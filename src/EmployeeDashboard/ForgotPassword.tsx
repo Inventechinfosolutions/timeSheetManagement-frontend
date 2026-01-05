@@ -5,13 +5,14 @@ import { useNavigate } from 'react-router-dom';
 const ForgotPassword = () => {
     const navigate = useNavigate();
     const [step, setStep] = useState(1); // 1: Email, 2: OTP, 3: New Password, 4: Success
-    const [email, setEmail] = useState('');
+    const [email, setEmail] = useState('arunkumar@inventechinfo.com');
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
     const [passwords, setPasswords] = useState({ new: '', confirm: '' });
     const [showPasswords, setShowPasswords] = useState(false);
     const [timer, setTimer] = useState(600); // 10 minutes in seconds
     const [isLoading, setIsLoading] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
+    const [generatedOtp, setGeneratedOtp] = useState('');
 
     const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -36,9 +37,14 @@ const ForgotPassword = () => {
         setIsLoading(true);
         // Simulate API call
         setTimeout(() => {
+            const newCode = '123456';
+            setGeneratedOtp(newCode);
             setIsLoading(false);
             setStep(2);
-            setMessage({ type: 'success', text: 'If your email is registered, we have sent a secure code.' });
+            setMessage({ 
+                type: 'success', 
+                text: `[TEST MODE] OTP sent! Your secure code is: ${newCode}` 
+            });
         }, 1500);
     };
 
@@ -62,6 +68,13 @@ const ForgotPassword = () => {
 
     const handleOtpVerify = async (e: React.FormEvent) => {
         e.preventDefault();
+        const enteredOtp = otp.join('');
+        
+        if (enteredOtp !== generatedOtp) {
+            setMessage({ type: 'error', text: 'Invalid verification code. Please try again.' });
+            return;
+        }
+
         setIsLoading(true);
         // Simulate API verification
         setTimeout(() => {
@@ -284,10 +297,10 @@ const ForgotPassword = () => {
                 Please log in with your new credentials.
             </p>
             <button
-                onClick={() => navigate('/admin-login')}
+                onClick={() => navigate('/landing')}
                 className="w-full bg-linear-to-r from-[#1c9cc0] to-[#0ea5e9] text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-[#1c9cc0]/30 hover:shadow-[#0ea5e9]/50 text-sm transform hover:-translate-y-0.5 active:translate-y-0"
             >
-                Back to login
+                Back to Home
             </button>
         </div>
     );

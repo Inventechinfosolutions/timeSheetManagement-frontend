@@ -174,7 +174,12 @@ const TodayAttendance = ({ setActiveTab, todayEntry, calculateTotal, entries, ca
                         </div>
                         <div>
                             <h4 className="text-4xl font-bold text-[#2B3674] mb-1">
-                                {entries.filter(day => !day.isFuture && !day.isToday && !day.isWeekend && !day.loginTime && day.status !== 'Absent').length}
+                                {entries.filter(day => 
+                                    !day.isFuture && 
+                                    !day.isToday && 
+                                    !day.isWeekend && 
+                                    (!day.loginTime || !day.logoutTime)
+                                ).length}
                             </h4>
                             <p className="text-gray-500 text-sm font-medium">Incomplete Days</p>
                         </div>
