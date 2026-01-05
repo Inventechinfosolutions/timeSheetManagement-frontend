@@ -1,3 +1,9 @@
+.dashboard-wrapper {
+  background-color: #E5E9F2;
+  min-height: 100vh;
+  width: 100%;
+}
+
 .dashboard-container {
   max-width: 1200px;
   margin: 0 auto;
@@ -13,6 +19,7 @@
   color: #333;
   font-size: 2.5rem;
   margin-bottom: 10px;
+  font-weight: 800;
 }
 
 .dashboard-subtitle {
@@ -176,4 +183,3 @@
     grid-template-columns: 1fr;
   }
 }
-
