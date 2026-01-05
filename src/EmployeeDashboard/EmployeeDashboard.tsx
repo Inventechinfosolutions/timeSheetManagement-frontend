@@ -12,82 +12,121 @@ import { TimesheetEntry } from '../types';
 const EmployeeDashboard = () => {
     const [activeTab, setActiveTab] = useState('Dashboard');
     const [entries, setEntries] = useState<TimesheetEntry[]>([]);
-    const [displayDate, setDisplayDate] = useState(new Date());
+
+    // Calendar Widget State
+    const [calendarEntries, setCalendarEntries] = useState<TimesheetEntry[]>([]);
+    const [calendarDate, setCalendarDate] = useState(new Date());
+
+    // Full Timesheet View State
+    const [fullTimesheetEntries, setFullTimesheetEntries] = useState<TimesheetEntry[]>([]);
+    const [fullTimesheetDate, setFullTimesheetDate] = useState(new Date());
+
     const [now] = useState(new Date());
     const [scrollToDate, setScrollToDate] = useState<number | null>(null);
 
-    const handlePrevMonth = () => {
-        setDisplayDate(new Date(displayDate.getFullYear(), displayDate.getMonth() - 1, 1));
+    // Helpers for Calendar Widget Navigation
+    // We pass setCalendarDate directly to TodayAttendance
+
+    // Helper to generate a single entry
+    const generateEntryForDate = (date: Date, now: Date) => {
+        const i = date.getDate();
+        const isToday = i === now.getDate() && date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+
+        // Future calculation: STRICTLY based on date comparison
+        const checkNow = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const checkDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+        const isFuture = checkDate > checkNow;
+
+        const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+
+        let loginTime = '';
+        let logoutTime = '';
+        let status: TimesheetEntry['status'] = 'Absent';
+        let attendanceType: TimesheetEntry['attendanceType'] = 'login';
+
+        // Fill past weekdays
+        if (!isFuture && !isWeekend && i !== 1) {
+            if (isToday) {
+                // Today defaults
+                loginTime = ''; // Start empty
+                attendanceType = null;
+                status = 'Present';
+            } else {
+                // Past
+                loginTime = '09:00';
+                logoutTime = '18:00';
+                status = 'Present';
+                attendanceType = 'logout';
+            }
+        }
+
+        // Explicit defaults for Today
+        if (isToday && !isWeekend) {
+            loginTime = '';
+            attendanceType = null;
+            status = 'Present';
+        }
+
+        return {
+            date: i,
+            fullDate: date,
+            dayName: date.toLocaleDateString('en-US', { weekday: 'long' }),
+            formattedDate: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            isToday,
+            isWeekend,
+            isFuture,
+            attendanceType,
+            loginTime,
+            logoutTime,
+            status,
+            isEditing: false,
+            isSaved: false
+        } as TimesheetEntry;
     };
 
-    const handleNextMonth = () => {
-        setDisplayDate(new Date(displayDate.getFullYear(), displayDate.getMonth() + 1, 1));
-    };
-
+    // 1. Generate Main Entries (Always Current Month/Now) - For MyTimesheet & Stats
     useEffect(() => {
-        // Generate Mock Data using the logic from MyTimesheet
-        const generateMonthData = () => {
-            const daysInMonth = new Date(displayDate.getFullYear(), displayDate.getMonth() + 1, 0).getDate();
+        const generateCurrentMonthData = () => {
+            const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
             const data: TimesheetEntry[] = [];
-
             for (let i = 1; i <= daysInMonth; i++) {
-                const date = new Date(displayDate.getFullYear(), displayDate.getMonth(), i);
-                const isToday = i === now.getDate() && displayDate.getMonth() === now.getMonth() && displayDate.getFullYear() === now.getFullYear();
-                const isFuture = (displayDate.getFullYear() > now.getFullYear()) ||
-                    (displayDate.getFullYear() === now.getFullYear() && displayDate.getMonth() > now.getMonth()) ||
-                    (displayDate.getFullYear() === now.getFullYear() && displayDate.getMonth() === now.getMonth() && i > now.getDate());
-
-                const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-
-                let loginTime = '';
-                let logoutTime = '';
-                let status: TimesheetEntry['status'] = 'Absent';
-                let attendanceType: TimesheetEntry['attendanceType'] = 'login';
-
-                // Fill past weekdays
-                if (!isFuture && !isWeekend && i !== 1) {
-                    if (i === now.getDate()) {
-                        // Today defaults
-                        loginTime = ''; // Start empty
-                        attendanceType = null;
-                        status = 'Present';
-                    } else {
-                        // Past
-                        loginTime = '09:00';
-                        logoutTime = '18:00';
-                        status = 'Present';
-                        attendanceType = 'logout';
-                    }
-                }
-
-                // Explicit defaults for Today
-                if (isToday && !isWeekend) {
-                    loginTime = '';
-                    attendanceType = null;
-                    status = 'Present';
-                }
-
-                data.push({
-                    date: i,
-                    fullDate: date,
-                    dayName: date.toLocaleDateString('en-US', { weekday: 'long' }),
-                    formattedDate: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-                    isToday,
-                    isWeekend,
-                    isFuture,
-                    attendanceType,
-                    loginTime,
-                    logoutTime,
-                    status,
-                    isEditing: false,
-                    isSaved: false
-                });
+                const date = new Date(now.getFullYear(), now.getMonth(), i);
+                data.push(generateEntryForDate(date, now));
             }
             return data;
         };
+        setEntries(generateCurrentMonthData());
+    }, [now]); // Only runs on mount/now change
 
-        setEntries(generateMonthData());
-    }, [displayDate, now]);
+    // 2. Generate Calendar Entries (Dependent on calendarDate) - For Calendar Widget
+    useEffect(() => {
+        const generateCalendarData = () => {
+            const daysInMonth = new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 0).getDate();
+            const data: TimesheetEntry[] = [];
+            for (let i = 1; i <= daysInMonth; i++) {
+                const date = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), i);
+                data.push(generateEntryForDate(date, now));
+            }
+            return data;
+        };
+        setCalendarEntries(generateCalendarData());
+    }, [calendarDate, now]);
+
+    // 3. Generate Full Timesheet Entries (Dependent on fullTimesheetDate)
+    useEffect(() => {
+        const generateFullTimesheetData = () => {
+            const daysInMonth = new Date(fullTimesheetDate.getFullYear(), fullTimesheetDate.getMonth() + 1, 0).getDate();
+            const data: TimesheetEntry[] = [];
+            for (let i = 1; i <= daysInMonth; i++) {
+                const date = new Date(fullTimesheetDate.getFullYear(), fullTimesheetDate.getMonth(), i);
+                data.push(generateEntryForDate(date, now));
+            }
+            return data;
+        };
+        setFullTimesheetEntries(generateFullTimesheetData());
+    }, [fullTimesheetDate, now]);
+
 
     const calculateTotal = (login: string, logout: string) => {
         if (!login || !logout) return '--:--';
@@ -103,6 +142,7 @@ const EmployeeDashboard = () => {
     };
 
     const handleUpdateEntry = (index: number, field: keyof TimesheetEntry, value: any) => {
+        // Only updates main entries (MyTimesheet)
         const newEntries = [...entries];
         newEntries[index] = { ...newEntries[index], [field]: value };
         setEntries(newEntries);
@@ -121,7 +161,8 @@ const EmployeeDashboard = () => {
         setEntries(newEntries);
     };
 
-    const todayEntry = entries.find(e => e.isToday);
+    // Ensure todayEntry is always valid
+    const todayEntry = entries.find(e => e.isToday) || generateEntryForDate(now, now);
 
     const handleNavigateToDate = (date: number) => {
         setScrollToDate(date);
@@ -132,7 +173,7 @@ const EmployeeDashboard = () => {
         if (activeTab === 'My Timesheet') {
             return (
                 <MyTimesheet
-                    entries={entries}
+                    entries={entries} // Always current month
                     handleUpdateEntry={handleUpdateEntry}
                     handleSave={handleSave}
                     calculateTotal={calculateTotal}
@@ -146,11 +187,11 @@ const EmployeeDashboard = () => {
         if (activeTab === 'Timesheet View') {
             return (
                 <FullTimesheet
-                    entries={entries}
+                    entries={fullTimesheetEntries}
                     calculateTotal={calculateTotal}
-                    displayDate={displayDate}
-                    onPrevMonth={handlePrevMonth}
-                    onNextMonth={handleNextMonth}
+                    displayDate={fullTimesheetDate}
+                    onPrevMonth={() => setFullTimesheetDate(new Date(fullTimesheetDate.getFullYear(), fullTimesheetDate.getMonth() - 1, 1))}
+                    onNextMonth={() => setFullTimesheetDate(new Date(fullTimesheetDate.getFullYear(), fullTimesheetDate.getMonth() + 1, 1))}
                 />
             );
         }
@@ -163,15 +204,18 @@ const EmployeeDashboard = () => {
             return <ChangePassword />;
         }
 
-        // Pass todayEntry and logic to TodayAttendance
+        // Pass todayEntry (Actual Today) and logic to TodayAttendance
         return (
             <TodayAttendance
                 setActiveTab={setActiveTab}
                 todayEntry={todayEntry}
                 calculateTotal={calculateTotal}
-                entries={entries}
+                entries={entries} // Stats use Current Month
+                calendarEntries={calendarEntries} // Widget uses Calendar Month
                 now={now}
                 onNavigateToDate={handleNavigateToDate}
+                displayDate={calendarDate}
+                onMonthChange={setCalendarDate}
             />
         );
     };

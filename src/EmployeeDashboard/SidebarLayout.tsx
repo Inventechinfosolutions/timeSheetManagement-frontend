@@ -49,7 +49,7 @@ const SidebarLayout = ({ children, activeTab = 'Dashboard', onTabChange, onLogou
             {/* Spacer to prevent layout shift when locked. 
                 When unlocked, it stays small (w-20). When locked, it takes full space (w-72). 
             */}
-            <div className={`shrink-0 transition-all duration-300 ease-in-out ${isLocked ? 'w-60' : 'w-20'} hidden md:block`}></div>
+            <div className={`shrink-0 transition-all duration-300 ease-in-out ${isOpen ? 'w-60' : 'w-20'} hidden md:block`}></div>
 
             <aside
                 className={`fixed md:absolute top-0 left-0 h-full bg-white/95 backdrop-blur-xl border-r border-gray-100 flex flex-col shrink-0 transition-all duration-300 ease-in-out shadow-2xl z-30
@@ -62,8 +62,8 @@ const SidebarLayout = ({ children, activeTab = 'Dashboard', onTabChange, onLogou
                 <div className="h-16 flex items-center justify-between px-0 relative">
                     {/* Logo / Title Area */}
                     {/* If closed, center logo. If open, left align with text. */}
-                    <div className={`flex items-center gap-2 transition-all duration-300 overflow-hidden pl-5 h-full items-center
-                        ${isOpen ? 'w-full opacity-100' : 'w-full justify-center opacity-100 px-0'}
+                    <div className={`flex items-center gap-2 transition-all duration-300 overflow-hidden h-full
+                        ${isOpen ? 'w-full opacity-100 pl-5' : 'w-full justify-center opacity-100 px-0'}
                     `}>
                         <div className="shrink-0 transition-transform duration-300 hover:scale-110">
                             <AlarmClock className="w-8 h-8 text-[#00A3C4]" />

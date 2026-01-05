@@ -11,11 +11,12 @@ import {
     Download,
     Eye,
 } from 'lucide-react';
+import Registration from './EmpRegistration';
 
 const AdminDashboard = () => {
     const [activeTab, setActiveTab] = useState('System Dashboard');
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedEmpId, setSelectedEmpId] = useState('EMP001');
+    const [selectedEmpId, setSelectedEmpId] = useState('');
 
     // Mock employee data
     const employees = [
@@ -32,7 +33,6 @@ const AdminDashboard = () => {
     // Generate mock entries for the calendar based on employee status
     const getMockEntries = (empId: string) => {
         const emp = employees.find(e => e.id === empId);
-        if (!emp) return [];
 
         return Array.from({ length: 31 }, (_, i): any => {
             const day = i + 1;
@@ -40,14 +40,19 @@ const AdminDashboard = () => {
             const isToday = day === 5; // Fixed today for mock
             const isFuture = day > 5;
 
+            // If an employee is found, show their data. Otherwise, show clean baseline.
+            const status = emp
+                ? (isWeekend ? 'Weekend' : (emp.status === 'Present' || day % 4 !== 0 ? 'Present' : 'Absent'))
+                : (isWeekend ? 'Weekend' : 'Future');
+
             return {
                 date: day,
-                status: isWeekend ? 'Weekend' : (emp.status === 'Present' || day % 4 !== 0 ? 'Present' : 'Absent'),
-                loginTime: emp.login !== '--' ? emp.login : null,
-                logoutTime: emp.logout !== '--' && emp.logout !== 'Not logged out' ? emp.logout : null,
+                status,
+                loginTime: emp && emp.login !== '--' ? emp.login : null,
+                logoutTime: emp && emp.logout !== '--' && emp.logout !== 'Not logged out' ? emp.logout : null,
                 isWeekend,
                 isToday,
-                isFuture
+                isFuture: emp ? isFuture : true // Treat as future if no emp to hide details
             };
         });
     };
@@ -225,9 +230,8 @@ const AdminDashboard = () => {
     const renderContent = () => {
         if (activeTab === 'User & Role Management') {
             return (
-                <div className="p-8">
-                    <h1 className="text-2xl font-bold text-[#2B3674]">User & Role Management</h1>
-                    <p className="text-gray-500 mt-2">Control user access and assign administrative roles.</p>
+                <div className="flex-1 overflow-auto">
+                    <Registration />
                 </div>
             );
         }
@@ -250,7 +254,7 @@ const AdminDashboard = () => {
                     <div className="flex flex-col lg:flex-row gap-4 items-start">
                         {renderAttendanceOverview()}
                         <div className="w-[260px] sticky top-24">
-                            <Calendar entries={getMockEntries(selectedEmpId)} now={new Date(2026, 0, 5)} />
+                            <Calendar entries={getMockEntries(selectedEmpId)} now={new Date(2026, 0, 5)} variant="small" />
                         </div>
                     </div>
                 </div>
@@ -259,7 +263,7 @@ const AdminDashboard = () => {
     };
 
     return (
-        <div className="flex flex-col h-[calc(100vh-60px)] overflow-hidden bg-[#F4F7FE]">
+        <div className="flex flex-col h-full overflow-hidden bg-[#F4F7FE]">
             <SidebarLayout activeTab={activeTab} onTabChange={setActiveTab}>
                 {renderContent()}
             </SidebarLayout>

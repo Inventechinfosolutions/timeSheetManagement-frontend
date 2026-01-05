@@ -181,10 +181,11 @@ const MyTimesheet = ({ entries, handleUpdateEntry, handleSave, calculateTotal, n
     };
 
     const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const hasInitialScrolled = useRef(false);
 
     useEffect(() => {
         if (entries.length > 0 && scrollContainerRef.current) {
-            // Priority 1: Scroll to specific date from Calendar
+            // Priority 1: Scroll to specific date from Calendar (External Navigation)
             if (scrollToDate !== null) {
                 const targetIndex = entries.findIndex(e => e.date === scrollToDate);
                 if (targetIndex !== -1) {
@@ -202,8 +203,9 @@ const MyTimesheet = ({ entries, handleUpdateEntry, handleSave, calculateTotal, n
                     }
                 }
             }
-            // Priority 2: Default scroll to Today on initial load
-            else if (highlightedRow === null) {
+            // Priority 2: Default scroll to Today on initial load ONLY
+            // We check hasInitialScrolled to prevent re-scrolling when user edits entries (which updates 'entries' prop)
+            else if (!hasInitialScrolled.current) {
                 const todayIndex = entries.findIndex(e => e.isToday);
                 if (todayIndex !== -1) {
                     const targetIndex = Math.max(0, todayIndex - 1);
@@ -211,7 +213,11 @@ const MyTimesheet = ({ entries, handleUpdateEntry, handleSave, calculateTotal, n
                     if (targetElement) {
                         const container = scrollContainerRef.current;
                         container.scrollTop = targetElement.offsetTop - container.offsetTop;
+                        hasInitialScrolled.current = true;
                     }
+                } else {
+                    // If today is not in list (viewing past/future month logic, though MyTimesheet is current month), mark as scrolled so we don't keep trying
+                    hasInitialScrolled.current = true;
                 }
             }
         }

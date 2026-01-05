@@ -19,19 +19,25 @@ interface Props {
     todayEntry: TimesheetEntry | undefined;
     calculateTotal: (login: string, logout: string) => string;
     entries: TimesheetEntry[];
+    calendarEntries?: TimesheetEntry[];
     now: Date;
     onNavigateToDate?: (date: number) => void;
     hideStatusBadges?: boolean;
     title?: string;
+    displayDate?: Date;
+    onMonthChange?: (date: Date) => void;
 }
 
-const TodayAttendance = ({ setActiveTab, todayEntry, calculateTotal, entries, now, onNavigateToDate, hideStatusBadges, title = "Today's Attendance" }: Props) => {
+const TodayAttendance = ({ setActiveTab, todayEntry, calculateTotal, entries, calendarEntries, now, onNavigateToDate, hideStatusBadges, title = "Today's Attendance", displayDate, onMonthChange }: Props) => {
 
     if (!todayEntry) return <div>Loading...</div>;
 
+    // Use calendarEntries for the Calendar view if provided, otherwise fallback to standard entries
+    const entriesForCalendar = calendarEntries || entries;
+
     return (
         <>
-            {/* Header - Simplified */}
+            {/* ... Header and Status Cards (unchanged) ... */}
             <header className="bg-[#F4F7FE] md:bg-opacity-50 backdrop-blur-sm sticky top-0 z-10 px-8 py-5 flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-[#2B3674]">{title}</h2>
 
@@ -176,7 +182,7 @@ const TodayAttendance = ({ setActiveTab, todayEntry, calculateTotal, entries, no
                 </div>
 
                 {/* Monthly Snapshot (Imported) */}
-                <CalendarView entries={entries} now={now} onNavigateToDate={onNavigateToDate} />
+                <CalendarView entries={entriesForCalendar} now={now} onNavigateToDate={onNavigateToDate} currentDate={displayDate} onMonthChange={onMonthChange} />
                 {/* Bottom Actions */}
                 <div className="flex items-center justify-center gap-4 mt-8 pb-8">
                     <button

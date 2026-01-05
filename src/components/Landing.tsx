@@ -47,7 +47,7 @@ const Landing = () => {
         {/* Left Section - Product Info */}
         <div className="space-y-10 lg:order-1 order-2">
           <div className="space-y-4">
-            <h1 className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-100 to-white tracking-tight drop-shadow-sm">
+            <h1 className="text-5xl font-extrabold text-transparent bg-clip-text bg-linear-to-r from-blue-100 to-white tracking-tight drop-shadow-sm">
               Timesheet Pro.
             </h1>
             <p className="text-lg text-blue-100 leading-relaxed max-w-lg font-medium">
@@ -119,6 +119,15 @@ const Landing = () => {
                       />
                       <Shield className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4" />
                     </div>
+                    <div className="flex justify-start mt-2.5 px-0.5">
+                      <button
+                        type="button"
+                        onClick={() => navigate('/forgot-password')}
+                        className="text-[10px] font-medium text-blue-100 hover:text-white transition-colors underline underline-offset-2"
+                      >
+                        Forgot Password?
+                      </button>
+                    </div>
                   </div>
 
                   <div className="mt-6">
@@ -133,9 +142,9 @@ const Landing = () => {
               </div>
 
               <div className="relative flex py-1 items-center">
-                <div className="flex-grow border-t border-white/20"></div>
-                <span className="flex-shrink-0 mx-3 text-blue-200 text-[10px] font-medium uppercase">Or</span>
-                <div className="flex-grow border-t border-white/20"></div>
+                <div className="grow border-t border-white/20"></div>
+                <span className="shrink-0 mx-3 text-blue-200 text-[10px] font-medium uppercase">Or</span>
+                <div className="grow border-t border-white/20"></div>
               </div>
 
               <div>
@@ -144,7 +153,7 @@ const Landing = () => {
                   onClick={() => navigate('/admin-login')}
                   className="w-full bg-white/10 border border-white/10 rounded-lg p-2.5 flex items-center gap-3 hover:bg-white/25 hover:border-white/40 hover:shadow-xl transition-all text-left group backdrop-blur-sm transform hover:-translate-y-1 hover:brightness-125 duration-300"
                 >
-                  <div className="w-9 h-9 bg-blue-500/20 rounded-full flex items-center justify-center flex-shrink-0 group-hover:bg-blue-500/30 transition-colors">
+                  <div className="w-9 h-9 bg-blue-500/20 rounded-full flex items-center justify-center shrink-0 group-hover:bg-blue-500/30 transition-colors">
                     <Shield className="w-4.5 h-4.5 text-blue-100" />
                   </div>
                   <div className="flex-1">
