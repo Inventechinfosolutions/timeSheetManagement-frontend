@@ -8,6 +8,7 @@ import {
     AlarmClock,
     Unlock,
     Eye,
+    Menu,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -22,6 +23,7 @@ const SidebarLayout = ({ children, activeTab = 'Dashboard', onTabChange, onLogou
     // State management
     const [isHovered, setIsHovered] = useState(false);
     const [isLocked, setIsLocked] = useState(false);
+    const [isMobileOpen, setIsMobileOpen] = useState(false);
     const navigate = useNavigate();
 
     // Sidebar opens if it's either hovered OR locked
@@ -46,24 +48,58 @@ const SidebarLayout = ({ children, activeTab = 'Dashboard', onTabChange, onLogou
     return (
         <div className="flex flex-1 bg-[#F4F7FE] font-sans text-[#2B3674] overflow-hidden relative">
 
+            {/* Mobile Menu Trigger - Floating Pulse Button */}
+            <button
+                onClick={() => setIsMobileOpen(true)}
+                className={`md:hidden fixed z-1001 left-4 top-[75px] w-11 h-11 bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 flex items-center justify-center text-[#00A3C4] active:scale-90 transition-all duration-300
+                    ${isMobileOpen ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100 scale-100'}
+                `}
+            >
+                <div className="relative">
+                    <Menu size={22} strokeWidth={2.5} />
+                    <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00A3C4] opacity-40"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#00A3C4]"></span>
+                    </span>
+                </div>
+            </button>
+
+            {/* Premium Mobile Backdrop */}
+            <div 
+                className={`md:hidden fixed inset-0 bg-[#2B3674]/40 backdrop-blur-md z-2000 transition-all duration-500 ease-in-out
+                    ${isMobileOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}
+                `}
+                onClick={() => setIsMobileOpen(false)}
+            />
+
             {/* Spacer to prevent layout shift when locked. 
                 When unlocked, it stays small (w-20). When locked, it takes full space (w-72). 
             */}
-            <div className={`shrink-0 transition-all duration-300 ease-in-out ${isLocked ? 'w-60' : 'w-20'} hidden md:block`}></div>
+            <div className={`shrink-0 transition-all duration-300 ease-in-out ${isOpen ? 'w-60' : 'w-20'} hidden md:block`}></div>
 
             <aside
-                className={`fixed md:absolute top-0 left-0 h-full bg-white/95 backdrop-blur-xl border-r border-gray-100 flex flex-col shrink-0 transition-all duration-300 ease-in-out shadow-2xl z-30
-                    ${isOpen ? 'w-60' : 'w-20'}
+                className={`fixed top-0 left-0 h-full bg-white border-r border-gray-100 flex flex-col shrink-0 transition-all duration-300 ease-in-out shadow-2xl z-2001 md:z-30 md:absolute
+                    ${isMobileOpen ? 'translate-x-0 w-72' : '-translate-x-full md:translate-x-0'}
+                    ${isOpen ? 'md:w-60' : 'md:w-20'}
                 `}
                 onMouseEnter={() => !isLocked && setIsHovered(true)}
                 onMouseLeave={() => !isLocked && setIsHovered(false)}
             >
-                {/* Branding & Lock Toggle */}
-                <div className="h-16 flex items-center justify-between px-0 relative">
+                {/* Mobile Drawer Navigation Header */}
+                <div className="md:hidden flex items-center gap-3 p-6 mb-2 border-b border-gray-50 bg-gray-50/50">
+                    <div className="p-2.5 bg-white rounded-xl shadow-sm border border-gray-100">
+                        <AlarmClock className="w-6 h-6 text-[#00A3C4]" />
+                    </div>
+                    <span className="text-xl font-bold text-[#2B3674] tracking-tight">
+                        Timesheet Pro
+                    </span>
+                </div>
+                {/* Branding & Lock Toggle - Desktop Only */}
+                <div className="hidden md:flex h-16 items-center justify-between px-0 relative">
                     {/* Logo / Title Area */}
                     {/* If closed, center logo. If open, left align with text. */}
-                    <div className={`flex items-center gap-2 transition-all duration-300 overflow-hidden pl-5 h-full items-center
-                        ${isOpen ? 'w-full opacity-100' : 'w-full justify-center opacity-100 px-0'}
+                    <div className={`flex items-center gap-2 transition-all duration-300 overflow-hidden h-full
+                        ${isOpen ? 'w-full opacity-100 pl-5' : 'w-full justify-center opacity-100 px-0'}
                     `}>
                         <div className="shrink-0 transition-transform duration-300 hover:scale-110">
                             <AlarmClock className="w-8 h-8 text-[#00A3C4]" />
@@ -100,13 +136,16 @@ const SidebarLayout = ({ children, activeTab = 'Dashboard', onTabChange, onLogou
                         return (
                             <div key={item.name} className="relative group">
                                 <button
-                                    onClick={() => onTabChange?.(item.name)}
+                                    onClick={() => {
+                                        onTabChange?.(item.name);
+                                        setIsMobileOpen(false); // Seamless close on select
+                                    }}
                                     className={`w-full flex items-center gap-4 p-2 rounded-xl cursor-pointer transition-all duration-300 relative overflow-hidden group
                                         ${isActive
                                             ? 'bg-[#E6FFFA] text-[#00A3C4]'
                                             : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
                                         }
-                                        ${!isOpen && 'justify-center'}
+                                        ${(!isOpen && !isMobileOpen) && 'md:justify-center'}
                                     `}
                                 >
                                     {/* Active Indicator Line (Left) */}
@@ -121,7 +160,7 @@ const SidebarLayout = ({ children, activeTab = 'Dashboard', onTabChange, onLogou
 
                                     {/* Label */}
                                     <span className={`font-medium text-sm whitespace-nowrap transition-all duration-300 relative z-10
-                                        ${isOpen ? 'opacity-100 translate-x-0 w-auto' : 'opacity-0 -translate-x-4 w-0 overflow-hidden absolute'}
+                                        ${(isOpen || isMobileOpen) ? 'opacity-100 translate-x-0 w-auto' : 'opacity-0 -translate-x-4 w-0 overflow-hidden absolute'}
                                         ${isActive ? 'font-semibold' : ''}
                                     `}>
                                         {item.name}
@@ -129,8 +168,8 @@ const SidebarLayout = ({ children, activeTab = 'Dashboard', onTabChange, onLogou
                                 </button>
 
                                 {/* Tooltip for collapsed state */}
-                                {!isOpen && (
-                                    <div className="absolute left-full top-1/2 -translate-y-1/2 ml-4 px-3 py-2 bg-[#2B3674] text-white text-xs font-bold rounded-md shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 whitespace-nowrap z-50 translate-x-2 group-hover:translate-x-0">
+                                {(!isOpen && !isMobileOpen) && (
+                                    <div className="absolute left-full top-1/2 -translate-y-1/2 ml-4 px-3 py-2 bg-[#2B3674] text-white text-xs font-bold rounded-md shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 whitespace-nowrap z-50 translate-x-2 group-hover:translate-x-0 md:block hidden">
                                         {item.name}
                                         {/* Small arrow */}
                                         <div className="absolute top-1/2 -left-1 -translate-y-1/2 border-td border-r-4 border-r-[#2B3674] border-t-4 border-t-transparent border-b-4 border-b-transparent"></div>
@@ -142,7 +181,7 @@ const SidebarLayout = ({ children, activeTab = 'Dashboard', onTabChange, onLogou
                 </nav>
 
                 {/* Footer / Logout */}
-                <div className="p-3 mt-20 shrink-0 mb-2 border-t border-gray-100/50 pt-2">
+                <div className="p-3 mt-auto shrink-0 mb-2 pt-2">
                     <button
                         onClick={handleLogout}
                         className={`w-full flex items-center gap-4 p-2 rounded-xl cursor-pointer transition-all duration-300 group hover:bg-red-50 text-red-500
@@ -153,7 +192,7 @@ const SidebarLayout = ({ children, activeTab = 'Dashboard', onTabChange, onLogou
                             <LogOut className="w-6 h-6" />
                         </div>
                         <span className={`font-medium text-sm whitespace-nowrap transition-all duration-300
-                            ${isOpen ? 'opacity-100 translate-x-0 w-auto' : 'opacity-0 -translate-x-4 w-0 absolute'}
+                            ${(isOpen || isMobileOpen) ? 'opacity-100 translate-x-0 w-auto' : 'opacity-0 -translate-x-4 w-0 absolute'}
                         `}>
                             Logout
                         </span>

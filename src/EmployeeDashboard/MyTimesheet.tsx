@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { Clock, Edit, ChevronDown } from 'lucide-react';
+import { Clock, ChevronDown } from 'lucide-react';
 import { TimesheetEntry } from '../types';
+import { MobileTimesheetCard } from './mobileView';
 
 interface TimesheetProps {
     entries: TimesheetEntry[];
@@ -20,7 +21,7 @@ interface Props {
     triggerClassName?: string;
 }
 
-const CustomDropdown = ({ value, options, onChange, mapValToLabel, triggerClassName }: Props) => {
+export const CustomDropdown = ({ value, options, onChange, mapValToLabel, triggerClassName }: Props) => {
     const [isOpen, setIsOpen] = useState(false);
     const displayValue = mapValToLabel ? mapValToLabel(value) : value;
 
@@ -36,7 +37,7 @@ const CustomDropdown = ({ value, options, onChange, mapValToLabel, triggerClassN
             onMouseEnter={() => setIsOpen(true)}
             onMouseLeave={() => setIsOpen(false)}
         >
-            <div className={`border rounded-lg px-3 py-1.5 text-xs font-bold shadow-sm flex items-center justify-between cursor-pointer transition-colors ${finalTriggerClasses}`}>
+            <div className={`border rounded-lg px-3 py-1.5 text-[13px] font-bold shadow-sm flex items-center justify-between cursor-pointer transition-colors ${finalTriggerClasses}`}>
                 <span className="capitalize">{displayValue}</span>
                 <ChevronDown size={14} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''} ${chevronClass}`} />
             </div>
@@ -47,7 +48,7 @@ const CustomDropdown = ({ value, options, onChange, mapValToLabel, triggerClassN
                         <div
                             key={option}
                             onClick={() => { onChange(option); setIsOpen(false); }}
-                            className="px-3 py-2 text-xs font-medium text-gray-600 hover:bg-[#F4F7FE] hover:text-[#00A3C4] cursor-pointer transition-colors first:rounded-t-lg last:rounded-b-lg capitalize"
+                            className="px-3 py-2 text-[13px] font-medium text-gray-600 hover:bg-[#F4F7FE] hover:text-[#00A3C4] cursor-pointer transition-colors first:rounded-t-lg last:rounded-b-lg capitalize"
                         >
                             {mapValToLabel ? mapValToLabel(option) : option}
                         </div>
@@ -64,7 +65,7 @@ interface TimeProps {
     dashed?: boolean;
 }
 
-const CustomTimePicker = ({ value, onChange, dashed }: TimeProps) => {
+export const CustomTimePicker = ({ value, onChange, dashed }: TimeProps) => {
     const [isOpen, setIsOpen] = useState(false);
 
     // Parse hours and minutes from value or default
@@ -167,24 +168,14 @@ const CustomTimePicker = ({ value, onChange, dashed }: TimeProps) => {
 const MyTimesheet = ({ entries, handleUpdateEntry, handleSave, calculateTotal, now, scrollToDate, setScrollToDate }: TimesheetProps) => {
     const [highlightedRow, setHighlightedRow] = useState<number | null>(null);
 
-    const toggleEdit = (index: number) => {
-        // Toggle logic is now partly inside handleSave for the Saved state.
-        // For simple edit toggle of non-saved items (if needed), we might need to expose it or just use handleSave for simplicity if that was the intent.
-        // However, looking at previous code, toggleEdit was for 'Done' button or 'Edit' button.
-        // We'll assume the parent handles the state change, we just need to call the updater.
-        // Actually, the previous toggleEdit mutated isEditing.
-        // We need a way to just toggle isEditing without saving? 
-        // Let's re-use handleUpdateEntry for isEditing for now if we want to keep it simple, or add a specific handler.
-        // But wait, handleUpdateEntry is generic.
-        const currentVal = entries[index].isEditing;
-        handleUpdateEntry(index, 'isEditing', !currentVal);
-    };
+
 
     const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const hasInitialScrolled = useRef(false);
 
     useEffect(() => {
         if (entries.length > 0 && scrollContainerRef.current) {
-            // Priority 1: Scroll to specific date from Calendar
+            // Priority 1: Scroll to specific date from Calendar (External Navigation)
             if (scrollToDate !== null) {
                 const targetIndex = entries.findIndex(e => e.date === scrollToDate);
                 if (targetIndex !== -1) {
@@ -202,8 +193,9 @@ const MyTimesheet = ({ entries, handleUpdateEntry, handleSave, calculateTotal, n
                     }
                 }
             }
-            // Priority 2: Default scroll to Today on initial load
-            else if (highlightedRow === null) {
+            // Priority 2: Default scroll to Today on initial load ONLY
+            // We check hasInitialScrolled to prevent re-scrolling when user edits entries (which updates 'entries' prop)
+            else if (!hasInitialScrolled.current) {
                 const todayIndex = entries.findIndex(e => e.isToday);
                 if (todayIndex !== -1) {
                     const targetIndex = Math.max(0, todayIndex - 1);
@@ -211,7 +203,11 @@ const MyTimesheet = ({ entries, handleUpdateEntry, handleSave, calculateTotal, n
                     if (targetElement) {
                         const container = scrollContainerRef.current;
                         container.scrollTop = targetElement.offsetTop - container.offsetTop;
+                        hasInitialScrolled.current = true;
                     }
+                } else {
+                    // If today is not in list (viewing past/future month logic, though MyTimesheet is current month), mark as scrolled so we don't keep trying
+                    hasInitialScrolled.current = true;
                 }
             }
         }
@@ -231,234 +227,182 @@ const MyTimesheet = ({ entries, handleUpdateEntry, handleSave, calculateTotal, n
 
             <div className="p-8">
                 <div className="bg-white rounded-[20px] p-6 shadow-sm border border-gray-100">
-                    {/* Table Header - Adjusted Gaps & Columns */}
-                    <div className="grid grid-cols-[70px_100px_140px_1fr_1fr_0.8fr_150px_100px] gap-2 mb-4 text-xs font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100 pb-4 text-center items-center">
-                        <div className="text-left pl-4">Date</div>
-                        <div className="text-left">Day</div>
-                        <div className="">Attendance</div>
-                        <div className="">Login</div>
-                        <div className="">Logout</div>
-                        <div className="">Total</div>
-                        <div className="">Status</div>
-                        <div className="text-right pr-4">Action</div>
+                    {/* Mobile Card View */}
+                    <div className="md:hidden space-y-4 h-[500px] overflow-y-auto no-scrollbar pb-10">
+                        {entries.map((day, index) => (
+                            <MobileTimesheetCard 
+                                key={day.date}
+                                day={day}
+                                index={index}
+                                isEditable={(day.isToday && !day.isSaved) || day.isEditing}
+                                handleUpdateEntry={handleUpdateEntry}
+                                handleSave={handleSave}
+                                calculateTotal={calculateTotal}
+                                CustomDropdown={CustomDropdown}
+                                CustomTimePicker={CustomTimePicker}
+                                highlightedRow={highlightedRow}
+                            />
+                        ))}
                     </div>
 
-                    <style>{`
-                        .no-scrollbar::-webkit-scrollbar {
-                            display: none;
-                        }
-                        .no-scrollbar {
-                            -ms-overflow-style: none;
-                            scrollbar-width: none;
-                        }
-                    `}</style>
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block">
+                        {/* Table Header - Adjusted Gaps & Columns */}
+                        <div className="grid grid-cols-[70px_100px_140px_1fr_1fr_0.8fr_1.8fr] gap-2 mb-4 text-xs font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100 pb-4 text-center items-center">
+                            <div className="text-left pl-4">Date</div>
+                            <div className="text-left">Day</div>
+                            <div className="">Location</div>
+                            <div className="">Login</div>
+                            <div className="">Logout</div>
+                            <div className="">Total Hours</div>
+                            <div className="">Status</div>
+                        </div>
 
-                    {/* Table Rows - Scrollable Container showing ~5 rows */}
-                    <div
-                        ref={scrollContainerRef}
-                        className="space-y-4 h-[380px] overflow-y-auto no-scrollbar pb-2"
-                    >
-                        {entries.map((day, index) => {
+                        {/* Table Rows - Scrollable Container showing ~5 rows */}
+                        <div
+                            ref={scrollContainerRef}
+                            className="space-y-4 h-[380px] overflow-y-auto no-scrollbar pb-2"
+                        >
+                            {entries.map((day, index) => {
 
-                            // Weekend Row
-                            if (day.isWeekend) {
+                                // Weekend Row
+                                if (day.isWeekend) {
+                                    return (
+                                        <div
+                                            id={`row-${index}`}
+                                            key={day.date}
+                                            className={`grid grid-cols-[70px_100px_140px_1fr_1fr_0.8fr_1.8fr] gap-2 items-center text-sm py-3 px-4 -mx-4 rounded-xl transition-all duration-500
+                                                ${highlightedRow === index ? 'bg-blue-100 ring-2 ring-blue-400 scale-[1.02] z-20 shadow-lg' : 'bg-red-50/50 text-gray-400 opacity-60'}`}
+                                        >
+                                            <div className="font-bold text-red-300 pl-2">{day.formattedDate}</div>
+                                            <div className="text-red-300">{day.dayName}</div>
+                                            <div className="col-span-5 text-center text-red-200 text-xs font-medium uppercase tracking-widest bg-red-50/50 py-2 rounded-lg border border-red-100/50">
+                                                Weekend
+                                            </div>
+                                        </div>
+                                    );
+                                }
+
+                                // Future Row
+                                if (day.isFuture) {
+                                    return (
+                                        <div
+                                            id={`row-${index}`}
+                                            key={day.date}
+                                            className={`grid grid-cols-[70px_100px_140px_1fr_1fr_0.8fr_1.8fr] gap-2 items-center text-sm py-3 px-4 -mx-4 rounded-xl transition-all duration-500
+                                                ${highlightedRow === index ? 'bg-blue-100 ring-2 ring-blue-400 scale-[1.02] z-20 shadow-lg' : 'text-gray-300 opacity-60 border border-gray-100'}`}
+                                        >
+                                            <div className="font-bold pl-2">{day.formattedDate}</div>
+                                            <div className="">{day.dayName}</div>
+                                            <div className="text-center">--</div>
+                                            <div className="text-center">--:--</div>
+                                            <div className="text-center">--:--</div>
+                                            <div className="text-center">--:--</div>
+                                            <div className="text-center">
+                                                <span className="px-3 py-1 bg-gray-50 border border-gray-100 rounded-lg text-[10px] font-bold uppercase tracking-wider">Upcoming</span>
+                                            </div>
+                                        </div>
+                                    );
+                                }
+
+                                // Today Or Editing Row
+                                const isEditable = (day.isToday && !day.isSaved) || day.isEditing;
+                                const rowBg = day.isToday ? 'bg-[#F4F7FE] border border-dashed border-[#00A3C4]' : 'border border-gray-100 hover:bg-gray-50';
+                                const dateColor = day.isToday ? 'text-[#00A3C4]' : 'text-[#2B3674]';
+
                                 return (
                                     <div
                                         id={`row-${index}`}
                                         key={day.date}
-                                        className={`grid grid-cols-[70px_100px_140px_1fr_1fr_0.8fr_150px_100px] gap-2 items-center text-sm py-3 px-4 -mx-4 rounded-xl transition-all duration-500
-                                            ${highlightedRow === index ? 'bg-blue-100 ring-2 ring-blue-400 scale-[1.02] z-20 shadow-lg' : 'bg-red-50/50 text-gray-400 opacity-60'}`}
+                                        className={`grid grid-cols-[70px_100px_140px_1fr_1fr_0.8fr_1.8fr] gap-2 items-center text-sm py-3 px-4 -mx-4 rounded-xl transition-all duration-500
+                                            ${highlightedRow === index ? 'bg-blue-100 ring-2 ring-blue-400 scale-[1.02] z-20 shadow-lg' : rowBg}`}
                                     >
-                                        <div className="font-bold text-red-300 pl-2">{day.formattedDate}</div>
-                                        <div className="text-red-300">{day.dayName}</div>
-                                        <div className="col-span-6 text-center text-red-200 text-xs font-medium uppercase tracking-widest bg-red-50/50 py-2 rounded-lg border border-red-100/50">
-                                            Weekend
-                                        </div>
-                                    </div>
-                                );
-                            }
+                                        {/* Date & Day */}
+                                        <div className={`font-bold pl-2 ${dateColor}`}>{day.formattedDate}</div>
+                                        <div className={`${day.isToday ? 'font-bold text-[#00A3C4]' : 'text-[#2B3674]'}`}>{day.isToday ? 'Today' : day.dayName}</div>
 
-                            // Past Incomplete Row
-                            if (!day.isFuture && !day.isToday && (!day.loginTime || !day.logoutTime)) {
-                                return (
-                                    <div
-                                        id={`row-${index}`}
-                                        key={day.date}
-                                        className={`grid grid-cols-[70px_100px_140px_1fr_1fr_0.8fr_150px_100px] gap-2 items-center text-sm py-3 px-4 -mx-4 rounded-xl transition-all duration-500
-                                            ${highlightedRow === index ? 'bg-blue-100 ring-2 ring-blue-400 scale-[1.02] z-20 shadow-lg' : 'bg-yellow-50/50 text-gray-400 opacity-80'}`}
-                                    >
-                                        <div className="font-bold text-yellow-500 pl-2">{day.formattedDate}</div>
-                                        <div className="text-yellow-500">{day.dayName}</div>
-                                        <div className="col-span-6 text-center text-yellow-500 text-xs font-medium uppercase tracking-widest bg-yellow-50/50 py-2 rounded-lg border border-yellow-100/50">
-                                            Not Updated
-                                        </div>
-                                    </div>
-                                );
-                            }
-
-                            // Future Row
-                            if (day.isFuture) {
-                                return (
-                                    <div
-                                        id={`row-${index}`}
-                                        key={day.date}
-                                        className={`grid grid-cols-[70px_100px_140px_1fr_1fr_0.8fr_150px_100px] gap-2 items-center text-sm py-3 px-4 -mx-4 rounded-xl transition-all duration-500
-                                            ${highlightedRow === index ? 'bg-blue-100 ring-2 ring-blue-400 scale-[1.02] z-20 shadow-lg' : 'text-gray-300 opacity-60 border border-gray-100'}`}
-                                    >
-                                        <div className="font-bold pl-2">{day.formattedDate}</div>
-                                        <div className="">{day.dayName}</div>
-                                        <div className="text-center">--</div>
-                                        <div className="text-center">--:--</div>
-                                        <div className="text-center">--:--</div>
-                                        <div className="text-center">--:--</div>
-                                        <div className="text-center">
-                                            <span className="px-3 py-1 bg-gray-50 border border-gray-100 rounded-lg text-[10px] font-bold uppercase tracking-wider">Upcoming</span>
-                                        </div>
-                                        <div className="text-right pr-2">--</div>
-                                    </div>
-                                );
-                            }
-
-                            // Today Or Editing Row
-                            const isEditable = (day.isToday && !day.isSaved) || day.isEditing;
-                            const rowBg = day.isToday ? 'bg-[#F4F7FE] border border-dashed border-[#00A3C4]' : 'border border-gray-100 hover:bg-gray-50';
-                            const dateColor = day.isToday ? 'text-[#00A3C4]' : 'text-[#2B3674]';
-
-                            return (
-                                <div
-                                    id={`row-${index}`}
-                                    key={day.date}
-                                    className={`grid grid-cols-[70px_100px_140px_1fr_1fr_0.8fr_150px_100px] gap-2 items-center text-sm py-3 px-4 -mx-4 rounded-xl transition-all duration-500
-                                        ${highlightedRow === index ? 'bg-blue-100 ring-2 ring-blue-400 scale-[1.02] z-20 shadow-lg' : rowBg}`}
-                                >
-                                    {/* Date & Day */}
-                                    <div className={`font-bold pl-2 ${dateColor}`}>{day.formattedDate}</div>
-                                    <div className={`${day.isToday ? 'font-bold text-[#00A3C4]' : 'text-[#2B3674]'}`}>{day.isToday ? 'Today' : day.dayName}</div>
-
-                                    {/* Attendance Type (Radio) */}
-                                    <div className="flex items-center justify-center gap-3">
-                                        <label className="flex items-center gap-1.5 cursor-pointer">
-                                            <div className="relative flex items-center justify-center">
-                                                <input
-                                                    type="radio"
-                                                    checked={day.attendanceType === 'login'}
-                                                    onChange={() => handleUpdateEntry(index, 'attendanceType', 'login')}
-                                                    name={`att-${day.date}`}
-                                                    className="peer sr-only"
-                                                    disabled={!isEditable}
+                                        {/* Location Dropdown */}
+                                        <div className="flex justify-center">
+                                            {isEditable ? (
+                                                <CustomDropdown
+                                                    value={day.location || 'Office'}
+                                                    options={['Office', 'WFH', 'Client Visit']}
+                                                    onChange={(val) => handleUpdateEntry(index, 'location', val)}
+                                                    triggerClassName="bg-white border-gray-200 text-[#2B3674] hover:border-[#00A3C4] min-w-[120px]"
                                                 />
-                                                <div className="w-2.5 h-2.5 rounded-full border border-gray-300 peer-checked:hidden"></div>
-                                                <div className="hidden peer-checked:block w-2.5 h-2.5 rounded-full bg-[#00A3C4]"></div>
-                                            </div>
-                                            <span className={`text-xs ${day.attendanceType === 'login' ? 'text-[#00A3C4] font-bold' : 'text-gray-400'}`}>In</span>
-                                        </label>
-                                        <label className="flex items-center gap-1.5 cursor-pointer">
-                                            <div className="relative flex items-center justify-center">
-                                                <input
-                                                    type="radio"
-                                                    checked={day.attendanceType === 'logout'}
-                                                    onChange={() => handleUpdateEntry(index, 'attendanceType', 'logout')}
-                                                    name={`att-${day.date}`}
-                                                    className="peer sr-only"
-                                                    disabled={!isEditable}
-                                                />
-                                                <div className="w-2.5 h-2.5 rounded-full border border-gray-300 peer-checked:hidden"></div>
-                                                <div className="hidden peer-checked:block w-2.5 h-2.5 rounded-full bg-[#0F6F8C]"></div>
-                                            </div>
-                                            <span className={`text-xs ${day.attendanceType === 'logout' ? 'text-[#197c9a] font-bold' : 'text-gray-400'}`}>Out</span>
-                                        </label>
-                                    </div>
-
-                                    {/* Login Time */}
-                                    <div className="flex justify-center">
-                                        {isEditable ? (
-                                            <CustomTimePicker
-                                                value={day.loginTime}
-                                                onChange={(val) => handleUpdateEntry(index, 'loginTime', val)}
-                                                dashed={true}
-                                            />
-                                        ) : (
-                                            <div className={`font-medium text-[#2B3674] flex items-center gap-2 ${!day.loginTime && 'opacity-30'}`}>
-                                                {day.loginTime || '--:--'} <Clock size={12} className="text-gray-400" />
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Logout Time */}
-                                    <div className="flex justify-center">
-                                        {isEditable ? (
-                                            <CustomTimePicker
-                                                value={day.logoutTime}
-                                                onChange={(val) => handleUpdateEntry(index, 'logoutTime', val)}
-                                                dashed={true}
-                                            />
-                                        ) : (
-                                            <div className={`font-medium text-[#2B3674] flex items-center gap-2 ${!day.logoutTime && 'opacity-30'}`}>
-                                                {day.logoutTime || '--:--'} <Clock size={12} className="text-gray-400" />
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Total Hours */}
-                                    <div className="flex justify-center font-bold text-[#2B3674]">
-                                        {calculateTotal(day.loginTime, day.logoutTime)}
-                                    </div>
-
-                                    {/* Status Dropdown */}
-                                    <div className="flex justify-center w-full">
-                                        {isEditable ? (
-                                            <CustomDropdown
-                                                value={day.status}
-                                                options={['Present', 'Absent', 'Half Day']}
-                                                onChange={(val) => handleUpdateEntry(index, 'status', val)}
-                                                triggerClassName={
-                                                    day.status === 'Present' ? 'text-[#01B574] font-bold border-gray-200 hover:border-[#01B574]' :
-                                                        day.status === 'Absent' ? 'text-[#EE5D50] font-bold border-gray-200 hover:border-[#EE5D50]' :
-                                                            day.status === 'Half Day' ? 'text-[#FFB547] font-bold border-gray-200 hover:border-[#FFB547]' : ''
-                                                }
-                                            />
-                                        ) : (
-                                            <span className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider
-                                                ${day.status === 'Present' ? 'bg-[#01B574] text-white shadow-[0_2px_10px_-2px_rgba(1,181,116,0.4)]' :
-                                                    day.status === 'Absent' ? 'bg-[#EE5D50] text-white shadow-[0_2px_10px_-2px_rgba(238,93,80,0.4)]' :
-                                                        day.status === 'Half Day' ? 'bg-[#FFB547] text-white shadow-[0_2px_10px_-2px_rgba(255,181,71,0.4)]' : 'text-gray-400'
-                                                }
-                                            `}>
-                                                {day.status}
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    {/* Action Button */}
-                                    <div className="text-right flex justify-end pr-2">
-                                        {day.isToday ? (
-                                            <button
-                                                onClick={() => handleSave(index)}
-                                                className="px-5 py-2 bg-[#00A3C4] text-white rounded-lg text-xs font-bold hover:bg-[#0093b1] shadow-md shadow-teal-100 transition-all"
-                                            >
-                                                {day.isSaved ? 'Update' : 'Save'}
-                                            </button>
-                                        ) : (
-                                            isEditable ? (
-                                                <button
-                                                    onClick={() => toggleEdit(index)}
-                                                    className="px-4 py-1.5 bg-[#4318FF] text-white rounded-lg text-xs font-bold hover:bg-[#3311cc] shadow-sm"
-                                                >
-                                                    Done
-                                                </button>
                                             ) : (
-                                                <button
-                                                    onClick={() => toggleEdit(index)}
-                                                    className="text-[#4318FF] font-medium text-xs flex items-center gap-1 hover:underline hover:bg-blue-50 px-2 py-1 rounded-md transition-colors"
-                                                >
-                                                    <Edit size={12} /> Edit
-                                                </button>
-                                            )
-                                        )}
+                                                <div className="text-[#2B3674] font-medium text-[13px]">
+                                                    {day.location || '--'}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Login Time */}
+                                        <div className="flex justify-center">
+                                            {isEditable ? (
+                                                <CustomTimePicker
+                                                    value={day.loginTime}
+                                                    onChange={(val) => handleUpdateEntry(index, 'loginTime', val)}
+                                                    dashed={true}
+                                                />
+                                            ) : (
+                                                <div className={`font-medium text-[#2B3674] flex items-center gap-2 ${!day.loginTime && 'opacity-30'}`}>
+                                                    {day.loginTime || '--:--'} <Clock size={12} className="text-gray-400" />
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Logout Time */}
+                                        <div className="flex justify-center">
+                                            {isEditable ? (
+                                                <CustomTimePicker
+                                                    value={day.logoutTime}
+                                                    onChange={(val) => handleUpdateEntry(index, 'logoutTime', val)}
+                                                    dashed={true}
+                                                />
+                                            ) : (
+                                                <div className={`font-medium text-[#2B3674] flex items-center gap-2 ${!day.logoutTime && 'opacity-30'}`}>
+                                                    {day.logoutTime || '--:--'} <Clock size={12} className="text-gray-400" />
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Total Hours */}
+                                        <div className="flex justify-center font-bold text-[#2B3674]">
+                                            {calculateTotal(day.loginTime, day.logoutTime)}
+                                        </div>
+
+                                        {/* Status Column with Integrated Save for Today */}
+                                        <div className="flex items-center justify-center gap-4 w-full px-2 min-h-[40px]">
+                                            <div className="flex justify-center">
+                                                    <span className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider min-w-[100px] text-center
+                                                        ${day.status === 'Present' ? 'bg-[#01B574] text-white shadow-[0_2px_10px_-2px_rgba(1,181,116,0.4)]' :
+                                                            day.status === 'WFH' ? 'bg-[#A3AED0] text-white shadow-[0_2px_8px_-1px_rgba(163,174,208,0.3)]' :
+                                                                day.status === 'Absent' ? 'bg-[#EE5D50] text-white shadow-[0_2px_10px_-2px_rgba(238,93,80,0.4)]' :
+                                                                    day.status === 'Half Day' ? 'bg-[#FFB547] text-white shadow-[0_2px_10px_-2px_rgba(255,181,71,0.4)]' : 
+                                                                        day.status === 'Client Visit' ? 'bg-[#6366F1] text-white shadow-[0_2px_8px_-1px_rgba(99,102,241,0.25)]' :
+                                                                            (day.status === 'Pending' || (!day.isFuture && !day.isToday && day.loginTime && !day.logoutTime)) ? 'bg-[#F6AD55] text-white shadow-[0_2px_10px_-2px_rgba(246,173,85,0.4)]' : 'text-gray-400'
+                                                        }
+                                                    `}>
+                                                        {(!day.isFuture && !day.isToday && day.loginTime && !day.logoutTime) ? 'NOT UPDATED' : day.status}
+                                                    </span>
+                                            </div>
+
+                                            {day.isToday && (
+                                                <div className="shrink-0">
+                                                    <button
+                                                        onClick={() => handleSave(index)}
+                                                        className="px-4 py-1.5 bg-[#00A3C4] text-white rounded-lg text-[11px] font-bold hover:bg-[#0093b1] shadow-md shadow-teal-100 transition-all transform active:scale-95"
+                                                    >
+                                                        {day.isEditing ? 'Done' : (day.isSaved ? 'Update' : 'Save')}
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                            );
-                        })}
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
             </div>

@@ -3,184 +3,191 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { TimesheetEntry } from "../types";
 
 interface CalendarProps {
-  entries: TimesheetEntry[];
-  now: Date;
-  onNavigateToDate?: (date: number) => void;
+    entries: TimesheetEntry[];
+    now: Date;
+    onNavigateToDate?: (date: number) => void;
+    variant?: 'small' | 'large';
 }
 
-const Calendar = ({ entries, now, onNavigateToDate }: CalendarProps) => {
-  // Local state for navigation
-  const [displayDate, setDisplayDate] = React.useState(now);
+const Calendar = ({ entries, now, onNavigateToDate, variant = 'large', currentDate, onMonthChange }: CalendarProps & { currentDate?: Date; onMonthChange?: (date: Date) => void }) => {
+    // Local state for navigation (fallback if not controlled)
+    const [internalDisplayDate, setInternalDisplayDate] = React.useState(now);
 
-  const currentMonthName = displayDate.toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
+    const displayDate = currentDate || internalDisplayDate;
 
-  const handlePrevMonth = () => {
-    setDisplayDate(
-      new Date(displayDate.getFullYear(), displayDate.getMonth() - 1, 1)
-    );
-  };
+    const isSmall = variant === 'small';
 
-  const handleNextMonth = () => {
-    setDisplayDate(
-      new Date(displayDate.getFullYear(), displayDate.getMonth() + 1, 1)
-    );
-  };
+    const currentMonthName = displayDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
-  // Days of week headers
-  const daysOfWeek = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+    const handlePrevMonth = () => {
+        const newDate = new Date(displayDate.getFullYear(), displayDate.getMonth() - 1, 1);
+        if (onMonthChange) {
+            onMonthChange(newDate);
+        } else {
+            setInternalDisplayDate(newDate);
+        }
+    };
 
-  // We need to align the first day of the month
-  // Note: getDay() returns 0 for Sunday. We want Monday to be first (index 0).
-  const firstDay = new Date(
-    displayDate.getFullYear(),
-    displayDate.getMonth(),
-    1
-  ).getDay();
-  // Convert Sunday (0) to 6, and shift others by -1 to make Mon=0
-  const firstDayIndex = firstDay === 0 ? 6 : firstDay - 1;
+    const handleNextMonth = () => {
+        const newDate = new Date(displayDate.getFullYear(), displayDate.getMonth() + 1, 1);
+        if (onMonthChange) {
+            onMonthChange(newDate);
+        } else {
+            setInternalDisplayDate(newDate);
+        }
+    };
 
-  const daysInMonth = new Date(
-    displayDate.getFullYear(),
-    displayDate.getMonth() + 1,
-    0
-  ).getDate();
+    // Days of week headers
+    const daysOfWeek = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
-  // Create array for the grid
-  const blanks = Array.from({ length: firstDayIndex }, (_, i) => i);
-  const monthDays = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+    // We need to align the first day of the month
+    const firstDay = new Date(displayDate.getFullYear(), displayDate.getMonth(), 1).getDay();
+    const firstDayIndex = firstDay === 0 ? 6 : firstDay - 1;
 
-  const isCurrentMonth =
-    displayDate.getMonth() === now.getMonth() &&
-    displayDate.getFullYear() === now.getFullYear();
+    const daysInMonth = new Date(displayDate.getFullYear(), displayDate.getMonth() + 1, 0).getDate();
 
-  const getStatusClasses = (day: number) => {
-    // Only show status for the actual current month
-    if (!isCurrentMonth) return "border border-gray-100 text-gray-400";
+    const blanks = Array.from({ length: firstDayIndex }, (_, i) => i);
+    const monthDays = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
-    const entry = entries.find((e) => e.date === day);
-    if (!entry) return "border border-gray-100 text-gray-400";
+    const getStatusClasses = (day: number) => {
+        // Find entry for the day
+        const entry = entries.find(e => e.date === day);
 
-    // Current Day Styling (Matches MyTimesheet 'Today' row)
-    if (entry.isToday)
-      return "bg-[#F4F7FE] border border-dashed border-[#00A3C4] text-[#00A3C4] font-bold";
+        // Construct the specific date for this cell to check weekend/future status reliably
+        const cellDate = new Date(displayDate.getFullYear(), displayDate.getMonth(), day);
+        const isWeekend = cellDate.getDay() === 0 || cellDate.getDay() === 6;
 
-    // Matching logic from previous TodayAttendance snapshot
-    if (entry.isWeekend) return "bg-red-50 text-red-400 border border-red-100";
+        // Future check: simple comparison (ignoring time)
+        const checkNow = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const isFuture = cellDate > checkNow;
 
-    // Working days (Present) - Green background
-    if (entry.status === "Present" && !entry.isFuture)
-      return "bg-[#E6FFFA] text-[#01B574] border border-[#01B574] shadow-sm font-bold";
+        // Requirement: Next month (and future) weekends should be red
+        if (isFuture && isWeekend) {
+            return 'bg-red-50 text-red-400 border border-red-100';
+        }
 
-    // Non-working days (Absent, Incomplete, Half Day) - Yellow background
-    if (
-      (entry.status === "Absent" ||
-        entry.status === "Incomplete" ||
-        entry.status === "Half Day") &&
-      !entry.isFuture
-    )
-      return "bg-[#FFF9E5] text-[#FFB547] border border-[#FFB547] relative font-bold";
+        if (!entry) return 'border border-gray-100 text-gray-400';
 
-    // Future or fallback
-    return "border border-gray-100 text-gray-400";
-  };
+        if (entry.isToday) return 'bg-[#F4F7FE] border border-dashed border-[#00A3C4] text-[#00A3C4] font-bold';
+        if (entry.isWeekend) return 'bg-red-50 text-red-400 border border-red-100';
 
-  return (
-    <div className="animate-in fade-in duration-500">
-      {/* Main Calendar Card */}
-      <div className="bg-white rounded-xl p-3 shadow-sm border border-gray-100">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-base font-bold text-[#1B254B]">
-            {currentMonthName}
-          </span>
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={handlePrevMonth}
-              className="p-1 hover:bg-[#F4F7FE] rounded-md transition-all text-[#A3AED0]"
-            >
-              <ChevronLeft size={14} />
-            </button>
-            <button
-              onClick={handleNextMonth}
-              className="p-1 hover:bg-[#F4F7FE] rounded-md transition-all text-[#A3AED0]"
-            >
-              <ChevronRight size={14} />
-            </button>
-          </div>
-        </div>
+        // Neutral style for future non-weekend days
+        if (entry.isFuture) return 'border border-gray-200 text-gray-400';
 
-        {/* Calendar Grid Card */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-[0px_4px_20px_rgba(0,0,0,0.05)] p-1.5 mb-2">
-          <div className="grid grid-cols-7 gap-0.5">
-            {daysOfWeek.map((day) => (
-              <div
-                key={day}
-                className="text-center text-[7px] font-bold text-gray-400 mb-0.5"
-              >
-                {day}
-              </div>
-            ))}
+        // Not Updated (Past Workday with missing logs) - Priority over Absent status
+        const isNotUpdated = !entry.isFuture && !entry.isToday && !entry.isWeekend && (!entry.loginTime || !entry.logoutTime);
+        if (isNotUpdated || entry.status === 'Half Day' || entry.status === 'Pending') return 'bg-[#FFF9E5] text-[#FFB020] border border-[#FFB020] relative';
 
-            {/* Blanks for alignment */}
-            {blanks.map((blank) => (
-              <div key={`blank-${blank}`} className="h-7 w-7 mx-auto"></div>
-            ))}
+        // Status Based Styling (Past days only)
+        if (entry.status === 'Present' || entry.status === 'WFH' || entry.status === 'Client Visit') return 'bg-[#E9FBF5] text-[#01B574] border border-[#01B574]/20 shadow-sm';
+        if (entry.status === 'Absent') return 'bg-red-50 text-red-400 border border-red-100';
 
-            {/* Days */}
-            {monthDays.map((day) => {
-              // Only look up entry if we are in the current month
-              const entry = isCurrentMonth
-                ? entries.find((e) => e.date === day)
-                : null;
-              const isIncomplete =
-                entry &&
-                (entry.status === "Absent" || entry.status === "Half Day") &&
-                !entry.isFuture &&
-                !entry.isWeekend;
+        return 'border border-gray-100 text-gray-400';
 
-              return (
-                <div
-                  key={day}
-                  onClick={() => isCurrentMonth && onNavigateToDate?.(day)}
-                  className={`w-7 h-7 mx-auto rounded-md flex items-center justify-center text-[9px] font-bold transition-transform hover:scale-105 cursor-pointer 
-                                    ${getStatusClasses(day)}`}
-                >
-                  {day}
-                  {isIncomplete && (
-                    <div className="absolute -top-1 -right-1 w-1.5 h-1.5 bg-[#FFB020] text-white text-[5px] flex items-center justify-center rounded-full border-2 border-white">
-                      !
+        return 'border border-gray-100 text-gray-400';
+    };
+
+    return (
+        <div className="animate-in fade-in duration-500">
+            {/* Main Calendar Card */}
+            <div className={`bg-white rounded-xl shadow-sm border border-gray-100 ${isSmall ? 'p-3' : 'p-8'}`}>
+                {/* Header Section */}
+                {!isSmall && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between mb-8 gap-4">
+                        <h3 className="text-lg md:text-xl font-bold text-[#1B254B] text-center sm:text-left">Monthly Attendance Snapshot</h3>
+                        <div className="flex items-center gap-4 md:gap-6 bg-gray-50/50 p-1 rounded-xl border border-gray-100/50">
+                            <button
+                                onClick={handlePrevMonth}
+                                className="p-2 hover:bg-white hover:shadow-sm rounded-lg transition-all text-[#A3AED0] hover:text-[#2B3674]"
+                            >
+                                <ChevronLeft size={20} />
+                            </button>
+                            <span className="text-sm md:text-lg font-bold text-[#2B3674] min-w-[120px] md:min-w-[140px] text-center">{currentMonthName}</span>
+                            <button
+                                onClick={handleNextMonth}
+                                className="p-2 hover:bg-white hover:shadow-sm rounded-lg transition-all text-[#A3AED0] hover:text-[#2B3674]"
+                            >
+                                <ChevronRight size={20} />
+                            </button>
+                        </div>
                     </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
+                )}
 
-        {/* Legend */}
-        <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 mt-2 border-t border-gray-100 pt-2">
-          <div className="flex items-center gap-1 text-[8px] font-medium text-gray-400">
-            <div className="w-1.5 h-1.5 rounded bg-[#E6FFFA] border border-[#01B574]"></div>{" "}
-            Done
-          </div>
-          <div className="flex items-center gap-1 text-[8px] font-medium text-gray-400">
-            <div className="w-1.5 h-1.5 rounded bg-[#F4F7FE] border border-dashed border-[#00A3C4]"></div>{" "}
-            Today
-          </div>
-          <div className="flex items-center gap-1 text-[8px] font-medium text-gray-400">
-            <div className="w-1.5 h-1.5 rounded bg-[#FFF9E5] border border-[#FFB547]"></div>{" "}
-            Miss
-          </div>
-          <div className="flex items-center gap-1 text-[8px] font-medium text-gray-400">
-            <div className="w-1.5 h-1.5 rounded bg-red-50 border border-red-100"></div>{" "}
-            End
-          </div>
+                {isSmall && (
+                    <div className="flex items-center justify-between mb-3">
+                        <span className="text-base font-bold text-[#1B254B]">{currentMonthName}</span>
+                        <div className="flex items-center gap-1.5">
+                            <button
+                                onClick={handlePrevMonth}
+                                className="p-1 hover:bg-[#F4F7FE] rounded-md transition-all text-[#A3AED0]"
+                            >
+                                <ChevronLeft size={14} />
+                            </button>
+                            <button
+                                onClick={handleNextMonth}
+                                className="p-1 hover:bg-[#F4F7FE] rounded-md transition-all text-[#A3AED0]"
+                            >
+                                <ChevronRight size={14} />
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Calendar Grid Card */}
+                <div className={`bg-white rounded-xl border border-gray-100 shadow-[0px_4px_20px_rgba(0,0,0,0.05)] ${isSmall ? 'p-1.5 mb-2' : 'p-2 md:p-4 mb-6'}`}>
+                    <div className={`grid grid-cols-7 ${isSmall ? 'gap-0.5' : 'gap-1 md:gap-2'}`}>
+                        {daysOfWeek.map(day => (
+                            <div key={day} className={`text-center font-bold text-gray-400 ${isSmall ? 'text-[7px] mb-0.5' : 'text-[10px] md:text-xs mb-2'}`}>{day}</div>
+                        ))}
+
+                        {/* Blanks for alignment */}
+                        {blanks.map(blank => (
+                            <div key={`blank-${blank}`} className={`${isSmall ? 'h-7 w-7' : 'w-[90%] md:w-[85%] lg:w-[80%] h-12 md:h-16 lg:h-20'} mx-auto`}></div>
+                        ))}
+
+                        {/* Days */}
+                        {monthDays.map(day => {
+                            // Find entry regardless of month (assuming parent handles data fetching)
+                            const entry = entries.find(e => e.date === day);
+                            const isNotUpdated = entry && !entry.isFuture && !entry.isToday && !entry.isWeekend && (!entry.loginTime || !entry.logoutTime);
+                            const isIncomplete = entry && (isNotUpdated || entry.status === 'Half Day' || entry.status === 'Pending') && !entry.isFuture && !entry.isWeekend;
+
+                            return (
+                                <div
+                                    key={day}
+                                    onClick={() => entry && onNavigateToDate?.(day)}
+                                    className={`${isSmall ? 'w-7 h-7 text-[9px]' : 'w-[90%] md:w-[85%] lg:w-[80%] h-12 md:h-16 lg:h-20 text-xs md:text-sm'} mx-auto rounded-lg flex items-center justify-center font-bold transition-all hover:scale-105 cursor-pointer relative
+                                    ${getStatusClasses(day)}`}
+                                >
+                                    {day}
+                                    {isIncomplete && (
+                                        <div className={`absolute top-0.5 right-0.5 md:-top-1 md:-right-1 bg-[#FFB020] text-white flex items-center justify-center rounded-full border border-white md:border-2 
+                                            ${isSmall ? 'w-1.5 h-1.5 text-[5px]' : 'w-2.5 h-2.5 md:w-3.5 md:h-3.5 text-[7px] md:text-[9px] font-black'}`}>!</div>
+                                    )}
+                                </div>
+                            )
+                        })}
+                    </div>
+                </div>
+
+                {/* Legend */}
+                <div className={`flex items-center justify-center flex-wrap border-t border-gray-100 ${isSmall ? 'gap-x-2 gap-y-1 mt-2 pt-2' : 'gap-x-4 md:gap-x-10 mt-6 md:mt-8 pt-4 md:pt-6'}`}>
+                    <div className={`flex items-center text-gray-400 font-medium ${isSmall ? 'gap-1 text-[8px]' : 'gap-1.5 md:gap-2 text-[10px] md:text-xs'}`}>
+                        <div className={`rounded bg-[#E9FBF5] border border-[#01B574]/20 ${isSmall ? 'w-1.5 h-1.5' : 'w-2.5 h-2.5 md:w-3 md:h-3'}`}></div> {isSmall ? 'Done' : 'Completed'}
+                    </div>
+                    <div className={`flex items-center text-gray-400 font-medium ${isSmall ? 'gap-1 text-[8px]' : 'gap-1.5 md:gap-2 text-[10px] md:text-xs'}`}>
+                        <div className={`rounded bg-[#F4F7FE] border border-dashed border-[#00A3C4] ${isSmall ? 'w-1.5 h-1.5' : 'w-2.5 h-2.5 md:w-3 md:h-3'}`}></div> Today
+                    </div>
+                    <div className={`flex items-center text-gray-400 font-medium ${isSmall ? 'gap-1 text-[8px]' : 'gap-1.5 md:gap-2 text-[10px] md:text-xs'}`}>
+                        <div className={`rounded bg-[#FFF9E5] border border-[#FFB020] ${isSmall ? 'w-1.5 h-1.5' : 'w-2.5 h-2.5 md:w-3 md:h-3'}`}></div> {isSmall ? 'Miss' : 'Half Day'}
+                    </div>
+                    <div className={`flex items-center text-gray-400 font-medium ${isSmall ? 'gap-1 text-[8px]' : 'gap-1.5 md:gap-2 text-[10px] md:text-xs'}`}>
+                        <div className={`rounded bg-red-50 border border-red-100 ${isSmall ? 'w-1.5 h-1.5' : 'w-2.5 h-2.5 md:w-3 md:h-3'}`}></div> {isSmall ? 'Off' : 'Weekend'}
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 };
 
 export default Calendar;
