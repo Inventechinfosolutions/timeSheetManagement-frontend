@@ -7,13 +7,13 @@
 }
 
 .header-container {
-  max-width: 1200px;
+  max-width: 100%;
   margin: 0 auto;
   padding: 0 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  height: 70px;
+  height: 60px;
 }
 
 .header-logo {
@@ -34,7 +34,10 @@
 .header-nav {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 30px;
+  /* Increased gap for better spacing */
+  margin-left: auto;
+  /* Push to right */
 }
 
 .nav-link {
@@ -93,4 +96,3 @@
     font-size: 1.2rem;
   }
 }
-

@@ -1,4 +1,4 @@
-import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import './Header.css'
 
 const Header = () => {
@@ -9,37 +9,42 @@ const Header = () => {
       <div className="header-container">
         <div className="header-logo">
           <Link to="/" className="logo-link">
-            <h2>TimeSheet Management</h2>
+            <div className="relative overflow-hidden rounded-xl bg-linear-to-br from-[#0093E9] to-[#80D0C7] p-1.5 shadow-lg ring-1 ring-white/20 w-[208px]">
+              <div className="absolute -top-12 -right-12 h-32 w-32 rounded-full bg-white/10 blur-2xl"></div>
+              <div className="absolute -bottom-12 -left-12 h-32 w-32 rounded-full bg-white/10 blur-2xl"></div>
+
+              <div className="relative flex items-center gap-2.5">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/20 backdrop-blur-md shadow-inner ring-1 ring-white/30">
+                  <div className="h-6 w-6 bg-white rounded-md flex items-center justify-center">
+                    <span className="text-[5px] font-bold text-[#0093E9]">InvenTech</span>
+                  </div>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-base font-bold leading-none text-white tracking-wide drop-shadow-sm mb-0.5">InvenTech</span>
+                  <span className="text-[6px] font-medium tracking-widest text-blue-50/90 whitespace-nowrap leading-none">INFO SOLUTIONS PVT. LTD.</span>
+                </div>
+              </div>
+            </div>
           </Link>
         </div>
-        
+
         <nav className="header-nav">
-          <Link 
-            to="/dashboard" 
-            className={`nav-link ${location.pathname === '/dashboard' ? 'active' : ''}`}
-          >
-            Dashboard
-          </Link>
-          <Link 
-            to="/login" 
-            className={`nav-link ${location.pathname === '/login' ? 'active' : ''}`}
+
+          <Link
+            to="/landing"
+            className={`nav-link ${location.pathname === '/landing' ? 'active' : ''}`}
           >
             Login
           </Link>
-          <Link 
-            to="/register" 
-            className={`nav-link ${location.pathname === '/register' ? 'active' : ''}`}
-          >
-            Register
-          </Link>
-          <Link 
-            to="/about" 
+
+          <Link
+            to="/about"
             className={`nav-link ${location.pathname === '/about' ? 'active' : ''}`}
           >
             About
           </Link>
-          <Link 
-            to="/contact" 
+          <Link
+            to="/contact"
             className={`nav-link ${location.pathname === '/contact' ? 'active' : ''}`}
           >
             Contact
