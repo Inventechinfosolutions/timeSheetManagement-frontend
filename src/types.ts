@@ -11,7 +11,7 @@ export interface TimesheetEntry {
     attendanceType: 'login' | 'logout' | null;
     loginTime: string;
     logoutTime: string;
-    status: 'Present' | 'Absent' | 'Half Day';
+    status: 'Present' | 'Absent' | 'Half Day' | 'Incomplete';
     isEditing: boolean;
     isSaved: boolean;
 }
