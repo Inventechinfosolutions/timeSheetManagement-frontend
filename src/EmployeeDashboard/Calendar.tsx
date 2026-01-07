@@ -1,6 +1,6 @@
-import React from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { TimesheetEntry } from '../types';
+import React from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { TimesheetEntry } from "../types";
 
 interface CalendarProps {
     entries: TimesheetEntry[];
