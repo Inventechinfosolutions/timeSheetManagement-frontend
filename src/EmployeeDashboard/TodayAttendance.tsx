@@ -1,15 +1,12 @@
-import React from 'react';
 import {
     LayoutGrid,
     CalendarCheck,
 
+    CheckCircle2,
     Clock,
-
     AlertTriangle,
     Save,
-
     Edit
-
 } from 'lucide-react';
 import { TimesheetEntry } from '../types';
 import CalendarView from './Calendar'; // Aliased to avoid conflict with lucide-react Calendar icon
@@ -38,38 +35,39 @@ const TodayAttendance = ({ setActiveTab, todayEntry, calculateTotal, entries, ca
     return (
         <>
             {/* ... Header and Status Cards (unchanged) ... */}
-            <header className="bg-[#F4F7FE] md:bg-opacity-50 backdrop-blur-sm sticky top-0 z-10 px-8 py-5 flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-[#2B3674]">{title}</h2>
+            {/* Refined Header area - Mobile Responsive */}
+            <header className="bg-[#F4F7FE] md:bg-opacity-50 backdrop-blur-sm sticky top-0 md:relative z-10 px-4 md:px-8 py-5 md:py-5 flex flex-col md:flex-row items-center md:items-center justify-between gap-4 border-b border-gray-100/50 md:border-none">
+                <h2 className="text-xl md:text-2xl font-bold text-[#2B3674] tracking-tight text-center md:text-left">{title}</h2>
 
-                <div className="flex items-center gap-4">
-                    <div className="bg-white px-5 py-1.5 rounded-full shadow-sm border border-gray-100">
-                        <span className="text-sm font-medium text-gray-500">
-                            {todayEntry.fullDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).replace(/,/g, ' /')}
+                <div className="flex flex-row flex-wrap items-center gap-3">
+                    <div className="bg-white px-3 md:px-4 py-1.5 md:py-2 rounded-xl md:rounded-full shadow-sm border border-gray-100 shrink-0">
+                        <span className="text-[12px] md:text-sm font-semibold text-gray-500 whitespace-nowrap">
+                            {todayEntry.fullDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
                         </span>
                     </div>
 
-                    {/* Status Badges */}
+                    {/* Status Badges - Mobile Optimized */}
                     {!hideStatusBadges && (
-                        <>
+                        <div className="flex items-center gap-2 shrink-0">
                             {todayEntry.status === 'Absent' ? (
-                                <div className="px-4 py-1.5 bg-[#FFF5F5] text-[#F53636] rounded-full text-xs font-bold flex items-center gap-1.5 uppercase tracking-wide shadow-[0_0_12px_rgba(245,54,54,0.3)]">
-                                    <AlertTriangle className="w-3.5 h-3.5" /> Absent
+                                <div className="px-3 md:px-4 py-1.5 md:py-2 bg-[#FFF5F5] text-[#F53636] rounded-xl md:rounded-full text-[10px] md:text-xs font-bold flex items-center gap-1.5 md:gap-2 uppercase tracking-wide shadow-sm">
+                                    <AlertTriangle className="w-3 md:w-3.5 h-3 md:h-3.5" /> Absent
                                 </div>
                             ) : !todayEntry.loginTime ? (
-                                <div className="px-4 py-1.5 bg-[#FFF9E5] text-[#FFB020] rounded-full text-xs font-bold flex items-center gap-1.5 uppercase tracking-wide shadow-[0_0_12px_rgba(255,176,32,0.3)]">
-                                    <Clock className="w-3.5 h-3.5" /> Pending Login
+                                <div className="px-3 md:px-4 py-1.5 md:py-2 bg-[#FFF9E5] text-[#FFB020] rounded-xl md:rounded-full text-[10px] md:text-xs font-bold flex items-center gap-1.5 md:gap-2 uppercase tracking-wide shadow-sm">
+                                    <Clock className="w-3 md:w-3.5 h-3 md:h-3.5" /> Pending Login
                                 </div>
                             ) : !todayEntry.logoutTime ? (
-                                <div className="px-4 py-1.5 bg-[#FFF9E5] text-[#FFB020] rounded-full text-xs font-bold flex items-center gap-1.5 uppercase tracking-wide shadow-[0_0_12px_rgba(255,176,32,0.3)]">
-                                    <Clock className="w-3.5 h-3.5" /> Pending Logout
+                                <div className="px-3 md:px-4 py-1.5 md:py-2 bg-[#FFF9E5] text-[#FFB020] rounded-xl md:rounded-full text-[10px] md:text-xs font-bold flex items-center gap-1.5 md:gap-2 uppercase tracking-wide shadow-sm">
+                                    <Clock className="w-3 md:w-3.5 h-3 md:h-3.5" /> Pending Logout
                                 </div>
                             ) : null}
-                        </>
+                        </div>
                     )}
                 </div>
             </header>
 
-            <div className="px-8 pb-8 space-y-6">
+            <div className="px-4 md:px-8 pb-8 space-y-6">
 
                 {/* Status Cards */}
                 <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
@@ -78,22 +76,24 @@ const TodayAttendance = ({ setActiveTab, todayEntry, calculateTotal, entries, ca
                         <div className="bg-[#E9FBF5] rounded-xl p-5 border-l-4 border-[#01B574] relative overflow-hidden group hover:shadow-md transition-all">
                             <p className="text-gray-500 text-sm font-medium mb-3">Login Time</p>
                             <div className="bg-white rounded-xl px-4 py-2.5 flex items-center justify-between shadow-sm">
-                                <span className="text-xl font-bold text-[#2B3674]">{todayEntry.loginTime || '--:--'}</span>
-                                <div className="w-7 h-7 rounded-full bg-[#E9FBF5] flex items-center justify-center text-[#01B574]">
-                                    <Clock size={16} />
+                                <span className={`text-xl font-bold ${todayEntry.loginTime ? 'text-[#2B3674]' : 'text-gray-400'}`}>
+                                    {todayEntry.loginTime || '--:--'}
+                                </span>
+                                <div className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${todayEntry.loginTime ? 'bg-[#E9FBF5] text-[#01B574]' : 'bg-gray-100 text-gray-400'}`}>
+                                    {todayEntry.loginTime ? <CheckCircle2 size={16} /> : <Clock size={16} />}
                                 </div>
                             </div>
                         </div>
 
                         {/* Logout Time */}
-                        <div className="bg-[#FDF2F2] rounded-xl p-5 border-l-4 border-red-500 relative overflow-hidden group hover:shadow-md transition-all">
+                        <div className={`rounded-xl p-5 border-l-4 transition-all relative overflow-hidden group hover:shadow-md ${todayEntry.logoutTime ? 'bg-[#E9FBF5] border-[#01B574]' : 'bg-[#FDF2F2] border-red-500'}`}>
                             <p className="text-gray-500 text-sm font-medium mb-3">Logout Time</p>
                             <div className="bg-white rounded-xl px-4 py-2.5 flex items-center justify-between shadow-sm">
-                                <span className="text-xl font-bold text-gray-400 tracking-wider">
+                                <span className={`text-xl font-bold tracking-wider ${todayEntry.logoutTime ? 'text-[#2B3674]' : 'text-gray-400'}`}>
                                     {todayEntry.logoutTime || '--:--'}
                                 </span>
-                                <div className="w-7 h-7 rounded-full bg-[#FDF2F2] flex items-center justify-center text-red-500">
-                                    <Clock size={16} />
+                                <div className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${todayEntry.logoutTime ? 'bg-[#E9FBF5] text-[#01B574]' : 'bg-[#FDF2F2] text-red-500'}`}>
+                                    {todayEntry.logoutTime ? <CheckCircle2 size={16} /> : <Clock size={16} />}
                                 </div>
                             </div>
                         </div>
@@ -101,7 +101,7 @@ const TodayAttendance = ({ setActiveTab, todayEntry, calculateTotal, entries, ca
                         {/* Total Hours */}
                         <div className="bg-[#F4F7FE] rounded-xl p-5 border-l-4 border-[#4318FF] relative overflow-hidden group hover:shadow-md transition-all">
                             <div className="flex justify-between items-start mb-2">
-                                <p className="text-gray-500 text-sm font-medium">Total Working Hours</p>
+                                <p className="text-gray-500 text-sm font-medium">Average working hours</p>
                             </div>
                             <div className="flex items-center gap-2">
                                 <span className="text-2xl font-bold text-[#4318FF] tracking-wider">
@@ -135,7 +135,7 @@ const TodayAttendance = ({ setActiveTab, todayEntry, calculateTotal, entries, ca
                         </div>
                         <div>
                             <h4 className="text-4xl font-bold text-[#2B3674] mb-1">
-                                {entries.filter(e => e.status === 'Present' || e.status === 'Half Day').length}
+                                {entries.filter(e => e.status === 'Present' || e.status === 'Half Day' || e.status === 'WFH' || e.status === 'Client Visit').length}
                             </h4>
                             <p className="text-gray-500 text-sm font-medium">Total Days Present</p>
                         </div>
@@ -160,7 +160,7 @@ const TodayAttendance = ({ setActiveTab, todayEntry, calculateTotal, entries, ca
                                     return acc + diff;
                                 }, 0) / 60)}
                             </h4>
-                            <p className="text-gray-500 text-sm font-medium">Total Working Hours</p>
+                            <p className="text-gray-500 text-sm font-medium">Average working hours</p>
                         </div>
                     </div>
 
@@ -188,17 +188,17 @@ const TodayAttendance = ({ setActiveTab, todayEntry, calculateTotal, entries, ca
 
                 {/* Monthly Snapshot (Imported) */}
                 <CalendarView entries={entriesForCalendar} now={now} onNavigateToDate={onNavigateToDate} currentDate={displayDate} onMonthChange={onMonthChange} />
-                {/* Bottom Actions */}
-                <div className="flex items-center justify-center gap-4 mt-8 pb-8">
+                {/* Bottom Actions - Stack on Mobile */}
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-8 pb-8">
                     <button
                         onClick={() => setActiveTab && setActiveTab('Timesheet View')}
-                        className="px-6 py-3 bg-white border border-[#00A3C4] text-[#00A3C4] rounded-xl font-bold hover:bg-[#E6FFFA] transition-colors flex items-center gap-2"
+                        className="w-full sm:w-auto px-6 py-3 bg-white border border-[#00A3C4] text-[#00A3C4] rounded-xl font-bold hover:bg-[#E6FFFA] transition-colors flex items-center justify-center gap-2"
                     >
                         <LayoutGrid size={18} /> View Full Timesheet
                     </button>
                     <button
                         onClick={() => setActiveTab && setActiveTab('My Timesheet')}
-                        className="px-6 py-3 bg-[#00A3C4] text-white rounded-xl font-bold hover:bg-[#0093b1] transition-colors flex items-center gap-2 shadow-lg shadow-teal-100"
+                        className="w-full sm:w-auto px-6 py-3 bg-[#00A3C4] text-white rounded-xl font-bold hover:bg-[#0093b1] transition-colors flex items-center justify-center gap-2 shadow-lg shadow-teal-100"
                     >
                         <Edit size={18} /> Edit Today's Entry
                     </button>

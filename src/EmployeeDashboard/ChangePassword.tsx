@@ -61,7 +61,7 @@ const ChangePassword = () => {
         <div className="p-8 w-full max-w-[1600px] mx-auto animate-in fade-in duration-500">
             <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-100 max-w-2xl mx-auto mt-10">
                 <div className="flex items-center gap-4 mb-8 pb-6 border-b border-gray-100">
-                    <div className="p-3 bg-[#E6FFFA] rounded-full text-[#00A3C4]">
+                    <div className="p-3 bg-[#E6FFFA] rounded-2xl text-[#00A3C4]">
                         <Lock size={24} />
                     </div>
                     <div>

@@ -288,7 +288,7 @@ const ForgotPassword = () => {
 
     const renderSuccess = () => (
         <div className="animate-in zoom-in-95 duration-500 text-center py-4">
-            <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6 scale-animation">
+            <div className="w-20 h-20 bg-green-50 rounded-2xl flex items-center justify-center mx-auto mb-6 scale-animation">
                 <CheckCircle2 size={48} className="text-green-500" />
             </div>
             <h2 className="text-2xl font-bold text-[#2B3674] mb-2">Password changed successfully</h2>

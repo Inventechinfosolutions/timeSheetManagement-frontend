@@ -69,10 +69,20 @@ const Calendar = ({ entries, now, onNavigateToDate, variant = 'large', currentDa
         if (!entry) return 'border border-gray-100 text-gray-400';
 
         if (entry.isToday) return 'bg-[#F4F7FE] border border-dashed border-[#00A3C4] text-[#00A3C4] font-bold';
-
         if (entry.isWeekend) return 'bg-red-50 text-red-400 border border-red-100';
-        if (entry.status === 'Present' && !entry.isFuture) return 'bg-white text-[#2B3674] border border-[#E0E5F2] shadow-sm';
-        if ((entry.status === 'Absent' || entry.status === 'Half Day') && !entry.isFuture) return 'bg-[#FFF9E5] text-[#FFB020] border border-[#FFB020] relative';
+
+        // Neutral style for future non-weekend days
+        if (entry.isFuture) return 'border border-gray-200 text-gray-400';
+
+        // Not Updated (Past Workday with missing logs) - Priority over Absent status
+        const isNotUpdated = !entry.isFuture && !entry.isToday && !entry.isWeekend && (!entry.loginTime || !entry.logoutTime);
+        if (isNotUpdated || entry.status === 'Half Day' || entry.status === 'Pending') return 'bg-[#FFF9E5] text-[#FFB020] border border-[#FFB020] relative';
+
+        // Status Based Styling (Past days only)
+        if (entry.status === 'Present' || entry.status === 'WFH' || entry.status === 'Client Visit') return 'bg-[#E9FBF5] text-[#01B574] border border-[#01B574]/20 shadow-sm';
+        if (entry.status === 'Absent') return 'bg-red-50 text-red-400 border border-red-100';
+
+        return 'border border-gray-100 text-gray-400';
 
         return 'border border-gray-100 text-gray-400';
     };
@@ -83,19 +93,19 @@ const Calendar = ({ entries, now, onNavigateToDate, variant = 'large', currentDa
             <div className={`bg-white rounded-xl shadow-sm border border-gray-100 ${isSmall ? 'p-3' : 'p-8'}`}>
                 {/* Header Section */}
                 {!isSmall && (
-                    <div className="flex items-center justify-between mb-8">
-                        <h3 className="text-xl font-bold text-[#1B254B]">Monthly Attendance Snapshot</h3>
-                        <div className="flex items-center gap-6">
+                    <div className="flex flex-col sm:flex-row items-center justify-between mb-8 gap-4">
+                        <h3 className="text-lg md:text-xl font-bold text-[#1B254B] text-center sm:text-left">Monthly Attendance Snapshot</h3>
+                        <div className="flex items-center gap-4 md:gap-6 bg-gray-50/50 p-1 rounded-xl border border-gray-100/50">
                             <button
                                 onClick={handlePrevMonth}
-                                className="p-2 hover:bg-[#F4F7FE] rounded-lg transition-all text-[#A3AED0] hover:text-[#2B3674]"
+                                className="p-2 hover:bg-white hover:shadow-sm rounded-lg transition-all text-[#A3AED0] hover:text-[#2B3674]"
                             >
                                 <ChevronLeft size={20} />
                             </button>
-                            <span className="text-lg font-bold text-[#2B3674] min-w-[140px] text-center">{currentMonthName}</span>
+                            <span className="text-sm md:text-lg font-bold text-[#2B3674] min-w-[120px] md:min-w-[140px] text-center">{currentMonthName}</span>
                             <button
                                 onClick={handleNextMonth}
-                                className="p-2 hover:bg-[#F4F7FE] rounded-lg transition-all text-[#A3AED0] hover:text-[#2B3674]"
+                                className="p-2 hover:bg-white hover:shadow-sm rounded-lg transition-all text-[#A3AED0] hover:text-[#2B3674]"
                             >
                                 <ChevronRight size={20} />
                             </button>
@@ -124,34 +134,35 @@ const Calendar = ({ entries, now, onNavigateToDate, variant = 'large', currentDa
                 )}
 
                 {/* Calendar Grid Card */}
-                <div className={`bg-white rounded-xl border border-gray-100 shadow-[0px_4px_20px_rgba(0,0,0,0.05)] ${isSmall ? 'p-1.5 mb-2' : 'p-4 mb-6'}`}>
-                    <div className={`grid grid-cols-7 ${isSmall ? 'gap-0.5' : 'gap-2'}`}>
+                <div className={`bg-white rounded-xl border border-gray-100 shadow-[0px_4px_20px_rgba(0,0,0,0.05)] ${isSmall ? 'p-1.5 mb-2' : 'p-2 md:p-4 mb-6'}`}>
+                    <div className={`grid grid-cols-7 ${isSmall ? 'gap-0.5' : 'gap-1 md:gap-2'}`}>
                         {daysOfWeek.map(day => (
-                            <div key={day} className={`text-center font-bold text-gray-400 ${isSmall ? 'text-[7px] mb-0.5' : 'text-xs mb-2'}`}>{day}</div>
+                            <div key={day} className={`text-center font-bold text-gray-400 ${isSmall ? 'text-[7px] mb-0.5' : 'text-[10px] md:text-xs mb-2'}`}>{day}</div>
                         ))}
 
                         {/* Blanks for alignment */}
                         {blanks.map(blank => (
-                            <div key={`blank-${blank}`} className={`${isSmall ? 'h-7 w-7' : 'h-16 w-16'} mx-auto`}></div>
+                            <div key={`blank-${blank}`} className={`${isSmall ? 'h-7 w-7' : 'w-[90%] md:w-[85%] lg:w-[80%] h-12 md:h-16 lg:h-20'} mx-auto`}></div>
                         ))}
 
                         {/* Days */}
                         {monthDays.map(day => {
                             // Find entry regardless of month (assuming parent handles data fetching)
                             const entry = entries.find(e => e.date === day);
-                            const isIncomplete = entry && (entry.status === 'Absent' || entry.status === 'Half Day') && !entry.isFuture && !entry.isWeekend;
+                            const isNotUpdated = entry && !entry.isFuture && !entry.isToday && !entry.isWeekend && (!entry.loginTime || !entry.logoutTime);
+                            const isIncomplete = entry && (isNotUpdated || entry.status === 'Half Day' || entry.status === 'Pending') && !entry.isFuture && !entry.isWeekend;
 
                             return (
                                 <div
                                     key={day}
                                     onClick={() => entry && onNavigateToDate?.(day)}
-                                    className={`${isSmall ? 'w-7 h-7 text-[9px]' : 'w-16 h-16 text-sm'} mx-auto rounded-lg flex items-center justify-center font-bold transition-transform hover:scale-105 cursor-pointer 
+                                    className={`${isSmall ? 'w-7 h-7 text-[9px]' : 'w-[90%] md:w-[85%] lg:w-[80%] h-12 md:h-16 lg:h-20 text-xs md:text-sm'} mx-auto rounded-lg flex items-center justify-center font-bold transition-all hover:scale-105 cursor-pointer relative
                                     ${getStatusClasses(day)}`}
                                 >
                                     {day}
                                     {isIncomplete && (
-                                        <div className={`absolute -top-1 -right-1 bg-[#FFB020] text-white flex items-center justify-center rounded-full border-2 border-white 
-                                            ${isSmall ? 'w-1.5 h-1.5 text-[5px]' : 'w-3.5 h-3.5 text-[9px] font-black'}`}>!</div>
+                                        <div className={`absolute top-0.5 right-0.5 md:-top-1 md:-right-1 bg-[#FFB020] text-white flex items-center justify-center rounded-full border border-white md:border-2 
+                                            ${isSmall ? 'w-1.5 h-1.5 text-[5px]' : 'w-2.5 h-2.5 md:w-3.5 md:h-3.5 text-[7px] md:text-[9px] font-black'}`}>!</div>
                                     )}
                                 </div>
                             )
@@ -160,18 +171,18 @@ const Calendar = ({ entries, now, onNavigateToDate, variant = 'large', currentDa
                 </div>
 
                 {/* Legend */}
-                <div className={`flex items-center justify-center border-t border-gray-100 ${isSmall ? 'flex-wrap gap-x-2 gap-y-1 mt-2 pt-2' : 'gap-x-10 mt-8 pt-6'}`}>
-                    <div className={`flex items-center text-gray-400 font-medium ${isSmall ? 'gap-1 text-[8px]' : 'gap-2 text-xs'}`}>
-                        <div className={`rounded bg-white border border-[#E0E5F2] ${isSmall ? 'w-1.5 h-1.5' : 'w-3 h-3'}`}></div> {isSmall ? 'Done' : 'Completed'}
+                <div className={`flex items-center justify-center flex-wrap border-t border-gray-100 ${isSmall ? 'gap-x-2 gap-y-1 mt-2 pt-2' : 'gap-x-4 md:gap-x-10 mt-6 md:mt-8 pt-4 md:pt-6'}`}>
+                    <div className={`flex items-center text-gray-400 font-medium ${isSmall ? 'gap-1 text-[8px]' : 'gap-1.5 md:gap-2 text-[10px] md:text-xs'}`}>
+                        <div className={`rounded bg-[#E9FBF5] border border-[#01B574]/20 ${isSmall ? 'w-1.5 h-1.5' : 'w-2.5 h-2.5 md:w-3 md:h-3'}`}></div> {isSmall ? 'Done' : 'Completed'}
                     </div>
-                    <div className={`flex items-center text-gray-400 font-medium ${isSmall ? 'gap-1 text-[8px]' : 'gap-2 text-xs'}`}>
-                        <div className={`rounded bg-[#F4F7FE] border border-dashed border-[#00A3C4] ${isSmall ? 'w-1.5 h-1.5' : 'w-3 h-3'}`}></div> Today
+                    <div className={`flex items-center text-gray-400 font-medium ${isSmall ? 'gap-1 text-[8px]' : 'gap-1.5 md:gap-2 text-[10px] md:text-xs'}`}>
+                        <div className={`rounded bg-[#F4F7FE] border border-dashed border-[#00A3C4] ${isSmall ? 'w-1.5 h-1.5' : 'w-2.5 h-2.5 md:w-3 md:h-3'}`}></div> Today
                     </div>
-                    <div className={`flex items-center text-gray-400 font-medium ${isSmall ? 'gap-1 text-[8px]' : 'gap-2 text-xs'}`}>
-                        <div className={`rounded bg-[#FFF9E5] border border-[#FFB020] ${isSmall ? 'w-1.5 h-1.5' : 'w-3 h-3'}`}></div> {isSmall ? 'Miss' : 'Incomplete'}
+                    <div className={`flex items-center text-gray-400 font-medium ${isSmall ? 'gap-1 text-[8px]' : 'gap-1.5 md:gap-2 text-[10px] md:text-xs'}`}>
+                        <div className={`rounded bg-[#FFF9E5] border border-[#FFB020] ${isSmall ? 'w-1.5 h-1.5' : 'w-2.5 h-2.5 md:w-3 md:h-3'}`}></div> {isSmall ? 'Miss' : 'Half Day'}
                     </div>
-                    <div className={`flex items-center text-gray-400 font-medium ${isSmall ? 'gap-1 text-[8px]' : 'gap-2 text-xs'}`}>
-                        <div className={`rounded bg-red-50 border border-red-100 ${isSmall ? 'w-1.5 h-1.5' : 'w-3 h-3'}`}></div> {isSmall ? 'End' : 'Weekend'}
+                    <div className={`flex items-center text-gray-400 font-medium ${isSmall ? 'gap-1 text-[8px]' : 'gap-1.5 md:gap-2 text-[10px] md:text-xs'}`}>
+                        <div className={`rounded bg-red-50 border border-red-100 ${isSmall ? 'w-1.5 h-1.5' : 'w-2.5 h-2.5 md:w-3 md:h-3'}`}></div> {isSmall ? 'Off' : 'Weekend'}
                     </div>
                 </div>
             </div>

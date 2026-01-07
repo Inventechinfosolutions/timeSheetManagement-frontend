@@ -8,10 +8,10 @@ export interface TimesheetEntry {
     isFuture: boolean;
 
     // Editable Fields
-    attendanceType: 'login' | 'logout' | null;
+    location: 'Office' | 'WFH' | 'Client Visit' | null;
     loginTime: string;
     logoutTime: string;
-    status: 'Present' | 'Absent' | 'Half Day';
+    status: 'Present' | 'Absent' | 'Half Day' | 'WFH' | 'Pending' | 'Client Visit';
     isEditing: boolean;
     isSaved: boolean;
 }
