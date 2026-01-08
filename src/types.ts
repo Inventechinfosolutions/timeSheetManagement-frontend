@@ -11,7 +11,7 @@ export interface TimesheetEntry {
     location: 'Office' | 'WFH' | 'Client Visit' | null;
     loginTime: string;
     logoutTime: string;
-    status: 'Present' | 'Absent' | 'Half Day' | 'WFH' | 'Pending' | 'Client Visit';
+    status: 'Full Day' | 'Leave' | 'Half Day' | 'WFH' | 'Pending' | 'Client Visit';
     isEditing: boolean;
     isSaved: boolean;
 }

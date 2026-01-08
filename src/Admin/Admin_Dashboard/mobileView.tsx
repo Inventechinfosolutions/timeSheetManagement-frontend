@@ -45,9 +45,9 @@ const MobileView = ({
             <span
               className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider
                 ${
-                  emp.status === "Present"
+                  emp.status === "Full Day"
                     ? "bg-[#E6FFFA] text-[#01B574]"
-                    : emp.status === "Incomplete"
+                    : emp.status === "Half Day"
                     ? "bg-[#FFF9E5] text-[#FFB547]"
                     : "bg-[#FFF5F5] text-[#EE5D50]"
                 }
