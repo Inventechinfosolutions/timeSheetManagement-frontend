@@ -8,7 +8,7 @@ interface Props {
 
 const SelectedEmployeeSummary = ({ employeeName, entries }: Props) => {
   const presentDays = entries.filter(
-    (e) => e.status === "Present" || e.status === "Half Day"
+    (e) => e.status === "Full Day" || e.status === "Half Day"
   ).length;
 
   const totalWorkingMinutes = entries.reduce((acc, curr) => {
@@ -37,7 +37,7 @@ const SelectedEmployeeSummary = ({ employeeName, entries }: Props) => {
       !day.isToday &&
       !day.isWeekend &&
       !day.loginTime &&
-      day.status !== "Absent"
+      day.status !== "Leave"
   ).length;
 
   return (

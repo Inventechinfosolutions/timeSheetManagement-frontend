@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { TimesheetEntry } from "../types";
+import { TimesheetEntry } from "../../../types";
 
 interface FullTimesheetProps {
   entries: TimesheetEntry[];
@@ -31,7 +31,7 @@ const EmployeeTimesheetView = ({
 }: FullTimesheetProps) => {
   // Calculate summary statistics
   const presentDays = entries.filter(
-    (e) => e.status === "Present" || e.status === "Half Day"
+    (e) => e.status === "Full Day" || e.status === "Half Day"
   ).length;
 
   const totalWorkingMinutes = entries.reduce((acc, curr) => {
@@ -60,7 +60,7 @@ const EmployeeTimesheetView = ({
       !day.isToday &&
       !day.isWeekend &&
       !day.loginTime &&
-      day.status !== "Absent"
+      day.status !== "Leave"
   ).length;
 
   // PDF Download State
@@ -453,9 +453,9 @@ const EmployeeTimesheetView = ({
                       <span
                         className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider
                                             ${
-                                              day.status === "Present"
+                                              day.status === "Full Day"
                                                 ? "bg-[#01B574] text-white shadow-[0_2px_10px_-2px_rgba(1,181,116,0.4)]"
-                                                : day.status === "Absent"
+                                                : day.status === "Leave"
                                                 ? "bg-[#EE5D50] text-white shadow-[0_2px_10px_-2px_rgba(238,93,80,0.4)]"
                                                 : day.status === "Half Day"
                                                 ? "bg-[#FFB547] text-white shadow-[0_2px_10px_-2px_rgba(255,181,71,0.4)]"
@@ -490,9 +490,9 @@ const EmployeeTimesheetView = ({
                       <span
                         className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider
                                             ${
-                                              day.status === "Present"
+                                              day.status === "Full Day"
                                                 ? "bg-[#01B574] text-white shadow-[0_2px_10px_-2px_rgba(1,181,116,0.4)]"
-                                                : day.status === "Absent"
+                                                : day.status === "Leave"
                                                 ? "bg-[#EE5D50] text-white shadow-[0_2px_10px_-2px_rgba(238,93,80,0.4)]"
                                                 : day.status === "Half Day"
                                                 ? "bg-[#FFB547] text-white shadow-[0_2px_10px_-2px_rgba(255,181,71,0.4)]"
