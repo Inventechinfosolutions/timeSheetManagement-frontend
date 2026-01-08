@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Shield, Users, User } from 'lucide-react'
+import { useAppDispatch } from '../hooks'
+import { setCurrentUser } from '../reducers/employeeDetails.reducer'
 
 import inventechLogo from '../assets/inventech-logo.jpg'
 
 const Landing = () => {
   const navigate = useNavigate()
+  const dispatch = useAppDispatch()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
@@ -13,6 +16,7 @@ const Landing = () => {
     console.log(`Selected role: ${role}, Name: ${name}`)
     // In a real app, you'd store the selected user context here
     if (role === 'employee') {
+      dispatch(setCurrentUser({ employeeId: email }));
       navigate('/employee-dashboard')
     } else {
       alert(`Logged in as ${name} (${role})`)

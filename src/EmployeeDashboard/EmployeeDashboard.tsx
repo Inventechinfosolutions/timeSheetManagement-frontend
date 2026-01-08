@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Header from '../components/Header';
 import SidebarLayout from './SidebarLayout';
 import MyTimesheet from './MyTimesheet';
@@ -7,216 +7,167 @@ import MyProfile from './MyProfile';
 import TodayAttendance from './TodayAttendance';
 import ChangePassword from './ChangePassword';
 
+import { useAppDispatch, useAppSelector } from '../hooks';
+import { fetchMonthlyAttendance, submitLogin, submitLogout, updateAttendanceRecord, AttendanceStatus } from '../reducers/employeeAttendance.reducer';
+import { generateMonthlyEntries, mapStatus, calculateTotal, formatTo12H } from '../utils/attendanceUtils';
 import { TimesheetEntry } from '../types';
 
 const EmployeeDashboard = () => {
     const [activeTab, setActiveTab] = useState('Dashboard');
-    const [entries, setEntries] = useState<TimesheetEntry[]>([]);
-
-    // Calendar Widget State
-    const [calendarEntries, setCalendarEntries] = useState<TimesheetEntry[]>([]);
-    const [calendarDate, setCalendarDate] = useState(new Date());
-
-    // Full Timesheet View State
-    const [fullTimesheetEntries, setFullTimesheetEntries] = useState<TimesheetEntry[]>([]);
-    const [fullTimesheetDate, setFullTimesheetDate] = useState(new Date());
-
-    const [now] = useState(new Date());
     const [scrollToDate, setScrollToDate] = useState<number | null>(null);
+    const [now] = useState(new Date());
 
-    // Helper to generate a single entry
-    const generateEntryForDate = (date: Date, now: Date) => {
-        const i = date.getDate();
-        const isToday = i === now.getDate() && date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+    // Redux
+    const dispatch = useAppDispatch();
+    const { records } = useAppSelector(state => state.attendance);
+    const { entity } = useAppSelector(state => state.employeeDetails);
+    const currentEmployeeId = entity?.employeeId || 'EMP001';
 
-        // Future calculation: STRICTLY based on date comparison
-        const checkNow = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const checkDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    // View States
+    const [fullTimesheetDate, setFullTimesheetDate] = useState(new Date());
+    const [localEntries, setLocalEntries] = useState<TimesheetEntry[]>([]);
 
-        const isFuture = checkDate > checkNow;
-        const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-
-        let locationValue: TimesheetEntry['location'] = null;
-        let loginTime = '';
-        let logoutTime = '';
-        let status: TimesheetEntry['status'] = 'Absent';
-
-        // Fill past weekdays
-        if (!isFuture && !isWeekend && i !== 1) {
-            if (isToday) {
-                loginTime = ''; // Start empty
-                locationValue = 'Office';
-                status = 'Pending';
-            } else {
-                loginTime = '09:00';
-                logoutTime = '18:00';
-                status = 'Present';
-                locationValue = 'Office';
-            }
-        }
-
-        // Explicit defaults for Today
-        if (isToday && !isWeekend) {
-            loginTime = '';
-            locationValue = 'Office';
-            status = 'Pending';
-        }
-
-        return {
-            date: i,
-            fullDate: date,
-            dayName: date.toLocaleDateString('en-US', { weekday: 'long' }),
-            formattedDate: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-            isToday,
-            isWeekend,
-            isFuture,
-            location: locationValue,
-            loginTime,
-            logoutTime,
-            status,
-            isEditing: false,
-            isSaved: false
-        } as TimesheetEntry;
-    };
-
-    // 1. Generate Main Entries (Always Current Month/Now) - For Stats & Base Data
-    useEffect(() => {
-        const generateCurrentMonthData = () => {
-            const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-            const data: TimesheetEntry[] = [];
-            for (let i = 1; i <= daysInMonth; i++) {
-                const date = new Date(now.getFullYear(), now.getMonth(), i);
-                data.push(generateEntryForDate(date, now));
-            }
-            return data;
-        };
-        setEntries(generateCurrentMonthData());
-    }, [now]);
-
-    // 2. Generate Calendar Entries (Dependent on calendarDate)
-    useEffect(() => {
-        const isCurrentMonth = calendarDate.getMonth() === now.getMonth() && 
-                             calendarDate.getFullYear() === now.getFullYear();
-        
-        if (isCurrentMonth) {
-            setCalendarEntries(entries);
-        } else {
-            const generateCalendarData = () => {
-                const daysInMonth = new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 0).getDate();
-                const data: TimesheetEntry[] = [];
-                for (let i = 1; i <= daysInMonth; i++) {
-                    const date = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), i);
-                    data.push(generateEntryForDate(date, now));
-                }
-                return data;
+    // Base records mapping for current month (used by My Timesheet)
+    const baseEntries = useMemo(() => {
+        const entries = generateMonthlyEntries(now, now, records);
+        return entries.map(e => {
+            const loginClean = (e.loginTime?.includes('NaN') || e.loginTime === '00:00:00') ? '' : (e.loginTime || '');
+            const logoutClean = (e.logoutTime?.includes('NaN') || e.logoutTime === '00:00:00') ? '' : (e.logoutTime || '');
+            return {
+                ...e,
+                loginTime: loginClean,
+                logoutTime: logoutClean,
+                isSaved: e.isSaved && !!loginClean,
+                isSavedLogout: e.isSavedLogout && !!logoutClean
             };
-            setCalendarEntries(generateCalendarData());
-        }
-    }, [calendarDate, now, entries]);
+        });
+    }, [now, records]);
 
-    // 3. Generate Full Timesheet Entries
     useEffect(() => {
-        const isCurrentMonth = fullTimesheetDate.getMonth() === now.getMonth() && 
-                             fullTimesheetDate.getFullYear() === now.getFullYear();
-        
-        if (isCurrentMonth) {
-            setFullTimesheetEntries(entries);
-        } else {
-            const generateFullTimesheetData = () => {
-                const daysInMonth = new Date(fullTimesheetDate.getFullYear(), fullTimesheetDate.getMonth() + 1, 0).getDate();
-                const data: TimesheetEntry[] = [];
-                for (let i = 1; i <= daysInMonth; i++) {
-                    const date = new Date(fullTimesheetDate.getFullYear(), fullTimesheetDate.getMonth(), i);
-                    data.push(generateEntryForDate(date, now));
-                }
-                return data;
-            };
-            setFullTimesheetEntries(generateFullTimesheetData());
-        }
-    }, [fullTimesheetDate, now, entries]);
+        setLocalEntries(baseEntries);
+    }, [baseEntries]);
 
-    const calculateTotal = (login: string, logout: string) => {
-        if (!login || !logout) return '--:--';
-        const [h1, m1] = login.split(':').map(Number);
-        const [h2, m2] = logout.split(':').map(Number);
-        let diffMinutes = (h2 * 60 + m2) - (h1 * 60 + m1);
-        if (diffMinutes < 0) return '--:--';
-        const hours = Math.floor(diffMinutes / 60);
-        const minutes = diffMinutes % 60;
-        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-    };
+    // Data Fetching
+    const fetchAttendance = useCallback((date: Date) => {
+        dispatch(fetchMonthlyAttendance({ 
+            employeeId: currentEmployeeId, 
+            month: (date.getMonth() + 1).toString(), 
+            year: date.getFullYear().toString() 
+        }));
+    }, [dispatch, currentEmployeeId]);
 
+    useEffect(() => {
+        fetchAttendance(now);
+    }, [fetchAttendance, now]);
+
+    // Handlers for MyTimesheet tab
     const handleUpdateEntry = (index: number, field: keyof TimesheetEntry, value: any) => {
-        const newEntries = [...entries];
-        newEntries[index] = { ...newEntries[index], [field]: value };
-        setEntries(newEntries);
+        const updated = [...localEntries];
+        updated[index] = { ...updated[index], [field]: value };
+        setLocalEntries(updated);
     };
 
-    const handleSave = (index: number) => {
-        const newEntries = [...entries];
-        const entry = { ...newEntries[index] };
+    const handleSave = async (index: number) => {
+        const entry = localEntries[index];
+        const { loginTime, logoutTime, location } = entry;
+        const d = entry.fullDate;
+        const workingDate = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
 
-        if (!entry.loginTime) {
-            entry.status = 'Absent';
-        } else if (!entry.logoutTime) {
-            entry.status = 'Pending';
-        } else {
-            const [h1, m1] = entry.loginTime.split(':').map(Number);
-            const [h2, m2] = entry.logoutTime.split(':').map(Number);
-            let diffMinutes = (h2 * 60 + m2) - (h1 * 60 + m1);
-            if (diffMinutes < 0) diffMinutes = 0;
+        const formattedLogin = formatTo12H(loginTime);
+        const formattedLogout = formatTo12H(logoutTime);
 
-            if (diffMinutes > 360) {
-                if (entry.location === 'WFH') entry.status = 'WFH';
-                else if (entry.location === 'Client Visit') entry.status = 'Client Visit';
-                else entry.status = 'Present';
-            } else {
-                entry.status = 'Half Day';
+        const locationMap: Record<string, string> = {
+            'Office': 'Office',
+            'WFH': 'Work from Home',
+            'Client Visit': 'Client Place'
+        };
+        const backendLocation = locationMap[location || 'Office'] || 'Office';
+
+        try {
+            const existingRecord = records.find(r => {
+                const rDate = typeof r.workingDate === 'string' ? r.workingDate.split('T')[0] : (r.workingDate as Date).toISOString().split('T')[0];
+                return rDate === workingDate;
+            });
+
+            let recordId = existingRecord?.id;
+
+            if (formattedLogout && logoutTime && logoutTime !== '--:--') {
+                const result = await dispatch(submitLogout({ 
+                    employeeId: currentEmployeeId, 
+                    workingDate, 
+                    logoutTime: formattedLogout 
+                })).unwrap();
+                if (result?.id) recordId = result.id;
+            } 
+            else if (formattedLogin && !existingRecord) {
+                const result = await dispatch(submitLogin({ 
+                    employeeId: currentEmployeeId, 
+                    workingDate, 
+                    loginTime: formattedLogin 
+                })).unwrap();
+                if (result?.id) recordId = result.id;
             }
+
+            if (recordId) {
+                const calculatedStatus = mapStatus(
+                    existingRecord?.status as AttendanceStatus | undefined,
+                    formattedLogin,
+                    formattedLogout,
+                    entry.isFuture,
+                    entry.isToday,
+                    entry.isWeekend
+                );
+
+                await dispatch(updateAttendanceRecord({
+                    id: recordId,
+                    data: {
+                        location: backendLocation as any,
+                        status: calculatedStatus as any,
+                        ...(formattedLogin && { loginTime: formattedLogin }),
+                        ...(formattedLogout && logoutTime && logoutTime !== '--:--' && { logoutTime: formattedLogout })
+                    }
+                })).unwrap();
+            }
+
+            fetchAttendance(now);
+        } catch (error: any) {
+            console.error("Failed to save attendance:", error);
         }
-
-        if (!entry.isSaved) {
-            entry.isSaved = true;
-            entry.isEditing = false;
-        } else {
-            entry.isEditing = !entry.isEditing;
-        }
-        newEntries[index] = entry;
-        setEntries(newEntries);
-    };
-
-    const todayEntry = entries.find(e => e.isToday) || generateEntryForDate(now, now);
-
-    const handleNavigateToDate = (date: number) => {
-        setScrollToDate(date);
-        // Sync Full Timesheet month with the month clicked in Calendar
-        setFullTimesheetDate(new Date(calendarDate));
-        setActiveTab('Timesheet View');
     };
 
     const renderContent = () => {
         if (activeTab === 'My Timesheet') {
             return (
                 <MyTimesheet
-                    entries={entries}
+                    entries={localEntries}
                     handleUpdateEntry={handleUpdateEntry}
                     handleSave={handleSave}
                     calculateTotal={calculateTotal}
                     now={now}
-                    scrollToDate={null}
-                    setScrollToDate={() => {}}
+                    scrollToDate={scrollToDate}
+                    setScrollToDate={setScrollToDate}
                 />
             );
         }
 
         if (activeTab === 'Timesheet View') {
+            // Re-fetch or at least generate entries for the selected month
+            const fullEntries = generateMonthlyEntries(fullTimesheetDate, now, records);
             return (
                 <FullTimesheet
-                    entries={fullTimesheetEntries}
+                    entries={fullEntries}
                     calculateTotal={calculateTotal}
                     displayDate={fullTimesheetDate}
-                    onPrevMonth={() => setFullTimesheetDate(new Date(fullTimesheetDate.getFullYear(), fullTimesheetDate.getMonth() - 1, 1))}
-                    onNextMonth={() => setFullTimesheetDate(new Date(fullTimesheetDate.getFullYear(), fullTimesheetDate.getMonth() + 1, 1))}
+                    onPrevMonth={() => {
+                        const newDate = new Date(fullTimesheetDate.getFullYear(), fullTimesheetDate.getMonth() - 1, 1);
+                        setFullTimesheetDate(newDate);
+                        fetchAttendance(newDate);
+                    }}
+                    onNextMonth={() => {
+                        const newDate = new Date(fullTimesheetDate.getFullYear(), fullTimesheetDate.getMonth() + 1, 1);
+                        setFullTimesheetDate(newDate);
+                        fetchAttendance(newDate);
+                    }}
                     scrollToDate={scrollToDate}
                     setScrollToDate={setScrollToDate}
                 />
@@ -226,17 +177,10 @@ const EmployeeDashboard = () => {
         if (activeTab === 'My Profile') return <MyProfile />;
         if (activeTab === 'Change Password') return <ChangePassword />;
 
+        // Dashboard View (TodayAttendance)
         return (
             <TodayAttendance
                 setActiveTab={setActiveTab}
-                todayEntry={todayEntry}
-                calculateTotal={calculateTotal}
-                entries={entries}
-                calendarEntries={calendarEntries}
-                now={now}
-                onNavigateToDate={handleNavigateToDate}
-                displayDate={calendarDate}
-                onMonthChange={setCalendarDate}
             />
         );
     };

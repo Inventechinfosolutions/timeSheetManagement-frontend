@@ -1,10 +1,16 @@
 import { configureStore } from '@reduxjs/toolkit';
-import employeeDetails from './reducers/employeeDetails.reducer';
+import attendanceReducer from './reducers/employeeAttendance.reducer';
+import employeeDetailsReducer from './reducers/employeeDetails.reducer';
 
-const store = configureStore({
+export const store = configureStore({
   reducer: {
-    employeeDetails,
+    attendance: attendanceReducer,
+    employeeDetails: employeeDetailsReducer,
   },
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({
+      serializableCheck: false,
+    }),
 });
 
 export type RootState = ReturnType<typeof store.getState>;

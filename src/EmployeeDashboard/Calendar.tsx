@@ -1,4 +1,4 @@
-import React from "react";
+import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { TimesheetEntry } from "../types";
 
@@ -7,11 +7,13 @@ interface CalendarProps {
     now: Date;
     onNavigateToDate?: (date: number) => void;
     variant?: 'small' | 'large';
+    currentDate?: Date;
+    onMonthChange?: (date: Date) => void;
 }
 
-const Calendar = ({ entries, now, onNavigateToDate, variant = 'large', currentDate, onMonthChange }: CalendarProps & { currentDate?: Date; onMonthChange?: (date: Date) => void }) => {
+const Calendar = ({ entries, now, onNavigateToDate, variant = 'large', currentDate, onMonthChange }: CalendarProps) => {
     // Local state for navigation (fallback if not controlled)
-    const [internalDisplayDate, setInternalDisplayDate] = React.useState(now);
+    const [internalDisplayDate, setInternalDisplayDate] = useState(now);
 
     const displayDate = currentDate || internalDisplayDate;
 
@@ -79,10 +81,8 @@ const Calendar = ({ entries, now, onNavigateToDate, variant = 'large', currentDa
         if (isNotUpdated || entry.status === 'Half Day' || entry.status === 'Pending') return 'bg-[#FFF9E5] text-[#FFB020] border border-[#FFB020] relative';
 
         // Status Based Styling (Past days only)
-        if (entry.status === 'Present' || entry.status === 'WFH' || entry.status === 'Client Visit') return 'bg-[#E9FBF5] text-[#01B574] border border-[#01B574]/20 shadow-sm';
-        if (entry.status === 'Absent') return 'bg-red-50 text-red-400 border border-red-100';
-
-        return 'border border-gray-100 text-gray-400';
+        if (entry.status === 'Full Day' || entry.status === 'WFH' || entry.status === 'Client Visit') return 'bg-[#E9FBF5] text-[#01B574] border border-[#01B574]/20 shadow-sm';
+        if (entry.status === 'Leave') return 'bg-red-50 text-red-400 border border-red-100';
 
         return 'border border-gray-100 text-gray-400';
     };
@@ -182,7 +182,7 @@ const Calendar = ({ entries, now, onNavigateToDate, variant = 'large', currentDa
                         <div className={`rounded bg-[#FFF9E5] border border-[#FFB020] ${isSmall ? 'w-1.5 h-1.5' : 'w-2.5 h-2.5 md:w-3 md:h-3'}`}></div> {isSmall ? 'Miss' : 'Half Day'}
                     </div>
                     <div className={`flex items-center text-gray-400 font-medium ${isSmall ? 'gap-1 text-[8px]' : 'gap-1.5 md:gap-2 text-[10px] md:text-xs'}`}>
-                        <div className={`rounded bg-red-50 border border-red-100 ${isSmall ? 'w-1.5 h-1.5' : 'w-2.5 h-2.5 md:w-3 md:h-3'}`}></div> {isSmall ? 'Off' : 'Weekend'}
+                        <div className={`rounded bg-red-50 border border-red-100 ${isSmall ? 'w-1.5 h-1.5' : 'w-2.5 h-2.5 md:w-3 md:h-3'}`}></div> {isSmall ? 'Off' : 'Leave / Weekend'}
                     </div>
                 </div>
             </div>

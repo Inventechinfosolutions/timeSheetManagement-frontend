@@ -12,6 +12,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 import { MobileTimesheetCard } from "./mobileView";
+import { useAppSelector } from "../hooks";
 
 interface FullTimesheetProps {
   entries: TimesheetEntry[];
@@ -23,17 +24,10 @@ interface FullTimesheetProps {
   setScrollToDate: (date: number | null) => void;
 }
 
-const FullTimesheet = ({
-  entries,
-  calculateTotal,
-  displayDate,
-  onPrevMonth,
-  onNextMonth,
-  scrollToDate,
-  setScrollToDate,
-}: FullTimesheetProps) => {
-  const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
-  const [highlightedRow, setHighlightedRow] = useState<number | null>(null);
+const FullTimesheet = ({ entries, calculateTotal, displayDate, onPrevMonth, onNextMonth, scrollToDate, setScrollToDate }: FullTimesheetProps) => {
+    const { entity } = useAppSelector(state => state.employeeDetails);
+    const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
+    const [highlightedRow, setHighlightedRow] = useState<number | null>(null);
 
   useEffect(() => {
     if (entries.length > 0 && scrollToDate !== null) {
@@ -120,6 +114,16 @@ const FullTimesheet = ({
     doc.setFont("helvetica", "normal");
     doc.text("Info Solutions Pvt. Ltd.", 20, 26);
 
+    const handleDownload = () => {
+        const doc = new jsPDF();
+        
+        // Employee Info from Redux with fallbacks
+        const employeeInfo = {
+            name: entity?.fullName || "Employee",
+            id: entity?.employeeId || "N/A",
+            department: entity?.department || "N/A",
+            designation: entity?.designation || "N/A"
+        };
     doc.setFontSize(16);
     doc.text("TIMESHEET REPORT", 140, 25);
 
@@ -385,6 +389,112 @@ const FullTimesheet = ({
                             }
                         `}</style>
 
+                        {/* Table Rows - Full Height (no overflow-y-auto restricted height) */}
+                        <div className="space-y-4 pb-2">
+                            {entries.map((day) => {
+
+                                // Weekend Row
+                                if (day.isWeekend) {
+                                    return (
+                                        <div 
+                                            key={day.date} 
+                                            id={`full-row-${day.date}`}
+                                            className={`grid grid-cols-[70px_100px_140px_1fr_1fr_0.8fr_150px] gap-2 items-center text-sm py-3 px-4 -mx-4 rounded-xl transition-all duration-500
+                                                ${highlightedRow === day.date ? 'bg-blue-100 ring-2 ring-blue-400 scale-[1.02] z-20 shadow-lg' : 'bg-red-50/50 text-gray-400'}`}
+                                        >
+                                            <div className="font-bold text-red-300 pl-2">{day.formattedDate}</div>
+                                            <div className="text-red-300">{day.dayName}</div>
+                                            <div className="col-span-5 text-center text-red-200 text-xs font-medium uppercase tracking-widest bg-red-50/50 py-2 rounded-lg border border-red-100/50">
+                                                Weekend
+                                            </div>
+                                        </div>
+                                    );
+                                }
+
+
+
+                                // Future Row
+                                if (day.isFuture) {
+                                    return (
+                                        <div 
+                                            key={day.date} 
+                                            id={`full-row-${day.date}`}
+                                            className={`grid grid-cols-[70px_100px_140px_1fr_1fr_0.8fr_150px] gap-2 items-center text-sm py-3 px-4 -mx-4 rounded-xl transition-all duration-500
+                                                ${highlightedRow === day.date ? 'bg-blue-100 ring-2 ring-blue-400 scale-[1.02] z-20 shadow-lg' : 'text-gray-300 opacity-100 border border-gray-100'}`}
+                                        >
+                                            <div className="font-bold pl-2">{day.formattedDate}</div>
+                                            <div className="">{day.dayName}</div>
+                                            <div className="text-center">--</div>
+                                            <div className="text-center">--:--</div>
+                                            <div className="text-center">--:--</div>
+                                            <div className="text-center">--:--</div>
+                                            <div className="text-center">
+                                                <span className="px-3 py-1 bg-gray-50 border border-gray-100 rounded-lg text-[10px] font-bold uppercase tracking-wider">Upcoming</span>
+                                            </div>
+                                        </div>
+                                    );
+                                }
+
+                                // Read-Only Data Row
+                                // Highlight Current Day
+                                const rowBg = day.isToday ? 'bg-[#F4F7FE] border border-dashed border-[#00A3C4]' : 'border border-gray-100 hover:bg-gray-50';
+                                const dateColor = day.isToday ? 'text-[#00A3C4]' : 'text-[#2B3674]';
+
+                                return (
+                                    <div 
+                                        key={day.date} 
+                                        id={`full-row-${day.date}`}
+                                        className={`grid grid-cols-[70px_100px_140px_1fr_1fr_0.8fr_150px] gap-2 items-center text-sm py-3 px-4 -mx-4 rounded-xl transition-all duration-500
+                                            ${highlightedRow === day.date ? 'bg-blue-100 ring-2 ring-blue-400 scale-[1.02] z-20 shadow-lg' : rowBg}`}
+                                    >
+                                        {/* Date & Day */}
+                                        <div className={`font-bold pl-2 ${dateColor}`}>{day.formattedDate}</div>
+                                        <div className={`${day.isToday ? 'font-bold text-[#00A3C4]' : 'text-[#2B3674]'}`}>{day.isToday ? 'Today' : day.dayName}</div>
+
+                                        {/* Location (Read Only) */}
+                                        <div className="flex justify-center">
+                                            <div className="text-[#2B3674] font-medium text-[13px]">
+                                                {day.location || '--'}
+                                            </div>
+                                        </div>
+
+                                        {/* Login Time */}
+                                        <div className="flex justify-center">
+                                            <div className={`font-medium text-[#2B3674] flex items-center gap-2 ${!day.loginTime && 'opacity-30'}`}>
+                                                {day.loginTime || '--:--'} <Clock size={12} className="text-gray-400" />
+                                            </div>
+                                        </div>
+
+                                        {/* Logout Time */}
+                                        <div className="flex justify-center">
+                                            <div className={`font-medium text-[#2B3674] flex items-center gap-2 ${!day.logoutTime && 'opacity-30'}`}>
+                                                {day.logoutTime || '--:--'} <Clock size={12} className="text-gray-400" />
+                                            </div>
+                                        </div>
+
+                                        {/* Total Hours */}
+                                        <div className="flex justify-center font-bold text-[#2B3674]">
+                                            {calculateTotal(day.loginTime, day.logoutTime)}
+                                        </div>
+
+                                        {/* Status Badge */}
+                                        <div className="flex justify-center w-full">
+                                            <span className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider min-w-[100px] text-center
+                                                ${day.status === 'Full Day' ? 'bg-[#01B574] text-white shadow-[0_2px_10px_-2px_rgba(1,181,116,0.4)]' :
+                                                    day.status === 'WFH' ? 'bg-[#A3AED0] text-white shadow-[0_2px_8px_-1px_rgba(163,174,208,0.3)]' :
+                                                        day.status === 'Leave' ? 'bg-[#EE5D50] text-white shadow-[0_2px_10px_-2px_rgba(238,93,80,0.4)]' :
+                                                            day.status === 'Half Day' ? 'bg-[#FFB547] text-white shadow-[0_2px_10px_-2px_rgba(255,181,71,0.4)]' : 
+                                                                day.status === 'Client Visit' ? 'bg-[#6366F1] text-white shadow-[0_2px_8px_-1px_rgba(99,102,241,0.25)]' :
+                                                                    (day.status === 'Pending' || (!day.isFuture && !day.isToday && day.loginTime && !day.logoutTime)) ? 'bg-[#F6AD55] text-white shadow-[0_2px_10px_-2px_rgba(246,173,85,0.4)]' : 'text-gray-400'
+                                                }
+                                            `}>
+                                                {(!day.isFuture && !day.isToday && day.loginTime && !day.logoutTime) ? 'NOT UPDATED' : day.status}
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
             {/* Table Rows - Full Height (no overflow-y-auto restricted height) */}
             <div className="space-y-4 pb-2">
               {entries.map((day) => {
@@ -515,11 +625,11 @@ const FullTimesheet = ({
                       <span
                         className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider min-w-[100px] text-center
                                                 ${
-                                                  day.status === "Present"
+                                                  day.status === "Full Day"
                                                     ? "bg-[#01B574] text-white shadow-[0_2px_10px_-2px_rgba(1,181,116,0.4)]"
                                                     : day.status === "WFH"
                                                     ? "bg-[#A3AED0] text-white shadow-[0_2px_8px_-1px_rgba(163,174,208,0.3)]"
-                                                    : day.status === "Absent"
+                                                    : day.status === "Leave"
                                                     ? "bg-[#EE5D50] text-white shadow-[0_2px_10px_-2px_rgba(238,93,80,0.4)]"
                                                     : day.status === "Half Day"
                                                     ? "bg-[#FFB547] text-white shadow-[0_2px_10px_-2px_rgba(255,181,71,0.4)]"
@@ -556,4 +666,4 @@ const FullTimesheet = ({
   );
 };
 
-export default FullTimesheet;
+export default FullTimesheet;           
