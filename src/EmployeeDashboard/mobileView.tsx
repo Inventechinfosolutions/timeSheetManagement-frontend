@@ -29,8 +29,8 @@ export const MobileTimesheetCard = ({
     const isHighlighted = highlightedRow === index;
     const scrollId = containerId || `mobile-row-${index}`;
     
-    // Weekend Styling
-    if (day.isWeekend) {
+    // Weekend Styling (Only show placeholder if no data)
+    if (day.isWeekend && !day.loginTime) {
         return (
             <div 
                 id={scrollId}
@@ -98,19 +98,28 @@ export const MobileTimesheetCard = ({
                 
                 <div className="flex flex-col items-end gap-2">
                     <span className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider block text-center
-                        ${day.status === 'Present' ? 'bg-[#01B574] text-white' :
+                        ${(day.status === 'Full Day' || day.status === 'Half Day') ? 'bg-[#01B574] text-white' :
                             day.status === 'WFH' ? 'bg-[#A3AED0] text-white' :
-                                day.status === 'Absent' ? 'bg-[#EE5D50] text-white' :
-                                    day.status === 'Half Day' ? 'bg-[#FFB547] text-white' : 
-                                        day.status === 'Client Visit' ? 'bg-[#6366F1] text-white' :
-                                            (day.status === 'Pending' || (!day.isFuture && !day.isToday && day.loginTime && !day.logoutTime)) ? 'bg-[#F6AD55] text-white' : 'text-gray-400'
+                                day.status === 'Leave' ? 'bg-[#EE5D50] text-white' :
+                                    day.status === 'Client Visit' ? 'bg-[#6366F1] text-white' :
+                                        (day.status === 'Pending' || day.status === 'Not Updated') ? 'bg-[#F6AD55] text-white' : 'text-gray-400'
                         }
                     `}>
-                        {(!day.isFuture && !day.isToday && day.loginTime && !day.logoutTime) ? 'NOT UPDATED' : day.status}
+                        {day.status}
                     </span>
-                    {day.isToday && handleSave && (
+                    {day.isToday && handleSave && (!day.isSavedLogout || day.isEditing) && (
                         <button
-                            onClick={() => handleSave(index)}
+                            onClick={() => {
+                                if (!day.loginTime || day.loginTime === '--:--' || day.loginTime.includes('--')) {
+                                    alert('Please fill Login time.');
+                                    return;
+                                }
+                                if (day.isSaved && (!day.logoutTime || day.logoutTime === '--:--' || day.logoutTime.includes('--'))) {
+                                    alert('Please fill Logout time to update.');
+                                    return;
+                                }
+                                handleSave!(index);
+                            }}
                             className="px-4 py-1.5 bg-[#00A3C4] text-white rounded-lg text-[10px] font-bold shadow-md shadow-teal-100 active:scale-95 transition-all"
                         >
                             {day.isEditing ? 'Done' : (day.isSaved ? 'Update' : 'Save')}

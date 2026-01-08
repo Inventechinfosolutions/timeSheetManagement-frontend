@@ -3,6 +3,7 @@ import { Clock, ChevronLeft, ChevronRight, Download, X, Calendar as CalendarIcon
 import { TimesheetEntry } from '../types';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { useAppSelector } from '../hooks';
 
 import { MobileTimesheetCard } from './mobileView';
 
@@ -17,6 +18,7 @@ interface FullTimesheetProps {
 }
 
 const FullTimesheet = ({ entries, calculateTotal, displayDate, onPrevMonth, onNextMonth, scrollToDate, setScrollToDate }: FullTimesheetProps) => {
+    const { entity } = useAppSelector(state => state.employeeDetails);
     const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
     const [highlightedRow, setHighlightedRow] = useState<number | null>(null);
 
@@ -68,12 +70,12 @@ const FullTimesheet = ({ entries, calculateTotal, displayDate, onPrevMonth, onNe
     const handleDownload = () => {
         const doc = new jsPDF();
         
-        // Employee Info (Mocking based on USER request for EMP ID)
+        // Employee Info from Redux with fallbacks
         const employeeInfo = {
-            name: "Natashia Khaleira",
-            id: "EMP-2024-001",
-            department: "Engineering",
-            designation: "Senior Developer"
+            name: entity?.fullName || "Employee",
+            id: entity?.employeeId || "N/A",
+            department: entity?.department || "N/A",
+            designation: entity?.designation || "N/A"
         };
 
         // Header
@@ -126,7 +128,7 @@ const FullTimesheet = ({ entries, calculateTotal, displayDate, onPrevMonth, onNe
                 // Mocking data for past days in range for the PDF
                 const login = "09:00";
                 const logout = "18:00";
-                const status = "PRESENT";
+                const status = "FULL DAY";
                 reportData.push([
                     dateStr,
                     dayName,
@@ -406,9 +408,9 @@ const FullTimesheet = ({ entries, calculateTotal, displayDate, onPrevMonth, onNe
                                         {/* Status Badge */}
                                         <div className="flex justify-center w-full">
                                             <span className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider min-w-[100px] text-center
-                                                ${day.status === 'Present' ? 'bg-[#01B574] text-white shadow-[0_2px_10px_-2px_rgba(1,181,116,0.4)]' :
+                                                ${day.status === 'Full Day' ? 'bg-[#01B574] text-white shadow-[0_2px_10px_-2px_rgba(1,181,116,0.4)]' :
                                                     day.status === 'WFH' ? 'bg-[#A3AED0] text-white shadow-[0_2px_8px_-1px_rgba(163,174,208,0.3)]' :
-                                                        day.status === 'Absent' ? 'bg-[#EE5D50] text-white shadow-[0_2px_10px_-2px_rgba(238,93,80,0.4)]' :
+                                                        day.status === 'Leave' ? 'bg-[#EE5D50] text-white shadow-[0_2px_10px_-2px_rgba(238,93,80,0.4)]' :
                                                             day.status === 'Half Day' ? 'bg-[#FFB547] text-white shadow-[0_2px_10px_-2px_rgba(255,181,71,0.4)]' : 
                                                                 day.status === 'Client Visit' ? 'bg-[#6366F1] text-white shadow-[0_2px_8px_-1px_rgba(99,102,241,0.25)]' :
                                                                     (day.status === 'Pending' || (!day.isFuture && !day.isToday && day.loginTime && !day.logoutTime)) ? 'bg-[#F6AD55] text-white shadow-[0_2px_10px_-2px_rgba(246,173,85,0.4)]' : 'text-gray-400'

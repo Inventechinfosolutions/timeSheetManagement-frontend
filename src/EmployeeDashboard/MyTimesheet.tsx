@@ -214,7 +214,16 @@ const MyTimesheet = ({ entries, handleUpdateEntry, handleSave, calculateTotal, n
     }, [entries, scrollToDate]);
 
     return (
-        <div className="flex flex-col h-full bg-[#F4F7FE]">
+        <div className="flex flex-col h-full bg-[#F4F7FE] overflow-hidden">
+            <style>{`
+                .no-scrollbar::-webkit-scrollbar {
+                    display: none;
+                }
+                .no-scrollbar {
+                    -ms-overflow-style: none;
+                    scrollbar-width: none;
+                }
+            `}</style>
             {/* Header */}
             <header className="bg-white/50 backdrop-blur-sm sticky top-0 z-20 px-8 py-3 flex items-center justify-between border-b border-gray-100">
                 <h2 className="text-xl font-bold text-[#2B3674]">My Timesheet</h2>
@@ -226,7 +235,7 @@ const MyTimesheet = ({ entries, handleUpdateEntry, handleSave, calculateTotal, n
             </header>
 
             <div className="p-8">
-                <div className="bg-white rounded-[20px] p-6 shadow-sm border border-gray-100">
+                <div className="bg-white rounded-[20px] p-6 shadow-sm border border-gray-100 overflow-x-hidden">
                     {/* Mobile Card View */}
                     <div className="md:hidden space-y-4 h-[500px] overflow-y-auto no-scrollbar pb-10">
                         {entries.map((day, index) => (
@@ -234,7 +243,7 @@ const MyTimesheet = ({ entries, handleUpdateEntry, handleSave, calculateTotal, n
                                 key={day.date}
                                 day={day}
                                 index={index}
-                                isEditable={(day.isToday && !day.isSaved) || day.isEditing}
+                                isEditable={(day.isToday && !day.isSavedLogout) || day.isEditing}
                                 handleUpdateEntry={handleUpdateEntry}
                                 handleSave={handleSave}
                                 calculateTotal={calculateTotal}
@@ -246,7 +255,7 @@ const MyTimesheet = ({ entries, handleUpdateEntry, handleSave, calculateTotal, n
                     </div>
 
                     {/* Desktop Table View */}
-                    <div className="hidden md:block">
+                    <div className="hidden md:block overflow-x-hidden">
                         {/* Table Header - Adjusted Gaps & Columns */}
                         <div className="grid grid-cols-[70px_100px_140px_1fr_1fr_0.8fr_1.8fr] gap-2 mb-4 text-xs font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100 pb-4 text-center items-center">
                             <div className="text-left pl-4">Date</div>
@@ -265,8 +274,8 @@ const MyTimesheet = ({ entries, handleUpdateEntry, handleSave, calculateTotal, n
                         >
                             {entries.map((day, index) => {
 
-                                // Weekend Row
-                                if (day.isWeekend) {
+                                // Weekend Row (Only show placeholder if no data)
+                                if (day.isWeekend && !day.loginTime) {
                                     return (
                                         <div
                                             id={`row-${index}`}
@@ -306,7 +315,8 @@ const MyTimesheet = ({ entries, handleUpdateEntry, handleSave, calculateTotal, n
                                 }
 
                                 // Today Or Editing Row
-                                const isEditable = (day.isToday && !day.isSaved) || day.isEditing;
+                                const isEditable = (day.isToday && !day.isSavedLogout) || day.isEditing;
+                                const isCompleted = day.isSavedLogout;
                                 const rowBg = day.isToday ? 'bg-[#F4F7FE] border border-dashed border-[#00A3C4]' : 'border border-gray-100 hover:bg-gray-50';
                                 const dateColor = day.isToday ? 'text-[#00A3C4]' : 'text-[#2B3674]';
 
@@ -323,7 +333,7 @@ const MyTimesheet = ({ entries, handleUpdateEntry, handleSave, calculateTotal, n
 
                                         {/* Location Dropdown */}
                                         <div className="flex justify-center">
-                                            {isEditable ? (
+                                            {isEditable && !isCompleted ? (
                                                 <CustomDropdown
                                                     value={day.location || 'Office'}
                                                     options={['Office', 'WFH', 'Client Visit']}
@@ -338,34 +348,35 @@ const MyTimesheet = ({ entries, handleUpdateEntry, handleSave, calculateTotal, n
                                         </div>
 
                                         {/* Login Time */}
-                                        <div className="flex justify-center">
-                                            {isEditable ? (
-                                                <CustomTimePicker
-                                                    value={day.loginTime}
-                                                    onChange={(val) => handleUpdateEntry(index, 'loginTime', val)}
-                                                    dashed={true}
-                                                />
-                                            ) : (
-                                                <div className={`font-medium text-[#2B3674] flex items-center gap-2 ${!day.loginTime && 'opacity-30'}`}>
-                                                    {day.loginTime || '--:--'} <Clock size={12} className="text-gray-400" />
-                                                </div>
-                                            )}
-                                        </div>
+                                         <div className="flex justify-center">
+                                             {isEditable && !day.isSaved ? (
+                                                 <CustomTimePicker
+                                                     value={day.loginTime}
+                                                     onChange={(val) => handleUpdateEntry(index, 'loginTime', val)}
+                                                     dashed={true}
+                                                 />
+                                             ) : (
+                                                 <div className={`font-medium text-[#2B3674] flex items-center gap-2 ${!day.loginTime && 'opacity-30'}`}>
+                                                     {day.loginTime || '--:--'} <Clock size={12} className="text-gray-400" />
+                                                 </div>
+                                             )}
+                                         </div>
 
-                                        {/* Logout Time */}
-                                        <div className="flex justify-center">
-                                            {isEditable ? (
-                                                <CustomTimePicker
-                                                    value={day.logoutTime}
-                                                    onChange={(val) => handleUpdateEntry(index, 'logoutTime', val)}
-                                                    dashed={true}
-                                                />
-                                            ) : (
-                                                <div className={`font-medium text-[#2B3674] flex items-center gap-2 ${!day.logoutTime && 'opacity-30'}`}>
-                                                    {day.logoutTime || '--:--'} <Clock size={12} className="text-gray-400" />
-                                                </div>
-                                            )}
-                                        </div>
+                                         {/* Logout Time */}
+                                         <div className="flex justify-center">
+                                             {isEditable ? (
+                                                 <CustomTimePicker
+                                                     value={day.logoutTime}
+                                                     onChange={(val) => handleUpdateEntry(index, 'logoutTime', val)}
+                                                     dashed={true}
+                                                     disabled={day.isToday && now.getHours() < 11}
+                                                 />
+                                             ) : (
+                                                 <div className={`font-medium text-[#2B3674] flex items-center gap-2 ${!day.logoutTime && 'opacity-30'}`}>
+                                                     {day.logoutTime || '--:--'} <Clock size={12} className="text-gray-400" />
+                                                 </div>
+                                             )}
+                                         </div>
 
                                         {/* Total Hours */}
                                         <div className="flex justify-center font-bold text-[#2B3674]">
@@ -376,26 +387,38 @@ const MyTimesheet = ({ entries, handleUpdateEntry, handleSave, calculateTotal, n
                                         <div className="flex items-center justify-center gap-4 w-full px-2 min-h-[40px]">
                                             <div className="flex justify-center">
                                                     <span className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider min-w-[100px] text-center
-                                                        ${day.status === 'Present' ? 'bg-[#01B574] text-white shadow-[0_2px_10px_-2px_rgba(1,181,116,0.4)]' :
+                                                        ${day.status === 'Full Day' ? 'bg-[#01B574] text-white shadow-[0_2px_10px_-2px_rgba(1,181,116,0.4)]' :
                                                             day.status === 'WFH' ? 'bg-[#A3AED0] text-white shadow-[0_2px_8px_-1px_rgba(163,174,208,0.3)]' :
-                                                                day.status === 'Absent' ? 'bg-[#EE5D50] text-white shadow-[0_2px_10px_-2px_rgba(238,93,80,0.4)]' :
+                                                                day.status === 'Leave' ? 'bg-[#EE5D50] text-white shadow-[0_2px_10px_-2px_rgba(238,93,80,0.4)]' :
                                                                     day.status === 'Half Day' ? 'bg-[#FFB547] text-white shadow-[0_2px_10px_-2px_rgba(255,181,71,0.4)]' : 
                                                                         day.status === 'Client Visit' ? 'bg-[#6366F1] text-white shadow-[0_2px_8px_-1px_rgba(99,102,241,0.25)]' :
-                                                                            (day.status === 'Pending' || (!day.isFuture && !day.isToday && day.loginTime && !day.logoutTime)) ? 'bg-[#F6AD55] text-white shadow-[0_2px_10px_-2px_rgba(246,173,85,0.4)]' : 'text-gray-400'
+                                                                            day.status === 'Not Updated' ? 'bg-[#FFF9E5] text-[#FFB020] border border-amber-200' :
+                                                                                (day.status === 'Pending' || (!day.isFuture && day.loginTime && !day.logoutTime)) ? 'bg-[#F6AD55] text-white shadow-[0_2px_10px_-2px_rgba(246,173,85,0.4)]' : 'text-gray-400'
                                                         }
                                                     `}>
-                                                        {(!day.isFuture && !day.isToday && day.loginTime && !day.logoutTime) ? 'NOT UPDATED' : day.status}
+                                                        {day.status}
                                                     </span>
                                             </div>
 
-                                            {day.isToday && (
-                                                <div className="shrink-0">
+                                            {day.isToday && (!day.isSavedLogout || day.isEditing) && (
+                                                <div className="shrink-0 flex items-center gap-2">
                                                     <button
-                                                        onClick={() => handleSave(index)}
-                                                        className="px-4 py-1.5 bg-[#00A3C4] text-white rounded-lg text-[11px] font-bold hover:bg-[#0093b1] shadow-md shadow-teal-100 transition-all transform active:scale-95"
+                                                        onClick={() => {
+                                                            if (!day.loginTime || day.loginTime === '--:--' || day.loginTime.includes('--')) {
+                                                                alert('Please fill Login time.');
+                                                                return;
+                                                            }
+                                                            if (day.isSaved && (!day.logoutTime || day.logoutTime === '--:--' || day.logoutTime.includes('--'))) {
+                                                                alert('Please fill Logout time to update.');
+                                                                return;
+                                                            }
+                                                            handleSave(index);
+                                                        }}
+                                                        className="px-4 py-1.5 rounded-lg text-[11px] font-bold shadow-md transition-all transform active:scale-95 bg-[#00A3C4] text-white hover:bg-[#0093b1] shadow-teal-100"
                                                     >
                                                         {day.isEditing ? 'Done' : (day.isSaved ? 'Update' : 'Save')}
                                                     </button>
+
                                                 </div>
                                             )}
                                         </div>

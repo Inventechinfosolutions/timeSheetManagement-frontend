@@ -155,6 +155,9 @@ export const EmployeeDetailsSlice = createSlice({
   initialState,
   reducers: {
     reset: () => initialState,
+    setCurrentUser: (state, action: PayloadAction<any>) => {
+      state.entity = action.payload;
+    },
   },
   extraReducers: (builder: ActionReducerMapBuilder<EmployeeDetailsState>) => {
     builder
@@ -206,6 +209,6 @@ export const EmployeeDetailsSlice = createSlice({
   },
 });
 
-export const { reset } = EmployeeDetailsSlice.actions;
+export const { reset, setCurrentUser } = EmployeeDetailsSlice.actions;
 
 export default EmployeeDetailsSlice.reducer;
