@@ -1,6 +1,6 @@
 import { ActionReducerMapBuilder, createAsyncThunk, createSlice, isFulfilled, isPending, PayloadAction } from '@reduxjs/toolkit';
 
-const apiUrl = 'employee-details';
+const apiUrl = 'http://localhost:3000/employee-details';
 
 // Helper to remove null/undefined values
 const cleanEntity = (entity: any) => {
@@ -31,10 +31,11 @@ const apiRequest = async (url: string, method: string = 'GET', body?: any) => {
   }
 
   const response = await fetch(url, config);
-  const data = await response.json();
+  const text = await response.text();
+  const data = text ? JSON.parse(text) : {};
 
   if (!response.ok) {
-    throw new Error(data.message || response.statusText);
+    throw new Error(data.message || response.statusText || 'Request failed');
   }
   return data;
 };
@@ -174,7 +175,7 @@ export const EmployeeDetailsSlice = createSlice({
         const response = action.payload;
         state.loading = false;
         state.entities = Array.isArray(response) ? response : (response.data || []);
-        state.totalItems = response.totalItems || state.entities.length;
+        state.totalItems = response.totalItems || response.total || state.entities.length;
       })
       .addMatcher(
         isFulfilled(createEntity, updateEntity, partialUpdateEntity),

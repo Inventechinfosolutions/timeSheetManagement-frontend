@@ -1,14 +1,14 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import Layout from './components/Layout'
-import AdminLogin from './AdminDashboard/AdminLogin'
-import EmpRegistration from './AdminDashboard/EmpRegistration'
-import AdminRegistration from './AdminDashboard/AdminRegistration'
-import AdminDashboard from './AdminDashboard/AdminDashboard'
-import EmployeeDashboard from './EmployeeDashboard/EmployeeDashboard'
-import Landing from './components/Landing'
-import About from './pages/About'
-import Dashboard from './pages/Dashboard'
-import ForgotPassword from './EmployeeDashboard/ForgotPassword'
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import { Suspense } from "react";
+import Layout from "./components/Layout";
+import AdminLayout from "./navigation/AdminLayout";
+import { adminComponentConfigs } from "./navigation/adminComponentConfigs";
+import { mainComponentConfigs } from "./mainComponentConfigs";
 
 function App() {
   return (
@@ -16,30 +16,97 @@ function App() {
       <Routes>
         <Route path="/login" element={<Navigate to="/admin-login" replace />} />
 
-        <Route path="/landing" element={<Landing />} />
+        {/* Home & Landing Routes from Config */}
+        {mainComponentConfigs
+          .filter(
+            (c) => c && ["/landing", "/employee-dashboard"].includes(c.path)
+          )
+          .map((config) => (
+            <Route
+              key={config.path}
+              path={config.path}
+              element={
+                <Suspense fallback={<div>Loading...</div>}>
+                  <config.Component />
+                </Suspense>
+              }
+            />
+          ))}
+
         <Route path="/welcome" element={<Navigate to="/landing" replace />} />
         <Route path="/" element={<Navigate to="/landing" replace />} />
 
-        <Route path="/*" element={
-          <Layout>
-            <Routes>
-              <Route path="/register" element={<EmpRegistration />} />
-              <Route path="/admin-login" element={<AdminLogin />} />
+        <Route
+          path="/*"
+          element={
+            <Layout>
+              <Routes>
+                <Route
+                  path="/"
+                  element={<Navigate to="/dashboard" replace />}
+                />
 
-              <Route path="/admin-register" element={<AdminRegistration />} />
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/admin-dashboard" element={<AdminDashboard />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-            </Routes>
-          </Layout>
-        } />
-        <Route path="/employee-dashboard" element={<EmployeeDashboard />} />
+                {adminComponentConfigs
+                  .filter((c) => c && !c.path.startsWith("/admin-dashboard"))
+                  .map((config) => (
+                    <Route
+                      key={config.path}
+                      path={config.path}
+                      element={
+                        <Suspense fallback={<div>Loading...</div>}>
+                          <config.Component />
+                        </Suspense>
+                      }
+                    />
+                  ))}
+
+                <Route path="/admin-dashboard" element={<AdminLayout />}>
+                  {adminComponentConfigs
+                    .filter((c) => c && c.path.startsWith("/admin-dashboard"))
+                    .map((config) => (
+                      <Route
+                        key={config.path}
+                        path={
+                          config.path === "/admin-dashboard"
+                            ? ""
+                            : config.path.replace("/admin-dashboard/", "")
+                        }
+                        index={config.path === "/admin-dashboard"}
+                        element={
+                          <Suspense fallback={<div>Loading...</div>}>
+                            <config.Component />
+                          </Suspense>
+                        }
+                      />
+                    ))}
+                </Route>
+
+                {mainComponentConfigs
+                  .filter(
+                    (c) =>
+                      c &&
+                      ["/about", "/dashboard", "/forgot-password"].includes(
+                        c.path
+                      )
+                  )
+                  .map((config) => (
+                    <Route
+                      key={config.path}
+                      path={config.path}
+                      element={
+                        <Suspense fallback={<div>Loading...</div>}>
+                          <config.Component />
+                        </Suspense>
+                      }
+                    />
+                  ))}
+              </Routes>
+            </Layout>
+          }
+        />
       </Routes>
     </Router>
-  )
+  );
 }
 
-export default App
-
+export default App;

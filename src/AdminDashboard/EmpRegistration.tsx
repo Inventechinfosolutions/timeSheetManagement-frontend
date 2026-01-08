@@ -1,76 +1,131 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { User, Mail, Lock, Briefcase, Building, Shield, CreditCard } from 'lucide-react'
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  User,
+  Mail,
+  Lock,
+  Briefcase,
+  Building,
+  Shield,
+  CreditCard,
+  Loader2,
+  CheckCircle,
+} from "lucide-react";
+import {
+  createEntity,
+  reset,
+  RootState,
+  AppDispatch,
+} from "../reducers/employeeDetails.reducer";
 
 const Registration = () => {
-  const navigate = useNavigate()
-  const [formData, setFormData] = useState({
-    fullName: '',
-    employeeId: '',
-    department: '',
-    designation: '',
-    email: '',
-    password: '',
-    confirmPassword: ''
-  })
-  const [error, setError] = useState('')
+  const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
+  const { loading, updateSuccess, errorMessage } = useSelector(
+    (state: RootState) => state.employeeDetails
+  );
 
+  const [formData, setFormData] = useState({
+    fullName: "",
+    employeeId: "",
+    department: "",
+    designation: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  });
+  const [error, setError] = useState("");
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  useEffect(() => {
+    if (updateSuccess) {
+      setShowSuccess(true);
+      const timer = setTimeout(() => {
+        dispatch(reset());
+        setShowSuccess(false);
+        navigate("/admin-dashboard");
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+    if (errorMessage) {
+      setError(errorMessage);
+    }
+  }, [updateSuccess, errorMessage, dispatch, navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
-    })
-  }
+      [e.target.name]: e.target.value,
+    });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
+    e.preventDefault();
+    setError("");
 
     // Basic Validation
-    if (Object.values(formData).some(val => !val)) {
-      setError('Please fill in all fields')
-      return
+    if (Object.values(formData).some((val) => !val)) {
+      setError("Please fill in all fields");
+      return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match')
-      return
+      setError("Passwords do not match");
+      return;
     }
 
-    console.log('Registration Data:', formData)
-    // Add API call here
-    navigate('/landing')
-  }
+    console.log("Registration Data:", formData);
+    dispatch(createEntity(formData));
+  };
 
   return (
     <div className="w-full h-full flex items-center justify-center p-4 font-sans text-gray-800 lg:p-10">
-
       {/* Main Card - Full Width Registration */}
       <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden min-h-[500px]">
-
         {/* Form Container */}
         <div className="w-full bg-white px-8 py-8 lg:px-12 lg:py-10 flex flex-col justify-center h-full overflow-hidden">
-
           <div className="mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-1">Create an Employee Account</h2>
-            <p className="text-gray-400 text-xs">Create an employee account and manage their workforce efficiently.</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-1">
+              Create an Employee Account
+            </h2>
+            <p className="text-gray-400 text-xs">
+              Create an employee account and manage their workforce efficiently.
+            </p>
           </div>
 
           {error && (
-            <div className="mb-4 p-2.5 bg-red-50 border border-red-200 rounded-lg text-red-600 text-xs">
+            <div className="mb-4 p-2.5 bg-red-50 border border-red-200 rounded-lg text-red-600 text-xs animate-in fade-in slide-in-from-top-2 duration-300">
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          {showSuccess && (
+            <div className="mb-4 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-600 flex items-center gap-3 animate-in fade-in zoom-in-95 duration-500 shadow-sm">
+              <div className="bg-emerald-100 p-1.5 rounded-full">
+                <CheckCircle className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-sm font-bold">
+                  Account Created Successfully!
+                </p>
+                <p className="text-[10px] opacity-80">
+                  The employee can now login with their credentials.
+                  Redirecting...
+                </p>
+              </div>
+            </div>
+          )}
 
+          <form onSubmit={handleSubmit} className="space-y-4">
             {/* Inner Card wrapping inputs */}
             <div className="border border-gray-100 rounded-2xl p-5 shadow-sm bg-white/50">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 {/* Full Name */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">Full Name</label>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">
+                    Full Name
+                  </label>
                   <div className="relative group">
                     <input
                       type="text"
@@ -87,7 +142,9 @@ const Registration = () => {
 
                 {/* Employee ID */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">Employee ID</label>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">
+                    Employee ID
+                  </label>
                   <div className="relative group">
                     <input
                       type="text"
@@ -104,7 +161,9 @@ const Registration = () => {
 
                 {/* Department */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">Department</label>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">
+                    Department
+                  </label>
                   <div className="relative group">
                     <input
                       type="text"
@@ -121,7 +180,9 @@ const Registration = () => {
 
                 {/* Designation */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">Designation</label>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">
+                    Designation
+                  </label>
                   <div className="relative group">
                     <input
                       type="text"
@@ -139,7 +200,9 @@ const Registration = () => {
 
               {/* Email */}
               <div className="space-y-1 mb-4">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">Email Address</label>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">
+                  Email Address
+                </label>
                 <div className="relative group">
                   <input
                     type="email"
@@ -157,7 +220,9 @@ const Registration = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Password */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">Password</label>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">
+                    Password
+                  </label>
                   <div className="relative group">
                     <input
                       type="password"
@@ -174,7 +239,9 @@ const Registration = () => {
 
                 {/* Confirm Password */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">Confirm Password</label>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">
+                    Confirm Password
+                  </label>
                   <div className="relative group">
                     <input
                       type="password"
@@ -191,17 +258,28 @@ const Registration = () => {
               </div>
             </div>
 
-
             {/* Buttons Row */}
             <div className="flex gap-4 mt-8 pt-2">
               <button
                 type="submit"
-                className="w-full relative overflow-hidden bg-linear-to-r from-[#1c9cc0] to-[#0ea5e9] text-white font-semibold py-2.5 px-6 rounded-lg transition-all shadow-lg shadow-[#1c9cc0]/30 hover:shadow-[#0ea5e9]/50 text-xs transform hover:-translate-y-0.5 group"
+                disabled={loading}
+                className="w-full relative overflow-hidden bg-linear-to-r from-[#1c9cc0] to-[#0ea5e9] text-white font-semibold py-2.5 px-6 rounded-lg transition-all shadow-lg shadow-[#1c9cc0]/30 hover:shadow-[#0ea5e9]/50 text-xs transform hover:-translate-y-0.5 group disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 {/* Shimmer Effect */}
-                <div className="absolute inset-0 w-[200%] h-full bg-linear-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-[shimmer_3s_infinite]"></div>
+                {!loading && (
+                  <div className="absolute inset-0 w-[200%] h-full bg-linear-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-[shimmer_3s_infinite]"></div>
+                )}
 
-                <span className="relative z-10">Create Account</span>
+                <span className="relative z-10 flex items-center justify-center gap-2">
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    "Create Account"
+                  )}
+                </span>
               </button>
             </div>
 
@@ -211,12 +289,11 @@ const Registration = () => {
                 100% { transform: translateX(100%); }
               }
             `}</style>
-
           </form>
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Registration
+export default Registration;

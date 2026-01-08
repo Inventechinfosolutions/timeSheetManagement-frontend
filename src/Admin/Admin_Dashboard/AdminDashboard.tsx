@@ -1,6 +1,9 @@
-import { useState } from "react";
-import SidebarLayout from "./SidebarLayout";
-import Calendar from "../EmployeeDashboard/Calendar";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { RootState, AppDispatch } from "../../store";
+import { getEntities } from "../../reducers/employeeDetails.reducer";
+import Calendar from "../../EmployeeDashboard/Calendar";
 import {
   Users,
   UserCheck,
@@ -15,19 +18,16 @@ import {
   X,
 } from "lucide-react";
 import { UserOutlined } from "@ant-design/icons";
-import EmployeeTimesheetView from "./EmployeeTimesheetView";
-import { TimesheetEntry } from "../types";
+import { TimesheetEntry } from "../../types";
 import MobileView from "./mobileView";
-import jsPDF from "jspdf";
+// import jsPDF from "jsPDF";
 import autoTable from "jspdf-autotable";
+import jsPDF from "jspdf";
 
 const AdminDashboard = () => {
-  const [activeTab, setActiveTab] = useState("System Dashboard");
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedEmpId, setSelectedEmpId] = useState<string | null>(null);
-  const [showTimesheet, setShowTimesheet] = useState(false);
-  const [viewingEmpId, setViewingEmpId] = useState<string | null>(null);
-  const [displayDate, setDisplayDate] = useState(new Date(2026, 0, 5));
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -35,260 +35,46 @@ const AdminDashboard = () => {
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [selectedDepartment, setSelectedDepartment] = useState("All");
+  const [showFilter, setShowFilter] = useState(false);
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
 
-  // Mock employee data
-  const employees = [
-    {
-      id: "EMP001",
-      name: "Rajesh Kumar",
-      dept: "IT Department",
-      login: "09:15 AM",
-      logout: "06:45 PM",
-      hours: "9h 30m",
-      status: "Present",
-      avatar: "https://i.pravatar.cc/150?u=EMP001",
-    },
-    {
-      id: "EMP002",
-      name: "Priya Sharma",
-      dept: "HR",
-      login: "08:30 AM",
-      logout: "05:00 PM",
-      hours: "8h 30m",
-      status: "Present",
-      avatar: "https://i.pravatar.cc/150?u=EMP002",
-    },
-    {
-      id: "EMP003",
-      name: "Amit Patel",
-      dept: "IT Department",
-      login: "10:00 AM",
-      logout: "Not logged out",
-      hours: "--",
-      status: "Incomplete",
-      avatar: "https://i.pravatar.cc/150?u=EMP003",
-    },
-    {
-      id: "EMP004",
-      name: "Sneha Reddy",
-      dept: "HR",
-      login: "09:00 AM",
-      logout: "06:15 PM",
-      hours: "9h 15m",
-      status: "Present",
-      avatar: "https://i.pravatar.cc/150?u=EMP004",
-    },
-    {
-      id: "EMP005",
-      name: "Vikram Singh",
-      dept: "HR",
-      login: "--",
-      logout: "--",
-      hours: "--",
-      status: "Absent",
-      avatar: "https://i.pravatar.cc/150?u=EMP005",
-    },
-    {
-      id: "EMP006",
-      name: "Ananya Iyer",
-      dept: "HR",
-      login: "08:45 AM",
-      logout: "05:30 PM",
-      hours: "8h 45m",
-      status: "Present",
-      avatar: "https://i.pravatar.cc/150?u=EMP006",
-    },
-    {
-      id: "EMP007",
-      name: "Karthik Menon",
-      dept: "IT Department",
-      login: "09:30 AM",
-      logout: "07:00 PM",
-      hours: "9h 30m",
-      status: "Present",
-      avatar: "https://i.pravatar.cc/150?u=EMP007",
-    },
-    {
-      id: "EMP008",
-      name: "Divya Nair",
-      dept: "HR",
-      login: "--",
-      logout: "--",
-      hours: "--",
-      status: "Absent",
-      avatar: "https://i.pravatar.cc/150?u=EMP008",
-    },
-    {
-      id: "EMP009",
-      name: "Arjun Desai",
-      dept: "HR",
-      login: "08:50 AM",
-      logout: "05:20 PM",
-      hours: "8h 30m",
-      status: "Present",
-      avatar: "https://i.pravatar.cc/150?u=EMP009",
-    },
-    {
-      id: "EMP010",
-      name: "Meera Joshi",
-      dept: "HR",
-      login: "09:10 AM",
-      logout: "06:00 PM",
-      hours: "8h 50m",
-      status: "Present",
-      avatar: "https://i.pravatar.cc/150?u=EMP010",
-    },
-    {
-      id: "EMP011",
-      name: "Rohan Kapoor",
-      dept: "IT Department",
-      login: "10:30 AM",
-      logout: "Not logged out",
-      hours: "--",
-      status: "Incomplete",
-      avatar: "https://i.pravatar.cc/150?u=EMP011",
-    },
-    {
-      id: "EMP012",
-      name: "Kavya Rao",
-      dept: "HR",
-      login: "08:20 AM",
-      logout: "04:50 PM",
-      hours: "8h 30m",
-      status: "Present",
-      avatar: "https://i.pravatar.cc/150?u=EMP012",
-    },
-    {
-      id: "EMP013",
-      name: "Sanjay Gupta",
-      dept: "HR",
-      login: "09:05 AM",
-      logout: "06:30 PM",
-      hours: "9h 25m",
-      status: "Present",
-      avatar: "https://i.pravatar.cc/150?u=EMP013",
-    },
-    {
-      id: "EMP014",
-      name: "Pooja Verma",
-      dept: "HR",
-      login: "08:55 AM",
-      logout: "05:40 PM",
-      hours: "8h 45m",
-      status: "Present",
-      avatar: "https://i.pravatar.cc/150?u=EMP014",
-    },
-    {
-      id: "EMP015",
-      name: "Aditya Malhotra",
-      dept: "IT Department",
-      login: "--",
-      logout: "--",
-      hours: "--",
-      status: "Absent",
-      avatar: "https://i.pravatar.cc/150?u=EMP015",
-    },
-  ];
+  const dispatch = useDispatch<AppDispatch>();
+  const { entities, loading, totalItems } = useSelector(
+    (state: RootState) => state.employeeDetails
+  );
 
-  // Filter Logic
-  const filteredEmployees = employees.filter((emp) => {
-    const matchesSearch =
-      emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.id.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesDept =
-      selectedDepartment === "All" || emp.dept === selectedDepartment;
-    return matchesSearch && matchesDept;
-  });
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500); // 500ms debounce delay
 
-  // Generate mock entries for the calendar based on employee status
-  const getMockEntries = (empId: string | null) => {
-    if (!empId) return [];
-    const emp = employees.find((e) => e.id === empId);
-    if (!emp) return [];
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
-    const daysInMonth = new Date(
-      displayDate.getFullYear(),
-      displayDate.getMonth() + 1,
-      0
-    ).getDate();
-    const data: TimesheetEntry[] = [];
-    const now = new Date(2026, 0, 5); // Fixed now for mock
+  useEffect(() => {
+    dispatch(
+      getEntities({
+        page: currentPage,
+        limit: itemsPerPage,
+        search: debouncedSearchTerm,
+      })
+    );
+  }, [dispatch, currentPage, debouncedSearchTerm]);
 
-    for (let i = 1; i <= daysInMonth; i++) {
-      const date = new Date(
-        displayDate.getFullYear(),
-        displayDate.getMonth(),
-        i
-      );
-      const isToday =
-        i === now.getDate() &&
-        displayDate.getMonth() === now.getMonth() &&
-        displayDate.getFullYear() === now.getFullYear();
-      const isFuture =
-        displayDate.getFullYear() > now.getFullYear() ||
-        (displayDate.getFullYear() === now.getFullYear() &&
-          displayDate.getMonth() > now.getMonth()) ||
-        (displayDate.getFullYear() === now.getFullYear() &&
-          displayDate.getMonth() === now.getMonth() &&
-          i > now.getDate());
+  // Map backend entities to the format expected by the UI
+  const employees = entities.map((emp: any) => ({
+    id: emp.employeeId || emp.id,
+    name: emp.fullName || emp.name,
+    dept: emp.department || emp.dept,
+    login: emp.loginTime || emp.login || "--",
+    logout: emp.logoutTime || emp.logout || "--",
+    hours: emp.totalHours || emp.hours || "--",
+    status: emp.status || "Leave",
+    avatar:
+      emp.avatar || `https://i.pravatar.cc/150?u=${emp.employeeId || emp.id}`,
+  }));
 
-      const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-
-      let loginTime = "";
-      let logoutTime = "";
-      let status: TimesheetEntry["status"] = "Absent";
-      let attendanceType: TimesheetEntry["attendanceType"] = "login";
-
-      if (!isFuture && !isWeekend) {
-        // Create employee-specific absent days based on their ID
-        const empNumber = parseInt(emp.id.replace("EMP", ""));
-        const absentDays = [
-          (empNumber % 31) + 1, // First absent day based on employee number
-          ((empNumber * 2) % 31) + 1, // Second absent day
-        ].filter((day) => day <= daysInMonth && day !== now.getDate()); // Exclude today and invalid days
-
-        if (absentDays.includes(i)) {
-          loginTime = "--";
-          logoutTime = "--";
-          status = "Absent";
-          attendanceType = null;
-        } else if (isToday) {
-          loginTime = "";
-          attendanceType = null;
-          status = "Present";
-        } else {
-          loginTime = emp.login !== "--" ? emp.login : "09:00 AM";
-          logoutTime =
-            emp.logout !== "--" && emp.logout !== "Not logged out"
-              ? emp.logout
-              : "06:00 PM";
-          status = "Present";
-          attendanceType = "logout";
-        }
-      }
-
-      data.push({
-        date: i,
-        fullDate: date,
-        dayName: date.toLocaleDateString("en-US", { weekday: "long" }),
-        formattedDate: date.toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-        }),
-        isToday,
-        isWeekend,
-        isFuture,
-        attendanceType,
-        loginTime: loginTime as any,
-        logoutTime: logoutTime as any,
-        status: isWeekend ? "Absent" : status,
-        isEditing: false,
-        isSaved: false,
-      });
-    }
-    return data;
-  };
+  // UI Logic
 
   const calculateTotal = (login: string | null, logout: string | null) => {
     if (
@@ -314,25 +100,21 @@ const AdminDashboard = () => {
   };
 
   const renderSummaryCards = () => {
-    const totalEmployees = filteredEmployees.length;
-    const presentCount = filteredEmployees.filter(
-      (e) => e.status === "Present"
-    ).length;
-    const absentCount = filteredEmployees.filter(
-      (e) => e.status === "Absent"
-    ).length;
+    const totalEmployeesCount = totalItems || employees.length;
+    const presentCount = employees.filter((e) => e.status === "Full Day").length;
+    const absentCount = employees.filter((e) => e.status === "Leave").length;
     const presentPercentage =
-      totalEmployees > 0
-        ? ((presentCount / totalEmployees) * 100).toFixed(1)
+      totalEmployeesCount > 0
+        ? ((presentCount / employees.length) * 100).toFixed(1)
         : "0.0";
     const absentPercentage =
-      totalEmployees > 0
-        ? ((absentCount / totalEmployees) * 100).toFixed(1)
+      totalEmployeesCount > 0
+        ? ((absentCount / employees.length) * 100).toFixed(1)
         : "0.0";
 
     // Calculate average hours
-    const workingHours = filteredEmployees
-      .filter((e) => e.status === "Present" && e.hours !== "--")
+    const workingHours = employees
+      .filter((e) => e.status === "Full Day" && e.hours !== "--")
       .map((e) => {
         const parts = e.hours.split(" ");
         const h = parseInt(parts[0]) || 0;
@@ -358,7 +140,7 @@ const AdminDashboard = () => {
           </div>
           <div>
             <h3 className="text-[32px] font-bold text-[#1B254B] leading-tight">
-              {totalEmployees}
+              {totalItems || employees.length}
             </h3>
             <p className="text-sm font-medium text-[#A3AED0]">
               Total Employees
@@ -429,7 +211,7 @@ const AdminDashboard = () => {
 
     const doc = new jsPDF();
 
-    filteredEmployees.forEach((emp, index) => {
+    employees.forEach((emp, index) => {
       // Add Page Break for subsequent employees
       if (index > 0) {
         doc.addPage();
@@ -492,7 +274,6 @@ const AdminDashboard = () => {
       doc.setFont("helvetica", "normal");
       doc.text(emp.dept, col2X + 25, gridStartY);
 
-      // Row 2: ID & Designation
       // ID
       doc.setTextColor(113, 128, 150); // Gray Label
       doc.setFont("helvetica", "bold");
@@ -502,14 +283,14 @@ const AdminDashboard = () => {
       doc.setFont("helvetica", "normal");
       doc.text(emp.id, 45, gridStartY + rowGap);
 
-      // Designation (Mock)
+      // Designation
       doc.setTextColor(113, 128, 150); // Gray Label
       doc.setFont("helvetica", "bold");
       doc.text("Designation:", col2X, gridStartY + rowGap);
 
       doc.setTextColor(43, 54, 116); // Blue Value
       doc.setFont("helvetica", "normal");
-      doc.text("Senior Developer", col2X + 25, gridStartY + rowGap);
+      doc.text("", col2X + 25, gridStartY + rowGap);
 
       // --- Period Section ---
       doc.setTextColor(43, 54, 116);
@@ -520,8 +301,8 @@ const AdminDashboard = () => {
         gridStartY + rowGap * 2 + 5
       );
 
-      // --- Table Data Preparation ---
-      const empEntries = getMockEntries(emp.id);
+      // timesheet entries
+      const empEntries: any[] = [];
 
       // Filter entries by date range
       const filteredEntries = empEntries.filter((entry) => {
@@ -592,27 +373,64 @@ const AdminDashboard = () => {
               placeholder="Search by ID or Name..."
               className="pl-10 pr-4 py-2 bg-[#F4F7FE] border-none rounded-xl text-sm focus:ring-2 focus:ring-[#4318FF] transition-all w-full sm:w-56"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1); // Reset to page 1 on search
+              }}
             />
           </div>
-          <div className="flex items-center gap-2 bg-[#F4F7FE] px-4 py-2 rounded-xl text-sm font-medium text-[#1B254B] cursor-pointer whitespace-nowrap relative group">
-            <Filter size={16} className="text-[#A3AED0]" />
-            <select
-              value={selectedDepartment}
-              onChange={(e) => {
-                setSelectedDepartment(e.target.value);
-                setCurrentPage(1); // Reset to page 1 on filter change
-              }}
-              className="bg-transparent border-none outline-none appearance-none pr-6 cursor-pointer text-[#1B254B] font-bold"
+
+          {/* Filter UI - Static for design as requested */}
+          <div className="relative">
+            <button
+              onClick={() => setShowFilter(!showFilter)}
+              className={`flex items-center gap-2 px-4 py-2 bg-[#F4F7FE] border border-transparent rounded-xl text-sm font-medium text-[#1B254B] hover:border-[#4318FF] transition-all whitespace-nowrap ${
+                showFilter ? "border-[#4318FF] ring-2 ring-[#4318FF]/10" : ""
+              }`}
             >
-              <option value="All">All Departments</option>
-              <option value="IT Department">IT Department</option>
-              <option value="HR">HR</option>
-            </select>
-            {/* Custom Arrow because appearance-none removes default */}
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-              <span className="text-gray-400 text-xs">▼</span>
-            </div>
+              <Filter size={16} className="text-[#A3AED0]" />
+              <span>Filter</span>
+            </button>
+
+            {showFilter && (
+              <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 p-4 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-[10px] font-bold text-[#A3AED0] uppercase tracking-wider mb-2">
+                      Department
+                    </h4>
+                    <div className="grid grid-cols-1 gap-1">
+                      {["All Departments", "IT Department", "HR"].map(
+                        (item) => (
+                          <button
+                            key={item}
+                            className="text-left px-3 py-1.5 rounded-lg text-sm text-[#2B3674] hover:bg-[#F4F7FE] transition-all"
+                          >
+                            {item}
+                          </button>
+                        )
+                      )}
+                    </div>
+                  </div>
+                  <div className="h-px bg-gray-50" />
+                  <div>
+                    <h4 className="text-[10px] font-bold text-[#A3AED0] uppercase tracking-wider mb-2">
+                      Status
+                    </h4>
+                    <div className="flex flex-wrap gap-1.5">
+                      {["Full Day", "Leave", "Incomplete"].map((item) => (
+                        <button
+                          key={item}
+                          className="px-3 py-1 bg-[#F4F7FE] text-[#2B3674] rounded-full text-[11px] font-bold hover:bg-[#E0E5F2] transition-all"
+                        >
+                          {item}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -623,7 +441,10 @@ const AdminDashboard = () => {
           <Eye size={16} />
           View All Attendance
         </button>
-        <button className="flex items-center gap-2 px-6 py-2.5 border border-[#00A3C4] text-[#00A3C4] rounded-xl text-sm font-bold hover:bg-[#E6FFFA] transition-all">
+        <button
+          onClick={() => navigate("/admin-dashboard/registration")}
+          className="flex items-center gap-2 px-6 py-2.5 border border-[#00A3C4] text-[#00A3C4] rounded-xl text-sm font-bold hover:bg-[#E6FFFA] transition-all"
+        >
           <Users size={16} />
           View Employee List
         </button>
@@ -639,13 +460,9 @@ const AdminDashboard = () => {
       {/* Mobile/Tablet Card View */}
       <div className="lg:hidden">
         <MobileView
-          employees={filteredEmployees.slice(
-            (currentPage - 1) * itemsPerPage,
-            currentPage * itemsPerPage
-          )}
+          employees={employees}
           onViewTimesheet={(id) => {
-            setViewingEmpId(id);
-            setShowTimesheet(true);
+            navigate(`/admin-dashboard/timesheet/${id}`);
           }}
           onSelectEmployee={setSelectedEmpId}
         />
@@ -667,86 +484,80 @@ const AdminDashboard = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {filteredEmployees
-              .slice(
-                (currentPage - 1) * itemsPerPage,
-                currentPage * itemsPerPage
-              )
-              .map((emp) => (
-                <tr
-                  key={emp.id}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedEmpId(emp.id);
-                  }}
-                  className={`group transition-all cursor-pointer ${
-                    selectedEmpId === emp.id
-                      ? "bg-[#F4F7FE]"
-                      : "hover:bg-[#F4F7FE]/30"
-                  }`}
-                >
-                  <td className="py-4 text-sm font-bold text-[#1B254B] border-l-4 border-transparent group-hover:border-[#4318FF] transition-all">
-                    <div className="pl-4">{emp.id}</div>
-                  </td>
-                  <td className="py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-[#F4F7FE] flex items-center justify-center text-[#4318FF] border-2 border-white shadow-sm">
-                        <UserOutlined style={{ fontSize: "20px" }} />
-                      </div>
-                      <span className="text-sm font-bold text-[#2B3674]">
-                        {emp.name}
-                      </span>
+            {employees.map((emp) => (
+              <tr
+                key={emp.id}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedEmpId(emp.id);
+                }}
+                className={`group transition-all cursor-pointer ${
+                  selectedEmpId === emp.id
+                    ? "bg-[#F4F7FE]"
+                    : "hover:bg-[#F4F7FE]/30"
+                }`}
+              >
+                <td className="py-4 text-sm font-bold text-[#1B254B] border-l-4 border-transparent group-hover:border-[#4318FF] transition-all">
+                  <div className="pl-4">{emp.id}</div>
+                </td>
+                <td className="py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-[#F4F7FE] flex items-center justify-center text-[#4318FF] border-2 border-white shadow-sm">
+                      <UserOutlined style={{ fontSize: "20px" }} />
                     </div>
-                  </td>
-                  <td className="py-4 text-sm text-[#A3AED0] text-center">
-                    {emp.dept}
-                  </td>
-                  <td className="py-4 text-sm font-medium text-[#2B3674] text-center font-mono">
-                    {emp.login}
-                  </td>
-                  <td className="py-4 text-center">
-                    {emp.logout === "Not logged out" ? (
-                      <span className="text-xs font-bold text-[#FFB547] leading-tight flex flex-col items-center">
-                        Not logged <span>out</span>
-                      </span>
-                    ) : (
-                      <span className="text-sm font-medium text-[#2B3674] font-mono">
-                        {emp.logout}
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-4 text-sm font-bold text-[#1B254B] text-center">
-                    {emp.hours}
-                  </td>
-                  <td className="py-4 text-center">
-                    <span
-                      className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider
+                    <span className="text-sm font-bold text-[#2B3674]">
+                      {emp.name}
+                    </span>
+                  </div>
+                </td>
+                <td className="py-4 text-sm text-[#A3AED0] text-center">
+                  {emp.dept}
+                </td>
+                <td className="py-4 text-sm font-medium text-[#2B3674] text-center font-mono">
+                  {emp.login}
+                </td>
+                <td className="py-4 text-center">
+                  {emp.logout === "Not logged out" ? (
+                    <span className="text-xs font-bold text-[#FFB547] leading-tight flex flex-col items-center">
+                      Not logged <span>out</span>
+                    </span>
+                  ) : (
+                    <span className="text-sm font-medium text-[#2B3674] font-mono">
+                      {emp.logout}
+                    </span>
+                  )}
+                </td>
+                <td className="py-4 text-sm font-bold text-[#1B254B] text-center">
+                  {emp.hours}
+                </td>
+                <td className="py-4 text-center">
+                  <span
+                    className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider
                                         ${
-                                          emp.status === "Present"
+                                          emp.status === "Full Day"
                                             ? "bg-[#E6FFFA] text-[#01B574]"
                                             : emp.status === "Incomplete"
                                             ? "bg-[#FFF9E5] text-[#FFB547]"
                                             : "bg-[#FFF5F5] text-[#EE5D50]"
                                         }
                                     `}
-                    >
-                      {emp.status}
-                    </span>
-                  </td>
-                  <td className="py-4 text-center">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setViewingEmpId(emp.id);
-                        setShowTimesheet(true);
-                      }}
-                      className="p-2 rounded-lg text-[#00A3C4] hover:bg-[#E0F7FA] transition-colors"
-                    >
-                      <Eye size={20} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
+                  >
+                    {emp.status}
+                  </span>
+                </td>
+                <td className="py-4 text-center">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/admin-dashboard/timesheet/${emp.id}`);
+                    }}
+                    className="p-2 rounded-lg text-[#00A3C4] hover:bg-[#E0F7FA] transition-colors"
+                  >
+                    <Eye size={20} />
+                  </button>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
@@ -756,20 +567,12 @@ const AdminDashboard = () => {
         <div className="text-sm text-[#A3AED0]">
           {" "}
           <span className="font-bold text-[#2B3674]">
-            {Math.min(
-              (currentPage - 1) * itemsPerPage + 1,
-              filteredEmployees.length
-            )}
+            {Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)}
           </span>{" "}
           to{" "}
           <span className="font-bold text-[#2B3674]">
-            {Math.min(currentPage * itemsPerPage, filteredEmployees.length)}
+            {Math.min(currentPage * itemsPerPage, totalItems)}
           </span>{" "}
-          {/* of{" "}
-          <span className="font-bold text-[#2B3674]">
-            {filteredEmployees.length}
-          </span>{" "} */}
-          {/* employees */}
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -785,7 +588,7 @@ const AdminDashboard = () => {
           </button>
 
           {Array.from(
-            { length: Math.ceil(filteredEmployees.length / itemsPerPage) },
+            { length: Math.ceil(totalItems / itemsPerPage) },
             (_, i) => i + 1
           ).map((page) => (
             <button
@@ -804,17 +607,12 @@ const AdminDashboard = () => {
           <button
             onClick={() =>
               setCurrentPage((prev) =>
-                Math.min(
-                  Math.ceil(filteredEmployees.length / itemsPerPage),
-                  prev + 1
-                )
+                Math.min(Math.ceil(totalItems / itemsPerPage), prev + 1)
               )
             }
-            disabled={
-              currentPage === Math.ceil(filteredEmployees.length / itemsPerPage)
-            }
+            disabled={currentPage === Math.ceil(totalItems / itemsPerPage)}
             className={`p-2 rounded-lg border transition-all ${
-              currentPage === Math.ceil(filteredEmployees.length / itemsPerPage)
+              currentPage === Math.ceil(totalItems / itemsPerPage)
                 ? "border-gray-200 text-gray-300 cursor-not-allowed"
                 : "border-[#E0E5F2] text-[#2B3674] hover:bg-[#F4F7FE] hover:border-[#4318FF]"
             }`}
@@ -827,55 +625,6 @@ const AdminDashboard = () => {
   );
 
   const renderContent = () => {
-    if (showTimesheet && viewingEmpId) {
-      return (
-        <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#F4F7FE]">
-          <div className="p-4 pb-0">
-            <button
-              onClick={() => setShowTimesheet(false)}
-              className="flex items-center gap-2 px-6 py-2.5 bg-white text-[#2B3674] rounded-xl text-sm font-bold shadow-sm border border-gray-100 hover:bg-gray-50 transition-all"
-            >
-              <ChevronLeft size={18} />
-              Back
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto no-scrollbar">
-            <EmployeeTimesheetView
-              entries={getMockEntries(viewingEmpId)}
-              calculateTotal={calculateTotal}
-              displayDate={displayDate}
-              onPrevMonth={() => {
-                const newDate = new Date(displayDate);
-                newDate.setMonth(newDate.getMonth() - 1);
-                setDisplayDate(newDate);
-              }}
-              onNextMonth={() => {
-                const newDate = new Date(displayDate);
-                newDate.setMonth(newDate.getMonth() + 1);
-                setDisplayDate(newDate);
-              }}
-              employeeName={
-                employees.find((e) => e.id === viewingEmpId)?.name || "Employee"
-              }
-            />
-          </div>
-        </div>
-      );
-    }
-
-    if (activeTab === "User & Role Management") {
-      return (
-        <div className="p-8">
-          <h1 className="text-2xl font-bold text-[#2B3674]">
-            User & Role Management
-          </h1>
-          <p className="text-gray-500 mt-2">
-            Control user access and assign administrative roles.
-          </p>
-        </div>
-      );
-    }
-
     return (
       <>
         {/* Sticky Header */}
@@ -909,10 +658,7 @@ const AdminDashboard = () => {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-                <Calendar
-                  entries={getMockEntries(selectedEmpId)}
-                  now={new Date(2026, 0, 5)}
-                />
+                <Calendar entries={[]} now={new Date()} />
               </div>
             </div>
           </div>
@@ -922,10 +668,8 @@ const AdminDashboard = () => {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-60px)] overflow-hidden bg-[#F4F7FE]">
-      <SidebarLayout activeTab={activeTab} onTabChange={setActiveTab}>
-        {renderContent()}
-      </SidebarLayout>
+    <div className="flex flex-col h-full overflow-hidden bg-[#F4F7FE]">
+      {renderContent()}
 
       {/* Download Modal - Global */}
       {showDownloadModal && (
