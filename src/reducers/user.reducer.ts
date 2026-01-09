@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import axios from 'axios';
+import { Storage } from '../utils/storage-util';
 
 /**
  * -------------------------------------------------------------------------
@@ -84,7 +85,7 @@ const initialState: UserState = {
 };
 
 // Base API URL configuration
-const API_BASE_URL = 'http://localhost:3000/user'; // Update this port/url if necessary
+const apiUrl = 'api/v1/user'; // Update this port/url if necessary
 
 /**
  * -------------------------------------------------------------------------
@@ -98,7 +99,7 @@ export const createUser = createAsyncThunk(
   'user/create',
   async (createUserDto: CreateUserDto, { rejectWithValue }) => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/create`, createUserDto);
+      const response = await axios.post(`${apiUrl}/create`, createUserDto);
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Failed to create user');
@@ -111,7 +112,7 @@ export const loginUser = createAsyncThunk(
   'user/login',
   async (userLoginDto: UserLoginDto, { rejectWithValue }) => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/login`, userLoginDto, {
+      const response = await axios.post(`${apiUrl}/login`, userLoginDto, {
         withCredentials: true, // Important: Send/receive cookies
       });
       return response.data.data as LoginResponse;
@@ -126,7 +127,7 @@ export const authMe = createAsyncThunk(
   'user/authMe',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/auth/me`, {
+      const response = await axios.get(`${apiUrl}/auth/me`, {
         withCredentials: true, // Important: Send cookies with request
       });
       return response.data.data as AuthMeResponse;
@@ -141,7 +142,7 @@ export const logoutUser = createAsyncThunk(
   'user/logout',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/logout`, {
+      const response = await axios.get(`${apiUrl}/logout`, {
         withCredentials: true, // Important: Clear cookies
       });
       return response.data;
@@ -156,10 +157,10 @@ export const changePassword = createAsyncThunk(
   'user/changePassword',
   async (changePasswordDto: ChangePasswordDto, { rejectWithValue }) => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/change-password`, changePasswordDto, {
+      const response = await axios.post(`${apiUrl}/change-password`, changePasswordDto, {
         withCredentials: true, // Important: Send auth cookies
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('accessToken')}`, // Include access token
+          Authorization: `Bearer ${Storage.session.get('TimeSheet-authenticationToken')}`, // Include access token
         },
       });
       return response.data;
@@ -231,8 +232,10 @@ const userSlice = createSlice({
         };
         state.error = null;
         
-        // Store access token in localStorage for persistence
-        localStorage.setItem('accessToken', action.payload.accessToken);
+        // Store access token in sessionStorage for persistence
+        Storage.session.set('TimeSheet-authenticationToken', action.payload.accessToken);
+        // Clean up old localStorage token if exists
+        localStorage.removeItem('accessToken');
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.loading = false;
@@ -260,8 +263,10 @@ const userSlice = createSlice({
         };
         state.error = null;
         
-        // Update access token in localStorage
-        localStorage.setItem('accessToken', action.payload.accessToken);
+        // Update access token in sessionStorage
+        Storage.session.set('TimeSheet-authenticationToken', action.payload.accessToken);
+        // Clean up old localStorage token if exists
+        localStorage.removeItem('accessToken');
       })
       .addCase(authMe.rejected, (state, action) => {
         state.loading = false;
@@ -271,7 +276,7 @@ const userSlice = createSlice({
         state.error = action.payload as string || 'Authentication failed';
         
         // Clear stored token on auth failure
-        localStorage.removeItem('accessToken');
+        Storage.session.remove('TimeSheet-authenticationToken');
       })
 
       // ===================================================================
@@ -291,7 +296,7 @@ const userSlice = createSlice({
         state.passwordChangeSuccess = false;
         
         // Clear stored token
-        localStorage.removeItem('accessToken');
+        Storage.session.remove('TimeSheet-authenticationToken');
       })
       .addCase(logoutUser.rejected, (state, action) => {
         state.loading = false;
@@ -301,7 +306,8 @@ const userSlice = createSlice({
         state.isAuthenticated = false;
         state.accessToken = null;
         state.currentUser = null;
-        localStorage.removeItem('accessToken');
+
+        Storage.session.remove('TimeSheet-authenticationToken');
       })
 
       // ===================================================================
