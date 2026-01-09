@@ -8,7 +8,7 @@ import {
   Download,
   X,
 } from "lucide-react";
-import jsPDF from "jspdf";
+import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { TimesheetEntry } from "../../../types";
 
@@ -73,9 +73,6 @@ const EmployeeTimesheetView = ({
       alert("Please select both start and end dates.");
       return;
     }
-
-    const start = new Date(startDate);
-    const end = new Date(endDate);
 
     const filteredEntries = entries.filter((entry) => {
       // Normalize entry date to YYYY-MM-DD string for safe comparison with input values

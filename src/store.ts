@@ -1,11 +1,13 @@
 import { configureStore } from '@reduxjs/toolkit';
 import attendanceReducer from './reducers/employeeAttendance.reducer';
 import employeeDetailsReducer from './reducers/employeeDetails.reducer';
+import userReducer from './reducers/user.reducer';
 
 export const store = configureStore({
   reducer: {
     attendance: attendanceReducer,
     employeeDetails: employeeDetailsReducer,
+    user: userReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

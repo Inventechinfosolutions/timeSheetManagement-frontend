@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
   User,
@@ -20,7 +19,6 @@ import {
 } from "../reducers/employeeDetails.reducer";
 
 const Registration = () => {
-  const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
   const { loading, updateSuccess, errorMessage } = useSelector(
     (state: RootState) => state.employeeDetails
@@ -32,8 +30,8 @@ const Registration = () => {
     department: "",
     designation: "",
     email: "",
-    password: "",
-    confirmPassword: "",
+    // password: "",
+    // confirmPassword: "",
   });
   const [error, setError] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
@@ -44,14 +42,21 @@ const Registration = () => {
       const timer = setTimeout(() => {
         dispatch(reset());
         setShowSuccess(false);
-        navigate("/admin-dashboard");
+        // Reset form data to allow creating another employee
+        setFormData({
+          fullName: "",
+          employeeId: "",
+          department: "",
+          designation: "",
+          email: "",
+        });
       }, 2000);
       return () => clearTimeout(timer);
     }
     if (errorMessage) {
       setError(errorMessage);
     }
-  }, [updateSuccess, errorMessage, dispatch, navigate]);
+  }, [updateSuccess, errorMessage, dispatch]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -70,10 +75,10 @@ const Registration = () => {
       return;
     }
 
-    if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
+    // if (formData.password !== formData.confirmPassword) {
+    //   setError("Passwords do not match");
+    //   return;
+    // }
 
     console.log("Registration Data:", formData);
     dispatch(createEntity(formData));
@@ -110,8 +115,8 @@ const Registration = () => {
                   Account Created Successfully!
                 </p>
                 <p className="text-[10px] opacity-80">
-                  The employee can now login with their credentials.
-                  Redirecting...
+                  The employee can now login with their credentials. Form reset
+                  for next entry.
                 </p>
               </div>
             </div>
@@ -220,11 +225,11 @@ const Registration = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Password */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">
+                  {/* <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">
                     Password
-                  </label>
+                  </label> */}
                   <div className="relative group">
-                    <input
+                    {/* <input
                       type="password"
                       name="password"
                       placeholder="••••••••"
@@ -232,18 +237,18 @@ const Registration = () => {
                       value={formData.password}
                       onChange={handleChange}
                       required
-                    />
+                    /> */}
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
                   </div>
                 </div>
 
                 {/* Confirm Password */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">
+                  {/* <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">
                     Confirm Password
-                  </label>
+                  </label> */}
                   <div className="relative group">
-                    <input
+                    {/* <input
                       type="password"
                       name="confirmPassword"
                       placeholder="••••••••"
@@ -251,7 +256,7 @@ const Registration = () => {
                       value={formData.confirmPassword}
                       onChange={handleChange}
                       required
-                    />
+                    /> */}
                     <Shield className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
                   </div>
                 </div>
