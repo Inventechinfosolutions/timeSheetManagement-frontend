@@ -8,7 +8,9 @@ import { Suspense } from "react";
 import Layout from "./components/Layout";
 import AdminLayout from "./navigation/AdminLayout";
 import { adminComponentConfigs } from "./navigation/adminComponentConfigs";
+import { employeeComponentConfigs } from "./navigation/employeeComponentConfigs";
 import { mainComponentConfigs } from "./mainComponentConfigs";
+import EmployeeLayout from "./navigation/EmployeeLayout";
 
 function App() {
   return (
@@ -18,9 +20,7 @@ function App() {
 
         {/* Home & Landing Routes from Config */}
         {mainComponentConfigs
-          .filter(
-            (c) => c && ["/landing", "/employee-dashboard"].includes(c.path)
-          )
+          .filter((c) => c && ["/landing"].includes(c.path))
           .map((config) => (
             <Route
               key={config.path}
@@ -100,6 +100,26 @@ function App() {
                       }
                     />
                   ))}
+
+                {/* Employee Dashboard Routes */}
+                <Route path="/employee-dashboard" element={<EmployeeLayout />}>
+                  {employeeComponentConfigs.map((config: any) => (
+                    <Route
+                      key={config.path}
+                      path={
+                        config.path === "/employee-dashboard"
+                          ? ""
+                          : config.path.replace("/employee-dashboard/", "")
+                      }
+                      index={config.path === "/employee-dashboard"}
+                      element={
+                        <Suspense fallback={<div>Loading...</div>}>
+                          <config.Component />
+                        </Suspense>
+                      }
+                    />
+                  ))}
+                </Route>
               </Routes>
             </Layout>
           }
