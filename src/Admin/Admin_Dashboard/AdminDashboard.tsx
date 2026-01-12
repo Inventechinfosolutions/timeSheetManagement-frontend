@@ -101,7 +101,9 @@ const AdminDashboard = () => {
 
   const renderSummaryCards = () => {
     const totalEmployeesCount = totalItems || employees.length;
-    const presentCount = employees.filter((e) => e.status === "Full Day").length;
+    const presentCount = employees.filter(
+      (e) => e.status === "Full Day"
+    ).length;
     const absentCount = employees.filter((e) => e.status === "Leave").length;
     const presentPercentage =
       totalEmployeesCount > 0
@@ -173,7 +175,7 @@ const AdminDashboard = () => {
           </div>
           <div>
             <h3 className="text-[32px] font-bold text-[#1B254B] leading-tight">
-              {absentCount}
+              {/* {absentCount} */}
             </h3>
             <p className="text-sm font-medium text-[#A3AED0] mb-1">
               Absent Today
@@ -201,7 +203,7 @@ const AdminDashboard = () => {
         </div>
       </div>
     );
-  };
+  };      
 
   const handleDownloadReport = () => {
     if (!startDate || !endDate) {
@@ -658,7 +660,7 @@ const AdminDashboard = () => {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-                <Calendar entries={[]} now={new Date()} />
+                <Calendar entries={[]} now={new Date()} variant="sidebar" />
               </div>
             </div>
           </div>

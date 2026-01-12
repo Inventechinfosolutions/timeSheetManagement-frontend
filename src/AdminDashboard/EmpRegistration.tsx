@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
   User,
@@ -10,6 +11,7 @@ import {
   CreditCard,
   Loader2,
   CheckCircle,
+  ArrowLeft,
 } from "lucide-react";
 import {
   createEntity,
@@ -19,6 +21,7 @@ import {
 } from "../reducers/employeeDetails.reducer";
 
 const Registration = () => {
+  const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
   const { loading, updateSuccess, errorMessage } = useSelector(
     (state: RootState) => state.employeeDetails
@@ -85,7 +88,19 @@ const Registration = () => {
   };
 
   return (
-    <div className="w-full h-full flex items-center justify-center p-4 font-sans text-gray-800 lg:p-10">
+    <div className="w-full h-full flex flex-col items-center justify-center p-4 font-sans text-gray-800 lg:p-10 relative">
+      {/* Back Button */}
+      <div className="w-full max-w-4xl mb-6">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors font-medium group"
+        >
+          <div className="p-2 rounded-full bg-white shadow-sm group-hover:shadow-md transition-all">
+            <ArrowLeft className="w-5 h-5" />
+          </div>
+          <span>Back to Dashboard</span>
+        </button>
+      </div>
       {/* Main Card - Full Width Registration */}
       <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden min-h-[500px]">
         {/* Form Container */}
@@ -238,7 +253,7 @@ const Registration = () => {
                       onChange={handleChange}
                       required
                     /> */}
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+                    {/* <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" /> */}
                   </div>
                 </div>
 
@@ -257,7 +272,7 @@ const Registration = () => {
                       onChange={handleChange}
                       required
                     /> */}
-                    <Shield className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+                    {/* <Shield className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" /> */}
                   </div>
                 </div>
               </div>

@@ -15,14 +15,14 @@ interface SidebarLayoutProps {
   children: React.ReactNode;
   activeTab?: string;
   onTabChange?: (tab: string) => void;
-  onLogout?: () => void;
+  // onLogout?: () => void;
 }
 
 const SidebarLayout = ({
   children,
   activeTab = "Dashboard",
   onTabChange,
-  onLogout,
+  // onLogout,
 }: SidebarLayoutProps) => {
   // State management
   const [isHovered, setIsHovered] = useState(false);
@@ -38,13 +38,13 @@ const SidebarLayout = ({
     { name: "User & Role Management", icon: Users },
   ];
 
-  const handleLogout = () => {
-    if (onLogout) {
-      onLogout();
-    } else {
-      navigate("/landing");
-    }
-  };
+  // const handleLogout = () => {
+  //   if (onLogout) {
+  //     onLogout();
+  //   } else {
+  //     navigate("/landing");
+  //   }
+  // };
 
   return (
     <div className="flex flex-1 bg-[#F4F7FE] font-sans text-[#2B3674] overflow-hidden relative min-h-screen">
@@ -223,7 +223,7 @@ const SidebarLayout = ({
         </nav>
 
         {/* Footer / Logout */}
-        <div className="p-3 mt-auto shrink-0 mb-2 border-t border-gray-100/50 pt-2">
+        {/* <div className="p-3 mt-auto shrink-0 mb-2 border-t border-gray-100/50 pt-2">
           <button
             onClick={handleLogout}
             className={`w-full flex items-center gap-4 p-3 md:p-2 rounded-xl cursor-pointer transition-all duration-300 group hover:bg-red-50 text-red-500
@@ -245,7 +245,7 @@ const SidebarLayout = ({
               Logout
             </span>
           </button>
-        </div>
+        </div> */}
       </aside>
 
       <main

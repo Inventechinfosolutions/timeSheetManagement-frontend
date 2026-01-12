@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { User, Lock } from "lucide-react";
+import { User, Lock, Eye, EyeOff } from "lucide-react";
 import { loginUser, clearError } from "../reducers/user.reducer";
 import type { AppDispatch, RootState } from "../store";
 
@@ -17,6 +17,7 @@ const AdminLogin = () => {
   // Local form state
   const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   // Navigate to dashboard on successful login
   useEffect(() => {
@@ -118,14 +119,21 @@ const AdminLogin = () => {
                 </label>
                 <div className="relative group">
                   <input
-                    type="password"
-                    className="w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all placeholder-gray-300 text-gray-700 text-sm"
+                    type={showPassword ? "text" : "password"}
+                    className="w-full pl-9 pr-10 py-2.5 border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all placeholder-gray-300 text-gray-700 text-sm"
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
                   />
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
                 </div>
               </div>
             </div>
@@ -138,14 +146,14 @@ const AdminLogin = () => {
               >
                 {loading ? "Logging in..." : "Login"}
               </button>
-              <button
+              {/* <button
                 type="button"
                 onClick={() => navigate("/admin-register")}
                 className="flex-1 bg-white hover:bg-gray-50 text-[#1A73E8] font-semibold py-3 px-6 rounded-lg transition-all border border-[#1A73E8]/30 hover:border-[#1A73E8] shadow-sm hover:shadow-md text-sm transform hover:-translate-y-0.5 hover:ring-2 hover:ring-[#1A73E8]/10"
               >
                 Sign Up
-              </button>
-            </div>
+              </button> */}
+            </div>                   
           </form>
         </div>
       </div>
