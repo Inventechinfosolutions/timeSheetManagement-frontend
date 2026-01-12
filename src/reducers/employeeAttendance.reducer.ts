@@ -1,12 +1,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import axios from 'axios';
 
-/**
- * -------------------------------------------------------------------------
- * ENUMS
- * Matching the NestJS Entity exactly to ensure data integrity.
- * -------------------------------------------------------------------------
- */
+// ENUMS
 export enum OfficeLocation {
   OFFICE = 'Office',
   WORK_FROM_HOME = 'Work from Home',
@@ -21,12 +16,7 @@ export enum AttendanceStatus {
   NOT_UPDATED = 'Not Updated',
 }
 
-/**
- * -------------------------------------------------------------------------
- * INTERFACES
- * Matching the EmployeeAttendanceDto for strict type-safety.
- * -------------------------------------------------------------------------
- */
+// INTERFACES
 export interface EmployeeAttendance {
   id?: number;
   employeeId: string;
@@ -59,21 +49,13 @@ const initialState: AttendanceState = {
   workedDaysSummary: null,
 };
 
-// Base API URL configuration
-const API_BASE_URL = 'http://localhost:3000/employee-attendance'; // Update this port/url if necessary
-
-/**
- * -------------------------------------------------------------------------
- * ASYNC THUNKS (API Methods)
- * Each thunk maps directly to a Controller endpoint.
- * -------------------------------------------------------------------------
- */
+const apiUrl = 'api/v1/employee-attendance';
 
 // 1. Fetch Monthly Details: GET /monthly-details/:employeeId?month=...&year=...
 export const fetchMonthlyAttendance = createAsyncThunk(
   'attendance/fetchMonthly',
   async ({ employeeId, month, year }: { employeeId: string; month: string; year: string }) => {
-    const response = await axios.get(`${API_BASE_URL}/monthly-details/${employeeId}`, {
+    const response = await axios.get(`${apiUrl}/monthly-details/${employeeId}`, {
       params: { month, year },
     });
     return response.data;
@@ -84,7 +66,7 @@ export const fetchMonthlyAttendance = createAsyncThunk(
 export const submitLogin = createAsyncThunk(
   'attendance/submitLogin',
   async ({ employeeId, workingDate, loginTime }: { employeeId: string; workingDate: string | Date; loginTime: string }) => {
-    const response = await axios.post(`${API_BASE_URL}/login-time/${employeeId}`, {
+    const response = await axios.post(`${apiUrl}/login-time/${employeeId}`, {
       workingDate,
       loginTime,
     });
@@ -96,7 +78,7 @@ export const submitLogin = createAsyncThunk(
 export const submitLogout = createAsyncThunk(
   'attendance/submitLogout',
   async ({ employeeId, workingDate, logoutTime }: { employeeId: string; workingDate: string | Date; logoutTime: string }) => {
-    const response = await axios.put(`${API_BASE_URL}/logout-time/${employeeId}`, {
+    const response = await axios.put(`${apiUrl}/logout-time/${employeeId}`, {
       workingDate,
       logoutTime,
     });
@@ -108,7 +90,7 @@ export const submitLogout = createAsyncThunk(
 export const updateAttendanceRecord = createAsyncThunk(
   'attendance/updateRecord',
   async ({ id, data }: { id: number; data: Partial<EmployeeAttendance> }) => {
-    const response = await axios.put(`${API_BASE_URL}/${id}`, data);
+    const response = await axios.put(`${apiUrl}/${id}`, data);
     return response.data;
   }
 );
@@ -117,7 +99,7 @@ export const updateAttendanceRecord = createAsyncThunk(
 export const fetchAttendanceByDate = createAsyncThunk(
   'attendance/fetchByDate',
   async ({ employeeId, workingDate }: { employeeId: string; workingDate: string }) => {
-    const response = await axios.get(`${API_BASE_URL}/by-date/${employeeId}`, {
+    const response = await axios.get(`${apiUrl}/by-date/${employeeId}`, {
       params: { workingDate },
     });
     return response.data;
@@ -128,7 +110,7 @@ export const fetchAttendanceByDate = createAsyncThunk(
 export const fetchWorkedDays = createAsyncThunk(
   'attendance/fetchWorkedDays',
   async ({ employeeId, startDate, endDate }: { employeeId: string; startDate: string; endDate: string }) => {
-    const response = await axios.get(`${API_BASE_URL}/worked-days/${employeeId}`, {
+    const response = await axios.get(`${apiUrl}/worked-days/${employeeId}`, {
       params: { startDate, endDate },
     });
     return response.data;
@@ -139,7 +121,7 @@ export const fetchWorkedDays = createAsyncThunk(
 export const deleteAttendanceRecord = createAsyncThunk(
   'attendance/deleteRecord',
   async (id: number) => {
-    await axios.delete(`${API_BASE_URL}/${id}`);
+    await axios.delete(`${apiUrl}/${id}`);
     return id;
   }
 );
@@ -148,7 +130,7 @@ export const deleteAttendanceRecord = createAsyncThunk(
 export const fetchAllAttendance = createAsyncThunk(
   'attendance/fetchAll',
   async () => {
-    const response = await axios.get(API_BASE_URL);
+    const response = await axios.get(apiUrl);
     return response.data;
   }
 );

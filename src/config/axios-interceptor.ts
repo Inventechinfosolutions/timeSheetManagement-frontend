@@ -4,7 +4,7 @@ import { message } from "antd";
 
 const TIMEOUT = 1 * 60 * 1000;
 axios.defaults.timeout = TIMEOUT;
-//axios.defaults.baseURL = '/';
+axios.defaults.baseURL = '/';
 axios.defaults.baseURL = 'http://localhost:3000';
 axios.defaults.withCredentials = true;
 
@@ -19,8 +19,8 @@ const setupAxiosInterceptors = (onUnauthenticated: () => void) => {
     const token =
       Storage.local.get("TimeSheet-authenticationToken") ||
       Storage.session.get("TimeSheet-authenticationToken");
-
-    const user = Storage.session.get("user");
+    
+    const user = Storage.session.get("user");  
     const existingContentType =
       config.headers?.["Content-Type"] || config.headers?.["content-type"];
     
@@ -31,10 +31,7 @@ const setupAxiosInterceptors = (onUnauthenticated: () => void) => {
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      // Ensure specific headers are strings if needed, or allow any type if flexible
-      if (user?.postDetails?.name) {
-         (config.headers as any).PostName = user.postDetails.name;
-      }
+      config.headers.user = user || "";
     }
 
     config.withCredentials = true;

@@ -2,12 +2,7 @@ import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import axios from 'axios';
 import { Storage } from '../utils/storage-util';
 
-/**
- * -------------------------------------------------------------------------
- * ENUMS
- * Matching the NestJS Entity exactly to ensure data integrity.
- * -------------------------------------------------------------------------
- */
+// ENUMS
 export enum UserStatus {
   ACTIVE = 'ACTIVE',
   INACTIVE = 'INACTIVE',
@@ -18,12 +13,7 @@ export enum UserType {
   EMPLOYEE = 'EMPLOYEE',
 }
 
-/**
- * -------------------------------------------------------------------------
- * INTERFACES
- * Matching the DTOs for strict type-safety.
- * -------------------------------------------------------------------------
- */
+// INTERFACES
 export interface User {
   id?: string;
   loginId: string;
@@ -84,15 +74,7 @@ const initialState: UserState = {
   passwordChangeSuccess: false,
 };
 
-// Base API URL configuration
-const apiUrl = 'api/v1/user'; // Update this port/url if necessary
-
-/**
- * -------------------------------------------------------------------------
- * ASYNC THUNKS (API Methods)
- * Each thunk maps directly to a Controller endpoint.
- * -------------------------------------------------------------------------
- */
+const apiUrl = 'api/v1/user'; 
 
 // 1. Create User: POST /user/create
 export const createUser = createAsyncThunk(
@@ -170,11 +152,7 @@ export const changePassword = createAsyncThunk(
   }
 );
 
-/**
- * -------------------------------------------------------------------------
- * THE REDUCER SLICE
- * -------------------------------------------------------------------------
- */
+// Slice
 const userSlice = createSlice({
   name: 'user',
   initialState,
@@ -197,9 +175,7 @@ const userSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // ===================================================================
       // CREATE USER
-      // ===================================================================
       .addCase(createUser.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -214,9 +190,7 @@ const userSlice = createSlice({
         state.error = action.payload as string || 'Failed to create user';
       })
 
-      // ===================================================================
       // LOGIN USER
-      // ===================================================================
       .addCase(loginUser.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -245,9 +219,7 @@ const userSlice = createSlice({
         state.error = action.payload as string || 'Login failed';
       })
 
-      // ===================================================================
       // AUTH ME (Token Verification/Refresh)
-      // ===================================================================
       .addCase(authMe.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -279,9 +251,7 @@ const userSlice = createSlice({
         Storage.session.remove('TimeSheet-authenticationToken');
       })
 
-      // ===================================================================
       // LOGOUT USER
-      // ===================================================================
       .addCase(logoutUser.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -310,9 +280,7 @@ const userSlice = createSlice({
         Storage.session.remove('TimeSheet-authenticationToken');
       })
 
-      // ===================================================================
       // CHANGE PASSWORD
-      // ===================================================================
       .addCase(changePassword.pending, (state) => {
         state.loading = true;
         state.error = null;
