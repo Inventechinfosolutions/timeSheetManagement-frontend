@@ -1,4 +1,7 @@
 export interface TimesheetEntry {
+    loginTime: any;
+    logoutTime: any;
+    isSavedLogout: boolean;
     date: number;
     fullDate: Date;
     dayName: string;

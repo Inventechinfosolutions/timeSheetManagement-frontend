@@ -1,12 +1,12 @@
 import { ActionReducerMapBuilder, createAsyncThunk, createSlice, isFulfilled, isPending, PayloadAction } from '@reduxjs/toolkit';
 import axios from 'axios';
 
-const apiUrl = 'api/v1/employee-details';
+const apiUrl = '/api/v1/employee-details';
 
-// Helper to remove null/undefined values
 const cleanEntity = (entity: any) => {
   const cleaned: any = {};
   Object.keys(entity).forEach((key) => {
+    // Treat empty strings, null, and undefined as null or omit them
     if (entity[key] !== null && entity[key] !== undefined && entity[key] !== '') {
       cleaned[key] = entity[key];
     }
@@ -34,15 +34,10 @@ const initialState: EmployeeDetailsState = {
   updateSuccess: false,
 };
 
-// Redux types (adjust based on your actual store configuration if available)
-export type RootState = {
-  employeeDetails: EmployeeDetailsState;
-};
-export type AppDispatch = any; // Ideally this should be dispatch from the store
 
 interface ThunkConfig {
-  dispatch: AppDispatch;
-  state: RootState;
+  dispatch: any;
+  state: any;
   rejectValue: string;
 }
 
@@ -79,10 +74,13 @@ export const createEntity = createAsyncThunk<any, any, ThunkConfig>(
   'employeeDetails/create_entity',
   async (entity, { dispatch, rejectWithValue }) => {
     try {
+      console.log('Dispatching createEntity:', entity);
       const response = await axios.post(apiUrl, cleanEntity(entity));
+      console.log('createEntity Success:', response.data);
       dispatch(getEntities({ page: 1, limit: 10, search: '' }));
       return response.data;
     } catch (error: any) {
+      console.error('createEntity Error:', error);
       return rejectWithValue(error.response?.data?.message || error.message || 'Request failed');
     }
   }
@@ -127,6 +125,18 @@ export const deleteEntity = createAsyncThunk<any, number, ThunkConfig>(
   }
 );
 
+export const resetPassword = createAsyncThunk<any, any, ThunkConfig>(
+  'employeeDetails/reset_password',
+  async (payload: any, { rejectWithValue }) => {
+    try {
+      const response = await axios.post(`${apiUrl}/reset-password`, payload);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
 export const EmployeeDetailsSlice = createSlice({
   name: 'employeeDetails',
   initialState,
@@ -154,7 +164,7 @@ export const EmployeeDetailsSlice = createSlice({
         state.totalItems = response.totalItems || response.total || state.entities.length;
       })
       .addMatcher(
-        isFulfilled(createEntity, updateEntity, partialUpdateEntity),
+        isFulfilled(createEntity, updateEntity, partialUpdateEntity, resetPassword),
         (state: EmployeeDetailsState, action: PayloadAction<any>) => {
           state.updating = false;
           state.loading = false;
@@ -162,16 +172,12 @@ export const EmployeeDetailsSlice = createSlice({
           state.entity = action.payload;
         }
       )
-      .addMatcher(isPending(getEntities, getEntity), (state: EmployeeDetailsState) => {
-        state.errorMessage = null;
-        state.updateSuccess = false;
-        state.loading = true;
-      })
       .addMatcher(
-        isPending(createEntity, updateEntity, deleteEntity, partialUpdateEntity),
+        isPending(getEntities, getEntity, createEntity, updateEntity, deleteEntity, partialUpdateEntity, resetPassword),
         (state: EmployeeDetailsState) => {
           state.errorMessage = null;
           state.updateSuccess = false;
+          state.loading = true;
           state.updating = true;
         }
       )

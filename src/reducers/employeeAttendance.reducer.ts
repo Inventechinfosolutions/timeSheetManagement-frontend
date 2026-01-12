@@ -49,7 +49,7 @@ const initialState: AttendanceState = {
   workedDaysSummary: null,
 };
 
-const apiUrl = 'api/v1/employee-attendance';
+const apiUrl = '/api/v1/employee-attendance';
 
 // 1. Fetch Monthly Details: GET /monthly-details/:employeeId?month=...&year=...
 export const fetchMonthlyAttendance = createAsyncThunk(
