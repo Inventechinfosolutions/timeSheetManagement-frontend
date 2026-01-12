@@ -237,7 +237,8 @@ const attendanceSlice = createSlice({
       .addMatcher(
         (action: any) => [
           createAttendanceRecord.fulfilled.type, 
-          updateAttendanceRecord.fulfilled.type
+          updateAttendanceRecord.fulfilled.type,
+          submitLogin.fulfilled.type
         ].includes(action.type),
         (state: AttendanceState, action: PayloadAction<EmployeeAttendance>) => {
           state.loading = false;
