@@ -1,7 +1,7 @@
 import { lazy } from "react";
 
 const MyTimesheet = lazy(() => import("../EmployeeDashboard/MyTimesheet"));
-const FullTimesheet = lazy(() => import("../EmployeeDashboard/FullTimesheet"));
+const FullTimesheet = lazy(() => import("../EmployeeDashboard/CalendarView"));
 const MyProfile = lazy(() => import("../EmployeeDashboard/MyProfile"));
 const TodayAttendance = lazy(
   () => import("../EmployeeDashboard/TodayAttendance")

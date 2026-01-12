@@ -4,13 +4,12 @@ import {
     Calendar,
     User,
     Lock,
-    LogOut,
     AlarmClock,
     Unlock,
     Eye,
     Menu,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+
 
 interface SidebarLayoutProps {
     children: React.ReactNode;
@@ -19,12 +18,12 @@ interface SidebarLayoutProps {
     onLogout?: () => void;
 }
 
-const SidebarLayout = ({ children, activeTab = 'Dashboard', onTabChange, onLogout }: SidebarLayoutProps) => {
+const SidebarLayout = ({ children, activeTab = 'Dashboard', onTabChange }: SidebarLayoutProps) => {
     // State management
     const [isHovered, setIsHovered] = useState(false);
     const [isLocked, setIsLocked] = useState(false);
     const [isMobileOpen, setIsMobileOpen] = useState(false);
-    const navigate = useNavigate();
+
 
     // Sidebar opens if it's either hovered OR locked
     const isOpen = isHovered || isLocked;
@@ -37,16 +36,10 @@ const SidebarLayout = ({ children, activeTab = 'Dashboard', onTabChange, onLogou
         { name: 'Change Password', icon: Lock },
     ];
 
-    const handleLogout = () => {
-        if (onLogout) {
-            onLogout();
-        } else {
-            navigate('/landing');
-        }
-    };
+
 
     return (
-        <div className="flex flex-1 bg-[#F4F7FE] font-sans text-[#2B3674] overflow-hidden relative">
+        <div className="flex w-full min-h-screen bg-[#F4F7FE] font-sans text-[#2B3674] overflow-hidden relative">
 
             {/* Mobile Menu Trigger - Floating Pulse Button */}
             <button
@@ -180,24 +173,7 @@ const SidebarLayout = ({ children, activeTab = 'Dashboard', onTabChange, onLogou
                     })}
                 </nav>
 
-                {/* Footer / Logout */}
-                <div className="p-3 mt-auto shrink-0 mb-2 pt-2">
-                    <button
-                        onClick={handleLogout}
-                        className={`w-full flex items-center gap-4 p-2 rounded-xl cursor-pointer transition-all duration-300 group hover:bg-red-50 text-red-500
-                            ${!isOpen && 'justify-center'}
-                        `}
-                    >
-                        <div className="shrink-0 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-12">
-                            <LogOut className="w-6 h-6" />
-                        </div>
-                        <span className={`font-medium text-sm whitespace-nowrap transition-all duration-300
-                            ${(isOpen || isMobileOpen) ? 'opacity-100 translate-x-0 w-auto' : 'opacity-0 -translate-x-4 w-0 absolute'}
-                        `}>
-                            Logout
-                        </span>
-                    </button>
-                </div>
+
             </aside>
 
             <main className="flex-1 overflow-y-auto overflow-x-hidden h-full [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>

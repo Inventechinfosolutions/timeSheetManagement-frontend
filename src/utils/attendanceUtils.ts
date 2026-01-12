@@ -129,12 +129,11 @@ export const mapStatus = (
         }
     }
 
-    if ((isFuture || isWeekend)) return 'Leave';
-    
-    // If we have login time but no logout, it's Pending
-    if (isToday && loginTime && !logoutTime) return 'Pending';
+    // 2. Future or Weekend (with no data) defaults to No Status (undefined)
+    if (isFuture) return undefined;
+    if (isWeekend) return undefined;
 
-    return isToday ? 'Pending' : 'Leave';
+    return isToday ? 'Pending' : 'Not Updated';
 };
 
 /**
@@ -155,6 +154,9 @@ export const mapAttendanceToEntry = (
     const isFuture = checkDate > checkNow;
     const isWeekend = date.getDay() === 0 || date.getDay() === 6;
 
+    // Handle potential snake_case from backend
+    const totalHours = attendance?.totalHours ?? (attendance as any)?.total_hours;
+
     return {
         date: i,
         fullDate: date,
@@ -163,11 +165,8 @@ export const mapAttendanceToEntry = (
         isToday,
         isWeekend,
         isFuture,
-        // Location and Times
-        location: attendance?.location,
-        loginTime: attendance?.loginTime,
-        logoutTime: attendance?.logoutTime,
-        status: mapStatus(attendance?.status, attendance?.loginTime, attendance?.logoutTime, isFuture, isToday, isWeekend, attendance?.totalHours),
+        totalHours, // Ensure this is passed to the UI
+        status: mapStatus(attendance?.status, isFuture, isToday, isWeekend, totalHours),
         isEditing: false,
         isSaved: !!attendance?.id,
         isSavedLogout: !!attendance?.logoutTime && attendance.logoutTime !== "00:00:00" && !attendance.logoutTime.includes("NaN"),

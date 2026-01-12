@@ -133,24 +133,16 @@ export const fetchAllAttendance = createAsyncThunk(
   }
 );
 
-// 9. Submit Login Time: POST /
-export const submitLogin = createAsyncThunk(
-  'attendance/submitLogin',
-  async ({ employeeId, workingDate, loginTime }: { employeeId: string; workingDate: string | Date; loginTime: string }) => {
-    const response = await axios.post(`${apiUrl}`, {
-      employeeId,
-      workingDate,
-      loginTime,
-    });
-    return response.data;
-  }
-);
-
-// 10. Bulk Submission: POST /bulk
+// 9. Bulk Update: POST /attendance-data/:employeeId
 export const submitBulkAttendance = createAsyncThunk(
   'attendance/submitBulk',
-  async (payload: any[]) => {
-    const response = await axios.post(`${apiUrl}/bulk`, payload);
+  async (data: Partial<EmployeeAttendance>[]) => {
+    // Extract employeeId from the first record (assumes all records belong to the same employee)
+    const employeeId = data[0]?.employeeId;
+    if (!employeeId) throw new Error("Employee ID missing in bulk data");
+    
+    // Endpoint path matches backend typo 'attendence-data'
+    const response = await axios.post(`${apiUrl}/attendence-data/${employeeId}`, data);
     return response.data;
   }
 );
@@ -223,6 +215,7 @@ const attendanceSlice = createSlice({
           }
       })
 
+
       // 2. ADD MATCHERS SECOND
       // HANDLE GLOBAL LOADING (Pending states)
       .addMatcher(
@@ -237,8 +230,7 @@ const attendanceSlice = createSlice({
       .addMatcher(
         (action: any) => [
           createAttendanceRecord.fulfilled.type, 
-          updateAttendanceRecord.fulfilled.type,
-          submitLogin.fulfilled.type
+          updateAttendanceRecord.fulfilled.type
         ].includes(action.type),
         (state: AttendanceState, action: PayloadAction<EmployeeAttendance>) => {
           state.loading = false;
