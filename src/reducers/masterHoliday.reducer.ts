@@ -9,14 +9,18 @@ import {
   HolidayDateRangePayload,
   UploadHolidayFilePayload,
   FetchHolidayFilesPayload,
-  DeleteHolidayFilePayload
+  DeleteHolidayFilePayload,
+  FetchByMonthPayload,
+  FetchByMonthAndYearPayload,
+  FetchYearWeekendsPayload
 } from '../types/masterHoliday.types';
 
 // Standardizing API URL to port 3000 to match user service
-const API_URL = 'http://localhost:3000/master-holidays';
+const API_URL = '/api/v1/master-holidays';
 
 const initialState: MasterHolidayState = {
   holidays: [],
+  weekends: [],
   loading: false,
   error: null,
   uploadedFiles: [],
@@ -51,6 +55,45 @@ export const fetchHolidaysByRange = createAsyncThunk(
   }
 );
 
+// Fetch Holidays by Month
+export const fetchHolidaysByMonth = createAsyncThunk(
+  'masterHolidays/fetchByMonth',
+  async ({ month }: FetchByMonthPayload, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`${API_URL}/month/${month}`);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to fetch holidays by month');
+    }
+  }
+);
+
+// Fetch Holidays by Month and Year
+export const fetchHolidaysByMonthAndYear = createAsyncThunk(
+  'masterHolidays/fetchByMonthAndYear',
+  async ({ month, year }: FetchByMonthAndYearPayload, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`${API_URL}/month/${month}/year/${year}`);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to fetch holidays by month and year');
+    }
+  }
+);
+
+// Fetch Year Weekends
+export const fetchYearWeekends = createAsyncThunk(
+  'masterHolidays/fetchYearWeekends',
+  async ({ year }: FetchYearWeekendsPayload, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`${API_URL}/weekends/${year}`);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to fetch year weekends');
+    }
+  }
+);
+
 // Create Holiday
 export const createHoliday = createAsyncThunk(
   'masterHolidays/create',
@@ -60,6 +103,19 @@ export const createHoliday = createAsyncThunk(
       return response.data; 
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Failed to create holiday');
+    }
+  }
+);
+
+// Create Bulk Holidays
+export const createBulkHolidays = createAsyncThunk(
+  'masterHolidays/createBulk',
+  async (payload: CreateHolidayPayload[], { rejectWithValue }) => {
+    try {
+      const response = await axios.post(`${API_URL}/holidays`, payload);
+      return response.data; 
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to create bulk holidays');
     }
   }
 );
@@ -181,11 +237,80 @@ const masterHolidaySlice = createSlice({
         state.error = action.payload as string;
       });
 
+    // Fetch Holidays By Range
+     builder
+      .addCase(fetchHolidaysByRange.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchHolidaysByRange.fulfilled, (state, action) => {
+        state.loading = false;
+        state.holidays = action.payload.data || action.payload;
+      })
+      .addCase(fetchHolidaysByRange.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      });
+
+    // Fetch Holidays By Month
+    builder
+      .addCase(fetchHolidaysByMonth.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchHolidaysByMonth.fulfilled, (state, action) => {
+        state.loading = false;
+        state.holidays = action.payload.data || action.payload;
+      })
+      .addCase(fetchHolidaysByMonth.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      });
+
+    // Fetch Holidays By Month And Year
+    builder
+      .addCase(fetchHolidaysByMonthAndYear.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchHolidaysByMonthAndYear.fulfilled, (state, action) => {
+        state.loading = false;
+        state.holidays = action.payload.data || action.payload;
+      })
+      .addCase(fetchHolidaysByMonthAndYear.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      });
+
+    // Fetch Year Weekends
+    builder
+      .addCase(fetchYearWeekends.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchYearWeekends.fulfilled, (state, action) => {
+        state.loading = false;
+        state.weekends = action.payload.data || action.payload;
+      })
+      .addCase(fetchYearWeekends.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      });
+
     // Create Holiday
     builder
       .addCase(createHoliday.fulfilled, (state, action) => {
         const newHoliday = action.payload.data || action.payload;
         state.holidays.push(newHoliday);
+      });
+
+    // Create Bulk Holidays
+    builder
+      .addCase(createBulkHolidays.fulfilled, (state, action) => {
+        const newHolidays = action.payload.data || action.payload;
+        if (Array.isArray(newHolidays)) {
+           state.holidays.push(...newHolidays);
+        }
       });
 
     // Update Holiday

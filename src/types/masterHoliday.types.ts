@@ -69,8 +69,27 @@ export interface UploadedFileDto {
   size: number;
 }
 
+export interface FetchByMonthPayload {
+  month: number;
+}
+
+export interface FetchByMonthAndYearPayload {
+  month: number;
+  year: number;
+}
+
+export interface FetchYearWeekendsPayload {
+  year: number;
+}
+
+export interface WeekendHoliday {
+  date: string; // Serialized Date
+  name: string;
+}
+
 export interface MasterHolidayState {
   holidays: MasterHoliday[];
+  weekends: WeekendHoliday[];
   loading: boolean;
   error: string | null;
   uploadedFiles: UploadedFileDto[];
