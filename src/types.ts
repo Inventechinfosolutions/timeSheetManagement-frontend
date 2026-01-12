@@ -9,7 +9,7 @@ export interface TimesheetEntry {
 
     // Editable Fields
     // location, loginTime, logoutTime removed as per DB schema changes
-    status: 'Full Day' | 'Half Day' | 'WFH' | 'Client Visit' | 'Pending' | 'Leave' | 'Not Updated';
+    status: 'Full Day' | 'Half Day' | 'WFH' | 'Client Visit' | 'Pending' | 'Leave' | 'Not Updated' | undefined;
     attendanceType?: 'login' | 'logout' | null;
     isEditing: boolean;
     isSaved: boolean;

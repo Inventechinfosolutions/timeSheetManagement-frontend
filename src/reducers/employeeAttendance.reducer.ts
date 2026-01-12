@@ -133,6 +133,20 @@ export const fetchAllAttendance = createAsyncThunk(
   }
 );
 
+// 9. Bulk Update: POST /attendance-data/:employeeId
+export const submitBulkAttendance = createAsyncThunk(
+  'attendance/submitBulk',
+  async (data: Partial<EmployeeAttendance>[]) => {
+    // Extract employeeId from the first record (assumes all records belong to the same employee)
+    const employeeId = data[0]?.employeeId;
+    if (!employeeId) throw new Error("Employee ID missing in bulk data");
+    
+    // Endpoint path matches backend typo 'attendence-data'
+    const response = await axios.post(`${apiUrl}/attendence-data/${employeeId}`, data);
+    return response.data;
+  }
+);
+
 /**
  * -------------------------------------------------------------------------
  * THE REDUCER SLICE
@@ -200,6 +214,7 @@ const attendanceSlice = createSlice({
               });
           }
       })
+
 
       // 2. ADD MATCHERS SECOND
       // HANDLE GLOBAL LOADING (Pending states)

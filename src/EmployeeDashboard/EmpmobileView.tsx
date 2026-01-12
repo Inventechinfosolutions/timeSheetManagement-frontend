@@ -1,5 +1,5 @@
 import { Calendar, Monitor } from 'lucide-react';
-import { TimesheetEntry } from '../../../types';
+import { TimesheetEntry } from '../types';
 
 interface MobileTimesheetCardProps {
     day: TimesheetEntry;

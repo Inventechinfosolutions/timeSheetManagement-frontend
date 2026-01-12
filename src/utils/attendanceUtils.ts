@@ -106,10 +106,11 @@ export const mapStatus = (
         }
     }
 
-    // 2. Future or Weekend (with no data) defaults to Absent
-    if ((isFuture || isWeekend)) return 'Leave';
+    // 2. Future or Weekend (with no data) defaults to No Status (undefined)
+    if (isFuture) return undefined;
+    if (isWeekend) return undefined;
 
-    return isToday ? 'Pending' : 'Leave';
+    return isToday ? 'Pending' : 'Not Updated';
 };
 
 /**
@@ -130,6 +131,9 @@ export const mapAttendanceToEntry = (
     const isFuture = checkDate > checkNow;
     const isWeekend = date.getDay() === 0 || date.getDay() === 6;
 
+    // Handle potential snake_case from backend
+    const totalHours = attendance?.totalHours ?? (attendance as any)?.total_hours;
+
     return {
         date: i,
         fullDate: date,
@@ -138,8 +142,8 @@ export const mapAttendanceToEntry = (
         isToday,
         isWeekend,
         isFuture,
-        // Location and Times removed as per new DB schema
-        status: mapStatus(attendance?.status, isFuture, isToday, isWeekend, attendance?.totalHours),
+        totalHours, // Ensure this is passed to the UI
+        status: mapStatus(attendance?.status, isFuture, isToday, isWeekend, totalHours),
         isEditing: false,
         isSaved: !!attendance?.id,
     } as TimesheetEntry;

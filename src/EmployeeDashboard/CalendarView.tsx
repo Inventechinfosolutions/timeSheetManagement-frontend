@@ -1,9 +1,9 @@
 import { useState, useMemo } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useAppSelector } from '../../../hooks';
-import { RootState } from '../../../store';
-import { generateMonthlyEntries } from '../../../utils/attendanceUtils';
-import { TimesheetEntry } from "../../../types";
+import { useAppSelector } from '../hooks';
+import { RootState } from '../store';
+import { generateMonthlyEntries } from '../utils/attendanceUtils';
+import { TimesheetEntry } from "../types";
 
 interface CalendarProps {
     now?: Date;
@@ -78,21 +78,21 @@ const Calendar = ({
         const cellDate = new Date(displayDate.getFullYear(), displayDate.getMonth(), day);
         const isWeekend = cellDate.getDay() === 0 || cellDate.getDay() === 6;
         
+        // Status Based Styling
+        const status = entry?.status;
+        
         // Future Dates
         const checkNow = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const isFuture = cellDate > checkNow;
 
-        // Requirement: Next month (and future) weekends should be red
-        if (isFuture && isWeekend) {
+        // Requirement: Next month (and future) weekends should be red, but ONLY if no explicit status is set
+        if (isFuture && isWeekend && !status) {
             return 'bg-red-50 text-red-400 border border-red-100';
         }
 
         if (!entry) return 'border border-gray-100 text-gray-400';
 
         if (entry.isToday) return 'bg-[#F4F7FE] border border-dashed border-[#00A3C4] text-[#00A3C4] font-bold';
-        
-        // Status Based Styling
-        const status = entry.status;
 
         // Not Updated Check
         const isNotUpdated = !entry.isFuture && !entry.isToday && !entry.isWeekend && 
@@ -109,7 +109,8 @@ const Calendar = ({
         if (status === 'Half Day') {
              return 'bg-[#FFF9E5] text-[#FFB020] border border-[#FFB020]';
         }
-        
+
+        // Weekend or Leave - Check this LAST so explicit statuses above take priority
         if (status === 'Leave' || (entry.isWeekend && !isFuture)) {
              return 'bg-red-50 text-red-400 border border-red-100';
         }
@@ -195,7 +196,7 @@ const Calendar = ({
                                 <div
                                     key={day}
                                     onClick={() => entry && onNavigateToDate?.(day)}
-                                    className={`${isSmall ? 'w-7 h-7 text-[9px]' : isSidebar ? 'w-8 h-8 text-xs' : 'w-[90%] md:w-[85%] lg:w-[80%] h-12 md:h-16 lg:h-20 text-xs md:text-sm'} mx-auto rounded-lg flex items-center justify-center font-bold transition-all hover:scale-105 cursor-pointer relative
+                                    className={`${isSmall ? 'w-7 h-7 text-[9px]' : isSidebar ? 'w-8 h-8 text-xs' : 'w-[90%] md:w-[85%] lg:w-[80%] h-12 md:h-16 lg:h-20 text-xs md:text-sm'} mx-auto rounded-lg flex items-center justify-center font-bold transition-all hover:scale-105 cursor-pointer relative group
                                     ${getStatusClasses(day)}`}
                                 >
                                     {day}
@@ -205,19 +206,33 @@ const Calendar = ({
                                     )}
 
                                     {/* Hover Status Badge - Only for large/standard view, usually */}
-                                    {(!isSmall && !isSidebar && entry && (!entry.isFuture || entry.status === 'Full Day')) && (
+                                    {(!isSmall && !isSidebar && entry && (entry.status || entry.isWeekend)) && (
                                         <div className={`absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full z-10 
                                             opacity-0 group-hover:opacity-100 group-hover:translate-y-[-50%] transition-all duration-300 pointer-events-none
                                             px-2 py-1 rounded text-[10px] md:text-xs font-bold whitespace-nowrap shadow-lg hidden md:block
                                             ${(() => {
-                                                if (entry.status === 'Not Updated') return 'bg-orange-500 text-white';
-                                                if (entry.status === 'Full Day' || entry.status === 'WFH') return 'bg-[#01B574] text-white';
-                                                if (entry.status === 'Half Day') return 'bg-[#FFB020] text-white';
-                                                if (entry.status === 'Leave' || entry.isWeekend) return 'bg-red-500 text-white';
+                                                const status = entry.status as any;
+                                                const isActualMissing = !entry.isFuture && !entry.totalHours && status !== 'Leave' && status !== 'Holiday' && !entry.isWeekend;
+                                                
+                                                if (status === 'Not Updated' || isActualMissing || status === 'Pending') return 'bg-orange-500 text-white';
+                                                
+                                                if (status === 'Full Day' || status === 'WFH' || status === 'Client Visit') return 'bg-[#01B574] text-white';
+                                                
+                                                if (status === 'Half Day') return 'bg-[#FFB020] text-white';
+                                                
+                                                if (status === 'Leave' || status === 'Holiday' || entry.isWeekend) return 'bg-red-500 text-white';
+                                                
                                                 if (entry.isToday) return 'bg-[#00A3C4] text-white';
                                                 return 'bg-gray-800 text-white';
                                             })()}`}>
-                                            {entry.status === 'Not Updated' ? 'Not Updated' : entry.status}
+                                            {(() => {
+                                                const status = entry.status;
+                                                const isActualMissing = !entry.isFuture && !entry.totalHours && status !== 'Leave' && (status as any) !== 'Holiday' && !entry.isWeekend;
+
+                                                if (status === 'Not Updated' || isActualMissing || status === 'Pending') return 'Not Updated';
+                                                if (entry.isWeekend && !status) return 'Weekly Off';
+                                                return status || 'No Status';
+                                            })()}
                                         </div>
                                     )}
                                 </div>
@@ -247,3 +262,4 @@ const Calendar = ({
 };
 
 export default Calendar;
+

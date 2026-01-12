@@ -1,726 +1,525 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { Clock, ChevronDown } from "lucide-react";
-import { TimesheetEntry } from "../types";
-import { MobileTimesheetCard } from "./mobileView";
-import { useAppDispatch, useAppSelector } from "../hooks";
-import {
-  fetchMonthlyAttendance,
-  submitLogin,
-  submitLogout,
-  updateAttendanceRecord,
-  AttendanceStatus,
-} from "../reducers/employeeAttendance.reducer";
-import {
-  generateMonthlyEntries,
-  mapStatus,
-  calculateTotal,
-  formatTo12H,
-} from "../utils/attendanceUtils";
+import { useState, useEffect, useMemo } from 'react';
+import { ChevronLeft, ChevronRight, Save, AlertCircle } from 'lucide-react';
+import { TimesheetEntry } from '../types';
+import { useAppDispatch, useAppSelector } from '../hooks';
+// ERROR HIGHLIGHT: Ensure this path is correct relative to the new file location
+import { fetchMonthlyAttendance, createAttendanceRecord, updateAttendanceRecord, submitBulkAttendance } from '../reducers/employeeAttendance.reducer';
+import { generateMonthlyEntries, isEditableMonth } from '../utils/attendanceUtils';
 
-interface Props {
-  value: string;
-  options: string[];
-  onChange: (value: string) => void;
-  mapValToLabel?: (val: string) => string;
-  triggerClassName?: string;
+// Note: Restored Bulk Save logic with 404 Fallback.
+// This allows single-API save when backend is ready, but falls back to sequential if backend is missing /bulk.
+
+interface TimesheetProps {
+    now?: Date;
 }
 
-export const CustomDropdown = ({
-  value,
-  options,
-  onChange,
-  mapValToLabel,
-  triggerClassName,
-}: Props) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const displayValue = mapValToLabel ? mapValToLabel(value) : value;
+const MyTimesheet = ({ now: propNow }: TimesheetProps) => {
+    // 1. Memoize 'now' to prevent infinite re-renders if prop is missing (new Date() on every render)
+    const now = useMemo(() => propNow || new Date(), [propNow]);
+    const dispatch = useAppDispatch();
+    const { records } = useAppSelector(state => state.attendance);
+    const { entity } = useAppSelector(state => state.employeeDetails);
+    const currentEmployeeId = entity?.employeeId ;
 
-  const defaultThemeClasses =
-    "bg-white border-gray-200 text-[#2B3674] hover:border-[#00A3C4]";
-  const finalTriggerClasses = triggerClassName || defaultThemeClasses;
-
-  // Determine chevron color: if custom trigger has white text, use white chevron, else gray
-  const chevronClass = finalTriggerClasses.includes("text-white")
-    ? "text-white/80"
-    : "text-gray-400";
-
-  return (
-    <div
-      className="relative w-full min-w-[100px]"
-      onMouseEnter={() => setIsOpen(true)}
-      onMouseLeave={() => setIsOpen(false)}
-    >
-      <div
-        className={`border rounded-lg px-3 py-1.5 text-[13px] font-bold shadow-sm flex items-center justify-between cursor-pointer transition-colors ${finalTriggerClasses}`}
-      >
-        <span className="capitalize">{displayValue}</span>
-        <ChevronDown
-          size={14}
-          className={`transition-transform duration-200 ${
-            isOpen ? "rotate-180" : ""
-          } ${chevronClass}`}
-        />
-      </div>
-
-      {isOpen && (
-        <div className="absolute top-full left-0 w-full mt-1 bg-white border border-gray-100 rounded-xl shadow-lg z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
-          {options.map((option) => (
-            <div
-              key={option}
-              onClick={() => {
-                onChange(option);
-                setIsOpen(false);
-              }}
-              className="px-3 py-2 text-[13px] font-medium text-gray-600 hover:bg-[#F4F7FE] hover:text-[#00A3C4] cursor-pointer transition-colors first:rounded-t-lg last:rounded-b-lg capitalize"
-            >
-              {mapValToLabel ? mapValToLabel(option) : option}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
-interface TimeProps {
-  value: string;
-  onChange: (value: string) => void;
-  dashed?: boolean;
-  disabled?: boolean;
-}
-
-export const CustomTimePicker = ({
-  value,
-  onChange,
-  dashed,
-  disabled,
-}: TimeProps) => {
-  const [isOpen, setIsOpen] = useState(false);
-
-  // Parse hours and minutes from value or default
-  const [currentHours, setCurrentHours] = useState(
-    value ? value.split(":")[0] : "--"
-  );
-  const [currentMinutes, setCurrentMinutes] = useState(
-    value ? value.split(":")[1] : "--"
-  );
-
-  // Update internal state when the prop 'value' changes
-  useEffect(() => {
-    if (value) {
-      const [h, m] = value.split(":");
-      setCurrentHours(h);
-      setCurrentMinutes(m);
-    } else {
-      setCurrentHours("--");
-      setCurrentMinutes("--");
-    }
-  }, [value]);
-
-  // Generate arrays for HH and MM
-  const hourOptions = Array.from({ length: 24 }, (_, i) =>
-    i.toString().padStart(2, "0")
-  );
-  const minuteOptions = Array.from({ length: 60 }, (_, i) =>
-    i.toString().padStart(2, "0")
-  );
-
-  const handleTimeChange = (type: "hour" | "minute", val: string) => {
-    let newH = currentHours;
-    let newM = currentMinutes;
-
-    if (type === "hour") {
-      newH = val;
-      setCurrentHours(val);
-      if (newM === "--") {
-        newM = "00";
-        setCurrentMinutes("00");
-      } // Default minute if not set
-    }
-    if (type === "minute") {
-      newM = val;
-      setCurrentMinutes(val);
-      if (newH === "--") {
-        newH = "09";
-        setCurrentHours("09");
-      } // Default hour if not set
-    }
-
-    if (newH !== "--" && newM !== "--") {
-      onChange(`${newH}:${newM}`);
-    } else {
-      onChange("");
-    }
-  };
-
-  if (disabled) {
-    return (
-      <div className="bg-gray-50 border border-gray-100 rounded-2xl px-3 py-2 text-xs font-bold text-gray-400 flex items-center justify-between cursor-not-allowed opacity-70">
-        <span>{value || "--:--"}</span>
-        <Clock size={14} className="text-gray-300" />
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className="relative w-[100px]"
-      onMouseEnter={() => setIsOpen(true)}
-      onMouseLeave={() => setIsOpen(false)}
-    >
-      <style>{`
-                .no-scrollbar::-webkit-scrollbar {
-                    display: none;
-                }
-                .no-scrollbar {
-                    -ms-overflow-style: none;
-                    scrollbar-width: none;
-                }
-            `}</style>
-
-      <div
-        className={`bg-white border ${
-          dashed ? "border-dashed border-gray-300" : "border-gray-200"
-        } rounded-2xl px-3 py-2 text-xs font-bold text-[#2B3674] shadow-sm flex items-center justify-between cursor-pointer hover:border-[#00A3C4] transition-colors`}
-      >
-        <span>{value || "--:--"}</span>
-        <Clock size={14} className="text-gray-400" />
-      </div>
-
-      {isOpen && (
-        <div className="absolute top-full left-0 mt-1 bg-white border border-gray-100 rounded-xl shadow-xl z-50 p-2 flex gap-1 h-48 w-32 animate-in fade-in zoom-in-95 duration-100">
-          <div className="flex-1 overflow-y-auto no-scrollbar">
-            <div className="text-[10px] text-center font-bold text-gray-400 mb-1 sticky top-0 bg-white">
-              HH
-            </div>
-            {hourOptions.map((h) => (
-              <div
-                key={h}
-                onClick={() => handleTimeChange("hour", h)}
-                className={`text-center py-1 text-xs rounded cursor-pointer hover:bg-gray-100 ${
-                  currentHours === h
-                    ? "bg-[#00A3C4] text-white hover:bg-[#00A3C4]"
-                    : "text-gray-600"
-                }`}
-              >
-                {h}
-              </div>
-            ))}
-          </div>
-          <div className="w-px bg-gray-100 h-full"></div>
-          <div className="flex-1 overflow-y-auto no-scrollbar">
-            <div className="text-[10px] text-center font-bold text-gray-400 mb-1 sticky top-0 bg-white">
-              MM
-            </div>
-            {minuteOptions.map((m) => (
-              <div
-                key={m}
-                onClick={() => handleTimeChange("minute", m)}
-                className={`text-center py-1 text-xs rounded cursor-pointer hover:bg-gray-100 ${
-                  currentMinutes === m
-                    ? "bg-[#00A3C4] text-white hover:bg-[#00A3C4]"
-                    : "text-gray-600"
-                }`}
-              >
-                {m}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-const MyTimesheet = () => {
-  const [highlightedRow, setHighlightedRow] = useState<number | null>(null);
-  const [now] = useState(new Date());
-  const [scrollToDate, setScrollToDate] = useState<number | null>(null);
-
-  // Redux
-  const dispatch = useAppDispatch();
-  const { records } = useAppSelector((state) => state.attendance);
-  const { entity } = useAppSelector((state) => state.employeeDetails);
-  const currentEmployeeId = entity?.employeeId || "EMP001";
-
-  const [entries, setEntries] = useState<TimesheetEntry[]>([]);
-
-  // Base records mapping for current month
-  const baseEntries = useMemo(() => {
-    const generatedEntries = generateMonthlyEntries(now, now, records);
-    return generatedEntries.map((e) => {
-      const loginClean =
-        e.loginTime?.includes("NaN") || e.loginTime === "00:00:00"
-          ? ""
-          : e.loginTime || "";
-      const logoutClean =
-        e.logoutTime?.includes("NaN") || e.logoutTime === "00:00:00"
-          ? ""
-          : e.logoutTime || "";
-      return {
-        ...e,
-        loginTime: loginClean,
-        logoutTime: logoutClean,
-        isSaved: e.isSaved && !!loginClean,
-        isSavedLogout: e.isSavedLogout && !!logoutClean,
-      };
+    // View State
+    const [localEntries, setLocalEntries] = useState<TimesheetEntry[]>([]);
+    
+    // State to track the start of the visible week
+    const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
+        const d = new Date(now);
+        const day = d.getDay(); 
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1); 
+        return new Date(d.setDate(diff));
     });
-  }, [now, records]);
 
-  useEffect(() => {
-    setEntries(baseEntries);
-  }, [baseEntries]);
+    const [today] = useState(new Date());
 
-  // Data Fetching
-  const fetchAttendance = useCallback(
-    (date: Date) => {
-      dispatch(
-        fetchMonthlyAttendance({
-          employeeId: currentEmployeeId,
-          month: (date.getMonth() + 1).toString(),
-          year: date.getFullYear().toString(),
-        })
-      );
-    },
-    [dispatch, currentEmployeeId]
-  );
+    // Toast State
+    const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' | 'info' }>({ 
+        show: false, message: '', type: 'success' 
+    });
 
-  useEffect(() => {
-    fetchAttendance(now);
-  }, [fetchAttendance, now]);
+    // --- Data Fetching ---
+    useEffect(() => {
+        if (!currentEmployeeId) return; // Guard: distinct check to prevent fetching without ID
 
-  // Handlers
-  const handleUpdateEntry = (
-    index: number,
-    field: keyof TimesheetEntry,
-    value: any
-  ) => {
-    const updated = [...entries];
-    updated[index] = { ...updated[index], [field]: value };
-    setEntries(updated);
-  };
+        dispatch(fetchMonthlyAttendance({ 
+            employeeId: currentEmployeeId, 
+            month: (now.getMonth() + 1).toString().padStart(2, '0'),
+            year: now.getFullYear().toString() 
+        }));
+    }, [dispatch, currentEmployeeId, now]);
 
-  const handleSave = async (index: number) => {
-    const entry = entries[index];
-    const { loginTime, logoutTime, location } = entry;
-    const d = entry.fullDate;
-    const workingDate = `${d.getFullYear()}-${(d.getMonth() + 1)
-      .toString()
-      .padStart(2, "0")}-${d.getDate().toString().padStart(2, "0")}`;
+    // --- Data Transformation ---
+    const baseEntries = useMemo(() => {
+        const entries = generateMonthlyEntries(now, today, records);
+        return entries.map(e => {
+            // Find the underlying record to get 'totalHours'
+            const dateStr = `${e.fullDate.getFullYear()}-${(e.fullDate.getMonth()+1).toString().padStart(2,'0')}-${e.fullDate.getDate().toString().padStart(2,'0')}`;
+            // Robust Date Matching (Same as attendanceUtils)
+            const record = records.find(rec => {
+                 const rawDate = rec.workingDate || (rec as any).working_date;
+                 if (!rawDate) return false;
 
-    const formattedLogin = formatTo12H(loginTime);
-    const formattedLogout = formatTo12H(logoutTime);
-
-    const locationMap: Record<string, string> = {
-      Office: "Office",
-      WFH: "Work from Home",
-      "Client Visit": "Client Place",
-    };
-    const backendLocation = locationMap[location || "Office"] || "Office";
-
-    try {
-      const existingRecord = records.find((r) => {
-        const rDate =
-          typeof r.workingDate === "string"
-            ? r.workingDate.split("T")[0]
-            : (r.workingDate as Date).toISOString().split("T")[0];
-        return rDate === workingDate;
-      });
-
-      let recordId = existingRecord?.id;
-
-      if (formattedLogout && logoutTime && logoutTime !== "--:--") {
-        const result = await dispatch(
-          submitLogout({
-            employeeId: currentEmployeeId,
-            workingDate,
-            logoutTime: formattedLogout,
-          })
-        ).unwrap();
-        if (result?.id) recordId = result.id;
-      } else if (formattedLogin && !existingRecord) {
-        const result = await dispatch(
-          submitLogin({
-            employeeId: currentEmployeeId,
-            workingDate,
-            loginTime: formattedLogin,
-          })
-        ).unwrap();
-        if (result?.id) recordId = result.id;
-      }
-
-      if (recordId) {
-        const calculatedStatus = mapStatus(
-          existingRecord?.status as AttendanceStatus | undefined,
-          formattedLogin,
-          formattedLogout,
-          entry.isFuture,
-          entry.isToday,
-          entry.isWeekend
-        );
-
-        await dispatch(
-          updateAttendanceRecord({
-            id: recordId,
-            data: {
-              location: backendLocation as any,
-              status: calculatedStatus as any,
-              ...(formattedLogin && { loginTime: formattedLogin }),
-              ...(formattedLogout &&
-                logoutTime &&
-                logoutTime !== "--:--" && { logoutTime: formattedLogout }),
-            },
-          })
-        ).unwrap();
-      }
-
-      fetchAttendance(now);
-    } catch (error: any) {
-      console.error("Failed to save attendance:", error);
-    }
-  };
-
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const hasInitialScrolled = useRef(false);
-
-  useEffect(() => {
-    if (entries.length > 0 && scrollContainerRef.current) {
-      // Priority 1: Scroll to specific date from Calendar (External Navigation) - Placeholder for now
-      if (scrollToDate !== null) {
-        const targetIndex = entries.findIndex((e) => e.date === scrollToDate);
-        if (targetIndex !== -1) {
-          const targetElement = document.getElementById(`row-${targetIndex}`);
-          if (targetElement) {
-            targetElement.scrollIntoView({
-              behavior: "smooth",
-              block: "center",
+                 let rYear, rMonth, rDay;
+                 if (typeof rawDate === 'string') {
+                     if (rawDate.includes('T')) {
+                          const d = new Date(rawDate);
+                          rYear = d.getFullYear();
+                          rMonth = d.getMonth() + 1;
+                          rDay = d.getDate();
+                     } else {
+                          const parts = rawDate.split('-');
+                          rYear = parseInt(parts[0]);
+                          rMonth = parseInt(parts[1]);
+                          rDay = parseInt(parts[2]);
+                     }
+                 } else {
+                     const d = new Date(rawDate);
+                     rYear = d.getFullYear();
+                     rMonth = d.getMonth() + 1;
+                     rDay = d.getDate();
+                 }
+                 const rDateStr = `${rYear}-${rMonth.toString().padStart(2, '0')}-${rDay.toString().padStart(2, '0')}`;
+                 return rDateStr === dateStr;
             });
-            setHighlightedRow(targetIndex);
-            setTimeout(() => setHighlightedRow(null), 2000);
-            setScrollToDate(null);
-          }
+
+            return {
+                ...e,
+                totalHours: record?.totalHours || 0,
+                isSaved: !!record?.id
+            };
+        });
+    }, [now, today, records]);
+
+    useEffect(() => {
+        setLocalEntries(baseEntries);
+    }, [baseEntries]);
+
+
+    // Sync week view when 'now' prop changes
+    useEffect(() => {
+        const d = new Date(now);
+        const day = d.getDay(); 
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+        setCurrentWeekStart(new Date(d.setDate(diff)));
+    }, [now]);
+
+    // Derive the 7 days for the current view
+    const weekData = useMemo(() => {
+        const days = [];
+        const start = new Date(currentWeekStart);
+        
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(start);
+            d.setDate(start.getDate() + i);
+            
+            // Match with existing local entries
+            const foundEntry = localEntries.find(e => e.date === d.getDate() && new Date(e.fullDate).getMonth() === d.getMonth());
+            
+            days.push({
+                dateObj: d,
+                dayName: d.toLocaleDateString('en-US', { weekday: 'short' }),
+                dateNum: d.getDate(),
+                entry: foundEntry,
+                isCurrentMonth: d.getMonth() === now.getMonth()
+            });
         }
-      }
-      // Priority 2: Default scroll to Today on initial load ONLY
-      else if (!hasInitialScrolled.current) {
-        const todayIndex = entries.findIndex((e) => e.isToday);
-        if (todayIndex !== -1) {
-          const targetIndex = Math.max(0, todayIndex - 1);
-          const targetElement = document.getElementById(`row-${targetIndex}`);
-          if (targetElement) {
-            const container = scrollContainerRef.current;
-            container.scrollTop = targetElement.offsetTop - container.offsetTop;
-            hasInitialScrolled.current = true;
-          }
-        } else {
-          hasInitialScrolled.current = true;
+        return days;
+    }, [currentWeekStart, localEntries, now]);
+
+    // Constraint Logic
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    const canGoPrev = () => {
+        const prevWeekStart = new Date(currentWeekStart);
+        prevWeekStart.setDate(prevWeekStart.getDate() - 7);
+        const prevWeekEnd = new Date(prevWeekStart);
+        prevWeekEnd.setDate(prevWeekStart.getDate() + 6);
+        return prevWeekEnd >= startOfMonth;
+    };
+
+    const canGoNext = () => {
+        const nextWeekStart = new Date(currentWeekStart);
+        nextWeekStart.setDate(nextWeekStart.getDate() + 7);
+        return nextWeekStart <= endOfMonth;
+    };
+
+    const handlePrevWeek = () => {
+        if (!canGoPrev()) return;
+        const newDate = new Date(currentWeekStart);
+        newDate.setDate(newDate.getDate() - 7);
+        setCurrentWeekStart(newDate);
+    };
+
+    const handleNextWeek = () => {
+        if (!canGoNext()) return;
+        const newDate = new Date(currentWeekStart);
+        newDate.setDate(newDate.getDate() + 7);
+        setCurrentWeekStart(newDate);
+    };
+
+    // Calculate Totals (Directly from totalHours)
+    const weekTotalHours = weekData.reduce((acc, { entry }) => {
+        return acc + (entry?.totalHours || 0);
+    }, 0);
+
+    const monthTotalHours = localEntries.reduce((acc, entry) => {
+        return acc + (entry.totalHours || 0);
+    }, 0);
+
+
+    // Local state to handle input typing (strings)
+    const [localInputValues, setLocalInputValues] = useState<Record<number, string>>({});
+
+
+
+    const handleHoursInput = (entryIndex: number, val: string) => {
+        if (!/^\d*\.?\d*$/.test(val)) return;
+        setLocalInputValues(prev => ({ ...prev, [entryIndex]: val }));
+
+        const num = parseFloat(val);
+        const hours = isNaN(num) ? 0 : num;
+        
+        let newStatus: TimesheetEntry['status'] = localEntries[entryIndex].status;
+        if (hours > 0) {
+            newStatus = hours > 6 ? 'Full Day' : 'Half Day';
         }
-      }
-    }
-  }, [entries, scrollToDate]);
 
-  return (
-    <div className="flex flex-col h-full bg-[#F4F7FE] overflow-hidden">
-      <style>{`
-                .no-scrollbar::-webkit-scrollbar {
-                    display: none;
-                }
-                .no-scrollbar {
-                    -ms-overflow-style: none;
-                    scrollbar-width: none;
-                }
-            `}</style>
-      {/* Header */}
-      <header className="bg-white/50 backdrop-blur-sm sticky top-0 z-20 px-8 py-3 flex items-center justify-between border-b border-gray-100">
-        <h2 className="text-xl font-bold text-[#2B3674]">My Timesheet</h2>
-        <div className="flex items-center gap-4 text-sm font-medium text-gray-500 bg-white px-6 py-1.5 rounded-full shadow-sm border border-gray-100">
-          <span className="min-w-[120px] text-center">
-            {now.toLocaleDateString("en-US", {
-              month: "long",
-              year: "numeric",
-            })}
-          </span>
-        </div>
-      </header>
+        const updated = [...localEntries];
+        updated[entryIndex] = { 
+            ...updated[entryIndex], 
+            totalHours: hours,
+            status: newStatus
+        };
+        setLocalEntries(updated);
+    };
 
-      <div className="p-8">
-        <div className="bg-white rounded-[20px] p-6 shadow-sm border border-gray-100 overflow-x-hidden">
-          {/* Mobile Card View */}
-          <div className="md:hidden space-y-4 h-[500px] overflow-y-auto no-scrollbar pb-10">
-            {entries.map((day, index) => (
-              <MobileTimesheetCard
-                key={day.date}
-                day={day}
-                index={index}
-                isEditable={
-                  (day.isToday && !day.isSavedLogout) || day.isEditing
-                }
-                handleUpdateEntry={handleUpdateEntry}
-                handleSave={handleSave}
-                calculateTotal={calculateTotal}
-                CustomDropdown={CustomDropdown}
-                CustomTimePicker={CustomTimePicker}
-                highlightedRow={highlightedRow}
-              />
-            ))}
-          </div>
+    const handleInputBlur = (entryIndex: number) => {
+        setLocalInputValues(prev => {
+            const next = { ...prev };
+            delete next[entryIndex];
+            return next;
+        });
+    };
 
-          {/* Desktop Table View */}
-          <div className="hidden md:block overflow-x-hidden">
-            {/* Table Header - Adjusted Gaps & Columns */}
-            <div className="grid grid-cols-[70px_100px_140px_1fr_1fr_0.8fr_1.8fr] gap-2 mb-4 text-xs font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100 pb-4 text-center items-center">
-              <div className="text-left pl-4">Date</div>
-              <div className="text-left">Day</div>
-              <div className="">Location</div>
-              <div className="">Login</div>
-              <div className="">Logout</div>
-              <div className="">Total Hours</div>
-              <div className="">Status</div>
+    useEffect(() => {
+        if (toast.show) {
+            const timer = setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [toast.show]);
+
+    // Fallback logic: Individual save (Used if Bulk fails with 404)
+    const handleIndividualSave = async (index: number): Promise<boolean> => {
+        const entry = localEntries[index];
+        const d = entry.fullDate;
+        const workingDate = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
+        const hoursToSave = entry.totalHours || 0;
+
+        try {
+            const existingRecord = records.find(r => {
+                const rDate = typeof r.workingDate === 'string' ? r.workingDate.split('T')[0] : (r.workingDate as Date).toISOString().split('T')[0];
+                return rDate === workingDate;
+            });
+
+            let recordId = existingRecord?.id;
+
+            if (!existingRecord) {
+                 const result = await dispatch(createAttendanceRecord({ 
+                     employeeId: currentEmployeeId, 
+                     workingDate, 
+                     totalHours: hoursToSave,
+                     status: 'Pending' as any // Initial status, will be updated if needed or handled by backend logic
+                 })).unwrap();
+                 if (result?.id) recordId = result.id;
+            }
+
+            // Use the status from the UI state (which is updated by handleHoursInput)
+            let derivedStatus = entry.status || 'Pending';
+            // Fallback if status is Pending but hours exist (shouldn't happen with new logic but safe)
+            if (derivedStatus === 'Pending' || derivedStatus === 'Not Updated') {
+                 if (hoursToSave > 6) derivedStatus = 'Full Day';
+                 else if (hoursToSave > 0) derivedStatus = 'Half Day';
+            }
+
+            if (recordId) {
+                await dispatch(updateAttendanceRecord({
+                    id: recordId,
+                    data: {
+                        totalHours: hoursToSave,
+                        status: derivedStatus as any
+                    }
+                })).unwrap();
+            }
+            return true;
+        } catch (error: any) {
+            console.error("Individual Save Failed:", error);
+            return false;
+        }
+    };
+
+    const onSaveAll = async () => {
+        // 1. Identify modified entries
+        const modifiedIndices: number[] = [];
+        const payload: any[] = [];
+        
+        localEntries.forEach((entry, idx) => {
+             const currentTotal = entry.totalHours || 0;
+             if (currentTotal <= 0) return;
+
+             const originalTotal = baseEntries[idx]?.totalHours || 0;
+             if (currentTotal !== originalTotal) {
+                 modifiedIndices.push(idx);
+
+                 // Prepare Bulk Payload
+                 const d = entry.fullDate;
+                 const workingDate = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
+                 
+                 // Use UI status
+                 let derivedStatus = entry.status || 'Pending';
+                 if (derivedStatus === 'Pending' || derivedStatus === 'Not Updated') {
+                      if (currentTotal > 6) derivedStatus = 'Full Day';
+                      else if (currentTotal > 0) derivedStatus = 'Half Day';
+                 }
+
+                 const existingRecord = records.find(r => {
+                     const rDate = typeof r.workingDate === 'string' ? r.workingDate.split('T')[0] : (r.workingDate as Date).toISOString().split('T')[0];
+                     return rDate === workingDate;
+                 });
+
+                 payload.push({
+                     id: existingRecord?.id,
+                     employeeId: currentEmployeeId,
+                     workingDate,
+                     totalHours: currentTotal,
+                     status: derivedStatus,
+                     // loginTime removed
+                 });
+             }
+        });
+        
+        if (payload.length === 0) {
+            setToast({ show: true, message: 'No changes to save', type: 'success' });
+            return;
+        }
+
+        // 2. Try Bulk Save First
+        try {
+            await dispatch(submitBulkAttendance(payload)).unwrap();
+            
+            // Refresh Data
+            dispatch(fetchMonthlyAttendance({ 
+                employeeId: currentEmployeeId, 
+                month: (now.getMonth() + 1).toString().padStart(2, '0'), 
+                year: now.getFullYear().toString() 
+            }));
+            
+            setToast({ show: true, message: 'Data Saved Successfully', type: 'success' });
+
+        } catch (error: any) {
+             console.warn("Bulk API failed, attempting sequential fallback...", error);
+             
+             // 3. Fallback: Sequential Save
+             let successCount = 0;
+             for (const item of payload) {
+                 try {
+                     // Check if record exists (has id) -> Update, else Create
+                     if (item.id) {
+                         // Update
+                         await dispatch(updateAttendanceRecord({ 
+                             id: item.id, 
+                             data: { 
+                                 totalHours: item.totalHours, 
+                                 status: item.status 
+                             } 
+                         })).unwrap();
+                     } else {
+                         // Create
+                         await dispatch(createAttendanceRecord({
+                             employeeId: item.employeeId,
+                             workingDate: item.workingDate,
+                             totalHours: item.totalHours,
+                             status: item.status
+                         })).unwrap();
+                     }
+                     successCount++;
+                 } catch (innerError) {
+                     console.error("Failed to save record:", item, innerError);
+                 }
+             }
+
+             if (successCount > 0) {
+                dispatch(fetchMonthlyAttendance({ 
+                    employeeId: currentEmployeeId, 
+                    month: (now.getMonth() + 1).toString().padStart(2, '0'), 
+                    year: now.getFullYear().toString() 
+                }));
+                // Show simplified success message if everything worked eventually
+                setToast({ show: true, message: 'Data Saved', type: 'success' });
+             } else {
+                 setToast({ show: true, message: 'Failed to save records.', type: 'error' });
+             }
+        }
+    };
+
+    // Label Logic
+    const endOfWeek = new Date(currentWeekStart);
+    endOfWeek.setDate(endOfWeek.getDate() + 6);
+    const isOverlap = (currentWeekStart.getMonth() === now.getMonth() && currentWeekStart.getFullYear() === now.getFullYear()) ||
+                      (endOfWeek.getMonth() === now.getMonth() && endOfWeek.getFullYear() === now.getFullYear());
+    
+    const weekCenter = new Date(currentWeekStart);
+    weekCenter.setDate(weekCenter.getDate() + 3);
+    
+    const labelDate = isOverlap ? now : weekCenter;
+
+    return (
+        <div className="flex flex-col h-full bg-[#F4F7FE] p-4 md:p-8 relative">
+            {/* Toast Notification */}
+            {toast.show && (
+                <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-50 flex items-center gap-1.5 animate-in fade-in slide-in-from-top-4 duration-300">
+                    {toast.type === 'success' ? (
+                        <Save size={16} className="text-[#00E676] drop-shadow-[0_0_8px_rgba(0,230,118,0.6)]" />
+                    ) : toast.type === 'info' ? (
+                        <AlertCircle size={16} className="text-blue-500" />
+                    ) : (
+                        <AlertCircle size={16} className="text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]" />
+                    )}
+                    <span className={`font-bold text-xs tracking-wide drop-shadow-[0_0_8px_rgba(255,255,255,0.6)] ${
+                        toast.type === 'success' ? 'text-[#00E676]' : toast.type === 'info' ? 'text-blue-500' : 'text-red-500'
+                    }`}>
+                        {toast.message}
+                    </span>
+                </div>
+            )}
+
+            {/* Header / Week Navigation */}
+            <div className="flex justify-between items-center mb-6">
+                 <h2 className="text-xl font-bold text-[#2B3674]">My Timesheet</h2>
+                 <div className="flex items-center gap-3">
+                     <div className="bg-white px-4 py-2 rounded-full shadow-sm text-[#2B3674] font-bold text-sm border border-gray-100">
+                         {labelDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                     </div>
+                     <button 
+                        onClick={onSaveAll}
+                        className="flex items-center gap-2 px-6 py-2 bg-linear-to-r from-[#00E676] to-[#00C853] text-white rounded-full font-bold text-sm shadow-[0_4px_14px_0_rgba(0,230,118,0.39)] hover:shadow-[0_6px_20px_rgba(0,230,118,0.23)] hover:bg-[#00E676] transition-all transform active:scale-95"
+                    >
+                        <Save size={16} />
+                        Save
+                    </button>
+                 </div>
             </div>
 
-            {/* Table Rows - Scrollable Container showing ~5 rows */}
-            <div
-              ref={scrollContainerRef}
-              className="space-y-4 h-[380px] overflow-y-auto no-scrollbar pb-2"
-            >
-              {entries.map((day, index) => {
-                // Weekend Row (Only show placeholder if no data)
-                if (day.isWeekend && !day.loginTime) {
-                  return (
-                    <div
-                      id={`row-${index}`}
-                      key={day.date}
-                      className={`grid grid-cols-[70px_100px_140px_1fr_1fr_0.8fr_1.8fr] gap-2 items-center text-sm py-3 px-4 -mx-4 rounded-xl transition-all duration-500
-                                                ${
-                                                  highlightedRow === index
-                                                    ? "bg-blue-100 ring-2 ring-blue-400 scale-[1.02] z-20 shadow-lg"
-                                                    : "bg-red-50/50 text-gray-400 opacity-60"
-                                                }`}
+            {/* Horizontal Grid Container */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 overflow-x-auto">
+                <div className="flex items-center gap-2 w-full min-w-max md:min-w-0">
+                    
+                    {/* Left Arrow */}
+                    <button 
+                        onClick={handlePrevWeek}
+                        disabled={!canGoPrev()}
+                        className={`p-2 rounded-full transition-colors ${!canGoPrev() ? 'text-gray-200 cursor-not-allowed' : 'hover:bg-gray-100 text-gray-400 hover:text-[#00A3C4]'}`}
                     >
-                      <div className="font-bold text-red-300 pl-2">
-                        {day.formattedDate}
-                      </div>
-                      <div className="text-red-300">{day.dayName}</div>
-                      <div className="col-span-5 text-center text-red-200 text-xs font-medium uppercase tracking-widest bg-red-50/50 py-2 rounded-lg border border-red-100/50">
-                        Weekend
-                      </div>
-                    </div>
-                  );
-                }
+                        <ChevronLeft size={24} />
+                    </button>
 
-                // Future Row
-                if (day.isFuture) {
-                  return (
-                    <div
-                      id={`row-${index}`}
-                      key={day.date}
-                      className={`grid grid-cols-[70px_100px_140px_1fr_1fr_0.8fr_1.8fr] gap-2 items-center text-sm py-3 px-4 -mx-4 rounded-xl transition-all duration-500
-                                                ${
-                                                  highlightedRow === index
-                                                    ? "bg-blue-100 ring-2 ring-blue-400 scale-[1.02] z-20 shadow-lg"
-                                                    : "text-gray-300 opacity-60 border border-gray-100"
-                                                }`}
+                    {/* Table Structure */}
+                    <div className="flex-1 border border-gray-200 rounded-xl overflow-hidden flex">
+                        
+                        {/* 7 Days Columns */}
+                        {weekData.map((day, i) => {
+                           // Check if day belongs to the currently viewed month
+                           const isCurrentMonth = day.dateObj.getMonth() === now.getMonth();
+                           const isToday = day.dateObj.toDateString() === new Date().toDateString();
+                           const isWeekend = day.dayName === 'Sat' || day.dayName === 'Sun';
+                           
+                           // Find actual index in localEntries
+                           const entryIndex = localEntries.findIndex(e => e.date === day.dateNum && new Date(e.fullDate).getMonth() === day.dateObj.getMonth());
+                           const displayVal = entryIndex !== -1 ? (localEntries[entryIndex].totalHours || 0) : 0;
+                           
+                           // Input value priority: Typed String > Stored Number > 0
+                           const inputValue = entryIndex !== -1 && localInputValues[entryIndex] !== undefined 
+                                ? localInputValues[entryIndex] 
+                                : (displayVal === 0 ? '' : displayVal.toString());
+
+                           return (
+                                <div key={i} className={`flex-1 flex flex-col border-r border-gray-200 last:border-r-0 min-w-[105px]`}>
+                                   {/* Header Cell - Always Visible */}
+                                   <div className={`py-3 text-center text-xs font-bold uppercase tracking-wider ${isToday && isCurrentMonth ? 'bg-blue-50 text-[#00A3C4]' : 'bg-[#F4F7FE] text-[#2B3674]'}`}>
+                                       {day.dayName}
+                                   </div>
+                                   
+                                   {/* Content Cell */}
+                                   <div className={`flex-1 py-5 px-2 flex flex-col items-center justify-center gap-3 ${isWeekend || !isCurrentMonth ? 'bg-gray-50/50' : 'bg-white'}`}>
+                                       {isCurrentMonth ? (
+                                           <>
+                                               <span className={`text-sm font-bold ${isToday ? 'text-[#00A3C4]' : 'text-[#2B3674]'}`}>
+                                                   {day.dateObj.toLocaleString('default', { month: 'short' })} {day.dateNum.toString().padStart(2, '0')}
+                                               </span>
+
+                                               {day.entry ? (
+                                                   <input 
+                                                        type="text" 
+                                                        disabled={!isEditableMonth(day.dateObj)}
+                                                        className={`w-full h-10 text-center border rounded-lg font-bold text-[#2B3674] placeholder:text-[10px] focus:outline-none focus:ring-2 focus:ring-[#00A3C4] focus:border-transparent transition-all
+                                                            ${!isEditableMonth(day.dateObj) ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-100' : (isToday ? 'border-[#00A3C4] bg-blue-50/30' : 'border-gray-200')}`}
+                                                        placeholder={isEditableMonth(day.dateObj) ? "Hours" : "Locked"}
+                                                        value={inputValue}
+                                                        onChange={(e) => handleHoursInput(entryIndex, e.target.value)}
+                                                        onBlur={() => handleInputBlur(entryIndex)}
+                                                   />
+                                               ) : (
+                                                   <div className="w-full h-10 flex items-center justify-center text-gray-300 font-medium text-xs border border-transparent">
+                                                       -
+                                                   </div>
+                                               )}
+                                           </>
+                                       ) : (
+                                           <div className="h-full w-full"></div>
+                                       )}
+                                   </div>
+                               </div>
+                           );
+                        })}
+
+                        {/* Week Total Column */}
+                        <div className="flex-1 flex flex-col border-l-2 border-gray-100 min-w-[100px] bg-gray-50/30">
+                            <div className="py-3 text-center text-xs font-bold uppercase tracking-wider text-[#2B3674] bg-[#F4F7FE]">
+                                Week Total
+                            </div>
+                            <div className="flex-1 flex items-center justify-center text-xl font-bold text-[#2B3674]">
+                                {weekTotalHours.toFixed(1)}
+                            </div>
+                        </div>
+
+                         {/* Month Total Column */}
+                         <div className="flex-1 flex flex-col border-l border-gray-200 min-w-[100px] bg-gray-50/30">
+                            <div className="py-3 text-center text-xs font-bold uppercase tracking-wider text-[#2B3674] bg-[#F4F7FE]">
+                                Month Total
+                            </div>
+                            <div className="flex-1 flex items-center justify-center text-xl font-bold text-[#2B3674]">
+                                {monthTotalHours.toFixed(1)}
+                            </div>
+                        </div>
+
+                    </div>
+
+                    {/* Right Arrow */}
+                    <button 
+                        onClick={handleNextWeek}
+                        disabled={!canGoNext()}
+                        className={`p-2 rounded-full transition-colors ${!canGoNext() ? 'text-gray-200 cursor-not-allowed' : 'hover:bg-gray-100 text-gray-400 hover:text-[#00A3C4]'}`}
                     >
-                      <div className="font-bold pl-2">{day.formattedDate}</div>
-                      <div className="">{day.dayName}</div>
-                      <div className="text-center">--</div>
-                      <div className="text-center">--:--</div>
-                      <div className="text-center">--:--</div>
-                      <div className="text-center">--:--</div>
-                      <div className="text-center">
-                        <span className="px-3 py-1 bg-gray-50 border border-gray-100 rounded-lg text-[10px] font-bold uppercase tracking-wider">
-                          Upcoming
-                        </span>
-                      </div>
-                    </div>
-                  );
-                }
-
-                // Today Or Editing Row
-                const isEditable =
-                  (day.isToday && !day.isSavedLogout) || day.isEditing;
-                const isCompleted = day.isSavedLogout;
-                const rowBg = day.isToday
-                  ? "bg-[#F4F7FE] border border-dashed border-[#00A3C4]"
-                  : "border border-gray-100 hover:bg-gray-50";
-                const dateColor = day.isToday
-                  ? "text-[#00A3C4]"
-                  : "text-[#2B3674]";
-
-                return (
-                  <div
-                    id={`row-${index}`}
-                    key={day.date}
-                    className={`grid grid-cols-[70px_100px_140px_1fr_1fr_0.8fr_1.8fr] gap-2 items-center text-sm py-3 px-4 -mx-4 rounded-xl transition-all duration-500
-                                            ${
-                                              highlightedRow === index
-                                                ? "bg-blue-100 ring-2 ring-blue-400 scale-[1.02] z-20 shadow-lg"
-                                                : rowBg
-                                            }`}
-                  >
-                    {/* Date & Day */}
-                    <div className={`font-bold pl-2 ${dateColor}`}>
-                      {day.formattedDate}
-                    </div>
-                    <div
-                      className={`${
-                        day.isToday
-                          ? "font-bold text-[#00A3C4]"
-                          : "text-[#2B3674]"
-                      }`}
-                    >
-                      {day.isToday ? "Today" : day.dayName}
-                    </div>
-
-                    {/* Location Dropdown */}
-                    <div className="flex justify-center">
-                      {isEditable && !isCompleted ? (
-                        <CustomDropdown
-                          value={day.location || "Office"}
-                          options={["Office", "WFH", "Client Visit"]}
-                          onChange={(val) =>
-                            handleUpdateEntry(index, "location", val)
-                          }
-                          triggerClassName="bg-white border-gray-200 text-[#2B3674] hover:border-[#00A3C4] min-w-[120px]"
-                        />
-                      ) : (
-                        <div className="text-[#2B3674] font-medium text-[13px]">
-                          {day.location || "--"}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Login Time */}
-                    <div className="flex justify-center">
-                      {isEditable && !day.isSaved ? (
-                        <CustomTimePicker
-                          value={day.loginTime}
-                          onChange={(val) =>
-                            handleUpdateEntry(index, "loginTime", val)
-                          }
-                          dashed={true}
-                        />
-                      ) : (
-                        <div
-                          className={`font-medium text-[#2B3674] flex items-center gap-2 ${
-                            !day.loginTime && "opacity-30"
-                          }`}
-                        >
-                          {day.loginTime || "--:--"}{" "}
-                          <Clock size={12} className="text-gray-400" />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Logout Time */}
-                    <div className="flex justify-center">
-                      {isEditable ? (
-                        <CustomTimePicker
-                          value={day.logoutTime}
-                          onChange={(val) =>
-                            handleUpdateEntry(index, "logoutTime", val)
-                          }
-                          dashed={true}
-                          disabled={day.isToday && now.getHours() < 11}
-                        />
-                      ) : (
-                        <div
-                          className={`font-medium text-[#2B3674] flex items-center gap-2 ${
-                            !day.logoutTime && "opacity-30"
-                          }`}
-                        >
-                          {day.logoutTime || "--:--"}{" "}
-                          <Clock size={12} className="text-gray-400" />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Total Hours */}
-                    <div className="flex justify-center font-bold text-[#2B3674]">
-                      {calculateTotal(day.loginTime, day.logoutTime)}
-                    </div>
-
-                    {/* Status Column with Integrated Save for Today */}
-                    <div className="flex items-center justify-center gap-4 w-full px-2 min-h-[40px]">
-                      <div className="flex justify-center">
-                        <span
-                          className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider min-w-[100px] text-center
-                                                        ${
-                                                          day.status ===
-                                                          "Full Day"
-                                                            ? "bg-[#01B574] text-white shadow-[0_2px_10px_-2px_rgba(1,181,116,0.4)]"
-                                                            : day.status ===
-                                                              "WFH"
-                                                            ? "bg-[#A3AED0] text-white shadow-[0_2px_8px_-1px_rgba(163,174,208,0.3)]"
-                                                            : day.status ===
-                                                              "Leave"
-                                                            ? "bg-[#EE5D50] text-white shadow-[0_2px_10px_-2px_rgba(238,93,80,0.4)]"
-                                                            : day.status ===
-                                                              "Half Day"
-                                                            ? "bg-[#FFB547] text-white shadow-[0_2px_10px_-2px_rgba(255,181,71,0.4)]"
-                                                            : day.status ===
-                                                              "Client Visit"
-                                                            ? "bg-[#6366F1] text-white shadow-[0_2px_8px_-1px_rgba(99,102,241,0.25)]"
-                                                            : day.status ===
-                                                              "Not Updated"
-                                                            ? "bg-[#FFF9E5] text-[#FFB020] border border-amber-200"
-                                                            : day.status ===
-                                                                "Pending" ||
-                                                              (!day.isFuture &&
-                                                                day.loginTime &&
-                                                                !day.logoutTime)
-                                                            ? "bg-[#F6AD55] text-white shadow-[0_2px_10px_-2px_rgba(246,173,85,0.4)]"
-                                                            : "text-gray-400"
-                                                        }
-                                                    `}
-                        >
-                          {day.status}
-                        </span>
-                      </div>
-
-                      {day.isToday && (!day.isSavedLogout || day.isEditing) && (
-                        <div className="shrink-0 flex items-center gap-2">
-                          <button
-                            onClick={() => {
-                              if (
-                                !day.loginTime ||
-                                day.loginTime === "--:--" ||
-                                day.loginTime.includes("--")
-                              ) {
-                                alert("Please fill Login time.");
-                                return;
-                              }
-                              if (
-                                day.isSaved &&
-                                (!day.logoutTime ||
-                                  day.logoutTime === "--:--" ||
-                                  day.logoutTime.includes("--"))
-                              ) {
-                                alert("Please fill Logout time to update.");
-                                return;
-                              }
-                              handleSave(index);
-                            }}
-                            className="px-4 py-1.5 rounded-lg text-[11px] font-bold shadow-md transition-all transform active:scale-95 bg-[#00A3C4] text-white hover:bg-[#0093b1] shadow-teal-100"
-                          >
-                            {day.isEditing
-                              ? "Done"
-                              : day.isSaved
-                              ? "Update"
-                              : "Save"}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+                        <ChevronRight size={24} />
+                    </button>
+                    
+                </div>
             </div>
-          </div>
+
         </div>
-      </div>
-    </div>
-  );
+    );
 };
 
 export default MyTimesheet;
