@@ -78,23 +78,46 @@ export const isEditableMonth = (date: Date | string): boolean => {
 // Map Backend Status enum to Frontend UI strings
 export const mapStatus = (
     status: AttendanceStatus | undefined, 
+    loginTime: string | null | undefined | boolean, 
+    logoutTime: string | null | undefined | boolean, 
     isFuture: boolean, 
     isToday: boolean, 
     isWeekend: boolean,
     totalHours?: number
 ): TimesheetEntry['status'] => {
-    // 1. Trust DB Status for finalized records
-    // Source of Truth: If the DB says something, we show it.
+    // Overload handling: If 2nd arg is boolean, it means we are using the old signature:
+    // status, isFuture, isToday, isWeekend, totalHours
+    if (typeof loginTime === 'boolean') {
+        const _isFuture = loginTime;
+        const _isToday = logoutTime as boolean;
+        const _isWeekend = isFuture;
+        const _totalHours = isToday as unknown as number;
+
+        if (status) {
+            if (status === AttendanceStatus.LEAVE && _totalHours && _totalHours > 0) {
+                 return _totalHours >= 6 ? 'Full Day' : 'Half Day';
+            }
+            if (status === AttendanceStatus.LEAVE) return 'Leave';
+            if (status !== AttendanceStatus.PENDING || !_isToday) {
+                switch (status) {
+                    case AttendanceStatus.FULL_DAY: return 'Full Day';
+                    case AttendanceStatus.HALF_DAY: return 'Half Day';
+                    case AttendanceStatus.NOT_UPDATED: return 'Not Updated';
+                    case AttendanceStatus.PENDING: return 'Pending';
+                    default: break;
+                }
+            }
+        }
+        if ((_isFuture || _isWeekend)) return 'Leave';
+        return _isToday ? 'Pending' : 'Leave';
+    }
+
+    // New signature handling: status, loginTime, logoutTime, isFuture, isToday, isWeekend
     if (status) {
-        // Fix: If backend says "Leave" but there are valid totalHours, override it.
-        // This handles case where backend converts "No Login Time" -> "Leave" despite hours existing.
         if (status === AttendanceStatus.LEAVE && totalHours && totalHours > 0) {
              return totalHours >= 6 ? 'Full Day' : 'Half Day';
         }
-
-        if (status === AttendanceStatus.LEAVE) return 'Leave'; // Explicit backend LEAVE
-        
-        // Use DB status unless it's just PENDING for Today (we want to show live predictions if user is typing)
+        if (status === AttendanceStatus.LEAVE) return 'Leave';
         if (status !== AttendanceStatus.PENDING || !isToday) {
             switch (status) {
                 case AttendanceStatus.FULL_DAY: return 'Full Day';
@@ -106,8 +129,10 @@ export const mapStatus = (
         }
     }
 
-    // 2. Future or Weekend (with no data) defaults to Absent
     if ((isFuture || isWeekend)) return 'Leave';
+    
+    // If we have login time but no logout, it's Pending
+    if (isToday && loginTime && !logoutTime) return 'Pending';
 
     return isToday ? 'Pending' : 'Leave';
 };
@@ -138,10 +163,14 @@ export const mapAttendanceToEntry = (
         isToday,
         isWeekend,
         isFuture,
-        // Location and Times removed as per new DB schema
-        status: mapStatus(attendance?.status, isFuture, isToday, isWeekend, attendance?.totalHours),
+        // Location and Times
+        location: attendance?.location,
+        loginTime: attendance?.loginTime,
+        logoutTime: attendance?.logoutTime,
+        status: mapStatus(attendance?.status, attendance?.loginTime, attendance?.logoutTime, isFuture, isToday, isWeekend, attendance?.totalHours),
         isEditing: false,
         isSaved: !!attendance?.id,
+        isSavedLogout: !!attendance?.logoutTime && attendance.logoutTime !== "00:00:00" && !attendance.logoutTime.includes("NaN"),
     } as TimesheetEntry;
 };
 
@@ -195,4 +224,68 @@ export const generateMonthlyEntries = (date: Date, now: Date, records: EmployeeA
     return entries;
 };
 
+/**
+ * Calculates the total time duration between login and logout times.
+ * Supports both 24H (HH:mm) and 12H (HH:mm AM/PM) formats.
+ */
+export const calculateTotal = (login: string | null | undefined, logout: string | null | undefined): string => {
+    if (!login || !logout || login === '--:--' || logout === '--:--' || login.includes('--') || logout.includes('--')) {
+        return "--";
+    }
 
+    const parseTime = (timeStr: string) => {
+        const parts = timeStr.trim().split(" ");
+        const time = parts[0];
+        const modifier = parts[1]; // AM or PM if present
+
+        let [hours, minutes] = time.split(":").map(Number);
+
+        if (modifier === "PM" && hours < 12) hours += 12;
+        if (modifier === "AM" && hours === 12) hours = 0;
+
+        return hours * 60 + minutes;
+    };
+
+    try {
+        const loginMinutes = parseTime(login);
+        const logoutMinutes = parseTime(logout);
+        
+        let diff = logoutMinutes - loginMinutes;
+
+        // If logout is before login, assume it's the next day or invalid
+        if (diff < 0) return "--";
+
+        const h = Math.floor(diff / 60);
+        const m = diff % 60;
+        return `${h}h ${m}m`;
+    } catch (e) {
+        return "--";
+    }
+};
+
+/**
+ * Converts a 24-hour time string (HH:mm) to 12-hour format (hh:mm AM/PM).
+ */
+export const formatTo12H = (time24: string | null | undefined): string => {
+    if (!time24 || time24 === '--:--' || time24.includes('--')) return "";
+    
+    // If it's already in 12H format (contains AM/PM), return it
+    if (time24.toUpperCase().includes("AM") || time24.toUpperCase().includes("PM")) {
+        return time24;
+    }
+
+    const [hoursStr, minutesStr] = time24.split(":");
+    let hours = parseInt(hoursStr);
+    const minutes = parseInt(minutesStr);
+    
+    if (isNaN(hours) || isNaN(minutes)) return "";
+
+    const modifier = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12;
+    hours = hours ? hours : 12; // 0 becomes 12
+    
+    const formattedHours = hours.toString().padStart(2, '0');
+    const formattedMinutes = minutes.toString().padStart(2, '0');
+    
+    return `${formattedHours}:${formattedMinutes} ${modifier}`;
+};

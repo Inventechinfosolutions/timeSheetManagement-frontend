@@ -14,10 +14,11 @@ import { useAppDispatch, useAppSelector } from "../hooks";
 import { fetchMonthlyAttendance } from "../reducers/employeeAttendance.reducer";
 import {
   generateMonthlyEntries,
-  calculateTotal,
+  calculateTotal
 } from "../utils/attendanceUtils";
-import CalendarView from "./Calendar";
+// import CalendarView from "./Calendar";
 import { RootState } from "../store";
+import CalendarView from "./CalendarView";
 
 const TodayAttendance = () => {
   const dispatch = useAppDispatch();
