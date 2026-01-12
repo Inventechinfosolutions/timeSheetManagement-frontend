@@ -11,6 +11,7 @@ import {
   CreditCard,
   Loader2,
   CheckCircle,
+  ArrowLeft,
 } from "lucide-react";
 import {
   createEntity,
@@ -32,8 +33,8 @@ const Registration = () => {
     department: "",
     designation: "",
     email: "",
-    password: "",
-    confirmPassword: "",
+    // password: "",
+    // confirmPassword: "",
   });
   const [error, setError] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
@@ -44,14 +45,21 @@ const Registration = () => {
       const timer = setTimeout(() => {
         dispatch(reset());
         setShowSuccess(false);
-        navigate("/admin-dashboard");
+        // Reset form data to allow creating another employee
+        setFormData({
+          fullName: "",
+          employeeId: "",
+          department: "",
+          designation: "",
+          email: "",
+        });
       }, 2000);
       return () => clearTimeout(timer);
     }
     if (errorMessage) {
       setError(errorMessage);
     }
-  }, [updateSuccess, errorMessage, dispatch, navigate]);
+  }, [updateSuccess, errorMessage, dispatch]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -70,17 +78,29 @@ const Registration = () => {
       return;
     }
 
-    if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
+    // if (formData.password !== formData.confirmPassword) {
+    //   setError("Passwords do not match");
+    //   return;
+    // }
 
     console.log("Registration Data:", formData);
     dispatch(createEntity(formData));
   };
 
   return (
-    <div className="w-full h-full flex items-center justify-center p-4 font-sans text-gray-800 lg:p-10">
+    <div className="w-full h-full flex flex-col items-center justify-center p-4 font-sans text-gray-800 lg:p-10 relative">
+      {/* Back Button */}
+      <div className="w-full max-w-4xl mb-6">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors font-medium group"
+        >
+          <div className="p-2 rounded-full bg-white shadow-sm group-hover:shadow-md transition-all">
+            <ArrowLeft className="w-5 h-5" />
+          </div>
+          <span>Back to Dashboard</span>
+        </button>
+      </div>
       {/* Main Card - Full Width Registration */}
       <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden min-h-[500px]">
         {/* Form Container */}
@@ -110,8 +130,8 @@ const Registration = () => {
                   Account Created Successfully!
                 </p>
                 <p className="text-[10px] opacity-80">
-                  The employee can now login with their credentials.
-                  Redirecting...
+                  The employee can now login with their credentials. Form reset
+                  for next entry.
                 </p>
               </div>
             </div>
@@ -220,11 +240,11 @@ const Registration = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Password */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">
+                  {/* <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">
                     Password
-                  </label>
+                  </label> */}
                   <div className="relative group">
-                    <input
+                    {/* <input
                       type="password"
                       name="password"
                       placeholder="••••••••"
@@ -232,18 +252,18 @@ const Registration = () => {
                       value={formData.password}
                       onChange={handleChange}
                       required
-                    />
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+                    /> */}
+                    {/* <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" /> */}
                   </div>
                 </div>
 
                 {/* Confirm Password */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">
+                  {/* <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">
                     Confirm Password
-                  </label>
+                  </label> */}
                   <div className="relative group">
-                    <input
+                    {/* <input
                       type="password"
                       name="confirmPassword"
                       placeholder="••••••••"
@@ -251,8 +271,8 @@ const Registration = () => {
                       value={formData.confirmPassword}
                       onChange={handleChange}
                       required
-                    />
-                    <Shield className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+                    /> */}
+                    {/* <Shield className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" /> */}
                   </div>
                 </div>
               </div>

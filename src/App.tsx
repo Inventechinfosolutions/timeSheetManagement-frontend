@@ -5,28 +5,35 @@ import {
   Navigate,
 } from "react-router-dom";
 import { Suspense } from "react";
+import { Spin } from "antd";
 import Layout from "./components/Layout";
 import AdminLayout from "./navigation/AdminLayout";
 import { adminComponentConfigs } from "./navigation/adminComponentConfigs";
+import { employeeComponentConfigs } from "./navigation/employeeComponentConfigs";
 import { mainComponentConfigs } from "./mainComponentConfigs";
+import EmployeeLayout from "./navigation/EmployeeLayout";
 
 function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/login" element={<Navigate to="/admin-login" replace />} />
+        <Route path="/login" element={<Navigate to="/landing" replace />} />
 
         {/* Home & Landing Routes from Config */}
         {mainComponentConfigs
-          .filter(
-            (c) => c && ["/landing", "/employee-dashboard"].includes(c.path)
-          )
+          .filter((c) => c && ["/landing"].includes(c.path))
           .map((config) => (
             <Route
               key={config.path}
               path={config.path}
               element={
-                <Suspense fallback={<div>Loading...</div>}>
+                <Suspense
+                  fallback={
+                    <div className="flex items-center justify-center min-h-screen">
+                      <Spin size="large" />
+                    </div>
+                  }
+                >
                   <config.Component />
                 </Suspense>
               }
@@ -53,7 +60,13 @@ function App() {
                       key={config.path}
                       path={config.path}
                       element={
-                        <Suspense fallback={<div>Loading...</div>}>
+                        <Suspense
+                          fallback={
+                            <div className="flex items-center justify-center min-h-screen">
+                              <Spin size="large" />
+                            </div>
+                          }
+                        >
                           <config.Component />
                         </Suspense>
                       }
@@ -73,7 +86,13 @@ function App() {
                         }
                         index={config.path === "/admin-dashboard"}
                         element={
-                          <Suspense fallback={<div>Loading...</div>}>
+                          <Suspense
+                            fallback={
+                              <div className="flex items-center justify-center min-h-screen">
+                                <Spin size="large" />
+                              </div>
+                            }
+                          >
                             <config.Component />
                           </Suspense>
                         }
@@ -94,12 +113,38 @@ function App() {
                       key={config.path}
                       path={config.path}
                       element={
+                        <Suspense
+                          fallback={
+                            <div className="flex items-center justify-center min-h-screen">
+                              <Spin size="large" />
+                            </div>
+                          }
+                        >
+                          <config.Component />
+                        </Suspense>
+                      }
+                    />
+                  ))}
+
+                {/* Employee Dashboard Routes */}
+                <Route path="/employee-dashboard" element={<EmployeeLayout />}>
+                  {employeeComponentConfigs.map((config: any) => (
+                    <Route
+                      key={config.path}
+                      path={
+                        config.path === "/employee-dashboard"
+                          ? ""
+                          : config.path.replace("/employee-dashboard/", "")
+                      }
+                      index={config.path === "/employee-dashboard"}
+                      element={
                         <Suspense fallback={<div>Loading...</div>}>
                           <config.Component />
                         </Suspense>
                       }
                     />
                   ))}
+                </Route>
               </Routes>
             </Layout>
           }

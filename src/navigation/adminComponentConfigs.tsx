@@ -7,7 +7,7 @@ const EmpRegistration = lazy(() => import("../AdminDashboard/EmpRegistration"));
 const AdminEmployeeTimesheetWrapper = lazy(
   () => import("../AdminDashboard/AdminEmployeeTimesheetWrapper")
 );
-const AdminLogin = lazy(() => import("../Login/AdminLogin"));
+
 const AdminRegistration = lazy(
   () => import("../AdminDashboard/AdminRegistration")
 );
@@ -17,10 +17,7 @@ export const adminComponentConfigs = [
     path: "/register",
     Component: EmpRegistration,
   },
-  {
-    path: "/admin-login",
-    Component: AdminLogin,
-  },
+
   {
     path: "/admin-register",
     Component: AdminRegistration,
