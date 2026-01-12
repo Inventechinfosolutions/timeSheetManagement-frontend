@@ -5,6 +5,7 @@ import {
   Navigate,
 } from "react-router-dom";
 import { Suspense } from "react";
+import { Spin } from "antd";
 import Layout from "./components/Layout";
 import AdminLayout from "./navigation/AdminLayout";
 import { adminComponentConfigs } from "./navigation/adminComponentConfigs";
@@ -26,7 +27,13 @@ function App() {
               key={config.path}
               path={config.path}
               element={
-                <Suspense fallback={<div>Loading...</div>}>
+                <Suspense
+                  fallback={
+                    <div className="flex items-center justify-center min-h-screen">
+                      <Spin size="large" />
+                    </div>
+                  }
+                >
                   <config.Component />
                 </Suspense>
               }
@@ -53,7 +60,13 @@ function App() {
                       key={config.path}
                       path={config.path}
                       element={
-                        <Suspense fallback={<div>Loading...</div>}>
+                        <Suspense
+                          fallback={
+                            <div className="flex items-center justify-center min-h-screen">
+                              <Spin size="large" />
+                            </div>
+                          }
+                        >
                           <config.Component />
                         </Suspense>
                       }
@@ -73,7 +86,13 @@ function App() {
                         }
                         index={config.path === "/admin-dashboard"}
                         element={
-                          <Suspense fallback={<div>Loading...</div>}>
+                          <Suspense
+                            fallback={
+                              <div className="flex items-center justify-center min-h-screen">
+                                <Spin size="large" />
+                              </div>
+                            }
+                          >
                             <config.Component />
                           </Suspense>
                         }
@@ -94,7 +113,13 @@ function App() {
                       key={config.path}
                       path={config.path}
                       element={
-                        <Suspense fallback={<div>Loading...</div>}>
+                        <Suspense
+                          fallback={
+                            <div className="flex items-center justify-center min-h-screen">
+                              <Spin size="large" />
+                            </div>
+                          }
+                        >
                           <config.Component />
                         </Suspense>
                       }

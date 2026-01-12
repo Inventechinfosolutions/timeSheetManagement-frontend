@@ -1,6 +1,7 @@
 import { ActionReducerMapBuilder, createAsyncThunk, createSlice, isFulfilled, isPending, PayloadAction } from '@reduxjs/toolkit';
+import axios from 'axios';
 
-const apiUrl = 'http://localhost:3000/employee-details';
+const apiUrl = 'api/v1/employee-details';
 
 // Helper to remove null/undefined values
 const cleanEntity = (entity: any) => {
@@ -11,33 +12,6 @@ const cleanEntity = (entity: any) => {
     }
   });
   return cleaned;
-};
-
-// Generic Fetch Wrapper
-const apiRequest = async (url: string, method: string = 'GET', body?: any) => {
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-  };
-  
-
-  const config: RequestInit = {
-    method,
-    headers,
-  };
-
-  if (body) {
-    config.body = JSON.stringify(body);
-  }
-
-  const response = await fetch(url, config);
-  const text = await response.text();
-  const data = text ? JSON.parse(text) : {};
-
-  if (!response.ok) {
-    throw new Error(data.message || response.statusText || 'Request failed');
-  }
-  return data;
 };
 
 interface EmployeeDetailsState {
@@ -74,79 +48,81 @@ interface ThunkConfig {
 
 export const getEntities = createAsyncThunk<any, { page: number; limit: number; search: string }, ThunkConfig>(
   'employeeDetails/fetch_entity_list',
-  async ({ page, limit, search }: { page: number; limit: number; search: string }, { rejectWithValue }) => {
+  async ({ page, limit, search }, { rejectWithValue }) => {
     try {
       const queryParams = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString(),
         search: search || '',
       });
-      return await apiRequest(`${apiUrl}?${queryParams.toString()}`);
+      const response = await axios.get(`${apiUrl}?${queryParams.toString()}`);
+      return response.data;
     } catch (error: any) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.response?.data?.message || error.message || 'Request failed');
     }
   }
 );
 
 export const getEntity = createAsyncThunk<any, number, ThunkConfig>(
   'employeeDetails/fetch_entity',
-  async (id: number, { rejectWithValue }) => {
+  async (id, { rejectWithValue }) => {
     try {
-      return await apiRequest(`${apiUrl}/${id}`);
+      const response = await axios.get(`${apiUrl}/${id}`);
+      return response.data;
     } catch (error: any) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.response?.data?.message || error.message || 'Request failed');
     }
   }
 );
 
 export const createEntity = createAsyncThunk<any, any, ThunkConfig>(
   'employeeDetails/create_entity',
-  async (entity: any, { dispatch, rejectWithValue }) => {
+  async (entity, { dispatch, rejectWithValue }) => {
     try {
-      const result = await apiRequest(apiUrl, 'POST', cleanEntity(entity));
+      const response = await axios.post(apiUrl, cleanEntity(entity));
       dispatch(getEntities({ page: 1, limit: 10, search: '' }));
-      return result;
+      return response.data;
     } catch (error: any) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.response?.data?.message || error.message || 'Request failed');
     }
   }
 );
 
 export const updateEntity = createAsyncThunk<any, { id: number; entity: any }, ThunkConfig>(
   'employeeDetails/update_entity',
-  async ({ id, entity }: { id: number; entity: any }, { dispatch, rejectWithValue }) => {
+  async ({ id, entity }, { dispatch, rejectWithValue }) => {
     try {
-      const result = await apiRequest(`${apiUrl}/${id}`, 'PUT', cleanEntity(entity));
+      const response = await axios.put(`${apiUrl}/${id}`, cleanEntity(entity));
       dispatch(getEntity(id));
-      return result;
+      return response.data;
     } catch (error: any) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.response?.data?.message || error.message || 'Request failed');
     }
   }
 );
 
 export const partialUpdateEntity = createAsyncThunk<any, { id: number; entity: any }, ThunkConfig>(
   'employeeDetails/partial_update_entity',
-  async ({ id, entity }: { id: number; entity: any }, { dispatch, rejectWithValue }) => {
+  async ({ id, entity }, { dispatch, rejectWithValue }) => {
     try {
-      const result = await apiRequest(`${apiUrl}/${id}`, 'PATCH', cleanEntity(entity));
+      const response = await axios.patch(`${apiUrl}/${id}`, cleanEntity(entity));
       dispatch(getEntity(id));
-      return result;
+      return response.data;
     } catch (error: any) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.response?.data?.message || error.message || 'Request failed');
     }
   }
 );
 
 export const deleteEntity = createAsyncThunk<any, number, ThunkConfig>(
   'employeeDetails/delete_entity',
-  async (id: number, { dispatch, rejectWithValue }) => {
+  async (id, { dispatch, rejectWithValue }) => {
     try {
-      const result = await apiRequest(`${apiUrl}/${id}`, 'DELETE');
+      const response = await axios.delete(`${apiUrl}/${id}`);
       dispatch(getEntities({ page: 1, limit: 10, search: '' }));
-      return result;
+      return response.data;
     } catch (error: any) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.response?.data?.message || error.message || 'Request failed');
     }
   }
 );
