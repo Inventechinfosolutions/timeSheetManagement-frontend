@@ -4,9 +4,9 @@ const Landing = lazy(() => import("./components/Landing"));
 const About = lazy(() => import("./pages/About"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const EmployeeDashboard = lazy(
-  () => import("./EmployeeDashboard/EmployeeDashboard")
+  () => import("./Employee/Employee_Dasboard/EmployeeDashboard/EmployeeDashboard")
 );
-const ForgotPassword = lazy(() => import("./EmployeeDashboard/ForgotPassword"));
+const ForgotPassword = lazy(() => import("./Employee/Employee_Dasboard/EmployeeDashboard/ForgotPassword"));
 
 export const mainComponentConfigs = [
   {

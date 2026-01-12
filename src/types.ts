@@ -8,12 +8,10 @@ export interface TimesheetEntry {
     isFuture: boolean;
 
     // Editable Fields
-    location?: 'Office' | 'WFH' | 'Client Visit' | null;
-    loginTime: string;
-    logoutTime: string;
+    // location, loginTime, logoutTime removed as per DB schema changes
     status: 'Full Day' | 'Half Day' | 'WFH' | 'Client Visit' | 'Pending' | 'Leave' | 'Not Updated';
     attendanceType?: 'login' | 'logout' | null;
     isEditing: boolean;
     isSaved: boolean;
-    isSavedLogout?: boolean;
+    totalHours?: number;
 }

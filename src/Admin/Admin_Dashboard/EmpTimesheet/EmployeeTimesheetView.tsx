@@ -14,7 +14,6 @@ import { TimesheetEntry } from "../../../types";
 
 interface FullTimesheetProps {
   entries: TimesheetEntry[];
-  calculateTotal: (login: string, logout: string) => string;
   displayDate: Date;
   onPrevMonth: () => void;
   onNextMonth: () => void;
@@ -23,7 +22,6 @@ interface FullTimesheetProps {
 
 const EmployeeTimesheetView = ({
   entries,
-  calculateTotal,
   displayDate,
   onPrevMonth,
   onNextMonth,
@@ -34,33 +32,16 @@ const EmployeeTimesheetView = ({
     (e) => e.status === "Full Day" || e.status === "Half Day"
   ).length;
 
-  const totalWorkingMinutes = entries.reduce((acc, curr) => {
-    if (!curr.loginTime || !curr.logoutTime) return acc;
-
-    const parseTime = (timeStr: string) => {
-      const [time, modifier] = timeStr.split(" ");
-      let [hours, minutes] = time.split(":").map(Number);
-      if (modifier === "PM" && hours < 12) hours += 12;
-      if (modifier === "AM" && hours === 12) hours = 0;
-      return hours * 60 + minutes;
-    };
-
-    const login = parseTime(curr.loginTime as string);
-    const logout = parseTime(curr.logoutTime as string);
-    let diff = logout - login;
-    if (diff < 0) diff = 0;
-    return acc + diff;
-  }, 0);
-
-  const totalHours = Math.round(totalWorkingMinutes / 60);
+  const totalHours = Math.round(
+    entries.reduce((acc, curr) => acc + (curr.totalHours || 0), 0)
+  );
 
   const incompleteDays = entries.filter(
     (day) =>
       !day.isFuture &&
       !day.isToday &&
       !day.isWeekend &&
-      !day.loginTime &&
-      day.status !== "Leave"
+      (day.status === "Pending" || day.status === "Not Updated" || (!day.totalHours && day.status !== "Leave"))
   ).length;
 
   // PDF Download State
@@ -74,9 +55,7 @@ const EmployeeTimesheetView = ({
       return;
     }
 
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-
+    
     const filteredEntries = entries.filter((entry) => {
       // Normalize entry date to YYYY-MM-DD string for safe comparison with input values
       const d = new Date(entry.fullDate);
@@ -98,14 +77,12 @@ const EmployeeTimesheetView = ({
       entry.formattedDate,
       entry.dayName,
       entry.status,
-      entry.loginTime || "-",
-      entry.logoutTime || "-",
-      calculateTotal(entry.loginTime || "", entry.logoutTime || ""),
+      entry.totalHours || "0",
     ]);
 
     autoTable(doc, {
       startY: 45,
-      head: [["Date", "Day", "Status", "Login", "Logout", "Total Hours"]],
+      head: [["Date", "Day", "Status", "Total Hours"]],
       body: tableBody,
     });
 
@@ -225,12 +202,10 @@ const EmployeeTimesheetView = ({
         </div>
         <div className="bg-white rounded-[20px] p-6 shadow-sm border border-gray-100">
           {/* Table Header - Removed Action Column */}
-          <div className="hidden md:grid grid-cols-[70px_100px_140px_1fr_1fr_0.8fr_150px] gap-2 mb-4 text-xs font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100 pb-4 text-center items-center">
+          <div className="hidden md:grid grid-cols-[70px_100px_140px_1fr_150px] gap-2 mb-4 text-xs font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100 pb-4 text-center items-center">
             <div className="text-left pl-4">Date</div>
             <div className="text-left">Day</div>
             <div className="">Attendance</div>
-            <div className="">Login</div>
-            <div className="">Logout</div>
             <div className="">Total</div>
             <div className="">Status</div>
           </div>
@@ -283,7 +258,7 @@ const EmployeeTimesheetView = ({
               if (
                 !day.isFuture &&
                 !day.isToday &&
-                (!day.loginTime || !day.logoutTime)
+                (!day.totalHours && day.status !== "Leave")
               ) {
                 return (
                   <div key={day.date}>
@@ -419,33 +394,9 @@ const EmployeeTimesheetView = ({
                       </div>
                     </div>
 
-                    {/* Login Time */}
-                    <div className="flex justify-center">
-                      <div
-                        className={`font-medium text-[#2B3674] flex items-center gap-2 ${
-                          !day.loginTime && "opacity-30"
-                        }`}
-                      >
-                        {day.loginTime || "--:--"}{" "}
-                        <Clock size={12} className="text-gray-400" />
-                      </div>
-                    </div>
-
-                    {/* Logout Time */}
-                    <div className="flex justify-center">
-                      <div
-                        className={`font-medium text-[#2B3674] flex items-center gap-2 ${
-                          !day.logoutTime && "opacity-30"
-                        }`}
-                      >
-                        {day.logoutTime || "--:--"}{" "}
-                        <Clock size={12} className="text-gray-400" />
-                      </div>
-                    </div>
-
                     {/* Total Hours */}
                     <div className="flex justify-center font-bold text-[#2B3674]">
-                      {calculateTotal(day.loginTime, day.logoutTime)}
+                      {day.totalHours ? day.totalHours : '0'}
                     </div>
 
                     {/* Status Badge */}
@@ -504,29 +455,13 @@ const EmployeeTimesheetView = ({
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2 text-sm bg-white/50 p-2 rounded-lg">
+                    <div className="grid grid-cols-1 gap-2 text-sm bg-white/50 p-2 rounded-lg">
                       <div className="flex flex-col items-center">
-                        <span className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">
-                          In
-                        </span>
-                        <div className="font-medium text-[#2B3674]">
-                          {day.loginTime || "--:--"}
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-center border-l border-gray-100">
-                        <span className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">
-                          Out
-                        </span>
-                        <div className="font-medium text-[#2B3674]">
-                          {day.logoutTime || "--:--"}
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-center border-l border-gray-100">
                         <span className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">
                           Total
                         </span>
                         <div className="font-bold text-[#2B3674]">
-                          {calculateTotal(day.loginTime, day.logoutTime)}
+                          {day.totalHours ? day.totalHours : '0'}
                         </div>
                       </div>
                     </div>

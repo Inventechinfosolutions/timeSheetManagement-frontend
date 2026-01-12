@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Shield, Users, User } from 'lucide-react'
+import { Shield, Users, User, AlertCircle } from 'lucide-react'
 import { useAppDispatch } from '../hooks'
-import { setCurrentUser } from '../reducers/employeeDetails.reducer'
+import { loginEmployee } from '../reducers/employeeDetails.reducer'
 
 import inventechLogo from '../assets/inventech-logo.jpg'
 
@@ -11,21 +11,33 @@ const Landing = () => {
   const dispatch = useAppDispatch()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [loginError, setLoginError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
 
-  const handleRoleSelect = (role: string, name: string) => {
-    console.log(`Selected role: ${role}, Name: ${name}`)
-    // In a real app, you'd store the selected user context here
-    if (role === 'employee') {
-      dispatch(setCurrentUser({ employeeId: email }));
-      navigate('/employee-dashboard')
-    } else {
-      alert(`Logged in as ${name} (${role})`)
-    }
-  }
+  // Removed handleRoleSelect as it is no longer used for local mock logic
 
-  const handleEmployeeLogin = (e: React.FormEvent) => {
+  const handleEmployeeLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    handleRoleSelect('employee', email)
+    setLoginError('')
+    setIsLoading(true)
+
+    try {
+      const resultAction = await dispatch(loginEmployee({ employeeId: email, password }));
+      if (loginEmployee.fulfilled.match(resultAction)) {
+         navigate('/employee-dashboard');
+      } else {
+        if (resultAction.payload) {
+          setLoginError(resultAction.payload as string)
+        } else {
+          setLoginError('Login failed. Please check your credentials.')
+        }
+      }
+    } catch (err) {
+      setLoginError('An unexpected error occurred.')
+      console.error('Login error:', err)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -102,6 +114,13 @@ const Landing = () => {
               <div>
                 <h3 className="text-[10px] font-bold text-blue-200 uppercase tracking-widest mb-3 text-center">Login as Employee</h3>
 
+                {loginError && (
+                  <div className="mb-4 p-2.5 bg-red-500/20 border border-red-500/50 rounded-lg text-white text-xs flex items-center gap-2 backdrop-blur-sm animate-in fade-in slide-in-from-top-1">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-red-100" />
+                    <span>{loginError}</span>
+                  </div>
+                )}
+
                 <form onSubmit={handleEmployeeLogin} className="space-y-4 sm:space-y-5">
                   <div className="space-y-1">
                     <label className="text-[10px] font-semibold text-blue-100 uppercase tracking-wider ml-1">Login ID</label>
@@ -113,6 +132,7 @@ const Landing = () => {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
+                        disabled={isLoading}
                       />
                       <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4" />
                     </div>
@@ -128,6 +148,7 @@ const Landing = () => {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
+                        disabled={isLoading}
                       />
                       <Shield className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4" />
                     </div>
