@@ -16,7 +16,7 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/login" element={<Navigate to="/admin-login" replace />} />
+        <Route path="/login" element={<Navigate to="/landing" replace />} />
 
         {/* Home & Landing Routes from Config */}
         {mainComponentConfigs
