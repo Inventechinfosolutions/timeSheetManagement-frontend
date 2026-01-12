@@ -6,6 +6,7 @@ import {
 } from "react-router-dom";
 import { Suspense } from "react";
 import { Spin } from "antd";
+import { lazy } from "react";
 import Layout from "./components/Layout";
 import AdminLayout from "./navigation/AdminLayout";
 import { adminComponentConfigs } from "./navigation/adminComponentConfigs";
@@ -13,10 +14,42 @@ import { employeeComponentConfigs } from "./navigation/employeeComponentConfigs"
 import { mainComponentConfigs } from "./mainComponentConfigs";
 import EmployeeLayout from "./navigation/EmployeeLayout";
 
+// Lazy load authentication components
+const EmployeeActivation = lazy(() => import("./Login/EmployeeActivation"));
+const SetPassword = lazy(() => import("./Login/SetPassword"));
+
 function App() {
   return (
     <Router>
       <Routes>
+        {/* Employee Activation Route - handles activation links */}
+        <Route
+          path="/auth/login"
+          element={
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50">Loading...</div>}>
+              <EmployeeActivation />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/activate"
+          element={
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50">Loading...</div>}>
+              <EmployeeActivation />
+            </Suspense>
+          }
+        />
+        
+        {/* Set Password Route - for first-time password setup */}
+        <Route
+          path="/set-password"
+          element={
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50">Loading...</div>}>
+              <SetPassword />
+            </Suspense>
+          }
+        />
+
         <Route path="/login" element={<Navigate to="/landing" replace />} />
 
         {/* Home & Landing Routes from Config */}

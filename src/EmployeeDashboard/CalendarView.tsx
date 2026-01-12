@@ -1,9 +1,9 @@
 import { useState, useMemo } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useAppSelector } from '../../../hooks';
-import { RootState } from '../../../store';
-import { generateMonthlyEntries } from '../../../utils/attendanceUtils';
-import { TimesheetEntry } from "../../../types";
+import { useAppSelector } from '../hooks';
+import { RootState } from '../store';
+import { generateMonthlyEntries } from '../utils/attendanceUtils';
+import { TimesheetEntry } from "../types";
 
 interface CalendarProps {
     now?: Date;

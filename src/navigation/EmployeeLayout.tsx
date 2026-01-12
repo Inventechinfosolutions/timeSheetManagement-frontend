@@ -1,13 +1,12 @@
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import SidebarLayout from "../EmployeeDashboard/SidebarLayout";
-import { useDispatch } from "react-redux";
+import { useAppDispatch } from "../hooks";
 import { logoutUser } from "../reducers/user.reducer";
-import { AppDispatch } from "../reducers/employeeDetails.reducer";
+import SidebarLayout from "../EmployeeDashboard/SidebarLayout";
 
 const EmployeeLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const dispatch = useDispatch<AppDispatch>();
+  const dispatch = useAppDispatch();
 
   // Determine active tab based on current path
   const getActiveTab = () => {

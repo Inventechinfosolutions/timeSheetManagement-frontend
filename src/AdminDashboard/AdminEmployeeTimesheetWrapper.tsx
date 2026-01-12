@@ -65,8 +65,7 @@ const AdminEmployeeTimesheetWrapper = () => {
       </div>
       <div className="flex-1 overflow-y-auto no-scrollbar">
         <EmployeeTimesheetView
-          entries={[]} // You might want to fetch actual entries here if available in state
-          calculateTotal={calculateTotal}
+          entries={[]} 
           displayDate={displayDate}
           onPrevMonth={() => {
             const newDate = new Date(displayDate);
