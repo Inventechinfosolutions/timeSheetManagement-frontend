@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { User, Eye, EyeOff, Lock } from "lucide-react";
+import { User, Eye, EyeOff, Lock, Shield, Users } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { setCurrentUser } from "../reducers/employeeDetails.reducer";
 import { loginUser, clearError } from "../reducers/user.reducer";
@@ -35,6 +35,17 @@ const Landing = () => {
     };
   }, [dispatch]);
 
+  const handleRoleSelect = (role: string, name: string) => {
+    console.log(`Selected role: ${role}, Name: ${name}`);
+    // In a real app, you'd store the selected user context here
+    if (role === 'employee') {
+      dispatch(setCurrentUser({ employeeId: loginId }));
+      navigate('/employee-dashboard/change-password', { state: { currentPassword: password } });
+    } else {
+      alert(`Logged in as ${name} (${role})`);
+    }
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -54,7 +65,7 @@ const Landing = () => {
         
         console.log("Admin login failed or user is not admin. Proceeding as Employee.");
         dispatch(setCurrentUser({ employeeId: loginId }));
-        navigate("/employee-dashboard");
+        navigate("/admin-dashboard");
       }
     } catch (err) {
       // Fallback constraint

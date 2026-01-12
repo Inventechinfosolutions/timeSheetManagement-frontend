@@ -1,16 +1,14 @@
 import { lazy } from "react";
 
-const AdminDashboard = lazy(
-  () => import("../Admin/Admin_Dashboard/AdminDashboard")
-);
+const AdminDashboard = lazy(() => import("../AdminDashboard/AdminDashboard"));
 const EmpRegistration = lazy(() => import("../AdminDashboard/EmpRegistration"));
 const AdminEmployeeTimesheetWrapper = lazy(
   () => import("../AdminDashboard/AdminEmployeeTimesheetWrapper")
 );
-
 const AdminRegistration = lazy(
   () => import("../AdminDashboard/AdminRegistration")
 );
+const ActivationSuccess = lazy(() => import("../Login/ActivationSuccess"));
 
 export const adminComponentConfigs = [
   {
@@ -33,5 +31,9 @@ export const adminComponentConfigs = [
   {
     path: "/admin-dashboard/timesheet/:employeeId",
     Component: AdminEmployeeTimesheetWrapper,
+  },
+  {
+    path: "/admin-dashboard/activation-success",
+    Component: ActivationSuccess,
   },
 ];

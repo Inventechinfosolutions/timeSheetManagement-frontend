@@ -49,7 +49,7 @@ const initialState: AttendanceState = {
   workedDaysSummary: null,
 };
 
-const apiUrl = 'api/v1/employee-attendance';
+const apiUrl = '/api/v1/employee-attendance';
 
 // 1. Fetch Monthly Details: GET /monthly-details/:employeeId?month=...&year=...
 export const fetchMonthlyAttendance = createAsyncThunk(
@@ -129,6 +129,28 @@ export const fetchAllAttendance = createAsyncThunk(
   'attendance/fetchAll',
   async () => {
     const response = await axios.get(apiUrl);
+    return response.data;
+  }
+);
+
+// 9. Submit Login Time: POST /
+export const submitLogin = createAsyncThunk(
+  'attendance/submitLogin',
+  async ({ employeeId, workingDate, loginTime }: { employeeId: string; workingDate: string | Date; loginTime: string }) => {
+    const response = await axios.post(`${apiUrl}`, {
+      employeeId,
+      workingDate,
+      loginTime,
+    });
+    return response.data;
+  }
+);
+
+// 10. Bulk Submission: POST /bulk
+export const submitBulkAttendance = createAsyncThunk(
+  'attendance/submitBulk',
+  async (payload: any[]) => {
+    const response = await axios.post(`${apiUrl}/bulk`, payload);
     return response.data;
   }
 );

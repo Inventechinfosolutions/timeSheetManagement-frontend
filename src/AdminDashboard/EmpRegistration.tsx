@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
 import {
   User,
   Mail,
@@ -16,14 +15,14 @@ import {
 import {
   createEntity,
   reset,
-  RootState,
-  AppDispatch,
 } from "../reducers/employeeDetails.reducer";
+import { useAppDispatch, useAppSelector } from "../hooks";
+import { RootState } from "../store";
 
 const Registration = () => {
   const navigate = useNavigate();
-  const dispatch = useDispatch<AppDispatch>();
-  const { loading, updateSuccess, errorMessage } = useSelector(
+  const dispatch = useAppDispatch();
+  const { loading, updateSuccess, errorMessage, entity } = useAppSelector(
     (state: RootState) => state.employeeDetails
   );
 
@@ -43,6 +42,14 @@ const Registration = () => {
     if (updateSuccess) {
       setShowSuccess(true);
       const timer = setTimeout(() => {
+          const navigationState = {
+            email: formData.email,
+            loginId: entity?.employeeId || formData.employeeId,
+            employeeId: entity?.id, // Pass internal ID for credential generation
+            // Password and link will be generated on the next screen
+            password: "", 
+            activationLink: "",
+          };
         dispatch(reset());
         setShowSuccess(false);
         // Reset form data to allow creating another employee
@@ -53,13 +60,14 @@ const Registration = () => {
           designation: "",
           email: "",
         });
-      }, 2000);
+        navigate("/admin-dashboard/activation-success", { state: navigationState });
+      }, 1000);
       return () => clearTimeout(timer);
     }
     if (errorMessage) {
       setError(errorMessage);
     }
-  }, [updateSuccess, errorMessage, dispatch]);
+  }, [updateSuccess, errorMessage, dispatch, navigate, formData, entity]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -83,7 +91,7 @@ const Registration = () => {
     //   return;
     // }
 
-    console.log("Registration Data:", formData);
+    console.log("Submitting Registration Data:", formData);
     dispatch(createEntity(formData));
   };
 

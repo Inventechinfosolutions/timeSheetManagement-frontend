@@ -1,4 +1,7 @@
 export interface TimesheetEntry {
+    loginTime: any;
+    logoutTime: any;
+    isSavedLogout: boolean;
     date: number;
     fullDate: Date;
     dayName: string;
@@ -8,7 +11,7 @@ export interface TimesheetEntry {
     isFuture: boolean;
 
     // Editable Fields
-    // location, loginTime, logoutTime removed as per DB schema changes
+    location?: string;
     status: 'Full Day' | 'Half Day' | 'WFH' | 'Client Visit' | 'Pending' | 'Leave' | 'Not Updated';
     attendanceType?: 'login' | 'logout' | null;
     isEditing: boolean;

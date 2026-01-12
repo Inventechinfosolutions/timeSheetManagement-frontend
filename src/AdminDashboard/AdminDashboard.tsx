@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
-import { RootState, AppDispatch } from "../../store";
-import { getEntities } from "../../reducers/employeeDetails.reducer";
-import Calendar from "../../EmployeeDashboard/CalendarView";
+import { RootState } from "../store";
+import { getEntities } from "../reducers/employeeDetails.reducer";
+import { useAppDispatch, useAppSelector } from "../hooks";
 import {
   Users,
   UserCheck,
@@ -18,39 +17,39 @@ import {
   X,
 } from "lucide-react";
 import { UserOutlined } from "@ant-design/icons";
-import { TimesheetEntry } from "../../types";
 import MobileView from "./mobileView";
 // import jsPDF from "jsPDF";
 import autoTable from "jspdf-autotable";
 import jsPDF from "jspdf";
-
+import Calendar from "../EmployeeDashboard/CalendarView";
+ 
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedEmpId, setSelectedEmpId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-
+ 
   // PDF Download State
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [showFilter, setShowFilter] = useState(false);
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-
-  const dispatch = useDispatch<AppDispatch>();
-  const { entities, loading, totalItems } = useSelector(
+ 
+  const dispatch = useAppDispatch();
+  const { entities, totalItems } = useAppSelector(
     (state: RootState) => state.employeeDetails
   );
-
+ 
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
     }, 500); // 500ms debounce delay
-
+ 
     return () => clearTimeout(timer);
   }, [searchTerm]);
-
+ 
   useEffect(() => {
     dispatch(
       getEntities({
@@ -60,7 +59,7 @@ const AdminDashboard = () => {
       })
     );
   }, [dispatch, currentPage, debouncedSearchTerm]);
-
+ 
   // Map backend entities to the format expected by the UI
   const employees = entities.map((emp: any) => ({
     id: emp.employeeId || emp.id,
@@ -73,9 +72,9 @@ const AdminDashboard = () => {
     avatar:
       emp.avatar || `https://i.pravatar.cc/150?u=${emp.employeeId || emp.id}`,
   }));
-
+ 
   // UI Logic
-
+ 
   const calculateTotal = (login: string | null, logout: string | null) => {
     if (
       !login ||
@@ -98,7 +97,7 @@ const AdminDashboard = () => {
     const m = diff % 60;
     return `${h}h ${m}m`;
   };
-
+ 
   const renderSummaryCards = () => {
     const totalEmployeesCount = totalItems || employees.length;
     const presentCount = employees.filter(
@@ -113,7 +112,7 @@ const AdminDashboard = () => {
       totalEmployeesCount > 0
         ? ((absentCount / employees.length) * 100).toFixed(1)
         : "0.0";
-
+ 
     // Calculate average hours
     const workingHours = employees
       .filter((e) => e.status === "Full Day" && e.hours !== "--")
@@ -129,7 +128,7 @@ const AdminDashboard = () => {
             workingHours.reduce((a, b) => a + b, 0) / workingHours.length
           ).toFixed(1)
         : "0.0";
-
+ 
     return (
       <div
         className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8"
@@ -149,7 +148,7 @@ const AdminDashboard = () => {
             </p>
           </div>
         </div>
-
+ 
         {/* Present Today */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 group hover:shadow-md transition-all flex flex-col">
           <div className="w-12 h-12 rounded-2xl bg-[#E6FFFA] flex items-center justify-center text-[#01B574] mb-4 group-hover:scale-110 transition-transform">
@@ -167,7 +166,7 @@ const AdminDashboard = () => {
             </span>
           </div>
         </div>
-
+ 
         {/* Absent Today */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 group hover:shadow-md transition-all flex flex-col">
           <div className="w-12 h-12 rounded-2xl bg-[#FFF5F5] flex items-center justify-center text-[#EE5D50] mb-4 group-hover:scale-110 transition-transform">
@@ -185,7 +184,7 @@ const AdminDashboard = () => {
             </span>
           </div>
         </div>
-
+ 
         {/* Avg Working Hours */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 group hover:shadow-md transition-all flex flex-col">
           <div className="w-12 h-12 rounded-2xl bg-[#E0F7FA] flex items-center justify-center text-[#00A3C4] mb-4 group-hover:scale-110 transition-transform">
@@ -204,96 +203,96 @@ const AdminDashboard = () => {
       </div>
     );
   };      
-
+ 
   const handleDownloadReport = () => {
     if (!startDate || !endDate) {
       alert("Please select both start and end dates.");
       return;
     }
-
+ 
     const doc = new jsPDF();
-
+ 
     employees.forEach((emp, index) => {
       // Add Page Break for subsequent employees
       if (index > 0) {
         doc.addPage();
       }
-
+ 
       // --- Header Background ---
       doc.setFillColor(43, 54, 116); // #2B3674 (Brand Blue)
       doc.rect(0, 0, 210, 40, "F");
-
+ 
       // --- Company Details (Top Left) ---
       doc.setTextColor(255, 255, 255);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(24);
       doc.text("INVENTECH", 14, 18);
-
+ 
       doc.setFont("helvetica", "normal");
       doc.setFontSize(10);
       doc.text("Info Solutions Pvt. Ltd.", 14, 24);
-
+ 
       // --- Report Title (Top Right) ---
       doc.setFont("helvetica", "normal");
       doc.setFontSize(16);
       doc.text("TIMESHEET REPORT", 196, 22, { align: "right" });
-
+ 
       // --- Employee Details Section ---
       const detailsStartY = 55;
-
+ 
       doc.setTextColor(43, 54, 116); // #2B3674
       doc.setFont("helvetica", "bold");
       doc.setFontSize(10);
       doc.text("EMPLOYEE DETAILS", 14, detailsStartY);
-
+ 
       // Horizontal Line
       doc.setDrawColor(220, 220, 220); // Light Gray
       doc.line(14, detailsStartY + 3, 196, detailsStartY + 3);
-
+ 
       // Details Grid
       const gridStartY = detailsStartY + 12;
       const col2X = 120; // X position for 2nd column
       const rowGap = 8; // Gap between rows
-
+ 
       doc.setFontSize(10);
-
+ 
       // Row 1: Name & Department
       // Name
       doc.setTextColor(113, 128, 150); // Gray Label
       doc.setFont("helvetica", "bold");
       doc.text("Name:", 14, gridStartY);
-
+ 
       doc.setTextColor(43, 54, 116); // Blue Value
       doc.setFont("helvetica", "normal");
       doc.text(emp.name, 45, gridStartY);
-
+ 
       // Department
       doc.setTextColor(113, 128, 150); // Gray Label
       doc.setFont("helvetica", "bold");
       doc.text("Department:", col2X, gridStartY);
-
+ 
       doc.setTextColor(43, 54, 116); // Blue Value
       doc.setFont("helvetica", "normal");
       doc.text(emp.dept, col2X + 25, gridStartY);
-
+ 
       // ID
       doc.setTextColor(113, 128, 150); // Gray Label
       doc.setFont("helvetica", "bold");
       doc.text("Employee ID:", 14, gridStartY + rowGap);
-
+ 
       doc.setTextColor(43, 54, 116); // Blue Value
       doc.setFont("helvetica", "normal");
       doc.text(emp.id, 45, gridStartY + rowGap);
-
+ 
       // Designation
       doc.setTextColor(113, 128, 150); // Gray Label
       doc.setFont("helvetica", "bold");
       doc.text("Designation:", col2X, gridStartY + rowGap);
-
+ 
       doc.setTextColor(43, 54, 116); // Blue Value
       doc.setFont("helvetica", "normal");
       doc.text("", col2X + 25, gridStartY + rowGap);
-
+ 
       // --- Period Section ---
       doc.setTextColor(43, 54, 116);
       doc.setFont("helvetica", "bold");
@@ -302,17 +301,17 @@ const AdminDashboard = () => {
         14,
         gridStartY + rowGap * 2 + 5
       );
-
+ 
       // timesheet entries
       const empEntries: any[] = [];
-
+ 
       // Filter entries by date range
       const filteredEntries = empEntries.filter((entry) => {
         const d = new Date(entry.fullDate);
         const entryDateStr = d.toLocaleDateString("en-CA");
         return entryDateStr >= startDate && entryDateStr <= endDate;
       });
-
+ 
       const tableBody = filteredEntries.map((entry) => [
         entry.formattedDate,
         entry.dayName,
@@ -322,7 +321,7 @@ const AdminDashboard = () => {
         calculateTotal(entry.loginTime || "", entry.logoutTime || ""),
         entry.status.toUpperCase(),
       ]);
-
+ 
       // --- Table Generation ---
       autoTable(doc, {
         startY: gridStartY + rowGap * 2 + 12,
@@ -353,11 +352,11 @@ const AdminDashboard = () => {
         },
       });
     });
-
+ 
     doc.save(`Complete_Timesheet_Report_${startDate}_${endDate}.pdf`);
     setShowDownloadModal(false);
   };
-
+ 
   const renderAttendanceOverview = () => (
     <div
       className="flex-1 bg-white rounded-xl shadow-sm border border-gray-100 p-6"
@@ -367,7 +366,7 @@ const AdminDashboard = () => {
         <h2 className="text-xl font-bold text-[#1B254B]">
           Attendance Overview
         </h2>
-
+ 
         <div className="flex items-center gap-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A3AED0] w-4 h-4" />
@@ -381,7 +380,7 @@ const AdminDashboard = () => {
               }}
             />
           </div>
-
+ 
           {/* Filter UI - Static for design as requested */}
           <div className="relative">
             <button
@@ -393,7 +392,7 @@ const AdminDashboard = () => {
               <Filter size={16} className="text-[#A3AED0]" />
               <span>Filter</span>
             </button>
-
+ 
             {showFilter && (
               <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 p-4 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                 <div className="space-y-4">
@@ -436,7 +435,7 @@ const AdminDashboard = () => {
           </div>
         </div>
       </div>
-
+ 
       {/* Action Buttons */}
       <div className="flex flex-wrap gap-4 mb-8">
         <button className="flex items-center gap-2 px-6 py-2.5 bg-[#00A3C4] text-white rounded-xl text-sm font-bold shadow-lg shadow-teal-100/50 hover:bg-[#0093b1] transition-all">
@@ -458,7 +457,7 @@ const AdminDashboard = () => {
           Download Report
         </button>
       </div>
-
+ 
       {/* Mobile/Tablet Card View */}
       <div className="lg:hidden">
         <MobileView
@@ -469,7 +468,7 @@ const AdminDashboard = () => {
           onSelectEmployee={setSelectedEmpId}
         />
       </div>
-
+ 
       {/* Desktop Table View */}
       <div className="hidden lg:block overflow-x-auto">
         <table className="w-full">
@@ -563,7 +562,7 @@ const AdminDashboard = () => {
           </tbody>
         </table>
       </div>
-
+ 
       {/* Pagination */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-gray-100">
         <div className="text-sm text-[#A3AED0]">
@@ -588,7 +587,7 @@ const AdminDashboard = () => {
           >
             <ChevronLeft size={18} />
           </button>
-
+ 
           {Array.from(
             { length: Math.ceil(totalItems / itemsPerPage) },
             (_, i) => i + 1
@@ -605,7 +604,7 @@ const AdminDashboard = () => {
               {page}
             </button>
           ))}
-
+ 
           <button
             onClick={() =>
               setCurrentPage((prev) =>
@@ -625,14 +624,14 @@ const AdminDashboard = () => {
       </div>
     </div>
   );
-
+ 
   const renderContent = () => {
     return (
       <>
         {/* Sticky Header */}
         <header className="bg-[#F4F7FE] md:bg-opacity-50 backdrop-blur-sm sticky top-0 z-20 px-4 py-4 flex items-center justify-between border-b border-gray-100/50">
           <h2 className="text-2xl font-bold text-[#2B3674]">Super Admin</h2>
-
+ 
           <div className="bg-white px-5 py-1.5 rounded-full shadow-sm border border-gray-100">
             <span className="text-sm font-medium text-gray-500">
               {new Date()
@@ -646,13 +645,13 @@ const AdminDashboard = () => {
             </span>
           </div>
         </header>
-
+ 
         <div
           className="p-4 pb-20 space-y-6"
           onClick={() => setSelectedEmpId(null)}
         >
           {renderSummaryCards()}
-
+ 
           <div className="flex flex-col lg:flex-row gap-6 items-start">
             {renderAttendanceOverview()}
             <div
@@ -668,11 +667,11 @@ const AdminDashboard = () => {
       </>
     );
   };
-
+ 
   return (
     <div className="flex flex-col h-full overflow-hidden bg-[#F4F7FE]">
       {renderContent()}
-
+ 
       {/* Download Modal - Global */}
       {showDownloadModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 text-left">
@@ -683,11 +682,11 @@ const AdminDashboard = () => {
             >
               <X size={20} />
             </button>
-
+ 
             <h3 className="text-lg font-bold text-[#2B3674] mb-4">
               Download Organization Report
             </h3>
-
+ 
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -711,7 +710,7 @@ const AdminDashboard = () => {
                   className="w-full p-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#4318FF] outline-none"
                 />
               </div>
-
+ 
               <button
                 onClick={handleDownloadReport}
                 className="w-full py-2.5 bg-[#00A3C4] text-white font-bold rounded-lg hover:bg-[#0093b1] transition-all flex items-center justify-center gap-2 mt-2"
@@ -726,5 +725,7 @@ const AdminDashboard = () => {
     </div>
   );
 };
-
+ 
 export default AdminDashboard;
+ 
+ 
