@@ -62,17 +62,15 @@ export const fetchMonthlyAttendance = createAsyncThunk(
   }
 );
 
-// 2. Post Login Time: POST /login-time/:employeeId
-export const submitLogin = createAsyncThunk(
-  'attendance/submitLogin',
-  async ({ employeeId, workingDate, loginTime }: { employeeId: string; workingDate: string | Date; loginTime: string }) => {
-    const response = await axios.post(`${apiUrl}/login-time/${employeeId}`, {
-      workingDate,
-      loginTime,
-    });
+// 2. Create Attendance Record: POST /
+export const createAttendanceRecord = createAsyncThunk(
+  'attendance/createRecord',
+  async (data: Partial<EmployeeAttendance>) => {
+    const response = await axios.post(`${apiUrl}`, data);
     return response.data;
   }
 );
+
 
 // 3. Post Logout Time: PUT /logout-time/:employeeId
 export const submitLogout = createAsyncThunk(
@@ -95,7 +93,7 @@ export const updateAttendanceRecord = createAsyncThunk(
   }
 );
 
-// 5. Fetch Attendance By Date: GET /by-date/:employeeId?workingDate=...
+// 4. Fetch Attendance By Date: GET /by-date/:employeeId?workingDate=...
 export const fetchAttendanceByDate = createAsyncThunk(
   'attendance/fetchByDate',
   async ({ employeeId, workingDate }: { employeeId: string; workingDate: string }) => {
@@ -106,7 +104,7 @@ export const fetchAttendanceByDate = createAsyncThunk(
   }
 );
 
-// 6. Fetch Worked Days: GET /worked-days/:employeeId?startDate=...&endDate=...
+// 5. Fetch Worked Days: GET /worked-days/:employeeId?startDate=...&endDate=...
 export const fetchWorkedDays = createAsyncThunk(
   'attendance/fetchWorkedDays',
   async ({ employeeId, startDate, endDate }: { employeeId: string; startDate: string; endDate: string }) => {
@@ -117,7 +115,7 @@ export const fetchWorkedDays = createAsyncThunk(
   }
 );
 
-// 7. Delete Record: DELETE /:id
+// 6. Delete Record: DELETE /:id
 export const deleteAttendanceRecord = createAsyncThunk(
   'attendance/deleteRecord',
   async (id: number) => {
@@ -186,6 +184,22 @@ const attendanceSlice = createSlice({
         state.loading = false;
         state.records = action.payload;
       })
+      // Handle Bulk Success (Assuming it returns the updated records)
+      .addCase(submitBulkAttendance.fulfilled, (state: AttendanceState, action: PayloadAction<EmployeeAttendance[] | any>) => {
+          state.loading = false;
+          // If backend returns array, we could merge. 
+          // For now, simpler to just let re-fetch happen or trust the payload if it matches.
+          if (Array.isArray(action.payload)) {
+              action.payload.forEach((updatedRecord: EmployeeAttendance) => {
+                 const index = state.records.findIndex((r) => r.id === updatedRecord.id);
+                 if (index !== -1) {
+                   state.records[index] = updatedRecord;
+                 } else {
+                   state.records.push(updatedRecord);
+                 }
+              });
+          }
+      })
 
       // 2. ADD MATCHERS SECOND
       // HANDLE GLOBAL LOADING (Pending states)
@@ -200,8 +214,7 @@ const attendanceSlice = createSlice({
       // LOGIN / LOGOUT / UPDATE SUCCESS
       .addMatcher(
         (action: any) => [
-          submitLogin.fulfilled.type, 
-          submitLogout.fulfilled.type, 
+          createAttendanceRecord.fulfilled.type, 
           updateAttendanceRecord.fulfilled.type
         ].includes(action.type),
         (state: AttendanceState, action: PayloadAction<EmployeeAttendance>) => {

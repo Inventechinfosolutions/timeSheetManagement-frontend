@@ -1,15 +1,9 @@
-import { Clock, Calendar, MapPin, Monitor, UserCheck } from 'lucide-react';
-import { TimesheetEntry } from '../types';
+import { Calendar, Monitor } from 'lucide-react';
+import { TimesheetEntry } from '../../../types';
 
 interface MobileTimesheetCardProps {
     day: TimesheetEntry;
     index: number;
-    isEditable?: boolean;
-    handleUpdateEntry?: (index: number, field: keyof TimesheetEntry, value: any) => void;
-    handleSave?: (index: number) => void;
-    calculateTotal: (login: string, logout: string) => string;
-    CustomDropdown?: any;
-    CustomTimePicker?: any;
     highlightedRow?: number | null;
     containerId?: string;
 }
@@ -17,12 +11,6 @@ interface MobileTimesheetCardProps {
 export const MobileTimesheetCard = ({
     day,
     index,
-    isEditable,
-    handleUpdateEntry,
-    handleSave,
-    calculateTotal,
-    CustomDropdown,
-    CustomTimePicker,
     highlightedRow,
     containerId
 }: MobileTimesheetCardProps) => {
@@ -30,7 +18,8 @@ export const MobileTimesheetCard = ({
     const scrollId = containerId || `mobile-row-${index}`;
     
     // Weekend Styling (Only show placeholder if no data)
-    if (day.isWeekend && !day.loginTime) {
+    // We check if totalHours is 0 to determine "no data" for weekend logic, or just rely on 'Leave' status 
+    if (day.isWeekend && (!day.totalHours || day.totalHours === 0)) {
         return (
             <div 
                 id={scrollId}
@@ -98,98 +87,29 @@ export const MobileTimesheetCard = ({
                 
                 <div className="flex flex-col items-end gap-2">
                     <span className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider block text-center
-                        ${(day.status === 'Full Day' || day.status === 'Half Day') ? 'bg-[#01B574] text-white' :
+                        ${day.status === 'Full Day' ? 'bg-[#01B574] text-white' :
                             day.status === 'WFH' ? 'bg-[#A3AED0] text-white' :
-                                day.status === 'Leave' ? 'bg-[#EE5D50] text-white' :
-                                    day.status === 'Client Visit' ? 'bg-[#6366F1] text-white' :
-                                        (day.status === 'Pending' || day.status === 'Not Updated') ? 'bg-[#F6AD55] text-white' : 'text-gray-400'
+                            day.status === 'Leave' ? 'bg-[#EE5D50] text-white' :
+                            day.status === 'Half Day' ? 'bg-[#FFB547] text-white' : 
+                            day.status === 'Client Visit' ? 'bg-[#6366F1] text-white' :
+                            (day.status === 'Pending' || day.status === 'Not Updated') ? 'bg-[#F6AD55] text-white' : 'text-gray-400'
                         }
                     `}>
                         {day.status}
                     </span>
-                    {day.isToday && handleSave && (!day.isSavedLogout || day.isEditing) && (
-                        <button
-                            onClick={() => {
-                                if (!day.loginTime || day.loginTime === '--:--' || day.loginTime.includes('--')) {
-                                    alert('Please fill Login time.');
-                                    return;
-                                }
-                                if (day.isSaved && (!day.logoutTime || day.logoutTime === '--:--' || day.logoutTime.includes('--'))) {
-                                    alert('Please fill Logout time to update.');
-                                    return;
-                                }
-                                handleSave!(index);
-                            }}
-                            className="px-4 py-1.5 bg-[#00A3C4] text-white rounded-lg text-[10px] font-bold shadow-md shadow-teal-100 active:scale-95 transition-all"
-                        >
-                            {day.isEditing ? 'Done' : (day.isSaved ? 'Update' : 'Save')}
-                        </button>
-                    )}
                 </div>
             </div>
 
             {/* Card Body */}
             <div className="grid grid-cols-2 gap-4">
-                {/* Location */}
-                <div className="space-y-1">
-                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                        <MapPin size={12} /> Location
-                    </div>
-                    {isEditable && CustomDropdown ? (
-                        <CustomDropdown
-                            value={day.location || 'Office'}
-                            options={['Office', 'WFH', 'Client Visit']}
-                            onChange={(val: any) => handleUpdateEntry!(index, 'location', val)}
-                        />
-                    ) : (
-                        <div className="text-sm font-bold text-[#2B3674] pl-1">{day.location || '--'}</div>
-                    )}
-                </div>
-
                 {/* Total Hours */}
                 <div className="space-y-1">
                     <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                         <Monitor size={12} /> Total Hours
                     </div>
                     <div className="text-sm font-bold text-[#2B3674] pl-1">
-                        {calculateTotal(day.loginTime, day.logoutTime)}
+                        {day.totalHours ? day.totalHours : 0}
                     </div>
-                </div>
-
-                {/* Login Time */}
-                <div className="space-y-1">
-                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                        <Clock size={12} /> Login
-                    </div>
-                    {isEditable && CustomTimePicker ? (
-                        <CustomTimePicker
-                            value={day.loginTime}
-                            onChange={(val: any) => handleUpdateEntry!(index, 'loginTime', val)}
-                            dashed={true}
-                        />
-                    ) : (
-                        <div className="text-sm font-bold text-[#2B3674] flex items-center gap-1.5 pl-1">
-                            {day.loginTime || '--:--'}
-                        </div>
-                    )}
-                </div>
-
-                {/* Logout Time */}
-                <div className="space-y-1">
-                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                        <UserCheck size={12} /> Logout
-                    </div>
-                    {isEditable && CustomTimePicker ? (
-                        <CustomTimePicker
-                            value={day.logoutTime}
-                            onChange={(val: any) => handleUpdateEntry!(index, 'logoutTime', val)}
-                            dashed={true}
-                        />
-                    ) : (
-                        <div className="text-sm font-bold text-[#2B3674] flex items-center gap-1.5 pl-1">
-                            {day.logoutTime || '--:--'}
-                        </div>
-                    )}
                 </div>
             </div>
         </div>
