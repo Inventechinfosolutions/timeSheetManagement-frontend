@@ -56,7 +56,7 @@ export const fetchMonthlyAttendance = createAsyncThunk(
   'attendance/fetchMonthly',
   async ({ employeeId, month, year }: { employeeId: string; month: string; year: string }) => {
     const response = await axios.get(`${apiUrl}/monthly-details/${employeeId}`, {
-      params: { month, year },
+      params: { month, year, employeeId },
     });
     return response.data;
   }

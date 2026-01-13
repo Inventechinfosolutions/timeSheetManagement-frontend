@@ -105,8 +105,16 @@ const Calendar = ({
         const checkNow = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const isFuture = cellDate > checkNow;
         
-        // 1. Holyday takes precedence over everything except maybe "Today" if you worked on a holiday? 
-        // Usually Holidays are red/pink
+        // 1. If YOU WORKED (Status exists and is valid work), show WORK COLOR (Overrides Holiday)
+        if (status === 'Full Day' || status === 'WFH' || status === 'Client Visit') {
+             return 'bg-[#E9FBF5] text-[#01B574] border border-[#01B574]/20 shadow-sm';
+        }
+        
+        if (status === 'Half Day') {
+             return 'bg-[#FFF9E5] text-[#FFB020] border border-[#FFB020]';
+        }
+
+        // 2. If NO WORK, then check HOLIDAY
         if (holiday) {
              return 'bg-[#FDF2F2] text-[#ff4d4d] border border-[#ff4d4d]/20 relative overflow-hidden';
         }
@@ -126,14 +134,6 @@ const Calendar = ({
         
         if (isNotUpdated || status === 'Pending') {
              return 'bg-[#FFF9E5] text-[#FFB020] border border-[#FFB020] relative';
-        }
-
-        if (status === 'Full Day' || status === 'WFH' || status === 'Client Visit') {
-             return 'bg-[#E9FBF5] text-[#01B574] border border-[#01B574]/20 shadow-sm';
-        }
-        
-        if (status === 'Half Day') {
-             return 'bg-[#FFF9E5] text-[#FFB020] border border-[#FFB020]';
         }
 
         // Weekend or Leave - Check this LAST so explicit statuses above take priority
@@ -229,6 +229,7 @@ const Calendar = ({
                                     <span className={holiday ? "mb-2 md:mb-3" : ""}>{day}</span>
                                     
                                     {/* Render Holiday Name */}
+                                    {/* Render Holiday Name */}
                                     {holiday && !isSmall && !isSidebar && (
                                         <div className="absolute bottom-1 md:bottom-2 left-0 w-full text-center px-0.5">
                                             <p className="text-[7px] md:text-[9px] leading-tight truncate font-medium opacity-90">
@@ -243,7 +244,7 @@ const Calendar = ({
                                     )}
 
                                     {/* Hover Status Badge - Only for large/standard view, usually */}
-                                    {(!isSmall && !isSidebar && entry && (entry.status || entry.isWeekend) && !holiday) && (
+                                    {(!isSmall && !isSidebar && entry && (entry.status || entry.isWeekend) && (!holiday || (entry.totalHours || 0) > 0)) && (
                                         <div className={`absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full z-10 
                                             opacity-0 group-hover:opacity-100 group-hover:translate-y-[-50%] transition-all duration-300 pointer-events-none
                                             px-2 py-1 rounded text-[10px] md:text-xs font-bold whitespace-nowrap shadow-lg hidden md:block

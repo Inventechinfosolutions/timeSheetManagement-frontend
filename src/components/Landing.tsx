@@ -62,7 +62,9 @@ const Landing = () => {
     try {
       const resultAction = await dispatch(loginUser({ loginId, password }));
       if (loginUser.fulfilled.match(resultAction)) {
-        // Success! Effect will handle redirect to /admin-dashboard
+        // Success!
+        dispatch(setCurrentUser({ employeeId: loginId }));
+        // Effect will handle redirect to /admin-dashboard or /employee-dashboard based on role
       } else {
         // 2. Fallback to Employee Login (Mock Mode) if Admin fails
         // In a real app, we'd check error codes (e.g., 404 User Not Found vs 401 Bad Password).
