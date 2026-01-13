@@ -10,7 +10,18 @@ const AdminRegistration = lazy(
 );
 const ActivationSuccess = lazy(() => import("../Login/ActivationSuccess"));
 
+const EmployeeListView = lazy(
+  () => import("../AdminDashboard/EmployeeListView")
+);
+const EmployeeDetailsView = lazy(
+  () => import("../AdminDashboard/EmployeeDetailsView")
+);
+
 export const adminComponentConfigs = [
+  {
+    path: "/admin-dashboard/employees",
+    Component: EmployeeListView,
+  },
   {
     path: "/register",
     Component: EmpRegistration,
@@ -31,6 +42,10 @@ export const adminComponentConfigs = [
   {
     path: "/admin-dashboard/timesheet/:employeeId",
     Component: AdminEmployeeTimesheetWrapper,
+  },
+  {
+    path: "/admin-dashboard/employee-details/:employeeId",
+    Component: EmployeeDetailsView,
   },
   {
     path: "/admin-dashboard/activation-success",
