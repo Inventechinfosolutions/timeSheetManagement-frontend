@@ -24,11 +24,11 @@ const Landing = () => {
   // Effect for Redirect
   useEffect(() => {
     if (isAuthenticated && currentUser) {
-      if (currentUser.resetRequired) {
+      if (Number(currentUser.resetRequired) === 1) {
         navigate("/fcManager/reset-password");
-      } else if (currentUser.userType === UserType.EMPLOYEE) {
+      } else if (currentUser.userType?.toUpperCase() === UserType.EMPLOYEE) {
         navigate("/employee-dashboard");
-      } else {
+      } else if (currentUser.userType?.toUpperCase() === UserType.ADMIN) {
         navigate("/admin-dashboard");
       }
     }

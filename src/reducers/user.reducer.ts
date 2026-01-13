@@ -22,7 +22,7 @@ export interface User {
   status?: UserStatus;
   createdAt?: string;
   updatedAt?: string;
-  resetRequired?: boolean;
+  resetRequired?: number;
 }
 
 export interface CreateUserDto {
@@ -48,7 +48,7 @@ export interface LoginResponse {
   email: string;
   accessToken: string;
   userType?: UserType;
-  resetRequired?: boolean;
+  resetRequired?: number;
   refreshToken?: string; // Not exposed in response, stored in httpOnly cookie
 }
 
@@ -58,7 +58,7 @@ export interface AuthMeResponse {
   email: string;
   accessToken: string;
   userType?: UserType;
-  resetRequired?: boolean;
+  resetRequired?: number;
 }
 
 interface UserState {
@@ -203,6 +203,12 @@ const userSlice = createSlice({
     },
     // Reset state on Logout or component unmount
     resetUserState: () => initialState,
+    // Set resetRequired flag
+    setResetRequired: (state, action: PayloadAction<number>) => {
+      if (state.currentUser) {
+        state.currentUser.resetRequired = action.payload;
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -326,7 +332,7 @@ const userSlice = createSlice({
         state.passwordChangeSuccess = true;
         state.error = null;
         if (state.currentUser) {
-          state.currentUser.resetRequired = false;
+          state.currentUser.resetRequired = 0;
         }
       })
       .addCase(changePassword.rejected, (state, action) => {
@@ -341,7 +347,8 @@ export const {
   clearError, 
   clearPasswordChangeSuccess, 
   setAccessToken, 
-  resetUserState 
+  resetUserState,
+  setResetRequired
 } = userSlice.actions;
 
 export default userSlice.reducer;

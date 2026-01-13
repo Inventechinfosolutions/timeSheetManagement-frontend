@@ -66,10 +66,10 @@ const setupAxiosInterceptors = (onUnauthenticated: () => void) => {
       // window.location.replace('/error-pages/error-500');
     } else if (status === 503) {
       window.location.replace("/error-pages/error-503");
-    } else if (!err.config?.skipErrorMessage) { 
+    } else if (!(err.config as any)?.skipErrorMessage) { 
         // console.error("An unexpected error occurred. Please try again later.");
-    } else if (status === 400) {
-        message.error(err.response.data.message, 3);
+    } else if (status === 400 && err.response?.data) {
+        message.error((err.response.data as any)?.message || 'Bad Request', 3);
     }
 
     return Promise.reject(err);
