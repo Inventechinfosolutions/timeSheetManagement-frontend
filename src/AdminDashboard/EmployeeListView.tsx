@@ -3,13 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { RootState } from "../store";
 import { getEntities } from "../reducers/employeeDetails.reducer";
 import { useAppDispatch, useAppSelector } from "../hooks";
-import { Users, Eye, Search } from "lucide-react";
+import { Eye, Search } from "lucide-react";
 
-const AdminDashboard = () => {
+const EmployeeListView = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
 
   const dispatch = useAppDispatch();
@@ -60,40 +61,6 @@ const AdminDashboard = () => {
       color: "#2B3674",
       margin: 0,
     },
-    card: {
-      backgroundColor: "white",
-      padding: "20px",
-      borderRadius: "20px",
-      boxShadow: "0px 18px 40px rgba(112, 144, 176, 0.12)",
-      marginBottom: "30px",
-      display: "flex",
-      alignItems: "center",
-      maxWidth: "300px",
-    },
-    iconBox: {
-      width: "56px",
-      height: "56px",
-      borderRadius: "50%",
-      backgroundColor: "#F4F7FE",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      marginRight: "15px",
-      color: "#4318FF",
-    },
-    metricValue: {
-      fontSize: "34px",
-      fontWeight: "700",
-      color: "#2B3674",
-      margin: 0,
-      lineHeight: "1",
-    },
-    metricLabel: {
-      fontSize: "14px",
-      color: "#A3AED0",
-      marginTop: "5px",
-      margin: 0,
-    },
     tableContainer: {
       backgroundColor: "white",
       borderRadius: "20px",
@@ -133,14 +100,14 @@ const AdminDashboard = () => {
     },
   };
 
-  const handleViewTimesheet = (empId: string) => {
-    navigate(`/admin-dashboard/timesheet/${empId}`);
+  const handleViewDetails = (empId: string) => {
+    navigate(`/admin-dashboard/employee-details/${empId}`);
   };
 
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <h1 style={styles.title}>Admin Dashboard</h1>
+        <h1 style={styles.title}>Employee List</h1>
 
         <div
           style={{
@@ -172,27 +139,13 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      <div style={styles.card}>
-        <div style={styles.iconBox}>
-          <Users size={24} />
-        </div>
-        <div>
-          <p style={styles.metricLabel}>Total Employees</p>
-          <h3 style={styles.metricValue}>{totalItems || entities.length}</h3>
-        </div>
-      </div>
-
-      {/* Table */}
       <div style={styles.tableContainer}>
-        <h3 style={{ ...styles.title, marginBottom: "20px", fontSize: "20px" }}>
-          Employee List
-        </h3>
         <table style={styles.table}>
           <thead>
             <tr>
               <th style={styles.th}>Name</th>
               <th style={styles.th}>ID</th>
-              <th style={styles.th}>Work Hours</th>
+              {/* <th style={styles.th}>Work Hours</th> */}
               <th style={styles.th}>Action</th>
             </tr>
           </thead>
@@ -201,20 +154,24 @@ const AdminDashboard = () => {
               <tr key={emp.id}>
                 <td style={styles.td}>{emp.name}</td>
                 <td style={styles.td}>{emp.id}</td>
-                <td style={styles.td}>{emp.hours}</td>
+                {/* <td style={styles.td}>{emp.hours}</td> */}
                 <td style={styles.td}>
-                  <div
-                    style={{
-                      color: "#A3AED0",
-                      display: "flex",
-                      justifyContent: "center",
-                    }}
+                  <button
+                    style={styles.actionBtn}
+                    onClick={() => handleViewDetails(emp.id)}
                   >
-                    <Eye size={16} />
-                  </div>
+                    <Eye size={16} /> View
+                  </button>
                 </td>
               </tr>
             ))}
+            {employees.length === 0 && (
+              <tr>
+                <td colSpan={4} style={{ ...styles.td, textAlign: "center" }}>
+                  No employees found
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -222,4 +179,4 @@ const AdminDashboard = () => {
   );
 };
 
-export default AdminDashboard;
+export default EmployeeListView;

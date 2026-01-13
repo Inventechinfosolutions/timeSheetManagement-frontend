@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Settings,
   Users,
@@ -8,8 +8,13 @@ import {
   Unlock,
   Menu,
   X,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "../store";
+import { getEntities } from "../reducers/employeeDetails.reducer";
 
 interface SidebarLayoutProps {
   children: React.ReactNode;
@@ -22,20 +27,31 @@ const SidebarLayout = ({
   children,
   activeTab = "Dashboard",
   onTabChange,
-  // onLogout,
-}: SidebarLayoutProps) => {
+}: // onLogout,
+SidebarLayoutProps) => {
   // State management
   const [isHovered, setIsHovered] = useState(false);
   const [isLocked, setIsLocked] = useState(true);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const dispatch = useDispatch<AppDispatch>();
+
+  const { entities } = useSelector((state: RootState) => state.employeeDetails);
+
+  useEffect(() => {
+    // Fetch employee list on mount
+    dispatch(getEntities({ page: 1, limit: 100, search: "" }));
+  }, [dispatch]);
 
   // Sidebar opens if it's either hovered OR locked (Desktop)
   const isDesktopOpen = isHovered || isLocked;
 
   const sidebarItems = [
     { name: "System Dashboard", icon: Settings },
+    { name: "Employee Details", icon: Users },
     { name: "User & Role Management", icon: Users },
+    
   ];
 
   // const handleLogout = () => {
@@ -158,12 +174,13 @@ const SidebarLayout = ({
         >
           {sidebarItems.map((item) => {
             const isActive = activeTab === item.name;
+
             return (
               <div key={item.name} className="relative group">
                 <button
                   onClick={() => {
                     onTabChange?.(item.name);
-                    setIsMobileOpen(false); // Close mobile menu on select
+                    setIsMobileOpen(false);
                   }}
                   className={`w-full flex items-center gap-4 p-3 md:p-2 rounded-xl cursor-pointer transition-all duration-300 relative overflow-hidden group
                                         ${
@@ -177,10 +194,12 @@ const SidebarLayout = ({
                   {/* Active Indicator Line (Left) */}
                   <div
                     className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#00A3C4] rounded-r-md transition-all duration-300
-                                        ${
-                                          isActive ? "opacity-100" : "opacity-0"
-                                        }
-                                    `}
+                                          ${
+                                            isActive
+                                              ? "opacity-100"
+                                              : "opacity-0"
+                                          }
+                                      `}
                   ></div>
 
                   {/* Icon */}
@@ -197,13 +216,13 @@ const SidebarLayout = ({
                   {/* Label */}
                   <span
                     className={`font-medium text-sm whitespace-nowrap transition-all duration-300 relative z-10
-                                        ${
-                                          isDesktopOpen
-                                            ? "opacity-100 translate-x-0 w-auto"
-                                            : "md:opacity-0 md:-translate-x-4 md:w-0 md:overflow-hidden md:absolute"
-                                        }
-                                        ${isActive ? "font-semibold" : ""}
-                                    `}
+                                          ${
+                                            isDesktopOpen
+                                              ? "opacity-100 translate-x-0 w-auto"
+                                              : "md:opacity-0 md:-translate-x-4 md:w-0 md:overflow-hidden md:absolute"
+                                          }
+                                          ${isActive ? "font-semibold" : ""}
+                                      `}
                   >
                     {item.name}
                   </span>

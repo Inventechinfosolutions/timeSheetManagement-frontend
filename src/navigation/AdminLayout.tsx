@@ -10,12 +10,17 @@ const AdminLayout = () => {
     if (location.pathname === "/admin-dashboard/registration") {
       return "User & Role Management";
     }
+    if (location.pathname === "/admin-dashboard/employees") {
+      return "Employee Details";
+    }
     return "System Dashboard";
   };
 
   const handleTabChange = (tabName: string) => {
     if (tabName === "User & Role Management") {
       navigate("/admin-dashboard/registration");
+    } else if (tabName === "Employee Details") {
+      navigate("/admin-dashboard/employees");
     } else {
       navigate("/admin-dashboard");
     }
