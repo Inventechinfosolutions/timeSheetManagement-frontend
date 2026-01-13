@@ -4,11 +4,12 @@ import { TimesheetEntry } from "../types";
 import { useAppDispatch, useAppSelector } from "../hooks";
 // ERROR HIGHLIGHT: Ensure this path is correct relative to the new file location
 import {
-  fetchMonthlyAttendance,
-  createAttendanceRecord,
   updateAttendanceRecord,
   submitBulkAttendance,
+  fetchMonthlyAttendance,
+  createAttendanceRecord,
 } from "../reducers/employeeAttendance.reducer";
+import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import {
   generateMonthlyEntries,
   isEditableMonth,
@@ -22,12 +23,23 @@ interface TimesheetProps {
 }
 
 const MyTimesheet = ({ now: propNow }: TimesheetProps) => {
-  // 1. Memoize 'now' to prevent infinite re-renders if prop is missing (new Date() on every render)
-  const now = useMemo(() => propNow || new Date(), [propNow]);
+  // 1. Internal State for 'now' (View Date)
+  const [now, setNow] = useState(() => propNow || new Date());
+  
+  // Sync if prop changes
+  useEffect(() => {
+    if (propNow) setNow(propNow);
+  }, [propNow]);
   const dispatch = useAppDispatch();
   const { records } = useAppSelector((state) => state.attendance);
   const { entity } = useAppSelector((state) => state.employeeDetails);
+  // @ts-ignore
+  const { holidays } = useAppSelector((state) => (state as any).masterHolidays || { holidays: [] });
   const currentEmployeeId = entity?.employeeId;
+
+  useEffect(() => {
+    dispatch(fetchHolidays());
+  }, [dispatch]);
 
   // View State
   const [localEntries, setLocalEntries] = useState<TimesheetEntry[]>([]);
@@ -183,6 +195,27 @@ const MyTimesheet = ({ now: propNow }: TimesheetProps) => {
     setCurrentWeekStart(newDate);
   };
 
+  const handlePrevMonth = () => {
+    const prev = new Date(now);
+    prev.setMonth(prev.getMonth() - 1);
+    setNow(prev);
+  }
+
+  const handleNextMonth = () => {
+    const next = new Date(now);
+    next.setMonth(next.getMonth() + 1);
+    if (next <= new Date()) { // Double check logic, or just rely on button state
+         setNow(next);
+    }
+  }
+
+  // Check if next month start is in future
+  const canGoNextMonth = () => {
+      const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      const currentRealMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      return nextMonth <= currentRealMonth;
+  };
+
   // Calculate Totals (Directly from totalHours)
   const weekTotalHours = weekData.reduce((acc, { entry }) => {
     return acc + (entry?.totalHours || 0);
@@ -205,8 +238,24 @@ const MyTimesheet = ({ now: propNow }: TimesheetProps) => {
     const hours = isNaN(num) ? 0 : num;
 
     let newStatus: TimesheetEntry["status"] = localEntries[entryIndex].status;
+    
     if (hours > 0) {
       newStatus = hours > 6 ? "Full Day" : "Half Day";
+    } else {
+      // Revert logic when hours are 0
+      const entryDate = new Date(localEntries[entryIndex].fullDate);
+      // Format YYYY-MM-DD
+      const dateStrLocal = `${entryDate.getFullYear()}-${String(entryDate.getMonth()+1).padStart(2,'0')}-${String(entryDate.getDate()).padStart(2,'0')}`;
+      const isHoliday = holidays?.find((h: any) => h.holidayDate === dateStrLocal || h.date === dateStrLocal);
+      const dayNum = entryDate.getDay();
+      
+      if (isHoliday) {
+          newStatus = "Holiday";
+      } else if (dayNum === 0 || dayNum === 6) {
+          newStatus = "Weekend";
+      } else {
+          newStatus = "Leave";
+      }
     }
 
     const updated = [...localEntries];
@@ -301,8 +350,8 @@ const MyTimesheet = ({ now: propNow }: TimesheetProps) => {
 
     localEntries.forEach((entry, idx) => {
       const currentTotal = entry.totalHours || 0;
-      if (currentTotal <= 0) return;
-
+      // Allow 0 modifications to pass through
+      
       const originalTotal = baseEntries[idx]?.totalHours || 0;
       if (currentTotal !== originalTotal) {
         modifiedIndices.push(idx);
@@ -468,11 +517,16 @@ const MyTimesheet = ({ now: propNow }: TimesheetProps) => {
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold text-[#2B3674]">My Timesheet</h2>
         <div className="flex items-center gap-3">
-          <div className="bg-white px-4 py-2 rounded-full shadow-sm text-[#2B3674] font-bold text-sm border border-gray-100">
-            {labelDate.toLocaleDateString("en-US", {
-              month: "long",
-              year: "numeric",
-            })}
+          <div className="flex items-center bg-white rounded-full shadow-sm border border-gray-100 p-1">
+            <button onClick={handlePrevMonth} className="p-1 hover:bg-gray-100 rounded-full text-gray-400 hover:text-[#2B3674] transition-colors">
+                <ChevronLeft size={16} />
+            </button>
+            <div className="px-3 min-w-[140px] text-center font-bold text-sm text-[#2B3674]">
+                {now.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+            </div>
+            <button onClick={handleNextMonth} disabled={!canGoNextMonth()} className={`p-1 rounded-full transition-colors ${!canGoNextMonth() ? "text-gray-200 cursor-not-allowed" : "hover:bg-gray-100 hover:text-[#2B3674] text-gray-400"}`}>
+                <ChevronRight size={16} />
+            </button>
           </div>
           <button
             onClick={onSaveAll}
@@ -509,6 +563,13 @@ const MyTimesheet = ({ now: propNow }: TimesheetProps) => {
               const isToday =
                 day.dateObj.toDateString() === new Date().toDateString();
               const isWeekend = day.dayName === "Sat" || day.dayName === "Sun";
+              const isFuture = day.dateObj > new Date();
+              
+              // New Logic for Red Styling (Holiday or Sunday)
+              const isSunday = day.dayName === "Sun";
+              const dateStrLocal = `${day.dateObj.getFullYear()}-${String(day.dateObj.getMonth()+1).padStart(2,'0')}-${String(day.dateObj.getDate()).padStart(2,'0')}`;
+              const holiday = holidays?.find((h: any) => h.holidayDate === dateStrLocal || h.date === dateStrLocal);
+              const isRed = isSunday || !!holiday;
 
               // Find actual index in localEntries
               const entryIndex = localEntries.findIndex(
@@ -522,12 +583,42 @@ const MyTimesheet = ({ now: propNow }: TimesheetProps) => {
                   : 0;
 
               // Input value priority: Typed String > Stored Number > 0
+              // Input value priority: Typed String > Stored Number > 0
               const inputValue =
                 entryIndex !== -1 && localInputValues[entryIndex] !== undefined
                   ? localInputValues[entryIndex]
                   : displayVal === 0
                   ? ""
                   : displayVal.toString();
+
+              // Determine Colors based on Priority
+              const status = day.entry?.status;
+              let bgClass = isWeekend || !isCurrentMonth ? "bg-gray-50/50" : "bg-white";
+              let textClass = "text-[#2B3674]"; // Default Text
+
+              // Priority 1: Green (Full Work)
+              if (status === 'Full Day' || status === 'WFH' || status === 'Client Visit') {
+                  bgClass = "bg-[#E9FBF5]";
+                  textClass = "text-[#01B574]";
+              } 
+              // Priority 2: Orange (Half Day / Pending / Not Updated)
+              else if (status === 'Half Day' || status === 'Pending' || status === 'Not Updated') {
+                  bgClass = "bg-[#FFF9E5]";
+                  textClass = "text-[#FFB020]";
+              }
+              // Priority 3: Red (Holiday / Weekend / Leave)
+              else if ((isRed && isCurrentMonth) || status === 'Leave' || status === 'Holiday' || status === 'Weekend') {
+                  bgClass = "bg-[#FDF2F2]";
+                  textClass = "text-[#ff4d4d]";
+              }
+              // Priority 4: Today (Blue)
+              else if (isToday && isCurrentMonth) {
+                  bgClass = "bg-[#E6F6F9]";
+                  textClass = "text-[#00A3C4]";
+              }
+
+              // Badge Check
+              const isIncomplete = (status === 'Not Updated' || status === 'Pending') && !isFuture && !isWeekend;
 
               return (
                 <div
@@ -547,38 +638,56 @@ const MyTimesheet = ({ now: propNow }: TimesheetProps) => {
 
                   {/* Content Cell */}
                   <div
-                    className={`flex-1 py-5 px-2 flex flex-col items-center justify-center gap-3 ${
-                      isWeekend || !isCurrentMonth
-                        ? "bg-gray-50/50"
-                        : "bg-white"
-                    }`}
+                    className={`flex-1 py-5 px-2 flex flex-col items-center justify-center gap-3 relative group ${bgClass}`}
                   >
+                    {/* Incomplete Badge */}
+                    {isIncomplete && isCurrentMonth && (
+                        <div className="absolute top-1 right-1 bg-[#FFB020] text-white flex items-center justify-center rounded-full border-2 border-white w-4 h-4 text-[9px] font-black shadow-sm z-10">
+                            !
+                        </div>
+                    )}
+                    
+                    {/* Hover Status Tooltip matches CalendarView */}
+                    {isCurrentMonth && (status || isWeekend || holiday) && (
+                         <div className={`absolute bottom-5 left-1/2 -translate-x-1/2 translate-y-full z-20 
+                            opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none
+                            px-2 py-1 rounded text-[10px] font-bold whitespace-nowrap shadow-lg
+                            ${(() => {
+                                if (status === 'Full Day' || status === 'WFH' || status === 'Client Visit') return 'bg-[#01B574] text-white';
+                                if (status === 'Half Day' || status === 'Pending' || status === 'Not Updated') return 'bg-[#FFB020] text-white';
+                                if (status === 'Leave' || status === 'Holiday' || holiday) return 'bg-red-500 text-white';
+                                if (isWeekend && !status) return 'bg-red-500 text-white'; // Weekly Off
+                                if (isToday) return 'bg-[#00A3C4] text-white';
+                                return 'hidden'; // Don't show if no status
+                            })()}`}>
+                            {status === 'Not Updated' ? 'Not Updated' : (status || (isWeekend ? "Weekly Off" : (holiday ? "Holiday" : "")))}
+                        </div>
+                    )}
+
                     {isCurrentMonth ? (
                       <>
                         <span
-                          className={`text-sm font-bold ${
-                            isToday ? "text-[#00A3C4]" : "text-[#2B3674]"
-                          }`}
+                          className={`text-sm font-bold ${textClass}`}
                         >
                           {day.dateObj.toLocaleString("default", {
                             month: "short",
                           })}{" "}
                           {day.dateNum.toString().padStart(2, "0")}
                         </span>
-
+                        
                         {day.entry ? (
                           <input
                             type="text"
                             disabled={!isEditableMonth(day.dateObj)}
-                            className={`w-full h-10 text-center border rounded-lg font-bold text-[#2B3674] placeholder:text-[10px] focus:outline-none focus:ring-2 focus:ring-[#00A3C4] focus:border-transparent transition-all
+                            className={`w-full h-10 text-center border rounded-lg font-bold placeholder:text-[10px] focus:outline-none focus:ring-2 focus:ring-[#00A3C4] focus:border-transparent transition-all
                                                             ${
                                                               !isEditableMonth(
                                                                 day.dateObj
                                                               )
                                                                 ? "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-100"
                                                                 : isToday
-                                                                ? "border-[#00A3C4] bg-blue-50/30"
-                                                                : "border-gray-200"
+                                                                ? "border-[#00A3C4] bg-white text-[#2B3674] shadow-sm"
+                                                                : "border-gray-200 text-[#2B3674] bg-white"
                                                             }`}
                             placeholder={
                               isEditableMonth(day.dateObj) ? "Hours" : "Locked"
@@ -593,6 +702,13 @@ const MyTimesheet = ({ now: propNow }: TimesheetProps) => {
                           <div className="w-full h-10 flex items-center justify-center text-gray-300 font-medium text-xs border border-transparent">
                             -
                           </div>
+                        )}
+
+                        {/* Status Text (Holiday or Weekly Off) - Below Input */}
+                        {(holiday || isSunday) && (
+                            <div className={`text-[9px] font-bold mt-1 text-center leading-tight truncate px-0.5 w-full text-red-500`}>
+                                {holiday ? holiday.name : "Weekly Off"}
+                            </div>
                         )}
                       </>
                     ) : (
