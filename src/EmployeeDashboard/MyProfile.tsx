@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   Camera,
   Mail,
@@ -7,16 +7,52 @@ import {
   Building,
   CreditCard,
 } from "lucide-react";
-import { useAppSelector } from "../hooks";
+import { useAppSelector, useAppDispatch } from "../hooks";
+import { getEntities, setCurrentUser } from "../reducers/employeeDetails.reducer";
 
 const MyProfile = () => {
+  const dispatch = useAppDispatch();
   const { entity } = useAppSelector((state) => state.employeeDetails);
+  
+  // Identify current user ID from the session (set during login)
+  const currentEmployeeId = entity?.employeeId;
 
   // Use entity values or fallbacks
-  const [profileImage, setProfileImage] = useState(
-    "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=2576&auto=format&fit=crop"
-  );
+  // Default to a placeholder if no image found in entity
+  const defaultImage = "https://media.istockphoto.com/id/1389610405/vector/avatar-man-user-icon.webp?a=1&b=1&s=612x612&w=0&k=20&c=044RCWtERyeaZmepUN5Zpca7CXL5sLFgHd9JoZosTPE=";
+  const [profileImage, setProfileImage] = useState(defaultImage);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Effect: Fetch Full Employee Details on Mount
+  useEffect(() => {
+    if (currentEmployeeId) {
+        // Use search to find the specific employee by ID string
+        dispatch(getEntities({ page: 1, limit: 1, search: currentEmployeeId }))
+            .unwrap()
+            .then((response) => {
+                // Handle different response structures (array or paginated object)
+                const dataList = Array.isArray(response) ? response : (response.data || []);
+                const foundUser = dataList.find((u: any) => u.employeeId === currentEmployeeId);
+                
+                if (foundUser) {
+                    dispatch(setCurrentUser(foundUser));
+                    // Sync image if it exists
+                    if (foundUser.profileImage) {
+                        setProfileImage(foundUser.profileImage);
+                    }
+                }
+            })
+            .catch((err) => console.error("Failed to fetch profile:", err));
+    }
+  }, [dispatch, currentEmployeeId]);
+
+  // Sync state with entity updates from other sources/re-renders
+  useEffect(() => {
+      if (entity?.profileImage) {
+          setProfileImage(entity.profileImage);
+      }
+  }, [entity]);
+
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -24,6 +60,7 @@ const MyProfile = () => {
       const reader = new FileReader();
       reader.onloadend = () => {
         setProfileImage(reader.result as string);
+        // Note: In a real implementation, you would dispatch an upload action here
       };
       reader.readAsDataURL(file);
     }
@@ -62,9 +99,9 @@ const MyProfile = () => {
 
         <div>
           <h1 className="text-2xl font-bold text-[#2B3674]">
-            {entity?.fullName || "Employee"}
+            {entity?.fullName || ""}
           </h1>
-          <p className="text-gray-400 font-medium text-sm">Employee</p>
+          <p className="text-gray-400 font-medium text-sm">{entity?.designation || ""}</p>
           <div className="flex items-center gap-2 mt-1 text-sm text-gray-400 font-medium">
             <Building size={14} className="text-gray-400" />
             <span>InvenTech</span>
@@ -93,7 +130,7 @@ const MyProfile = () => {
               <input
                 type="text"
                 disabled
-                defaultValue={entity?.fullName || ""}
+                value={entity?.fullName || ""}
                 className="w-full pl-9 pr-3 py-2.5 border border-gray-100 rounded-xl bg-[#F4F7FE] text-[#2B3674] text-xs font-medium"
               />
               <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
@@ -109,7 +146,7 @@ const MyProfile = () => {
               <input
                 type="text"
                 disabled
-                defaultValue={entity?.employeeId || ""}
+                value={entity?.employeeId || ""}
                 className="w-full pl-9 pr-3 py-2.5 border border-gray-100 rounded-xl bg-[#F4F7FE] text-[#2B3674] text-xs font-medium"
               />
               <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
@@ -125,7 +162,7 @@ const MyProfile = () => {
               <input
                 type="text"
                 disabled
-                defaultValue={entity?.department || ""}
+                value={entity?.department || ""}
                 className="w-full pl-9 pr-3 py-2.5 border border-gray-100 rounded-xl bg-[#F4F7FE] text-[#2B3674] text-xs font-medium"
               />
               <Building className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
@@ -141,7 +178,7 @@ const MyProfile = () => {
               <input
                 type="text"
                 disabled
-                defaultValue={entity?.designation || ""}
+                value={entity?.designation || ""}
                 className="w-full pl-9 pr-3 py-2.5 border border-gray-100 rounded-xl bg-[#F4F7FE] text-[#2B3674] text-xs font-medium"
               />
               <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
@@ -157,7 +194,7 @@ const MyProfile = () => {
               <input
                 type="email"
                 disabled
-                defaultValue={entity?.email || ""}
+                value={entity?.email || ""}
                 className="w-full pl-9 pr-3 py-2.5 border border-gray-100 rounded-xl bg-[#F4F7FE] text-[#2B3674] text-xs font-medium"
               />
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
