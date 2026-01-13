@@ -22,6 +22,7 @@ export interface User {
   status?: UserStatus;
   createdAt?: string;
   updatedAt?: string;
+  resetRequired?: boolean;
 }
 
 export interface CreateUserDto {
@@ -46,6 +47,8 @@ export interface LoginResponse {
   name: string;
   email: string;
   accessToken: string;
+  userType?: UserType;
+  resetRequired?: boolean;
   refreshToken?: string; // Not exposed in response, stored in httpOnly cookie
 }
 
@@ -54,6 +57,8 @@ export interface AuthMeResponse {
   name: string;
   email: string;
   accessToken: string;
+  userType?: UserType;
+  resetRequired?: boolean;
 }
 
 interface UserState {
@@ -97,7 +102,33 @@ export const loginUser = createAsyncThunk(
       const response = await axios.post(`${apiUrl}/login`, userLoginDto, {
         withCredentials: true, // Important: Send/receive cookies
       });
-      return response.data.data as LoginResponse;
+      
+      const data = response.data.data as LoginResponse;
+      
+      // If userType is missing, fetch it
+      if (!data.userType) {
+         try {
+             // We prioritize the token from the response
+             const token = data.accessToken;
+             const meResponse = await axios.get(`${apiUrl}/auth/me`, {
+                withCredentials: true,
+                headers: { Authorization: `Bearer ${token}` }
+             });
+             // Merge the userType and resetRequired from meResponse
+             if (meResponse.data.data) {
+                 return { 
+                    ...data, 
+                    userType: meResponse.data.data.userType,
+                    resetRequired: meResponse.data.data.resetRequired
+                 };
+             }
+         } catch (e) {
+             console.warn("Failed to fetch user type after login", e);
+             // Proceed without userType if fetch fails, or handle as needed
+         }
+      }
+      
+      return data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Login failed');
     }
@@ -203,6 +234,8 @@ const userSlice = createSlice({
           id: action.payload.userId,
           loginId: action.payload.email,
           aliasLoginName: action.payload.name,
+          userType: action.payload.userType,
+          resetRequired: action.payload.resetRequired,
         };
         state.error = null;
         
@@ -232,6 +265,8 @@ const userSlice = createSlice({
           id: action.payload.userId,
           loginId: action.payload.email,
           aliasLoginName: action.payload.name,
+          userType: action.payload.userType,
+          resetRequired: action.payload.resetRequired,
         };
         state.error = null;
         
@@ -290,6 +325,9 @@ const userSlice = createSlice({
         state.loading = false;
         state.passwordChangeSuccess = true;
         state.error = null;
+        if (state.currentUser) {
+          state.currentUser.resetRequired = false;
+        }
       })
       .addCase(changePassword.rejected, (state, action) => {
         state.loading = false;

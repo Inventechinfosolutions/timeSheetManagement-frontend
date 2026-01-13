@@ -16,6 +16,8 @@ import EmployeeLayout from "./navigation/EmployeeLayout";
 
 // Lazy load authentication components
 const EmployeeActivation = lazy(() => import("./Login/EmployeeActivation"));
+const FcManagerActivation = lazy(() => import("./Login/FcManagerActivation"));
+const FcManagerResetPassword = lazy(() => import("./Login/FcManagerResetPassword"));
 const SetPassword = lazy(() => import("./Login/SetPassword"));
 
 function App() {
@@ -36,6 +38,23 @@ function App() {
           element={
             <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50">Loading...</div>}>
               <EmployeeActivation />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/fcManager/activate"
+          element={
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50">Loading...</div>}>
+              <FcManagerActivation />
+            </Suspense>
+          }
+        />
+        
+        <Route
+          path="/fcManager/reset-password"
+          element={
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50">Loading...</div>}>
+              <FcManagerResetPassword />
             </Suspense>
           }
         />
@@ -159,7 +178,7 @@ function App() {
                     />
                   ))}
 
-                {/* Employee Dashboard Routes */}
+                <Route path="/emplyoee-dashboard" element={<Navigate to="/employee-dashboard" replace />} />
                 <Route path="/employee-dashboard" element={<EmployeeLayout />}>
                   {employeeComponentConfigs.map((config: any) => (
                     <Route
