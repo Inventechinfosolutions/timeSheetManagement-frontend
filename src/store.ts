@@ -4,6 +4,7 @@ import employeeDetailsReducer from './reducers/employeeDetails.reducer';
 import userReducer from './reducers/user.reducer';
 import employeeLink from './reducers/employeeLink.reducer';
 import publicReducer from './reducers/public.reducer';
+import masterHolidayReducer from './reducers/masterHoliday.reducer';
 
 export const store = configureStore({
   reducer: {
@@ -12,6 +13,7 @@ export const store = configureStore({
     user: userReducer,
     employeeLink,
     public: publicReducer,
+    masterHolidays: masterHolidayReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
