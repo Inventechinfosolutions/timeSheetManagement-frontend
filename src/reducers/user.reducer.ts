@@ -37,7 +37,6 @@ export interface UserLoginDto {
 }
 
 export interface ChangePasswordDto {
-  oldPassword: string;
   newPassword: string;
   confirmNewPassword: string;
 }

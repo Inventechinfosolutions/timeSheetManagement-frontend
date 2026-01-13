@@ -41,11 +41,11 @@ const FcManagerResetPassword: React.FC = () => {
         currentUser
     } = useSelector((state: RootState) => state.user);
 
-    const [oldPassword, setOldPassword] = useState('');
+
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     
-    const [showOldPassword, setShowOldPassword] = useState(false);
+
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     
@@ -106,10 +106,6 @@ const FcManagerResetPassword: React.FC = () => {
                  setLocalError('Session expired. Please login again.');
                  return;
              }
-             if (!oldPassword) {
-                 setLocalError('Old password is required.');
-                 return;
-             }
         }
 
         if (isForgotMode) {
@@ -119,7 +115,6 @@ const FcManagerResetPassword: React.FC = () => {
             }));
         } else {
             dispatch(changePassword({
-                oldPassword: oldPassword,
                 newPassword: password,
                 confirmNewPassword: confirmPassword
             }));
@@ -216,31 +211,7 @@ const FcManagerResetPassword: React.FC = () => {
 
                                 <form onSubmit={handleSubmit} className="space-y-8">
                                     
-                                    {/* Old Password Field (Only for Authenticated Mode) */}
-                                    {!isForgotMode && (
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-bold text-[#2B3674] ml-1 flex items-center gap-1">
-                                                <span className="text-red-500">*</span> Old Password
-                                            </label>
-                                            <div className="relative group/field">
-                                                <input
-                                                    type={showOldPassword ? 'text' : 'password'}
-                                                    value={oldPassword}
-                                                    onChange={(e) => setOldPassword(e.target.value)}
-                                                    placeholder="Current Password"
-                                                    className="w-full px-6 py-4 bg-white border-2 border-gray-100 rounded-2xl focus:border-[#01B574] focus:ring-0 transition-all outline-none text-[#2B3674] font-medium pr-14 group-hover/field:border-gray-200"
-                                                    required
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowOldPassword(!showOldPassword)}
-                                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#2B3674] transition-colors p-2"
-                                                >
-                                                    {showOldPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
+
 
                                     <div className="space-y-2">
                                         <label className="text-sm font-bold text-[#2B3674] ml-1 flex items-center gap-1">

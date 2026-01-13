@@ -33,7 +33,7 @@ const SidebarLayout = ({ children, activeTab = 'Dashboard', onTabChange }: Sideb
         { name: 'My Timesheet', icon: Calendar },
         { name: 'Timesheet View', icon: Eye },
         { name: 'My Profile', icon: User },
-        { name: 'Change Password', icon: Lock },
+        // { name: 'Change Password', icon: Lock },
     ];
 
 
