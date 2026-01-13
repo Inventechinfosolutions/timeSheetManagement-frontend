@@ -13,7 +13,7 @@ import {
   LayoutGrid
 } from 'lucide-react';
 import { resetPasswordEmployee, clearResetPasswordState } from '../reducers/public.reducer';
-import { changePassword, clearPasswordChangeSuccess, clearError as clearUserError, logoutUser } from '../reducers/user.reducer';
+import { changePassword, clearPasswordChangeSuccess, clearError as clearUserError, logoutUser, setResetRequired } from '../reducers/user.reducer';
 import { AppDispatch, RootState } from '../store';
 import inventechLogo from '../assets/inventech-logo.jpg';
 
@@ -56,8 +56,7 @@ const FcManagerResetPassword: React.FC = () => {
         if (resetPasswordResponse?.success || passwordChangeSuccess) {
             setSuccess(true);
             
-            // If we were in force reset mode (authenticated), log out the user 
-            // so they can login with their new password on the landing page
+            // Ensure local state reflects that reset is no longer required
             if (passwordChangeSuccess) {
                 dispatch(logoutUser());
             }
