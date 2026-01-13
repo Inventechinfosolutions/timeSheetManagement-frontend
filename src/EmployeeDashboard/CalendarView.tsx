@@ -1,9 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useAppSelector } from '../hooks';
+import { useAppSelector, useAppDispatch } from '../hooks';
 import { RootState } from '../store';
 import { generateMonthlyEntries } from '../utils/attendanceUtils';
 import { TimesheetEntry } from "../types";
+import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 
 interface CalendarProps {
     now?: Date;
@@ -23,8 +24,16 @@ const Calendar = ({
     entries: propEntries 
 }: CalendarProps) => {
 
+    const dispatch = useAppDispatch();
     const { records } = useAppSelector((state: RootState) => state.attendance);
+    // @ts-ignore - Assuming masterHolidays is in RootState but type might not be fully updated in IDE
+    const { holidays } = useAppSelector((state: RootState) => state.masterHolidays || { holidays: [] });
     
+    // Fetch holidays on mount
+    useEffect(() => {
+        dispatch(fetchHolidays());
+    }, [dispatch]);
+
     // Local state for navigation (fallback if not controlled)
     const [internalDisplayDate, setInternalDisplayDate] = useState(now);
 
@@ -73,17 +82,34 @@ const Calendar = ({
     const blanks = Array.from({ length: firstDayIndex }, (_, i) => i);
     const monthDays = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
+    const checkIsHoliday = (year: number, month: number, day: number) => {
+        if (!holidays || holidays.length === 0) return null;
+        // Construct date string YYYY-MM-DD
+        // Ensure month is 1-indexed and padded
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        return holidays.find((h: any) => h.holidayDate === dateStr || h.date === dateStr);
+    };
+
     const getStatusClasses = (day: number) => {
         const entry = entries.find(e => e.date === day);
         const cellDate = new Date(displayDate.getFullYear(), displayDate.getMonth(), day);
         const isWeekend = cellDate.getDay() === 0 || cellDate.getDay() === 6;
         
+        // Check Master Holiday
+        const holiday = checkIsHoliday(displayDate.getFullYear(), displayDate.getMonth(), day);
+
         // Status Based Styling
         const status = entry?.status;
         
         // Future Dates
         const checkNow = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const isFuture = cellDate > checkNow;
+        
+        // 1. Holyday takes precedence over everything except maybe "Today" if you worked on a holiday? 
+        // Usually Holidays are red/pink
+        if (holiday) {
+             return 'bg-[#FDF2F2] text-[#ff4d4d] border border-[#ff4d4d]/20 relative overflow-hidden';
+        }
 
         // Requirement: Next month (and future) weekends should be red, but ONLY if no explicit status is set
         if (isFuture && isWeekend && !status) {
@@ -185,6 +211,7 @@ const Calendar = ({
                         {monthDays.map(day => {
                             // Find entry
                             const entry = entries.find(e => e.date === day);
+                            const holiday = checkIsHoliday(displayDate.getFullYear(), displayDate.getMonth(), day);
                             
                             // Re-implementing logic safely without loginTime
                             const isNotUpdated = entry && !entry.isFuture && !entry.isToday && !entry.isWeekend && 
@@ -199,14 +226,24 @@ const Calendar = ({
                                     className={`${isSmall ? 'w-7 h-7 text-[9px]' : isSidebar ? 'w-8 h-8 text-xs' : 'w-[90%] md:w-[85%] lg:w-[80%] h-12 md:h-16 lg:h-20 text-xs md:text-sm'} mx-auto rounded-lg flex items-center justify-center font-bold transition-all hover:scale-105 cursor-pointer relative group
                                     ${getStatusClasses(day)}`}
                                 >
-                                    {day}
+                                    <span className={holiday ? "mb-2 md:mb-3" : ""}>{day}</span>
+                                    
+                                    {/* Render Holiday Name */}
+                                    {holiday && !isSmall && !isSidebar && (
+                                        <div className="absolute bottom-1 md:bottom-2 left-0 w-full text-center px-0.5">
+                                            <p className="text-[7px] md:text-[9px] leading-tight truncate font-medium opacity-90">
+                                                {holiday.name}
+                                            </p>
+                                        </div>
+                                    )}
+
                                     {isIncomplete && (
                                         <div className={`absolute top-0.5 right-0.5 md:-top-1 md:-right-1 bg-[#FFB020] text-white flex items-center justify-center rounded-full border border-white md:border-2 
                                             ${isSmall ? 'w-1.5 h-1.5 text-[5px]' : 'w-2.5 h-2.5 md:w-3.5 md:h-3.5 text-[7px] md:text-[9px] font-black'}`}>!</div>
                                     )}
 
                                     {/* Hover Status Badge - Only for large/standard view, usually */}
-                                    {(!isSmall && !isSidebar && entry && (entry.status || entry.isWeekend)) && (
+                                    {(!isSmall && !isSidebar && entry && (entry.status || entry.isWeekend) && !holiday) && (
                                         <div className={`absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full z-10 
                                             opacity-0 group-hover:opacity-100 group-hover:translate-y-[-50%] transition-all duration-300 pointer-events-none
                                             px-2 py-1 rounded text-[10px] md:text-xs font-bold whitespace-nowrap shadow-lg hidden md:block
@@ -214,7 +251,7 @@ const Calendar = ({
                                                 const status = entry.status as any;
                                                 const isActualMissing = !entry.isFuture && !entry.totalHours && status !== 'Leave' && status !== 'Holiday' && !entry.isWeekend;
                                                 
-                                                if (status === 'Not Updated' || isActualMissing || status === 'Pending') return 'bg-orange-500 text-white';
+                                                if (status === 'Not Updated' || isActualMissing || status === 'Pending') return 'bg-[#FFB020] text-white';
                                                 
                                                 if (status === 'Full Day' || status === 'WFH' || status === 'Client Visit') return 'bg-[#01B574] text-white';
                                                 

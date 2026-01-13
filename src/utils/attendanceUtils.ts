@@ -108,8 +108,8 @@ export const mapStatus = (
                 }
             }
         }
-        if ((_isFuture || _isWeekend)) return 'Leave';
-        return _isToday ? 'Pending' : 'Leave';
+        if (_isFuture || _isWeekend) return undefined;
+        return _isToday ? 'Pending' : 'Not Updated';
     }
 
     // New signature handling: status, loginTime, logoutTime, isFuture, isToday, isWeekend
