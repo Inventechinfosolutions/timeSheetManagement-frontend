@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { User, Eye, EyeOff, Lock, Shield, Users } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { setCurrentUser } from "../reducers/employeeDetails.reducer";
-import { loginUser, clearError } from "../reducers/user.reducer";
+import { loginUser, clearError, UserType } from "../reducers/user.reducer";
 import inventechLogo from "../assets/inventech-logo.jpg";
 
 const Landing = () => {
@@ -16,17 +16,23 @@ const Landing = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Redux state for Admin
-  const { loading: adminLoading, isAuthenticated: adminIsAuthenticated } = useAppSelector(
+  // Redux state
+  const { loading, isAuthenticated, currentUser, error } = useAppSelector(
     (state) => state.user
   );
 
-  // Effect for Admin Redirect
+  // Effect for Redirect
   useEffect(() => {
-    if (adminIsAuthenticated) {
-      navigate("/admin-dashboard");
+    if (isAuthenticated && currentUser) {
+      if (currentUser.resetRequired) {
+        navigate("/fcManager/reset-password");
+      } else if (currentUser.userType === UserType.EMPLOYEE) {
+        navigate("/employee-dashboard");
+      } else {
+        navigate("/admin-dashboard");
+      }
     }
-  }, [adminIsAuthenticated, navigate]);
+  }, [isAuthenticated, currentUser, navigate]);
 
   // Clear admin errors on unmount
   useEffect(() => {
@@ -52,25 +58,13 @@ const Landing = () => {
     dispatch(clearError());
 
     try {
-      // 1. Attempt Admin Login via API
       const resultAction = await dispatch(loginUser({ loginId, password }));
-
       if (loginUser.fulfilled.match(resultAction)) {
-        // Success! Effect will handle redirect to /admin-dashboard
-      } else {
-        // 2. Fallback to Employee Login (Mock Mode) if Admin fails
-        // In a real app, we'd check error codes (e.g., 404 User Not Found vs 401 Bad Password).
-        // Here, we assume if it's not a valid Admin, it might be an Employee.
-        // We preserve the existing "Employee Login doesn't check password" prototype behavior.
-        
-        console.log("Admin login failed or user is not admin. Proceeding as Employee.");
+        // Set employee context for dashboard components
         dispatch(setCurrentUser({ employeeId: loginId }));
-        navigate("/admin-dashboard");
       }
     } catch (err) {
-      // Fallback constraint
-      dispatch(setCurrentUser({ employeeId: loginId }));
-      navigate("/employee-dashboard");
+      console.error("Login attempt failed:", err);
     } finally {
       setIsSubmitting(false);
     }
@@ -102,6 +96,13 @@ const Landing = () => {
              Enter your credentials to access the dashboard
           </p>
         </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-500/20 backdrop-blur-md border border-red-500/50 rounded-xl text-white text-sm font-semibold animate-in slide-in-from-top-2 duration-300">
+            {error}
+          </div>
+        )}
 
         {/* Login Form */}
         <form onSubmit={handleLogin} className="space-y-5">
@@ -153,10 +154,10 @@ const Landing = () => {
 
           <button
             type="submit"
-            disabled={isSubmitting || adminLoading}
+            disabled={isSubmitting || loading}
             className="w-full bg-linear-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-900/20 active:scale-[0.98] transition-all duration-200 mt-2 disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            {isSubmitting || adminLoading ? "Authenticating..." : "Login"}
+            {isSubmitting || loading ? "Authenticating..." : "Login"}
           </button>
         </form>
       </div>

@@ -91,8 +91,11 @@ const Registration = () => {
     //   return;
     // }
 
-    console.log("Submitting Registration Data:", formData);
-    dispatch(createEntity(formData));
+    const submissionData = {
+      ...formData,
+    };
+    console.log("Submitting Registration Data:", submissionData);
+    dispatch(createEntity(submissionData));
   };
 
   return (
