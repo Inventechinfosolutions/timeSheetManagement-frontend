@@ -9,7 +9,6 @@ const ChangePassword = () => {
   const dispatch = useAppDispatch();
 
   const [passwords, setPasswords] = useState({
-    currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
@@ -62,7 +61,6 @@ const ChangePassword = () => {
     try {
       await dispatch(
         changePassword({
-          oldPassword: passwords.currentPassword,
           newPassword: passwords.newPassword,
           confirmNewPassword: passwords.confirmPassword,
         })
