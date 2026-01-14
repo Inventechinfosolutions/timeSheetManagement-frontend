@@ -6,7 +6,7 @@ import MyTimesheet from './MyTimesheet';
 import Calendar from './CalendarView'; // Replaced FullTimesheet
 import MyProfile from './MyProfile';
 import TodayAttendance from './TodayAttendance';
-import ChangePassword from './ChangePassword';
+//import ChangePassword from './ChangePassword';
 
 import { useAppDispatch, useAppSelector } from '../hooks';
 import { fetchMonthlyAttendance } from '../reducers/employeeAttendance.reducer';
@@ -93,7 +93,6 @@ const EmployeeDashboard = () => {
         }
 
         if (activeTab === 'My Profile') return <MyProfile />;
-        if (activeTab === 'Change Password') return <ChangePassword />;
 
         // Dashboard View (TodayAttendance)
         return (

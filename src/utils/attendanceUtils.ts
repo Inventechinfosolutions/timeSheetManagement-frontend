@@ -78,41 +78,12 @@ export const isEditableMonth = (date: Date | string): boolean => {
 // Map Backend Status enum to Frontend UI strings
 export const mapStatus = (
     status: AttendanceStatus | undefined, 
-    loginTime: string | null | undefined | boolean, 
-    logoutTime: string | null | undefined | boolean, 
     isFuture: boolean, 
     isToday: boolean, 
     isWeekend: boolean,
     totalHours?: number
 ): TimesheetEntry['status'] => {
-    // Overload handling: If 2nd arg is boolean, it means we are using the old signature:
-    // status, isFuture, isToday, isWeekend, totalHours
-    if (typeof loginTime === 'boolean') {
-        const _isFuture = loginTime;
-        const _isToday = logoutTime as boolean;
-        const _isWeekend = isFuture;
-        const _totalHours = isToday as unknown as number;
-
-        if (status) {
-            if (status === AttendanceStatus.LEAVE && _totalHours && _totalHours > 0) {
-                 return _totalHours >= 6 ? 'Full Day' : 'Half Day';
-            }
-            if (status === AttendanceStatus.LEAVE) return 'Leave';
-            if (status !== AttendanceStatus.PENDING || !_isToday) {
-                switch (status) {
-                    case AttendanceStatus.FULL_DAY: return 'Full Day';
-                    case AttendanceStatus.HALF_DAY: return 'Half Day';
-                    case AttendanceStatus.NOT_UPDATED: return 'Not Updated';
-                    case AttendanceStatus.PENDING: return 'Pending';
-                    default: break;
-                }
-            }
-        }
-        if (_isFuture || _isWeekend) return undefined;
-        return _isToday ? 'Pending' : 'Not Updated';
-    }
-
-    // New signature handling: status, loginTime, logoutTime, isFuture, isToday, isWeekend
+    
     if (status) {
         if (status === AttendanceStatus.LEAVE && totalHours && totalHours > 0) {
              return totalHours >= 6 ? 'Full Day' : 'Half Day';

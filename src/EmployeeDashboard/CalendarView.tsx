@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, X, Calendar as CalendarIcon } from "lucide-react";
+import { downloadPdf } from "../utils/downloadPdf";
 import { useAppSelector, useAppDispatch } from '../hooks';
 import { RootState } from '../store';
 import { generateMonthlyEntries } from '../utils/attendanceUtils';
@@ -26,6 +27,56 @@ const Calendar = ({
 
     const dispatch = useAppDispatch();
     const { records } = useAppSelector((state: RootState) => state.attendance);
+    const { entity } = useAppSelector((state: RootState) => state.employeeDetails);
+
+    const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
+    const [downloadDateRange, setDownloadDateRange] = useState({
+        from: '',
+        to: ''
+    });
+
+    const handleDownload = () => {
+        // Default to current view month
+        const start = new Date(displayDate.getFullYear(), displayDate.getMonth(), 1);
+        const end = new Date(displayDate.getFullYear(), displayDate.getMonth() + 1, 0); // Last day of month
+        
+        // Format YYYY-MM-DD (local time safety)
+        const format = (d: Date) => {
+            const offset = d.getTimezoneOffset() * 60000;
+            return new Date(d.getTime() - offset).toISOString().split('T')[0];
+        };
+
+        setDownloadDateRange({ from: format(start), to: format(end) });
+        setIsDownloadModalOpen(true);
+    };
+
+    const handleConfirmDownload = () => {
+        if (!entity || !entries) return;
+        
+        const fromDate = new Date(downloadDateRange.from);
+        const toDate = new Date(downloadDateRange.to);
+        toDate.setHours(23, 59, 59, 999); // Include full end day
+
+        // Filter entries based on range
+        const filteredEntries = entries.filter(e => {
+            const entryDate = new Date(e.fullDate);
+            return entryDate >= fromDate && entryDate <= toDate;
+        });
+
+        const totalHours = filteredEntries.reduce((sum, entry) => sum + (entry.totalHours || 0), 0);
+
+        downloadPdf({
+            employeeName: entity.fullName || 'Employee',
+            employeeId: entity.employeeId,
+            designation: entity.designation || 'N/A',
+            department: entity.department || 'Engineering',
+            month: `${downloadDateRange.from} to ${downloadDateRange.to}`,
+            entries: filteredEntries,
+            totalHours: totalHours
+        });
+        
+        setIsDownloadModalOpen(false);
+    };
     // @ts-ignore - Assuming masterHolidays is in RootState but type might not be fully updated in IDE
     const { holidays } = useAppSelector((state: RootState) => state.masterHolidays || { holidays: [] });
     
@@ -152,10 +203,21 @@ const Calendar = ({
                 {/* Header Section */}
                 {!isSmall && (
                     <div className={`flex items-center justify-between gap-2 ${isSidebar ? 'mb-4' : 'flex-col sm:flex-row mb-8 md:gap-4'}`}>
-                        <h3 className={`${isSidebar ? 'text-base' : 'text-lg md:text-xl'} font-bold text-[#1B254B] text-center sm:text-left`}>
-                            {isSidebar ? 'Attendance' : 'Monthly Attendance Snapshot'}
-                        </h3>
+                        <div className="flex items-center gap-3">
+                            <h3 className={`${isSidebar ? 'text-base' : 'text-lg md:text-xl'} font-bold text-[#1B254B] text-center sm:text-left`}>
+                                {isSidebar ? 'Attendance' : 'Monthly Attendance Snapshot'}
+                            </h3>
+                        </div>
                         <div className={`flex items-center gap-2 ${isSidebar ? 'bg-transparent p-0' : 'md:gap-6 bg-gray-50/50 p-1 rounded-xl border border-gray-100/50'}`}>
+                            {!isSmall && !isSidebar && (
+                                <button
+                                    onClick={handleDownload}
+                                    className="p-2 text-[#2B3674] bg-[#F4F7FE] rounded-lg hover:bg-[#2B3674] hover:text-white transition-all duration-300 shadow-sm mr-2"
+                                    title="Download Monthly Report"
+                                >
+                                    <Download size={18} strokeWidth={2.5} />
+                                </button>
+                            )}
                             <button
                                 onClick={handlePrevMonth}
                                 className={`p-2 hover:bg-white hover:shadow-sm rounded-lg transition-all text-[#A3AED0] hover:text-[#2B3674] ${isSidebar ? 'p-1' : ''}`}
@@ -197,14 +259,14 @@ const Calendar = ({
 
                 {/* Calendar Grid Card */}
                 <div className={`bg-white rounded-xl border border-gray-100 shadow-[0px_4px_20px_rgba(0,0,0,0.05)] ${isSmall ? 'p-1.5 mb-2' : isSidebar ? 'p-2 mb-4' : 'p-2 md:p-4 mb-6'}`}>
-                    <div className={`grid grid-cols-7 ${isSmall ? 'gap-0.5' : isSidebar ? 'gap-1' : 'gap-1 md:gap-2'}`}>
+                    <div className={`grid grid-cols-7 ${isSmall ? 'gap-0.5' : isSidebar ? 'gap-1' : 'gap-1 md:gap-x-px md:gap-y-2'}`}>
                         {daysOfWeek.map(day => (
                             <div key={day} className={`text-center font-bold text-gray-400 ${isSmall ? 'text-[7px] mb-0.5' : isSidebar ? 'text-[9px] mb-1' : 'text-[10px] md:text-xs mb-2'}`}>{day}</div>
                         ))}
 
                         {/* Blanks for alignment */}
                         {blanks.map(blank => (
-                            <div key={`blank-${blank}`} className={`${isSmall ? 'h-7 w-7' : isSidebar ? 'h-8 w-8' : 'w-[90%] md:w-[85%] lg:w-[80%] h-12 md:h-16 lg:h-20'} mx-auto`}></div>
+                            <div key={`blank-${blank}`} className={`${isSmall ? 'h-7 w-7' : isSidebar ? 'h-8 w-8' : 'w-[90%] md:w-[75%] lg:w-[65%] h-12 md:h-14 lg:h-16'} mx-auto`}></div>
                         ))}
 
                         {/* Days */}
@@ -223,7 +285,7 @@ const Calendar = ({
                                 <div
                                     key={day}
                                     onClick={() => entry && onNavigateToDate?.(day)}
-                                    className={`${isSmall ? 'w-7 h-7 text-[9px]' : isSidebar ? 'w-8 h-8 text-xs' : 'w-[90%] md:w-[85%] lg:w-[80%] h-12 md:h-16 lg:h-20 text-xs md:text-sm'} mx-auto rounded-lg flex items-center justify-center font-bold transition-all hover:scale-105 cursor-pointer relative group
+                                    className={`${isSmall ? 'w-7 h-7 text-[9px]' : isSidebar ? 'w-8 h-8 text-xs' : 'w-[90%] md:w-[75%] lg:w-[65%] h-12 md:h-14 lg:h-16 text-xs'} mx-auto rounded-lg flex items-center justify-center font-bold transition-all hover:scale-105 cursor-pointer relative group
                                     ${getStatusClasses(day)}`}
                                 >
                                     <span className={holiday ? "mb-2 md:mb-3" : ""}>{day}</span>
@@ -295,6 +357,65 @@ const Calendar = ({
                     </div>
                 </div>
             </div>
+            {/* Download Date Range Modal */}
+            {isDownloadModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm border border-gray-100 overflow-hidden scale-100 animate-in zoom-in-95 duration-200">
+                        {/* Header */}
+                        <div className="flex items-center justify-between p-4 border-b border-gray-50 bg-gray-50/50">
+                            <h3 className="text-lg font-bold text-[#2B3674] flex items-center gap-2">
+                                <CalendarIcon className="w-5 h-5 text-[#00A3C4]" /> 
+                                Select Date Range
+                            </h3>
+                            <button 
+                                onClick={() => setIsDownloadModalOpen(false)}
+                                className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+                        
+                        {/* Body */}
+                        <div className="p-6 space-y-4">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">From Date</label>
+                                <input 
+                                    type="date" 
+                                    value={downloadDateRange.from}
+                                    onChange={(e) => setDownloadDateRange({...downloadDateRange, from: e.target.value})}
+                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-[#00A3C4]/20 focus:border-[#00A3C4] transition-all"
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">To Date</label>
+                                <input 
+                                    type="date" 
+                                    value={downloadDateRange.to}
+                                    onChange={(e) => setDownloadDateRange({...downloadDateRange, to: e.target.value})}
+                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-[#00A3C4]/20 focus:border-[#00A3C4] transition-all"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-4 bg-gray-50/50 flex gap-3">
+                            <button 
+                                onClick={() => setIsDownloadModalOpen(false)}
+                                className="flex-1 px-4 py-2.5 text-sm font-bold text-gray-500 hover:text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-all shadow-sm"
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                onClick={handleConfirmDownload}
+                                className="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-[#2B3674] hover:bg-[#1B254B] rounded-xl transition-all shadow-lg hover:shadow-[#2B3674]/20 flex items-center justify-center gap-2"
+                            >
+                                <Download size={16} />
+                                Download PDF
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

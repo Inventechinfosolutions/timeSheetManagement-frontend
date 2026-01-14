@@ -8,14 +8,15 @@ import {
   CreditCard,
 } from "lucide-react";
 import { useAppSelector, useAppDispatch } from "../hooks";
-import { getEntities, setCurrentUser } from "../reducers/employeeDetails.reducer";
+import { getEntities, setCurrentUser, uploadProfileImage, fetchProfileImage } from "../reducers/employeeDetails.reducer";
 
 const MyProfile = () => {
   const dispatch = useAppDispatch();
   const { entity } = useAppSelector((state) => state.employeeDetails);
   
-  // Identify current user ID from the session (set during login)
-  const currentEmployeeId = entity?.employeeId;
+  // Use the database Primary Key (number) for API calls, fallback to employeeId string if needed for display
+  const currentDbId = entity?.id;
+  const displayEmployeeId = entity?.employeeId;
 
   // Use entity values or fallbacks
   // Default to a placeholder if no image found in entity
@@ -23,46 +24,66 @@ const MyProfile = () => {
   const [profileImage, setProfileImage] = useState(defaultImage);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Effect: Fetch Full Employee Details on Mount
+  // Effect: Fetch Full Employee Details & Image on Mount
   useEffect(() => {
-    if (currentEmployeeId) {
-        // Use search to find the specific employee by ID string
-        dispatch(getEntities({ page: 1, limit: 1, search: currentEmployeeId }))
+    // 1. Fetch data using the string ID (if available) - assuming search works with string ID
+    if (displayEmployeeId) {
+        dispatch(getEntities({ page: 1, limit: 1, search: displayEmployeeId }))
             .unwrap()
             .then((response) => {
-                // Handle different response structures (array or paginated object)
                 const dataList = Array.isArray(response) ? response : (response.data || []);
-                const foundUser = dataList.find((u: any) => u.employeeId === currentEmployeeId);
+                const foundUser = dataList.find((u: any) => u.employeeId === displayEmployeeId);
                 
                 if (foundUser) {
                     dispatch(setCurrentUser(foundUser));
-                    // Sync image if it exists
-                    if (foundUser.profileImage) {
-                        setProfileImage(foundUser.profileImage);
-                    }
                 }
             })
-            .catch((err) => console.error("Failed to fetch profile:", err));
+            .catch((err) => console.error("Failed to fetch profile data:", err));
     }
-  }, [dispatch, currentEmployeeId]);
 
-  // Sync state with entity updates from other sources/re-renders
-  useEffect(() => {
-      if (entity?.profileImage) {
-          setProfileImage(entity.profileImage);
-      }
-  }, [entity]);
+    // 2. Securely Fetch Profile Image using Numeric ID
+    if (currentDbId) {
+        dispatch(fetchProfileImage(currentDbId))
+            .unwrap()
+            .then((blobUrl) => {
+                setProfileImage(blobUrl);
+            })
+            .catch(() => {
+                setProfileImage(defaultImage);
+            });
+    }
+  }, [dispatch, displayEmployeeId, currentDbId]);
 
+
+
+
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
+    if (file && currentDbId) {
+      // 1. Show Preview Immediately
+      setUploadStatus('idle');
       const reader = new FileReader();
       reader.onloadend = () => {
         setProfileImage(reader.result as string);
-        // Note: In a real implementation, you would dispatch an upload action here
       };
       reader.readAsDataURL(file);
+
+      // 2. Upload to Backend Immediately
+      dispatch(uploadProfileImage({ id: currentDbId, file }))
+        .unwrap()
+        .then(() => {
+          console.log("Profile image uploaded successfully");
+          setUploadStatus('success');
+          // Clear message after 3 seconds
+          setTimeout(() => setUploadStatus('idle'), 3000);
+        })
+        .catch((err) => {
+             console.error("Failed to upload info:", err);
+             setUploadStatus('error');
+             setTimeout(() => setUploadStatus('idle'), 3000);
+        });
     }
   };
 
@@ -107,6 +128,7 @@ const MyProfile = () => {
             <span>InvenTech</span>
           </div>
         </div>
+
       </div>
 
       {/* Personal Information Card */}
@@ -201,6 +223,18 @@ const MyProfile = () => {
             </div>
           </div>
         </div>
+
+        {uploadStatus === 'success' && (
+             <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 text-green-500 font-bold text-lg animate-in fade-in slide-in-from-top-4 flex items-center gap-2">
+                 <span className="text-2xl">✓</span> Image Uploaded Successfully
+             </div>
+        )}
+
+        {uploadStatus === 'error' && (
+             <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 text-red-500 font-bold text-lg animate-in fade-in slide-in-from-top-4">
+                 Upload Failed
+             </div>
+        )}
       </div>
     </div>
   );

@@ -4,11 +4,12 @@ import { TimesheetEntry } from "../types";
 import { useAppDispatch, useAppSelector } from "../hooks";
 // ERROR HIGHLIGHT: Ensure this path is correct relative to the new file location
 import {
-  fetchMonthlyAttendance,
-  createAttendanceRecord,
   updateAttendanceRecord,
   submitBulkAttendance,
+  fetchMonthlyAttendance,
+  createAttendanceRecord,
 } from "../reducers/employeeAttendance.reducer";
+import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import {
   generateMonthlyEntries,
   isEditableMonth,
@@ -22,12 +23,23 @@ interface TimesheetProps {
 }
 
 const MyTimesheet = ({ now: propNow }: TimesheetProps) => {
-  // 1. Memoize 'now' to prevent infinite re-renders if prop is missing (new Date() on every render)
-  const now = useMemo(() => propNow || new Date(), [propNow]);
+  // 1. Internal State for 'now' (View Date)
+  const [now, setNow] = useState(() => propNow || new Date());
+  
+  // Sync if prop changes
+  useEffect(() => {
+    if (propNow) setNow(propNow);
+  }, [propNow]);
   const dispatch = useAppDispatch();
   const { records } = useAppSelector((state) => state.attendance);
   const { entity } = useAppSelector((state) => state.employeeDetails);
+  // @ts-ignore
+  const { holidays } = useAppSelector((state) => (state as any).masterHolidays || { holidays: [] });
   const currentEmployeeId = entity?.employeeId;
+
+  useEffect(() => {
+    dispatch(fetchHolidays());
+  }, [dispatch]);
 
   // View State
   const [localEntries, setLocalEntries] = useState<TimesheetEntry[]>([]);
@@ -183,6 +195,27 @@ const MyTimesheet = ({ now: propNow }: TimesheetProps) => {
     setCurrentWeekStart(newDate);
   };
 
+  const handlePrevMonth = () => {
+    const prev = new Date(now);
+    prev.setMonth(prev.getMonth() - 1);
+    setNow(prev);
+  }
+
+  const handleNextMonth = () => {
+    const next = new Date(now);
+    next.setMonth(next.getMonth() + 1);
+    if (next <= new Date()) { // Double check logic, or just rely on button state
+         setNow(next);
+    }
+  }
+
+  // Check if next month start is in future
+  const canGoNextMonth = () => {
+      const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      const currentRealMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      return nextMonth <= currentRealMonth;
+  };
+
   // Calculate Totals (Directly from totalHours)
   const weekTotalHours = weekData.reduce((acc, { entry }) => {
     return acc + (entry?.totalHours || 0);
@@ -205,8 +238,24 @@ const MyTimesheet = ({ now: propNow }: TimesheetProps) => {
     const hours = isNaN(num) ? 0 : num;
 
     let newStatus: TimesheetEntry["status"] = localEntries[entryIndex].status;
+    
     if (hours > 0) {
       newStatus = hours > 6 ? "Full Day" : "Half Day";
+    } else {
+      // Revert logic when hours are 0
+      const entryDate = new Date(localEntries[entryIndex].fullDate);
+      // Format YYYY-MM-DD
+      const dateStrLocal = `${entryDate.getFullYear()}-${String(entryDate.getMonth()+1).padStart(2,'0')}-${String(entryDate.getDate()).padStart(2,'0')}`;
+      const isHoliday = holidays?.find((h: any) => h.holidayDate === dateStrLocal || h.date === dateStrLocal);
+      const dayNum = entryDate.getDay();
+      
+      if (isHoliday) {
+          newStatus = "Holiday";
+      } else if (dayNum === 0 || dayNum === 6) {
+          newStatus = "Weekend";
+      } else {
+          newStatus = "Leave";
+      }
     }
 
     const updated = [...localEntries];
@@ -301,8 +350,8 @@ const MyTimesheet = ({ now: propNow }: TimesheetProps) => {
 
     localEntries.forEach((entry, idx) => {
       const currentTotal = entry.totalHours || 0;
-      if (currentTotal <= 0) return;
-
+      // Allow 0 modifications to pass through
+      
       const originalTotal = baseEntries[idx]?.totalHours || 0;
       if (currentTotal !== originalTotal) {
         modifiedIndices.push(idx);
@@ -465,14 +514,19 @@ const MyTimesheet = ({ now: propNow }: TimesheetProps) => {
       )}
 
       {/* Header / Week Navigation */}
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold text-[#2B3674]">My Timesheet</h2>
-        <div className="flex items-center gap-3">
-          <div className="bg-white px-4 py-2 rounded-full shadow-sm text-[#2B3674] font-bold text-sm border border-gray-100">
-            {labelDate.toLocaleDateString("en-US", {
-              month: "long",
-              year: "numeric",
-            })}
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+        <h2 className="text-xl font-bold text-[#2B3674] w-full md:w-auto text-center md:text-left">My Timesheet</h2>
+        <div className="flex items-center gap-3 w-full md:w-auto justify-center md:justify-end">
+          <div className="flex items-center bg-white rounded-full shadow-sm border border-gray-100 p-1">
+            <button onClick={handlePrevMonth} className="p-1 hover:bg-gray-100 rounded-full text-gray-400 hover:text-[#2B3674] transition-colors">
+                <ChevronLeft size={16} />
+            </button>
+            <div className="px-3 min-w-[140px] text-center font-bold text-sm text-[#2B3674]">
+                {now.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+            </div>
+            <button onClick={handleNextMonth} disabled={!canGoNextMonth()} className={`p-1 rounded-full transition-colors ${!canGoNextMonth() ? "text-gray-200 cursor-not-allowed" : "hover:bg-gray-100 hover:text-[#2B3674] text-gray-400"}`}>
+                <ChevronRight size={16} />
+            </button>
           </div>
           <button
             onClick={onSaveAll}
@@ -484,14 +538,41 @@ const MyTimesheet = ({ now: propNow }: TimesheetProps) => {
         </div>
       </div>
 
-      {/* Horizontal Grid Container */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 overflow-x-auto">
-        <div className="flex items-center gap-2 w-full min-w-max md:min-w-0">
-          {/* Left Arrow */}
+      {/* Responsive Grid/Stack Container */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:overflow-x-auto">
+        
+        {/* Mobile Navigation Header */}
+        <div className="md:hidden flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
+             <button
+                onClick={handlePrevWeek}
+                disabled={!canGoPrev()}
+                className={`p-2 rounded-full ${
+                  !canGoPrev() ? "text-gray-200" : "text-gray-500 hover:bg-gray-50"
+                }`}
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <span className="font-bold text-[#2B3674] text-sm">
+                Week of {weekData[0].dateObj.getDate()}{" "}
+                {weekData[0].dateObj.toLocaleDateString("en-US", { month: "short" })}
+              </span>
+              <button
+                onClick={handleNextWeek}
+                disabled={!canGoNext()}
+                className={`p-2 rounded-full ${
+                  !canGoNext() ? "text-gray-200" : "text-gray-500 hover:bg-gray-50"
+                }`}
+              >
+                <ChevronRight size={20} />
+              </button>
+        </div>
+
+        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2 w-full">
+          {/* Left Arrow (Desktop Only) */}
           <button
             onClick={handlePrevWeek}
             disabled={!canGoPrev()}
-            className={`p-2 rounded-full transition-colors ${
+            className={`hidden md:block p-2 rounded-full transition-colors ${
               !canGoPrev()
                 ? "text-gray-200 cursor-not-allowed"
                 : "hover:bg-gray-100 text-gray-400 hover:text-[#00A3C4]"
@@ -501,7 +582,7 @@ const MyTimesheet = ({ now: propNow }: TimesheetProps) => {
           </button>
 
           {/* Table Structure */}
-          <div className="flex-1 border border-gray-200 rounded-xl overflow-hidden flex">
+          <div className="flex-1 flex flex-col md:flex-row gap-4 md:gap-0 md:bg-white md:border md:border-gray-200 md:rounded-xl md:overflow-hidden md:divide-x md:divide-gray-100 md:overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
             {/* 7 Days Columns */}
             {weekData.map((day, i) => {
               // Check if day belongs to the currently viewed month
@@ -509,6 +590,13 @@ const MyTimesheet = ({ now: propNow }: TimesheetProps) => {
               const isToday =
                 day.dateObj.toDateString() === new Date().toDateString();
               const isWeekend = day.dayName === "Sat" || day.dayName === "Sun";
+              const isFuture = day.dateObj > new Date();
+              
+              // New Logic for Red Styling (Holiday or Sunday)
+              const isSunday = day.dayName === "Sun";
+              const dateStrLocal = `${day.dateObj.getFullYear()}-${String(day.dateObj.getMonth()+1).padStart(2,'0')}-${String(day.dateObj.getDate()).padStart(2,'0')}`;
+              const holiday = holidays?.find((h: any) => h.holidayDate === dateStrLocal || h.date === dateStrLocal);
+              const isRed = isSunday || !!holiday;
 
               // Find actual index in localEntries
               const entryIndex = localEntries.findIndex(
@@ -522,6 +610,7 @@ const MyTimesheet = ({ now: propNow }: TimesheetProps) => {
                   : 0;
 
               // Input value priority: Typed String > Stored Number > 0
+              // Input value priority: Typed String > Stored Number > 0
               const inputValue =
                 entryIndex !== -1 && localInputValues[entryIndex] !== undefined
                   ? localInputValues[entryIndex]
@@ -529,10 +618,47 @@ const MyTimesheet = ({ now: propNow }: TimesheetProps) => {
                   ? ""
                   : displayVal.toString();
 
+              // Determine Colors based on Priority
+              const status = day.entry?.status;
+              let bgClass = isWeekend || !isCurrentMonth ? "bg-gray-50/50" : "bg-white";
+              let textClass = "text-[#2B3674]"; // Default Text
+              let borderClass = "border-2 border-transparent"; // Default border
+
+              // Priority 1: Green (Full Work)
+              if (status === 'Full Day' || status === 'WFH' || status === 'Client Visit') {
+                  bgClass = "bg-[#E9FBF5]";
+                  textClass = "text-[#01B574]";
+              } 
+              // Priority 2: Orange (Half Day / Pending / Not Updated)
+              else if (status === 'Half Day' || status === 'Pending' || status === 'Not Updated') {
+                  bgClass = "bg-[#FFF9E5]";
+                  textClass = "text-[#FFB020]";
+              }
+              // Priority 3: Red (Holiday / Weekend / Leave)
+              else if ((isRed && isCurrentMonth) || status === 'Leave' || status === 'Holiday' || status === 'Weekend') {
+                  bgClass = "bg-[#FDF2F2]";
+                  textClass = "text-[#ff4d4d]";
+              }
+              // Priority 4: Today (Blue)
+              // Note: This only applies if no other status matched (e.g. not Pending/Leave)
+              else if (isToday && isCurrentMonth) {
+                  bgClass = "bg-[#E6F6F9]";
+                  textClass = "text-[#00A3C4]";
+              }
+
+              // Apply Dashed Border to Today regardless of status
+              if (isToday && isCurrentMonth) {
+                  borderClass = "border border-dashed border-[#00A3C4] rounded-lg";
+              }
+
+              // Badge Check
+              const isIncomplete = (status === 'Not Updated' || status === 'Pending') && !isFuture && !isWeekend;
+
               return (
                 <div
+                
                   key={i}
-                  className={`flex-1 flex flex-col border-r border-gray-200 last:border-r-0 min-w-[105px]`}
+                  className={`flex-1 flex flex-col md:min-w-[85px] min-w-[105px] rounded-xl border border-gray-200 shadow-sm md:rounded-none md:shadow-none md:border-0 md:border-r last:border-0 overflow-hidden bg-white`}
                 >
                   {/* Header Cell - Always Visible */}
                   <div
@@ -547,52 +673,80 @@ const MyTimesheet = ({ now: propNow }: TimesheetProps) => {
 
                   {/* Content Cell */}
                   <div
-                    className={`flex-1 py-5 px-2 flex flex-col items-center justify-center gap-3 ${
-                      isWeekend || !isCurrentMonth
-                        ? "bg-gray-50/50"
-                        : "bg-white"
-                    }`}
+                    className={`flex-1 py-5 px-4 md:px-2 flex md:flex-col items-center justify-between md:justify-center gap-3 relative group ${bgClass} ${borderClass}`}
                   >
+                    {/* Incomplete Badge */}
+                    {isIncomplete && isCurrentMonth && (
+                        <div className="absolute top-1 right-1 bg-[#FFB020] text-white flex items-center justify-center rounded-full border-2 border-white w-4 h-4 text-[9px] font-black shadow-sm z-10">
+                            !
+                        </div>
+                    )}
+                    
+                    {/* Hover Status Tooltip matches CalendarView */}
+                    {isCurrentMonth && (status || isWeekend || holiday) && (
+                         <div className={`hidden md:block absolute bottom-5 left-1/2 -translate-x-1/2 translate-y-full z-20 
+                            opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none
+                            px-2 py-1 rounded text-[10px] font-bold whitespace-nowrap shadow-lg
+                            ${(() => {
+                                if (status === 'Full Day' || status === 'WFH' || status === 'Client Visit') return 'bg-[#01B574] text-white';
+                                if (status === 'Half Day' || status === 'Pending' || status === 'Not Updated') return 'bg-[#FFB020] text-white';
+                                if (status === 'Leave' || status === 'Holiday' || holiday) return 'bg-red-500 text-white';
+                                if (isWeekend && !status) return 'bg-red-500 text-white'; // Weekly Off
+                                if (isToday) return 'bg-[#00A3C4] text-white';
+                                return 'hidden'; // Don't show if no status
+                            })()}`}>
+                            {status === 'Not Updated' ? 'Not Updated' : (status || (isWeekend ? "Weekly Off" : (holiday ? "Holiday" : "")))}
+                        </div>
+                    )}
+
                     {isCurrentMonth ? (
                       <>
                         <span
-                          className={`text-sm font-bold ${
-                            isToday ? "text-[#00A3C4]" : "text-[#2B3674]"
-                          }`}
+                          className={`text-sm font-bold ${textClass}`}
                         >
                           {day.dateObj.toLocaleString("default", {
                             month: "short",
                           })}{" "}
                           {day.dateNum.toString().padStart(2, "0")}
                         </span>
+                        
+                        {/* Wrapper for Input to control width on mobile */}
+                        <div className="w-24 md:w-full">
+                            {day.entry ? (
+                            <input
+                                type="text"
+                                disabled={!isEditableMonth(day.dateObj)}
+                                className={`w-full h-10 text-center border rounded-lg font-bold placeholder:text-[10px] focus:outline-none focus:ring-2 focus:ring-[#00A3C4] focus:border-transparent transition-all
+                                                                ${
+                                                                !isEditableMonth(
+                                                                    day.dateObj
+                                                                )
+                                                                    ? "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-100"
+                                                                    : isToday
+                                                                    ? "border-[#00A3C4] bg-white text-[#2B3674] shadow-sm"
+                                                                    : "border-gray-200 text-[#2B3674] bg-white"
+                                                                }`}
+                                placeholder={
+                                isEditableMonth(day.dateObj) ? "Hours" : "Locked"
+                                }
+                                value={inputValue}
+                                onChange={(e) =>
+                                handleHoursInput(entryIndex, e.target.value)
+                                }
+                                onBlur={() => handleInputBlur(entryIndex)}
+                            />
+                            ) : (
+                            <div className="w-full h-10 flex items-center justify-center text-gray-300 font-medium text-xs border border-transparent">
+                                -
+                            </div>
+                            )}
+                        </div>
 
-                        {day.entry ? (
-                          <input
-                            type="text"
-                            disabled={!isEditableMonth(day.dateObj)}
-                            className={`w-full h-10 text-center border rounded-lg font-bold text-[#2B3674] placeholder:text-[10px] focus:outline-none focus:ring-2 focus:ring-[#00A3C4] focus:border-transparent transition-all
-                                                            ${
-                                                              !isEditableMonth(
-                                                                day.dateObj
-                                                              )
-                                                                ? "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-100"
-                                                                : isToday
-                                                                ? "border-[#00A3C4] bg-blue-50/30"
-                                                                : "border-gray-200"
-                                                            }`}
-                            placeholder={
-                              isEditableMonth(day.dateObj) ? "Hours" : "Locked"
-                            }
-                            value={inputValue}
-                            onChange={(e) =>
-                              handleHoursInput(entryIndex, e.target.value)
-                            }
-                            onBlur={() => handleInputBlur(entryIndex)}
-                          />
-                        ) : (
-                          <div className="w-full h-10 flex items-center justify-center text-gray-300 font-medium text-xs border border-transparent">
-                            -
-                          </div>
+                        {/* Status Text (Holiday or Weekly Off) - Below Input */}
+                        {(holiday || isSunday) && (
+                            <div className={`text-[9px] font-bold md:mt-1 text-center leading-tight truncate px-0.5 w-auto md:w-full text-red-500`}>
+                                {holiday ? holiday.name : "Weekly Off"}
+                            </div>
                         )}
                       </>
                     ) : (
@@ -604,31 +758,31 @@ const MyTimesheet = ({ now: propNow }: TimesheetProps) => {
             })}
 
             {/* Week Total Column */}
-            <div className="flex-1 flex flex-col border-l-2 border-gray-100 min-w-[100px] bg-gray-50/30">
-              <div className="py-3 text-center text-xs font-bold uppercase tracking-wider text-[#2B3674] bg-[#F4F7FE]">
+            <div className="flex-1 flex md:flex-col items-center md:items-stretch justify-between md:justify-start rounded-xl border border-gray-200 shadow-sm md:rounded-none md:shadow-none md:border-0 md:border-l md:border-gray-100 md:min-w-[85px] min-w-[100px] bg-white md:bg-gray-50/30 overflow-hidden">
+              <div className="w-full py-3 px-4 md:px-0 text-left md:text-center text-xs font-bold uppercase tracking-wider text-[#2B3674] bg-[#F4F7FE]">
                 Week Total
               </div>
-              <div className="flex-1 flex items-center justify-center text-xl font-bold text-[#2B3674]">
+              <div className="flex-1 flex items-center justify-end md:justify-center px-4 md:px-0 py-3 md:py-0 text-xl font-bold text-[#2B3674]">
                 {weekTotalHours.toFixed(1)}
               </div>
             </div>
 
             {/* Month Total Column */}
-            <div className="flex-1 flex flex-col border-l border-gray-200 min-w-[100px] bg-gray-50/30">
-              <div className="py-3 text-center text-xs font-bold uppercase tracking-wider text-[#2B3674] bg-[#F4F7FE]">
+            <div className="flex-1 flex md:flex-col items-center md:items-stretch justify-between md:justify-start rounded-xl border border-gray-200 shadow-sm md:rounded-none md:shadow-none md:border-0 md:border-l md:border-gray-100 md:min-w-[85px] min-w-[100px] bg-white md:bg-gray-50/30 overflow-hidden">
+              <div className="w-full py-3 px-4 md:px-0 text-left md:text-center text-xs font-bold uppercase tracking-wider text-[#2B3674] bg-[#F4F7FE]">
                 Month Total
               </div>
-              <div className="flex-1 flex items-center justify-center text-xl font-bold text-[#2B3674]">
+              <div className="flex-1 flex items-center justify-end md:justify-center px-4 md:px-0 py-3 md:py-0 text-xl font-bold text-[#2B3674]">
                 {monthTotalHours.toFixed(1)}
               </div>
             </div>
           </div>
 
-          {/* Right Arrow */}
+          {/* Right Arrow (Desktop Only) */}
           <button
             onClick={handleNextWeek}
             disabled={!canGoNext()}
-            className={`p-2 rounded-full transition-colors ${
+            className={`hidden md:block p-2 rounded-full transition-colors ${
               !canGoNext()
                 ? "text-gray-200 cursor-not-allowed"
                 : "hover:bg-gray-100 text-gray-400 hover:text-[#00A3C4]"
