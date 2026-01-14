@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
+import { useLocation } from "react-router-dom";
 import { ChevronLeft, ChevronRight, Save, AlertCircle } from "lucide-react";
 import { TimesheetEntry } from "../types";
 import { useAppDispatch, useAppSelector } from "../hooks";
-// ERROR HIGHLIGHT: Ensure this path is correct relative to the new file location
 import {
   updateAttendanceRecord,
   submitBulkAttendance,
@@ -15,21 +15,47 @@ import {
   isEditableMonth,
 } from "../utils/attendanceUtils";
 
-// Note: Restored Bulk Save logic with 404 Fallback.
-// This allows single-API save when backend is ready, but falls back to sequential if backend is missing /bulk.
-
 interface TimesheetProps {
   now?: Date;
+  selectedDateId?: number | null;
 }
 
-const MyTimesheet = ({ now: propNow }: TimesheetProps) => {
-  // 1. Internal State for 'now' (View Date)
-  const [now, setNow] = useState(() => propNow || new Date());
-  
-  // Sync if prop changes
+const MyTimesheet = ({ now: propNow, selectedDateId: propSelectedDateId }: TimesheetProps) => {
+  const location = useLocation();
+  const navState = location.state as { selectedDate?: string; timestamp?: number } | null;
+
+  const [now, setNow] = useState(() => {
+    if (propNow) return propNow;
+    if (navState?.selectedDate) return new Date(navState.selectedDate);
+    return new Date();
+  });
+
+  const [selectedDateId, setSelectedDateId] = useState<number | null>(() => {
+    return propSelectedDateId || navState?.timestamp || null;
+  });
+
+  const [isHighlighted, setIsHighlighted] = useState(false);
+
   useEffect(() => {
-    if (propNow) setNow(propNow);
-  }, [propNow]);
+    if (selectedDateId) {
+      setIsHighlighted(true);
+      const timer = setTimeout(() => {
+        setIsHighlighted(false);
+        setSelectedDateId(null); // Clear ID so highlight can be re-triggered
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedDateId]);
+
+  const [today] = useState(new Date());
+  const [localEntries, setLocalEntries] = useState<TimesheetEntry[]>([]);
+  const [localInputValues, setLocalInputValues] = useState<Record<number, string>>({});
+  const [toast, setToast] = useState<{
+    show: boolean;
+    message: string;
+    type: "success" | "error" | "info";
+  }>({ show: false, message: "", type: "success" });
+
   const dispatch = useAppDispatch();
   const { records } = useAppSelector((state) => state.attendance);
   const { entity } = useAppSelector((state) => state.employeeDetails);
@@ -37,38 +63,13 @@ const MyTimesheet = ({ now: propNow }: TimesheetProps) => {
   const { holidays } = useAppSelector((state) => (state as any).masterHolidays || { holidays: [] });
   const currentEmployeeId = entity?.employeeId;
 
+  // Initial Fetch
   useEffect(() => {
     dispatch(fetchHolidays());
   }, [dispatch]);
 
-  // View State
-  const [localEntries, setLocalEntries] = useState<TimesheetEntry[]>([]);
-
-  // State to track the start of the visible week
-  const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
-    const d = new Date(now);
-    const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-    return new Date(d.setDate(diff));
-  });
-
-  const [today] = useState(new Date());
-
-  // Toast State
-  const [toast, setToast] = useState<{
-    show: boolean;
-    message: string;
-    type: "success" | "error" | "info";
-  }>({
-    show: false,
-    message: "",
-    type: "success",
-  });
-
-  // --- Data Fetching ---
   useEffect(() => {
-    if (!currentEmployeeId) return; // Guard: distinct check to prevent fetching without ID
-
+    if (!currentEmployeeId) return;
     dispatch(
       fetchMonthlyAttendance({
         employeeId: currentEmployeeId,
@@ -78,123 +79,56 @@ const MyTimesheet = ({ now: propNow }: TimesheetProps) => {
     );
   }, [dispatch, currentEmployeeId, now]);
 
-  // --- Data Transformation ---
+  useEffect(() => {
+    if (propNow) {
+      // Only sync if the prop actually represents a different month or year
+      // This prevents "jumping back" during re-renders if the user manually navigated
+      const hasMonthChanged = 
+        propNow.getMonth() !== now.getMonth() || 
+        propNow.getFullYear() !== now.getFullYear();
+      
+      if (hasMonthChanged) {
+        setNow(propNow);
+      }
+    } else if (navState?.selectedDate) {
+      const navDate = new Date(navState.selectedDate);
+      const hasMonthChanged = 
+        navDate.getMonth() !== now.getMonth() || 
+        navDate.getFullYear() !== now.getFullYear();
+        
+      if (hasMonthChanged) {
+        setNow(navDate);
+      }
+    }
+  }, [propNow, navState?.selectedDate]);
+
+  useEffect(() => {
+    const targetId = propSelectedDateId || navState?.timestamp;
+    if (targetId && targetId !== selectedDateId) {
+      setSelectedDateId(targetId);
+    }
+  }, [propSelectedDateId, navState?.timestamp]);
+
+
+
+  // Transform records to local state
   const baseEntries = useMemo(() => {
-    const entries = generateMonthlyEntries(now, today, records);
-    return entries.map((e) => {
-      // Find the underlying record to get 'totalHours'
-      const dateStr = `${e.fullDate.getFullYear()}-${(e.fullDate.getMonth() + 1)
-        .toString()
-        .padStart(2, "0")}-${e.fullDate.getDate().toString().padStart(2, "0")}`;
-      // Robust Date Matching (Same as attendanceUtils)
-      const record = records.find((rec) => {
-        const rawDate = rec.workingDate || (rec as any).working_date;
-        if (!rawDate) return false;
-
-        let rYear, rMonth, rDay;
-        if (typeof rawDate === "string") {
-          if (rawDate.includes("T")) {
-            const d = new Date(rawDate);
-            rYear = d.getFullYear();
-            rMonth = d.getMonth() + 1;
-            rDay = d.getDate();
-          } else {
-            const parts = rawDate.split("-");
-            rYear = parseInt(parts[0]);
-            rMonth = parseInt(parts[1]);
-            rDay = parseInt(parts[2]);
-          }
-        } else {
-          const d = new Date(rawDate);
-          rYear = d.getFullYear();
-          rMonth = d.getMonth() + 1;
-          rDay = d.getDate();
-        }
-        const rDateStr = `${rYear}-${rMonth.toString().padStart(2, "0")}-${rDay
-          .toString()
-          .padStart(2, "0")}`;
-        return rDateStr === dateStr;
-      });
-
-      return {
-        ...e,
-        totalHours: record?.totalHours || 0,
-        isSaved: !!record?.id,
-      };
-    });
+    return generateMonthlyEntries(now, today, records);
   }, [now, today, records]);
 
   useEffect(() => {
     setLocalEntries(baseEntries);
   }, [baseEntries]);
 
-  // Sync week view when 'now' prop changes
+  // Toast Timer
   useEffect(() => {
-    const d = new Date(now);
-    const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-    setCurrentWeekStart(new Date(d.setDate(diff)));
-  }, [now]);
-
-  // Derive the 7 days for the current view
-  const weekData = useMemo(() => {
-    const days = [];
-    const start = new Date(currentWeekStart);
-
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
-
-      // Match with existing local entries
-      const foundEntry = localEntries.find(
-        (e) =>
-          e.date === d.getDate() &&
-          new Date(e.fullDate).getMonth() === d.getMonth()
-      );
-
-      days.push({
-        dateObj: d,
-        dayName: d.toLocaleDateString("en-US", { weekday: "short" }),
-        dateNum: d.getDate(),
-        entry: foundEntry,
-        isCurrentMonth: d.getMonth() === now.getMonth(),
-      });
+    if (toast.show) {
+      const timer = setTimeout(() => setToast((prev) => ({ ...prev, show: false })), 3000);
+      return () => clearTimeout(timer);
     }
-    return days;
-  }, [currentWeekStart, localEntries, now]);
+  }, [toast.show]);
 
-  // Constraint Logic
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-
-  const canGoPrev = () => {
-    const prevWeekStart = new Date(currentWeekStart);
-    prevWeekStart.setDate(prevWeekStart.getDate() - 7);
-    const prevWeekEnd = new Date(prevWeekStart);
-    prevWeekEnd.setDate(prevWeekStart.getDate() + 6);
-    return prevWeekEnd >= startOfMonth;
-  };
-
-  const canGoNext = () => {
-    const nextWeekStart = new Date(currentWeekStart);
-    nextWeekStart.setDate(nextWeekStart.getDate() + 7);
-    return nextWeekStart <= endOfMonth;
-  };
-
-  const handlePrevWeek = () => {
-    if (!canGoPrev()) return;
-    const newDate = new Date(currentWeekStart);
-    newDate.setDate(newDate.getDate() - 7);
-    setCurrentWeekStart(newDate);
-  };
-
-  const handleNextWeek = () => {
-    if (!canGoNext()) return;
-    const newDate = new Date(currentWeekStart);
-    newDate.setDate(newDate.getDate() + 7);
-    setCurrentWeekStart(newDate);
-  };
-
+  // Handlers
   const handlePrevMonth = () => {
     const prev = new Date(now);
     prev.setMonth(prev.getMonth() - 1);
@@ -204,31 +138,14 @@ const MyTimesheet = ({ now: propNow }: TimesheetProps) => {
   const handleNextMonth = () => {
     const next = new Date(now);
     next.setMonth(next.getMonth() + 1);
-    if (next <= new Date()) { // Double check logic, or just rely on button state
-         setNow(next);
-    }
+    if (next <= new Date()) setNow(next);
   }
 
-  // Check if next month start is in future
   const canGoNextMonth = () => {
-      const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-      const currentRealMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-      return nextMonth <= currentRealMonth;
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const currentRealMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    return nextMonth <= currentRealMonth;
   };
-
-  // Calculate Totals (Directly from totalHours)
-  const weekTotalHours = weekData.reduce((acc, { entry }) => {
-    return acc + (entry?.totalHours || 0);
-  }, 0);
-
-  const monthTotalHours = localEntries.reduce((acc, entry) => {
-    return acc + (entry.totalHours || 0);
-  }, 0);
-
-  // Local state to handle input typing (strings)
-  const [localInputValues, setLocalInputValues] = useState<
-    Record<number, string>
-  >({});
 
   const handleHoursInput = (entryIndex: number, val: string) => {
     if (!/^\d*\.?\d*$/.test(val)) return;
@@ -240,558 +157,210 @@ const MyTimesheet = ({ now: propNow }: TimesheetProps) => {
     let newStatus: TimesheetEntry["status"] = localEntries[entryIndex].status;
     
     if (hours > 0) {
-      newStatus = hours > 6 ? "Full Day" : "Half Day";
+        newStatus = hours > 6 ? "Full Day" : "Half Day";
     } else {
-      // Revert logic when hours are 0
-      const entryDate = new Date(localEntries[entryIndex].fullDate);
-      // Format YYYY-MM-DD
-      const dateStrLocal = `${entryDate.getFullYear()}-${String(entryDate.getMonth()+1).padStart(2,'0')}-${String(entryDate.getDate()).padStart(2,'0')}`;
-      const isHoliday = holidays?.find((h: any) => h.holidayDate === dateStrLocal || h.date === dateStrLocal);
-      const dayNum = entryDate.getDay();
-      
-      if (isHoliday) {
-          newStatus = "Holiday";
-      } else if (dayNum === 0 || dayNum === 6) {
-          newStatus = "Weekend";
-      } else {
-          newStatus = "Leave";
-      }
+        const entryDate = new Date(localEntries[entryIndex].fullDate);
+        // Normalize date for comparison: YYYY-MM-DD
+        const dateStrLocal = `${entryDate.getFullYear()}-${String(entryDate.getMonth() + 1).padStart(2, '0')}-${String(entryDate.getDate()).padStart(2, '0')}`;
+        
+        // Robust holiday lookup checking both holidayDate and date fields, normalized
+        const isHoliday = holidays?.find((h: any) => {
+            const hDate = h.holidayDate || h.date;
+            if (!hDate) return false;
+            const normalizedHDate = typeof hDate === 'string' ? hDate.split('T')[0] : new Date(hDate).toISOString().split('T')[0];
+            return normalizedHDate === dateStrLocal;
+        });
+        
+        const dayNum = entryDate.getDay();
+        
+        if (isHoliday) {
+            newStatus = "Holiday";
+        } else if (dayNum === 0 || dayNum === 6) {
+            newStatus = "Weekend";
+        } else {
+            // Check if Past/Today or Future
+            const todayNorm = new Date();
+            todayNorm.setHours(0, 0, 0, 0);
+            
+            const entryDateNorm = new Date(entryDate);
+            entryDateNorm.setHours(0, 0, 0, 0);
+
+            if (entryDateNorm <= todayNorm) {
+                // Past or Today weekday with 0 hours -> LEAVE
+                newStatus = "Leave";
+            } else {
+                // Future weekday -> Not Updated
+                newStatus = "Not Updated";
+            }
+        }
     }
 
     const updated = [...localEntries];
     updated[entryIndex] = {
-      ...updated[entryIndex],
-      totalHours: hours,
-      status: newStatus,
+        ...updated[entryIndex],
+        totalHours: hours,
+        status: newStatus,
     };
     setLocalEntries(updated);
   };
 
   const handleInputBlur = (entryIndex: number) => {
     setLocalInputValues((prev) => {
-      const next = { ...prev };
-      delete next[entryIndex];
-      return next;
+        const next = { ...prev };
+        delete next[entryIndex];
+        return next;
     });
-  };
-
-  useEffect(() => {
-    if (toast.show) {
-      const timer = setTimeout(
-        () => setToast((prev) => ({ ...prev, show: false })),
-        3000
-      );
-      return () => clearTimeout(timer);
-    }
-  }, [toast.show]);
-
-  // Fallback logic: Individual save (Used if Bulk fails with 404)
-  const handleIndividualSave = async (index: number): Promise<boolean> => {
-    const entry = localEntries[index];
-    const d = entry.fullDate;
-    const workingDate = `${d.getFullYear()}-${(d.getMonth() + 1)
-      .toString()
-      .padStart(2, "0")}-${d.getDate().toString().padStart(2, "0")}`;
-    const hoursToSave = entry.totalHours || 0;
-
-    try {
-      const existingRecord = records.find((r) => {
-        const rDate =
-          typeof r.workingDate === "string"
-            ? r.workingDate.split("T")[0]
-            : (r.workingDate as Date).toISOString().split("T")[0];
-        return rDate === workingDate;
-      });
-
-      let recordId = existingRecord?.id;
-
-      if (!existingRecord) {
-        const result = await dispatch(
-          createAttendanceRecord({
-            employeeId: currentEmployeeId,
-            workingDate,
-            totalHours: hoursToSave,
-            status: "Pending" as any, // Initial status, will be updated if needed or handled by backend logic
-          })
-        ).unwrap();
-        if (result?.id) recordId = result.id;
-      }
-
-      // Use the status from the UI state (which is updated by handleHoursInput)
-      let derivedStatus = entry.status || "Pending";
-      // Fallback if status is Pending but hours exist (shouldn't happen with new logic but safe)
-      if (derivedStatus === "Pending" || derivedStatus === "Not Updated") {
-        if (hoursToSave > 6) derivedStatus = "Full Day";
-        else if (hoursToSave > 0) derivedStatus = "Half Day";
-      }
-
-      if (recordId) {
-        await dispatch(
-          updateAttendanceRecord({
-            id: recordId,
-            data: {
-              totalHours: hoursToSave,
-              status: derivedStatus as any,
-            },
-          })
-        ).unwrap();
-      }
-      return true;
-    } catch (error: any) {
-      console.error("Individual Save Failed:", error);
-      return false;
-    }
   };
 
   const onSaveAll = async () => {
-    // 1. Identify modified entries
-    const modifiedIndices: number[] = [];
     const payload: any[] = [];
-
     localEntries.forEach((entry, idx) => {
-      const currentTotal = entry.totalHours || 0;
-      // Allow 0 modifications to pass through
-      
-      const originalTotal = baseEntries[idx]?.totalHours || 0;
-      if (currentTotal !== originalTotal) {
-        modifiedIndices.push(idx);
+        const currentTotal = entry.totalHours || 0;
+        const originalTotal = baseEntries[idx]?.totalHours || 0;
+        
+        if (currentTotal !== originalTotal) {
+            const d = entry.fullDate;
+            const workingDate = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, "0")}-${d.getDate().toString().padStart(2, "0")}`;
+            let derivedStatus = entry.status || "Pending";
+            
+            if (derivedStatus === "Pending" || derivedStatus === "Not Updated") {
+                if (currentTotal > 6) derivedStatus = "Full Day";
+                else if (currentTotal > 0) derivedStatus = "Half Day";
+            }
 
-        // Prepare Bulk Payload
-        const d = entry.fullDate;
-        const workingDate = `${d.getFullYear()}-${(d.getMonth() + 1)
-          .toString()
-          .padStart(2, "0")}-${d.getDate().toString().padStart(2, "0")}`;
-
-        // Use UI status
-        let derivedStatus = entry.status || "Pending";
-        if (derivedStatus === "Pending" || derivedStatus === "Not Updated") {
-          if (currentTotal > 6) derivedStatus = "Full Day";
-          else if (currentTotal > 0) derivedStatus = "Half Day";
+            const existingRecord = records.find((r) => {
+                const rDate = typeof r.workingDate === "string" ? r.workingDate.split("T")[0] : (r.workingDate as Date).toISOString().split("T")[0];
+                return rDate === workingDate;
+            });
+            payload.push({ id: existingRecord?.id, employeeId: currentEmployeeId, workingDate, totalHours: currentTotal, status: derivedStatus });
         }
-
-        const existingRecord = records.find((r) => {
-          const rDate =
-            typeof r.workingDate === "string"
-              ? r.workingDate.split("T")[0]
-              : (r.workingDate as Date).toISOString().split("T")[0];
-          return rDate === workingDate;
-        });
-
-        payload.push({
-          id: existingRecord?.id,
-          employeeId: currentEmployeeId,
-          workingDate,
-          totalHours: currentTotal,
-          status: derivedStatus,
-          // loginTime removed
-        });
-      }
     });
 
     if (payload.length === 0) {
-      setToast({ show: true, message: "No changes to save", type: "success" });
-      return;
+        setToast({ show: true, message: "No changes to save", type: "success" });
+        return;
     }
 
-    // 2. Try Bulk Save First
     try {
-      await dispatch(submitBulkAttendance(payload)).unwrap();
-
-      // Refresh Data
-      dispatch(
-        fetchMonthlyAttendance({
-          employeeId: currentEmployeeId,
-          month: (now.getMonth() + 1).toString().padStart(2, "0"),
-          year: now.getFullYear().toString(),
-        })
-      );
-
-      setToast({
-        show: true,
-        message: "Data Saved Successfully",
-        type: "success",
-      });
+        await dispatch(submitBulkAttendance(payload)).unwrap();
+        dispatch(fetchMonthlyAttendance({ employeeId: currentEmployeeId, month: (now.getMonth() + 1).toString().padStart(2, "0"), year: now.getFullYear().toString() }));
+        setToast({ show: true, message: "Data Saved Successfully", type: "success" });
     } catch (error: any) {
-      console.warn("Bulk API failed, attempting sequential fallback...", error);
-
-      // 3. Fallback: Sequential Save
-      let successCount = 0;
-      for (const item of payload) {
-        try {
-          // Check if record exists (has id) -> Update, else Create
-          if (item.id) {
-            // Update
-            await dispatch(
-              updateAttendanceRecord({
-                id: item.id,
-                data: {
-                  totalHours: item.totalHours,
-                  status: item.status,
-                },
-              })
-            ).unwrap();
-          } else {
-            // Create
-            await dispatch(
-              createAttendanceRecord({
-                employeeId: item.employeeId,
-                workingDate: item.workingDate,
-                totalHours: item.totalHours,
-                status: item.status,
-              })
-            ).unwrap();
-          }
-          successCount++;
-        } catch (innerError) {
-          console.error("Failed to save record:", item, innerError);
+        console.warn("Bulk API failed, attempting sequential fallback...", error);
+        let successCount = 0;
+        for (const item of payload) {
+            try {
+                if (item.id) {
+                    await dispatch(updateAttendanceRecord({ id: item.id, data: { totalHours: item.totalHours, status: item.status } })).unwrap();
+                } else {
+                    await dispatch(createAttendanceRecord({ employeeId: item.employeeId, workingDate: item.workingDate, totalHours: item.totalHours, status: item.status } )).unwrap();
+                }
+                successCount++;
+            } catch (innerError) { console.error("Failed to save record:", item, innerError); }
         }
-      }
-
-      if (successCount > 0) {
-        dispatch(
-          fetchMonthlyAttendance({
-            employeeId: currentEmployeeId,
-            month: (now.getMonth() + 1).toString().padStart(2, "0"),
-            year: now.getFullYear().toString(),
-          })
-        );
-        // Show simplified success message if everything worked eventually
-        setToast({ show: true, message: "Data Saved", type: "success" });
-      } else {
-        setToast({
-          show: true,
-          message: "Failed to save records.",
-          type: "error",
-        });
-      }
+        if (successCount > 0) {
+            dispatch(fetchMonthlyAttendance({ employeeId: currentEmployeeId, month: (now.getMonth() + 1).toString().padStart(2, "0"), year: now.getFullYear().toString() }));
+            setToast({ show: true, message: "Data Saved", type: "success" });
+        } else {
+            setToast({ show: true, message: "Failed to save records.", type: "error" });
+        }
     }
   };
 
-  // Label Logic
-  const endOfWeek = new Date(currentWeekStart);
-  endOfWeek.setDate(endOfWeek.getDate() + 6);
-  const isOverlap =
-    (currentWeekStart.getMonth() === now.getMonth() &&
-      currentWeekStart.getFullYear() === now.getFullYear()) ||
-    (endOfWeek.getMonth() === now.getMonth() &&
-      endOfWeek.getFullYear() === now.getFullYear());
-
-  const weekCenter = new Date(currentWeekStart);
-  weekCenter.setDate(weekCenter.getDate() + 3);
-
-  const labelDate = isOverlap ? now : weekCenter;
+  // Calculations
+  const monthTotalHours = localEntries.reduce((acc, entry) => acc + (entry.totalHours || 0), 0);
+  const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getDay();
+  const paddingDays = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
+  const weekdays = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
   return (
-    <div className="flex flex-col h-full bg-[#F4F7FE] p-4 md:p-8 relative">
-      {/* Toast Notification */}
-      {toast.show && (
-        <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-50 flex items-center gap-1.5 animate-in fade-in slide-in-from-top-4 duration-300">
-          {toast.type === "success" ? (
-            <Save
-              size={16}
-              className="text-[#00E676] drop-shadow-[0_0_8px_rgba(0,230,118,0.6)]"
-            />
-          ) : toast.type === "info" ? (
-            <AlertCircle size={16} className="text-blue-500" />
-          ) : (
-            <AlertCircle
-              size={16}
-              className="text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]"
-            />
-          )}
-          <span
-            className={`font-bold text-xs tracking-wide drop-shadow-[0_0_8px_rgba(255,255,255,0.6)] ${
-              toast.type === "success"
-                ? "text-[#00E676]"
-                : toast.type === "info"
-                ? "text-blue-500"
-                : "text-red-500"
-            }`}
-          >
-            {toast.message}
-          </span>
-        </div>
-      )}
-
-      {/* Header / Week Navigation */}
-      <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-        <h2 className="text-xl font-bold text-[#2B3674] w-full md:w-auto text-center md:text-left">My Timesheet</h2>
-        <div className="flex items-center gap-3 w-full md:w-auto justify-center md:justify-end">
-          <div className="flex items-center bg-white rounded-full shadow-sm border border-gray-100 p-1">
-            <button onClick={handlePrevMonth} className="p-1 hover:bg-gray-100 rounded-full text-gray-400 hover:text-[#2B3674] transition-colors">
-                <ChevronLeft size={16} />
-            </button>
-            <div className="px-3 min-w-[140px] text-center font-bold text-sm text-[#2B3674]">
-                {now.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+    <div className="flex flex-col h-full max-h-full overflow-hidden bg-[#F4F7FE] p-2 md:px-4 md:pt-1 md:pb-0 relative">
+        {toast.show && (
+            <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-50 flex items-center gap-1.5 animate-in fade-in slide-in-from-top-4 duration-300">
+                {toast.type === "success" ? <Save size={16} className="text-[#00E676]" /> : <AlertCircle size={16} className="text-red-500" />}
+                <span className={`font-bold text-[10px] ${toast.type === "success" ? "text-[#00E676]" : "text-red-500"}`}>{toast.message}</span>
             </div>
-            <button onClick={handleNextMonth} disabled={!canGoNextMonth()} className={`p-1 rounded-full transition-colors ${!canGoNextMonth() ? "text-gray-200 cursor-not-allowed" : "hover:bg-gray-100 hover:text-[#2B3674] text-gray-400"}`}>
-                <ChevronRight size={16} />
-            </button>
-          </div>
-          <button
-            onClick={onSaveAll}
-            className="flex items-center gap-2 px-6 py-2 bg-linear-to-r from-[#00E676] to-[#00C853] text-white rounded-full font-bold text-sm shadow-[0_4px_14px_0_rgba(0,230,118,0.39)] hover:shadow-[0_6px_20px_rgba(0,230,118,0.23)] hover:bg-[#00E676] transition-all transform active:scale-95"
-          >
-            <Save size={16} />
-            Save
-          </button>
-        </div>
-      </div>
+        )}
 
-      {/* Responsive Grid/Stack Container */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:overflow-x-auto">
-        
-        {/* Mobile Navigation Header */}
-        <div className="md:hidden flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
-             <button
-                onClick={handlePrevWeek}
-                disabled={!canGoPrev()}
-                className={`p-2 rounded-full ${
-                  !canGoPrev() ? "text-gray-200" : "text-gray-500 hover:bg-gray-50"
-                }`}
-              >
-                <ChevronLeft size={20} />
-              </button>
-              <span className="font-bold text-[#2B3674] text-sm">
-                Week of {weekData[0].dateObj.getDate()}{" "}
-                {weekData[0].dateObj.toLocaleDateString("en-US", { month: "short" })}
-              </span>
-              <button
-                onClick={handleNextWeek}
-                disabled={!canGoNext()}
-                className={`p-2 rounded-full ${
-                  !canGoNext() ? "text-gray-200" : "text-gray-500 hover:bg-gray-50"
-                }`}
-              >
-                <ChevronRight size={20} />
-              </button>
-        </div>
-
-        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2 w-full">
-          {/* Left Arrow (Desktop Only) */}
-          <button
-            onClick={handlePrevWeek}
-            disabled={!canGoPrev()}
-            className={`hidden md:block p-2 rounded-full transition-colors ${
-              !canGoPrev()
-                ? "text-gray-200 cursor-not-allowed"
-                : "hover:bg-gray-100 text-gray-400 hover:text-[#00A3C4]"
-            }`}
-          >
-            <ChevronLeft size={24} />
-          </button>
-
-          {/* Table Structure */}
-          <div className="flex-1 flex flex-col md:flex-row gap-4 md:gap-0 md:bg-white md:border md:border-gray-200 md:rounded-xl md:overflow-hidden md:divide-x md:divide-gray-100 md:overflow-x-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-            {/* 7 Days Columns */}
-            {weekData.map((day, i) => {
-              // Check if day belongs to the currently viewed month
-              const isCurrentMonth = day.dateObj.getMonth() === now.getMonth();
-              const isToday =
-                day.dateObj.toDateString() === new Date().toDateString();
-              const isWeekend = day.dayName === "Sat" || day.dayName === "Sun";
-              const isFuture = day.dateObj > new Date();
-              
-              // New Logic for Red Styling (Holiday or Sunday)
-              const isSunday = day.dayName === "Sun";
-              const dateStrLocal = `${day.dateObj.getFullYear()}-${String(day.dateObj.getMonth()+1).padStart(2,'0')}-${String(day.dateObj.getDate()).padStart(2,'0')}`;
-              const holiday = holidays?.find((h: any) => h.holidayDate === dateStrLocal || h.date === dateStrLocal);
-              const isRed = isSunday || !!holiday;
-
-              // Find actual index in localEntries
-              const entryIndex = localEntries.findIndex(
-                (e) =>
-                  e.date === day.dateNum &&
-                  new Date(e.fullDate).getMonth() === day.dateObj.getMonth()
-              );
-              const displayVal =
-                entryIndex !== -1
-                  ? localEntries[entryIndex].totalHours || 0
-                  : 0;
-
-              // Input value priority: Typed String > Stored Number > 0
-              // Input value priority: Typed String > Stored Number > 0
-              const inputValue =
-                entryIndex !== -1 && localInputValues[entryIndex] !== undefined
-                  ? localInputValues[entryIndex]
-                  : displayVal === 0
-                  ? ""
-                  : displayVal.toString();
-
-              // Determine Colors based on Priority
-              const status = day.entry?.status;
-              let bgClass = isWeekend || !isCurrentMonth ? "bg-gray-50/50" : "bg-white";
-              let textClass = "text-[#2B3674]"; // Default Text
-              let borderClass = "border-2 border-transparent"; // Default border
-
-              // Priority 1: Green (Full Work)
-              if (status === 'Full Day' || status === 'WFH' || status === 'Client Visit') {
-                  bgClass = "bg-[#E9FBF5]";
-                  textClass = "text-[#01B574]";
-              } 
-              // Priority 2: Orange (Half Day / Pending / Not Updated)
-              else if (status === 'Half Day' || status === 'Pending' || status === 'Not Updated') {
-                  bgClass = "bg-[#FFF9E5]";
-                  textClass = "text-[#FFB020]";
-              }
-              // Priority 3: Red (Holiday / Weekend / Leave)
-              else if ((isRed && isCurrentMonth) || status === 'Leave' || status === 'Holiday' || status === 'Weekend') {
-                  bgClass = "bg-[#FDF2F2]";
-                  textClass = "text-[#ff4d4d]";
-              }
-              // Priority 4: Today (Blue)
-              // Note: This only applies if no other status matched (e.g. not Pending/Leave)
-              else if (isToday && isCurrentMonth) {
-                  bgClass = "bg-[#E6F6F9]";
-                  textClass = "text-[#00A3C4]";
-              }
-
-              // Apply Dashed Border to Today regardless of status
-              if (isToday && isCurrentMonth) {
-                  borderClass = "border border-dashed border-[#00A3C4] rounded-lg";
-              }
-
-              // Badge Check
-              const isIncomplete = (status === 'Not Updated' || status === 'Pending') && !isFuture && !isWeekend;
-
-              return (
-                <div
-                
-                  key={i}
-                  className={`flex-1 flex flex-col md:min-w-[85px] min-w-[105px] rounded-xl border border-gray-200 shadow-sm md:rounded-none md:shadow-none md:border-0 md:border-r last:border-0 overflow-hidden bg-white`}
-                >
-                  {/* Header Cell - Always Visible */}
-                  <div
-                    className={`py-3 text-center text-xs font-bold uppercase tracking-wider ${
-                      isToday && isCurrentMonth
-                        ? "bg-blue-50 text-[#00A3C4]"
-                        : "bg-[#F4F7FE] text-[#2B3674]"
-                    }`}
-                  >
-                    {day.dayName}
-                  </div>
-
-                  {/* Content Cell */}
-                  <div
-                    className={`flex-1 py-5 px-4 md:px-2 flex md:flex-col items-center justify-between md:justify-center gap-3 relative group ${bgClass} ${borderClass}`}
-                  >
-                    {/* Incomplete Badge */}
-                    {isIncomplete && isCurrentMonth && (
-                        <div className="absolute top-1 right-1 bg-[#FFB020] text-white flex items-center justify-center rounded-full border-2 border-white w-4 h-4 text-[9px] font-black shadow-sm z-10">
-                            !
-                        </div>
-                    )}
-                    
-                    {/* Hover Status Tooltip matches CalendarView */}
-                    {isCurrentMonth && (status || isWeekend || holiday) && (
-                         <div className={`hidden md:block absolute bottom-5 left-1/2 -translate-x-1/2 translate-y-full z-20 
-                            opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none
-                            px-2 py-1 rounded text-[10px] font-bold whitespace-nowrap shadow-lg
-                            ${(() => {
-                                if (status === 'Full Day' || status === 'WFH' || status === 'Client Visit') return 'bg-[#01B574] text-white';
-                                if (status === 'Half Day' || status === 'Pending' || status === 'Not Updated') return 'bg-[#FFB020] text-white';
-                                if (status === 'Leave' || status === 'Holiday' || holiday) return 'bg-red-500 text-white';
-                                if (isWeekend && !status) return 'bg-red-500 text-white'; // Weekly Off
-                                if (isToday) return 'bg-[#00A3C4] text-white';
-                                return 'hidden'; // Don't show if no status
-                            })()}`}>
-                            {status === 'Not Updated' ? 'Not Updated' : (status || (isWeekend ? "Weekly Off" : (holiday ? "Holiday" : "")))}
-                        </div>
-                    )}
-
-                    {isCurrentMonth ? (
-                      <>
-                        <span
-                          className={`text-sm font-bold ${textClass}`}
-                        >
-                          {day.dateObj.toLocaleString("default", {
-                            month: "short",
-                          })}{" "}
-                          {day.dateNum.toString().padStart(2, "0")}
-                        </span>
-                        
-                        {/* Wrapper for Input to control width on mobile */}
-                        <div className="w-24 md:w-full">
-                            {day.entry ? (
-                            <input
-                                type="text"
-                                disabled={!isEditableMonth(day.dateObj)}
-                                className={`w-full h-10 text-center border rounded-lg font-bold placeholder:text-[10px] focus:outline-none focus:ring-2 focus:ring-[#00A3C4] focus:border-transparent transition-all
-                                                                ${
-                                                                !isEditableMonth(
-                                                                    day.dateObj
-                                                                )
-                                                                    ? "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-100"
-                                                                    : isToday
-                                                                    ? "border-[#00A3C4] bg-white text-[#2B3674] shadow-sm"
-                                                                    : "border-gray-200 text-[#2B3674] bg-white"
-                                                                }`}
-                                placeholder={
-                                isEditableMonth(day.dateObj) ? "Hours" : "Locked"
-                                }
-                                value={inputValue}
-                                onChange={(e) =>
-                                handleHoursInput(entryIndex, e.target.value)
-                                }
-                                onBlur={() => handleInputBlur(entryIndex)}
-                            />
-                            ) : (
-                            <div className="w-full h-10 flex items-center justify-center text-gray-300 font-medium text-xs border border-transparent">
-                                -
-                            </div>
-                            )}
-                        </div>
-
-                        {/* Status Text (Holiday or Weekly Off) - Below Input */}
-                        {(holiday || isSunday) && (
-                            <div className={`text-[9px] font-bold md:mt-1 text-center leading-tight truncate px-0.5 w-auto md:w-full text-red-500`}>
-                                {holiday ? holiday.name : "Weekly Off"}
-                            </div>
-                        )}
-                      </>
-                    ) : (
-                      <div className="h-full w-full"></div>
-                    )}
-                  </div>
+        {/* Calendar Card */}
+        <div className="flex-1 bg-white rounded-2xl p-3 shadow-sm border border-gray-100 overflow-hidden mt-1">
+            <div className="flex justify-between items-center mb-2 px-1">
+                <div className="flex items-center gap-2">
+                    <button onClick={handlePrevMonth} className="p-1 hover:bg-[#F4F7FE] rounded-md transition-all text-[#A3AED0] hover:text-[#2B3674]"><ChevronLeft size={16} /></button>
+                    <p className="text-sm font-bold text-[#2B3674] min-w-[100px] text-center">{now.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</p>
+                    <button onClick={handleNextMonth} disabled={!canGoNextMonth()} className={`p-1 rounded-md transition-all ${!canGoNextMonth() ? "text-gray-200 cursor-not-allowed" : "hover:bg-[#F4F7FE] text-[#A3AED0] hover:text-[#2B3674]"}`}><ChevronRight size={16} /></button>
                 </div>
-              );
-            })}
-
-            {/* Week Total Column */}
-            <div className="flex-1 flex md:flex-col items-center md:items-stretch justify-between md:justify-start rounded-xl border border-gray-200 shadow-sm md:rounded-none md:shadow-none md:border-0 md:border-l md:border-gray-100 md:min-w-[85px] min-w-[100px] bg-white md:bg-gray-50/30 overflow-hidden">
-              <div className="w-full py-3 px-4 md:px-0 text-left md:text-center text-xs font-bold uppercase tracking-wider text-[#2B3674] bg-[#F4F7FE]">
-                Week Total
-              </div>
-              <div className="flex-1 flex items-center justify-end md:justify-center px-4 md:px-0 py-3 md:py-0 text-xl font-bold text-[#2B3674]">
-                {weekTotalHours.toFixed(1)}
-              </div>
+                
+                <div className="flex items-center gap-4">
+                    <div className="text-right">
+                        <p className="text-[9px] uppercase font-bold text-[#A3AED0] tracking-widest leading-none mb-0.5">Month Total</p>
+                        <p className="text-lg font-black text-[#00A3C4] leading-none">{monthTotalHours.toFixed(1)} <span className="text-[10px] font-bold text-[#A3AED0]">hrs</span></p>
+                    </div>
+                    <button onClick={onSaveAll} className="flex items-center gap-1.5 px-4 py-1.5 bg-linear-to-r from-[#00E676] to-[#01B574] text-white rounded-full font-bold text-[11px] shadow-sm hover:shadow-md transition-all transform hover:-translate-y-0.5 active:scale-95"><Save size={14} /> Save</button>
+                </div>
             </div>
 
-            {/* Month Total Column */}
-            <div className="flex-1 flex md:flex-col items-center md:items-stretch justify-between md:justify-start rounded-xl border border-gray-200 shadow-sm md:rounded-none md:shadow-none md:border-0 md:border-l md:border-gray-100 md:min-w-[85px] min-w-[100px] bg-white md:bg-gray-50/30 overflow-hidden">
-              <div className="w-full py-3 px-4 md:px-0 text-left md:text-center text-xs font-bold uppercase tracking-wider text-[#2B3674] bg-[#F4F7FE]">
-                Month Total
-              </div>
-              <div className="flex-1 flex items-center justify-end md:justify-center px-4 md:px-0 py-3 md:py-0 text-xl font-bold text-[#2B3674]">
-                {monthTotalHours.toFixed(1)}
-              </div>
+            <div className="grid grid-cols-7 gap-1.5 mb-1.5">
+                {weekdays.map(day => <div key={day} className="text-center text-[8px] font-black text-[#A3AED0] tracking-widest">{day}</div>)}
             </div>
-          </div>
 
-          {/* Right Arrow (Desktop Only) */}
-          <button
-            onClick={handleNextWeek}
-            disabled={!canGoNext()}
-            className={`hidden md:block p-2 rounded-full transition-colors ${
-              !canGoNext()
-                ? "text-gray-200 cursor-not-allowed"
-                : "hover:bg-gray-100 text-gray-400 hover:text-[#00A3C4]"
-            }`}
-          >
-            <ChevronRight size={24} />
-          </button>
+            <div className="grid grid-cols-7 gap-1.5">
+                {Array.from({ length: paddingDays }).map((_, idx) => (
+                    <div key={`p-${idx}`} className="h-20 rounded-lg bg-gray-50/20 border border-dashed border-gray-100"></div>
+                ))}
+                {localEntries.map((day, idx) => {
+                    const displayVal = day.totalHours || 0;
+                    const inputValue = localInputValues[idx] !== undefined ? localInputValues[idx] : (displayVal === 0 ? "" : displayVal.toString());
+                    const dateStr = `${day.fullDate.getFullYear()}-${String(day.fullDate.getMonth() + 1).padStart(2, '0')}-${String(day.fullDate.getDate()).padStart(2, '0')}`;
+                    const holiday = holidays?.find((h: any) => {
+                        const hDate = h.holidayDate || h.date;
+                        if (!hDate) return false;
+                        const normalizedHDate = typeof hDate === 'string' ? hDate.split('T')[0] : new Date(hDate).toISOString().split('T')[0];
+                        return normalizedHDate === dateStr;
+                    });
+                    const isRed = (day.isWeekend && !day.status) || !!holiday;
+                    const isSelected = selectedDateId && new Date(selectedDateId).toDateString() === day.fullDate.toDateString();
+                    const highlightClass = isSelected && isHighlighted ? "date-highlight" : "";
+                    
+                    let bg = "bg-white";
+                    let badge = "bg-gray-100 text-gray-400";
+                    if (day.status === 'Full Day' || day.status === 'WFH' || day.status === 'Client Visit') { bg = "bg-[#E9FBF5]/50"; badge = "bg-[#E9FBF5] text-[#01B574]"; }
+                    else if (day.status === 'Half Day' || day.status === 'Pending' || day.status === 'Not Updated') { bg = "bg-[#FFF9E5]/50"; badge = "bg-[#FFF9E5] text-[#FFB020]"; }
+                    else if (isRed || day.status === 'Leave' || day.status === 'Holiday' || day.status === 'Weekend') { bg = "bg-[#FDF2F2]/50"; badge = "bg-[#FDF2F2] text-[#ff4d4d]"; }
+                    else if (day.isToday) bg = "bg-[#F4F7FE]";
+
+                    return (
+                        <div key={idx} className={`relative flex flex-col p-1.5 rounded-lg border transition-all h-20 group 
+                            ${day.isToday ? 'border-dashed border-[#00A3C4] shadow-md shadow-teal-100/30' : 'border-gray-100 shadow-sm hover:shadow-md'} 
+                            ${isSelected && isHighlighted ? 'ring-2 ring-offset-1 ring-[#00A3C4] border-[#00A3C4] shadow-lg scale-105 z-10 ' + highlightClass : ''}
+                            ${bg}`}>
+                            <div className="flex justify-between items-start">
+                                <span className={`text-sm font-black ${day.isToday ? 'text-[#00A3C4]' : 'text-[#2B3674]'}`}>{day.date}</span>
+                                {day.isToday && <span className="px-1 py-0.5 bg-[#00A3C4] text-white text-[6px] font-black rounded uppercase">Today</span>}
+                            </div>
+                            <div className="flex-1 flex flex-col items-center justify-center">
+                                <input
+                                    type="text"
+                                    disabled={!isEditableMonth(day.fullDate)}
+                                    className={`w-full max-w-[45px] h-7 text-center text-sm font-bold rounded-md border focus:outline-none focus:ring-2 focus:ring-[#00A3C4] ${!isEditableMonth(day.fullDate) ? "bg-gray-50 text-gray-400 cursor-not-allowed" : "bg-white text-[#2B3674] shadow-inner"}`}
+                                    placeholder="0"
+                                    value={inputValue}
+                                    onChange={(e) => handleHoursInput(idx, e.target.value)}
+                                    onBlur={() => handleInputBlur(idx)}
+                                />
+                            </div>
+                            <div className={`w-full py-0.5 rounded-md text-center text-[7.5px] font-black uppercase tracking-tight truncate ${badge}`}>
+                                {day.status === 'Not Updated' ? 'Pending' : (
+                                    (day.status === 'Holiday' || (!day.status && holiday)) ? (holiday?.holidayName || holiday?.name || "HOLIDAY") : 
+                                    (day.status === 'Weekend' || (!day.status && day.isWeekend)) ? "WEEKEND" :
+                                    (day.status || "UPCOMING")
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
         </div>
-      </div>
     </div>
   );
 };
