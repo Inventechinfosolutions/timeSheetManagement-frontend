@@ -15,7 +15,7 @@ interface MobileTimesheetCardProps {
     login: string | null | undefined,
     logout: string | null | undefined
   ) => string;
-  CustomDropdown?: any;
+
   CustomTimePicker?: any;
   highlightedRow?: number | null;
   containerId?: string;
@@ -28,7 +28,6 @@ export const MobileTimesheetCard = ({
   handleUpdateEntry,
   handleSave,
   calculateTotal,
-  CustomDropdown,
   CustomTimePicker,
   highlightedRow,
   containerId,
@@ -36,7 +35,7 @@ export const MobileTimesheetCard = ({
   const isHighlighted = highlightedRow === index;
   const scrollId = containerId || `mobile-row-${index}`;
 
-  if (day.isWeekend && !day.loginTime) {
+  if (day.isWeekend && !day.loginTime && !day.totalHours) {
     return (
       <div
         id={scrollId}
@@ -193,25 +192,6 @@ export const MobileTimesheetCard = ({
 
         <div className="space-y-1">
           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-            Location
-          </p>
-          {isEditable && !day.isSavedLogout && CustomDropdown ? (
-            <CustomDropdown
-              value={day.location || "Office"}
-              options={["Office", "WFH", "Client Visit"]}
-              onChange={(val: any) =>
-                handleUpdateEntry && handleUpdateEntry(index, "location", val)
-              }
-            />
-          ) : (
-            <p className="text-sm font-bold text-[#2B3674]">
-              {day.location || "--"}
-            </p>
-          )}
-        </div>
-
-        <div className="space-y-1">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
             Total Hours
           </p>
           <p className="text-sm font-bold text-[#2B3674]">
@@ -223,17 +203,19 @@ export const MobileTimesheetCard = ({
       {isEditable && (!day.isSavedLogout || day.isEditing) && (
         <button
           onClick={() => {
-            if (!day.loginTime || day.loginTime === "--:--" || day.loginTime.includes("--")) {
-              alert("Please fill Login time.");
-              return;
-            }
-            if (day.isSaved && (!day.logoutTime || day.logoutTime === "--:--" || day.logoutTime.includes("--"))) {
-              alert("Please fill Logout time to update.");
-              return;
+            if (!showHoursOnly) {
+                if (!day.loginTime || day.loginTime === "--:--" || day.loginTime.includes("--")) {
+                alert("Please fill Login time.");
+                return;
+                }
+                if (day.isSaved && (!day.logoutTime || day.logoutTime === "--:--" || day.logoutTime.includes("--"))) {
+                alert("Please fill Logout time to update.");
+                return;
+                }
             }
             handleSave && handleSave(index);
           }}
-          className="w-full py-3 bg-[#00A3C4] text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-teal-100"
+          className="w-full py-3 bg-[#00A3C4] text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-teal-100 mt-4"
         >
           <Save size={18} />
           {day.isEditing ? "Complete" : day.isSaved ? "Update" : "Save Record"}

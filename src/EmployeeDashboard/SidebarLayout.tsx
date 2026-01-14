@@ -33,7 +33,7 @@ const SidebarLayout = ({ children, activeTab = 'Dashboard', onTabChange }: Sideb
         { name: 'My Timesheet', icon: Calendar },
         { name: 'Timesheet View', icon: Eye },
         { name: 'My Profile', icon: User },
-        { name: 'Change Password', icon: Lock },
+        //{ name: 'Change Password', icon: Lock },
     ];
 
 
@@ -71,7 +71,7 @@ const SidebarLayout = ({ children, activeTab = 'Dashboard', onTabChange }: Sideb
             <div className={`shrink-0 transition-all duration-300 ease-in-out ${isOpen ? 'w-60' : 'w-20'} hidden md:block`}></div>
 
             <aside
-                className={`fixed top-0 left-0 h-full bg-white border-r border-gray-100 flex flex-col shrink-0 transition-all duration-300 ease-in-out shadow-2xl z-2001 md:z-30 md:absolute
+                className={`fixed top-0 md:top-[50px] left-0 h-full md:h-[calc(100vh-50px)] bg-white border-r border-gray-100 flex flex-col shrink-0 transition-all duration-300 ease-in-out shadow-2xl z-2001 md:z-30
                     ${isMobileOpen ? 'translate-x-0 w-72' : '-translate-x-full md:translate-x-0'}
                     ${isOpen ? 'md:w-60' : 'md:w-20'}
                 `}
@@ -84,7 +84,7 @@ const SidebarLayout = ({ children, activeTab = 'Dashboard', onTabChange }: Sideb
                         <AlarmClock className="w-6 h-6 text-[#00A3C4]" />
                     </div>
                     <span className="text-xl font-bold text-[#2B3674] tracking-tight">
-                        Timesheet Pro
+                        Employee
                     </span>
                 </div>
                 {/* Branding & Lock Toggle - Desktop Only */}
@@ -101,7 +101,7 @@ const SidebarLayout = ({ children, activeTab = 'Dashboard', onTabChange }: Sideb
                         <span className={`text-xl font-bold text-[#2B3674] tracking-tight whitespace-nowrap transition-all duration-300 origin-left
                             ${isOpen ? 'opacity-100 scale-100 ml-0' : 'opacity-0 scale-90 w-0 ml-[-100px] overflow-hidden absolute'}
                         `}>
-                            Timesheet Pro
+                            Employee
                         </span>
                     </div>
 
@@ -123,7 +123,7 @@ const SidebarLayout = ({ children, activeTab = 'Dashboard', onTabChange }: Sideb
                 </div>
 
                 {/* Navigation Items */}
-                <nav className="flex-1 px-3 space-y-1 mt-1 overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                <nav className="flex-1 px-3 space-y-1 mt-1 overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [&::-webkit-scrollbar]:w-0 [&::-webkit-scrollbar]:h-0" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                     {sidebarItems.map((item) => {
                         const isActive = activeTab === item.name;
                         return (
@@ -176,7 +176,7 @@ const SidebarLayout = ({ children, activeTab = 'Dashboard', onTabChange }: Sideb
 
             </aside>
 
-            <main className="flex-1 overflow-y-auto overflow-x-hidden h-full [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            <main className="flex-1 overflow-y-auto overflow-x-hidden h-full [&::-webkit-scrollbar]:hidden [&::-webkit-scrollbar]:w-0 [&::-webkit-scrollbar]:h-0" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                 {children}
             </main>
         </div>
