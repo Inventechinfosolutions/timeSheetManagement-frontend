@@ -1,20 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Settings,
   Users,
   Lock,
-  LogOut,
   AlarmClock,
   Unlock,
   Menu,
   X,
-  ChevronDown,
-  ChevronRight,
   ClipboardList,
 } from "lucide-react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
-import { AppDispatch, RootState } from "../store";
+import { useNavigate, useParams } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { AppDispatch } from "../store";
 import { getEntities } from "../reducers/employeeDetails.reducer";
 
 interface SidebarLayoutProps {
@@ -34,15 +31,25 @@ SidebarLayoutProps) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isLocked, setIsLocked] = useState(true);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const { tab } = useParams<{ tab?: string }>();
   const navigate = useNavigate();
-  const location = useLocation();
   const dispatch = useDispatch<AppDispatch>();
 
-  const { entities } = useSelector((state: RootState) => state.employeeDetails);
+  // Determine active tab from URL if not explicitly provided
+  const derivedActiveTab = useMemo(() => {
+    if (activeTab && activeTab !== "Dashboard") return activeTab;
+    switch (tab) {
+      case "registration": return "User & Role Management";
+      case "employees": return "Employee Details";
+      case "timesheet-list": return "Timesheet";
+      case "working-details": return "Working Details";
+      default: return "System Dashboard";
+    }
+  }, [tab, activeTab]);
 
   useEffect(() => {
     // Fetch employee list on mount
-    dispatch(getEntities({ page: 1, limit: 100, search: "" }));
+    dispatch(getEntities({ search: "" }));
   }, [dispatch]);
 
   // Sidebar opens if it's either hovered OR locked (Desktop)
@@ -53,7 +60,6 @@ SidebarLayoutProps) => {
     { name: "Employee Details", icon: Users },
     { name: "Timesheet", icon: AlarmClock },
     { name: "Working Details", icon: ClipboardList },
-    { name: "User & Role Management", icon: Users },
   ];
 
   // const handleLogout = () => {
@@ -82,21 +88,18 @@ SidebarLayoutProps) => {
         />
       )}
 
-      {/* Spacer for Desktop Layout Shift */}
+      {/* Spacer for Desktop Layout Shift - Now pushes content when sidebar is active */}
       <div
         className={`shrink-0 transition-all duration-300 ease-in-out ${
-          isLocked ? "w-60" : "w-20"
+          isDesktopOpen ? "w-60" : "w-20"
         } hidden md:block`}
       ></div>
 
       <aside
         className={`fixed top-0 left-0 h-full bg-white/95 backdrop-blur-xl border-r border-gray-100 flex flex-col shrink-0 transition-all duration-300 ease-out shadow-2xl z-[1051]
                     md:absolute md:z-30
-                    ${/* Mobile: Slide in/out */ ""}
                     ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}
-                    ${/* Desktop: Always visible (reset translate) */ ""}
                     md:translate-x-0
-                    ${/* Width control */ ""}
                     w-64 md:w-auto
                     ${isDesktopOpen ? "md:w-60" : "md:w-20"}
                 `}
@@ -105,9 +108,9 @@ SidebarLayoutProps) => {
       >
         {/* Branding & Lock Toggle */}
         <div className="h-20 md:h-16 flex items-center justify-between px-0 relative">
-          {/* Logo / Title Area */}
+          {/* Logo / Title Area - Added pr-12 to prevent Lock overlap */}
           <div
-            className={`flex items-center gap-2 transition-all duration-300 overflow-hidden pl-5 h-full items-center
+            className={`flex items-center gap-2 transition-all duration-300 overflow-hidden pl-5 pr-12 h-full items-center
                         ${
                           isDesktopOpen
                             ? "w-full opacity-100"
@@ -175,7 +178,7 @@ SidebarLayoutProps) => {
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
           {sidebarItems.map((item) => {
-            const isActive = activeTab === item.name;
+            const isActive = derivedActiveTab === item.name;
 
             return (
               <div key={item.name} className="relative group">
@@ -242,31 +245,6 @@ SidebarLayoutProps) => {
             );
           })}
         </nav>
-
-        {/* Footer / Logout */}
-        {/* <div className="p-3 mt-auto shrink-0 mb-2 border-t border-gray-100/50 pt-2">
-          <button
-            onClick={handleLogout}
-            className={`w-full flex items-center gap-4 p-3 md:p-2 rounded-xl cursor-pointer transition-all duration-300 group hover:bg-red-50 text-red-500
-                            ${!isDesktopOpen && "md:justify-center"}
-                        `}
-          >
-            <div className="shrink-0 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-12">
-              <LogOut className="w-6 h-6" />
-            </div>
-            <span
-              className={`font-medium text-sm whitespace-nowrap transition-all duration-300
-                            ${
-                              isDesktopOpen
-                                ? "opacity-100 translate-x-0 w-auto"
-                                : "md:opacity-0 md:-translate-x-4 md:w-0 md:absolute"
-                            }
-                        `}
-            >
-              Logout
-            </span>
-          </button>
-        </div> */}
       </aside>
 
       <main

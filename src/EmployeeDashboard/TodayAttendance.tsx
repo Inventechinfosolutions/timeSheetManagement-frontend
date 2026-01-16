@@ -11,7 +11,7 @@ import {
     fetchMonthlyAttendance
 } from '../reducers/employeeAttendance.reducer';
 import { 
-    getEntities,
+    getEntity,
     setCurrentUser
 } from '../reducers/employeeDetails.reducer';
 import { 
@@ -39,7 +39,7 @@ const TodayAttendance = ({ setActiveTab, setScrollToDate, onNavigate }: Props) =
     const [now] = useState(() => new Date());
     const [calendarDate, setCalendarDate] = useState(new Date());
 
-    // Fetch entity if missing name but we have an ID to search for
+    // Fetch entity if missing name but we have an ID to fetch
     useEffect(() => {
         if (!entity?.fullName && (currentEmployeeId || currentUser?.loginId)) {
             const searchTerm = currentEmployeeId || currentUser?.loginId;
@@ -47,15 +47,9 @@ const TodayAttendance = ({ setActiveTab, setScrollToDate, onNavigate }: Props) =
                 if (detailsFetched.current) return;
                 detailsFetched.current = true;
                 
-                dispatch(getEntities({ page: 1, limit: 1, search: searchTerm }))
+                dispatch(getEntity(searchTerm))
                     .unwrap()
-                    .then((response) => {
-                         const data = Array.isArray(response) ? response : (response.data || []);
-                         // Prefer exact match on employeeId if searching by it
-                         const found = data.find((u: any) => 
-                            u.employeeId === searchTerm || u.email === searchTerm
-                         ) || data[0];
-                         
+                    .then((found) => {
                          if (found) {
                              dispatch(setCurrentUser(found));
                          }

@@ -8,8 +8,7 @@ import {
   CreditCard,
 } from "lucide-react";
 import { useAppSelector, useAppDispatch } from "../hooks";
-import { getEntities, setCurrentUser, uploadProfileImage, fetchProfileImage } from "../reducers/employeeDetails.reducer";
-import inventechLogo from "../assets/inventech-logo.jpg";
+import { getEntity, getEntities, setCurrentUser, uploadProfileImage, fetchProfileImage } from "../reducers/employeeDetails.reducer";
 import defaultAvatar from "../assets/default-avatar.jpg";
 
 const MyProfile = () => {
@@ -38,7 +37,7 @@ const MyProfile = () => {
   const [profileImage, setProfileImage] = useState(defaultImage);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const detailsFetched = useRef(false);
-  const imageFetchedForId = useRef<number | null>(null);
+  const imageFetchedForId = useRef<string | null>(null);
 
   // Debug logs
   useEffect(() => {
@@ -48,92 +47,54 @@ const MyProfile = () => {
     );
   }, [currentSearchId]);
 
-  // Effect: Fetch Full Employee Details
+  // Effect: Fetch Full Employee Details & Profile Image
   useEffect(() => {
-    if (currentSearchId) {
-      console.log("MyProfile: Calling getEntities for:", currentSearchId);
-      dispatch(
-        getEntities({ page: 1, limit: 10, search: String(currentSearchId) })
-      )
+    if (currentSearchId && !detailsFetched.current) {
+      console.log("MyProfile: Initial fetch via direct API for:", currentSearchId);
+      detailsFetched.current = true;
+      
+      dispatch(getEntity(String(currentSearchId)))
         .unwrap()
-        .then((response) => {
-          const dataList = Array.isArray(response)
-            ? response
-            : response.data || [];
-          const foundUser = dataList.find(
-            (u: any) =>
-              String(u.email || "").toLowerCase() ===
-                String(currentSearchId).toLowerCase() ||
-              String(u.loginId || "").toLowerCase() ===
-                String(currentSearchId).toLowerCase() ||
-              String(u.employeeId || "").toLowerCase() ===
-                String(currentSearchId).toLowerCase() ||
-              (u.fullName && u.fullName === currentUser?.aliasLoginName) ||
-              (u.name && u.name === currentUser?.aliasLoginName)
-          );
-
+        .then((foundUser) => {
           if (foundUser) {
             dispatch(setCurrentUser(foundUser));
-            if (foundUser.profileImage || foundUser.image) {
-              setProfileImage(foundUser.profileImage || foundUser.image);
-            }
-          } else if (dataList.length === 1) {
-            dispatch(setCurrentUser(dataList[0]));
-            if (dataList[0].profileImage || dataList[0].image) {
-              setProfileImage(dataList[0].profileImage || dataList[0].image);
+            
+            // Immediately fetch the profile image if we have an ID
+            const empId = foundUser.employeeId || foundUser.id;
+            if (empId && imageFetchedForId.current !== String(empId)) {
+                imageFetchedForId.current = String(empId);
+                dispatch(fetchProfileImage(String(empId)))
+                    .unwrap()
+                    .then((blobUrl) => setProfileImage(blobUrl))
+                    .catch(() => {
+                        imageFetchedForId.current = null;
+                        setProfileImage(defaultImage);
+                    });
             }
           }
         })
-        .catch((err) => console.error("MyProfile: API Error:", err));
+        .catch((err) => {
+          detailsFetched.current = false;
+          console.error("MyProfile: API Error:", err);
+          
+          // Fallback to search only if direct ID fails (optional safety)
+          console.log("MyProfile: Retrying with search fallback...");
+          dispatch(getEntities({ search: String(currentSearchId) }))
+            .unwrap()
+            .then(res => {
+               const list = Array.isArray(res) ? res : res.data || [];
+               if (list.length > 0) dispatch(setCurrentUser(list[0]));
+            });
+        });
     }
   }, [dispatch, currentSearchId]);
 
-  // Sync state with entity updates from authMe or other components
+  // Sync state with entity updates from other components
   useEffect(() => {
     if (entity?.profileImage || entity?.image) {
       setProfileImage(entity.profileImage || entity.image);
     }
   }, [entity]);
-
-  // Effect: Fetch Full Employee Details & Image on Mount
-  useEffect(() => {
-    // 1. Fetch data using the string ID (if available) - assuming search works with string ID
-    if (displayEmployeeId) {
-        if (detailsFetched.current) return;
-        detailsFetched.current = true;
-
-        dispatch(getEntities({ page: 1, limit: 1, search: displayEmployeeId }))
-            .unwrap()
-            .then((response) => {
-                const dataList = Array.isArray(response) ? response : (response.data || []);
-                const foundUser = dataList.find((u: any) => u.employeeId === displayEmployeeId);
-                
-                if (foundUser) {
-                    dispatch(setCurrentUser(foundUser));
-                }
-            })
-            .catch((err) => {
-                detailsFetched.current = false;
-                console.error("Failed to fetch profile data:", err);
-            });
-    }
-
-    // 2. Securely Fetch Profile Image using Numeric ID
-    if (currentDbId) {
-        if (imageFetchedForId.current === currentDbId) return;
-        imageFetchedForId.current = currentDbId;
-
-        dispatch(fetchProfileImage(currentDbId))
-            .unwrap()
-            .then((blobUrl) => {
-                setProfileImage(blobUrl);
-            })
-            .catch(() => {
-                imageFetchedForId.current = null;
-                setProfileImage(defaultImage);
-            });
-    }
-  }, [dispatch, displayEmployeeId, currentDbId]);
 
 
 
@@ -142,7 +103,7 @@ const MyProfile = () => {
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && currentDbId) {
+    if (file && displayEmployeeId) {
       // 1. Show Preview Immediately
       setUploadStatus('idle');
       const reader = new FileReader();
@@ -152,7 +113,7 @@ const MyProfile = () => {
       reader.readAsDataURL(file);
 
       // 2. Upload to Backend Immediately
-      dispatch(uploadProfileImage({ id: currentDbId, file }))
+      dispatch(uploadProfileImage({ employeeId: displayEmployeeId, file }))
         .unwrap()
         .then(() => {
           console.log("Profile image uploaded successfully");

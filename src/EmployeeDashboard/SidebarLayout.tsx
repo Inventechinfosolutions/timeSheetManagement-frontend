@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
     LayoutGrid,
     Calendar,
@@ -9,6 +9,7 @@ import {
     Eye,
     Menu,
 } from 'lucide-react';
+import { useParams } from 'react-router-dom';
 
 
 interface SidebarLayoutProps {
@@ -23,6 +24,19 @@ const SidebarLayout = ({ children, activeTab = 'Dashboard', onTabChange }: Sideb
     const [isHovered, setIsHovered] = useState(false);
     const [isLocked, setIsLocked] = useState(false);
     const [isMobileOpen, setIsMobileOpen] = useState(false);
+    const { tab } = useParams<{ tab?: string }>();
+
+    // Determine active tab from URL if not explicitly provided
+    const derivedActiveTab = useMemo(() => {
+        if (activeTab && activeTab !== 'Dashboard') return activeTab;
+        switch (tab) {
+            case 'my-timesheet': return 'My Timesheet';
+            case 'timesheet-view': return 'Timesheet View';
+            case 'my-profile': return 'My Profile';
+            case 'change-password': return 'Change Password';
+            default: return 'Dashboard';
+        }
+    }, [tab, activeTab]);
 
 
     // Sidebar opens if it's either hovered OR locked
@@ -125,7 +139,7 @@ const SidebarLayout = ({ children, activeTab = 'Dashboard', onTabChange }: Sideb
                 {/* Navigation Items */}
                 <nav className="flex-1 px-3 space-y-1 mt-1 overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [&::-webkit-scrollbar]:w-0 [&::-webkit-scrollbar]:h-0" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                     {sidebarItems.map((item) => {
-                        const isActive = activeTab === item.name;
+                        const isActive = derivedActiveTab === item.name;
                         return (
                             <div key={item.name} className="relative group">
                                 <button

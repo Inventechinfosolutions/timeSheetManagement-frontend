@@ -44,28 +44,17 @@ interface ThunkConfig {
 export const getEntities = createAsyncThunk<
   any,
   {
-    page: number;
-    limit: number;
-    search: string;
-    sort?: string;
-    order?: string;
+    search?: string;
     department?: string;
   },
   ThunkConfig
 >(
   'employeeDetails/fetch_entity_list',
-  async ({ page, limit, search, sort, order, department }, { rejectWithValue }) => {
+  async ({ search, department }, { rejectWithValue }) => {
     try {
       const params: any = {
-        page: page.toString(),
-        limit: limit.toString(),
         search: search || '',
       };
-
-      if (sort) {
-        params.sort = sort;
-        params.order = order ? order.toUpperCase() : 'ASC';
-      }
 
       if (department && department !== 'All') {
         params.department = department;
@@ -80,11 +69,11 @@ export const getEntities = createAsyncThunk<
   }
 );
 
-export const getEntity = createAsyncThunk<any, number, ThunkConfig>(
+export const getEntity = createAsyncThunk<any, string, ThunkConfig>(
   'employeeDetails/fetch_entity',
-  async (id, { rejectWithValue }) => {
+  async (employeeId, { rejectWithValue }) => {
     try {
-      const response = await axios.get(`${apiUrl}/${id}`);
+      const response = await axios.get(`${apiUrl}/${employeeId}`);
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || error.message || 'Request failed');
@@ -96,24 +85,21 @@ export const createEntity = createAsyncThunk<any, any, ThunkConfig>(
   'employeeDetails/create_entity',
   async (entity, { dispatch, rejectWithValue }) => {
     try {
-      console.log('Dispatching createEntity:', entity);
       const response = await axios.post(apiUrl, cleanEntity(entity));
-      console.log('createEntity Success:', response.data);
-      dispatch(getEntities({ page: 1, limit: 10, search: '' }));
+      dispatch(getEntities({ search: '' }));
       return response.data;
     } catch (error: any) {
-      console.error('createEntity Error:', error);
       return rejectWithValue(error.response?.data?.message || error.message || 'Request failed');
     }
   }
 );
 
-export const updateEntity = createAsyncThunk<any, { id: number; entity: any }, ThunkConfig>(
+export const updateEntity = createAsyncThunk<any, { employeeId: string; entity: any }, ThunkConfig>(
   'employeeDetails/update_entity',
-  async ({ id, entity }, { dispatch, rejectWithValue }) => {
+  async ({ employeeId, entity }, { dispatch, rejectWithValue }) => {
     try {
-      const response = await axios.put(`${apiUrl}/${id}`, cleanEntity(entity));
-      dispatch(getEntity(id));
+      const response = await axios.put(`${apiUrl}/${employeeId}`, cleanEntity(entity));
+      dispatch(getEntity(employeeId));
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || error.message || 'Request failed');
@@ -121,12 +107,12 @@ export const updateEntity = createAsyncThunk<any, { id: number; entity: any }, T
   }
 );
 
-export const partialUpdateEntity = createAsyncThunk<any, { id: number; entity: any }, ThunkConfig>(
+export const partialUpdateEntity = createAsyncThunk<any, { employeeId: string; entity: any }, ThunkConfig>(
   'employeeDetails/partial_update_entity',
-  async ({ id, entity }, { dispatch, rejectWithValue }) => {
+  async ({ employeeId, entity }, { dispatch, rejectWithValue }) => {
     try {
-      const response = await axios.patch(`${apiUrl}/${id}`, cleanEntity(entity));
-      dispatch(getEntity(id));
+      const response = await axios.patch(`${apiUrl}/${employeeId}`, cleanEntity(entity));
+      dispatch(getEntity(employeeId));
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || error.message || 'Request failed');
@@ -134,12 +120,12 @@ export const partialUpdateEntity = createAsyncThunk<any, { id: number; entity: a
   }
 );
 
-export const deleteEntity = createAsyncThunk<any, number, ThunkConfig>(
+export const deleteEntity = createAsyncThunk<any, string, ThunkConfig>(
   'employeeDetails/delete_entity',
-  async (id, { dispatch, rejectWithValue }) => {
+  async (employeeId, { dispatch, rejectWithValue }) => {
     try {
-      const response = await axios.delete(`${apiUrl}/${id}`);
-      dispatch(getEntities({ page: 1, limit: 10, search: '' }));
+      const response = await axios.delete(`${apiUrl}/${employeeId}`);
+      dispatch(getEntities({ search: '' }));
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || error.message || 'Request failed');
@@ -159,14 +145,14 @@ export const resetPassword = createAsyncThunk<any, any, ThunkConfig>(
   }
 );
 
-export const uploadProfileImage = createAsyncThunk<any, { id: number; file: File }, ThunkConfig>(
+export const uploadProfileImage = createAsyncThunk<any, { employeeId: string; file: File }, ThunkConfig>(
   'employeeDetails/upload_profile_image',
-  async ({ id, file }, { rejectWithValue }) => {
+  async ({ employeeId, file }, { rejectWithValue }) => {
     try {
       const formData = new FormData();
       formData.append('file', file);
       
-      const response = await axios.post(`${apiUrl}/upload-profile-image/${id}`, formData, {
+      const response = await axios.post(`${apiUrl}/upload-profile-image/${employeeId}`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -178,12 +164,12 @@ export const uploadProfileImage = createAsyncThunk<any, { id: number; file: File
   }
 );
 
-export const fetchProfileImage = createAsyncThunk<string, number, ThunkConfig>(
+export const fetchProfileImage = createAsyncThunk<string, string, ThunkConfig>(
   'employeeDetails/fetch_profile_image',
-  async (id, { rejectWithValue }) => {
+  async (employeeId, { rejectWithValue }) => {
     try {
       // Use the view endpoint but fetch as blob to handle auth
-      const response = await axios.get(`${apiUrl}/profile-image/${id}/view`, {
+      const response = await axios.get(`${apiUrl}/profile-image/${employeeId}/view`, {
         responseType: 'blob',
       });
       return URL.createObjectURL(response.data);

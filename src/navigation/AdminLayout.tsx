@@ -1,25 +1,26 @@
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, useParams, useNavigate } from "react-router-dom";
 import SidebarLayout from "../AdminDashboard/SidebarLayout";
 
 const AdminLayout = () => {
-  const location = useLocation();
+  const { tab } = useParams<{ tab: string }>();
   const navigate = useNavigate();
 
-  // Determine active tab based on current path
+  // Determine active tab based on path parameter
   const getActiveTab = () => {
-    if (location.pathname === "/admin-dashboard/registration") {
-      return "User & Role Management";
+    switch (tab) {
+      case "registration":
+        return "User & Role Management";
+      case "employees":
+      case "employee-details":
+        return "Employee Details";
+      case "working-details":
+        return "Working Details";
+      case "timesheet-list":
+      case "timesheet-view":
+        return "Timesheet";
+      default:
+        return "System Dashboard";
     }
-    if (location.pathname === "/admin-dashboard/employees") {
-      return "Employee Details";
-    }
-    if (location.pathname === "/admin-dashboard/working-details") {
-      return "Working Details";
-    }
-    if (location.pathname === "/admin-dashboard/timesheet-list") {
-      return "Timesheet";
-    }
-    return "System Dashboard";
   };
 
   const handleTabChange = (tabName: string) => {
@@ -31,7 +32,7 @@ const AdminLayout = () => {
       navigate("/admin-dashboard/timesheet-list");
     } else if (tabName === "Working Details") {
       navigate("/admin-dashboard/working-details");
-    } else {
+    } else if (tabName === "System Dashboard") {
       navigate("/admin-dashboard");
     }
   };

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { RootState } from "../store";
 import { getEntities } from "../reducers/employeeDetails.reducer";
 import { useAppDispatch, useAppSelector } from "../hooks";
-import { Eye, Search } from "lucide-react";
+import { Eye, Search, UserPlus, ChevronLeft, ChevronRight } from "lucide-react";
 
 const EmployeeListView = () => {
   const navigate = useNavigate();
@@ -75,9 +75,7 @@ const EmployeeListView = () => {
   const currentItems = employees;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
-  const handlePageChange = (pageNumber: number) => {
-    setCurrentPage(pageNumber);
-  };
+
 
   const handleViewDetails = (empId: string) => {
     navigate(`/admin-dashboard/employee-details/${empId}`);
@@ -234,6 +232,14 @@ const EmployeeListView = () => {
               }}
             />
           </div>
+
+          <button
+            onClick={() => navigate("/admin-dashboard/registration")}
+            className="flex items-center gap-2 px-5 py-2.5 bg-[#4318FF] hover:bg-[#3311CC] text-white rounded-full font-bold text-sm transition-all shadow-lg shadow-blue-500/20 active:scale-95 ml-2"
+          >
+            <UserPlus size={18} />
+            <span>Create Employee</span>
+          </button>
         </div>
       </div>
 
@@ -315,29 +321,31 @@ const EmployeeListView = () => {
             onClick={handlePrevPage}
             disabled={currentPage === 1}
             style={{
-              padding: "8px 16px",
-              borderRadius: "8px",
+              padding: "8px",
+              borderRadius: "50%",
               border: "1px solid #E9EDF7",
               backgroundColor: currentPage === 1 ? "#F4F7FE" : "white",
               color: currentPage === 1 ? "#A3AED0" : "#2B3674",
               cursor: currentPage === 1 ? "not-allowed" : "pointer",
-              fontWeight: "bold",
-              fontSize: "14px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              transition: "all 0.2s"
             }}
           >
-            Previous
+            <ChevronLeft size={18} />
           </button>
           <span
-            style={{ fontSize: "14px", color: "#2B3674", fontWeight: "500" }}
+            style={{ fontSize: "14px", color: "#2B3674", fontWeight: "600", margin: "0 10px" }}
           >
-            Page {currentPage} of {totalPages > 0 ? totalPages : 1}
+            {currentPage} / {totalPages > 0 ? totalPages : 1}
           </span>
           <button
             onClick={handleNextPage}
             disabled={currentPage === totalPages || totalPages === 0}
             style={{
-              padding: "8px 16px",
-              borderRadius: "8px",
+              padding: "8px",
+              borderRadius: "50%",
               border: "1px solid #E9EDF7",
               backgroundColor:
                 currentPage === totalPages || totalPages === 0
@@ -345,17 +353,18 @@ const EmployeeListView = () => {
                   : "white",
               color:
                 currentPage === totalPages || totalPages === 0
-                  ? "#A3AED0"
-                  : "#2B3674",
+                  ? "#A3AED0" : "#2B3674",
               cursor:
                 currentPage === totalPages || totalPages === 0
                   ? "not-allowed"
                   : "pointer",
-              fontWeight: "bold",
-              fontSize: "14px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              transition: "all 0.2s"
             }}
           >
-            Next
+            <ChevronRight size={18} />
           </button>
         </div>
       </div>

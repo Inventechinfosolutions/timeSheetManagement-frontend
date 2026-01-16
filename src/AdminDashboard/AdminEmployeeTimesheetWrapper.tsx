@@ -1,23 +1,86 @@
 import { useNavigate, useParams } from "react-router-dom";
-import { useSelector } from "react-redux";
-import { RootState } from "../store";
-import { ChevronLeft } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useAppDispatch, useAppSelector } from "../hooks";
+import { getEntity } from "../reducers/employeeDetails.reducer";
+import { ChevronLeft, Loader2, Lock, X, Calendar as CalendarIcon, ShieldAlert } from "lucide-react";
 import MyTimesheet from "../EmployeeDashboard/MyTimesheet";
+import { applyBlocker, fetchBlockers, deleteBlocker } from "../reducers/timesheetBlocker.reducer";
 
 const AdminEmployeeTimesheetWrapper = () => {
   const { employeeId } = useParams<{ employeeId: string }>();
   const navigate = useNavigate();
-  const { entities } = useSelector((state: RootState) => state.employeeDetails);
+  const dispatch = useAppDispatch();
+  const { entities, entity, loading } = useAppSelector((state) => state.employeeDetails);
+  const { blockers, loading: blockerLoading } = useAppSelector((state) => state.timesheetBlocker);
+  const { currentUser } = useAppSelector((state) => state.user);
 
-  const employee = entities.find(
-    (e: any) => (e.employeeId || e.id) === employeeId
-  );
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [reason, setReason] = useState("");
+
+  useEffect(() => {
+    if (employeeId && (!entity || (entity.employeeId || entity.id) !== employeeId)) {
+      dispatch(getEntity(employeeId));
+    }
+    if (employeeId) {
+      dispatch(fetchBlockers(employeeId));
+    }
+  }, [dispatch, employeeId, entity]);
+
+  const employee = (entity && (entity.employeeId || entity.id) === employeeId) 
+    ? entity 
+    : entities.find((e: any) => (e.employeeId || e.id) === employeeId);
 
   const handleBack = () => {
     navigate("/admin-dashboard/timesheet-list");
   };
 
-  if (!employee) {
+  const handleApplyBlock = async () => {
+    if (!fromDate || !toDate) {
+      alert("Please select both dates");
+      return;
+    }
+
+    try {
+      await dispatch(applyBlocker({
+        employeeId: employeeId!,
+        blockedFrom: fromDate,
+        blockedTo: toDate,
+        reason: reason || "Admin Blocked",
+        blockedBy: currentUser?.employeeId || "Admin"
+      })).unwrap();
+      
+      setIsModalOpen(false);
+      setFromDate("");
+      setToDate("");
+      setReason("");
+      dispatch(fetchBlockers(employeeId!));
+    } catch (error) {
+      alert("Failed to apply blocker");
+    }
+  };
+
+  const handleDeleteBlock = async (id: number) => {
+    if (window.confirm("Are you sure you want to remove this blocker?")) {
+      try {
+        await dispatch(deleteBlocker(id)).unwrap();
+        dispatch(fetchBlockers(employeeId!));
+      } catch (error) {
+        alert("Failed to remove blocker");
+      }
+    }
+  };
+
+  if (loading && !employee) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="w-8 h-8 animate-spin text-[#4318FF]" />
+      </div>
+    );
+  }
+
+  if (!employee && !loading) {
     return (
       <div className="p-8 text-center pt-[100px]">
         <p className="text-gray-500 mb-4">Employee not found</p>
@@ -32,23 +95,132 @@ const AdminEmployeeTimesheetWrapper = () => {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#F4F7FE] p-4 md:p-8 pt-[80px]">
-      <div className="mb-6 flex items-center justify-between">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#F4F7FE] p-4 md:p-8 pt-0">
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={handleBack}
+            className="flex items-center gap-2 px-4 py-2 bg-white text-[#2B3674] rounded-xl text-sm font-bold shadow-sm border border-gray-100 hover:bg-gray-50 transition-all"
+          >
+            <ChevronLeft size={18} />
+            Back to List
+          </button>
+          <h2 className="text-xl font-bold text-[#2B3674]">
+            Employee Timesheet: {employee ? (employee.fullName || employee.name || employee.employeeId) : 'Loading...'}
+          </h2>
+        </div>
+
         <button
-          onClick={handleBack}
-          className="flex items-center gap-2 px-4 py-2 bg-white text-[#2B3674] rounded-xl text-sm font-bold shadow-sm border border-gray-100 hover:bg-gray-50 transition-all"
+          onClick={() => setIsModalOpen(true)}
+          className="flex items-center gap-2 px-6 py-2 bg-[#4318FF] text-white rounded-xl text-sm font-bold shadow-lg hover:shadow-[#4318FF]/20 hover:-translate-y-0.5 transition-all"
         >
-          <ChevronLeft size={18} />
-          Back to List
+          <Lock size={16} />
+          Block
         </button>
-        <h2 className="text-xl font-bold text-[#2B3674]">
-          Employee Timesheet: {employee.fullName || employee.name}
-        </h2>
       </div>
 
       <div className="flex-1 overflow-y-auto no-scrollbar pb-8">
-        <MyTimesheet employeeId={employeeId!} readOnly={true} />
+        <MyTimesheet employeeId={employeeId!} readOnly={false} />
       </div>
+
+      {/* Block Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-[#1B254B]/40 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="w-full max-w-md bg-white rounded-3xl p-8 shadow-2xl border border-gray-100 animate-in zoom-in-95 duration-300">
+            <div className="flex justify-between items-start mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-red-50 rounded-2xl">
+                  <ShieldAlert className="w-6 h-6 text-red-500" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-[#2B3674]">Block Timesheet</h3>
+                  <p className="text-xs text-gray-500 font-medium tracking-wide">Select date range to restrict editing</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+                aria-label="Close modal"
+              >
+                <X size={20} className="text-gray-400" />
+              </button>
+            </div>
+
+            <div className="space-y-5">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-[#2B3674] ml-1">From Date</label>
+                  <div className="relative">
+                    <CalendarIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input 
+                      type="date" 
+                      value={fromDate}
+                      onChange={(e) => setFromDate(e.target.value)}
+                      className="w-full pl-11 pr-4 py-3 bg-[#F4F7FE] border-none rounded-2xl text-sm text-[#2B3674] font-bold focus:ring-2 focus:ring-[#4318FF] transition-all"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-[#2B3674] ml-1">To Date</label>
+                  <div className="relative">
+                    <CalendarIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input 
+                      type="date" 
+                      value={toDate}
+                      onChange={(e) => setToDate(e.target.value)}
+                      className="w-full pl-11 pr-4 py-3 bg-[#F4F7FE] border-none rounded-2xl text-sm text-[#2B3674] font-bold focus:ring-2 focus:ring-[#4318FF] transition-all"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-[#2B3674] ml-1">Block Reason</label>
+                <textarea 
+                  placeholder="e.g. Monthly Payroll Verification"
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  className="w-full px-5 py-3 bg-[#F4F7FE] border-none rounded-2xl text-sm text-[#2B3674] font-bold placeholder:text-gray-400 focus:ring-2 focus:ring-[#4318FF] transition-all min-h-[100px]"
+                />
+              </div>
+
+              <div className="pt-2">
+                <button 
+                  onClick={handleApplyBlock}
+                  className="w-full py-4 bg-[#4318FF] text-white rounded-2xl font-bold shadow-lg shadow-[#4318FF]/20 hover:shadow-[#4318FF]/40 hover:-translate-y-0.5 active:scale-95 transition-all text-sm uppercase tracking-wider flex items-center justify-center gap-2"
+                >
+                  APPLY BLOCK <Lock size={16} />
+                </button>
+              </div>
+
+              {/* Existing Blockers List */}
+              {blockers.length > 0 && (
+                <div className="mt-6 pt-6 border-t border-gray-100">
+                   <h4 className="text-xs font-black text-[#A3AED0] uppercase tracking-widest mb-4">Active Locks</h4>
+                   <div className="space-y-3 max-h-[150px] overflow-y-auto no-scrollbar">
+                      {blockers.map((b) => (
+                        <div key={b.id} className="flex items-center justify-between p-3 bg-red-50/50 rounded-xl border border-red-100">
+                          <div className="flex flex-col">
+                            <span className="text-[10px] font-black text-red-600 uppercase">
+                              {new Date(b.blockedFrom).toLocaleDateString()} - {new Date(b.blockedTo).toLocaleDateString()}
+                            </span>
+                            <span className="text-[10px] text-gray-500 font-medium">{b.reason}</span>
+                          </div>
+                          <button 
+                            onClick={() => handleDeleteBlock(b.id!)}
+                            className="p-1.5 hover:bg-red-100 rounded-lg text-red-500 transition-colors"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ))}
+                   </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

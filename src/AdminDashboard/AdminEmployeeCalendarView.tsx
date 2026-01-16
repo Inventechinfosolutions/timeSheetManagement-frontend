@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { RootState } from "../store";
-import { fetchMonthlyAttendance } from "../reducers/employeeAttendance.reducer";
+import { fetchMonthlyAttendance, AttendanceStatus } from "../reducers/employeeAttendance.reducer";
 import Calendar from "../EmployeeDashboard/CalendarView";
 import { ChevronLeft, ClipboardList, Clock, CalendarCheck } from "lucide-react";
 
@@ -25,10 +25,8 @@ const AdminEmployeeCalendarView = () => {
   // Calculate metrics
   const presentDays = records.filter(
     (r) =>
-      r.status === "Full Day" ||
-      r.status === "Half Day" ||
-      r.status === "Work from Home" ||
-      r.status === "Client Place"
+      r.status === AttendanceStatus.FULL_DAY ||
+      r.status === AttendanceStatus.HALF_DAY
   ).length;
 
   const totalHours = records.reduce(
@@ -73,11 +71,11 @@ const AdminEmployeeCalendarView = () => {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#F4F7FE] p-4 md:p-8 pt-[80px]">
-      <div className="mb-6 flex items-center justify-between">
+    <div className="flex-1 flex flex-col bg-[#F4F7FE] p-4 md:p-6 pt-0">
+      <div className="mb-0 flex items-center justify-between">
         <button
           onClick={handleBack}
-          className="flex items-center gap-2 px-4 py-2 bg-white text-[#2B3674] rounded-xl text-sm font-bold shadow-sm border border-gray-100 hover:bg-gray-50 transition-all"
+          className="flex items-center gap-2 px-4 py-1 bg-white text-[#2B3674] rounded-xl text-sm font-bold shadow-sm border border-gray-100 hover:bg-gray-50 transition-all"
         >
           <ChevronLeft size={18} />
           Back to List
@@ -88,9 +86,9 @@ const AdminEmployeeCalendarView = () => {
       </div>
 
       <div className="flex-1 overflow-y-auto no-scrollbar">
-        <div className="space-y-6">
+        <div className="space-y-3 pb-10">
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex items-center gap-5 hover:shadow-md transition-all duration-300 group">
               <div className="w-14 h-14 rounded-2xl bg-[#E6FFFA] flex items-center justify-center text-[#01B574] group-hover:scale-110 transition-transform">
                 <CalendarCheck size={28} />

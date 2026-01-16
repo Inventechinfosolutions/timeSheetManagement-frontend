@@ -43,22 +43,24 @@ const Header = () => {
           {/* </Link> */}
         </div>
 
-        <Link
-          to="/about"
-          className={`nav-link ${
-            location.pathname === "/about" ? "active" : ""
-          }`}
-        >
-          About
-        </Link>
+        <div className="flex items-center gap-4 ml-auto">
+          <Link
+            to="/about"
+            className={`nav-link ${
+              location.pathname === "/about" ? "active" : ""
+            }`}
+          >
+            About
+          </Link>
 
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors duration-200 font-medium text-sm ml-auto"
-        >
-          <LogOut size={16} />
-          Logout
-        </button>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors duration-200 font-medium text-sm"
+          >
+            <LogOut size={16} />
+            Logout
+          </button>
+        </div>
       </div>
     </header>
   );
