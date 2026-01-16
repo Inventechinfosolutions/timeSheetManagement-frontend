@@ -8,8 +8,9 @@ import {
   Lock,
   Unlock,
 } from "lucide-react";
-import { TimesheetEntry, UserType } from "../types";
+import { TimesheetEntry } from "../types";
 import { useAppDispatch, useAppSelector } from "../hooks";
+import { UserType } from "../reducers/user.reducer";
 import {
   updateAttendanceRecord,
   submitBulkAttendance,
@@ -238,10 +239,7 @@ const MyTimesheet = ({
     const updated = [...localEntries];
     const currentStatus = updated[entryIndex].status;
 
-    if (
-      currentStatus === AttendanceStatus.BLOCKED ||
-      currentStatus === "Blocked"
-    ) {
+    if (currentStatus === AttendanceStatus.BLOCKED) {
       const hours = updated[entryIndex].totalHours || 0;
       updated[entryIndex].status =
         hours > 6
@@ -505,9 +503,7 @@ const MyTimesheet = ({
                 ? "date-highlight ring-2 ring-offset-2 ring-[#00A3C4] shadow-lg scale-105"
                 : "";
 
-            const isBlocked =
-              day.status === AttendanceStatus.BLOCKED ||
-              day.status === "Blocked";
+            const isBlocked = day.status === AttendanceStatus.BLOCKED;
             const isEditable =
               (!readOnly || isAdmin) &&
               isEditableMonth(day.fullDate) &&
