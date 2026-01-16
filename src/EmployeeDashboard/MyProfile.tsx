@@ -8,10 +8,9 @@ import {
   CreditCard,
 } from "lucide-react";
 import { useAppSelector, useAppDispatch } from "../hooks";
-import {
-  getEntities,
-  setCurrentUser,
-} from "../reducers/employeeDetails.reducer";
+import { getEntities, setCurrentUser, uploadProfileImage, fetchProfileImage } from "../reducers/employeeDetails.reducer";
+import inventechLogo from "../assets/inventech-logo.jpg";
+import defaultAvatar from "../assets/default-avatar.jpg";
 
 const MyProfile = () => {
   const dispatch = useAppDispatch();
@@ -26,10 +25,20 @@ const MyProfile = () => {
     localStorage.getItem("userLoginId");
 
   // Use entity values or fallbacks
-  const defaultImage =
-    "https://media.istockphoto.com/id/1389610405/vector/avatar-man-user-icon.webp?a=1&b=1&s=612x612&w=0&k=20&c=044RCWtERyeaZmepUN5Zpca7CXL5sLFgHd9JoZosTPE=";
+  // const defaultImage =
+  //   "https://media.istockphoto.com/id/1389610405/vector/avatar-man-user-icon.webp?a=1&b=1&s=612x612&w=0&k=20&c=044RCWtERyeaZmepUN5Zpca7CXL5sLFgHd9JoZosTPE=";
+  
+  // Use the database Primary Key (number) for API calls, fallback to employeeId string if needed for display
+  const currentDbId = entity?.id;
+  const displayEmployeeId = entity?.employeeId;
+
+  // Use entity values or fallbacks
+  // Default to a local asset if no image found in entity
+  const defaultImage = defaultAvatar;
   const [profileImage, setProfileImage] = useState(defaultImage);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const detailsFetched = useRef(false);
+  const imageFetchedForId = useRef<number | null>(null);
 
   // Debug logs
   useEffect(() => {
@@ -86,15 +95,76 @@ const MyProfile = () => {
     }
   }, [entity]);
 
+  // Effect: Fetch Full Employee Details & Image on Mount
+  useEffect(() => {
+    // 1. Fetch data using the string ID (if available) - assuming search works with string ID
+    if (displayEmployeeId) {
+        if (detailsFetched.current) return;
+        detailsFetched.current = true;
+
+        dispatch(getEntities({ page: 1, limit: 1, search: displayEmployeeId }))
+            .unwrap()
+            .then((response) => {
+                const dataList = Array.isArray(response) ? response : (response.data || []);
+                const foundUser = dataList.find((u: any) => u.employeeId === displayEmployeeId);
+                
+                if (foundUser) {
+                    dispatch(setCurrentUser(foundUser));
+                }
+            })
+            .catch((err) => {
+                detailsFetched.current = false;
+                console.error("Failed to fetch profile data:", err);
+            });
+    }
+
+    // 2. Securely Fetch Profile Image using Numeric ID
+    if (currentDbId) {
+        if (imageFetchedForId.current === currentDbId) return;
+        imageFetchedForId.current = currentDbId;
+
+        dispatch(fetchProfileImage(currentDbId))
+            .unwrap()
+            .then((blobUrl) => {
+                setProfileImage(blobUrl);
+            })
+            .catch(() => {
+                imageFetchedForId.current = null;
+                setProfileImage(defaultImage);
+            });
+    }
+  }, [dispatch, displayEmployeeId, currentDbId]);
+
+
+
+
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'success' | 'error'>('idle');
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
+    if (file && currentDbId) {
+      // 1. Show Preview Immediately
+      setUploadStatus('idle');
       const reader = new FileReader();
       reader.onloadend = () => {
         setProfileImage(reader.result as string);
-        // Note: In a real implementation, you would dispatch an upload action here
       };
       reader.readAsDataURL(file);
+
+      // 2. Upload to Backend Immediately
+      dispatch(uploadProfileImage({ id: currentDbId, file }))
+        .unwrap()
+        .then(() => {
+          console.log("Profile image uploaded successfully");
+          setUploadStatus('success');
+          // Clear message after 3 seconds
+          setTimeout(() => setUploadStatus('idle'), 3000);
+        })
+        .catch((err) => {
+             console.error("Failed to upload info:", err);
+             setUploadStatus('error');
+             setTimeout(() => setUploadStatus('idle'), 3000);
+        });
     }
   };
 
@@ -103,29 +173,44 @@ const MyProfile = () => {
   };
 
   return (
-    <div className="p-8 w-full max-w-[1600px] mx-auto animate-in fade-in duration-500 space-y-8">
+    <div className="px-8 pt-1 pb-8 w-full max-w-[1600px] mx-auto animate-in fade-in duration-500 space-y-2">
       {/* Top Card - User Header */}
-      <div className="bg-white rounded-[20px] p-8 shadow-sm border border-gray-100 flex items-center gap-6 relative overflow-hidden">
-        <div
-          className="relative group cursor-pointer inline-block"
-          onClick={handleCameraClick}
-        >
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleImageChange}
-            className="hidden"
-            accept="image/*"
-          />
-          <div className="p-1 rounded-full border-4 border-[#00A3C4] shadow-sm">
-            <img
-              src={profileImage}
-              alt="Profile"
-              className="w-24 h-24 rounded-full object-cover"
+      <div className="bg-white rounded-[20px] p-5 shadow-sm border border-gray-100 flex items-center gap-6 relative">
+        <div className="flex flex-col items-center gap-1">
+          <div
+            className="relative group cursor-pointer inline-block"
+            onClick={handleCameraClick}
+          >
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleImageChange}
+              className="hidden"
+              accept="image/*"
             />
+            <div className="p-1 rounded-full border-4 border-[#00A3C4] shadow-sm">
+              <img
+                src={profileImage}
+                alt="Profile"
+                className="w-24 h-24 rounded-full object-cover"
+              />
+            </div>
+            <div className="absolute bottom-1 right-1 bg-[#00A3C4] text-white p-1.5 rounded-full border border-white shadow-sm transition-transform group-hover:scale-110">
+              <Camera size={14} />
+            </div>
           </div>
-          <div className="absolute bottom-1 right-1 bg-[#00A3C4] text-white p-1.5 rounded-full border border-white shadow-sm transition-transform group-hover:scale-110">
-            <Camera size={14} />
+          
+          <div className="h-4 flex items-center justify-center">
+            {uploadStatus === 'success' && (
+              <span className="text-[#01B574] text-[10px] font-bold animate-in fade-in slide-in-from-top-1 px-2 py-0.5 bg-green-50 rounded-full">
+                Successfully updated
+              </span>
+            )}
+            {uploadStatus === 'error' && (
+              <span className="text-red-500 text-[10px] font-bold animate-in fade-in slide-in-from-top-1 px-2 py-0.5 bg-red-50 rounded-full">
+                Upload Failed
+              </span>
+            )}
           </div>
         </div>
 
@@ -141,16 +226,17 @@ const MyProfile = () => {
             <span>InvenTech</span>
           </div>
         </div>
+
       </div>
 
       {/* Personal Information Card */}
-      <div className="bg-white rounded-[20px] p-8 shadow-sm border border-gray-100">
+      <div className="bg-white rounded-[20px] p-5 shadow-sm border border-gray-100">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-lg font-bold text-[#2B3674]">
             Personal Information
           </h2>
         </div>
-        <div className="mb-8">
+        <div className="mb-6">
           <div className="h-px bg-gray-200 shadow-[0_1px_2px_rgba(0,0,0,0.05)] w-full"></div>
         </div>
 
@@ -235,6 +321,7 @@ const MyProfile = () => {
             </div>
           </div>
         </div>
+
       </div>
     </div>
   );

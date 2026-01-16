@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import {
   ChevronLeft,
   ChevronRight,
@@ -7,268 +8,179 @@ import {
   Lock,
   Unlock,
 } from "lucide-react";
-import { TimesheetEntry } from "../types";
+import { TimesheetEntry, UserType } from "../types";
 import { useAppDispatch, useAppSelector } from "../hooks";
-// ERROR HIGHLIGHT: Ensure this path is correct relative to the new file location
 import {
-  fetchMonthlyAttendance,
-  createAttendanceRecord,
   updateAttendanceRecord,
   submitBulkAttendance,
   AttendanceStatus,
+  fetchMonthlyAttendance,
+  createAttendanceRecord,
 } from "../reducers/employeeAttendance.reducer";
-import { UserType } from "../reducers/user.reducer";
+import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import {
   generateMonthlyEntries,
   isEditableMonth,
 } from "../utils/attendanceUtils";
 
-// Note: Restored Bulk Save logic with 404 Fallback.
-// This allows single-API save when backend is ready, but falls back to sequential if backend is missing /bulk.
-
 interface TimesheetProps {
   now?: Date;
   employeeId?: string;
   readOnly?: boolean;
+  selectedDateId?: number | null;
 }
 
 const MyTimesheet = ({
   now: propNow,
   employeeId: propEmployeeId,
   readOnly = false,
+  selectedDateId: propSelectedDateId,
 }: TimesheetProps) => {
-  // 1. viewMonth state (replaces the old 'now' memo)
-  const [viewMonth, setViewMonth] = useState<Date>(() => propNow || new Date());
-
+  const location = useLocation();
+  const navState = location.state as {
+    selectedDate?: string;
+    timestamp?: number;
+  } | null;
   const dispatch = useAppDispatch();
+
   const { records, loading } = useAppSelector((state) => state.attendance);
   const { entity } = useAppSelector((state) => state.employeeDetails);
   const { currentUser } = useAppSelector((state) => state.user);
+  // @ts-ignore
+  const { holidays } = useAppSelector(
+    (state) => (state as any).masterHolidays || { holidays: [] }
+  );
 
   const isAdmin = currentUser?.userType === UserType.ADMIN;
-
-  // Use propEmployeeId if provided (Admin mode), otherwise fallback to logged-in user's ID
   const currentEmployeeId = propEmployeeId || entity?.employeeId;
 
-  // View State
-  const [localEntries, setLocalEntries] = useState<TimesheetEntry[]>([]);
-
-  // State to track the start of the visible week
-  const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
-    const d = new Date(viewMonth);
-    const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-    return new Date(d.setDate(diff));
+  // 1. viewMonth/now state
+  const [now, setNow] = useState<Date>(() => {
+    if (propNow) return propNow;
+    if (navState?.selectedDate) return new Date(navState.selectedDate);
+    return new Date();
   });
 
-  const [today] = useState(new Date());
+  // 2. Highlighting state
+  const [selectedDateId, setSelectedDateId] = useState<number | null>(() => {
+    return propSelectedDateId || navState?.timestamp || null;
+  });
+  const [isHighlighted, setIsHighlighted] = useState(false);
 
-  // Toast State
+  // 3. View/Input state
+  const [localEntries, setLocalEntries] = useState<TimesheetEntry[]>([]);
+  const [localInputValues, setLocalInputValues] = useState<
+    Record<number, string>
+  >({});
   const [toast, setToast] = useState<{
     show: boolean;
     message: string;
     type: "success" | "error" | "info";
-  }>({
-    show: false,
-    message: "",
-    type: "success",
-  });
+  }>({ show: false, message: "", type: "success" });
 
-  // --- Data Fetching ---
+  const holidaysFetched = useRef(false);
+  const lastAttendanceKey = useRef<string | null>(null);
+  const today = useMemo(() => new Date(), []);
+
+  // Fetch holidays on mount
+  useEffect(() => {
+    if (holidaysFetched.current) return;
+    holidaysFetched.current = true;
+    dispatch(fetchHolidays());
+  }, [dispatch]);
+
+  // Fetch attendance when month/employee changes
   useEffect(() => {
     if (!currentEmployeeId) return;
+    const fetchKey = `${currentEmployeeId}-${
+      now.getMonth() + 1
+    }-${now.getFullYear()}`;
+    if (lastAttendanceKey.current === fetchKey) return;
+    lastAttendanceKey.current = fetchKey;
 
     dispatch(
       fetchMonthlyAttendance({
         employeeId: currentEmployeeId,
-        month: (viewMonth.getMonth() + 1).toString().padStart(2, "0"),
-        year: viewMonth.getFullYear().toString(),
+        month: (now.getMonth() + 1).toString().padStart(2, "0"),
+        year: now.getFullYear().toString(),
       })
     );
-  }, [dispatch, currentEmployeeId, viewMonth]);
+  }, [dispatch, currentEmployeeId, now]);
 
-  // --- Data Transformation ---
+  // Sync state with props/nav
+  useEffect(() => {
+    if (propNow) {
+      const hasMonthChanged =
+        propNow.getMonth() !== now.getMonth() ||
+        propNow.getFullYear() !== now.getFullYear();
+      if (hasMonthChanged) setNow(propNow);
+    } else if (navState?.selectedDate) {
+      const navDate = new Date(navState.selectedDate);
+      const hasMonthChanged =
+        navDate.getMonth() !== now.getMonth() ||
+        navDate.getFullYear() !== now.getFullYear();
+      if (hasMonthChanged) setNow(navDate);
+    }
+  }, [propNow, navState?.selectedDate]);
+
+  useEffect(() => {
+    const targetId = propSelectedDateId || navState?.timestamp;
+    if (targetId && targetId !== selectedDateId) {
+      setSelectedDateId(targetId);
+    }
+  }, [propSelectedDateId, navState?.timestamp]);
+
+  // Highlight Timer
+  useEffect(() => {
+    if (selectedDateId) {
+      setIsHighlighted(true);
+      const timer = setTimeout(() => {
+        setIsHighlighted(false);
+        setSelectedDateId(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedDateId]);
+
+  // Toast Timer
+  useEffect(() => {
+    if (toast.show) {
+      const timer = setTimeout(
+        () => setToast((prev) => ({ ...prev, show: false })),
+        3000
+      );
+      return () => clearTimeout(timer);
+    }
+  }, [toast.show]);
+
+  // Transform records to local state
   const baseEntries = useMemo(() => {
-    const entries = generateMonthlyEntries(viewMonth, today, records);
-    return entries.map((e) => {
-      // Find the underlying record to get 'totalHours'
-      const dateStr = `${e.fullDate.getFullYear()}-${(e.fullDate.getMonth() + 1)
-        .toString()
-        .padStart(2, "0")}-${e.fullDate.getDate().toString().padStart(2, "0")}`;
-      // Robust Date Matching (Same as attendanceUtils)
-      const record = records.find((rec) => {
-        const rawDate = rec.workingDate || (rec as any).working_date;
-        if (!rawDate) return false;
-
-        let rYear, rMonth, rDay;
-        if (typeof rawDate === "string") {
-          if (rawDate.includes("T")) {
-            const d = new Date(rawDate);
-            rYear = d.getFullYear();
-            rMonth = d.getMonth() + 1;
-            rDay = d.getDate();
-          } else {
-            const parts = rawDate.split("-");
-            rYear = parseInt(parts[0]);
-            rMonth = parseInt(parts[1]);
-            rDay = parseInt(parts[2]);
-          }
-        } else {
-          const d = new Date(rawDate);
-          rYear = d.getFullYear();
-          rMonth = d.getMonth() + 1;
-          rDay = d.getDate();
-        }
-        const rDateStr = `${rYear}-${rMonth.toString().padStart(2, "0")}-${rDay
-          .toString()
-          .padStart(2, "0")}`;
-        return rDateStr === dateStr;
-      });
-
-      return {
-        ...e,
-        totalHours: record?.totalHours || 0,
-        status: record?.status || e.status,
-        isSaved: !!record?.id,
-      };
-    });
-  }, [viewMonth, today, records]);
+    return generateMonthlyEntries(now, today, records);
+  }, [now, today, records]);
 
   useEffect(() => {
     setLocalEntries(baseEntries);
   }, [baseEntries]);
 
-  // Sync week view when 'viewMonth' prop changes
-  useEffect(() => {
-    const d = new Date(viewMonth);
-    const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-    setCurrentWeekStart(new Date(d.setDate(diff)));
-  }, [viewMonth]);
-
-  // Derive the 7 days for the current view
-  const weekData = useMemo(() => {
-    const days = [];
-    const start = new Date(currentWeekStart);
-
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
-
-      // Match with existing local entries
-      const foundEntry = localEntries.find(
-        (e) =>
-          e.date === d.getDate() &&
-          new Date(e.fullDate).getMonth() === d.getMonth()
-      );
-
-      days.push({
-        dateObj: d,
-        dayName: d.toLocaleDateString("en-US", { weekday: "short" }),
-        dateNum: d.getDate(),
-        entry: foundEntry,
-        isCurrentMonth: d.getMonth() === viewMonth.getMonth(),
-      });
-    }
-    return days;
-  }, [currentWeekStart, localEntries, viewMonth]);
-
-  // Constraint Logic
-  const startOfMonth = new Date(
-    viewMonth.getFullYear(),
-    viewMonth.getMonth(),
-    1
-  );
-  const endOfMonth = new Date(
-    viewMonth.getFullYear(),
-    viewMonth.getMonth() + 1,
-    0
-  );
-
-  const canGoPrev = () => {
-    if (isAdmin) return true;
-    const prevWeekStart = new Date(currentWeekStart);
-    prevWeekStart.setDate(prevWeekStart.getDate() - 7);
-    const prevWeekEnd = new Date(prevWeekStart);
-    prevWeekEnd.setDate(prevWeekStart.getDate() + 6);
-    return prevWeekEnd >= startOfMonth;
-  };
-
-  const canGoNext = () => {
-    if (isAdmin) return true;
-    const nextWeekStart = new Date(currentWeekStart);
-    nextWeekStart.setDate(nextWeekStart.getDate() + 7);
-    return nextWeekStart <= endOfMonth;
-  };
-
-  const handlePrevWeek = () => {
-    if (!canGoPrev()) return;
-    const newDate = new Date(currentWeekStart);
-    newDate.setDate(newDate.getDate() - 7);
-
-    if (isAdmin) {
-      // If we move to a week that is primarily in a different month, update viewMonth
-      const weekCenter = new Date(newDate);
-      weekCenter.setDate(weekCenter.getDate() + 3);
-      if (
-        weekCenter.getMonth() !== viewMonth.getMonth() ||
-        weekCenter.getFullYear() !== viewMonth.getFullYear()
-      ) {
-        setViewMonth(
-          new Date(weekCenter.getFullYear(), weekCenter.getMonth(), 1)
-        );
-      }
-    }
-    setCurrentWeekStart(newDate);
-  };
-
-  const handleNextWeek = () => {
-    if (!canGoNext()) return;
-    const newDate = new Date(currentWeekStart);
-    newDate.setDate(newDate.getDate() + 7);
-
-    if (isAdmin) {
-      // If we move to a week that is primarily in a different month, update viewMonth
-      const weekCenter = new Date(newDate);
-      weekCenter.setDate(weekCenter.getDate() + 3);
-      if (
-        weekCenter.getMonth() !== viewMonth.getMonth() ||
-        weekCenter.getFullYear() !== viewMonth.getFullYear()
-      ) {
-        setViewMonth(
-          new Date(weekCenter.getFullYear(), weekCenter.getMonth(), 1)
-        );
-      }
-    }
-    setCurrentWeekStart(newDate);
-  };
-
-  // Month Navigation (Admin Only)
+  // Handlers
   const handlePrevMonth = () => {
-    const d = new Date(viewMonth);
-    d.setMonth(d.getMonth() - 1);
-    setViewMonth(new Date(d.getFullYear(), d.getMonth(), 1));
+    const prev = new Date(now);
+    prev.setMonth(prev.getMonth() - 1);
+    setNow(prev);
   };
 
   const handleNextMonth = () => {
-    const d = new Date(viewMonth);
-    d.setMonth(d.getMonth() + 1);
-    setViewMonth(new Date(d.getFullYear(), d.getMonth(), 1));
+    const next = new Date(now);
+    next.setMonth(next.getMonth() + 1);
+    if (isAdmin || next <= new Date()) setNow(next);
   };
 
-  // Calculate Totals (Directly from totalHours)
-  const weekTotalHours = weekData.reduce((acc, { entry }) => {
-    return acc + (entry?.totalHours || 0);
-  }, 0);
-
-  const monthTotalHours = localEntries.reduce((acc, entry) => {
-    return acc + (entry.totalHours || 0);
-  }, 0);
-
-  // Local state to handle input typing (strings)
-  const [localInputValues, setLocalInputValues] = useState<
-    Record<number, string>
-  >({});
+  const canGoNextMonth = () => {
+    if (isAdmin) return true;
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const currentRealMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    return nextMonth <= currentRealMonth;
+  };
 
   const handleHoursInput = (entryIndex: number, val: string) => {
     if (!/^\d*\.?\d*$/.test(val)) return;
@@ -277,9 +189,31 @@ const MyTimesheet = ({
     const num = parseFloat(val);
     const hours = isNaN(num) ? 0 : num;
 
-    let newStatus: TimesheetEntry["status"] = localEntries[entryIndex].status;
+    let newStatus = localEntries[entryIndex].status;
+
     if (hours > 0) {
-      newStatus = hours > 6 ? "Full Day" : "Half Day";
+      newStatus =
+        hours > 6 ? AttendanceStatus.FULL_DAY : AttendanceStatus.HALF_DAY;
+    } else {
+      const entryDate = new Date(localEntries[entryIndex].fullDate);
+      const dateStrLocal = `${entryDate.getFullYear()}-${String(
+        entryDate.getMonth() + 1
+      ).padStart(2, "0")}-${String(entryDate.getDate()).padStart(2, "0")}`;
+
+      const holiday = holidays?.find((h: any) => {
+        const hDate = h.holidayDate || h.date;
+        if (!hDate) return false;
+        const normalizedHDate =
+          typeof hDate === "string"
+            ? hDate.split("T")[0]
+            : new Date(hDate).toISOString().split("T")[0];
+        return normalizedHDate === dateStrLocal;
+      });
+
+      const dayNum = entryDate.getDay();
+      if (holiday) newStatus = "Holiday" as any;
+      else if (dayNum === 0 || dayNum === 6) newStatus = "Weekend" as any;
+      else newStatus = AttendanceStatus.PENDING;
     }
 
     const updated = [...localEntries];
@@ -304,8 +238,10 @@ const MyTimesheet = ({
     const updated = [...localEntries];
     const currentStatus = updated[entryIndex].status;
 
-    if (currentStatus === AttendanceStatus.BLOCKED) {
-      // Unblock -> Restore based on hours
+    if (
+      currentStatus === AttendanceStatus.BLOCKED ||
+      currentStatus === "Blocked"
+    ) {
       const hours = updated[entryIndex].totalHours || 0;
       updated[entryIndex].status =
         hours > 6
@@ -314,108 +250,33 @@ const MyTimesheet = ({
           ? AttendanceStatus.HALF_DAY
           : AttendanceStatus.PENDING;
     } else {
-      // Block
       updated[entryIndex].status = AttendanceStatus.BLOCKED;
     }
     setLocalEntries(updated);
-
-    // Auto-save this specific change for better UX
     setTimeout(() => onSaveAll(), 100);
   };
 
-  useEffect(() => {
-    if (toast.show) {
-      const timer = setTimeout(
-        () => setToast((prev) => ({ ...prev, show: false })),
-        3000
-      );
-      return () => clearTimeout(timer);
-    }
-  }, [toast.show]);
-
-  // Fallback logic: Individual save (Used if Bulk fails with 404)
-  const handleIndividualSave = async (index: number): Promise<boolean> => {
-    const entry = localEntries[index];
-    const d = entry.fullDate;
-    const workingDate = `${d.getFullYear()}-${(d.getMonth() + 1)
-      .toString()
-      .padStart(2, "0")}-${d.getDate().toString().padStart(2, "0")}`;
-    const hoursToSave = entry.totalHours || 0;
-
-    try {
-      const existingRecord = records.find((r) => {
-        const rDate =
-          typeof r.workingDate === "string"
-            ? r.workingDate.split("T")[0]
-            : (r.workingDate as Date).toISOString().split("T")[0];
-        return rDate === workingDate;
-      });
-
-      let recordId = existingRecord?.id;
-
-      if (!existingRecord) {
-        const result = await dispatch(
-          createAttendanceRecord({
-            employeeId: currentEmployeeId,
-            workingDate,
-            totalHours: hoursToSave,
-            status: "Pending" as any, // Initial status, will be updated if needed or handled by backend logic
-          })
-        ).unwrap();
-        if (result?.id) recordId = result.id;
-      }
-
-      // Use the status from the UI state (which is updated by handleHoursInput)
-      let derivedStatus = entry.status || "Pending";
-      // Fallback if status is Pending but hours exist (shouldn't happen with new logic but safe)
-      if (derivedStatus === "Pending" || derivedStatus === "Not Updated") {
-        if (hoursToSave > 6) derivedStatus = "Full Day";
-        else if (hoursToSave > 0) derivedStatus = "Half Day";
-      }
-
-      if (recordId) {
-        await dispatch(
-          updateAttendanceRecord({
-            id: recordId,
-            data: {
-              totalHours: hoursToSave,
-              status: derivedStatus as any,
-            },
-          })
-        ).unwrap();
-      }
-      return true;
-    } catch (error: any) {
-      console.error("Individual Save Failed:", error);
-      return false;
-    }
-  };
   const onSaveAll = async () => {
-    // 1. Identify modified entries
-    const modifiedIndices: number[] = [];
     const payload: any[] = [];
-
     localEntries.forEach((entry, idx) => {
       const currentTotal = entry.totalHours || 0;
       const originalTotal = baseEntries[idx]?.totalHours || 0;
       const currentStatus = entry.status;
       const originalStatus = baseEntries[idx]?.status;
 
-      // Identify modified entries based on hours OR status
       if (currentTotal !== originalTotal || currentStatus !== originalStatus) {
-        modifiedIndices.push(idx);
-
-        // Prepare Bulk Payload
         const d = entry.fullDate;
         const workingDate = `${d.getFullYear()}-${(d.getMonth() + 1)
           .toString()
           .padStart(2, "0")}-${d.getDate().toString().padStart(2, "0")}`;
+        let derivedStatus = entry.status || AttendanceStatus.PENDING;
 
-        // logic for derived status
-        let derivedStatus = currentStatus || "Pending";
-        if (derivedStatus === "Pending" || derivedStatus === "Not Updated") {
-          if (currentTotal > 6) derivedStatus = "Full Day";
-          else if (currentTotal > 0) derivedStatus = "Half Day";
+        if (
+          derivedStatus === AttendanceStatus.PENDING ||
+          derivedStatus === "Not Updated"
+        ) {
+          if (currentTotal > 6) derivedStatus = AttendanceStatus.FULL_DAY;
+          else if (currentTotal > 0) derivedStatus = AttendanceStatus.HALF_DAY;
         }
 
         const existingRecord = records.find((r) => {
@@ -425,14 +286,12 @@ const MyTimesheet = ({
               : (r.workingDate as Date).toISOString().split("T")[0];
           return rDate === workingDate;
         });
-
         payload.push({
           id: existingRecord?.id,
           employeeId: currentEmployeeId,
           workingDate,
           totalHours: currentTotal,
           status: derivedStatus,
-          // loginTime removed
         });
       }
     });
@@ -442,19 +301,15 @@ const MyTimesheet = ({
       return;
     }
 
-    // 2. Try Bulk Save First
     try {
       await dispatch(submitBulkAttendance(payload)).unwrap();
-
-      // Refresh Data
       dispatch(
         fetchMonthlyAttendance({
           employeeId: currentEmployeeId,
-          month: (viewMonth.getMonth() + 1).toString().padStart(2, "0"),
-          year: viewMonth.getFullYear().toString(),
+          month: (now.getMonth() + 1).toString().padStart(2, "0"),
+          year: now.getFullYear().toString(),
         })
       );
-
       setToast({
         show: true,
         message: "Data Saved Successfully",
@@ -462,25 +317,17 @@ const MyTimesheet = ({
       });
     } catch (error: any) {
       console.warn("Bulk API failed, attempting sequential fallback...", error);
-
-      // 3. Fallback: Sequential Save
       let successCount = 0;
       for (const item of payload) {
         try {
-          // Check if record exists (has id) -> Update, else Create
           if (item.id) {
-            // Update
             await dispatch(
               updateAttendanceRecord({
                 id: item.id,
-                data: {
-                  totalHours: item.totalHours,
-                  status: item.status,
-                },
+                data: { totalHours: item.totalHours, status: item.status },
               })
             ).unwrap();
           } else {
-            // Create
             await dispatch(
               createAttendanceRecord({
                 employeeId: item.employeeId,
@@ -495,16 +342,14 @@ const MyTimesheet = ({
           console.error("Failed to save record:", item, innerError);
         }
       }
-
       if (successCount > 0) {
         dispatch(
           fetchMonthlyAttendance({
             employeeId: currentEmployeeId,
-            month: (viewMonth.getMonth() + 1).toString().padStart(2, "0"),
-            year: viewMonth.getFullYear().toString(),
+            month: (now.getMonth() + 1).toString().padStart(2, "0"),
+            year: now.getFullYear().toString(),
           })
         );
-        // Show simplified success message if everything worked eventually
         setToast({ show: true, message: "Data Saved", type: "success" });
       } else {
         setToast({
@@ -516,32 +361,26 @@ const MyTimesheet = ({
     }
   };
 
-  // Label Logic
-  const endOfWeek = new Date(currentWeekStart);
-  endOfWeek.setDate(endOfWeek.getDate() + 6);
-  const isOverlap =
-    (currentWeekStart.getMonth() === viewMonth.getMonth() &&
-      currentWeekStart.getFullYear() === viewMonth.getFullYear()) ||
-    (endOfWeek.getMonth() === viewMonth.getMonth() &&
-      endOfWeek.getFullYear() === viewMonth.getFullYear());
-
-  const weekCenter = new Date(currentWeekStart);
-  weekCenter.setDate(weekCenter.getDate() + 3);
-
-  const labelDate = isOverlap ? viewMonth : weekCenter;
+  // Calculations for Grid
+  const monthTotalHours = localEntries.reduce(
+    (acc, entry) => acc + (entry.totalHours || 0),
+    0
+  );
+  const firstDayOfMonth = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    1
+  ).getDay();
+  const paddingDays = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
+  const weekdays = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
   return (
-    <div
-      className={`flex flex-col h-full bg-[#F4F7FE] relative ${
-        propEmployeeId ? "" : "p-4 md:p-8"
-      }`}
-    >
+    <div className="flex flex-col h-full max-h-full overflow-hidden bg-[#F4F7FE] p-2 md:px-4 md:pt-1 md:pb-0 relative">
       {loading && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/50 backdrop-blur-[1px] rounded-xl">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/30 backdrop-blur-[1px]">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#00A3C4]"></div>
         </div>
       )}
-      {/* Toast Notification */}
       {toast.show && (
         <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-50 flex items-center gap-1.5 animate-in fade-in slide-in-from-top-4 duration-300">
           {toast.type === "success" ? (
@@ -549,21 +388,12 @@ const MyTimesheet = ({
               size={16}
               className="text-[#00E676] drop-shadow-[0_0_8px_rgba(0,230,118,0.6)]"
             />
-          ) : toast.type === "info" ? (
-            <AlertCircle size={16} className="text-blue-500" />
           ) : (
-            <AlertCircle
-              size={16}
-              className="text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]"
-            />
+            <AlertCircle size={16} className="text-red-500" />
           )}
           <span
-            className={`font-bold text-xs tracking-wide drop-shadow-[0_0_8px_rgba(255,255,255,0.6)] ${
-              toast.type === "success"
-                ? "text-[#00E676]"
-                : toast.type === "info"
-                ? "text-blue-500"
-                : "text-red-500"
+            className={`font-bold text-xs ${
+              toast.type === "success" ? "text-[#00E676]" : "text-red-500"
             }`}
           >
             {toast.message}
@@ -571,256 +401,209 @@ const MyTimesheet = ({
         </div>
       )}
 
-      {/* Header / Week Navigation */}
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold text-[#2B3674]">
-          {propEmployeeId ? "Employee Timesheet" : "My Timesheet"}
-        </h2>
-        <div className="flex items-center gap-3">
-          {isAdmin && (
-            <div className="flex items-center gap-1 bg-white p-1 rounded-full shadow-sm border border-gray-100">
-              <button
-                onClick={handlePrevMonth}
-                className="p-1.5 hover:bg-gray-50 rounded-full text-gray-400 hover:text-[#00A3C4] transition-colors"
-                title="Previous Month"
-              >
-                <ChevronLeft size={16} />
-              </button>
-              <div className="px-3 py-1.5 text-[#2B3674] font-bold text-sm">
-                {viewMonth.toLocaleString("default", {
-                  month: "long",
-                  year: "numeric",
-                })}
-              </div>
-              <button
-                onClick={handleNextMonth}
-                className="p-1.5 hover:bg-gray-50 rounded-full text-gray-400 hover:text-[#00A3C4] transition-colors"
-                title="Next Month"
-              >
-                <ChevronRight size={16} />
-              </button>
-            </div>
-          )}
-          {!isAdmin && (
-            <div className="bg-white px-4 py-2 rounded-full shadow-sm text-[#2B3674] font-bold text-sm border border-gray-100">
-              {labelDate.toLocaleDateString("en-US", {
+      <div className="flex-1 bg-white rounded-2xl p-3 shadow-sm border border-gray-100 overflow-hidden mt-1">
+        <div className="flex justify-between items-center mb-2 px-1">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handlePrevMonth}
+              className="p-1 hover:bg-[#F4F7FE] rounded-md transition-all text-[#A3AED0] hover:text-[#2B3674]"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <p className="text-sm font-bold text-[#2B3674] min-w-[100px] text-center">
+              {now.toLocaleDateString("en-US", {
                 month: "long",
                 year: "numeric",
               })}
-            </div>
-          )}
-          {(!readOnly || isAdmin) && (
+            </p>
             <button
-              onClick={onSaveAll}
-              className="flex items-center gap-2 px-6 py-2 bg-linear-to-r from-[#00E676] to-[#00C853] text-white rounded-full font-bold text-sm shadow-[0_4px_14px_0_rgba(0,230,118,0.39)] hover:shadow-[0_6px_20px_rgba(0,230,118,0.23)] hover:bg-[#00E676] transition-all transform active:scale-95"
+              onClick={handleNextMonth}
+              disabled={!canGoNextMonth()}
+              className={`p-1 rounded-md transition-all ${
+                !canGoNextMonth()
+                  ? "text-gray-200 cursor-not-allowed"
+                  : "hover:bg-[#F4F7FE] text-[#A3AED0] hover:text-[#2B3674]"
+              }`}
             >
-              <Save size={16} />
-              Save
+              <ChevronRight size={16} />
             </button>
-          )}
-        </div>
-      </div>
-
-      {/* Horizontal Grid Container */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 overflow-x-auto">
-        <div className="flex items-center gap-2 w-full min-w-max md:min-w-0">
-          {/* Left Arrow */}
-          <button
-            onClick={handlePrevWeek}
-            disabled={!canGoPrev()}
-            className={`p-2 rounded-full transition-colors ${
-              !canGoPrev()
-                ? "text-gray-200 cursor-not-allowed"
-                : "hover:bg-gray-100 text-gray-400 hover:text-[#00A3C4]"
-            }`}
-          >
-            <ChevronLeft size={24} />
-          </button>
-
-          {/* Table Structure */}
-          <div className="flex-1 border border-gray-200 rounded-xl overflow-hidden flex">
-            {/* 7 Days Columns */}
-            {weekData.map((day, i) => {
-              // Check if day belongs to the currently viewed month
-              const isCurrentMonth =
-                day.dateObj.getMonth() === viewMonth.getMonth();
-              const isToday =
-                day.dateObj.toDateString() === new Date().toDateString();
-              const isWeekend = day.dayName === "Sat" || day.dayName === "Sun";
-
-              // Find actual index in localEntries
-              const entryIndex = localEntries.findIndex(
-                (e) =>
-                  e.date === day.dateNum &&
-                  new Date(e.fullDate).getMonth() === day.dateObj.getMonth()
-              );
-              const displayVal =
-                entryIndex !== -1
-                  ? localEntries[entryIndex].totalHours || 0
-                  : 0;
-
-              // Input value priority: Typed String > Stored Number > 0
-              const inputValue =
-                entryIndex !== -1 && localInputValues[entryIndex] !== undefined
-                  ? localInputValues[entryIndex]
-                  : displayVal === 0
-                  ? ""
-                  : displayVal.toString();
-
-              return (
-                <div
-                  key={i}
-                  className={`flex-1 flex flex-col border-r border-gray-200 last:border-r-0 min-w-[105px]`}
-                >
-                  {/* Header Cell - Always Visible */}
-                  <div
-                    className={`py-3 text-center text-xs font-bold uppercase tracking-wider ${
-                      isToday && isCurrentMonth
-                        ? "bg-blue-50 text-[#00A3C4]"
-                        : "bg-[#F4F7FE] text-[#2B3674]"
-                    }`}
-                  >
-                    {day.dayName}
-                  </div>
-
-                  {/* Content Cell */}
-                  <div
-                    className={`flex-1 py-5 px-2 flex flex-col items-center justify-center gap-3 ${
-                      isWeekend || !isCurrentMonth
-                        ? "bg-gray-50/50"
-                        : "bg-white"
-                    }`}
-                  >
-                    {isCurrentMonth ? (
-                      <>
-                        <span
-                          className={`text-sm font-bold ${
-                            isToday ? "text-[#00A3C4]" : "text-[#2B3674]"
-                          }`}
-                        >
-                          {day.dateObj.toLocaleString("default", {
-                            month: "short",
-                          })}{" "}
-                          {day.dateNum.toString().padStart(2, "0")}
-                        </span>
-
-                        {day.entry ? (
-                          <div className="relative w-full">
-                            <input
-                              type="text"
-                              disabled={
-                                !isAdmin &&
-                                (readOnly ||
-                                  !isEditableMonth(day.dateObj) ||
-                                  day.entry.status ===
-                                    AttendanceStatus.BLOCKED ||
-                                  day.entry.status === "Blocked")
-                              }
-                              className={`w-full h-10 text-center border rounded-lg font-bold text-[#2B3674] placeholder:text-[10px] focus:outline-none focus:ring-2 focus:ring-[#00A3C4] focus:border-transparent transition-all
-                                                                ${
-                                                                  !isAdmin &&
-                                                                  (readOnly ||
-                                                                    !isEditableMonth(
-                                                                      day.dateObj
-                                                                    ) ||
-                                                                    day.entry
-                                                                      .status ===
-                                                                      AttendanceStatus.BLOCKED ||
-                                                                    day.entry
-                                                                      .status ===
-                                                                      "Blocked")
-                                                                    ? "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-100"
-                                                                    : isToday
-                                                                    ? "border-[#00A3C4] bg-blue-50/30"
-                                                                    : "border-gray-200"
-                                                                }`}
-                              placeholder={
-                                day.entry.status === AttendanceStatus.BLOCKED ||
-                                day.entry.status === "Blocked"
-                                  ? "Blocked"
-                                  : readOnly && !isAdmin
-                                  ? ""
-                                  : isEditableMonth(day.dateObj)
-                                  ? "Hours"
-                                  : "Locked"
-                              }
-                              value={inputValue}
-                              onChange={(e) =>
-                                handleHoursInput(entryIndex, e.target.value)
-                              }
-                              onBlur={() => handleInputBlur(entryIndex)}
-                            />
-                            {isAdmin && (
-                              <button
-                                onClick={() => handleToggleBlock(entryIndex)}
-                                className={`absolute -top-2 -right-2 p-1 rounded-full shadow-sm border transition-all ${
-                                  day.entry.status === AttendanceStatus.BLOCKED
-                                    ? "bg-red-500 text-white border-red-600 hover:bg-red-600"
-                                    : "bg-white text-gray-400 border-gray-100 hover:text-[#00A3C4]"
-                                }`}
-                                title={
-                                  day.entry.status === AttendanceStatus.BLOCKED
-                                    ? "Unblock"
-                                    : "Block"
-                                }
-                              >
-                                {day.entry.status ===
-                                  AttendanceStatus.BLOCKED ||
-                                day.entry.status === "Blocked" ? (
-                                  <Lock size={10} />
-                                ) : (
-                                  <Unlock size={10} />
-                                )}
-                              </button>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="w-full h-10 flex items-center justify-center text-gray-300 font-medium text-xs border border-transparent">
-                            -
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <div className="h-full w-full"></div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-
-            {/* Week Total Column */}
-            <div className="flex-1 flex flex-col border-l-2 border-gray-100 min-w-[100px] bg-gray-50/30">
-              <div className="py-3 text-center text-xs font-bold uppercase tracking-wider text-[#2B3674] bg-[#F4F7FE]">
-                Week Total
-              </div>
-              <div className="flex-1 flex items-center justify-center text-xl font-bold text-[#2B3674]">
-                {weekTotalHours.toFixed(1)}
-              </div>
-            </div>
-
-            {/* Month Total Column */}
-            <div className="flex-1 flex flex-col border-l border-gray-200 min-w-[100px] bg-gray-50/30">
-              <div className="py-3 text-center text-xs font-bold uppercase tracking-wider text-[#2B3674] bg-[#F4F7FE]">
-                Month Total
-              </div>
-              <div className="flex-1 flex items-center justify-center text-xl font-bold text-[#2B3674]">
-                {monthTotalHours.toFixed(1)}
-              </div>
-            </div>
           </div>
 
-          {/* Right Arrow */}
-          <button
-            onClick={handleNextWeek}
-            disabled={!canGoNext()}
-            className={`p-2 rounded-full transition-colors ${
-              !canGoNext()
-                ? "text-gray-200 cursor-not-allowed"
-                : "hover:bg-gray-100 text-gray-400 hover:text-[#00A3C4]"
-            }`}
-          >
-            <ChevronRight size={24} />
-          </button>
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <p className="text-[9px] uppercase font-bold text-[#A3AED0] tracking-widest leading-none mb-0.5">
+                Month Total
+              </p>
+              <p className="text-lg font-black text-[#00A3C4] leading-none">
+                {monthTotalHours.toFixed(1)}{" "}
+                <span className="text-[10px] font-bold text-[#A3AED0]">
+                  hrs
+                </span>
+              </p>
+            </div>
+            {(!readOnly || isAdmin) && (
+              <button
+                onClick={onSaveAll}
+                className="flex items-center gap-1.5 px-4 py-1.5 bg-linear-to-r from-[#00E676] to-[#01B574] text-white rounded-full font-bold text-[11px] shadow-sm hover:shadow-md transition-all transform hover:-translate-y-0.5 active:scale-95"
+              >
+                <Save size={14} /> Save
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-7 gap-1.5 mb-1.5 border-b border-gray-50 pb-2">
+          {weekdays.map((day) => (
+            <div
+              key={day}
+              className="text-center text-[10px] font-black text-[#A3AED0] tracking-widest"
+            >
+              {day}
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-7 gap-1.5 overflow-y-auto max-h-[calc(100vh-250px)] pr-1">
+          {Array.from({ length: paddingDays }).map((_, idx) => (
+            <div
+              key={`p-${idx}`}
+              className="h-20 rounded-lg bg-gray-50/20 border border-dashed border-gray-100"
+            ></div>
+          ))}
+          {localEntries.map((day, idx) => {
+            const displayVal = day.totalHours || 0;
+            const inputValue =
+              localInputValues[idx] !== undefined
+                ? localInputValues[idx]
+                : displayVal === 0
+                ? ""
+                : displayVal.toString();
+            const dateStr = `${day.fullDate.getFullYear()}-${String(
+              day.fullDate.getMonth() + 1
+            ).padStart(2, "0")}-${String(day.fullDate.getDate()).padStart(
+              2,
+              "0"
+            )}`;
+
+            const holiday = holidays?.find((h: any) => {
+              const hDate = h.holidayDate || h.date;
+              if (!hDate) return false;
+              const normalizedHDate =
+                typeof hDate === "string"
+                  ? hDate.split("T")[0]
+                  : new Date(hDate).toISOString().split("T")[0];
+              return normalizedHDate === dateStr;
+            });
+
+            const isRed = (day.isWeekend && !day.status) || !!holiday;
+            const isSelected =
+              selectedDateId &&
+              new Date(selectedDateId).toDateString() ===
+                day.fullDate.toDateString();
+            const highlightClass =
+              isSelected && isHighlighted
+                ? "date-highlight ring-2 ring-offset-2 ring-[#00A3C4] shadow-lg scale-105"
+                : "";
+
+            const isBlocked =
+              day.status === AttendanceStatus.BLOCKED ||
+              day.status === "Blocked";
+            const isEditable =
+              (!readOnly || isAdmin) &&
+              isEditableMonth(day.fullDate) &&
+              !isBlocked;
+
+            let bg = "bg-white";
+            let badge = "bg-gray-100 text-gray-400";
+            if (
+              day.status === "Full Day" ||
+              day.status === "WFH" ||
+              day.status === "Client Visit"
+            ) {
+              bg = "bg-[#E9FBF5]/50";
+              badge = "bg-[#E9FBF5] text-[#01B574]";
+            } else if (
+              isRed ||
+              day.status === "Leave" ||
+              day.status === "Holiday" ||
+              day.status === "Weekend"
+            ) {
+              bg = "bg-[#FDF2F2]/50";
+              badge = "bg-[#FDF2F2] text-[#ff4d4d]";
+            } else if (
+              day.status === "Half Day" ||
+              day.status === "Pending" ||
+              day.status === "Not Updated"
+            ) {
+              bg = "bg-[#FFF9E5]/50";
+              badge = "bg-[#FFF9E5] text-[#FFB020]";
+            } else if (day.isToday) bg = "bg-[#F4F7FE]";
+
+            return (
+              <div
+                key={idx}
+                className={`relative flex flex-col p-1.5 rounded-lg border transition-all h-20 group 
+                            ${
+                              day.isToday
+                                ? "border-dashed border-[#00A3C4] shadow-md shadow-teal-100/30"
+                                : "border-gray-100 shadow-sm hover:shadow-md"
+                            } 
+                            ${highlightClass} ${bg} ${
+                  isBlocked ? "opacity-70" : ""
+                }`}
+              >
+                <div className="flex justify-between items-start">
+                  <span
+                    className={`text-sm font-black ${
+                      day.isToday ? "text-[#00A3C4]" : "text-[#2B3674]"
+                    }`}
+                  >
+                    {day.date}
+                  </span>
+                  {isAdmin && (
+                    <button
+                      onClick={() => handleToggleBlock(idx)}
+                      className={`p-1 rounded-full shadow-sm border transition-all ${
+                        isBlocked
+                          ? "bg-red-500 text-white border-red-600"
+                          : "bg-white text-gray-300 hover:text-[#00A3C4]"
+                      }`}
+                    >
+                      {isBlocked ? <Lock size={8} /> : <Unlock size={8} />}
+                    </button>
+                  )}
+                </div>
+                <div className="flex-1 flex flex-col items-center justify-center">
+                  <input
+                    type="text"
+                    disabled={!isEditable}
+                    className={`w-full max-w-[60px] h-7 text-center text-sm font-bold rounded-md border focus:outline-none focus:ring-2 focus:ring-[#00A3C4] ${
+                      !isEditable
+                        ? "bg-gray-50 text-gray-400 cursor-not-allowed border-transparent"
+                        : "bg-white text-[#2B3674] shadow-inner border-gray-100"
+                    }`}
+                    placeholder={isBlocked ? "Locked" : "0"}
+                    value={inputValue}
+                    onChange={(e) => handleHoursInput(idx, e.target.value)}
+                    onBlur={() => handleInputBlur(idx)}
+                  />
+                </div>
+                <div
+                  className={`w-full py-0.5 rounded-md text-center text-[7.5px] font-black uppercase tracking-tight truncate ${badge}`}
+                >
+                  {day.status === "Holiday" || holiday
+                    ? holiday?.holidayName || holiday?.name || "HOLIDAY"
+                    : isBlocked
+                    ? "ADMIN BLOCKED"
+                    : day.status === "Weekend" || day.isWeekend
+                    ? "WEEKEND"
+                    : day.status === "Not Updated"
+                    ? "Pending"
+                    : day.status || "UPCOMING"}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

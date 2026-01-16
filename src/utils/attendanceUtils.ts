@@ -78,8 +78,6 @@ export const isEditableMonth = (date: Date | string): boolean => {
 // Map Backend Status enum to Frontend UI strings
 export const mapStatus = (
     status: AttendanceStatus | undefined, 
-    loginTime: string | null | undefined | boolean, 
-    logoutTime: string | null | undefined | boolean, 
     isFuture: boolean, 
     isToday: boolean, 
     isWeekend: boolean,
@@ -127,6 +125,8 @@ export const mapStatus = (
                 case AttendanceStatus.HALF_DAY: return 'Half Day';
                 case AttendanceStatus.NOT_UPDATED: return 'Not Updated';
                 case AttendanceStatus.PENDING: return 'Pending';
+                case AttendanceStatus.HOLIDAY: return 'Holiday';
+                case AttendanceStatus.WEEKEND: return 'Weekend';
                 default: break;
             }
         }
@@ -136,6 +136,7 @@ export const mapStatus = (
     if (isFuture) return undefined;
     if (isWeekend) return undefined;
 
+    // 3. For Past/Today weekdays with no explicit status -> Not Updated
     return isToday ? 'Pending' : 'Not Updated';
 };
 

@@ -6,7 +6,7 @@ import MyTimesheet from './MyTimesheet';
 import Calendar from './CalendarView'; // Replaced FullTimesheet
 import MyProfile from './MyProfile';
 import TodayAttendance from './TodayAttendance';
-import ChangePassword from './ChangePassword';
+//import ChangePassword from './ChangePassword';
 
 import { useAppDispatch, useAppSelector } from '../hooks';
 import { fetchMonthlyAttendance } from '../reducers/employeeAttendance.reducer';
@@ -53,10 +53,6 @@ const EmployeeDashboard = () => {
         fetchAttendance(viewDate);
     }, [fetchAttendance, viewDate]);
 
-    useEffect(() => {
-        console.log('EmployeeDashboard: Records loaded:', records.length, 'Last Date:', records[records.length-1]?.workingDate);
-    }, [records]);
-
     // Sync View Date when scrolling to a specific date (e.g. from Dashboard Calendar)
     useEffect(() => {
         if (scrollToDate) {
@@ -65,20 +61,25 @@ const EmployeeDashboard = () => {
     }, [scrollToDate]);
 
     // Handlers for MyTimesheet tab
-
+    const handleDateNavigator = useCallback((timestamp: number) => {
+        setScrollToDate(timestamp);
+        setViewDate(new Date(timestamp));
+        setActiveTab('My Timesheet');
+    }, []);
 
     const renderContent = () => {
         if (activeTab === 'My Timesheet') {
             return (
                 <MyTimesheet
                     now={viewDate}
+                    selectedDateId={scrollToDate}
                 />
             );
         }
 
         if (activeTab === 'Timesheet View') {
             return (
-                <div className="p-4 md:p-8 h-full overflow-y-auto">
+                <div className="px-4 md:px-8 pb-0 pt-2 md:pt-4 h-full">
                      <Calendar 
                         now={today}
                         currentDate={fullTimesheetDate}
@@ -86,20 +87,26 @@ const EmployeeDashboard = () => {
                             setFullTimesheetDate(date);
                             fetchAttendance(date);
                         }}
+                        onNavigateToDate={(day) => {
+                            const targetDate = new Date(fullTimesheetDate.getFullYear(), fullTimesheetDate.getMonth(), day);
+                            handleDateNavigator(targetDate.getTime());
+                        }}
                         variant="large"
                     />
                 </div>
             );
         }
 
-        if (activeTab === 'My Profile') return <MyProfile />;
-        if (activeTab === 'Change Password') return <ChangePassword />;
+        if (activeTab === 'My Profile') {
+            return <MyProfile />;
+        }
 
         // Dashboard View (TodayAttendance)
         return (
             <TodayAttendance
                 setActiveTab={setActiveTab}
                 setScrollToDate={setScrollToDate}
+                onNavigate={(timestamp) => handleDateNavigator(timestamp)}
             />
         );
     };
@@ -113,13 +120,15 @@ const EmployeeDashboard = () => {
     return (
         <div className="flex flex-col h-screen overflow-hidden">
             <Header />
-            <SidebarLayout 
-                activeTab={activeTab} 
-                onTabChange={setActiveTab}
-                onLogout={handleLogout}
-            >
-                {renderContent()}
-            </SidebarLayout>
+            <div className="flex-1 overflow-hidden">
+                <SidebarLayout 
+                    activeTab={activeTab} 
+                    onTabChange={setActiveTab}
+                    onLogout={handleLogout}
+                >
+                    {renderContent()}
+                </SidebarLayout>
+            </div>
         </div >
     );
 };

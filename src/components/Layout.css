@@ -1,11 +1,15 @@
 .layout {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  background-color: white;
-  background-image: none;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background-color: #F4F7FE;
 }
 
 .main-content {
   flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }

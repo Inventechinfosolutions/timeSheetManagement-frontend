@@ -1,7 +1,7 @@
 import { ActionReducerMapBuilder, createAsyncThunk, createSlice, isFulfilled, isPending, PayloadAction } from '@reduxjs/toolkit';
 import axios from 'axios';
 
-const apiUrl = '/api/v1/employee-details';
+const apiUrl = '/api/employee-details';
 
 const cleanEntity = (entity: any) => {
   const cleaned: any = {};
@@ -155,6 +155,40 @@ export const resetPassword = createAsyncThunk<any, any, ThunkConfig>(
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.message);
+    }
+  }
+);
+
+export const uploadProfileImage = createAsyncThunk<any, { id: number; file: File }, ThunkConfig>(
+  'employeeDetails/upload_profile_image',
+  async ({ id, file }, { rejectWithValue }) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await axios.post(`${apiUrl}/upload-profile-image/${id}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || error.message || 'Upload failed');
+    }
+  }
+);
+
+export const fetchProfileImage = createAsyncThunk<string, number, ThunkConfig>(
+  'employeeDetails/fetch_profile_image',
+  async (id, { rejectWithValue }) => {
+    try {
+      // Use the view endpoint but fetch as blob to handle auth
+      const response = await axios.get(`${apiUrl}/profile-image/${id}/view`, {
+        responseType: 'blob',
+      });
+      return URL.createObjectURL(response.data);
+    } catch (error: any) {
+      return rejectWithValue('No image found');
     }
   }
 );

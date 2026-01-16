@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     LayoutGrid,
     Clock,
@@ -10,24 +11,62 @@ import {
     fetchMonthlyAttendance
 } from '../reducers/employeeAttendance.reducer';
 import { 
+    getEntities,
+    setCurrentUser
+} from '../reducers/employeeDetails.reducer';
+import { 
     generateMonthlyEntries
 } from '../utils/attendanceUtils';
 import Calendar from './CalendarView';
 import { RootState } from '../store';
 
 interface Props {
-    setActiveTab: (tab: string) => void;
-    setScrollToDate: (date: number | null) => void;
+    setActiveTab?: (tab: string) => void;
+    setScrollToDate?: (date: number | null) => void;
+    onNavigate?: (timestamp: number) => void;
 }
 
-const TodayAttendance = ({ setActiveTab, setScrollToDate }: Props) => {
+const TodayAttendance = ({ setActiveTab, setScrollToDate, onNavigate }: Props) => {
     const dispatch = useAppDispatch();
+    const navigate = useNavigate();
     const { records, loading } = useAppSelector((state: RootState) => state.attendance);
     const { entity } = useAppSelector((state: RootState) => state.employeeDetails);
-    const currentEmployeeId = entity?.employeeId ;
+    const { currentUser } = useAppSelector((state: RootState) => state.user);
+    const currentEmployeeId = entity?.employeeId;
+    const detailsFetched = useRef(false);
+    const attendanceFetchedKey = useRef<string | null>(null);
 
     const [now] = useState(() => new Date());
     const [calendarDate, setCalendarDate] = useState(new Date());
+
+    // Fetch entity if missing name but we have an ID to search for
+    useEffect(() => {
+        if (!entity?.fullName && (currentEmployeeId || currentUser?.loginId)) {
+            const searchTerm = currentEmployeeId || currentUser?.loginId;
+            if (searchTerm) {
+                if (detailsFetched.current) return;
+                detailsFetched.current = true;
+                
+                dispatch(getEntities({ page: 1, limit: 1, search: searchTerm }))
+                    .unwrap()
+                    .then((response) => {
+                         const data = Array.isArray(response) ? response : (response.data || []);
+                         // Prefer exact match on employeeId if searching by it
+                         const found = data.find((u: any) => 
+                            u.employeeId === searchTerm || u.email === searchTerm
+                         ) || data[0];
+                         
+                         if (found) {
+                             dispatch(setCurrentUser(found));
+                         }
+                    })
+                    .catch(err => {
+                         detailsFetched.current = false; // Reset on failure so it can retry
+                         console.error("Failed to fetch employee details:", err);
+                    });
+            }
+        }
+    }, [dispatch, entity, currentEmployeeId, currentUser]);
 
     // 1. Separate "Today's" Data - ALWAYS based on current real-time Month
     // This ensures "Today's Attendance" card never changes when navigating calendar
@@ -53,6 +92,10 @@ const TodayAttendance = ({ setActiveTab, setScrollToDate }: Props) => {
     const fetchAttendanceData = useCallback((date: Date) => {
         if (!currentEmployeeId) return; // Guard to prevent calls with undefined ID
 
+        const fetchKey = `${currentEmployeeId}-${date.getMonth() + 1}-${date.getFullYear()}`;
+        if (attendanceFetchedKey.current === fetchKey) return;
+        attendanceFetchedKey.current = fetchKey;
+
         dispatch(fetchMonthlyAttendance({ 
             employeeId: currentEmployeeId, 
             month: (date.getMonth() + 1).toString().padStart(2, '0'),
@@ -64,9 +107,29 @@ const TodayAttendance = ({ setActiveTab, setScrollToDate }: Props) => {
         fetchAttendanceData(now);
     }, [fetchAttendanceData, now]);
 
-    const handleNavigate = (date: number) => {
-        setScrollToDate(date);
-        setActiveTab('My Timesheet');
+    const handleDateNavigator = useCallback((timestamp: number) => {
+        if (setScrollToDate) setScrollToDate(timestamp);
+        
+        const targetDate = new Date(timestamp);
+        const navTarget = '/employee-dashboard/my-timesheet';
+        const state = { 
+            selectedDate: targetDate.toISOString(),
+            timestamp: targetDate.getTime() 
+        };
+
+        if (setActiveTab) {
+            setActiveTab('My Timesheet');
+        } else {
+            navigate(navTarget, { state });
+        }
+    }, [setScrollToDate, setActiveTab, navigate]);
+
+    const handleNavigate = (timestamp: number) => {
+        if (onNavigate) {
+            onNavigate(timestamp);
+        } else {
+            handleDateNavigator(timestamp); // Using the new handleDateNavigator
+        }
     };
 
     if (!todayStatsEntry && loading) return (
@@ -79,9 +142,13 @@ const TodayAttendance = ({ setActiveTab, setScrollToDate }: Props) => {
     if (!todayStatsEntry && !loading && records.length === 0) return <div className="p-8 text-center text-gray-500">Initializing entry...</div>;
 
     return (
-        <>
-            <header className="bg-[#F4F7FE] md:bg-opacity-50 backdrop-blur-sm sticky top-0 md:relative z-10 px-4 md:px-8 py-5 md:py-5 flex flex-col md:flex-row items-center md:items-center justify-between gap-4 border-b border-gray-100/50 md:border-none">
-                <div></div>
+        <div className="flex flex-col h-full w-full overflow-hidden bg-[#F4F7FE]">
+            <header className="bg-[#F4F7FE] md:bg-opacity-50 backdrop-blur-sm px-4 md:px-8 py-3 flex flex-col md:flex-row items-center justify-between gap-4 border-b border-gray-100/50">
+                <div className="shrink-0">
+                    <span className="text-lg md:text-xl font-bold text-[#2B3674]">
+                        Welcome, {entity?.firstName || entity?.fullName || currentUser?.aliasLoginName || 'Employee'}
+                    </span>
+                </div>
 
                 <div className="flex flex-row flex-wrap items-center gap-3">
                     <div className="bg-white px-3 md:px-4 py-1.5 md:py-2 rounded-xl md:rounded-full shadow-sm border border-gray-100 shrink-0">
@@ -89,17 +156,20 @@ const TodayAttendance = ({ setActiveTab, setScrollToDate }: Props) => {
                             {displayEntry.fullDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
                         </span>
                     </div>
-
-
                 </div>
             </header>
 
-            <div className="px-4 md:px-8 pb-8 space-y-6">
+            <div 
+                className="flex-1 overflow-y-auto px-4 md:px-8 pb-0 pt-4 space-y-4 min-h-0 custom-scrollbar"
+            >
                 {/* Status Cards - Preserving Old 3-Column Design with New Logic */}
                 <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-6">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         {/* Card 1: Total Full Days (Requested: "make this as total full day") */}
-                        <div className="bg-[#E9FBF5] rounded-xl p-5 border-l-4 border-[#01B574] relative overflow-hidden group hover:shadow-md transition-all">
+                        <div 
+                            onClick={() => handleNavigate(calendarDate.getTime())}
+                            className="bg-[#E9FBF5] rounded-xl p-5 border-l-4 border-[#01B574] relative overflow-hidden group hover:shadow-md transition-all cursor-pointer"
+                        >
                             <p className="text-gray-500 text-sm font-medium mb-3">Total Full Days</p>
                             <div className="bg-white rounded-xl px-4 py-2.5 flex items-center justify-between shadow-sm">
                                 <span className={`text-xl font-bold text-[#2B3674]`}>
@@ -109,7 +179,10 @@ const TodayAttendance = ({ setActiveTab, setScrollToDate }: Props) => {
                         </div>
 
                         {/* Card 2: Total Half Days (Requested: "make this yellow and text as ttal half day") */}
-                        <div className={`rounded-xl p-5 border-l-4 transition-all relative overflow-hidden group hover:shadow-md bg-[#FFF9E5] border-[#FFB020]`}>
+                        <div 
+                            onClick={() => handleNavigate(calendarDate.getTime())}
+                            className={`rounded-xl p-5 border-l-4 transition-all relative overflow-hidden group hover:shadow-md bg-[#FFF9E5] border-[#FFB020] cursor-pointer`}
+                        >
                             <p className="text-gray-500 text-sm font-medium mb-3">Total Half Days</p>
                             <div className="bg-white rounded-xl px-4 py-2.5 flex items-center justify-between shadow-sm">
                                 <span className={`text-xl font-bold text-[#2B3674]`}>
@@ -119,7 +192,10 @@ const TodayAttendance = ({ setActiveTab, setScrollToDate }: Props) => {
                         </div>
 
                         {/* Card 3: Total Absent Days (Requested: "total absent days", Red) */}
-                        <div className="bg-[#FDF2F2] rounded-xl p-5 border-l-4 border-[#ff4d4d] relative overflow-hidden group hover:shadow-md transition-all">
+                        <div 
+                            onClick={() => handleNavigate(calendarDate.getTime())}
+                            className="bg-[#FDF2F2] rounded-xl p-5 border-l-4 border-[#ff4d4d] relative overflow-hidden group hover:shadow-md transition-all cursor-pointer"
+                        >
                             <div className="flex justify-between items-start mb-2">
                                 <p className="text-gray-500 text-sm font-medium">Total Absent Days</p>
                             </div>
@@ -133,7 +209,7 @@ const TodayAttendance = ({ setActiveTab, setScrollToDate }: Props) => {
 
                     <div className="mt-8 flex justify-start">
                         <button
-                            onClick={() => setActiveTab('My Timesheet')}
+                             onClick={() => handleNavigate(now.getTime())}
                             className="px-6 py-2.5 bg-[#01B574] text-white rounded-xl font-bold hover:bg-[#009e65] transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-100 min-w-[200px]"
                         >
                             <Edit size={18} />
@@ -211,7 +287,7 @@ const TodayAttendance = ({ setActiveTab, setScrollToDate }: Props) => {
                     </div>
 
                     <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between h-full hover:shadow-md transition-all cursor-pointer group"
-                        onClick={() => setActiveTab('My Timesheet')}
+                        onClick={() => handleNavigate(calendarDate.getTime())}
                     >
                         <div className="flex items-start justify-between mb-4">
                             <div className="w-12 h-12 rounded-xl bg-[#FFF9E5] flex items-center justify-center text-[#FFB020] group-hover:scale-110 transition-transform">
@@ -237,25 +313,15 @@ const TodayAttendance = ({ setActiveTab, setScrollToDate }: Props) => {
                         setCalendarDate(date);
                         fetchAttendanceData(date);
                     }}
-                    onNavigateToDate={handleNavigate} 
+                    onNavigateToDate={(day) => {
+                        const targetDate = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), day);
+                        handleNavigate(targetDate.getTime());
+                    }} 
                 />
                 
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-8 pb-8">
-                    <button
-                        onClick={() => setActiveTab('Timesheet View')}
-                        className="w-full sm:w-auto px-6 py-3 bg-white border border-[#00A3C4] text-[#00A3C4] rounded-xl font-bold hover:bg-[#E6FFFA] transition-colors flex items-center justify-center gap-2"
-                    >
-                        <LayoutGrid size={18} /> View Full Timesheet
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('My Timesheet')}
-                        className="w-full sm:w-auto px-6 py-3 bg-[#00A3C4] text-white rounded-xl font-bold hover:bg-[#0093b1] transition-colors flex items-center justify-center gap-2 shadow-lg shadow-teal-100"
-                    >
-                        <Edit size={18} /> Detailed Records
-                    </button>
-                </div>
+
             </div>
-        </>
+        </div>
     );
 };
 
