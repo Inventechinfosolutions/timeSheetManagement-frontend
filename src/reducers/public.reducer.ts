@@ -72,13 +72,13 @@ const initialState: PublicState = {
 
 // ============ API Configuration ============
 
-const apiUrl = "/api/v1";
+const apiUrl = "/api";
 
 // ============ Async Thunks ============
 
 /**
  * User Login
- * POST /api/v1/public/login
+ * POST /api/public/login
  */
 export const userLogin = createAsyncThunk(
   "public/user_login",
@@ -102,7 +102,7 @@ export const userLogin = createAsyncThunk(
 
 /**
  * Verify Employee Activation Link
- * GET /api/v1/public/verify-activation-employee?token=xxx
+ * GET /api/public/verify-activation-employee?token=xxx
  */
 export const verifyActivationEmployee = createAsyncThunk(
   "public/verify_activation_employee",
@@ -125,7 +125,7 @@ export const verifyActivationEmployee = createAsyncThunk(
 
 /**
  * Reset Employee Password
- * POST /api/v1/public/reset-password-employee
+ * POST /api/public/reset-password-employee
  */
 export const resetPasswordEmployee = createAsyncThunk(
   "public/reset_password_employee",

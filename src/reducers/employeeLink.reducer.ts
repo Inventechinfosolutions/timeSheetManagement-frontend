@@ -1,7 +1,7 @@
 import { ActionReducerMapBuilder, createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 import axios from 'axios';
-const apiUrl = '/api/v1/employee-link';
+const apiUrl = '/api/employee-link';
 
 interface EmployeeLinkState {
   loading: boolean;

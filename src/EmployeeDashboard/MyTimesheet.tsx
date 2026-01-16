@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { ChevronLeft, ChevronRight, Save, AlertCircle } from "lucide-react";
 import { TimesheetEntry } from "../types";
@@ -62,14 +62,22 @@ const MyTimesheet = ({ now: propNow, selectedDateId: propSelectedDateId }: Times
   // @ts-ignore
   const { holidays } = useAppSelector((state) => (state as any).masterHolidays || { holidays: [] });
   const currentEmployeeId = entity?.employeeId;
+  const holidaysFetched = useRef(false);
+  const lastAttendanceKey = useRef<string | null>(null);
 
   // Initial Fetch
   useEffect(() => {
+    if (holidaysFetched.current) return;
+    holidaysFetched.current = true;
     dispatch(fetchHolidays());
   }, [dispatch]);
 
   useEffect(() => {
     if (!currentEmployeeId) return;
+    const fetchKey = `${currentEmployeeId}-${now.getMonth() + 1}-${now.getFullYear()}`;
+    if (lastAttendanceKey.current === fetchKey) return;
+    lastAttendanceKey.current = fetchKey;
+    
     dispatch(
       fetchMonthlyAttendance({
         employeeId: currentEmployeeId,
@@ -186,8 +194,8 @@ const MyTimesheet = ({ now: propNow, selectedDateId: propSelectedDateId }: Times
             entryDateNorm.setHours(0, 0, 0, 0);
 
             if (entryDateNorm <= todayNorm) {
-                // Past or Today weekday with 0 hours -> LEAVE
-                newStatus = "Leave";
+                // Past or Today weekday with 0 hours -> Not Updated
+                newStatus = "Not Updated";
             } else {
                 // Future weekday -> Not Updated
                 newStatus = "Not Updated";
@@ -325,8 +333,8 @@ const MyTimesheet = ({ now: propNow, selectedDateId: propSelectedDateId }: Times
                     let bg = "bg-white";
                     let badge = "bg-gray-100 text-gray-400";
                     if (day.status === 'Full Day' || day.status === 'WFH' || day.status === 'Client Visit') { bg = "bg-[#E9FBF5]/50"; badge = "bg-[#E9FBF5] text-[#01B574]"; }
-                    else if (day.status === 'Half Day' || day.status === 'Pending' || day.status === 'Not Updated') { bg = "bg-[#FFF9E5]/50"; badge = "bg-[#FFF9E5] text-[#FFB020]"; }
                     else if (isRed || day.status === 'Leave' || day.status === 'Holiday' || day.status === 'Weekend') { bg = "bg-[#FDF2F2]/50"; badge = "bg-[#FDF2F2] text-[#ff4d4d]"; }
+                    else if (day.status === 'Half Day' || day.status === 'Pending' || day.status === 'Not Updated') { bg = "bg-[#FFF9E5]/50"; badge = "bg-[#FFF9E5] text-[#FFB020]"; }
                     else if (day.isToday) bg = "bg-[#F4F7FE]";
 
                     return (
@@ -342,7 +350,7 @@ const MyTimesheet = ({ now: propNow, selectedDateId: propSelectedDateId }: Times
                                 <input
                                     type="text"
                                     disabled={!isEditableMonth(day.fullDate)}
-                                    className={`w-full max-w-[45px] h-7 text-center text-sm font-bold rounded-md border focus:outline-none focus:ring-2 focus:ring-[#00A3C4] ${!isEditableMonth(day.fullDate) ? "bg-gray-50 text-gray-400 cursor-not-allowed" : "bg-white text-[#2B3674] shadow-inner"}`}
+                                    className={`w-full max-w-[60px] h-7 text-center text-sm font-bold rounded-md border focus:outline-none focus:ring-2 focus:ring-[#00A3C4] ${!isEditableMonth(day.fullDate) ? "bg-gray-50 text-gray-400 cursor-not-allowed" : "bg-white text-[#2B3674] shadow-inner"}`}
                                     placeholder="0"
                                     value={inputValue}
                                     onChange={(e) => handleHoursInput(idx, e.target.value)}
@@ -350,11 +358,9 @@ const MyTimesheet = ({ now: propNow, selectedDateId: propSelectedDateId }: Times
                                 />
                             </div>
                             <div className={`w-full py-0.5 rounded-md text-center text-[7.5px] font-black uppercase tracking-tight truncate ${badge}`}>
-                                {day.status === 'Not Updated' ? 'Pending' : (
-                                    (day.status === 'Holiday' || (!day.status && holiday)) ? (holiday?.holidayName || holiday?.name || "HOLIDAY") : 
-                                    (day.status === 'Weekend' || (!day.status && day.isWeekend)) ? "WEEKEND" :
-                                    (day.status || "UPCOMING")
-                                )}
+                                { (day.status === 'Holiday' || holiday) ? (holiday?.holidayName || holiday?.name || "HOLIDAY") : 
+                                  (day.status === 'Weekend' || day.isWeekend) ? "WEEKEND" :
+                                  (day.status === 'Not Updated' ? 'Pending' : (day.status || "UPCOMING"))}
                             </div>
                         </div>
                     );

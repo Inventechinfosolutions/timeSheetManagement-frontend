@@ -1,7 +1,7 @@
 .footer {
   background: white;
-  border-top: 1px solid #f0f0f0;
-  padding: 6px 0;
+  border-top: 1px solid #f4f7fe;
+  padding: 0;
   width: 100%;
 }
 
@@ -11,6 +11,20 @@
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+.footer-content {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
+.footer-logo {
+  height: 22px;
+  width: auto;
+  filter: brightness(1.05) contrast(1.1) saturate(1.2);
+  display: block;
 }
 
 .footer-small {

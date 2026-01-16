@@ -106,8 +106,8 @@ export const mapStatus = (
     if (isFuture) return undefined;
     if (isWeekend) return undefined;
 
-    // 3. For Past/Today weekdays with no explicit status -> Leave
-    return isToday ? 'Pending' : 'Leave';
+    // 3. For Past/Today weekdays with no explicit status -> Not Updated
+    return isToday ? 'Pending' : 'Not Updated';
 };
 
 /**

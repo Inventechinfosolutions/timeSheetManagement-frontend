@@ -105,7 +105,7 @@ export const MobileTimesheetCard = ({
       <div className="flex justify-between items-start mb-4">
         <div className="flex items-center gap-3">
           <div
-            className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+            className={`w-12 h-10 rounded-xl flex items-center justify-center ${
               day.isToday ? "bg-teal-50 text-[#00A3C4]" : "bg-gray-50 text-gray-400"
             }`}
           >
@@ -200,27 +200,6 @@ export const MobileTimesheetCard = ({
         </div>
       </div>
 
-      {isEditable && (!day.isSavedLogout || day.isEditing) && (
-        <button
-          onClick={() => {
-            if (!showHoursOnly) {
-                if (!day.loginTime || day.loginTime === "--:--" || day.loginTime.includes("--")) {
-                alert("Please fill Login time.");
-                return;
-                }
-                if (day.isSaved && (!day.logoutTime || day.logoutTime === "--:--" || day.logoutTime.includes("--"))) {
-                alert("Please fill Logout time to update.");
-                return;
-                }
-            }
-            handleSave && handleSave(index);
-          }}
-          className="w-full py-3 bg-[#00A3C4] text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-teal-100 mt-4"
-        >
-          <Save size={18} />
-          {day.isEditing ? "Complete" : day.isSaved ? "Update" : "Save Record"}
-        </button>
-      )}
     </div>
   );
 };

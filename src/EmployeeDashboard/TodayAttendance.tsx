@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     LayoutGrid,
@@ -33,6 +33,8 @@ const TodayAttendance = ({ setActiveTab, setScrollToDate, onNavigate }: Props) =
     const { entity } = useAppSelector((state: RootState) => state.employeeDetails);
     const { currentUser } = useAppSelector((state: RootState) => state.user);
     const currentEmployeeId = entity?.employeeId;
+    const detailsFetched = useRef(false);
+    const attendanceFetchedKey = useRef<string | null>(null);
 
     const [now] = useState(() => new Date());
     const [calendarDate, setCalendarDate] = useState(new Date());
@@ -42,6 +44,9 @@ const TodayAttendance = ({ setActiveTab, setScrollToDate, onNavigate }: Props) =
         if (!entity?.fullName && (currentEmployeeId || currentUser?.loginId)) {
             const searchTerm = currentEmployeeId || currentUser?.loginId;
             if (searchTerm) {
+                if (detailsFetched.current) return;
+                detailsFetched.current = true;
+                
                 dispatch(getEntities({ page: 1, limit: 1, search: searchTerm }))
                     .unwrap()
                     .then((response) => {
@@ -55,7 +60,10 @@ const TodayAttendance = ({ setActiveTab, setScrollToDate, onNavigate }: Props) =
                              dispatch(setCurrentUser(found));
                          }
                     })
-                    .catch(err => console.error("Failed to fetch employee details:", err));
+                    .catch(err => {
+                         detailsFetched.current = false; // Reset on failure so it can retry
+                         console.error("Failed to fetch employee details:", err);
+                    });
             }
         }
     }, [dispatch, entity, currentEmployeeId, currentUser]);
@@ -83,6 +91,10 @@ const TodayAttendance = ({ setActiveTab, setScrollToDate, onNavigate }: Props) =
 
     const fetchAttendanceData = useCallback((date: Date) => {
         if (!currentEmployeeId) return; // Guard to prevent calls with undefined ID
+
+        const fetchKey = `${currentEmployeeId}-${date.getMonth() + 1}-${date.getFullYear()}`;
+        if (attendanceFetchedKey.current === fetchKey) return;
+        attendanceFetchedKey.current = fetchKey;
 
         dispatch(fetchMonthlyAttendance({ 
             employeeId: currentEmployeeId, 
