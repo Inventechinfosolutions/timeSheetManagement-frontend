@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight, Download, X, Calendar as CalendarIcon } from "lucide-react";
 import { downloadPdf } from "../utils/downloadPdf";
@@ -32,6 +32,8 @@ const Calendar = ({
     const { records } = useAppSelector((state: RootState) => state.attendance);
     const { entity } = useAppSelector((state: RootState) => state.employeeDetails);
     const currentEmployeeId = entity?.employeeId;
+    const holidaysFetched = useRef(false);
+    const attendanceFetchedKey = useRef<string | null>(null);
 
     const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
     const [downloadDateRange, setDownloadDateRange] = useState({
@@ -86,6 +88,8 @@ const Calendar = ({
     
     // Fetch holidays on mount
     useEffect(() => {
+        if (holidaysFetched.current) return;
+        holidaysFetched.current = true;
         dispatch(fetchHolidays());
     }, [dispatch]);
 
@@ -97,6 +101,10 @@ const Calendar = ({
     // Fetch attendance data when month changes (if standalone)
     useEffect(() => {
         if (currentEmployeeId && !propEntries) {
+            const fetchKey = `${currentEmployeeId}-${displayDate.getMonth() + 1}-${displayDate.getFullYear()}`;
+            if (attendanceFetchedKey.current === fetchKey) return;
+            attendanceFetchedKey.current = fetchKey;
+
             dispatch(fetchMonthlyAttendance({
                 employeeId: currentEmployeeId,
                 month: (displayDate.getMonth() + 1).toString().padStart(2, '0'),

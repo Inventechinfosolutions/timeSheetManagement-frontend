@@ -78,7 +78,7 @@ const initialState: UserState = {
   passwordChangeSuccess: false,
 };
 
-const apiUrl = '/api/v1/user'; 
+const apiUrl = '/api/user'; 
 
 // 1. Create User: POST /user/create
 export const createUser = createAsyncThunk(

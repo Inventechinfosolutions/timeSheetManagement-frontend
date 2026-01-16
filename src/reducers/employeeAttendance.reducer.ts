@@ -51,14 +51,14 @@ const initialState: AttendanceState = {
   workedDaysSummary: null,
 };
 
-const apiUrl = '/api/v1/employee-attendance';
+const apiUrl = '/api/employee-attendance';
 
 // 1. Fetch Monthly Details: GET /monthly-details/:employeeId?month=...&year=...
 export const fetchMonthlyAttendance = createAsyncThunk(
   'attendance/fetchMonthly',
   async ({ employeeId, month, year }: { employeeId: string; month: string; year: string }) => {
     const response = await axios.get(`${apiUrl}/monthly-details/${employeeId}`, {
-      params: { month, year, employeeId },
+      params: { month, year },
     });
     return response.data;
   }

@@ -9,6 +9,8 @@ import {
 } from "lucide-react";
 import { useAppSelector, useAppDispatch } from "../hooks";
 import { getEntities, setCurrentUser, uploadProfileImage, fetchProfileImage } from "../reducers/employeeDetails.reducer";
+import inventechLogo from "../assets/inventech-logo.jpg";
+import defaultAvatar from "../assets/default-avatar.jpg";
 
 const MyProfile = () => {
   const dispatch = useAppDispatch();
@@ -19,15 +21,20 @@ const MyProfile = () => {
   const displayEmployeeId = entity?.employeeId;
 
   // Use entity values or fallbacks
-  // Default to a placeholder if no image found in entity
-  const defaultImage = "https://media.istockphoto.com/id/1389610405/vector/avatar-man-user-icon.webp?a=1&b=1&s=612x612&w=0&k=20&c=044RCWtERyeaZmepUN5Zpca7CXL5sLFgHd9JoZosTPE=";
+  // Default to a local asset if no image found in entity
+  const defaultImage = defaultAvatar;
   const [profileImage, setProfileImage] = useState(defaultImage);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const detailsFetched = useRef(false);
+  const imageFetchedForId = useRef<number | null>(null);
 
   // Effect: Fetch Full Employee Details & Image on Mount
   useEffect(() => {
     // 1. Fetch data using the string ID (if available) - assuming search works with string ID
     if (displayEmployeeId) {
+        if (detailsFetched.current) return;
+        detailsFetched.current = true;
+
         dispatch(getEntities({ page: 1, limit: 1, search: displayEmployeeId }))
             .unwrap()
             .then((response) => {
@@ -38,17 +45,24 @@ const MyProfile = () => {
                     dispatch(setCurrentUser(foundUser));
                 }
             })
-            .catch((err) => console.error("Failed to fetch profile data:", err));
+            .catch((err) => {
+                detailsFetched.current = false;
+                console.error("Failed to fetch profile data:", err);
+            });
     }
 
     // 2. Securely Fetch Profile Image using Numeric ID
     if (currentDbId) {
+        if (imageFetchedForId.current === currentDbId) return;
+        imageFetchedForId.current = currentDbId;
+
         dispatch(fetchProfileImage(currentDbId))
             .unwrap()
             .then((blobUrl) => {
                 setProfileImage(blobUrl);
             })
             .catch(() => {
+                imageFetchedForId.current = null;
                 setProfileImage(defaultImage);
             });
     }

@@ -16,7 +16,7 @@ import {
 } from '../types/masterHoliday.types';
 
 // Standardizing API URL to port 3000 to match user service
-const API_URL = '/api/v1/master-holidays';
+const API_URL = '/api/master-holidays';
 
 const initialState: MasterHolidayState = {
   holidays: [],

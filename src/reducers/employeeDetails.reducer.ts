@@ -1,7 +1,7 @@
 import { ActionReducerMapBuilder, createAsyncThunk, createSlice, isFulfilled, isPending, PayloadAction } from '@reduxjs/toolkit';
 import axios from 'axios';
 
-const apiUrl = '/api/v1/employee-details';
+const apiUrl = '/api/employee-details';
 
 const cleanEntity = (entity: any) => {
   const cleaned: any = {};
