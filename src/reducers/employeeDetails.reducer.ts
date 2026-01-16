@@ -41,15 +41,37 @@ interface ThunkConfig {
   rejectValue: string;
 }
 
-export const getEntities = createAsyncThunk<any, { page: number; limit: number; search: string }, ThunkConfig>(
+export const getEntities = createAsyncThunk<
+  any,
+  {
+    page: number;
+    limit: number;
+    search: string;
+    sort?: string;
+    order?: string;
+    department?: string;
+  },
+  ThunkConfig
+>(
   'employeeDetails/fetch_entity_list',
-  async ({ page, limit, search }, { rejectWithValue }) => {
+  async ({ page, limit, search, sort, order, department }, { rejectWithValue }) => {
     try {
-      const queryParams = new URLSearchParams({
+      const params: any = {
         page: page.toString(),
         limit: limit.toString(),
         search: search || '',
-      });
+      };
+
+      if (sort) {
+        params.sort = sort;
+        params.order = order ? order.toUpperCase() : 'ASC';
+      }
+
+      if (department && department !== 'All') {
+        params.department = department;
+      }
+
+      const queryParams = new URLSearchParams(params);
       const response = await axios.get(`${apiUrl}?${queryParams.toString()}`);
       return response.data;
     } catch (error: any) {

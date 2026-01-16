@@ -5,18 +5,20 @@ import { getEntities } from "../reducers/employeeDetails.reducer";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { Eye, Search } from "lucide-react";
 
-const EmployeeListView = () => {
+const EmpWorkingDetails = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10; // Server-side pagination limit
 
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-
+  const [selectedDepartment, setSelectedDepartment] = useState("All");
   const [sortConfig, setSortConfig] = useState<{
     key: string | null;
     direction: "asc" | "desc";
   }>({ key: null, direction: "asc" });
+
+  const departments = ["All", "HR", "IT", "Sales", "Marketing", "Finance"];
 
   const dispatch = useAppDispatch();
   const { entities, totalItems } = useAppSelector(
@@ -29,9 +31,6 @@ const EmployeeListView = () => {
     }, 500);
     return () => clearTimeout(timer);
   }, [searchTerm]);
-
-  const [selectedDepartment, setSelectedDepartment] = useState("All");
-  const departments = ["All", "HR", "IT", "Sales", "Marketing", "Finance"];
 
   useEffect(() => {
     dispatch(
@@ -75,12 +74,16 @@ const EmployeeListView = () => {
   const currentItems = employees;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
-  const handlePageChange = (pageNumber: number) => {
-    setCurrentPage(pageNumber);
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage((prev) => prev + 1);
+    }
   };
 
-  const handleViewDetails = (empId: string) => {
-    navigate(`/admin-dashboard/employee-details/${empId}`);
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage((prev) => prev - 1);
+    }
   };
 
   const styles = {
@@ -148,17 +151,6 @@ const EmployeeListView = () => {
       fontWeight: "500",
       textTransform: "uppercase" as const,
     },
-    clickableTh: {
-      textAlign: "left" as const,
-      padding: "15px",
-      borderBottom: "1px solid #E9EDF7",
-      color: "#A3AED0",
-      fontSize: "12px",
-      fontWeight: "500",
-      textTransform: "uppercase" as const,
-      cursor: "pointer",
-      userSelect: "none" as const,
-    },
     td: {
       padding: "15px",
       borderBottom: "1px solid #E9EDF7",
@@ -178,22 +170,14 @@ const EmployeeListView = () => {
     },
   };
 
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage((prev) => prev + 1);
-    }
-  };
-
-  const handlePrevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage((prev) => prev - 1);
-    }
+  const handleViewDetails = (empId: string) => {
+    navigate(`/admin-dashboard/working-details/${empId}`);
   };
 
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <h1 style={styles.title}>Employee List</h1>
+        <h1 style={styles.title}>Employee Working Details</h1>
 
         <div style={styles.filterContainer}>
           {/* Department Filter */}
@@ -201,7 +185,7 @@ const EmployeeListView = () => {
             value={selectedDepartment}
             onChange={(e) => {
               setSelectedDepartment(e.target.value);
-              setCurrentPage(1); // Reset to first page on filter change
+              setCurrentPage(1); // Reset to first page
             }}
             style={styles.dropdown}
           >
@@ -219,10 +203,7 @@ const EmployeeListView = () => {
               type="text"
               placeholder="Search..."
               value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page on search
-              }}
+              onChange={(e) => setSearchTerm(e.target.value)}
               style={{
                 border: "none",
                 outline: "none",
@@ -242,35 +223,20 @@ const EmployeeListView = () => {
           <thead>
             <tr>
               <th
-                style={styles.clickableTh}
+                style={{ ...styles.th, cursor: "pointer", userSelect: "none" }}
                 onClick={() => handleSort("fullName")}
                 title="Click to sort by Name"
               >
-                <div
-                  style={{ display: "flex", alignItems: "center", gap: "5px" }}
-                >
-                  Name
-                  {/* {sortConfig.key === "fullName" && (
-                    <span>{sortConfig.direction === "asc" ? "↑" : "↓"}</span>
-                  )} */}
-                </div>
+                Name
               </th>
               <th
-                style={styles.clickableTh}
+                style={{ ...styles.th, cursor: "pointer", userSelect: "none" }}
                 onClick={() => handleSort("employeeId")}
                 title="Click to sort by ID"
               >
-                <div
-                  style={{ display: "flex", alignItems: "center", gap: "5px" }}
-                >
-                  ID
-                  {/* {sortConfig.key === "employeeId" && (
-                    <span>{sortConfig.direction === "asc" ? "↑" : "↓"}</span>
-                  )} */}
-                </div>
+                ID
               </th>
               <th style={styles.th}>Department</th>
-              {/* <th style={styles.th}>Work Hours</th> */}
               <th style={styles.th}>Action</th>
             </tr>
           </thead>
@@ -280,7 +246,6 @@ const EmployeeListView = () => {
                 <td style={styles.td}>{emp.name}</td>
                 <td style={styles.td}>{emp.id}</td>
                 <td style={styles.td}>{emp.department}</td>
-                {/* <td style={styles.td}>{emp.hours}</td> */}
                 <td style={styles.td}>
                   <button
                     style={styles.actionBtn}
@@ -363,4 +328,4 @@ const EmployeeListView = () => {
   );
 };
 
-export default EmployeeListView;
+export default EmpWorkingDetails;

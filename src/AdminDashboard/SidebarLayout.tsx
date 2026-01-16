@@ -10,6 +10,7 @@ import {
   X,
   ChevronDown,
   ChevronRight,
+  ClipboardList,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -50,8 +51,9 @@ SidebarLayoutProps) => {
   const sidebarItems = [
     { name: "System Dashboard", icon: Settings },
     { name: "Employee Details", icon: Users },
+    { name: "Timesheet", icon: AlarmClock },
+    { name: "Working Details", icon: ClipboardList },
     { name: "User & Role Management", icon: Users },
-    
   ];
 
   // const handleLogout = () => {

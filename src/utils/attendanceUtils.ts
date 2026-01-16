@@ -104,6 +104,7 @@ export const mapStatus = (
                     case AttendanceStatus.HALF_DAY: return 'Half Day';
                     case AttendanceStatus.NOT_UPDATED: return 'Not Updated';
                     case AttendanceStatus.PENDING: return 'Pending';
+                    case AttendanceStatus.BLOCKED: return 'Blocked';
                     default: break;
                 }
             }
@@ -118,6 +119,8 @@ export const mapStatus = (
              return totalHours >= 6 ? 'Full Day' : 'Half Day';
         }
         if (status === AttendanceStatus.LEAVE) return 'Leave';
+        if (status === AttendanceStatus.BLOCKED) return 'Blocked';
+        
         if (status !== AttendanceStatus.PENDING || !isToday) {
             switch (status) {
                 case AttendanceStatus.FULL_DAY: return 'Full Day';
@@ -166,7 +169,7 @@ export const mapAttendanceToEntry = (
         isWeekend,
         isFuture,
         totalHours, // Ensure this is passed to the UI
-        status: mapStatus(attendance?.status, isFuture, isToday, isWeekend, totalHours),
+        status: mapStatus(attendance?.status, attendance?.loginTime, attendance?.logoutTime, isFuture, isToday, isWeekend, totalHours),
         isEditing: false,
         isSaved: !!attendance?.id,
         isSavedLogout: !!attendance?.logoutTime && attendance.logoutTime !== "00:00:00" && !attendance.logoutTime.includes("NaN"),

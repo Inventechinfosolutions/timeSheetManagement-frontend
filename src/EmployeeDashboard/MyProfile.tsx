@@ -8,51 +8,83 @@ import {
   CreditCard,
 } from "lucide-react";
 import { useAppSelector, useAppDispatch } from "../hooks";
-import { getEntities, setCurrentUser } from "../reducers/employeeDetails.reducer";
+import {
+  getEntities,
+  setCurrentUser,
+} from "../reducers/employeeDetails.reducer";
 
 const MyProfile = () => {
   const dispatch = useAppDispatch();
   const { entity } = useAppSelector((state) => state.employeeDetails);
-  
+  const { currentUser } = useAppSelector((state) => state.user);
+
   // Identify current user ID from the session (set during login)
-  const currentEmployeeId = entity?.employeeId;
+  // Logic: 1. check Redux currentUser, 2. check Redux entity (last fetched), 3. check localStorage (persisted on login)
+  const currentSearchId =
+    currentUser?.loginId ||
+    entity?.employeeId ||
+    localStorage.getItem("userLoginId");
 
   // Use entity values or fallbacks
-  // Default to a placeholder if no image found in entity
-  const defaultImage = "https://media.istockphoto.com/id/1389610405/vector/avatar-man-user-icon.webp?a=1&b=1&s=612x612&w=0&k=20&c=044RCWtERyeaZmepUN5Zpca7CXL5sLFgHd9JoZosTPE=";
+  const defaultImage =
+    "https://media.istockphoto.com/id/1389610405/vector/avatar-man-user-icon.webp?a=1&b=1&s=612x612&w=0&k=20&c=044RCWtERyeaZmepUN5Zpca7CXL5sLFgHd9JoZosTPE=";
   const [profileImage, setProfileImage] = useState(defaultImage);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Effect: Fetch Full Employee Details on Mount
+  // Debug logs
   useEffect(() => {
-    if (currentEmployeeId) {
-        // Use search to find the specific employee by ID string
-        dispatch(getEntities({ page: 1, limit: 1, search: currentEmployeeId }))
-            .unwrap()
-            .then((response) => {
-                // Handle different response structures (array or paginated object)
-                const dataList = Array.isArray(response) ? response : (response.data || []);
-                const foundUser = dataList.find((u: any) => u.employeeId === currentEmployeeId);
-                
-                if (foundUser) {
-                    dispatch(setCurrentUser(foundUser));
-                    // Sync image if it exists
-                    if (foundUser.profileImage) {
-                        setProfileImage(foundUser.profileImage);
-                    }
-                }
-            })
-            .catch((err) => console.error("Failed to fetch profile:", err));
+    console.log(
+      "MyProfile: Component mounted or searchId changed:",
+      currentSearchId
+    );
+  }, [currentSearchId]);
+
+  // Effect: Fetch Full Employee Details
+  useEffect(() => {
+    if (currentSearchId) {
+      console.log("MyProfile: Calling getEntities for:", currentSearchId);
+      dispatch(
+        getEntities({ page: 1, limit: 10, search: String(currentSearchId) })
+      )
+        .unwrap()
+        .then((response) => {
+          const dataList = Array.isArray(response)
+            ? response
+            : response.data || [];
+          const foundUser = dataList.find(
+            (u: any) =>
+              String(u.email || "").toLowerCase() ===
+                String(currentSearchId).toLowerCase() ||
+              String(u.loginId || "").toLowerCase() ===
+                String(currentSearchId).toLowerCase() ||
+              String(u.employeeId || "").toLowerCase() ===
+                String(currentSearchId).toLowerCase() ||
+              (u.fullName && u.fullName === currentUser?.aliasLoginName) ||
+              (u.name && u.name === currentUser?.aliasLoginName)
+          );
+
+          if (foundUser) {
+            dispatch(setCurrentUser(foundUser));
+            if (foundUser.profileImage || foundUser.image) {
+              setProfileImage(foundUser.profileImage || foundUser.image);
+            }
+          } else if (dataList.length === 1) {
+            dispatch(setCurrentUser(dataList[0]));
+            if (dataList[0].profileImage || dataList[0].image) {
+              setProfileImage(dataList[0].profileImage || dataList[0].image);
+            }
+          }
+        })
+        .catch((err) => console.error("MyProfile: API Error:", err));
     }
-  }, [dispatch, currentEmployeeId]);
+  }, [dispatch, currentSearchId]);
 
-  // Sync state with entity updates from other sources/re-renders
+  // Sync state with entity updates from authMe or other components
   useEffect(() => {
-      if (entity?.profileImage) {
-          setProfileImage(entity.profileImage);
-      }
+    if (entity?.profileImage || entity?.image) {
+      setProfileImage(entity.profileImage || entity.image);
+    }
   }, [entity]);
-
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -99,9 +131,11 @@ const MyProfile = () => {
 
         <div>
           <h1 className="text-2xl font-bold text-[#2B3674]">
-            {entity?.fullName || ""}
+            {entity?.fullName || entity?.name || ""}
           </h1>
-          <p className="text-gray-400 font-medium text-sm">{entity?.designation || ""}</p>
+          <p className="text-gray-400 font-medium text-sm">
+            {entity?.designation || ""}
+          </p>
           <div className="flex items-center gap-2 mt-1 text-sm text-gray-400 font-medium">
             <Building size={14} className="text-gray-400" />
             <span>InvenTech</span>
@@ -130,7 +164,7 @@ const MyProfile = () => {
               <input
                 type="text"
                 disabled
-                value={entity?.fullName || ""}
+                value={entity?.fullName || entity?.name || ""}
                 className="w-full pl-9 pr-3 py-2.5 border border-gray-100 rounded-xl bg-[#F4F7FE] text-[#2B3674] text-xs font-medium"
               />
               <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
@@ -146,7 +180,7 @@ const MyProfile = () => {
               <input
                 type="text"
                 disabled
-                value={entity?.employeeId || ""}
+                value={entity?.employeeId || entity?.id || ""}
                 className="w-full pl-9 pr-3 py-2.5 border border-gray-100 rounded-xl bg-[#F4F7FE] text-[#2B3674] text-xs font-medium"
               />
               <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />

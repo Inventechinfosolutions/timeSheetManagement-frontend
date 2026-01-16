@@ -8,6 +8,7 @@ import {
   Building,
   CreditCard,
   Calendar,
+  ArrowLeft,
 } from "lucide-react";
 
 const EmployeeDetailsView = () => {
@@ -37,8 +38,15 @@ const EmployeeDetailsView = () => {
     <div className="p-8 max-w-4xl mx-auto font-sans text-[#2B3674]">
       {/* Header */}
       <div className="mb-8">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 text-gray-500 hover:text-[#4318FF] mb-4 transition-colors"
+        >
+          <ArrowLeft size={20} />
+          <span className="font-medium">Back to employee list</span>
+        </button>
         <h1 className="text-3xl font-bold mb-2">Employee Details</h1>
-        <p className="text-gray-500">View and manage employee information.</p>
+        <p className="text-gray-500">View Employee Information</p>
       </div>
 
       {/* Main Content Grid */}
@@ -58,7 +66,7 @@ const EmployeeDetailsView = () => {
           </p>
 
           <div className="w-full pt-4 border-t border-gray-50 mt-auto">
-            <button
+            {/* <button
               onClick={() =>
                 navigate(`/admin-dashboard/timesheet/${employeeId}`)
               }
@@ -66,7 +74,7 @@ const EmployeeDetailsView = () => {
             >
               <Calendar size={16} />
               View Timesheet
-            </button>
+            </button> */}
           </div>
         </div>
 

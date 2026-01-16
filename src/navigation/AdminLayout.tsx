@@ -13,6 +13,12 @@ const AdminLayout = () => {
     if (location.pathname === "/admin-dashboard/employees") {
       return "Employee Details";
     }
+    if (location.pathname === "/admin-dashboard/working-details") {
+      return "Working Details";
+    }
+    if (location.pathname === "/admin-dashboard/timesheet-list") {
+      return "Timesheet";
+    }
     return "System Dashboard";
   };
 
@@ -21,6 +27,10 @@ const AdminLayout = () => {
       navigate("/admin-dashboard/registration");
     } else if (tabName === "Employee Details") {
       navigate("/admin-dashboard/employees");
+    } else if (tabName === "Timesheet") {
+      navigate("/admin-dashboard/timesheet-list");
+    } else if (tabName === "Working Details") {
+      navigate("/admin-dashboard/working-details");
     } else {
       navigate("/admin-dashboard");
     }

@@ -63,6 +63,7 @@ const Landing = () => {
       const resultAction = await dispatch(loginUser({ loginId, password }));
       if (loginUser.fulfilled.match(resultAction)) {
         // Success!
+        localStorage.setItem("userLoginId", loginId);
         dispatch(setCurrentUser({ employeeId: loginId }));
         // Effect will handle redirect to /admin-dashboard or /employee-dashboard based on role
       } else {
@@ -75,6 +76,7 @@ const Landing = () => {
           "Admin login failed or user is not admin. Proceeding as Employee."
         );
         // Set employee context for dashboard components
+        localStorage.setItem("userLoginId", loginId);
         dispatch(setCurrentUser({ employeeId: loginId }));
       }
     } catch (err) {

@@ -5,6 +5,8 @@ import { getEntities } from "../reducers/employeeDetails.reducer";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { Users, Eye, Search } from "lucide-react";
 
+import { fetchMonthlyAttendance } from "../reducers/employeeAttendance.reducer"; // Import the new thunk
+
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
@@ -15,6 +17,10 @@ const AdminDashboard = () => {
   const dispatch = useAppDispatch();
   const { entities, totalItems } = useAppSelector(
     (state: RootState) => state.employeeDetails
+  );
+
+  const { employeeRecords } = useAppSelector(
+    (state: RootState) => state.attendance
   );
 
   useEffect(() => {
@@ -34,12 +40,92 @@ const AdminDashboard = () => {
     );
   }, [dispatch, currentPage, debouncedSearchTerm]);
 
-  const employees = entities.map((emp: any) => ({
-    id: emp.employeeId || emp.id,
-    name: emp.fullName || emp.name,
-    dept: emp.department || emp.dept,
-    hours: emp.totalHours || emp.hours || "--",
-  }));
+  // Fetch attendance for each employee when entities change
+  useEffect(() => {
+    if (entities.length > 0) {
+      const now = new Date();
+      // Backend expects month as "01", "02", etc.
+      const currentMonth = (now.getMonth() + 1).toString().padStart(2, "0");
+      const currentYear = now.getFullYear().toString();
+
+      entities.forEach((emp: any) => {
+        const empId = emp.employeeId || emp.id;
+        if (empId) {
+          dispatch(
+            fetchMonthlyAttendance({
+              employeeId: empId,
+              month: currentMonth,
+              year: currentYear,
+            })
+          );
+        }
+      });
+    }
+  }, [dispatch, entities]);
+
+  const employees = entities.map((emp: any) => {
+    const empId = emp.employeeId || emp.id;
+    const records = employeeRecords[empId] || [];
+
+    let totalMinutes = 0;
+    records.forEach((record: any) => {
+      if (record.totalHours) {
+        if (typeof record.totalHours === "number") {
+          totalMinutes += record.totalHours * 60;
+        } else if (
+          typeof record.totalHours === "string" &&
+          record.totalHours.includes(":")
+        ) {
+          const [h, m] = record.totalHours.split(":").map(Number);
+          totalMinutes += (h || 0) * 60 + (m || 0);
+        }
+      }
+    });
+
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = Math.round(totalMinutes % 60);
+    const formattedHours = totalMinutes > 0 ? `${hours}h ${minutes}m` : "--";
+
+    return {
+      id: empId,
+      name: emp.fullName || emp.name,
+      dept: emp.department || emp.dept,
+      hours: formattedHours,
+    };
+  });
+
+  // Calculate Dashboard Total Hours (Sum of all LOADED records for visible employees)
+  const calculateDashboardTotalHours = () => {
+    let totalAllMinutes = 0;
+
+    // Iterate over all keys in employeeRecords that correspond to currently visible entities
+    // OR strictly sum up everything in employeeRecords?
+    // Let's sum up for visible entities to be consistent with the view
+    entities.forEach((emp: any) => {
+      const empId = emp.employeeId || emp.id;
+      const records = employeeRecords[empId] || [];
+
+      records.forEach((record: any) => {
+        if (record.totalHours) {
+          if (typeof record.totalHours === "number") {
+            totalAllMinutes += record.totalHours * 60;
+          } else if (
+            typeof record.totalHours === "string" &&
+            record.totalHours.includes(":")
+          ) {
+            const [h, m] = record.totalHours.split(":").map(Number);
+            totalAllMinutes += (h || 0) * 60 + (m || 0);
+          }
+        }
+      });
+    });
+
+    const hours = Math.floor(totalAllMinutes / 60);
+    const minutes = Math.round(totalAllMinutes % 60);
+    return `${hours}h ${minutes}m`;
+  };
+
+  const totalHoursDisplay = calculateDashboardTotalHours();
 
   const styles = {
     container: {
@@ -172,13 +258,32 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      <div style={styles.card}>
-        <div style={styles.iconBox}>
-          <Users size={24} />
+      <div
+        style={{
+          display: "flex",
+          gap: "20px",
+          flexWrap: "wrap",
+          marginBottom: "30px",
+        }}
+      >
+        <div style={styles.card}>
+          <div style={styles.iconBox}>
+            <Users size={24} />
+          </div>
+          <div>
+            <p style={styles.metricLabel}>Total Employees</p>
+            <h3 style={styles.metricValue}>{totalItems || entities.length}</h3>
+          </div>
         </div>
-        <div>
-          <p style={styles.metricLabel}>Total Employees</p>
-          <h3 style={styles.metricValue}>{totalItems || entities.length}</h3>
+
+        <div style={styles.card}>
+          <div style={styles.iconBox}>
+            <Users size={24} />
+          </div>
+          <div>
+            <p style={styles.metricLabel}>Total Hours</p>
+            <h3 style={styles.metricValue}>{totalHoursDisplay}</h3>
+          </div>
         </div>
       </div>
 
@@ -193,7 +298,6 @@ const AdminDashboard = () => {
               <th style={styles.th}>Name</th>
               <th style={styles.th}>ID</th>
               <th style={styles.th}>Work Hours</th>
-              <th style={styles.th}>Action</th>
             </tr>
           </thead>
           <tbody>
@@ -202,21 +306,77 @@ const AdminDashboard = () => {
                 <td style={styles.td}>{emp.name}</td>
                 <td style={styles.td}>{emp.id}</td>
                 <td style={styles.td}>{emp.hours}</td>
-                <td style={styles.td}>
-                  <div
-                    style={{
-                      color: "#A3AED0",
-                      display: "flex",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Eye size={16} />
-                  </div>
-                </td>
               </tr>
             ))}
+            {employees.length === 0 && (
+              <tr>
+                <td colSpan={3} style={{ ...styles.td, textAlign: "center" }}>
+                  No employees found
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
+
+        {/* Pagination Controls */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            alignItems: "center",
+            marginTop: "20px",
+            gap: "10px",
+          }}
+        >
+          <button
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            style={{
+              padding: "8px 16px",
+              borderRadius: "8px",
+              border: "1px solid #E9EDF7",
+              backgroundColor: currentPage === 1 ? "#F4F7FE" : "white",
+              color: currentPage === 1 ? "#A3AED0" : "#2B3674",
+              cursor: currentPage === 1 ? "not-allowed" : "pointer",
+              fontWeight: "bold",
+              fontSize: "14px",
+            }}
+          >
+            Previous
+          </button>
+          <span
+            style={{ fontSize: "14px", color: "#2B3674", fontWeight: "500" }}
+          >
+            Page {currentPage} of {Math.ceil(totalItems / itemsPerPage) || 1}
+          </span>
+          <button
+            onClick={() =>
+              setCurrentPage((prev) =>
+                prev * itemsPerPage < totalItems ? prev + 1 : prev
+              )
+            }
+            disabled={currentPage * itemsPerPage >= totalItems}
+            style={{
+              padding: "8px 16px",
+              borderRadius: "8px",
+              border: "1px solid #E9EDF7",
+              backgroundColor:
+                currentPage * itemsPerPage >= totalItems ? "#F4F7FE" : "white",
+              color:
+                currentPage * itemsPerPage >= totalItems
+                  ? "#A3AED0"
+                  : "#2B3674",
+              cursor:
+                currentPage * itemsPerPage >= totalItems
+                  ? "not-allowed"
+                  : "pointer",
+              fontWeight: "bold",
+              fontSize: "14px",
+            }}
+          >
+            Next
+          </button>
+        </div>
       </div>
     </div>
   );
