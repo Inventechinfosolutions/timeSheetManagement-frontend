@@ -373,25 +373,26 @@ const MyTimesheet = ({
   const weekdays = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
   return (
-    <div className="flex flex-col h-full max-h-full overflow-hidden bg-[#F4F7FE] p-2 md:px-4 md:pt-1 md:pb-0 relative">
+    <div className="flex flex-col h-full max-h-full overflow-hidden bg-[#F4F7FE] p-2 md:px-6 md:pt-4 md:pb-0 relative">
       {loading && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/30 backdrop-blur-[1px]">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#00A3C4]"></div>
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/30 backdrop-blur-[2px]">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-4 border-[#4318FF]"></div>
         </div>
       )}
       {toast.show && (
-        <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-50 flex items-center gap-1.5 animate-in fade-in slide-in-from-top-4 duration-300">
+        <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-50 flex items-center gap-2 animate-in fade-in slide-in-from-top-4 duration-300 px-4 py-2 bg-white rounded-full shadow-2xl border border-gray-100">
           {toast.type === "success" ? (
-            <Save
-              size={16}
-              className="text-[#00E676] drop-shadow-[0_0_8px_rgba(0,230,118,0.6)]"
-            />
+            <div className="p-1 bg-green-100 rounded-full">
+              <Save size={14} className="text-green-600" />
+            </div>
           ) : (
-            <AlertCircle size={16} className="text-red-500" />
+            <div className="p-1 bg-red-100 rounded-full">
+              <AlertCircle size={14} className="text-red-600" />
+            </div>
           )}
           <span
-            className={`font-bold text-xs ${
-              toast.type === "success" ? "text-[#00E676]" : "text-red-500"
+            className={`font-bold text-sm ${
+              toast.type === "success" ? "text-green-700" : "text-red-600"
             }`}
           >
             {toast.message}
@@ -399,73 +400,79 @@ const MyTimesheet = ({
         </div>
       )}
 
-      <div className="flex-1 bg-white rounded-2xl p-3 shadow-sm border border-gray-100 overflow-hidden mt-1">
-        <div className="flex justify-between items-center mb-2 px-1">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handlePrevMonth}
-              className="p-1 hover:bg-[#F4F7FE] rounded-md transition-all text-[#A3AED0] hover:text-[#2B3674]"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <p className="text-sm font-bold text-[#2B3674] min-w-[100px] text-center">
-              {now.toLocaleDateString("en-US", {
-                month: "long",
-                year: "numeric",
-              })}
-            </p>
-            <button
-              onClick={handleNextMonth}
-              disabled={!canGoNextMonth()}
-              className={`p-1 rounded-md transition-all ${
-                !canGoNextMonth()
-                  ? "text-gray-200 cursor-not-allowed"
-                  : "hover:bg-[#F4F7FE] text-[#A3AED0] hover:text-[#2B3674]"
-              }`}
-            >
-              <ChevronRight size={16} />
-            </button>
+      {/* Main Card Container */}
+      <div className="flex-1 bg-white rounded-[20px] p-4 shadow-[0px_20px_50px_0px_#111c440d] border border-gray-100 overflow-hidden mt-1 flex flex-col">
+        {/* Header Controls */}
+        <div className="flex justify-between items-center mb-4 px-2">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center bg-[#F4F7FE] rounded-xl p-1">
+              <button
+                onClick={handlePrevMonth}
+                className="p-1.5 hover:bg-white hover:shadow-sm rounded-lg transition-all text-[#A3AED0] hover:text-[#4318FF]"
+              >
+                <ChevronLeft size={18} strokeWidth={2.5} />
+              </button>
+              <p className="text-sm font-bold text-[#2B3674] min-w-[120px] text-center px-2">
+                {now.toLocaleDateString("en-US", {
+                  month: "long",
+                  year: "numeric",
+                })}
+              </p>
+              <button
+                onClick={handleNextMonth}
+                disabled={!canGoNextMonth()}
+                className={`p-1.5 rounded-lg transition-all ${
+                  !canGoNextMonth()
+                    ? "text-gray-300 cursor-not-allowed"
+                    : "hover:bg-white hover:shadow-sm text-[#A3AED0] hover:text-[#4318FF]"
+                }`}
+              >
+                <ChevronRight size={18} strokeWidth={2.5} />
+              </button>
+            </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-6">
             <div className="text-right">
-              <p className="text-[9px] uppercase font-bold text-[#A3AED0] tracking-widest leading-none mb-0.5">
-                Month Total
+              <p className="text-[10px] uppercase font-bold text-[#A3AED0] tracking-widest leading-none mb-1">
+                Total Hours
               </p>
-              <p className="text-lg font-black text-[#00A3C4] leading-none">
-                {monthTotalHours.toFixed(1)}{" "}
-                <span className="text-[10px] font-bold text-[#A3AED0]">
-                  hrs
-                </span>
-              </p>
+              <div className="flex items-baseline justify-end gap-1">
+                <p className="text-2xl font-black text-[#4318FF] leading-none">
+                  {monthTotalHours.toFixed(1)}
+                </p>
+                <span className="text-xs font-bold text-[#A3AED0]">hrs</span>
+              </div>
             </div>
             {(!readOnly || isAdmin) && (
               <button
                 onClick={onSaveAll}
-                className="flex items-center gap-1.5 px-4 py-1.5 bg-linear-to-r from-[#00E676] to-[#01B574] text-white rounded-full font-bold text-[11px] shadow-sm hover:shadow-md transition-all transform hover:-translate-y-0.5 active:scale-95"
+                className="flex items-center gap-2 px-6 py-2.5 bg-linear-to-r from-[#4318FF] to-[#868CFF] text-white rounded-xl font-bold text-xs shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all transform hover:-translate-y-0.5 active:scale-95 tracking-wide uppercase"
               >
-                <Save size={14} /> Save
+                <Save size={16} /> Save Changes
               </button>
             )}
           </div>
         </div>
 
-        <div className="grid grid-cols-7 gap-1.5 mb-1.5 border-b border-gray-50 pb-2">
+        {/* Days Header */}
+        <div className="grid grid-cols-7 gap-3 mb-2 px-2 border-b border-gray-50 pb-3">
           {weekdays.map((day) => (
             <div
               key={day}
-              className="text-center text-[10px] font-black text-[#A3AED0] tracking-widest"
+              className="text-center text-[10px] font-black text-[#A3AED0] tracking-[0.2em] uppercase"
             >
               {day}
             </div>
           ))}
         </div>
 
-        <div className="grid grid-cols-7 gap-1.5 overflow-y-auto max-h-[calc(100vh-250px)] pr-1">
+        {/* Calendar Grid */}
+        <div className="grid grid-cols-7 gap-3 overflow-y-auto max-h-full pr-1 pb-4 px-2 scroll-smooth flex-1 custom-scrollbar">
           {Array.from({ length: paddingDays }).map((_, idx) => (
             <div
               key={`p-${idx}`}
-              className="h-20 rounded-lg bg-gray-50/20 border border-dashed border-gray-100"
+              className="min-h-[90px] rounded-2xl bg-gray-50/30 border border-dashed border-gray-100"
             ></div>
           ))}
           {localEntries.map((day, idx) => {
@@ -493,14 +500,14 @@ const MyTimesheet = ({
               return normalizedHDate === dateStr;
             });
 
-            const isRed = (day.isWeekend && !day.status) || !!holiday;
+            const isRed = day.isWeekend && !day.status; // Only weekends without status are red, not holidays
             const isSelected =
               selectedDateId &&
               new Date(selectedDateId).toDateString() ===
                 day.fullDate.toDateString();
             const highlightClass =
               isSelected && isHighlighted
-                ? "date-highlight ring-2 ring-offset-2 ring-[#00A3C4] shadow-lg scale-105"
+                ? "date-highlight ring-4 ring-[#4318FF]/20 z-10 scale-[1.02]"
                 : "";
 
             const isBlocked = day.status === AttendanceStatus.BLOCKED;
@@ -509,92 +516,143 @@ const MyTimesheet = ({
               isEditableMonth(day.fullDate) &&
               !isBlocked;
 
-            let bg = "bg-white";
-            let badge = "bg-gray-100 text-gray-400";
+            let bg = "bg-white hover:border-[#4318FF]/20";
+            let badge = "bg-gray-50 text-gray-400";
+            let border = "border-transparent";
+            let shadow = "shadow-[0px_2px_15px_rgba(0,0,0,0.02)]";
+
             if (
-              day.status === "Full Day" ||
-              day.status === "WFH" ||
-              day.status === "Client Visit"
+              (day.status === "Full Day" || day.status === "WFH") &&
+              displayVal !== 0 &&
+              displayVal !== ""
             ) {
-              bg = "bg-[#E9FBF5]/50";
-              badge = "bg-[#E9FBF5] text-[#01B574]";
+              bg = "bg-[#E6FDF4]/60";
+              badge = "bg-[#05CD99] text-white font-bold";
+              border = "border-[#05CD99]/20";
+            } else if (day.status === "Client Visit") {
+              bg = "bg-[#F4F7FE]";
+              badge = "bg-[#4318FF] text-white font-bold";
+              border = "border-[#4318FF]/20";
+            } else if (holiday || day.status === "Holiday") {
+              // Government holidays from database or status - Light Blue
+              bg = "bg-[#E6F7FF]/60";
+              badge = "bg-[#1890FF] text-white font-bold";
+              border = "border-[#1890FF]/20";
             } else if (
               isRed ||
               day.status === "Leave" ||
-              day.status === "Holiday" ||
               day.status === "Weekend"
             ) {
-              bg = "bg-[#FDF2F2]/50";
-              badge = "bg-[#FDF2F2] text-[#ff4d4d]";
+              // Leave and Weekend - Red
+              bg = "bg-[#FFF5F5]/60";
+              badge = "bg-[#EE5D50] text-white font-bold";
+              border = "border-[#EE5D50]/10";
             } else if (
-              day.status === "Half Day" ||
-              day.status === "Pending" ||
-              day.status === "Not Updated"
+              day.status === "Half Day" &&
+              displayVal !== 0 &&
+              displayVal !== ""
             ) {
-              bg = "bg-[#FFF9E5]/50";
-              badge = "bg-[#FFF9E5] text-[#FFB020]";
-            } else if (day.isToday) bg = "bg-[#F4F7FE]";
+              bg = "bg-[#FFFBEB]/60";
+              badge = "bg-[#FFB020] text-white font-bold";
+              border = "border-[#FFB020]/20";
+            } else if (
+              day.status === "Pending" &&
+              displayVal !== 0 &&
+              displayVal !== ""
+            ) {
+              bg = "bg-[#FFFBEB]/60";
+              badge = "bg-[#FFB020] text-white font-bold";
+              border = "border-[#FFB020]/20";
+            } else if (day.isToday) {
+              bg = "bg-white";
+              border = "border-[#4318FF]";
+              shadow = "shadow-[0px_4px_20px_rgba(67,24,255,0.15)]";
+            }
 
             return (
               <div
                 key={idx}
-                className={`relative flex flex-col p-1.5 rounded-lg border transition-all h-20 group 
-                            ${
-                              day.isToday
-                                ? "border-dashed border-[#00A3C4] shadow-md shadow-teal-100/30"
-                                : "border-gray-100 shadow-sm hover:shadow-md"
-                            } 
-                            ${highlightClass} ${bg} ${
-                  isBlocked ? "opacity-70" : ""
+                className={`relative flex flex-col justify-between p-1.5 rounded-2xl border transition-all duration-300 min-h-[120px] group 
+                            ${border} ${shadow} ${highlightClass} ${bg} ${
+                  isBlocked
+                    ? "opacity-60 grayscale"
+                    : "hover:-translate-y-1 hover:shadow-lg"
                 }`}
               >
-                <div className="flex justify-between items-start">
-                  <span
-                    className={`text-sm font-black ${
-                      day.isToday ? "text-[#00A3C4]" : "text-[#2B3674]"
-                    }`}
+                {/* Top Row: Date & Lock */}
+                <div className="flex justify-between items-start z-10 mb-1">
+                  <div
+                    className={`flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold transition-colors
+                      ${
+                        day.isToday
+                          ? "bg-[#4318FF] text-white shadow-lg shadow-blue-500/30"
+                          : "bg-white/50 text-[#2B3674] group-hover:bg-[#4318FF] group-hover:text-white"
+                      }
+                  `}
                   >
                     {day.date}
-                  </span>
+                  </div>
                   {isAdmin && (
                     <button
                       onClick={() => handleToggleBlock(idx)}
                       className={`p-1 rounded-full shadow-sm border transition-all ${
                         isBlocked
-                          ? "bg-red-500 text-white border-red-600"
-                          : "bg-white text-gray-300 hover:text-[#00A3C4]"
+                          ? "bg-red-50 text-red-500 border-red-100"
+                          : "bg-white/80 text-gray-300 hover:text-[#4318FF] border-gray-100 hover:border-blue-200"
                       }`}
                     >
-                      {isBlocked ? <Lock size={8} /> : <Unlock size={8} />}
+                      {isBlocked ? (
+                        <Lock size={8} strokeWidth={3} />
+                      ) : (
+                        <Unlock size={8} strokeWidth={3} />
+                      )}
                     </button>
                   )}
                 </div>
-                <div className="flex-1 flex flex-col items-center justify-center">
-                  <input
-                    type="text"
-                    disabled={!isEditable}
-                    className={`w-full max-w-[60px] h-7 text-center text-sm font-bold rounded-md border focus:outline-none focus:ring-2 focus:ring-[#00A3C4] ${
-                      !isEditable
-                        ? "bg-gray-50 text-gray-400 cursor-not-allowed border-transparent"
-                        : "bg-white text-[#2B3674] shadow-inner border-gray-100"
-                    }`}
-                    placeholder={isBlocked ? "Locked" : "0"}
-                    value={inputValue}
-                    onChange={(e) => handleHoursInput(idx, e.target.value)}
-                    onBlur={() => handleInputBlur(idx)}
-                  />
+
+                {/* Middle: Input Area */}
+                <div className="flex-1 flex flex-col items-center justify-center gap-0.5 z-10 py-1 min-h-[50px]">
+                  <div className="relative group/input w-full flex justify-center">
+                    <input
+                      type="text"
+                      disabled={!isEditable}
+                      className={`w-full h-8 text-center text-xl font-bold bg-transparent transition-all focus:outline-none focus:ring-0
+                        ${
+                          !isEditable
+                            ? "text-gray-400 cursor-not-allowed"
+                            : "text-[#2B3674] group-hover:scale-110 focus:scale-110"
+                        }`}
+                      placeholder={isBlocked ? "-" : "0"}
+                      value={inputValue}
+                      onChange={(e) => handleHoursInput(idx, e.target.value)}
+                      onBlur={() => handleInputBlur(idx)}
+                    />
+                    {isEditable && (
+                      <div className="absolute bottom-0.5 w-6 h-0.5 bg-[#4318FF]/20 rounded-full group-hover/input:bg-[#4318FF] transition-colors"></div>
+                    )}
+                  </div>
+                  <span className="text-[9px] text-[#A3AED0] font-semibold uppercase tracking-wider">
+                    hours
+                  </span>
                 </div>
+
+                {/* Bottom: Status Badge */}
                 <div
-                  className={`w-full py-0.5 rounded-md text-center text-[7.5px] font-black uppercase tracking-tight truncate ${badge}`}
+                  className={`w-full py-1.5 rounded-lg text-center text-[8px] font-black uppercase tracking-wider truncate px-1 shadow-sm z-10 mt-auto ${badge}`}
                 >
                   {day.status === "Holiday" || holiday
                     ? holiday?.holidayName || holiday?.name || "HOLIDAY"
                     : isBlocked
-                    ? "ADMIN BLOCKED"
+                    ? "BLOCKED"
                     : day.status === "Weekend" || day.isWeekend
                     ? "WEEKEND"
+                    : ((displayVal === 0 || !displayVal) &&
+                        (day.status === "Half Day" ||
+                          day.status === "Full Day")) ||
+                      (day.isToday && !day.status)
+                    ? ""
                     : day.status === "Not Updated"
-                    ? "Pending"
+                    ? ""
                     : day.status || "UPCOMING"}
                 </div>
               </div>
