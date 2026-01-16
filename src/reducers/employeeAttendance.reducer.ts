@@ -14,6 +14,7 @@ export enum AttendanceStatus {
   LEAVE = 'Leave',
   PENDING = 'Pending',
   NOT_UPDATED = 'Not Updated',
+  BLOCKED = 'Blocked',
   HOLIDAY = 'Holiday',
   WEEKEND = 'Weekend',
 }
@@ -32,6 +33,7 @@ export interface EmployeeAttendance {
 
 interface AttendanceState {
   records: EmployeeAttendance[];      // List of records for the month/view
+  employeeRecords: Record<string, EmployeeAttendance[]>; // Keyed by employeeId
   loading: boolean;                   // Global loading state for API calls
   error: string | null;               // Global error message
   currentDayRecord: EmployeeAttendance | null; // Data for today's specific entry
@@ -45,6 +47,7 @@ interface AttendanceState {
 
 const initialState: AttendanceState = {
   records: [],
+  employeeRecords: {},
   loading: false,
   error: null,
   currentDayRecord: null,
@@ -172,9 +175,12 @@ const attendanceSlice = createSlice({
   extraReducers: (builder) => {
     builder
       // 1. ADD CASES FIRST (Requirement for Redux Toolkit builder)
-      .addCase(fetchMonthlyAttendance.fulfilled, (state: AttendanceState, action: PayloadAction<EmployeeAttendance[]>) => {
+      .addCase(fetchMonthlyAttendance.fulfilled, (state: AttendanceState, action: PayloadAction<EmployeeAttendance[]> | any) => {
         state.loading = false;
-        state.records = action.payload;
+        state.records = action.payload; // Keep this for legacy single-view usage if any
+        if (action.meta && action.meta.arg && action.meta.arg.employeeId) {
+             state.employeeRecords[action.meta.arg.employeeId] = action.payload;
+        }
       })
       .addCase(fetchAttendanceByDate.fulfilled, (state: AttendanceState, action: PayloadAction<EmployeeAttendance[]>) => {
         state.loading = false;

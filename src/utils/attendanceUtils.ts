@@ -83,12 +83,42 @@ export const mapStatus = (
     isWeekend: boolean,
     totalHours?: number
 ): TimesheetEntry['status'] => {
-    
+    // Overload handling: If 2nd arg is boolean, it means we are using the old signature:
+    // status, isFuture, isToday, isWeekend, totalHours
+    if (typeof loginTime === 'boolean') {
+        const _isFuture = loginTime;
+        const _isToday = logoutTime as boolean;
+        const _isWeekend = isFuture;
+        const _totalHours = isToday as unknown as number;
+
+        if (status) {
+            if (status === AttendanceStatus.LEAVE && _totalHours && _totalHours > 0) {
+                 return _totalHours >= 6 ? 'Full Day' : 'Half Day';
+            }
+            if (status === AttendanceStatus.LEAVE) return 'Leave';
+            if (status !== AttendanceStatus.PENDING || !_isToday) {
+                switch (status) {
+                    case AttendanceStatus.FULL_DAY: return 'Full Day';
+                    case AttendanceStatus.HALF_DAY: return 'Half Day';
+                    case AttendanceStatus.NOT_UPDATED: return 'Not Updated';
+                    case AttendanceStatus.PENDING: return 'Pending';
+                    case AttendanceStatus.BLOCKED: return 'Blocked';
+                    default: break;
+                }
+            }
+        }
+        if (_isFuture || _isWeekend) return undefined;
+        return _isToday ? 'Pending' : 'Not Updated';
+    }
+
+    // New signature handling: status, loginTime, logoutTime, isFuture, isToday, isWeekend
     if (status) {
         if (status === AttendanceStatus.LEAVE && totalHours && totalHours > 0) {
              return totalHours >= 6 ? 'Full Day' : 'Half Day';
         }
         if (status === AttendanceStatus.LEAVE) return 'Leave';
+        if (status === AttendanceStatus.BLOCKED) return 'Blocked';
+        
         if (status !== AttendanceStatus.PENDING || !isToday) {
             switch (status) {
                 case AttendanceStatus.FULL_DAY: return 'Full Day';
@@ -140,7 +170,7 @@ export const mapAttendanceToEntry = (
         isWeekend,
         isFuture,
         totalHours, // Ensure this is passed to the UI
-        status: mapStatus(attendance?.status, isFuture, isToday, isWeekend, totalHours),
+        status: mapStatus(attendance?.status, attendance?.loginTime, attendance?.logoutTime, isFuture, isToday, isWeekend, totalHours),
         isEditing: false,
         isSaved: !!attendance?.id,
         isSavedLogout: !!attendance?.logoutTime && attendance.logoutTime !== "00:00:00" && !attendance.logoutTime.includes("NaN"),

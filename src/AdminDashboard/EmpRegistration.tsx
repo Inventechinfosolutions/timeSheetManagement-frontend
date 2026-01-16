@@ -8,14 +8,11 @@ import {
   Building,
   Shield,
   CreditCard,
+ 
   Loader2,
   CheckCircle,
-  ArrowLeft,
 } from "lucide-react";
-import {
-  createEntity,
-  reset,
-} from "../reducers/employeeDetails.reducer";
+import { createEntity, reset } from "../reducers/employeeDetails.reducer";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { RootState } from "../store";
 
@@ -42,14 +39,14 @@ const Registration = () => {
     if (updateSuccess) {
       setShowSuccess(true);
       const timer = setTimeout(() => {
-          const navigationState = {
-            email: formData.email,
-            loginId: entity?.employeeId || formData.employeeId,
-            employeeId: entity?.id, // Pass internal ID for credential generation
-            // Password and link will be generated on the next screen
-            password: "", 
-            activationLink: "",
-          };
+        const navigationState = {
+          email: formData.email,
+          loginId: entity?.employeeId || formData.employeeId,
+          employeeId: entity?.id, // Pass internal ID for credential generation
+          // Password and link will be generated on the next screen
+          password: "",
+          activationLink: "",
+        };
         dispatch(reset());
         setShowSuccess(false);
         // Reset form data to allow creating another employee
@@ -60,7 +57,9 @@ const Registration = () => {
           designation: "",
           email: "",
         });
-        navigate("/admin-dashboard/activation-success", { state: navigationState });
+        navigate("/admin-dashboard/activation-success", {
+          state: navigationState,
+        });
       }, 1000);
       return () => clearTimeout(timer);
     }
@@ -69,7 +68,9 @@ const Registration = () => {
     }
   }, [updateSuccess, errorMessage, dispatch, navigate, formData, entity]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
@@ -106,10 +107,7 @@ const Registration = () => {
           onClick={() => navigate(-1)}
           className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors font-medium group"
         >
-          <div className="p-2 rounded-full bg-white shadow-sm group-hover:shadow-md transition-all">
-            <ArrowLeft className="w-5 h-5" />
-          </div>
-          <span>Back to Dashboard</span>
+          <span>Back</span>
         </button>
       </div>
       {/* Main Card - Full Width Registration */}
@@ -196,16 +194,23 @@ const Registration = () => {
                     Department
                   </label>
                   <div className="relative group">
-                    <input
-                      type="text"
+                    <select
                       name="department"
-                      placeholder="Engineering"
-                      className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-md focus:ring-1 focus:ring-[#00A3C4] focus:border-[#00A3C4] outline-none transition-all placeholder-gray-300 text-gray-700 text-xs"
+                      className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-md focus:ring-1 focus:ring-[#00A3C4] focus:border-[#00A3C4] outline-none transition-all text-gray-700 text-xs appearance-none bg-white"
                       value={formData.department}
                       onChange={handleChange}
                       required
-                    />
-                    <Building className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+                    >
+                      <option value="" disabled>
+                        Select Department
+                      </option>
+                      <option value="HR">HR</option>
+                      <option value="IT">IT</option>
+                      <option value="Sales">Sales</option>
+                      <option value="Marketing">Marketing</option>
+                      <option value="Finance">Finance</option>
+                    </select>
+                    <Building className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5 pointer-events-none" />
                   </div>
                 </div>
 
