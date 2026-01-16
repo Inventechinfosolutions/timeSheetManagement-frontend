@@ -39,7 +39,7 @@ const SidebarLayout = ({ children, activeTab = 'Dashboard', onTabChange }: Sideb
 
 
     return (
-        <div className="flex w-full min-h-screen bg-[#F4F7FE] font-sans text-[#2B3674] overflow-hidden relative">
+        <div className="flex w-full h-full bg-[#F4F7FE] font-sans text-[#2B3674] overflow-hidden relative">
 
             {/* Mobile Menu Trigger - Floating Pulse Button */}
             <button
@@ -71,7 +71,7 @@ const SidebarLayout = ({ children, activeTab = 'Dashboard', onTabChange }: Sideb
             <div className={`shrink-0 transition-all duration-300 ease-in-out ${isOpen ? 'w-60' : 'w-20'} hidden md:block`}></div>
 
             <aside
-                className={`fixed top-0 md:top-[50px] left-0 h-full md:h-[calc(100vh-50px)] bg-white border-r border-gray-100 flex flex-col shrink-0 transition-all duration-300 ease-in-out shadow-2xl z-2001 md:z-30
+                className={`fixed top-0 md:absolute md:top-0 left-0 h-full bg-white border-r border-gray-100 flex flex-col shrink-0 transition-all duration-300 ease-in-out shadow-2xl z-2001 md:z-30
                     ${isMobileOpen ? 'translate-x-0 w-72' : '-translate-x-full md:translate-x-0'}
                     ${isOpen ? 'md:w-60' : 'md:w-20'}
                 `}
@@ -176,7 +176,7 @@ const SidebarLayout = ({ children, activeTab = 'Dashboard', onTabChange }: Sideb
 
             </aside>
 
-            <main className="flex-1 overflow-y-auto overflow-x-hidden h-full [&::-webkit-scrollbar]:hidden [&::-webkit-scrollbar]:w-0 [&::-webkit-scrollbar]:h-0" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            <main className="flex-1 overflow-hidden h-full relative no-scrollbar flex flex-col">
                 {children}
             </main>
         </div>

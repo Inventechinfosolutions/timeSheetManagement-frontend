@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight, Download, X, Calendar as CalendarIcon } from "lucide-react";
 import { downloadPdf } from "../utils/downloadPdf";
 import { useAppSelector, useAppDispatch } from '../hooks';
@@ -6,6 +7,7 @@ import { RootState } from '../store';
 import { generateMonthlyEntries } from '../utils/attendanceUtils';
 import { TimesheetEntry } from "../types";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
+import { fetchMonthlyAttendance } from "../reducers/employeeAttendance.reducer";
 
 interface CalendarProps {
     now?: Date;
@@ -26,8 +28,10 @@ const Calendar = ({
 }: CalendarProps) => {
 
     const dispatch = useAppDispatch();
+    const navigate = useNavigate();
     const { records } = useAppSelector((state: RootState) => state.attendance);
     const { entity } = useAppSelector((state: RootState) => state.employeeDetails);
+    const currentEmployeeId = entity?.employeeId;
 
     const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
     const [downloadDateRange, setDownloadDateRange] = useState({
@@ -89,6 +93,17 @@ const Calendar = ({
     const [internalDisplayDate, setInternalDisplayDate] = useState(now);
 
     const displayDate = currentDate || internalDisplayDate;
+
+    // Fetch attendance data when month changes (if standalone)
+    useEffect(() => {
+        if (currentEmployeeId && !propEntries) {
+            dispatch(fetchMonthlyAttendance({
+                employeeId: currentEmployeeId,
+                month: (displayDate.getMonth() + 1).toString().padStart(2, '0'),
+                year: displayDate.getFullYear().toString()
+            }));
+        }
+    }, [dispatch, currentEmployeeId, displayDate, propEntries]);
 
     // Generate entries from Redux state ONLY if not provided via props
     const entries = useMemo(() => {
@@ -199,10 +214,10 @@ const Calendar = ({
     return (
         <div className="animate-in fade-in duration-500">
             {/* Main Calendar Card */}
-            <div className={`bg-white rounded-xl shadow-sm border border-gray-100 ${isSmall ? 'p-3' : isSidebar ? 'p-4' : 'p-8'}`}>
+            <div className={`bg-white rounded-xl shadow-sm border border-gray-100 ${isSmall ? 'p-3' : isSidebar ? 'p-4' : 'p-4 md:p-6 pb-4'}`}>
                 {/* Header Section */}
                 {!isSmall && (
-                    <div className={`flex items-center justify-between gap-2 ${isSidebar ? 'mb-4' : 'flex-col sm:flex-row mb-8 md:gap-4'}`}>
+                    <div className={`flex items-center justify-between gap-2 ${isSidebar ? 'mb-4' : 'flex-col sm:flex-row mb-1 md:mb-2 md:gap-4'}`}>
                         <div className="flex items-center gap-3">
                             <h3 className={`${isSidebar ? 'text-base' : 'text-lg md:text-xl'} font-bold text-[#1B254B] text-center sm:text-left`}>
                                 {isSidebar ? 'Attendance' : 'Monthly Attendance Snapshot'}
@@ -258,7 +273,7 @@ const Calendar = ({
                 )}
 
                 {/* Calendar Grid Card */}
-                <div className={`bg-white rounded-xl border border-gray-100 shadow-[0px_4px_20px_rgba(0,0,0,0.05)] ${isSmall ? 'p-1.5 mb-2' : isSidebar ? 'p-2 mb-4' : 'p-2 md:p-4 mb-6'}`}>
+                <div className={`bg-white rounded-xl border border-gray-100 shadow-[0px_4px_20px_rgba(0,0,0,0.05)] ${isSmall ? 'p-1.5 mb-2' : isSidebar ? 'p-2 mb-4' : 'p-2 md:p-3 mb-1'}`}>
                     <div className={`grid grid-cols-7 ${isSmall ? 'gap-0.5' : isSidebar ? 'gap-1' : 'gap-1 md:gap-x-px md:gap-y-2'}`}>
                         {daysOfWeek.map(day => (
                             <div key={day} className={`text-center font-bold text-gray-400 ${isSmall ? 'text-[7px] mb-0.5' : isSidebar ? 'text-[9px] mb-1' : 'text-[10px] md:text-xs mb-2'}`}>{day}</div>
@@ -284,7 +299,20 @@ const Calendar = ({
                             return (
                                 <div
                                     key={day}
-                                    onClick={() => entry && onNavigateToDate?.(day)}
+                                    onClick={() => {
+                                        console.log('Calendar: Day clicked:', day, 'Month:', displayDate.getMonth());
+                                        if (onNavigateToDate) {
+                                            onNavigateToDate(day);
+                                        } else {
+                                            const targetDate = new Date(displayDate.getFullYear(), displayDate.getMonth(), day);
+                                            navigate('/employee-dashboard/my-timesheet', { 
+                                                state: { 
+                                                    selectedDate: targetDate.toISOString(),
+                                                    timestamp: targetDate.getTime() 
+                                                } 
+                                            });
+                                        }
+                                    }}
                                     className={`${isSmall ? 'w-7 h-7 text-[9px]' : isSidebar ? 'w-8 h-8 text-xs' : 'w-[90%] md:w-[75%] lg:w-[65%] h-12 md:h-14 lg:h-16 text-xs'} mx-auto rounded-lg flex items-center justify-center font-bold transition-all hover:scale-105 cursor-pointer relative group
                                     ${getStatusClasses(day)}`}
                                 >
@@ -342,7 +370,7 @@ const Calendar = ({
                 </div>
 
                 {/* Legend */}
-                <div className={`flex items-center justify-center flex-wrap border-t border-gray-100 ${isSmall ? 'gap-x-2 gap-y-1 mt-2 pt-2' : isSidebar ? 'gap-2 mt-4 pt-4' : 'gap-x-4 md:gap-x-10 mt-6 md:mt-8 pt-4 md:pt-6'}`}>
+                <div className={`flex items-center justify-center flex-wrap border-t border-gray-100 ${isSmall ? 'gap-x-2 gap-y-1 mt-1 pt-1' : isSidebar ? 'gap-2 mt-4 pt-4' : 'gap-x-4 md:gap-x-10 mt-1 md:mt-2 pt-2 md:pt-3'}`}>
                     <div className={`flex items-center text-gray-400 font-medium ${isSmall ? 'gap-1 text-[8px]' : isSidebar ? 'gap-1 text-[9px]' : 'gap-1.5 md:gap-2 text-[10px] md:text-xs'}`}>
                         <div className={`rounded bg-[#E9FBF5] border border-[#01B574]/20 ${isSmall ? 'w-1.5 h-1.5' : 'w-2.5 h-2.5 md:w-3 md:h-3'}`}></div> {isSmall ? 'Done' : 'Full Day'}
                     </div>

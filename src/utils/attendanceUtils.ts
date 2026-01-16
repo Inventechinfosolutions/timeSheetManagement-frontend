@@ -95,6 +95,8 @@ export const mapStatus = (
                 case AttendanceStatus.HALF_DAY: return 'Half Day';
                 case AttendanceStatus.NOT_UPDATED: return 'Not Updated';
                 case AttendanceStatus.PENDING: return 'Pending';
+                case AttendanceStatus.HOLIDAY: return 'Holiday';
+                case AttendanceStatus.WEEKEND: return 'Weekend';
                 default: break;
             }
         }
@@ -104,7 +106,8 @@ export const mapStatus = (
     if (isFuture) return undefined;
     if (isWeekend) return undefined;
 
-    return isToday ? 'Pending' : 'Not Updated';
+    // 3. For Past/Today weekdays with no explicit status -> Leave
+    return isToday ? 'Pending' : 'Leave';
 };
 
 /**

@@ -14,6 +14,8 @@ export enum AttendanceStatus {
   LEAVE = 'Leave',
   PENDING = 'Pending',
   NOT_UPDATED = 'Not Updated',
+  HOLIDAY = 'Holiday',
+  WEEKEND = 'Weekend',
 }
 
 // INTERFACES
