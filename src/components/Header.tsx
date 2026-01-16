@@ -1,23 +1,86 @@
 import { Link, useNavigate } from "react-router-dom";
-import { LogOut } from "lucide-react";
-import { useAppDispatch } from "../hooks";
+import { LogOut, Bell, User, ChevronDown } from "lucide-react";
+import { useAppDispatch, useAppSelector } from "../hooks";
 import { logoutUser } from "../reducers/user.reducer";
+import { fetchProfileImage } from "../reducers/employeeDetails.reducer";
+import { useState, useRef, useEffect } from "react";
+import defaultAvatar from "../assets/default-avatar.jpg";
 import "./Header.css";
 
 const Header = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+  const { entity } = useAppSelector((state) => state.employeeDetails);
+  const { currentUser } = useAppSelector((state) => state.user);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [profileImage, setProfileImage] = useState(defaultAvatar);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Check if user is admin
+  const isAdmin = currentUser?.userType === "ADMIN";
 
   const handleLogout = async () => {
-    await dispatch(logoutUser());
-    navigate("/landing");
+    try {
+      setIsDropdownOpen(false); // Close dropdown first
+      await dispatch(logoutUser()).unwrap();
+      // Clear any local storage
+      localStorage.clear();
+      sessionStorage.clear();
+      // Navigate to landing page
+      navigate("/landing");
+    } catch (error) {
+      console.error("Logout failed:", error);
+      // Even if logout fails, clear local state and navigate
+      localStorage.clear();
+      sessionStorage.clear();
+      navigate("/landing");
+    }
   };
+
+  const handleProfileClick = () => {
+    navigate("/employee-dashboard/my-profile");
+    setIsDropdownOpen(false);
+  };
+
+  // Get first letter of name for avatar fallback
+  const avatarLetter =
+    entity?.fullName?.charAt(0)?.toUpperCase() ||
+    entity?.name?.charAt(0)?.toUpperCase() ||
+    "U";
+
+  // Fetch profile image
+  useEffect(() => {
+    if (entity?.id) {
+      dispatch(fetchProfileImage(entity.id))
+        .unwrap()
+        .then((blobUrl) => {
+          setProfileImage(blobUrl);
+        })
+        .catch(() => {
+          setProfileImage(defaultAvatar);
+        });
+    }
+  }, [dispatch, entity?.id]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
     <header className="header">
       <div className="header-container">
         <div className="header-logo">
-          {/* <Link to="/" className="logo-link"> */}
           <div className="relative overflow-hidden rounded-xl bg-linear-to-br from-[#0093E9] to-[#80D0C7] p-1.5 shadow-lg ring-1 ring-white/20 w-[208px]">
             <div className="absolute -top-12 -right-12 h-32 w-32 rounded-full bg-white/10 blur-2xl"></div>
             <div className="absolute -bottom-12 -left-12 h-32 w-32 rounded-full bg-white/10 blur-2xl"></div>
@@ -40,7 +103,6 @@ const Header = () => {
               </div>
             </div>
           </div>
-          {/* </Link> */}
         </div>
 
         <div className="flex items-center gap-4 ml-auto">
@@ -67,21 +129,3 @@ const Header = () => {
 };
 
 export default Header;
-
-// <nav className="header-nav">
-
-//   <Link
-//     to="/landing"
-//     className={`nav-link ${location.pathname === '/landing' ? 'active' : ''}`}
-//   >
-//     Login
-//   </Link>
-
-//   <Link
-//     to="/about"
-//     className={`nav-link ${location.pathname === '/about' ? 'active' : ''}`}
-//   >
-//     About
-//   </Link>
-
-// </nav>

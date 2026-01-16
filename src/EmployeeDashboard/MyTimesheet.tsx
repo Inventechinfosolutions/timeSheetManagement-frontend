@@ -370,6 +370,7 @@ const MyTimesheet = ({
   return (
     <div className="flex flex-col h-full max-h-full overflow-hidden bg-[#F4F7FE] p-2 md:px-4 md:pt-1 md:pb-0 relative">
       {toast.show && (
+        <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-50 flex items-center gap-2 animate-in fade-in slide-in-from-top-4 duration-300 px-4 py-2 bg-white rounded-full shadow-2xl border border-gray-100">
         <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-50 flex items-center gap-1.5 animate-in fade-in slide-in-from-top-4 duration-300 bg-white/80 backdrop-blur-md px-4 py-2 rounded-full shadow-lg border border-gray-100">
           {toast.type === "success" ? (
             <Save size={16} className="text-[#00E676]" />
@@ -412,7 +413,7 @@ const MyTimesheet = ({
             </button>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-6">
             <div className="text-right">
               <p className="text-[9px] uppercase font-bold text-[#A3AED0] tracking-widest leading-none mb-0.5">
                 Month Total
@@ -425,9 +426,9 @@ const MyTimesheet = ({
             {!readOnly && (
               <button
                 onClick={onSaveAll}
-                className="flex items-center gap-1.5 px-4 py-1.5 bg-linear-to-r from-[#00E676] to-[#01B574] text-white rounded-full font-bold text-[11px] shadow-sm hover:shadow-md transition-all transform hover:-translate-y-0.5 active:scale-95"
+                className="flex items-center gap-2 px-6 py-2.5 bg-linear-to-r from-[#4318FF] to-[#868CFF] text-white rounded-xl font-bold text-xs shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all transform hover:-translate-y-0.5 active:scale-95 tracking-wide uppercase"
               >
-                <Save size={14} /> Save
+                <Save size={16} /> Save Changes
               </button>
             )}
           </div>
@@ -477,12 +478,79 @@ const MyTimesheet = ({
               const isBlocked = isDateBlocked(day.fullDate);
               const blockedReason = isBlocked ? getBlockedReason(day.fullDate) : "";
 
+            const isRed = day.isWeekend && !day.status; // Only weekends without status are red, not holidays
+            const isSelected =
+              selectedDateId &&
+              new Date(selectedDateId).toDateString() ===
+                day.fullDate.toDateString();
+            const highlightClass =
+              isSelected && isHighlighted
+                ? "date-highlight ring-4 ring-[#4318FF]/20 z-10 scale-[1.02]"
+                : "";
+
+            const isBlocked = day.status === AttendanceStatus.BLOCKED;
+            const isEditable =
+              (!readOnly || isAdmin) &&
+              isEditableMonth(day.fullDate) &&
+              !isBlocked;
               const isRed = (day.isWeekend && !day.status) || !!holiday;
               const isSelected =
                 selectedDateId &&
                 new Date(selectedDateId).toDateString() === day.fullDate.toDateString();
               const highlightClass = isSelected && isHighlighted ? "date-highlight" : "";
 
+            let bg = "bg-white hover:border-[#4318FF]/20";
+            let badge = "bg-gray-50 text-gray-400";
+            let border = "border-transparent";
+            let shadow = "shadow-[0px_2px_15px_rgba(0,0,0,0.02)]";
+
+            if (
+              (day.status === "Full Day" || day.status === "WFH") &&
+              displayVal !== 0 &&
+              displayVal !== ""
+            ) {
+              bg = "bg-[#E6FDF4]/60";
+              badge = "bg-[#05CD99] text-white font-bold";
+              border = "border-[#05CD99]/20";
+            } else if (day.status === "Client Visit") {
+              bg = "bg-[#F4F7FE]";
+              badge = "bg-[#4318FF] text-white font-bold";
+              border = "border-[#4318FF]/20";
+            } else if (holiday || day.status === "Holiday") {
+              // Government holidays from database or status - Light Blue
+              bg = "bg-[#E6F7FF]/60";
+              badge = "bg-[#1890FF] text-white font-bold";
+              border = "border-[#1890FF]/20";
+            } else if (
+              isRed ||
+              day.status === "Leave" ||
+              day.status === "Weekend"
+            ) {
+              // Leave and Weekend - Red
+              bg = "bg-[#FFF5F5]/60";
+              badge = "bg-[#EE5D50] text-white font-bold";
+              border = "border-[#EE5D50]/10";
+            } else if (
+              day.status === "Half Day" &&
+              displayVal !== 0 &&
+              displayVal !== ""
+            ) {
+              bg = "bg-[#FFFBEB]/60";
+              badge = "bg-[#FFB020] text-white font-bold";
+              border = "border-[#FFB020]/20";
+            } else if (
+              day.status === "Pending" &&
+              displayVal !== 0 &&
+              displayVal !== ""
+            ) {
+              bg = "bg-[#FFFBEB]/60";
+              badge = "bg-[#FFB020] text-white font-bold";
+              border = "border-[#FFB020]/20";
+            } else if (day.isToday) {
+              bg = "bg-white";
+              border = "border-[#4318FF]";
+              shadow = "shadow-[0px_4px_20px_rgba(67,24,255,0.15)]";
+            }
               let bg = "bg-white";
               let badge = "bg-gray-100 text-gray-400";
               

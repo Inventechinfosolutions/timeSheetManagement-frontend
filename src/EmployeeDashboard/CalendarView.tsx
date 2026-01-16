@@ -295,6 +295,106 @@ const Calendar = ({
                     </div>
                 )}
 
+        {/* Legend - Moved to top for better UX on large view */}
+        {!isSmall && !isSidebar && (
+          <div className="flex items-center gap-x-6 gap-y-2 flex-wrap mb-4 overflow-x-auto pb-2 scrollbar-none">
+            {[
+              {
+                label: "Full Day/WFH",
+                color: "bg-[#E9FBF5]",
+                border: "border-[#05CD99]",
+              },
+              {
+                label: "Half Day",
+                color: "bg-[#FFF9E5]",
+                border: "border-[#FFB020]",
+              },
+              {
+                label: "Leave/Absent",
+                color: "bg-[#FDF2F2]",
+                border: "border-[#EE5D50]",
+              },
+              {
+                label: "Today",
+                color: "bg-[#4318FF]",
+                border: "border-transparent",
+                text: "text-white",
+              },
+              {
+                label: "Holiday",
+                color: "bg-[#E6F7FF]",
+                border: "border-[#00A3C4]",
+              },
+            ].map((item) => (
+              <div
+                key={item.label}
+                className="flex items-center gap-2 text-xs font-bold text-gray-400 whitespace-nowrap"
+              >
+                <div
+                  className={`w-3 h-3 rounded-full ${item.color} border ${item.border}`}
+                ></div>
+                <span>{item.label}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 flex flex-col relative">
+          {/* Weekday Header */}
+          <div
+            className={`grid grid-cols-7 sticky top-0 bg-white z-20 pb-2 border-b border-gray-50 ${
+              isSmall ? "gap-0.5" : isSidebar ? "gap-1" : "gap-3"
+            }`}
+          >
+            {daysOfWeek.map((day) => (
+              <div
+                key={day}
+                className={`text-center font-black text-[#A3AED0] uppercase tracking-widest ${
+                  isSmall
+                    ? "text-[7px] mb-0.5"
+                    : isSidebar
+                    ? "text-[9px] mb-1"
+                    : "text-[10px] py-2"
+                }`}
+              >
+                {day}
+              </div>
+            ))}
+          </div>
+
+          {/* Calendar Grid */}
+          <div
+            className={`grid grid-cols-7 pb-2 mt-2 flex-1 ${
+              isSmall ? "gap-1" : isSidebar ? "gap-1.5" : "gap-3"
+            }`}
+          >
+            {blanks.map((blank) => (
+              <div
+                key={`blank-${blank}`}
+                className=" rounded-2xl bg-gray-50/20 border border-dashed border-gray-100 min-h-[40px] md:min-h-[80px]"
+              ></div>
+            ))}
+
+            {monthDays.map((day) => {
+              const entry = entries.find((e) => e.date === day);
+              const holiday = checkIsHoliday(
+                displayDate.getFullYear(),
+                displayDate.getMonth(),
+                day
+              );
+              const isToday =
+                day === now.getDate() &&
+                displayDate.getMonth() === now.getMonth() &&
+                displayDate.getFullYear() === now.getFullYear();
+
+              const isIncomplete =
+                entry &&
+                !entry.isFuture &&
+                !entry.isToday &&
+                !entry.isWeekend &&
+                !holiday &&
+                (entry.status === "Not Updated" ||
+                  (!entry.totalHours && entry.status !== "Leave"));
                 {isSmall && (
                     <div className="flex items-center justify-between mb-3">
                         <span className="text-base font-bold text-[#1B254B]">{currentMonthName}</span>
@@ -342,6 +442,121 @@ const Calendar = ({
                             
                             const isIncomplete = entry && (isNotUpdated || entry.status === 'Pending') && !entry.isFuture && !entry.isWeekend && !isBlocked;
 
+              // Status Logic for Styling
+              let cellClass =
+                "bg-white hover:shadow-md hover:-translate-y-1 border-gray-100";
+              let textClass = "text-[#2B3674]";
+              let statusLabel = entry?.status || "-";
+
+              if (isToday) {
+                cellClass =
+                  "bg-white ring-2 ring-[#4318FF] shadow-lg shadow-blue-200 z-10";
+                textClass = "text-[#4318FF]";
+                if (statusLabel === "-") statusLabel = "";
+              } else if (
+                entry?.status === "Full Day" ||
+                entry?.status === "WFH" ||
+                entry?.status === "Client Visit"
+              ) {
+                cellClass =
+                  "bg-[#E6FDF4]/50 border-transparent hover:bg-[#E6FDF4]";
+                textClass = "text-[#05CD99]";
+                 if (!entry?.totalHours || Number(entry.totalHours) === 0) {
+                  statusLabel = "";
+                }
+              } else if (entry?.status === "Half Day") {
+                cellClass =
+                  "bg-[#FFFBEB]/50 border-transparent hover:bg-[#FFFBEB]";
+                textClass = "text-[#FFB547]";
+                if (!entry?.totalHours || Number(entry.totalHours) === 0) {
+                  statusLabel = "";
+                }
+              } else if (
+                entry?.status === "Leave" ||
+                (isIncomplete && !entry?.isFuture)
+              ) {
+                cellClass =
+                  "bg-[#FFF5F5]/50 border-transparent hover:bg-[#FFF5F5]";
+                textClass = "text-[#EE5D50]";
+              } else if (holiday) {
+                cellClass =
+                  "bg-[#F0F9FF]/50 border-transparent hover:bg-[#F0F9FF]";
+                textClass = "text-[#1890FF]";
+                statusLabel = holiday.name;
+              } else if (entry?.isWeekend) {
+                cellClass = "bg-gray-50/50 border-transparent";
+                textClass = "text-gray-400";
+                statusLabel = "Weekend";
+              }
+
+              return (
+                <div
+                  key={day}
+                  onClick={() => {
+                    if (onNavigateToDate) {
+                      onNavigateToDate(day);
+                    } else {
+                      const targetDate = new Date(
+                        displayDate.getFullYear(),
+                        displayDate.getMonth(),
+                        day
+                      );
+                      navigate("/employee-dashboard/my-timesheet", {
+                        state: {
+                          selectedDate: targetDate.toISOString(),
+                          timestamp: targetDate.getTime(),
+                        },
+                      });
+                    }
+                  }}
+                  className={`relative flex flex-col items-center justify-between p-2 rounded-2xl border transition-all duration-300 cursor-pointer min-h-[90px] group ${cellClass}`}
+                >
+                  <span
+                    className={`text-sm font-bold ${textClass} mb-1 flex items-center justify-center w-6 h-6 rounded-full ${
+                      isToday ? "bg-[#4318FF] text-white" : ""
+                    } `}
+                  >
+                    {day}
+                  </span>
+
+                  <div className="flex-1 flex flex-col items-center justify-center w-full">
+                    {entry?.totalHours ? (
+                      <div className="text-center">
+                        <span
+                          className={`text-lg font-black ${textClass} leading-none`}
+                        >
+                          {entry.totalHours}
+                        </span>
+                        <span className="block text-[8px] font-bold text-gray-400 uppercase">
+                          hrs
+                        </span>
+                      </div>
+                    ) : (
+                      <div
+                        className={`h-1 w-8 rounded-full ${
+                          holiday ? "bg-[#00A3C4]/20" : "bg-gray-100"
+                        }`}
+                      ></div>
+                    )}
+                  </div>
+
+                  <div
+                    className={`text-[8px] font-bold uppercase truncate w-full text-center px-1 py-1 rounded-md mt-1
+                         ${
+                           holiday
+                             ? "text-white bg-[#1890FF]"
+                             : entry?.status === "Full Day" && statusLabel
+                             ? "text-white bg-[#05CD99]"
+                             : entry?.status === "Half Day" && statusLabel
+                             ? "text-white bg-[#FFB020]"
+                             : entry?.status === "Leave"
+                             ? "text-white bg-[#EE5D50]"
+                             : "text-gray-300"
+                         }
+                    `}
+                  >
+                    {holiday ? holiday.name : statusLabel}
+                  </div>
                             return (
                                 <div
                                     key={day}
