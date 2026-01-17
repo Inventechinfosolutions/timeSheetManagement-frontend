@@ -2,7 +2,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { getEntity } from "../reducers/employeeDetails.reducer";
-import { ChevronLeft, Loader2, Lock, X, Calendar as CalendarIcon, ShieldAlert } from "lucide-react";
+import { ArrowLeft, Loader2, Lock, X, Calendar as CalendarIcon, ShieldAlert } from "lucide-react";
 import MyTimesheet from "../EmployeeDashboard/MyTimesheet";
 import { applyBlocker, fetchBlockers, deleteBlocker } from "../reducers/timesheetBlocker.reducer";
 
@@ -20,10 +20,10 @@ const AdminEmployeeTimesheetWrapper = () => {
   const [reason, setReason] = useState("");
 
   useEffect(() => {
-    if (employeeId && (!entity || (entity.employeeId || entity.id) !== employeeId)) {
-      dispatch(getEntity(employeeId));
-    }
-    if (employeeId) {
+    if (employeeId && employeeId.toLowerCase() !== "admin") {
+      if (!entity || (entity.employeeId || entity.id) !== employeeId) {
+        dispatch(getEntity(employeeId));
+      }
       dispatch(fetchBlockers(employeeId));
     }
   }, [dispatch, employeeId, entity]);
@@ -66,6 +66,7 @@ const AdminEmployeeTimesheetWrapper = () => {
       try {
         await dispatch(deleteBlocker(id)).unwrap();
         dispatch(fetchBlockers(employeeId!));
+        setIsModalOpen(false); // Return to timesheet view
       } catch (error) {
         alert("Failed to remove blocker");
       }
@@ -86,26 +87,27 @@ const AdminEmployeeTimesheetWrapper = () => {
         <p className="text-gray-500 mb-4">Employee not found</p>
         <button
           onClick={handleBack}
-          className="px-4 py-2 bg-[#4318FF] text-white rounded-lg"
+          className="flex items-center gap-2 text-gray-400 hover:text-[#4318FF] transition-colors group"
         >
-          Back to List
+          <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+          <span className="text-sm font-semibold tracking-wide">Back to employee list</span>
         </button>
       </div>
     );
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#F4F7FE] p-4 md:p-8 pt-0">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#F4F7FE] p-4 md:p-8 pt-6">
       <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col gap-1">
           <button
             onClick={handleBack}
-            className="flex items-center gap-2 px-4 py-2 bg-white text-[#2B3674] rounded-xl text-sm font-bold shadow-sm border border-gray-100 hover:bg-gray-50 transition-all"
+            className="flex items-center gap-2 text-gray-400 hover:text-[#4318FF] transition-colors group"
           >
-            <ChevronLeft size={18} />
-            Back to List
+            <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+            <span className="text-sm font-semibold tracking-wide">Back to employee list</span>
           </button>
-          <h2 className="text-xl font-bold text-[#2B3674]">
+          <h2 className="text-xl font-bold text-[#2B3674] mt-1">
             Employee Timesheet: {employee ? (employee.fullName || employee.name || employee.employeeId) : 'Loading...'}
           </h2>
         </div>
@@ -120,7 +122,11 @@ const AdminEmployeeTimesheetWrapper = () => {
       </div>
 
       <div className="flex-1 overflow-y-auto no-scrollbar pb-8">
-        <MyTimesheet employeeId={employeeId!} readOnly={false} />
+        <MyTimesheet 
+          employeeId={employeeId!} 
+          readOnly={false} 
+          onBlockedClick={() => setIsModalOpen(true)}
+        />
       </div>
 
       {/* Block Modal */}

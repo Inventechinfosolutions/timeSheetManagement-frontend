@@ -4,7 +4,7 @@ import { useAppDispatch, useAppSelector } from "../hooks";
 import { RootState } from "../store";
 import { fetchMonthlyAttendance, AttendanceStatus } from "../reducers/employeeAttendance.reducer";
 import Calendar from "../EmployeeDashboard/CalendarView";
-import { ChevronLeft, ClipboardList, Clock, CalendarCheck } from "lucide-react";
+import { ArrowLeft, ClipboardList, Clock, CalendarCheck } from "lucide-react";
 
 const AdminEmployeeCalendarView = () => {
   const { employeeId } = useParams<{ employeeId: string }>();
@@ -62,76 +62,84 @@ const AdminEmployeeCalendarView = () => {
         <p className="text-gray-500 mb-4">Employee not found</p>
         <button
           onClick={handleBack}
-          className="px-4 py-2 bg-[#4318FF] text-white rounded-lg"
+          className="flex items-center gap-2 text-gray-400 hover:text-[#4318FF] transition-colors group mx-auto"
         >
-          Back to List
+          <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+          <span className="text-sm font-semibold tracking-wide">Back to employee list</span>
         </button>
       </div>
     );
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-[#F4F7FE] p-4 md:p-6 pt-0">
-      <div className="mb-0 flex items-center justify-between">
-        <button
-          onClick={handleBack}
-          className="flex items-center gap-2 px-4 py-1 bg-white text-[#2B3674] rounded-xl text-sm font-bold shadow-sm border border-gray-100 hover:bg-gray-50 transition-all"
-        >
-          <ChevronLeft size={18} />
-          Back to List
-        </button>
-        <h2 className="text-xl font-bold text-[#2B3674]">
-          Working Details: {employee.fullName || employee.name}
-        </h2>
+    <div className="flex-1 flex flex-col bg-[#F4F7FE] pt-6">
+      <div className="mb-4 flex items-center justify-between px-4 md:px-8">
+        <div className="flex flex-col gap-1">
+          <button
+            onClick={handleBack}
+            className="flex items-center gap-2 text-gray-400 hover:text-[#4318FF] transition-colors group"
+          >
+            <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+            <span className="text-sm font-semibold tracking-wide">Back to employee list</span>
+          </button>
+          <h2 className="text-xl font-bold text-[#2B3674] mt-1">
+            Working Details: {employee.fullName || employee.name}
+          </h2>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto no-scrollbar">
         <div className="space-y-3 pb-10">
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex items-center gap-5 hover:shadow-md transition-all duration-300 group">
-              <div className="w-14 h-14 rounded-2xl bg-[#E6FFFA] flex items-center justify-center text-[#01B574] group-hover:scale-110 transition-transform">
-                <CalendarCheck size={28} />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-500 mb-1">
-                  Total Present Days
-                </p>
-                <div className="flex items-baseline gap-2">
-                  <h3 className="text-3xl font-black text-[#2B3674]">
-                    {presentDays}
-                  </h3>
-                  <span className="text-xs font-bold text-[#01B574] bg-[#E6FFFA] px-2 py-0.5 rounded-full">
-                    Days
-                  </span>
+          <div className="px-4 md:px-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex items-center gap-5 hover:shadow-md transition-all duration-300 group">
+                <div className="w-14 h-14 rounded-2xl bg-[#E6FFFA] flex items-center justify-center text-[#01B574] group-hover:scale-110 transition-transform">
+                  <CalendarCheck size={28} />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500 mb-1">
+                    Total Present Days
+                  </p>
+                  <div className="flex items-baseline gap-2">
+                    <h3 className="text-3xl font-black text-[#2B3674]">
+                      {presentDays}
+                    </h3>
+                    <span className="text-xs font-bold text-[#01B574] bg-[#E6FFFA] px-2 py-0.5 rounded-full">
+                      Days
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex items-center gap-5 hover:shadow-md transition-all duration-300 group">
-              <div className="w-14 h-14 rounded-2xl bg-[#F4F7FE] flex items-center justify-center text-[#4318FF] group-hover:scale-110 transition-transform">
-                <Clock size={28} />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-500 mb-1">
-                  Total Working Hours
-                </p>
-                <div className="flex items-baseline gap-2">
-                  <h3 className="text-3xl font-black text-[#2B3674]">
-                    {avgHours}
-                  </h3>
-                  <span className="text-xs font-bold text-[#4318FF] bg-[#F4F7FE] px-2 py-0.5 rounded-full">
-                    Hours
-                  </span>
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex items-center gap-5 hover:shadow-md transition-all duration-300 group">
+                <div className="w-14 h-14 rounded-2xl bg-[#F4F7FE] flex items-center justify-center text-[#4318FF] group-hover:scale-110 transition-transform">
+                  <Clock size={28} />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500 mb-1">
+                    Total Working Hours
+                  </p>
+                  <div className="flex items-baseline gap-2">
+                    <h3 className="text-3xl font-black text-[#2B3674]">
+                      {avgHours}
+                    </h3>
+                    <span className="text-xs font-bold text-[#4318FF] bg-[#F4F7FE] px-2 py-0.5 rounded-full">
+                      Hours
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <Calendar
-            currentDate={displayDate}
-            onMonthChange={handleMonthChange}
-          />
+          <div className="px-0 md:px-2">
+            <Calendar
+              currentDate={displayDate}
+              onMonthChange={handleMonthChange}
+              employeeId={employeeId}
+            />
+          </div>
 
           {loading ? (
             <div className="flex items-center justify-center py-10">

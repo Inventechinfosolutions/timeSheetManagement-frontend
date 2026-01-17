@@ -1,299 +1,350 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Download, X, Calendar as CalendarIcon, Lock } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  X,
+  Calendar as CalendarIcon,
+  Lock,
+  AlertCircle,
+} from "lucide-react";
 import { downloadPdf } from "../utils/downloadPdf";
-import { useAppSelector, useAppDispatch } from '../hooks';
-import { RootState } from '../store';
-import { generateMonthlyEntries } from '../utils/attendanceUtils';
+import { useAppSelector, useAppDispatch } from "../hooks";
+import { RootState } from "../store";
+import { generateMonthlyEntries } from "../utils/attendanceUtils";
 import { TimesheetEntry } from "../types";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import { fetchMonthlyAttendance } from "../reducers/employeeAttendance.reducer";
 import { fetchBlockers } from "../reducers/timesheetBlocker.reducer";
+import { UserType } from "../reducers/user.reducer";
 
 interface CalendarProps {
-    now?: Date;
-    onNavigateToDate?: (date: number) => void;
-    variant?: 'small' | 'large' | 'sidebar';
-    currentDate?: Date;
-    onMonthChange?: (date: Date) => void;
-    entries?: TimesheetEntry[];
+  now?: Date;
+  onNavigateToDate?: (date: number) => void;
+  variant?: "small" | "large" | "sidebar";
+  currentDate?: Date;
+  onMonthChange?: (date: Date) => void;
+  entries?: TimesheetEntry[];
+  employeeId?: string;
 }
 
-const Calendar = ({ 
-    now = new Date(), 
-    onNavigateToDate, 
-    variant = 'large', 
-    currentDate, 
-    onMonthChange, 
-    entries: propEntries 
+const Calendar = ({
+  now = new Date(),
+  onNavigateToDate,
+  variant = "large",
+  currentDate,
+  onMonthChange,
+  entries: propEntries,
+  employeeId: propEmployeeId,
 }: CalendarProps) => {
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
+  const { records } = useAppSelector((state: RootState) => state.attendance);
+  const { entity } = useAppSelector(
+    (state: RootState) => state.employeeDetails
+  );
+  const { currentUser } = useAppSelector((state: RootState) => state.user);
+  // @ts-ignore - Assuming masterHolidays is in RootState but type might not be fully updated in IDE
+  const { holidays } = useAppSelector(
+    (state: RootState) => state.masterHolidays || { holidays: [] }
+  );
+  const { blockers } = useAppSelector(
+    (state: RootState) => state.timesheetBlocker
+  );
 
-    const dispatch = useAppDispatch();
-    const navigate = useNavigate();
-    const { records } = useAppSelector((state: RootState) => state.attendance);
-    const { entity } = useAppSelector((state: RootState) => state.employeeDetails);
-    const { blockers } = useAppSelector((state: RootState) => state.timesheetBlocker);
-    const currentEmployeeId = entity?.employeeId;
-    const holidaysFetched = useRef(false);
-    const attendanceFetchedKey = useRef<string | null>(null);
+  const isAdmin = currentUser?.userType === UserType.ADMIN;
+  const currentEmployeeId = propEmployeeId || entity?.employeeId || (!isAdmin ? currentUser?.employeeId : undefined);
+  const holidaysFetched = useRef(false);
+  const attendanceFetchedKey = useRef<string | null>(null);
 
-    const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
-    const [downloadDateRange, setDownloadDateRange] = useState({
-        from: '',
-        to: ''
+  const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
+  const [internalDisplayDate, setInternalDisplayDate] = useState(now);
+  const [downloadDateRange, setDownloadDateRange] = useState({
+    from: "",
+    to: "",
+  });
+
+  const displayDate = currentDate || internalDisplayDate;
+
+  // Fetch holidays on mount
+  useEffect(() => {
+    dispatch(fetchHolidays());
+  }, [dispatch]);
+
+  // Fetch attendance data and blockers when month/employee changes
+  useEffect(() => {
+    if (!currentEmployeeId || (isAdmin && currentEmployeeId.toLowerCase() === "admin")) return;
+    if (propEntries) return;
+
+    const fetchKey = `${currentEmployeeId}-${
+      displayDate.getMonth() + 1
+    }-${displayDate.getFullYear()}`;
+    
+    if (attendanceFetchedKey.current === fetchKey) return;
+    attendanceFetchedKey.current = fetchKey;
+
+    dispatch(fetchBlockers(currentEmployeeId));
+    dispatch(
+      fetchMonthlyAttendance({
+        employeeId: currentEmployeeId,
+        month: (displayDate.getMonth() + 1).toString().padStart(2, "0"),
+        year: displayDate.getFullYear().toString(),
+      })
+    );
+  }, [dispatch, currentEmployeeId, displayDate, propEntries, isAdmin]);
+
+  // Generate entries from Redux state ONLY if not provided via props
+  const entries = useMemo(() => {
+    if (propEntries) return propEntries;
+    return generateMonthlyEntries(displayDate, now, records);
+  }, [displayDate, now, records, propEntries]);
+
+  const handlePrevMonth = () => {
+    const newDate = new Date(
+      displayDate.getFullYear(),
+      displayDate.getMonth() - 1,
+      1
+    );
+    if (onMonthChange) {
+      onMonthChange(newDate);
+    } else {
+      setInternalDisplayDate(newDate);
+    }
+  };
+
+  const handleNextMonth = () => {
+    const newDate = new Date(
+      displayDate.getFullYear(),
+      displayDate.getMonth() + 1,
+      1
+    );
+    if (onMonthChange) {
+      onMonthChange(newDate);
+    } else {
+      setInternalDisplayDate(newDate);
+    }
+  };
+
+  const handleDownload = () => {
+    const start = new Date(
+      displayDate.getFullYear(),
+      displayDate.getMonth(),
+      1
+    );
+    const end = new Date(
+      displayDate.getFullYear(),
+      displayDate.getMonth() + 1,
+      0
+    );
+
+    const format = (d: Date) => {
+      const offset = d.getTimezoneOffset() * 60000;
+      return new Date(d.getTime() - offset).toISOString().split("T")[0];
+    };
+
+    setDownloadDateRange({ from: format(start), to: format(end) });
+    setIsDownloadModalOpen(true);
+  };
+
+  const handleConfirmDownload = () => {
+    if (!entity || !entries) return;
+
+    const fromDateStr = downloadDateRange.from;
+    const toDateStr = downloadDateRange.to;
+
+    const filteredEntries = entries.filter((e) => {
+      const d = new Date(e.fullDate);
+      const entryDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      return entryDateStr >= fromDateStr && entryDateStr <= toDateStr;
     });
 
-    const handleDownload = () => {
-        // Default to current view month
-        const start = new Date(displayDate.getFullYear(), displayDate.getMonth(), 1);
-        const end = new Date(displayDate.getFullYear(), displayDate.getMonth() + 1, 0); // Last day of month
-        
-        // Format YYYY-MM-DD (local time safety)
-        const format = (d: Date) => {
-            const offset = d.getTimezoneOffset() * 60000;
-            return new Date(d.getTime() - offset).toISOString().split('T')[0];
-        };
+    const totalHours = filteredEntries.reduce(
+      (sum, entry) => sum + (entry.totalHours || 0),
+      0
+    );
 
-        setDownloadDateRange({ from: format(start), to: format(end) });
-        setIsDownloadModalOpen(true);
-    };
+    downloadPdf({
+      employeeName: entity.fullName || "Employee",
+      employeeId: entity.employeeId,
+      designation: entity.designation || "N/A",
+      department: entity.department || "Engineering",
+      month: `${downloadDateRange.from} to ${downloadDateRange.to}`,
+      entries: filteredEntries,
+      totalHours: totalHours,
+      holidays: holidays
+    });
 
-    const handleConfirmDownload = () => {
-        if (!entity || !entries) return;
-        
-        const fromDate = new Date(downloadDateRange.from);
-        const toDate = new Date(downloadDateRange.to);
-        toDate.setHours(23, 59, 59, 999); // Include full end day
+    setIsDownloadModalOpen(false);
+  };
 
-        // Filter entries based on range
-        const filteredEntries = entries.filter(e => {
-            const entryDate = new Date(e.fullDate);
-            return entryDate >= fromDate && entryDate <= toDate;
-        });
+  const isDateBlocked = (date: Date) => {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    return blockers.some((b) => {
+      const start = new Date(b.blockedFrom);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(b.blockedTo);
+      end.setHours(0, 0, 0, 0);
+      return d >= start && d <= end;
+    });
+  };
 
-        const totalHours = filteredEntries.reduce((sum, entry) => sum + (entry.totalHours || 0), 0);
+  const getBlockedReason = (date: Date) => {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    const blocker = blockers.find((b) => {
+      const start = new Date(b.blockedFrom);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(b.blockedTo);
+      end.setHours(0, 0, 0, 0);
+      return d >= start && d <= end;
+    });
+    return blocker?.reason || "Admin Blocked";
+  };
 
-        downloadPdf({
-            employeeName: entity.fullName || 'Employee',
-            employeeId: entity.employeeId,
-            designation: entity.designation || 'N/A',
-            department: entity.department || 'Engineering',
-            month: `${downloadDateRange.from} to ${downloadDateRange.to}`,
-            entries: filteredEntries,
-            totalHours: totalHours
-        });
-        
-        setIsDownloadModalOpen(false);
-    };
-    // @ts-ignore - Assuming masterHolidays is in RootState but type might not be fully updated in IDE
-    const { holidays } = useAppSelector((state: RootState) => state.masterHolidays || { holidays: [] });
-    
-    // Fetch holidays and blockers on mount
-    useEffect(() => {
-        if (holidaysFetched.current) return;
-        holidaysFetched.current = true;
-        dispatch(fetchHolidays());
-        if (currentEmployeeId) {
-            dispatch(fetchBlockers(currentEmployeeId));
-        }
-    }, [dispatch, currentEmployeeId]);
+  const checkIsHoliday = (year: number, month: number, day: number) => {
+    if (!holidays || holidays.length === 0) return null;
+    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(
+      day
+    ).padStart(2, "0")}`;
+    return holidays.find(
+      (h: any) => h.holidayDate === dateStr || h.date === dateStr
+    );
+  };
 
-    // Local state for navigation (fallback if not controlled)
-    const [internalDisplayDate, setInternalDisplayDate] = useState(now);
+  const isSmall = variant === "small";
+  const isSidebar = variant === "sidebar";
 
-    const displayDate = currentDate || internalDisplayDate;
+  const currentMonthName = displayDate.toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
 
-    // Fetch attendance data when month changes (if standalone)
-    useEffect(() => {
-        if (currentEmployeeId && !propEntries) {
-            const fetchKey = `${currentEmployeeId}-${displayDate.getMonth() + 1}-${displayDate.getFullYear()}`;
-            if (attendanceFetchedKey.current === fetchKey) return;
-            attendanceFetchedKey.current = fetchKey;
+  const daysOfWeek = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+  const firstDay = new Date(
+    displayDate.getFullYear(),
+    displayDate.getMonth(),
+    1
+  ).getDay();
+  const firstDayIndex = firstDay === 0 ? 6 : firstDay - 1;
+  const daysInMonth = new Date(
+    displayDate.getFullYear(),
+    displayDate.getMonth() + 1,
+    0
+  ).getDate();
 
-            dispatch(fetchMonthlyAttendance({
-                employeeId: currentEmployeeId,
-                month: (displayDate.getMonth() + 1).toString().padStart(2, '0'),
-                year: displayDate.getFullYear().toString()
-            }));
-        }
-    }, [dispatch, currentEmployeeId, displayDate, propEntries]);
+  const blanks = Array.from({ length: firstDayIndex }, (_, i) => i);
+  const monthDays = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
-    // Generate entries from Redux state ONLY if not provided via props
-    const entries = useMemo(() => {
-        if (propEntries) return propEntries;
+  return (
+    <div
+      className={`animate-in fade-in duration-500 h-full flex flex-col ${
+        !isSmall && !isSidebar ? "p-4 md:p-6" : ""
+      }`}
+    >
+      <div
+        className={`bg-white shadow-[0px_20px_50px_0px_#111c440d] border border-gray-100 flex flex-col ${
+          isSmall
+            ? "p-3 rounded-xl"
+            : isSidebar
+            ? "p-4 rounded-xl"
+            : "p-6 rounded-[20px] flex-1 h-full overflow-hidden"
+        }`}
+      >
+        {!isSmall && (
+          <div
+            className={`flex flex-wrap items-center justify-between gap-y-4 gap-x-2 ${
+              isSidebar ? "mb-4" : "mb-6"
+            }`}
+          >
+            <div className="flex items-center gap-3 min-w-fit">
+              <div
+                className={`p-2 rounded-lg ${
+                  isSidebar ? "bg-blue-50" : "bg-[#4318FF]/10"
+                }`}
+              >
+                <CalendarIcon
+                  className={`${
+                    isSidebar ? "w-4 h-4" : "w-6 h-6"
+                  } text-[#4318FF]`}
+                />
+              </div>
+              <h3
+                className={`${
+                  isSidebar ? "text-base" : "text-xl md:text-2xl"
+                } font-bold text-[#2B3674] tracking-tight leading-tight`}
+              >
+                {isSidebar ? "Attendance" : "Monthly Attendance Snapshot"}
+              </h3>
+            </div>
 
-        const rawEntries = generateMonthlyEntries(displayDate, now, records);
-        return rawEntries;
-    }, [displayDate, now, records, propEntries]);
+            <div className="flex items-center gap-2 md:gap-3 ml-auto sm:ml-0">
+              {!isSmall && !isSidebar && (
+                <button
+                  onClick={handleDownload}
+                  className="hidden md:flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-[#4318FF] to-[#868CFF] text-white rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 text-xs font-bold tracking-wide uppercase group"
+                  title="Download Monthly Report"
+                >
+                  <Download
+                    size={16}
+                    strokeWidth={2.5}
+                    className="group-hover:animate-bounce"
+                  />
+                  <span>Download Report</span>
+                </button>
+              )}
+              {!isSmall && !isSidebar && (
+                <button
+                  onClick={handleDownload}
+                  className="md:hidden flex p-2.5 bg-gradient-to-r from-[#4318FF] to-[#868CFF] text-white rounded-xl shadow-lg shadow-blue-500/30 active:scale-95 transition-all"
+                  title="Download Monthly Report"
+                >
+                  <Download size={18} strokeWidth={2.5} />
+                </button>
+              )}
 
-    const isSmall = variant === 'small';
-    const isSidebar = variant === 'sidebar';
-
-    const currentMonthName = displayDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-
-    const handlePrevMonth = () => {
-        const newDate = new Date(displayDate.getFullYear(), displayDate.getMonth() - 1, 1);
-        if (onMonthChange) {
-            onMonthChange(newDate);
-        } else {
-            setInternalDisplayDate(newDate);
-        }
-    };
-
-    const handleNextMonth = () => {
-        const newDate = new Date(displayDate.getFullYear(), displayDate.getMonth() + 1, 1);
-        if (onMonthChange) {
-            onMonthChange(newDate);
-        } else {
-            setInternalDisplayDate(newDate);
-        }
-    };
-
-    const isDateBlocked = (date: Date) => {
-        const d = new Date(date);
-        d.setHours(0, 0, 0, 0);
-        return blockers.some(b => {
-            const start = new Date(b.blockedFrom);
-            start.setHours(0, 0, 0, 0);
-            const end = new Date(b.blockedTo);
-            end.setHours(0, 0, 0, 0);
-            return d >= start && d <= end;
-        });
-    };
-
-    const getBlockedReason = (date: Date) => {
-        const d = new Date(date);
-        d.setHours(0, 0, 0, 0);
-        const blocker = blockers.find(b => {
-            const start = new Date(b.blockedFrom);
-            start.setHours(0, 0, 0, 0);
-            const end = new Date(b.blockedTo);
-            end.setHours(0, 0, 0, 0);
-            return d >= start && d <= end;
-        });
-        return blocker?.reason || "Admin Blocked";
-    };
-
-    // Days of week headers
-    const daysOfWeek = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
-
-    // We need to align the first day of the month
-    const firstDay = new Date(displayDate.getFullYear(), displayDate.getMonth(), 1).getDay();
-    const firstDayIndex = firstDay === 0 ? 6 : firstDay - 1;
-
-    const daysInMonth = new Date(displayDate.getFullYear(), displayDate.getMonth() + 1, 0).getDate();
-
-    const blanks = Array.from({ length: firstDayIndex }, (_, i) => i);
-    const monthDays = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-
-    const checkIsHoliday = (year: number, month: number, day: number) => {
-        if (!holidays || holidays.length === 0) return null;
-        // Construct date string YYYY-MM-DD
-        // Ensure month is 1-indexed and padded
-        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        return holidays.find((h: any) => h.holidayDate === dateStr || h.date === dateStr);
-    };
-
-    const getStatusClasses = (day: number) => {
-        const entry = entries.find(e => e.date === day);
-        const cellDate = new Date(displayDate.getFullYear(), displayDate.getMonth(), day);
-        const isWeekend = cellDate.getDay() === 0 || cellDate.getDay() === 6;
-        const isBlocked = isDateBlocked(cellDate);
-        
-        // Check Master Holiday
-        const holiday = checkIsHoliday(displayDate.getFullYear(), displayDate.getMonth(), day);
-
-        // Status Based Styling
-        const status = entry?.status;
-        
-        // Future Dates
-        const checkNow = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const isFuture = cellDate > checkNow;
-        
-        if (isBlocked) {
-            return 'bg-gray-100 text-gray-500 border border-gray-200 shadow-inner opacity-80';
-        }
-
-        // 1. If YOU WORKED (Status exists and is valid work), show WORK COLOR (Overrides Holiday)
-        if (status === 'Full Day' || status === 'WFH' || status === 'Client Visit') {
-             return 'bg-[#E9FBF5] text-[#01B574] border border-[#01B574]/20 shadow-sm';
-        }
-        
-        if (status === 'Half Day') {
-             return 'bg-[#FFF9E5] text-[#FFB020] border border-[#FFB020]';
-        }
-
-        // 2. If NO WORK, then check HOLIDAY
-        if (holiday) {
-             return 'bg-[#FDF2F2] text-[#ff4d4d] border border-[#ff4d4d]/20 relative overflow-hidden';
-        }
-
-        // Requirement: Next month (and future) weekends should be red, but ONLY if no explicit status is set
-        if (isFuture && isWeekend && !status) {
-            return 'bg-red-50 text-red-400 border border-red-100';
-        }
-
-        if (!entry) return 'border border-gray-100 text-gray-400';
-
-        if (entry.isToday) return 'bg-[#F4F7FE] border border-dashed border-[#00A3C4] text-[#00A3C4] font-bold';
-
-        // Not Updated Check
-        const isNotUpdated = !entry.isFuture && !entry.isToday && !entry.isWeekend && 
-                            (status === 'Not Updated' || (!entry.totalHours && status !== 'Leave'));
-        
-        if (isNotUpdated || status === 'Pending') {
-             return 'bg-[#FFF9E5] text-[#FFB020] border border-[#FFB020] relative';
-        }
-
-        // Weekend or Leave - Check this LAST so explicit statuses above take priority
-        if (status === 'Leave' || (entry.isWeekend && !isFuture)) {
-             return 'bg-red-50 text-red-400 border border-red-100';
-        }
-
-        // Default neutral
-        return 'border border-gray-100 text-gray-400';
-    };
-
-    return (
-        <div className="animate-in fade-in duration-500">
-            {/* Main Calendar Card */}
-            <div className={`bg-white rounded-xl shadow-sm border border-gray-100 ${isSmall ? 'p-3' : isSidebar ? 'p-4' : 'p-4 md:p-6 pb-4'}`}>
-                {/* Header Section */}
-                {!isSmall && (
-                    <div className={`flex items-center justify-between gap-2 ${isSidebar ? 'mb-4' : 'flex-col sm:flex-row mb-1 md:mb-2 md:gap-4'}`}>
-                        <div className="flex items-center gap-3">
-                            <h3 className={`${isSidebar ? 'text-base' : 'text-lg md:text-xl'} font-bold text-[#1B254B] text-center sm:text-left`}>
-                                {isSidebar ? 'Attendance' : 'Monthly Attendance Snapshot'}
-                            </h3>
-                        </div>
-                        <div className={`flex items-center gap-2 ${isSidebar ? 'bg-transparent p-0' : 'md:gap-6 bg-gray-50/50 p-1 rounded-xl border border-gray-100/50'}`}>
-                            {!isSmall && !isSidebar && (
-                                <button
-                                    onClick={handleDownload}
-                                    className="p-2 text-[#2B3674] bg-[#F4F7FE] rounded-lg hover:bg-[#2B3674] hover:text-white transition-all duration-300 shadow-sm mr-2"
-                                    title="Download Monthly Report"
-                                >
-                                    <Download size={18} strokeWidth={2.5} />
-                                </button>
-                            )}
-                            <button
-                                onClick={handlePrevMonth}
-                                className={`p-2 hover:bg-white hover:shadow-sm rounded-lg transition-all text-[#A3AED0] hover:text-[#2B3674] ${isSidebar ? 'p-1' : ''}`}
-                            >
-                                <ChevronLeft size={isSidebar ? 16 : 20} />
-                            </button>
-                            <span className={`${isSidebar ? 'text-sm min-w-[100px]' : 'text-sm md:text-lg min-w-[120px] md:min-w-[140px]'} font-bold text-[#2B3674] text-center`}>
-                                {currentMonthName}
-                            </span>
-                            <button
-                                onClick={handleNextMonth}
-                                className={`p-2 hover:bg-white hover:shadow-sm rounded-lg transition-all text-[#A3AED0] hover:text-[#2B3674] ${isSidebar ? 'p-1' : ''}`}
-                            >
-                                <ChevronRight size={isSidebar ? 16 : 20} />
-                            </button>
-                        </div>
-                    </div>
-                )}
+              <div
+                className={`flex items-center gap-1 ${
+                  isSidebar
+                    ? "bg-transparent p-0"
+                    : "bg-[#F4F7FE] p-1 rounded-xl border border-transparent hover:border-gray-200 transition-colors"
+                }`}
+              >
+                <button
+                  onClick={handlePrevMonth}
+                  className={`p-1.5 hover:bg-white hover:shadow-sm rounded-lg transition-all text-[#A3AED0] hover:text-[#4318FF] active:scale-90 ${
+                    isSidebar ? "p-1" : ""
+                  }`}
+                >
+                  <ChevronLeft size={20} strokeWidth={2.5} />
+                </button>
+                <span
+                  className={`${
+                    isSidebar
+                      ? "text-sm min-w-[90px]"
+                      : "text-sm font-extrabold min-w-[120px] md:min-w-[140px]"
+                  } text-[#2B3674] text-center select-none`}
+                >
+                  {currentMonthName}
+                </span>
+                <button
+                  onClick={handleNextMonth}
+                  disabled={displayDate.getMonth() === new Date().getMonth() && displayDate.getFullYear() === new Date().getFullYear()}
+                  className={`p-1.5 rounded-lg transition-all active:scale-90 ${
+                    isSidebar ? "p-1" : ""
+                  } ${
+                    displayDate.getMonth() === new Date().getMonth() && displayDate.getFullYear() === new Date().getFullYear()
+                      ? "text-gray-300 cursor-not-allowed"
+                      : "text-[#A3AED0] hover:text-[#4318FF] hover:bg-white hover:shadow-sm"
+                  }`}
+                >
+                  <ChevronRight size={20} strokeWidth={2.5} />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Legend - Moved to top for better UX on large view */}
         {!isSmall && !isSidebar && (
@@ -301,8 +352,8 @@ const Calendar = ({
             {[
               {
                 label: "Full Day/WFH",
-                color: "bg-[#E9FBF5]",
-                border: "border-[#05CD99]",
+                color: "bg-[#E6FFFA]",
+                border: "border-[#01B574]",
               },
               {
                 label: "Half Day",
@@ -324,6 +375,11 @@ const Calendar = ({
                 label: "Holiday",
                 color: "bg-[#E6F7FF]",
                 border: "border-[#00A3C4]",
+              },
+              {
+                label: "Blocked",
+                color: "bg-gray-100",
+                border: "border-gray-200",
               },
             ].map((item) => (
               <div
@@ -377,6 +433,11 @@ const Calendar = ({
 
             {monthDays.map((day) => {
               const entry = entries.find((e) => e.date === day);
+              const cellDate = new Date(
+                displayDate.getFullYear(),
+                displayDate.getMonth(),
+                day
+              );
               const holiday = checkIsHoliday(
                 displayDate.getFullYear(),
                 displayDate.getMonth(),
@@ -387,112 +448,84 @@ const Calendar = ({
                 displayDate.getMonth() === now.getMonth() &&
                 displayDate.getFullYear() === now.getFullYear();
 
+              const isBlocked = isDateBlocked(cellDate);
+              const blockedReason = isBlocked ? getBlockedReason(cellDate) : "";
+              
+              // Determine if the day is incomplete (has data but marked as Not Updated)
               const isIncomplete =
                 entry &&
                 !entry.isFuture &&
                 !entry.isToday &&
                 !entry.isWeekend &&
                 !holiday &&
-                (entry.status === "Not Updated" ||
-                  (!entry.totalHours && entry.status !== "Leave"));
-                {isSmall && (
-                    <div className="flex items-center justify-between mb-3">
-                        <span className="text-base font-bold text-[#1B254B]">{currentMonthName}</span>
-                        <div className="flex items-center gap-1.5">
-                            <button
-                                onClick={handlePrevMonth}
-                                className="p-1 hover:bg-[#F4F7FE] rounded-md transition-all text-[#A3AED0]"
-                            >
-                                <ChevronLeft size={14} />
-                            </button>
-                            <button
-                                onClick={handleNextMonth}
-                                className="p-1 hover:bg-[#F4F7FE] rounded-md transition-all text-[#A3AED0]"
-                            >
-                                <ChevronRight size={14} />
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {/* Calendar Grid Card */}
-                <div className={`bg-white rounded-xl border border-gray-100 shadow-[0px_4px_20px_rgba(0,0,0,0.05)] ${isSmall ? 'p-1.5 mb-2' : isSidebar ? 'p-2 mb-4' : 'p-2 md:p-3 mb-1'}`}>
-                    <div className={`grid grid-cols-7 ${isSmall ? 'gap-0.5' : isSidebar ? 'gap-1' : 'gap-1 md:gap-x-px md:gap-y-2'}`}>
-                        {daysOfWeek.map(day => (
-                            <div key={day} className={`text-center font-bold text-gray-400 ${isSmall ? 'text-[7px] mb-0.5' : isSidebar ? 'text-[9px] mb-1' : 'text-[10px] md:text-xs mb-2'}`}>{day}</div>
-                        ))}
-
-                        {/* Blanks for alignment */}
-                        {blanks.map(blank => (
-                            <div key={`blank-${blank}`} className={`${isSmall ? 'h-7 w-7' : isSidebar ? 'h-8 w-8' : 'w-[90%] md:w-[75%] lg:w-[65%] h-12 md:h-14 lg:h-16'} mx-auto`}></div>
-                        ))}
-
-                        {/* Days */}
-                        {monthDays.map(day => {
-                            // Find entry
-                            const entry = entries.find(e => e.date === day);
-                            const cellDate = new Date(displayDate.getFullYear(), displayDate.getMonth(), day);
-                            const holiday = checkIsHoliday(displayDate.getFullYear(), displayDate.getMonth(), day);
-                            const isBlocked = isDateBlocked(cellDate);
-                            const blockedReason = isBlocked ? getBlockedReason(cellDate) : "";
-                            
-                            // Re-implementing logic safely without loginTime
-                            const isNotUpdated = entry && !entry.isFuture && !entry.isToday && !entry.isWeekend && 
-                                                (entry.status === 'Not Updated' || (!entry.totalHours && entry.status !== 'Leave'));
-                            
-                            const isIncomplete = entry && (isNotUpdated || entry.status === 'Pending') && !entry.isFuture && !entry.isWeekend && !isBlocked;
+                (!entry.totalHours && entry.status !== "Leave");
 
               // Status Logic for Styling
-              let cellClass =
-                "bg-white hover:shadow-md hover:-translate-y-1 border-gray-100";
+              const baseHover = "hover:shadow-md hover:-translate-y-1 transition-all duration-300";
+              let cellClass = `bg-white border-gray-100 ${baseHover}`;
               let textClass = "text-[#2B3674]";
               let statusLabel = entry?.status || "-";
 
               if (isToday) {
                 cellClass =
-                  "bg-white ring-2 ring-[#4318FF] shadow-lg shadow-blue-200 z-10";
+                  `bg-white ring-2 ring-[#4318FF] shadow-lg shadow-blue-200 z-10 ${baseHover}`;
                 textClass = "text-[#4318FF]";
                 if (statusLabel === "-") statusLabel = "";
+              } else if (isBlocked) {
+                cellClass =
+                  "bg-gray-100/60 opacity-60 grayscale border border-gray-200 shadow-inner cursor-not-allowed";
+                textClass = "text-gray-500";
+                statusLabel = "Blocked";
               } else if (
                 entry?.status === "Full Day" ||
                 entry?.status === "WFH" ||
                 entry?.status === "Client Visit"
               ) {
                 cellClass =
-                  "bg-[#E6FDF4]/50 border-transparent hover:bg-[#E6FDF4]";
-                textClass = "text-[#05CD99]";
-                 if (!entry?.totalHours || Number(entry.totalHours) === 0) {
-                  statusLabel = "";
-                }
-              } else if (entry?.status === "Half Day") {
-                cellClass =
-                  "bg-[#FFFBEB]/50 border-transparent hover:bg-[#FFFBEB]";
-                textClass = "text-[#FFB547]";
+                  `bg-[#E6FFFA] border-transparent hover:bg-[#D1FAE5] ${baseHover}`;
+                textClass = "text-[#01B574] font-bold";
                 if (!entry?.totalHours || Number(entry.totalHours) === 0) {
                   statusLabel = "";
                 }
               } else if (
-                entry?.status === "Leave" ||
-                (isIncomplete && !entry?.isFuture)
+                entry?.status === "Half Day" ||
+                isIncomplete // Using Orange for Incomplete to match Logic
               ) {
                 cellClass =
-                  "bg-[#FFF5F5]/50 border-transparent hover:bg-[#FFF5F5]";
-                textClass = "text-[#EE5D50]";
+                  `bg-[#FEF3C7] border-transparent hover:bg-[#FDE68A] ${baseHover}`; // Amber-100 -> Amber-200 hover
+                textClass = "text-yellow-600 font-bold";
+                if (!entry?.totalHours || Number(entry.totalHours) === 0) {
+                  statusLabel = isIncomplete ? "Not Updated" : "";
+                }
+              } else if (entry?.status === "Leave") {
+                cellClass =
+                  `bg-[#FEE2E2] border-transparent hover:bg-[#FECACA] ${baseHover}`; // Red-100 -> Red-200 hover
+                textClass = "text-red-600 font-bold";
               } else if (holiday) {
                 cellClass =
-                  "bg-[#F0F9FF]/50 border-transparent hover:bg-[#F0F9FF]";
-                textClass = "text-[#1890FF]";
+                  `bg-[#DBEAFE] border-transparent hover:bg-[#BFDBFE] ${baseHover}`; // Blue-100 -> Blue-200 hover
+                textClass = "text-blue-600 font-bold";
                 statusLabel = holiday.name;
               } else if (entry?.isWeekend) {
-                cellClass = "bg-gray-50/50 border-transparent";
-                textClass = "text-gray-400";
-                statusLabel = "Weekend";
+                cellClass = `bg-[#FEE2E2] border-transparent text-red-600 hover:bg-[#FECACA] ${baseHover}`;
+                textClass = "text-red-600 font-bold";
+                statusLabel = "WEEKEND";
+              } else if (entry?.isFuture) {
+                 cellClass = `bg-gray-50 border-transparent hover:bg-gray-100 ${baseHover}`;
+                 textClass = "text-gray-400 font-bold";
+                 statusLabel = "UPCOMING";
               }
 
               return (
                 <div
                   key={day}
                   onClick={() => {
+                    console.log(
+                      "Calendar: Day clicked:",
+                      day,
+                      "Month:",
+                      displayDate.getMonth()
+                    );
                     if (onNavigateToDate) {
                       onNavigateToDate(day);
                     } else {
@@ -501,16 +534,54 @@ const Calendar = ({
                         displayDate.getMonth(),
                         day
                       );
-                      navigate("/employee-dashboard/my-timesheet", {
-                        state: {
-                          selectedDate: targetDate.toISOString(),
-                          timestamp: targetDate.getTime(),
-                        },
-                      });
+                      const dateStr = targetDate.toISOString().split("T")[0];
+                      const isParamView =
+                        window.location.pathname.includes(
+                          "/admin-dashboard/working-details"
+                        );
+
+                      // Navigate based on view context
+                      if (isParamView && currentEmployeeId) {
+                        navigate(
+                          `/admin-dashboard/timesheet/${currentEmployeeId}/${dateStr}`
+                        );
+                      } else {
+                        // Standard employee view
+                        navigate("/employee-dashboard/my-timesheet", {
+                          state: {
+                            selectedDate: targetDate.toISOString(),
+                            timestamp: targetDate.getTime(),
+                          },
+                        });
+                      }
                     }
                   }}
-                  className={`relative flex flex-col items-center justify-between p-2 rounded-2xl border transition-all duration-300 cursor-pointer min-h-[90px] group ${cellClass}`}
+                  className={`relative flex flex-col items-start justify-between p-2 rounded-2xl border transition-all duration-300 cursor-pointer min-h-[72px] group ${cellClass}`}
+                  title={isBlocked ? `Blocked by Admin: ${blockedReason}` : ""}
                 >
+                  {/* Blocked Hover Overlay */}
+                  {isBlocked && (
+                    <div className="absolute inset-0 z-30 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 bg-[#111c44]/40 backdrop-blur-[3px] rounded-2xl p-2 text-center overflow-hidden pointer-events-none">
+                      <div className="bg-white/95 p-3 rounded-xl shadow-2xl flex flex-col items-center gap-1.5 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 border border-white/20 w-[90%] mx-auto">
+                        <div className="p-1.5 bg-red-100 rounded-lg">
+                          <AlertCircle size={14} className="text-red-600" />
+                        </div>
+                        <div className="space-y-0.5">
+                          <p className="text-[9px] font-black text-[#2B3674] leading-tight uppercase tracking-tight">Timesheet Blocked</p>
+                          <p className="text-[10px] font-extrabold text-[#4318FF]">
+                           {isAdmin ? "Unblock" : "Contact Admin"}
+                          </p>
+                        </div>
+                        {blockedReason && (
+                          <div className="mt-1 pt-1 border-t border-gray-100 w-full px-1">
+                            <p className="text-[8px] text-[#A3AED0] font-bold italic truncate overflow-hidden whitespace-nowrap" title={blockedReason}>
+                              "{blockedReason}"
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   <span
                     className={`text-sm font-bold ${textClass} mb-1 flex items-center justify-center w-6 h-6 rounded-full ${
                       isToday ? "bg-[#4318FF] text-white" : ""
@@ -519,8 +590,14 @@ const Calendar = ({
                     {day}
                   </span>
 
+                  {isBlocked && (
+                    <div className="absolute top-2 right-2">
+                      <Lock size={12} className="text-gray-400" />
+                    </div>
+                  )}
+
                   <div className="flex-1 flex flex-col items-center justify-center w-full">
-                    {entry?.totalHours ? (
+                    {!isBlocked && entry?.totalHours ? (
                       <div className="text-center">
                         <span
                           className={`text-lg font-black ${textClass} leading-none`}
@@ -534,192 +611,144 @@ const Calendar = ({
                     ) : (
                       <div
                         className={`h-1 w-8 rounded-full ${
-                          holiday ? "bg-[#00A3C4]/20" : "bg-gray-100"
+                          holiday
+                            ? "bg-[#00A3C4]/20"
+                            : isBlocked
+                            ? "bg-gray-300"
+                            : "bg-gray-100"
                         }`}
                       ></div>
                     )}
                   </div>
 
-                  <div
-                    className={`text-[8px] font-bold uppercase truncate w-full text-center px-1 py-1 rounded-md mt-1
+                   <div
+                    className={`text-[8px] font-bold uppercase truncate w-full text-center px-1 py-1 rounded-md mt-1 backdrop-blur-sm
                          ${
-                           holiday
-                             ? "text-white bg-[#1890FF]"
+                           isBlocked
+                             ? "text-white bg-gray-400/80"
+                             : holiday
+                             ? "text-white bg-[#1890FF]/70"
                              : entry?.status === "Full Day" && statusLabel
-                             ? "text-white bg-[#05CD99]"
-                             : entry?.status === "Half Day" && statusLabel
-                             ? "text-white bg-[#FFB020]"
+                             ? "text-white bg-[#01B574]"
+                             : (entry?.status === "Half Day" || isIncomplete) &&
+                               statusLabel
+                             ? "text-white bg-[#FFB020]/80"
                              : entry?.status === "Leave"
-                             ? "text-white bg-[#EE5D50]"
-                             : "text-gray-300"
+                             ? "text-white bg-[#EE5D50]/70"
+                             : entry?.isWeekend
+                             ? "text-white bg-[#EE5D50]/70"
+                             : "text-white bg-gray-400/60"
                          }
                     `}
                   >
-                    {holiday ? holiday.name : statusLabel}
+                    {isBlocked
+                      ? "BLOCKED"
+                      : holiday
+                      ? holiday.name
+                      : isIncomplete && !statusLabel
+                      ? "Not Updated"
+                      : statusLabel}
                   </div>
-                            return (
-                                <div
-                                    key={day}
-                                    onClick={() => {
-                                        console.log('Calendar: Day clicked:', day, 'Month:', displayDate.getMonth());
-                                        if (onNavigateToDate) {
-                                            onNavigateToDate(day);
-                                        } else {
-                                            const targetDate = new Date(displayDate.getFullYear(), displayDate.getMonth(), day);
-                                            const dateStr = targetDate.toISOString().split('T')[0];
-                                            const isParamView = window.location.pathname.includes('/admin-dashboard/working-details');
-                                            
-                                            if (isParamView && currentEmployeeId) {
-                                                navigate(`/admin-dashboard/timesheet/${currentEmployeeId}/${dateStr}`);
-                                            } else {
-                                                navigate(`/employee-dashboard/my-timesheet/${dateStr}`);
-                                            }
-                                        }
-                                    }}
-                                    className={`${isSmall ? 'w-7 h-7 text-[9px]' : isSidebar ? 'w-8 h-8 text-xs' : 'w-[90%] md:w-[75%] lg:w-[65%] h-12 md:h-14 lg:h-16 text-xs'} mx-auto rounded-lg flex items-center justify-center font-bold transition-all hover:scale-105 cursor-pointer relative group
-                                    ${getStatusClasses(day)}`}
-                                    title={isBlocked ? `Locked by Admin: ${blockedReason}` : ""}
-                                >
-                                    <span className={holiday || isBlocked ? "mb-2 md:mb-3" : ""}>{day}</span>
-                                    
-                                    {isBlocked && (
-                                        <div className="absolute top-1 right-1">
-                                            <Lock size={isSmall ? 8 : 12} className="text-gray-400" />
-                                        </div>
-                                    )}
 
-                                    {/* Render Holiday Name */}
-                                    {holiday && !isSmall && !isSidebar && (
-                                        <div className="absolute bottom-1 md:bottom-2 left-0 w-full text-center px-0.5 text-red-500">
-                                            <p className="text-[7px] md:text-[9px] leading-tight truncate font-medium opacity-90">
-                                                {holiday.name}
-                                            </p>
-                                        </div>
-                                    )}
-
-                                    {isIncomplete && (
-                                        <div className={`absolute top-0.5 right-0.5 md:-top-1 md:-right-1 bg-[#FFB020] text-white flex items-center justify-center rounded-full border border-white md:border-2 
-                                            ${isSmall ? 'w-1.5 h-1.5 text-[5px]' : 'w-2.5 h-2.5 md:w-3.5 md:h-3.5 text-[7px] md:text-[9px] font-black'}`}>!</div>
-                                    )}
-
-                                    {/* Hover Status Badge - Only for large/standard view, usually */}
-                                    {(!isSmall && !isSidebar && (entry || isBlocked) && (!holiday || (entry?.totalHours || 0) > 0)) && (
-                                        <div className={`absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full z-10 
-                                            opacity-0 group-hover:opacity-100 group-hover:translate-y-[-50%] transition-all duration-300 pointer-events-none
-                                            px-2 py-1 rounded text-[10px] md:text-xs font-bold whitespace-nowrap shadow-lg hidden md:block
-                                            ${(() => {
-                                                if (isBlocked) return 'bg-gray-700 text-white';
-                                                const status = entry?.status as any;
-                                                const isActualMissing = entry && !entry.isFuture && !entry.totalHours && status !== 'Leave' && status !== 'Holiday' && !entry.isWeekend;
-                                                
-                                                if (status === 'Not Updated' || isActualMissing || status === 'Pending') return 'bg-[#FFB020] text-white';
-                                                
-                                                if (status === 'Full Day' || status === 'WFH' || status === 'Client Visit') return 'bg-[#01B574] text-white';
-                                                
-                                                if (status === 'Half Day') return 'bg-[#FFB020] text-white';
-                                                
-                                                if (status === 'Leave' || status === 'Holiday' || entry?.isWeekend) return 'bg-red-500 text-white';
-                                                
-                                                if (entry?.isToday) return 'bg-[#00A3C4] text-white';
-                                                return 'bg-gray-800 text-white';
-                                            })()}`}>
-                                            {(() => {
-                                                if (isBlocked) return `LOCKED: ${blockedReason}`;
-                                                const status = entry?.status;
-                                                const isActualMissing = entry && !entry.isFuture && !entry.totalHours && status !== 'Leave' && (status as any) !== 'Holiday' && !entry.isWeekend;
-
-                                                if (status === 'Not Updated' || isActualMissing || status === 'Pending') return 'Not Updated';
-                                                if (entry?.isWeekend && !status) return 'Weekly Off';
-                                                return status || 'No Status';
-                                            })()}
-                                        </div>
-                                    )}
-                                </div>
-                            )
-                        })}
+                   {isIncomplete && (
+                    <div className="absolute top-2 right-2 w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center shadow-sm animate-pulse">
+                      <span className="text-white text-[10px] font-bold">!</span>
                     </div>
+                  )}
                 </div>
-
-                {/* Legend */}
-                <div className={`flex items-center justify-center flex-wrap border-t border-gray-100 ${isSmall ? 'gap-x-2 gap-y-1 mt-1 pt-1' : isSidebar ? 'gap-2 mt-4 pt-4' : 'gap-x-4 md:gap-x-10 mt-1 md:mt-2 pt-2 md:pt-3'}`}>
-                    <div className={`flex items-center text-gray-400 font-medium ${isSmall ? 'gap-1 text-[8px]' : isSidebar ? 'gap-1 text-[9px]' : 'gap-1.5 md:gap-2 text-[10px] md:text-xs'}`}>
-                        <div className={`rounded bg-[#E9FBF5] border border-[#01B574]/20 ${isSmall ? 'w-1.5 h-1.5' : 'w-2.5 h-2.5 md:w-3 md:h-3'}`}></div> {isSmall ? 'Done' : 'Full Day'}
-                    </div>
-                    <div className={`flex items-center text-gray-400 font-medium ${isSmall ? 'gap-1 text-[8px]' : isSidebar ? 'gap-1 text-[9px]' : 'gap-1.5 md:gap-2 text-[10px] md:text-xs'}`}>
-                        <div className={`rounded bg-[#F4F7FE] border border-dashed border-[#00A3C4] ${isSmall ? 'w-1.5 h-1.5' : 'w-2.5 h-2.5 md:w-3 md:h-3'}`}></div> Today
-                    </div>
-                    <div className={`flex items-center text-gray-400 font-medium ${isSmall ? 'gap-1 text-[8px]' : isSidebar ? 'gap-1 text-[9px]' : 'gap-1.5 md:gap-2 text-[10px] md:text-xs'}`}>
-                        <div className={`rounded bg-[#FFF9E5] border border-[#FFB020] ${isSmall ? 'w-1.5 h-1.5' : 'w-2.5 h-2.5 md:w-3 md:h-3'}`}></div> {isSmall ? 'Miss' : 'Half Day'}
-                    </div>
-                    <div className={`flex items-center text-gray-400 font-medium ${isSmall ? 'gap-1 text-[8px]' : isSidebar ? 'gap-1 text-[9px]' : 'gap-1.5 md:gap-2 text-[10px] md:text-xs'}`}>
-                        <div className={`rounded bg-red-50 border border-red-100 ${isSmall ? 'w-1.5 h-1.5' : 'w-2.5 h-2.5 md:w-3 md:h-3'}`}></div> {isSmall ? 'Off' : isSidebar ? 'Leave' : 'Leave / Weekend'}
-                    </div>
-                    <div className={`flex items-center text-gray-400 font-medium ${isSmall ? 'gap-1 text-[8px]' : isSidebar ? 'gap-1 text-[9px]' : 'gap-1.5 md:gap-2 text-[10px] md:text-xs'}`}>
-                        <div className={`rounded bg-gray-100 border border-gray-200 ${isSmall ? 'w-1.5 h-1.5' : 'w-2.5 h-2.5 md:w-3 md:h-3'}`}></div> Locked
-                    </div>
-                </div>
-            </div>
-            {/* Download Date Range Modal */}
-            {isDownloadModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm border border-gray-100 overflow-hidden scale-100 animate-in zoom-in-95 duration-200">
-                        {/* Header */}
-                        <div className="flex items-center justify-between p-4 border-b border-gray-50 bg-gray-50/50">
-                            <h3 className="text-lg font-bold text-[#2B3674] flex items-center gap-2">
-                                <CalendarIcon className="w-5 h-5 text-[#00A3C4]" /> 
-                                Select Date Range
-                            </h3>
-                            <button 
-                                onClick={() => setIsDownloadModalOpen(false)}
-                                className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                            >
-                                <X size={20} />
-                            </button>
-                        </div>
-                        
-                        {/* Body */}
-                        <div className="p-6 space-y-4">
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">From Date</label>
-                                <input 
-                                    type="date" 
-                                    value={downloadDateRange.from}
-                                    onChange={(e) => setDownloadDateRange({...downloadDateRange, from: e.target.value})}
-                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-[#00A3C4]/20 focus:border-[#00A3C4] transition-all"
-                                />
-                            </div>
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">To Date</label>
-                                <input 
-                                    type="date" 
-                                    value={downloadDateRange.to}
-                                    onChange={(e) => setDownloadDateRange({...downloadDateRange, to: e.target.value})}
-                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-[#00A3C4]/20 focus:border-[#00A3C4] transition-all"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Footer */}
-                        <div className="p-4 bg-gray-50/50 flex gap-3">
-                            <button 
-                                onClick={() => setIsDownloadModalOpen(false)}
-                                className="flex-1 px-4 py-2.5 text-sm font-bold text-gray-500 hover:text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-all shadow-sm"
-                            >
-                                Cancel
-                            </button>
-                            <button 
-                                onClick={handleConfirmDownload}
-                                className="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-[#2B3674] hover:bg-[#1B254B] rounded-xl transition-all shadow-lg hover:shadow-[#2B3674]/20 flex items-center justify-center gap-2"
-                            >
-                                <Download size={16} />
-                                Download PDF
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+              );
+            })}
+          </div>
         </div>
-    );
+
+        {/* Simple Legend for sidebar/small view */}
+        {(isSmall || isSidebar) && (
+          <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-gray-50 flex-wrap">
+            {/* Simplified legend dots */}
+            <div className="w-2 h-2 rounded-full bg-[#05CD99]"></div>
+            <div className="w-2 h-2 rounded-full bg-[#FFB020]"></div>
+            <div className="w-2 h-2 rounded-full bg-[#EE5D50]"></div>
+          </div>
+        )}
+      </div>
+
+      {isDownloadModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#111c44]/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-[20px] shadow-2xl w-full max-w-sm border border-gray-100 overflow-hidden scale-100 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between p-5 border-b border-gray-50">
+              <h3 className="text-lg font-bold text-[#2B3674] flex items-center gap-2">
+                <CalendarIcon className="w-5 h-5 text-[#4318FF]" />
+                Select Date Range
+              </h3>
+              <button
+                onClick={() => setIsDownloadModalOpen(false)}
+                className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-[#A3AED0] uppercase tracking-wide">
+                  From Date
+                </label>
+                <div className="relative group">
+                  <input
+                    type="date"
+                    value={downloadDateRange.from}
+                    onChange={(e) =>
+                      setDownloadDateRange({
+                        ...downloadDateRange,
+                        from: e.target.value,
+                      })
+                    }
+                    className="w-full pl-4 pr-12 py-3 bg-[#F4F7FE] border-transparent rounded-xl text-[#2B3674] font-bold focus:outline-none focus:ring-2 focus:ring-[#4318FF] transition-all cursor-pointer"
+                  />
+                  <CalendarIcon size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#2B3674]/50 pointer-events-none" />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-[#A3AED0] uppercase tracking-wide">
+                  To Date
+                </label>
+                <div className="relative group">
+                  <input
+                    type="date"
+                    value={downloadDateRange.to}
+                    onChange={(e) =>
+                      setDownloadDateRange({
+                        ...downloadDateRange,
+                        to: e.target.value,
+                      })
+                    }
+                    className="w-full pl-4 pr-12 py-3 bg-[#F4F7FE] border-transparent rounded-xl text-[#2B3674] font-bold focus:outline-none focus:ring-2 focus:ring-[#4318FF] transition-all cursor-pointer"
+                  />
+                  <CalendarIcon size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#2B3674]/50 pointer-events-none" />
+                </div>
+              </div>
+            </div>
+
+            <div className="p-5 flex gap-3">
+              <button
+                onClick={() => setIsDownloadModalOpen(false)}
+                className="flex-1 px-4 py-3 text-sm font-bold text-[#A3AED0] hover:text-[#2B3674] bg-transparent hover:bg-[#F4F7FE] rounded-xl transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDownload}
+                className="flex-1 px-4 py-3 text-xs font-bold text-white bg-gradient-to-r from-[#4318FF] to-[#868CFF] rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5 active:scale-95 tracking-wide uppercase"
+              >
+                <Download size={16} />
+                Download PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default Calendar;

@@ -292,11 +292,11 @@ const Registration = () => {
             </div>
 
             {/* Buttons Row */}
-            <div className="flex gap-4 mt-4 pt-1">
+            <div className="flex gap-4 mt-6 pt-1">
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full relative overflow-hidden bg-linear-to-r from-[#1c9cc0] to-[#0ea5e9] text-white font-semibold py-2.5 px-6 rounded-lg transition-all shadow-lg shadow-[#1c9cc0]/30 hover:shadow-[#0ea5e9]/50 text-xs transform hover:-translate-y-0.5 group disabled:opacity-70 disabled:cursor-not-allowed"
+                className="w-full relative overflow-hidden bg-linear-to-r from-[#4318FF] to-[#868CFF] text-white font-black py-3 px-6 rounded-xl transition-all shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 text-[10px] transform hover:-translate-y-0.5 group disabled:opacity-70 disabled:cursor-not-allowed tracking-widest uppercase"
               >
                 {/* Shimmer Effect */}
                 {!loading && (
@@ -307,7 +307,7 @@ const Registration = () => {
                   {loading ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Creating...
+                      CREATING...
                     </>
                   ) : (
                     "Create Account"

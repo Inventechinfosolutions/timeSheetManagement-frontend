@@ -1,47 +1,58 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo } from "react";
 import {
-    LayoutGrid,
-    Calendar,
-    User,
-    Lock,
-    AlarmClock,
-    Unlock,
-    Eye,
-    Menu,
-} from 'lucide-react';
-import { useParams } from 'react-router-dom';
-
-
+  LayoutGrid,
+  Calendar,
+  User,
+  Lock,
+  AlarmClock,
+  Unlock,
+  Eye,
+  Menu,
+} from "lucide-react";
+import { useAppSelector } from "../hooks";
+import { useParams } from "react-router-dom";
+ 
 interface SidebarLayoutProps {
   children: React.ReactNode;
   activeTab?: string;
   onTabChange?: (tab: string) => void;
   onLogout?: () => void;
 }
+ 
+const SidebarLayout = ({
+  children,
+  activeTab = "Dashboard",
+  onTabChange,
+}: SidebarLayoutProps) => {
+  // State management
+  const [isHovered, setIsHovered] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const { tab } = useParams<{ tab?: string }>();
+ 
+  // Get employee details from Redux
+  const { entity } = useAppSelector((state) => state.employeeDetails);
 
-const SidebarLayout = ({ children, activeTab = 'Dashboard', onTabChange }: SidebarLayoutProps) => {
-    // State management
-    const [isHovered, setIsHovered] = useState(false);
-    const [isLocked, setIsLocked] = useState(false);
-    const [isMobileOpen, setIsMobileOpen] = useState(false);
-    const { tab } = useParams<{ tab?: string }>();
-
-    // Determine active tab from URL if not explicitly provided
-    const derivedActiveTab = useMemo(() => {
-        if (activeTab && activeTab !== 'Dashboard') return activeTab;
-        switch (tab) {
-            case 'my-timesheet': return 'My Timesheet';
-            case 'timesheet-view': return 'Timesheet View';
-            case 'my-profile': return 'My Profile';
-            case 'change-password': return 'Change Password';
-            default: return 'Dashboard';
-        }
-    }, [tab, activeTab]);
-
+  // Determine active tab from URL if not explicitly provided
+  const derivedActiveTab = useMemo(() => {
+    if (activeTab && activeTab !== "Dashboard") return activeTab;
+    switch (tab) {
+      case "my-timesheet":
+        return "My Timesheet";
+      case "timesheet-view":
+        return "Timesheet View";
+      case "my-profile":
+        return "My Profile";
+      case "change-password":
+        return "Change Password";
+      default:
+        return "Dashboard";
+    }
+  }, [tab, activeTab]);
 
   // Sidebar opens if it's either hovered OR locked
   const isOpen = isHovered || isLocked;
-
+ 
   const sidebarItems = [
     { name: "Dashboard", icon: LayoutGrid },
     { name: "My Timesheet", icon: Calendar },
@@ -49,16 +60,13 @@ const SidebarLayout = ({ children, activeTab = 'Dashboard', onTabChange }: Sideb
     { name: "My Profile", icon: User },
     //{ name: 'Change Password', icon: Lock },
   ];
-
-  // Get employee details from Redux
-  const { entity } = useAppSelector((state) => state.employeeDetails);
-
+ 
   return (
     <div className="flex w-full h-full bg-[#f8f9fa] font-sans text-[#2B3674] overflow-hidden relative">
       {/* Mobile Menu Trigger - Floating Pulse Button */}
       <button
         onClick={() => setIsMobileOpen(true)}
-        className={`md:hidden fixed z-1001 left-4 top-[75px] w-11 h-11 bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 flex items-center justify-center text-[#4318FF] active:scale-90 transition-all duration-300
+        className={`md:hidden fixed z-[1001] left-4 top-[75px] w-11 h-11 bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 flex items-center justify-center text-[#4318FF] active:scale-90 transition-all duration-300
                     ${
                       isMobileOpen
                         ? "opacity-0 scale-90 pointer-events-none"
@@ -74,10 +82,10 @@ const SidebarLayout = ({ children, activeTab = 'Dashboard', onTabChange }: Sideb
           </span>
         </div>
       </button>
-
+ 
       {/* Premium Mobile Backdrop */}
       <div
-        className={`md:hidden fixed inset-0 bg-[#111c44]/60 backdrop-blur-md z-2000 transition-all duration-500 ease-in-out
+        className={`md:hidden fixed inset-0 bg-[#111c44]/60 backdrop-blur-md z-[2000] transition-all duration-500 ease-in-out
                     ${
                       isMobileOpen
                         ? "opacity-100 pointer-events-auto"
@@ -86,18 +94,18 @@ const SidebarLayout = ({ children, activeTab = 'Dashboard', onTabChange }: Sideb
                 `}
         onClick={() => setIsMobileOpen(false)}
       />
-
-      {/* Spacer to prevent layout shift when locked. 
-                When unlocked, it stays small (w-20). When locked, it takes full space (w-72). 
+ 
+      {/* Spacer to prevent layout shift when locked.
+                When unlocked, it stays small (w-20). When locked, it takes full space (w-64).
             */}
       <div
         className={`shrink-0 transition-all duration-300 ease-in-out ${
           isOpen ? "w-64" : "w-20"
         } hidden md:block`}
       ></div>
-
+ 
       <aside
-        className={`fixed top-0 md:absolute md:top-0 md:left-0 h-full md:h-full flex flex-col shrink-0 transition-all duration-300 ease-in-out z-2001 md:z-30 text-white
+        className={`fixed top-0 md:absolute md:top-0 md:left-0 h-full md:h-full flex flex-col shrink-0 transition-all duration-300 ease-in-out z-[2001] md:z-30 text-white
                     ${
                       isMobileOpen
                         ? "translate-x-0 w-72"
@@ -107,7 +115,7 @@ const SidebarLayout = ({ children, activeTab = 'Dashboard', onTabChange }: Sideb
                 `}
         style={{
           background:
-            "linear-gradient(37deg, #1E3A8A 4.06%, #2563EB 62.76%, #3B82F6 121.45%)",
+            "linear-gradient(37deg, #3B82F6 4.06%, #2563EB 62.76%, #1E3A8A 121.45%)",
           boxShadow:
             "0 4px 6px 0 rgba(0, 0, 0, 0.10), 0 10px 15px 0 rgba(0, 0, 0, 0.10)",
         }}
@@ -124,7 +132,7 @@ const SidebarLayout = ({ children, activeTab = 'Dashboard', onTabChange }: Sideb
           </span>
         </div>
         {/* Branding & Lock Toggle - Desktop Only */}
-        <div className="hidden md:flex h-20 items-center justify-between px-0 relative mb-4">
+        <div className="hidden md:flex h-14 items-center justify-between px-0 relative mb-0">
           {/* Logo / Title Area */}
           <div
             className={`flex items-center gap-3 transition-all duration-300 overflow-hidden h-full
@@ -138,7 +146,7 @@ const SidebarLayout = ({ children, activeTab = 'Dashboard', onTabChange }: Sideb
             <div className="shrink-0 transition-transform duration-300 hover:scale-110 p-2 bg-white/10 rounded-xl backdrop-blur-sm">
               <AlarmClock className="w-6 h-6 text-white" />
             </div>
-
+ 
             <div
               className={`flex flex-col transition-all duration-300 origin-left
                             ${
@@ -156,7 +164,7 @@ const SidebarLayout = ({ children, activeTab = 'Dashboard', onTabChange }: Sideb
               </span>
             </div>
           </div>
-
+ 
           {/* Lock/Unlock Button */}
           <button
             onClick={() => setIsLocked(!isLocked)}
@@ -172,36 +180,40 @@ const SidebarLayout = ({ children, activeTab = 'Dashboard', onTabChange }: Sideb
             {isLocked ? <Lock size={16} /> : <Unlock size={16} />}
           </button>
         </div>
-
+ 
         {/* Divider */}
-        <div className="px-4 mb-6">
+        <div className="px-4 mb-1">
           <div
             className={`h-px bg-white/20 transition-all duration-500 ${
               isOpen ? "w-full" : "w-8 mx-auto"
             }`}
           ></div>
         </div>
-
-                {/* Navigation Items */}
-                <nav className="flex-1 px-3 space-y-1 mt-1 overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [&::-webkit-scrollbar]:w-0 [&::-webkit-scrollbar]:h-0" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                    {sidebarItems.map((item) => {
-                        const isActive = derivedActiveTab === item.name;
-                        return (
-                            <div key={item.name} className="relative group">
-                                <button
-                                    onClick={() => {
-                                        onTabChange?.(item.name);
-                                        setIsMobileOpen(false); // Seamless close on select
-                                    }}
-                                    className={`w-full flex items-center gap-4 p-2 rounded-xl cursor-pointer transition-all duration-300 relative overflow-hidden group
-                                        ${isActive
-                                            ? 'bg-[#E6FFFA] text-[#00A3C4]'
-                                            : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
+ 
+        {/* Navigation Items */}
+        <nav
+          className="flex-1 px-4 space-y-2 mt-0.5 overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [&::webkit-scrollbar]:w-0 [&::-webkit-scrollbar]:h-0"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+        >
+          {sidebarItems.map((item) => {
+            const isActive = derivedActiveTab === item.name;
+            return (
+              <div key={item.name} className="relative group">
+                <button
+                  onClick={() => {
+                    onTabChange?.(item.name);
+                    setIsMobileOpen(false);
+                  }}
+                  className={`w-full flex items-center p-3 rounded-2xl cursor-pointer transition-all duration-300 relative overflow-hidden group
+                                        ${
+                                          isActive
+                                            ? "bg-white shadow-lg text-[#4318FF] font-bold"
+                                            : "text-blue-100 hover:bg-white/10 hover:text-white"
                                         }
                                         ${
-                                          !isOpen &&
-                                          !isMobileOpen &&
-                                          "md:justify-center md:px-2"
+                                          isOpen || isMobileOpen
+                                            ? "gap-4 px-4"
+                                            : "md:justify-center md:px-0 gap-0"
                                         }
                                     `}
                 >
@@ -213,7 +225,7 @@ const SidebarLayout = ({ children, activeTab = 'Dashboard', onTabChange }: Sideb
                       }`}
                     />
                   </div>
-
+ 
                   {/* Label */}
                   <span
                     className={`text-sm whitespace-nowrap transition-all duration-300 relative z-10
@@ -227,8 +239,8 @@ const SidebarLayout = ({ children, activeTab = 'Dashboard', onTabChange }: Sideb
                     {item.name}
                   </span>
                 </button>
-
-                {/* Tooltip using portal-like positioning logic or cleaner absolute */}
+ 
+                {/* Tooltip */}
                 {!isOpen && !isMobileOpen && (
                   <div className="hidden md:block absolute left-[calc(100%+10px)] top-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#111c44] text-white text-xs font-bold rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 whitespace-nowrap z-50">
                     {item.name}
@@ -240,12 +252,12 @@ const SidebarLayout = ({ children, activeTab = 'Dashboard', onTabChange }: Sideb
           })}
         </nav>
       </aside>
-
+ 
       <main className="flex-1 overflow-hidden h-full relative no-scrollbar flex flex-col bg-[#F4F7FE]">
         {children}
       </main>
     </div>
   );
 };
-
+ 
 export default SidebarLayout;

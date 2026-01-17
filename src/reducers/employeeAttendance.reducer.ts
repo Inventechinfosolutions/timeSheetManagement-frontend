@@ -65,6 +65,15 @@ export const fetchMonthlyAttendance = createAsyncThunk(
   }
 );
 
+// 1.5 Fetch Bulk Monthly: GET /monthly-details-all/:month/:year
+export const fetchAllEmployeesMonthlyAttendance = createAsyncThunk(
+  'attendance/fetchAllEmployeesMonthly',
+  async ({ month, year }: { month: string; year: string }) => {
+    const response = await axios.get(`${apiUrl}/monthly-details-all/${month}/${year}`);
+    return response.data;
+  }
+);
+
 // 2. Create Attendance Record: POST /
 export const createAttendanceRecord = createAsyncThunk(
   'attendance/createRecord',
@@ -179,6 +188,18 @@ const attendanceSlice = createSlice({
         if (action.meta && action.meta.arg && action.meta.arg.employeeId) {
              state.employeeRecords[action.meta.arg.employeeId] = action.payload;
         }
+      })
+      .addCase(fetchAllEmployeesMonthlyAttendance.fulfilled, (state: AttendanceState, action: PayloadAction<EmployeeAttendance[]>) => {
+        state.loading = false;
+        // Group by employeeId
+        const grouped: Record<string, EmployeeAttendance[]> = {};
+        action.payload.forEach(record => {
+          if (!grouped[record.employeeId]) {
+            grouped[record.employeeId] = [];
+          }
+          grouped[record.employeeId].push(record);
+        });
+        state.employeeRecords = grouped;
       })
       .addCase(fetchAttendanceByDate.fulfilled, (state: AttendanceState, action: PayloadAction<EmployeeAttendance[]>) => {
         state.loading = false;
