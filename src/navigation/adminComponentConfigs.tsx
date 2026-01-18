@@ -49,7 +49,7 @@ export const adminComponentConfigs = [
     Component: EmpRegistration,
   },
   {
-    path: "/admin-dashboard/timesheet/:employeeId",
+    path: "/admin-dashboard/timesheet/:employeeId/:date?",
     Component: AdminEmployeeTimesheetWrapper,
   },
   {

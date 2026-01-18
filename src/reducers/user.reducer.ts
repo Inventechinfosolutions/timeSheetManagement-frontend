@@ -23,6 +23,7 @@ export interface User {
   createdAt?: string;
   updatedAt?: string;
   resetRequired?: number;
+  employeeId?: string;
 }
 
 export interface CreateUserDto {
@@ -49,6 +50,7 @@ export interface LoginResponse {
   userType?: UserType;
   resetRequired?: number;
   refreshToken?: string; // Not exposed in response, stored in httpOnly cookie
+  employeeId?: string;
 }
 
 export interface AuthMeResponse {
@@ -58,6 +60,7 @@ export interface AuthMeResponse {
   accessToken: string;
   userType?: UserType;
   resetRequired?: number;
+  employeeId?: string;
 }
 
 interface UserState {
@@ -241,6 +244,7 @@ const userSlice = createSlice({
           aliasLoginName: action.payload.name,
           userType: action.payload.userType,
           resetRequired: action.payload.resetRequired,
+          employeeId: action.payload.employeeId,
         };
         state.error = null;
         
@@ -272,6 +276,7 @@ const userSlice = createSlice({
           aliasLoginName: action.payload.name,
           userType: action.payload.userType,
           resetRequired: action.payload.resetRequired,
+          employeeId: action.payload.employeeId,
         };
         state.error = null;
         

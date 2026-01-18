@@ -1,29 +1,43 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { RootState } from "../store";
 import { getEntities } from "../reducers/employeeDetails.reducer";
 import { useAppDispatch, useAppSelector } from "../hooks";
-import { Eye, Search } from "lucide-react";
+import { Eye, Search, ChevronLeft, ChevronRight, ChevronDown, Filter } from "lucide-react";
 
 const EmpWorkingDetails = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10; // Server-side pagination limit
+  const itemsPerPage = 10;
 
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState("All");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
   const [sortConfig, setSortConfig] = useState<{
     key: string | null;
     direction: "asc" | "desc";
   }>({ key: null, direction: "asc" });
 
-  const departments = ["All", "HR", "IT", "Sales", "Marketing", "Finance"];
+  const departments = ["All", "HR", "IT", "Sales", "Marketing", "Finance", "Admin"];
 
   const dispatch = useAppDispatch();
   const { entities, totalItems } = useAppSelector(
     (state: RootState) => state.employeeDetails
   );
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -35,11 +49,7 @@ const EmpWorkingDetails = () => {
   useEffect(() => {
     dispatch(
       getEntities({
-        page: currentPage,
-        limit: itemsPerPage,
         search: debouncedSearchTerm,
-        sort: sortConfig.key || undefined,
-        order: sortConfig.key ? sortConfig.direction.toUpperCase() : undefined,
         department:
           selectedDepartment === "All" ? undefined : selectedDepartment,
       })
@@ -70,7 +80,6 @@ const EmpWorkingDetails = () => {
     department: emp.department,
   }));
 
-  // Server-side: Use fetched employees directly
   const currentItems = employees;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
@@ -86,180 +95,120 @@ const EmpWorkingDetails = () => {
     }
   };
 
-  const styles = {
-    container: {
-      padding: "20px",
-      backgroundColor: "#F4F7FE",
-      minHeight: "100vh",
-      fontFamily: "'DM Sans', sans-serif",
-    },
-    header: {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      marginBottom: "30px",
-    },
-    title: {
-      fontSize: "24px",
-      fontWeight: "bold",
-      color: "#2B3674",
-      margin: 0,
-    },
-    filterContainer: {
-      display: "flex",
-      alignItems: "center",
-      gap: "10px",
-    },
-    searchBox: {
-      display: "flex",
-      alignItems: "center",
-      backgroundColor: "white",
-      borderRadius: "30px",
-      padding: "10px 20px",
-      boxShadow: "0px 18px 40px rgba(112, 144, 176, 0.12)",
-      minWidth: "250px",
-    },
-    dropdown: {
-      padding: "10px 15px",
-      borderRadius: "30px",
-      border: "none",
-      backgroundColor: "white",
-      boxShadow: "0px 18px 40px rgba(112, 144, 176, 0.12)",
-      color: "#2B3674",
-      fontWeight: "500",
-      outline: "none",
-      cursor: "pointer",
-      minWidth: "120px",
-    },
-    tableContainer: {
-      backgroundColor: "white",
-      borderRadius: "20px",
-      padding: "20px",
-      boxShadow: "0px 18px 40px rgba(112, 144, 176, 0.12)",
-      overflowX: "auto" as const,
-    },
-    table: {
-      width: "100%",
-      borderCollapse: "collapse" as const,
-    },
-    th: {
-      textAlign: "left" as const,
-      padding: "15px",
-      borderBottom: "1px solid #E9EDF7",
-      color: "#A3AED0",
-      fontSize: "12px",
-      fontWeight: "500",
-      textTransform: "uppercase" as const,
-    },
-    td: {
-      padding: "15px",
-      borderBottom: "1px solid #E9EDF7",
-      color: "#2B3674",
-      fontSize: "14px",
-      fontWeight: "500",
-    },
-    actionBtn: {
-      backgroundColor: "transparent",
-      border: "none",
-      cursor: "pointer",
-      color: "#4318FF",
-      display: "flex",
-      alignItems: "center",
-      gap: "5px",
-      fontSize: "14px",
-    },
-  };
-
   const handleViewDetails = (empId: string) => {
     navigate(`/admin-dashboard/working-details/${empId}`);
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        <h1 style={styles.title}>Employee Working Details</h1>
+    <div className="p-5 bg-[#F4F7FE] min-h-screen font-sans">
+      <div className="max-w-6xl mx-auto">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <h1 className="text-2xl font-bold text-[#2B3674] m-0">Employee Working Details</h1>
 
-        <div style={styles.filterContainer}>
-          {/* Department Filter */}
-          <select
-            value={selectedDepartment}
-            onChange={(e) => {
-              setSelectedDepartment(e.target.value);
-              setCurrentPage(1); // Reset to first page
-            }}
-            style={styles.dropdown}
-          >
-            {departments.map((dept) => (
-              <option key={dept} value={dept}>
-                {dept}
-              </option>
-            ))}
-          </select>
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          {/* Modern Custom Dropdown */}
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="flex items-center gap-2 px-5 py-2.5 bg-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] text-[#2B3674] font-bold text-sm hover:bg-gray-50 transition-all border border-transparent focus:border-[#4318FF]/20"
+            >
+              <Filter size={16} className="text-[#4318FF]" />
+              <span>{selectedDepartment}</span>
+              <ChevronDown size={16} className={`text-[#A3AED0] transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isDropdownOpen && (
+              <div className="absolute top-full right-0 mt-2 w-48 bg-white/80 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-white/20 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="px-3 py-1 mb-1">
+                  <span className="text-[10px] font-black text-[#A3AED0] uppercase tracking-widest pl-2">Departments</span>
+                </div>
+                {departments.map((dept) => (
+                  <button
+                    key={dept}
+                    onClick={() => {
+                      setSelectedDepartment(dept);
+                      setIsDropdownOpen(false);
+                      setCurrentPage(1);
+                    }}
+                    className={`w-full text-left px-5 py-2 text-sm font-semibold transition-colors
+                      ${selectedDepartment === dept 
+                        ? 'text-[#4318FF] bg-[#4318FF]/5' 
+                        : 'text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]'}`}
+                  >
+                    {dept}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Search Box */}
-          <div style={styles.searchBox}>
-            <Search size={18} color="#A3AED0" style={{ marginRight: "10px" }} />
+          <div className="flex items-center bg-white rounded-full px-5 py-2.5 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] min-w-[250px] flex-1 md:flex-initial border border-transparent focus-within:border-[#4318FF]/20 transition-all">
+            <Search size={18} className="text-[#A3AED0] mr-2" />
             <input
               type="text"
               placeholder="Search..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{
-                border: "none",
-                outline: "none",
-                backgroundColor: "transparent",
-                color: "#2B3674",
-                width: "100%",
-                fontSize: "14px",
-                fontWeight: "500",
-              }}
+              className="border-none outline-none bg-transparent text-[#2B3674] w-full text-sm font-semibold placeholder:text-[#A3AED0]/60"
             />
           </div>
         </div>
       </div>
 
-      <div style={styles.tableContainer}>
-        <table style={styles.table}>
+      <div className="bg-white rounded-[20px] p-6 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] overflow-x-auto border border-gray-50">
+        <h3 className="text-xl font-bold text-[#2B3674] mb-5">Employee List</h3>
+        <table className="w-full border-collapse">
           <thead>
             <tr>
               <th
-                style={{ ...styles.th, cursor: "pointer", userSelect: "none" }}
+                className="text-left py-4 pl-10 pr-4 border-b border-[#E9EDF7] text-[#A3AED0] text-[12px] font-bold uppercase tracking-wider cursor-pointer select-none hover:text-[#4318FF] transition-colors"
                 onClick={() => handleSort("fullName")}
-                title="Click to sort by Name"
               >
                 Name
               </th>
               <th
-                style={{ ...styles.th, cursor: "pointer", userSelect: "none" }}
+                className="text-center py-4 px-4 border-b border-[#E9EDF7] text-[#A3AED0] text-[12px] font-bold uppercase tracking-wider cursor-pointer select-none hover:text-[#4318FF] transition-colors"
                 onClick={() => handleSort("employeeId")}
-                title="Click to sort by ID"
               >
                 ID
               </th>
-              <th style={styles.th}>Department</th>
-              <th style={styles.th}>Action</th>
+              <th className="text-center py-4 px-4 border-b border-[#E9EDF7] text-[#A3AED0] text-[12px] font-bold uppercase tracking-wider">
+                Department
+              </th>
+              <th className="py-4 pl-4 pr-10 border-b border-[#E9EDF7] text-[#A3AED0] text-[12px] font-bold uppercase tracking-wider text-center w-48">
+                Action
+              </th>
             </tr>
           </thead>
-          <tbody>
-            {currentItems.map((emp) => (
-              <tr key={emp.id}>
-                <td style={styles.td}>{emp.name}</td>
-                <td style={styles.td}>{emp.id}</td>
-                <td style={styles.td}>{emp.department}</td>
-                <td style={styles.td}>
+          <tbody className="divide-y divide-gray-50">
+            {currentItems.map((emp, index) => (
+              <tr 
+                key={emp.id} 
+                className={`group transition-all duration-300 ${index % 2 === 0 ? 'bg-white' : 'bg-[#F8F9FC]'} hover:bg-[#E9EDF7] hover:shadow-[0px_4px_25px_rgba(112,144,176,0.18)] hover:scale-[1.005] cursor-pointer`}
+              >
+                <td className="py-4 pl-10 pr-4 text-[#2B3674] text-sm font-bold">{emp.name}</td>
+                <td className="py-4 px-4 text-center text-[#A3AED0] text-sm font-semibold">{emp.id}</td>
+                <td className="py-4 px-4 text-center text-[#A3AED0] text-sm font-semibold">
+                  {emp.department || "General"}
+                </td>
+                <td className="py-4 pl-4 pr-10 text-center">
                   <button
-                    style={styles.actionBtn}
                     onClick={() => handleViewDetails(emp.id)}
+                    className="inline-flex items-center gap-2 bg-transparent border-none cursor-pointer text-[#4318FF] text-sm font-bold hover:underline transition-all hover:translate-x-1"
                   >
-                    <Eye size={16} /> View
+                    <Eye size={16} /> View Details
                   </button>
                 </td>
               </tr>
             ))}
             {currentItems.length === 0 && (
               <tr>
-                <td colSpan={4} style={{ ...styles.td, textAlign: "center" }}>
-                  No employees found
+                <td colSpan={4} className="py-20 text-center text-[#A3AED0] font-bold">
+                  <div className="flex flex-col items-center gap-2">
+                    <Search size={32} className="opacity-20" />
+                    <span>No employees found matching your criteria</span>
+                  </div>
                 </td>
               </tr>
             )}
@@ -267,62 +216,34 @@ const EmpWorkingDetails = () => {
         </table>
 
         {/* Pagination Controls */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-end",
-            alignItems: "center",
-            marginTop: "20px",
-            gap: "10px",
-          }}
-        >
+        <div className="flex justify-end items-center mt-6 gap-3">
           <button
             onClick={handlePrevPage}
             disabled={currentPage === 1}
-            style={{
-              padding: "8px 16px",
-              borderRadius: "8px",
-              border: "1px solid #E9EDF7",
-              backgroundColor: currentPage === 1 ? "#F4F7FE" : "white",
-              color: currentPage === 1 ? "#A3AED0" : "#2B3674",
-              cursor: currentPage === 1 ? "not-allowed" : "pointer",
-              fontWeight: "bold",
-              fontSize: "14px",
-            }}
+            className={`p-2 rounded-xl border border-[#E9EDF7] transition-all flex items-center justify-center
+              ${currentPage === 1 
+                ? 'bg-gray-50 text-gray-300 cursor-not-allowed' 
+                : 'bg-white text-[#4318FF] hover:bg-[#4318FF]/5 active:scale-90 shadow-sm'}`}
           >
-            Previous
+            <ChevronLeft size={18} />
           </button>
-          <span
-            style={{ fontSize: "14px", color: "#2B3674", fontWeight: "500" }}
-          >
-            Page {currentPage} of {totalPages > 0 ? totalPages : 1}
-          </span>
+          <div className="bg-[#F4F7FE] px-4 py-1.5 rounded-xl border border-transparent">
+            <span className="text-xs font-black text-[#2B3674] tracking-widest">
+              {currentPage} / {totalPages > 0 ? totalPages : 1}
+            </span>
+          </div>
           <button
             onClick={handleNextPage}
             disabled={currentPage === totalPages || totalPages === 0}
-            style={{
-              padding: "8px 16px",
-              borderRadius: "8px",
-              border: "1px solid #E9EDF7",
-              backgroundColor:
-                currentPage === totalPages || totalPages === 0
-                  ? "#F4F7FE"
-                  : "white",
-              color:
-                currentPage === totalPages || totalPages === 0
-                  ? "#A3AED0"
-                  : "#2B3674",
-              cursor:
-                currentPage === totalPages || totalPages === 0
-                  ? "not-allowed"
-                  : "pointer",
-              fontWeight: "bold",
-              fontSize: "14px",
-            }}
+            className={`p-2 rounded-xl border border-[#E9EDF7] transition-all flex items-center justify-center
+              ${currentPage === totalPages || totalPages === 0
+                ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
+                : 'bg-white text-[#4318FF] hover:bg-[#4318FF]/5 active:scale-90 shadow-sm'}`}
           >
-            Next
+            <ChevronRight size={18} />
           </button>
         </div>
+      </div>
       </div>
     </div>
   );

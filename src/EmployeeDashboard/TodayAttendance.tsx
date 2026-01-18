@@ -1,15 +1,25 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
-import { LayoutGrid, Clock, AlertTriangle, Edit } from "lucide-react";
-import { useAppDispatch, useAppSelector } from "../hooks";
-import { fetchMonthlyAttendance } from "../reducers/employeeAttendance.reducer";
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-  getEntities,
-  setCurrentUser,
-} from "../reducers/employeeDetails.reducer";
-import { generateMonthlyEntries } from "../utils/attendanceUtils";
-import Calendar from "./CalendarView";
-import { RootState } from "../store";
+    LayoutGrid,
+    Clock,
+    AlertTriangle,
+    Edit,
+    Calendar as CalendarIcon
+} from 'lucide-react';
+import { useAppDispatch, useAppSelector } from '../hooks';
+import { 
+    fetchMonthlyAttendance
+} from '../reducers/employeeAttendance.reducer';
+import { 
+    getEntity,
+    setCurrentUser
+} from '../reducers/employeeDetails.reducer';
+import { 
+    generateMonthlyEntries
+} from '../utils/attendanceUtils';
+import Calendar from './CalendarView';
+import { RootState } from '../store';
 
 interface Props {
   setActiveTab?: (tab: string) => void;
@@ -38,38 +48,28 @@ const TodayAttendance = ({
   const [now] = useState(() => new Date());
   const [calendarDate, setCalendarDate] = useState(new Date());
 
-  // Fetch entity if missing name but we have an ID to search for
-  useEffect(() => {
-    if (!entity?.fullName && (currentEmployeeId || currentUser?.loginId)) {
-      const searchTerm = currentEmployeeId || currentUser?.loginId;
-      if (searchTerm) {
-        if (detailsFetched.current) return;
-        detailsFetched.current = true;
-
-        dispatch(getEntities({ page: 1, limit: 1, search: searchTerm }))
-          .unwrap()
-          .then((response) => {
-            const data = Array.isArray(response)
-              ? response
-              : response.data || [];
-            // Prefer exact match on employeeId if searching by it
-            const found =
-              data.find(
-                (u: any) =>
-                  u.employeeId === searchTerm || u.email === searchTerm
-              ) || data[0];
-
-            if (found) {
-              dispatch(setCurrentUser(found));
+    // Fetch entity if missing name but we have an ID to fetch
+    useEffect(() => {
+        if (!entity?.fullName && (currentEmployeeId || currentUser?.loginId)) {
+            const searchTerm = currentEmployeeId || currentUser?.loginId;
+            if (searchTerm) {
+                if (detailsFetched.current) return;
+                detailsFetched.current = true;
+                
+                dispatch(getEntity(searchTerm))
+                    .unwrap()
+                    .then((found) => {
+                         if (found) {
+                             dispatch(setCurrentUser(found));
+                         }
+                    })
+                    .catch(err => {
+                         detailsFetched.current = false; // Reset on failure so it can retry
+                         console.error("Failed to fetch employee details:", err);
+                    });
             }
-          })
-          .catch((err) => {
-            detailsFetched.current = false; // Reset on failure so it can retry
-            console.error("Failed to fetch employee details:", err);
-          });
-      }
-    }
-  }, [dispatch, entity, currentEmployeeId, currentUser]);
+        }
+    }, [dispatch, entity, currentEmployeeId, currentUser]);
 
   // 1. Separate "Today's" Data - ALWAYS based on current real-time Month
   // This ensures "Today's Attendance" card never changes when navigating calendar
@@ -191,17 +191,25 @@ const TodayAttendance = ({
       <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
         {/* Top Row: Colorful Stats Cards (Reference Style) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Card 1: Green (Full Days) */}
+          {/* Card 1: Total Full Days - Green */}
           <div
             onClick={() => handleNavigate(calendarDate.getTime())}
-            className="rounded-xl p-6 relative overflow-hidden cursor-pointer hover:-translate-y-1 transition-transform duration-300 shadow-sm"
-            style={{ backgroundColor: "#05CD99" }}
+            className="group relative h-44 rounded-[30px] p-2 overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-green-500/40"
+            style={{
+              background: "linear-gradient(135deg, #4ADE80 0%, #16A34A 100%)",
+            }}
           >
-            <div className="flex flex-col items-center justify-center text-center h-full text-white">
-              <p className="text-sm font-bold uppercase tracking-wider mb-2 opacity-90">
-                Total Full Days
-              </p>
-              <h3 className="text-5xl font-black mb-1">
+            {/* Top Label */}
+            <div className="h-[25%] flex items-center justify-center">
+                <h3 className="text-white text-base font-medium tracking-wide">Total Full Days</h3>
+            </div>
+
+            {/* Glass Panel */}
+            <div className="h-[75%] bg-white/20 backdrop-blur-md rounded-[24px] border border-white/30 flex flex-col items-center justify-center relative overflow-hidden shadow-inner">
+                 {/* Glossy shine reflection */}
+                 <div className="absolute -top-20 -left-20 w-60 h-60 bg-white/20 rounded-full blur-3xl pointer-events-none"></div>
+
+                <h2 className="text-6xl font-bold text-white drop-shadow-md mb-2 relative z-10">
                 {
                   currentMonthEntries.filter(
                     (e) =>
@@ -210,59 +218,73 @@ const TodayAttendance = ({
                       e.status === "Client Visit"
                   ).length
                 }
-              </h3>
-              <p className="text-xs font-medium opacity-80">Within SLA</p>
+                </h2>
+                <p className="text-white/90 text-sm font-medium tracking-wide relative z-10">Within SLA</p>
             </div>
           </div>
 
-          {/* Card 2: Orange (Half Days) */}
+          {/* Card 2: Total Half Days - Orange */}
           <div
             onClick={() => handleNavigate(calendarDate.getTime())}
-            className="rounded-xl p-6 relative overflow-hidden cursor-pointer hover:-translate-y-1 transition-transform duration-300 shadow-sm"
-            style={{ backgroundColor: "#FFB020" }}
+            className="group relative h-44 rounded-[30px] p-2 overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-orange-500/40"
+            style={{
+              background: "linear-gradient(135deg, #FDBA74 0%, #EA580C 100%)",
+            }}
           >
-            <div className="flex flex-col items-center justify-center text-center h-full text-white">
-              <p className="text-sm font-bold uppercase tracking-wider mb-2 opacity-90">
-                Total Half Days
-              </p>
-              <h3 className="text-5xl font-black mb-1">
+            {/* Top Label */}
+            <div className="h-[25%] flex items-center justify-center">
+                <h3 className="text-white text-base font-medium tracking-wide">Total Half Days</h3>
+            </div>
+
+             {/* Glass Panel */}
+            <div className="h-[75%] bg-white/20 backdrop-blur-md rounded-[24px] border border-white/30 flex flex-col items-center justify-center relative overflow-hidden shadow-inner">
+                {/* Glossy shine reflection */}
+                <div className="absolute -top-20 -left-20 w-60 h-60 bg-white/20 rounded-full blur-3xl pointer-events-none"></div>
+
+                <h2 className="text-6xl font-bold text-white drop-shadow-md mb-2 relative z-10">
                 {records.filter((r) => r.status === "Half Day").length}
-              </h3>
-              <p className="text-xs font-medium opacity-80">
-                Approaching Limit
-              </p>
+                </h2>
+                <p className="text-white/90 text-sm font-medium tracking-wide relative z-10">Approaching Limit</p>
             </div>
           </div>
 
-          {/* Card 3: Red (Absent) */}
+          {/* Card 3: Total Absent Days - Red */}
           <div
             onClick={() => handleNavigate(calendarDate.getTime())}
-            className="rounded-xl p-6 relative overflow-hidden cursor-pointer hover:-translate-y-1 transition-transform duration-300 shadow-sm"
-            style={{ backgroundColor: "#EE5D50" }}
+            className="group relative h-44 rounded-[30px] p-2 overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-red-500/40"
+            style={{
+              background: "linear-gradient(135deg, #F87171 0%, #DC2626 100%)",
+            }}
           >
-            <div className="flex flex-col items-center justify-center text-center h-full text-white">
-              <p className="text-sm font-bold uppercase tracking-wider mb-2 opacity-90">
-                Total Absent Days
-              </p>
-              <h3 className="text-5xl font-black mb-1">
+             {/* Top Label */}
+             <div className="h-[25%] flex items-center justify-center">
+                <h3 className="text-white text-base font-medium tracking-wide">Total Absent Days</h3>
+            </div>
+
+             {/* Glass Panel */}
+            <div className="h-[75%] bg-white/20 backdrop-blur-md rounded-[24px] border border-white/30 flex flex-col items-center justify-center relative overflow-hidden shadow-inner">
+                 {/* Glossy shine reflection */}
+                <div className="absolute -top-20 -left-20 w-60 h-60 bg-white/20 rounded-full blur-3xl pointer-events-none"></div>
+
+                <h2 className="text-6xl font-bold text-white drop-shadow-md mb-2 relative z-10">
                 {records.filter((r) => r.status === "Leave").length}
-              </h3>
-              <p className="text-xs font-medium opacity-80">Action Required</p>
+                </h2>
+                <p className="text-white/90 text-sm font-medium tracking-wide relative z-10">Action Required</p>
             </div>
           </div>
         </div>
 
         {/* Middle Section: Info Cards (White) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-xl p-6 shadow-[0px_10px_30px_rgba(0,0,0,0.02)] border border-gray-100/50 flex flex-col justify-between">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500 mb-4">
-              <Clock size={20} />
+          <div className="bg-white rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-row items-center gap-5 transition-all hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
+            <div className="w-12 h-12 rounded-xl bg-blue-50/80 flex items-center justify-center text-blue-600 shadow-sm group-hover:scale-110 transition-transform">
+              <Clock size={24} strokeWidth={2} />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-gray-400 uppercase tracking-wide">
+              <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">
                 Total Week Hours
               </h4>
-              <p className="text-2xl font-bold text-[#1B2559] mt-1">
+              <p className="text-3xl font-black text-gray-800 tracking-tight">
                 {(() => {
                   const d = new Date(now);
                   const day = d.getDay();
@@ -287,15 +309,15 @@ const TodayAttendance = ({
             </div>
           </div>
 
-          <div className="bg-white rounded-xl p-6 shadow-[0px_10px_30px_rgba(0,0,0,0.02)] border border-gray-100/50 flex flex-col justify-between">
-            <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center text-purple-500 mb-4">
-              <Clock size={20} />
+          <div className="bg-white rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-row items-center gap-5 transition-all hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
+            <div className="w-12 h-12 rounded-xl bg-purple-50/80 flex items-center justify-center text-purple-600 shadow-sm">
+              <CalendarIcon size={24} strokeWidth={2} />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-gray-400 uppercase tracking-wide">
+              <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">
                 Total Monthly Hours
               </h4>
-              <p className="text-2xl font-bold text-[#1B2559] mt-1">
+              <p className="text-3xl font-black text-gray-800 tracking-tight">
                 {(() => {
                   const workedDays = records.filter(
                     (e) => (e.totalHours || 0) > 0
@@ -308,36 +330,35 @@ const TodayAttendance = ({
             </div>
           </div>
 
-          <div className="bg-white rounded-xl p-6 shadow-[0px_10px_30px_rgba(0,0,0,0.02)] border border-gray-100/50 flex flex-col justify-between">
-            <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center text-orange-500 mb-4">
-              <AlertTriangle size={20} />
+          <div className="bg-white rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-row items-center gap-5 transition-all hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
+            <div className="w-12 h-12 rounded-xl bg-orange-50/80 flex items-center justify-center text-orange-500 shadow-sm">
+              <AlertTriangle size={24} strokeWidth={2} />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-gray-400 uppercase tracking-wide">
+              <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">
                 Pending Updates
               </h4>
-              <p className="text-2xl font-bold text-[#1B2559] mt-1">
-                {
-                  currentMonthEntries.filter(
-                    (day) =>
-                      day.status === "Not Updated" && day.fullDate < new Date()
-                  ).length
-                }{" "}
-                <span className="text-xs text-gray-400 font-normal ml-1">
+              <div className="flex items-baseline gap-1">
+                <p className="text-3xl font-black text-gray-800 tracking-tight">
+                    {
+                    currentMonthEntries.filter(
+                        (day) =>
+                        day.status === "Not Updated" && day.fullDate < new Date()
+                    ).length
+                    }
+                </p>
+                <span className="text-sm text-gray-400 font-bold">
                   Days
                 </span>
-              </p>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="flex justify-end">
+        <div className="flex justify-start">
           <button
             onClick={() => handleNavigate(now.getTime())}
-            className="px-8 py-3 rounded-xl text-white font-bold shadow-lg shadow-blue-500/30 hover:shadow-blue-500/40 transition-all flex items-center gap-2 transform active:scale-95"
-            style={{
-              background: "linear-gradient(90deg, #2563EB 0%, #1E40AF 100%)",
-            }}
+            className="px-8 py-3 rounded-xl text-white font-bold bg-gradient-to-r from-[#868CFF] to-[#4318FF] shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all flex items-center gap-2 transform active:scale-95"
           >
             <Edit size={18} />
             <span>Update Today's Attendance</span>

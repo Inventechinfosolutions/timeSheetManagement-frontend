@@ -1,22 +1,22 @@
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, useParams, useNavigate } from "react-router-dom";
 import { useAppDispatch } from "../hooks";
 import { logoutUser } from "../reducers/user.reducer";
 import SidebarLayout from "../EmployeeDashboard/SidebarLayout";
 
 const EmployeeLayout = () => {
-  const location = useLocation();
+  const { tab } = useParams<{ tab: string }>();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
-  // Determine active tab based on current path
+  // Determine active tab based on path parameter
   const getActiveTab = () => {
-    const path = location.pathname;
-    if (path === "/employee-dashboard/my-timesheet") return "My Timesheet";
-    if (path === "/employee-dashboard/timesheet-view") return "Timesheet View";
-    if (path === "/employee-dashboard/my-profile") return "My Profile";
-    if (path === "/employee-dashboard/change-password")
-      return "Change Password";
-    return "Dashboard";
+    switch (tab) {
+      case "my-timesheet": return "My Timesheet";
+      case "timesheet-view": return "Timesheet View";
+      case "my-profile": return "My Profile";
+      case "change-password": return "Change Password";
+      default: return "Dashboard";
+    }
   };
 
   const handleTabChange = (tabName: string) => {

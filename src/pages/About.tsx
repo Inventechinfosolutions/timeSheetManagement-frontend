@@ -6,16 +6,7 @@ const About = () => {
 
   return (
     <div className="min-h-screen bg-[#F4F7FE] pb-20">
-      <style>{`
-        ::-webkit-scrollbar {
-          display: none;
-        }
-        * {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-      `}</style>
-
+      
       {/* Hero Section */}
       <div className="bg-linear-to-r from-[#1c9cc0] to-[#00A3C4] text-white py-16 sm:py-24 px-4 sm:px-6 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32 blur-3xl"></div>

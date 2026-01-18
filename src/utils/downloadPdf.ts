@@ -10,6 +10,7 @@ interface PdfData {
     month: string;
     entries: TimesheetEntry[];
     totalHours: number;
+    holidays?: any[];
 }
 
 export const downloadPdf = ({ 
@@ -19,7 +20,8 @@ export const downloadPdf = ({
     department = 'Engineering', // Default or passed
     month, 
     entries, 
-    totalHours 
+    totalHours,
+    holidays = []
 }: PdfData) => {
     const doc = new jsPDF();
     const blueColor = "#2B3674";
@@ -97,20 +99,54 @@ export const downloadPdf = ({
     
     const tableColumn = ["Date", "Day", "Total Hours", "Status"];
     const tableRows: any[] = [];
+    
+    let fullDays = 0;
+    let halfDays = 0;
+    let leaves = 0;
 
     entries.forEach(entry => {
         const dateStr = new Date(entry.fullDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         
         const hours = entry.totalHours ? entry.totalHours.toFixed(2) : "--"; // 09:00 format
         
-        let status = entry.status || "";
+        // Normalize Check Date
+        const d = new Date(entry.fullDate);
+        const entryDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        
+        // Check master holiday
+        const holiday = holidays.find((h: any) => {
+             const hDate = h.holidayDate || h.date;
+             if (!hDate) return false;
+             return (String(hDate).split('T')[0]) === entryDateStr;
+        });
 
-        if (!status) {
-             if (entry.isWeekend) status = "WEEKEND";
-             else if (entry.isFuture) status = "";
-             else status = "ABSENT"; 
+        let status = entry.status || "";
+        const isFuture = entry.isFuture;
+
+        const isStatusMissing = !status || status === "Not Updated" || status === "NOT UPDATED";
+
+        if (isStatusMissing) {
+             if (holiday) {
+                 status = holiday.holidayName || holiday.name || "HOLIDAY";
+             } else if (entry.isWeekend) {
+                 status = "WEEKEND";
+             } else if (!isFuture) {
+                 status = "NOT UPDATED";
+             } else {
+                 status = ""; 
+             }
         }
-        status = status.toUpperCase();
+        
+        status = (status || "").toUpperCase();
+
+        // Tally totals
+        if (status === "FULL DAY" || status === "WFH" || status === "CLIENT VISIT") {
+            fullDays++;
+        } else if (status === "HALF DAY") {
+            halfDays++;
+        } else if (status === "LEAVE") {
+            leaves++;
+        }
 
         const rowData = [
             dateStr,
@@ -152,16 +188,28 @@ export const downloadPdf = ({
     });
 
     // -- Footer Section --
+    // -- Summary Section --
     const finalY = (doc as any).lastAutoTable.finalY || 60;
     
-    // Total Hours Box
-    doc.setFillColor(blueColor);
-    doc.rect(140, finalY + 5, 56, 10, 'F');
+    // Background Layer
+    doc.setFillColor(245, 247, 250);
+    doc.rect(14, finalY + 5, 182, 12, 'F');
     
-    doc.setFontSize(11);
-    doc.setTextColor(255, 255, 255);
+    // Border Line
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.1);
+    doc.line(14, finalY + 5, 196, finalY + 5);
+    doc.line(14, finalY + 17, 196, finalY + 17);
+
+    doc.setFontSize(9);
+    doc.setTextColor(blueColor);
     doc.setFont('helvetica', 'bold');
-    doc.text(`Total Hours: ${totalHours.toFixed(1)}`, 168, finalY + 11.5, { align: 'center' });
+    
+    const summaryY = finalY + 12.8;
+    doc.text(`Full Days: ${fullDays}`, 20, summaryY);
+    doc.text(`Half Days: ${halfDays}`, 65, summaryY);
+    doc.text(`Leaves: ${leaves}`, 110, summaryY);
+    doc.text(`Total Hours: ${totalHours.toFixed(1)}`, 155, summaryY);
 
     // Save
     const fileName = `Timesheet_${employeeName.replace(/\s+/g, '_')}_${month.substring(0, 10)}.pdf`;

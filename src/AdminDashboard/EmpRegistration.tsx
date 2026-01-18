@@ -3,12 +3,9 @@ import { useNavigate } from "react-router-dom";
 import {
   User,
   Mail,
-  Lock,
   Briefcase,
   Building,
-  Shield,
   CreditCard,
- 
   Loader2,
   CheckCircle,
 } from "lucide-react";
@@ -100,9 +97,9 @@ const Registration = () => {
   };
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center p-4 font-sans text-gray-800 lg:p-10 relative">
+    <div className="w-full h-full flex flex-col items-center justify-center p-4 font-sans text-gray-800 lg:p-4 lg:pt-0 relative">
       {/* Back Button */}
-      <div className="w-full max-w-4xl mb-6">
+      <div className="w-full max-w-4xl mb-2">
         <button
           onClick={() => navigate(-1)}
           className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors font-medium group"
@@ -111,10 +108,10 @@ const Registration = () => {
         </button>
       </div>
       {/* Main Card - Full Width Registration */}
-      <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden min-h-[500px]">
+      <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden">
         {/* Form Container */}
-        <div className="w-full bg-white px-8 py-8 lg:px-12 lg:py-10 flex flex-col justify-center h-full overflow-hidden">
-          <div className="mb-6">
+        <div className="w-full bg-white px-8 py-4 lg:px-12 lg:py-6 flex flex-col justify-center h-full overflow-hidden">
+          <div className="mb-3">
             <h2 className="text-2xl font-bold text-gray-900 mb-1">
               Create an Employee Account
             </h2>
@@ -148,8 +145,8 @@ const Registration = () => {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Inner Card wrapping inputs */}
-            <div className="border border-gray-100 rounded-2xl p-5 shadow-sm bg-white/50">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="border border-gray-100 rounded-2xl p-4 shadow-sm bg-white/50">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
                 {/* Full Name */}
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">
@@ -295,11 +292,11 @@ const Registration = () => {
             </div>
 
             {/* Buttons Row */}
-            <div className="flex gap-4 mt-8 pt-2">
+            <div className="flex gap-4 mt-6 pt-1">
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full relative overflow-hidden bg-linear-to-r from-[#1c9cc0] to-[#0ea5e9] text-white font-semibold py-2.5 px-6 rounded-lg transition-all shadow-lg shadow-[#1c9cc0]/30 hover:shadow-[#0ea5e9]/50 text-xs transform hover:-translate-y-0.5 group disabled:opacity-70 disabled:cursor-not-allowed"
+                className="w-full relative overflow-hidden bg-linear-to-r from-[#4318FF] to-[#868CFF] text-white font-black py-3 px-6 rounded-xl transition-all shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 text-[10px] transform hover:-translate-y-0.5 group disabled:opacity-70 disabled:cursor-not-allowed tracking-widest uppercase"
               >
                 {/* Shimmer Effect */}
                 {!loading && (
@@ -310,7 +307,7 @@ const Registration = () => {
                   {loading ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Creating...
+                      CREATING...
                     </>
                   ) : (
                     "Create Account"

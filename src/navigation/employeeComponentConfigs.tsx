@@ -16,7 +16,7 @@ export const employeeComponentConfigs = [
     Component: TodayAttendance,
   },
   {
-    path: "/employee-dashboard/my-timesheet",
+    path: "/employee-dashboard/my-timesheet/:date?",
     Component: MyTimesheet,
   },
   {

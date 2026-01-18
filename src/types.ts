@@ -18,3 +18,4 @@ export interface TimesheetEntry {
     isSaved: boolean;
     totalHours?: number;
 }
+   
