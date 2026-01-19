@@ -8,11 +8,12 @@ import {
   Calendar as CalendarIcon,
   Lock,
   AlertCircle,
+  Loader2,
 } from "lucide-react";
 import { downloadPdf } from "../utils/downloadPdf";
 import { useAppSelector, useAppDispatch } from "../hooks";
 import { RootState } from "../store";
-import { generateMonthlyEntries } from "../utils/attendanceUtils";
+import { generateMonthlyEntries, generateRangeEntries } from "../utils/attendanceUtils";
 import { TimesheetEntry } from "../types";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import { fetchMonthlyAttendance } from "../reducers/employeeAttendance.reducer";
@@ -67,6 +68,7 @@ const Calendar = ({
     from: "",
     to: "",
   });
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const displayDate = currentDate || internalDisplayDate;
 
@@ -155,34 +157,49 @@ const Calendar = ({
   };
 
   const handleConfirmDownload = () => {
-    if (!entity || !entries) return;
+    if (!entity || !currentEmployeeId) return;
 
-    const fromDateStr = downloadDateRange.from;
-    const toDateStr = downloadDateRange.to;
+    try {
+      setIsDownloading(true);
+      const fromDateStr = downloadDateRange.from;
+      const toDateStr = downloadDateRange.to;
 
-    const filteredEntries = entries.filter((e) => {
-      const d = new Date(e.fullDate);
-      const entryDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-      return entryDateStr >= fromDateStr && entryDateStr <= toDateStr;
-    });
+      // 1. Use existing data from Redux state instead of making a new API call
+      // Filter records that fall within the selected date range
+      const filteredRecords = records.filter(record => {
+        const recordDate = new Date(record.workingDate).toISOString().split('T')[0];
+        return recordDate >= fromDateStr && recordDate <= toDateStr;
+      });
 
-    const totalHours = filteredEntries.reduce(
-      (sum, entry) => sum + (entry.totalHours || 0),
-      0,
-    );
+      // 2. Generate full range entries (including weekends/holidays/not-updated)
+      const start = new Date(fromDateStr);
+      const end = new Date(toDateStr);
+      
+      const rangeEntries = generateRangeEntries(start, end, now, filteredRecords);
 
-    downloadPdf({
-      employeeName: entity.fullName || "Employee",
-      employeeId: entity.employeeId,
-      designation: entity.designation || "N/A",
-      department: entity.department || "Engineering",
-      month: `${downloadDateRange.from} to ${downloadDateRange.to}`,
-      entries: filteredEntries,
-      totalHours: totalHours,
-      holidays: holidays,
-    });
+      const totalHours = rangeEntries.reduce(
+        (sum, entry) => sum + (entry.totalHours || 0),
+        0
+      );
 
-    setIsDownloadModalOpen(false);
+      // 3. Generate PDF
+      downloadPdf({
+        employeeName: entity.fullName || "Employee",
+        employeeId: currentEmployeeId,
+        designation: entity.designation,
+        department: entity.department,
+        month: `${fromDateStr} to ${toDateStr}`,
+        entries: rangeEntries,
+        totalHours: totalHours,
+        holidays: holidays || []
+      });
+
+      setIsDownloadModalOpen(false);
+    } catch (error) {
+      console.error("Download failed:", error);
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   const isDateBlocked = (date: Date) => {
@@ -712,6 +729,7 @@ const Calendar = ({
                   <input
                     type="date"
                     value={downloadDateRange.from}
+                    max={new Date().toISOString().split("T")[0]}
                     onChange={(e) =>
                       setDownloadDateRange({
                         ...downloadDateRange,
@@ -734,6 +752,7 @@ const Calendar = ({
                   <input
                     type="date"
                     value={downloadDateRange.to}
+                    max={new Date().toISOString().split("T")[0]}
                     onChange={(e) =>
                       setDownloadDateRange({
                         ...downloadDateRange,
@@ -759,10 +778,15 @@ const Calendar = ({
               </button>
               <button
                 onClick={handleConfirmDownload}
-                className="flex-1 px-4 py-3 text-xs font-bold text-white bg-gradient-to-r from-[#4318FF] to-[#868CFF] rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5 active:scale-95 tracking-wide uppercase"
+                disabled={isDownloading}
+                className={`flex-1 px-4 py-3 text-xs font-bold text-white bg-gradient-to-r from-[#4318FF] to-[#868CFF] rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5 active:scale-95 tracking-wide uppercase ${isDownloading ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
-                <Download size={16} />
-                Download PDF
+                {isDownloading ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <Download size={16} />
+                )}
+                {isDownloading ? 'Fetching...' : 'Download PDF'}
               </button>
             </div>
           </div>

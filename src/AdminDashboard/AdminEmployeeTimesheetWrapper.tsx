@@ -120,7 +120,7 @@ const AdminEmployeeTimesheetWrapper = () => {
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#F4F7FE] p-4 md:p-8 pt-6">
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-6 flex flex-shrink-0 items-center justify-between">
         <div className="flex flex-col gap-1">
           <button
             onClick={handleBack}

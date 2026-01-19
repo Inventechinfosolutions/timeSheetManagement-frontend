@@ -116,13 +116,11 @@ export const fetchAttendanceByDate = createAsyncThunk(
   }
 );
 
-// 5. Fetch Worked Days: GET /worked-days/:employeeId?startDate=...&endDate=...
+// 5. Fetch Worked Days: GET /worked-days/:employeeId/:startDate/:endDate
 export const fetchWorkedDays = createAsyncThunk(
   'attendance/fetchWorkedDays',
   async ({ employeeId, startDate, endDate }: { employeeId: string; startDate: string; endDate: string }) => {
-    const response = await axios.get(`${apiUrl}/worked-days/${employeeId}`, {
-      params: { startDate, endDate },
-    });
+    const response = await axios.get(`${apiUrl}/worked-days/${employeeId}/${startDate}/${endDate}`);
     return response.data;
   }
 );

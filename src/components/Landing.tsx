@@ -65,19 +65,7 @@ const Landing = () => {
         // Success!
         localStorage.setItem("userLoginId", loginId);
         dispatch(setCurrentUser({ employeeId: loginId }));
-        // Effect will handle redirect to /admin-dashboard or /employee-dashboard based on role
-      } else {
-        // 2. Fallback to Employee Login (Mock Mode) if Admin fails
-        // In a real app, we'd check error codes (e.g., 404 User Not Found vs 401 Bad Password).
-        // Here, we assume if it's not a valid Admin, it might be an Employee.
-        // We preserve the existing "Employee Login doesn't check password" prototype behavior.
-
-        console.log(
-          "Admin login failed or user is not admin. Proceeding as Employee."
-        );
-        // Set employee context for dashboard components
-        localStorage.setItem("userLoginId", loginId);
-        dispatch(setCurrentUser({ employeeId: loginId }));
+        // Effect will handle redirect
       }
     } catch (err) {
       console.error("Login attempt failed:", err);
