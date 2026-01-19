@@ -11,6 +11,7 @@ import {
   ChevronDown,
   Filter,
 } from "lucide-react";
+import EmployeeTimeSheetMobileCard from "./EmployeeTimeSheetMobileCard";
 
 const AdminEmployeeTimesheetList = () => {
   const navigate = useNavigate();
@@ -66,7 +67,11 @@ const AdminEmployeeTimesheetList = () => {
   useEffect(() => {
     dispatch(
       getEntities({
+        page: currentPage,
+        limit: itemsPerPage,
         search: debouncedSearchTerm,
+        sort: sortConfig.key || undefined,
+        order: sortConfig.key ? sortConfig.direction.toUpperCase() : undefined,
         department:
           selectedDepartment === "All" ? undefined : selectedDepartment,
       }),
@@ -118,7 +123,7 @@ const AdminEmployeeTimesheetList = () => {
 
   return (
     <div className="p-5 bg-[#F4F7FE] min-h-screen font-sans">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-[1600px] mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <h1 className="text-2xl font-bold text-[#2B3674] m-0">
             Employee Timesheet
@@ -183,101 +188,124 @@ const AdminEmployeeTimesheetList = () => {
         </div>
 
         <div className="bg-white rounded-[20px] p-0 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] overflow-hidden border border-gray-100">
-          <table className="w-full border-separate border-spacing-0">
-            <thead>
-              <tr className="bg-[#4318FF] text-white">
-                <th
-                  className="text-left py-4 pl-10 pr-4 text-[13px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-[#3d16e5] transition-colors"
-                  onClick={() => handleSort("fullName")}
-                >
-                  Name
-                </th>
-                <th
-                  className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-[#3d16e5] transition-colors"
-                  onClick={() => handleSort("employeeId")}
-                >
-                  ID
-                </th>
-                <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider">
-                  Department
-                </th>
-                <th className="py-4 pl-4 pr-10 text-[13px] font-bold uppercase tracking-wider text-center w-48">
-                  Action
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {currentItems.map((emp, index) => (
-                <tr
-                  key={emp.id}
-                  className={`group transition-all duration-200 ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} hover:bg-[#F1F4FF] cursor-pointer`}
-                >
-                  <td className="py-4 pl-10 pr-4 text-[#2B3674] text-sm font-bold">
-                    {emp.name}
-                  </td>
-                  <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
-                    {emp.id}
-                  </td>
-                  <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
-                    {emp.department || "General"}
-                  </td>
-                  <td className="py-4 pl-4 pr-10 text-center">
-                    <button
-                      onClick={() => handleViewTimesheet(emp.id)}
-                      className="inline-flex items-center gap-2 bg-transparent border-none cursor-pointer text-[#4318FF] text-sm font-bold hover:underline transition-all hover:scale-105 active:scale-95"
-                    >
-                      <Edit size={16} /> Edit Timesheet
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {currentItems.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={4}
-                    className="py-24 text-center text-[#A3AED0] font-bold bg-white"
+          {/* Desktop Table View */}
+          <div className="hidden lg:block">
+            <table className="w-full border-separate border-spacing-0">
+              <thead>
+                <tr className="bg-[#4318FF] text-white">
+                  <th
+                    className="text-left py-4 pl-10 pr-4 text-[13px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-[#3d16e5] transition-colors"
+                    onClick={() => handleSort("fullName")}
                   >
-                    <div className="flex flex-col items-center gap-3">
-                      <Search size={40} className="text-[#E0E5F2]" />
-                      <span>No employees found matching your criteria</span>
-                    </div>
-                  </td>
+                    Name
+                  </th>
+                  <th
+                    className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-[#3d16e5] transition-colors"
+                    onClick={() => handleSort("employeeId")}
+                  >
+                    ID
+                  </th>
+                  <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider">
+                    Department
+                  </th>
+                  <th className="py-4 pl-4 pr-10 text-[13px] font-bold uppercase tracking-wider text-center w-48">
+                    Action
+                  </th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {currentItems.map((emp, index) => (
+                  <tr
+                    key={emp.id}
+                    className={`group transition-all duration-200 ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} hover:bg-[#F1F4FF] cursor-pointer`}
+                  >
+                    <td className="py-4 pl-10 pr-4 text-[#2B3674] text-sm font-bold">
+                      {emp.name}
+                    </td>
+                    <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
+                      {emp.id}
+                    </td>
+                    <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
+                      {emp.department || "General"}
+                    </td>
+                    <td className="py-4 pl-4 pr-10 text-center">
+                      <button
+                        onClick={() => handleViewTimesheet(emp.id)}
+                        className="inline-flex items-center gap-2 bg-transparent border-none cursor-pointer text-[#4318FF] text-sm font-bold hover:underline transition-all hover:scale-105 active:scale-95"
+                      >
+                        <Edit size={16} /> Edit Timesheet
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile/Tablet Card View */}
+          <div className="block lg:hidden p-4">
+            {currentItems.length > 0 ? (
+              <EmployeeTimeSheetMobileCard
+                employees={currentItems}
+                onViewTimesheet={handleViewTimesheet}
+              />
+            ) : null}
+          </div>
+
+          {currentItems.length === 0 && (
+            <div className="py-24 text-center text-[#A3AED0] font-bold bg-white">
+              <div className="flex flex-col items-center gap-3">
+                <Search size={40} className="text-[#E0E5F2]" />
+                <span>No employees found matching your criteria</span>
+              </div>
+            </div>
+          )}
 
           {/* Pagination Controls */}
-          <div className="flex justify-end items-center mt-6 gap-3">
-            <button
-              onClick={handlePrevPage}
-              disabled={currentPage === 1}
-              className={`p-2 rounded-xl border border-[#E9EDF7] transition-all flex items-center justify-center
-              ${
-                currentPage === 1
-                  ? "bg-gray-50 text-gray-300 cursor-not-allowed"
-                  : "bg-white text-[#4318FF] hover:bg-[#4318FF]/5 active:scale-90 shadow-sm"
-              }`}
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <div className="bg-[#F4F7FE] px-4 py-1.5 rounded-xl border border-transparent">
-              <span className="text-xs font-black text-[#2B3674] tracking-widest">
-                {currentPage} / {totalPages > 0 ? totalPages : 1}
-              </span>
+          <div className="flex flex-col sm:flex-row justify-between items-center mt-6 p-6 lg:px-10 lg:pb-10 gap-6">
+            <div className="text-sm font-bold text-[#A3AED0] text-center sm:text-left">
+              Showing{" "}
+              <span className="text-[#2B3674]">
+                {totalItems > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}
+              </span>{" "}
+              to{" "}
+              <span className="text-[#2B3674]">
+                {Math.min(currentPage * itemsPerPage, totalItems)}
+              </span>{" "}
+              of <span className="text-[#2B3674]">{totalItems}</span> entries
             </div>
-            <button
-              onClick={handleNextPage}
-              disabled={currentPage === totalPages || totalPages === 0}
-              className={`p-2 rounded-xl border border-[#E9EDF7] transition-all flex items-center justify-center
-              ${
-                currentPage === totalPages || totalPages === 0
-                  ? "bg-gray-50 text-gray-300 cursor-not-allowed"
-                  : "bg-white text-[#4318FF] hover:bg-[#4318FF]/5 active:scale-90 shadow-sm"
-              }`}
-            >
-              <ChevronRight size={18} />
-            </button>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handlePrevPage}
+                disabled={currentPage === 1}
+                className={`p-2 rounded-xl border border-[#E9EDF7] transition-all flex items-center justify-center
+                ${
+                  currentPage === 1
+                    ? "bg-gray-50 text-gray-300 cursor-not-allowed"
+                    : "bg-white text-[#4318FF] hover:bg-[#4318FF]/5 active:scale-90 shadow-sm"
+                }`}
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <div className="bg-[#F4F7FE] px-4 py-1.5 rounded-xl border border-transparent">
+                <span className="text-xs font-black text-[#2B3674] tracking-widest">
+                  {currentPage} / {totalPages > 0 ? totalPages : 1}
+                </span>
+              </div>
+              <button
+                onClick={handleNextPage}
+                disabled={currentPage === totalPages || totalPages === 0}
+                className={`p-2 rounded-xl border border-[#E9EDF7] transition-all flex items-center justify-center
+                ${
+                  currentPage === totalPages || totalPages === 0
+                    ? "bg-gray-50 text-gray-300 cursor-not-allowed"
+                    : "bg-white text-[#4318FF] hover:bg-[#4318FF]/5 active:scale-90 shadow-sm"
+                }`}
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
           </div>
         </div>
       </div>

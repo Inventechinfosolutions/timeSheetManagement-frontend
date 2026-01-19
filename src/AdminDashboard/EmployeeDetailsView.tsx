@@ -90,7 +90,7 @@ const EmployeeDetailsView = () => {
     .toUpperCase();
 
   return (
-    <div className="px-4 md:px-8 pt-6 pb-8 w-full max-w-[1400px] mx-auto animate-in fade-in duration-500 space-y-3">
+    <div className="px-4 md:px-8 py-2 md:py-8 w-full max-w-[1400px] mx-auto animate-in fade-in duration-500 space-y-3 md:space-y-6">
       {/* Navigation Back */}
       <div className="flex items-center mb-2">
         <button
@@ -108,7 +108,7 @@ const EmployeeDetailsView = () => {
       </div>
 
       {/* Top Card - User Header with Gradient */}
-      <div className="relative overflow-hidden rounded-[24px] shadow-[0px_20px_50px_0px_#111c440d] border border-gray-100">
+      <div className="relative overflow-hidden rounded-2xl md:rounded-[24px] shadow-[0px_20px_50px_0px_#111c440d] border border-gray-100">
         {/* Gradient Background */}
         <div
           className="absolute inset-0 opacity-100"
@@ -118,38 +118,38 @@ const EmployeeDetailsView = () => {
         ></div>
 
         {/* Content */}
-        <div className="relative z-10 p-4 flex flex-col md:flex-row items-center md:items-start gap-5">
+        <div className="relative z-10 p-4 md:p-10 flex flex-col md:flex-row items-center md:items-start gap-3 md:gap-6">
           {/* Avatar Area */}
           <div className="flex flex-col items-center gap-2">
-            <div className="p-1 rounded-full bg-white shadow-xl overflow-hidden">
+            <div className="p-0.5 md:p-1 rounded-full bg-white shadow-xl overflow-hidden">
               {viewedProfileImage ? (
                 <img
                   src={viewedProfileImage}
                   alt="Profile"
-                  className="w-24 h-24 rounded-full object-cover"
+                  className="w-14 h-14 sm:w-20 md:w-24 rounded-full object-cover"
                 />
               ) : (
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#4318FF] to-[#00A3C4] flex items-center justify-center text-white text-3xl font-black shadow-inner">
+                <div className="w-14 h-14 sm:w-20 md:w-24 rounded-full bg-gradient-to-br from-[#4318FF] to-[#00A3C4] flex items-center justify-center text-white text-xl sm:text-2xl md:text-3xl font-black shadow-inner">
                   {avatarLetter}
                 </div>
               )}
             </div>
           </div>
 
-          <div className="text-center md:text-left flex-1 mt-1">
-            <h1 className="text-2xl font-black text-white mb-0.5">
+          <div className="text-center md:text-left flex-1 mt-0.5">
+            <h1 className="text-base sm:text-2xl md:text-3xl font-black text-white mb-0">
               {employee.fullName || employee.name || ""}
             </h1>
-            <p className="text-white/90 font-semibold text-base mb-3">
+            <p className="text-white/90 font-semibold text-[10px] sm:text-base md:text-lg mb-2">
               {employee.designation || "Employee"}
             </p>
-            <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 text-sm text-white/80">
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-white/10 backdrop-blur-sm rounded-full border border-white/10">
-                <Building size={14} />
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-1.5 text-[9px] sm:text-xs md:text-sm text-white/80">
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-white/10 backdrop-blur-sm rounded-full border border-white/10">
+                <Building size={12} className="md:w-3.5 md:h-3.5" />
                 <span className="font-medium">InvenTech INFO SOLUTIONS</span>
               </div>
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-white/10 backdrop-blur-sm rounded-full border border-white/10">
-                <CreditCard size={14} />
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-white/10 backdrop-blur-sm rounded-full border border-white/10">
+                <CreditCard size={12} className="md:w-3.5 md:h-3.5" />
                 <span className="font-medium">
                   {employee.employeeId || employee.id || ""}
                 </span>
@@ -160,7 +160,7 @@ const EmployeeDetailsView = () => {
       </div>
 
       {/* Personal Information Card */}
-      <div className="bg-white rounded-[24px] p-6 shadow-[0px_20px_50px_0px_#111c440d] border border-gray-100">
+      <div className="bg-white rounded-2xl md:rounded-[24px] p-5 sm:p-6 md:p-8 shadow-[0px_20px_50px_0px_#111c440d] border border-gray-100 mb-4 md:mb-8">
         <div className="flex items-center gap-3 mb-5">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#667eea] to-[#764ba2] flex items-center justify-center shadow-lg shadow-purple-200">
             <User size={20} className="text-white" />
@@ -170,7 +170,7 @@ const EmployeeDetailsView = () => {
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-7">
           {/* Full Name */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">

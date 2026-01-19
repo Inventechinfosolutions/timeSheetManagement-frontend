@@ -2,7 +2,10 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { RootState } from "../store";
-import { fetchMonthlyAttendance, AttendanceStatus } from "../reducers/employeeAttendance.reducer";
+import {
+  fetchMonthlyAttendance,
+  AttendanceStatus,
+} from "../reducers/employeeAttendance.reducer";
 import Calendar from "../EmployeeDashboard/CalendarView";
 import { ArrowLeft, ClipboardList, Clock, CalendarCheck } from "lucide-react";
 
@@ -11,27 +14,27 @@ const AdminEmployeeCalendarView = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { records, loading } = useAppSelector(
-    (state: RootState) => state.attendance
+    (state: RootState) => state.attendance,
   );
   const { entities } = useAppSelector(
-    (state: RootState) => state.employeeDetails
+    (state: RootState) => state.employeeDetails,
   );
   const [displayDate, setDisplayDate] = useState(new Date());
 
   const employee = entities.find(
-    (e: any) => (e.employeeId || e.id) === employeeId
+    (e: any) => (e.employeeId || e.id) === employeeId,
   );
 
   // Calculate metrics
   const presentDays = records.filter(
     (r) =>
       r.status === AttendanceStatus.FULL_DAY ||
-      r.status === AttendanceStatus.HALF_DAY
+      r.status === AttendanceStatus.HALF_DAY,
   ).length;
 
   const totalHours = records.reduce(
     (acc, curr) => acc + (curr.totalHours || 0),
-    0
+    0,
   );
   const avgHours =
     presentDays > 0 ? (totalHours / presentDays).toFixed(1) : "0";
@@ -43,7 +46,7 @@ const AdminEmployeeCalendarView = () => {
           employeeId,
           month: (displayDate.getMonth() + 1).toString(),
           year: displayDate.getFullYear().toString(),
-        })
+        }),
       );
     }
   }, [dispatch, employeeId, displayDate]);
@@ -64,8 +67,13 @@ const AdminEmployeeCalendarView = () => {
           onClick={handleBack}
           className="flex items-center gap-2 text-gray-400 hover:text-[#4318FF] transition-colors group mx-auto"
         >
-          <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
-          <span className="text-sm font-semibold tracking-wide">Back to employee list</span>
+          <ArrowLeft
+            size={18}
+            className="group-hover:-translate-x-1 transition-transform"
+          />
+          <span className="text-sm font-semibold tracking-wide">
+            Back to employee list
+          </span>
         </button>
       </div>
     );
@@ -79,8 +87,13 @@ const AdminEmployeeCalendarView = () => {
             onClick={handleBack}
             className="flex items-center gap-2 text-gray-400 hover:text-[#4318FF] transition-colors group"
           >
-            <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
-            <span className="text-sm font-semibold tracking-wide">Back to employee list</span>
+            <ArrowLeft
+              size={18}
+              className="group-hover:-translate-x-1 transition-transform"
+            />
+            <span className="text-sm font-semibold tracking-wide">
+              Back to employee list
+            </span>
           </button>
           <h2 className="text-xl font-bold text-[#2B3674] mt-1">
             Working Details: {employee.fullName || employee.name}
