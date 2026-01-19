@@ -246,7 +246,7 @@ const attendanceSlice = createSlice({
       // 2. ADD MATCHERS SECOND
       // HANDLE GLOBAL LOADING (Pending states)
       .addMatcher(
-        (action: any) => action.type.endsWith('/pending'),
+        (action: any) => action.type.startsWith('attendance/') && action.type.endsWith('/pending'),
         (state: AttendanceState) => {
           state.loading = true;
           state.error = null;
@@ -275,7 +275,7 @@ const attendanceSlice = createSlice({
 
       // HANDLE GLOBAL ERRORS (Rejected states)
       .addMatcher(
-        (action: any) => action.type.endsWith('/rejected'),
+        (action: any) => action.type.startsWith('attendance/') && action.type.endsWith('/rejected'),
         (state: AttendanceState, action: any) => {
           state.loading = false;
           // Capture the error message from Axios
