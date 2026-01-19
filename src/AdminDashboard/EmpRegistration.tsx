@@ -8,6 +8,7 @@ import {
   CreditCard,
   Loader2,
   CheckCircle,
+  ArrowLeft,
 } from "lucide-react";
 import { createEntity, reset } from "../reducers/employeeDetails.reducer";
 import { useAppDispatch, useAppSelector } from "../hooks";
@@ -68,9 +69,10 @@ const Registration = () => {
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: name === "employeeId" ? value.toUpperCase() : value,
     });
   };
 
@@ -98,13 +100,13 @@ const Registration = () => {
 
   return (
     <div className="w-full h-full flex flex-col items-center justify-center p-4 font-sans text-gray-800 lg:p-4 lg:pt-0 relative">
-      {/* Back Button */}
-      <div className="w-full max-w-4xl mb-2">
+      <div className="w-full max-w-4xl mb-3">
         <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors font-medium group"
+          onClick={() => navigate("/admin-dashboard/timesheet-list")}
+          className="flex items-center gap-2 text-gray-400 hover:text-[#4318FF] transition-colors group"
         >
-          <span>Back</span>
+          <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+          <span className="text-sm font-semibold tracking-wide">Back to employee list</span>
         </button>
       </div>
       {/* Main Card - Full Width Registration */}
@@ -143,7 +145,7 @@ const Registration = () => {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
             {/* Inner Card wrapping inputs */}
             <div className="border border-gray-100 rounded-2xl p-4 shadow-sm bg-white/50">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
@@ -157,9 +159,10 @@ const Registration = () => {
                       type="text"
                       name="fullName"
                       placeholder="John Doe"
-                      className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all placeholder-gray-300 text-gray-700 text-xs"
+                      className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-md focus:ring-1 focus:ring-[#4318FF] focus:border-[#4318FF] outline-none transition-all placeholder-gray-300 text-gray-700 text-xs"
                       value={formData.fullName}
                       onChange={handleChange}
+                      autoComplete="nope"
                       required
                     />
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
@@ -176,9 +179,13 @@ const Registration = () => {
                       type="text"
                       name="employeeId"
                       placeholder="EMP-1234"
-                      className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all placeholder-gray-300 text-gray-700 text-xs"
+                      className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-md focus:ring-1 focus:ring-[#4318FF] focus:border-[#4318FF] outline-none transition-all placeholder-gray-300 text-gray-700 text-xs"
                       value={formData.employeeId}
                       onChange={handleChange}
+                      onInput={(e) => (e.currentTarget.value = e.currentTarget.value.toUpperCase())}
+                      pattern="[A-Z0-9-]*"
+                      title="Employee ID should contain only uppercase letters, numbers, and hyphens"
+                      autoComplete="nope"
                       required
                     />
                     <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
@@ -193,7 +200,7 @@ const Registration = () => {
                   <div className="relative group">
                     <select
                       name="department"
-                      className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-md focus:ring-1 focus:ring-[#00A3C4] focus:border-[#00A3C4] outline-none transition-all text-gray-700 text-xs appearance-none bg-white"
+                      className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-md focus:ring-1 focus:ring-[#4318FF] focus:border-[#4318FF] outline-none transition-all text-gray-700 text-xs appearance-none bg-white font-semibold"
                       value={formData.department}
                       onChange={handleChange}
                       required
@@ -221,7 +228,7 @@ const Registration = () => {
                       type="text"
                       name="designation"
                       placeholder="Senior Developer"
-                      className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-md focus:ring-1 focus:ring-[#00A3C4] focus:border-[#00A3C4] outline-none transition-all placeholder-gray-300 text-gray-700 text-xs"
+                      className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-md focus:ring-1 focus:ring-[#4318FF] focus:border-[#4318FF] outline-none transition-all placeholder-gray-300 text-gray-700 text-xs"
                       value={formData.designation}
                       onChange={handleChange}
                       required
@@ -241,9 +248,10 @@ const Registration = () => {
                     type="email"
                     name="email"
                     placeholder="john.doe@inventech.com"
-                    className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all placeholder-gray-300 text-gray-700 text-xs"
+                    className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-md focus:ring-1 focus:ring-[#4318FF] focus:border-[#4318FF] outline-none transition-all placeholder-gray-300 text-gray-700 text-xs"
                     value={formData.email}
                     onChange={handleChange}
+                    autoComplete="new-password"
                     required
                   />
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />

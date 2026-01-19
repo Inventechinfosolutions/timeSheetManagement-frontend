@@ -154,30 +154,39 @@ export const mapAttendanceToEntry = (
  */
 export const generateMonthlyEntries = (date: Date, now: Date, records: EmployeeAttendance[]): TimesheetEntry[] => {
     const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-    const entries: TimesheetEntry[] = [];
+    const startDate = new Date(date.getFullYear(), date.getMonth(), 1);
+    const endDate = new Date(date.getFullYear(), date.getMonth(), daysInMonth);
+    return generateRangeEntries(startDate, endDate, now, records);
+};
 
-    for (let i = 1; i <= daysInMonth; i++) {
-        const currentLoopDate = new Date(date.getFullYear(), date.getMonth(), i);
+/**
+ * Generates a full range of TimesheetEntry objects between two dates, merging in actual attendance records where they exist.
+ */
+export const generateRangeEntries = (start: Date, end: Date, now: Date, records: EmployeeAttendance[]): TimesheetEntry[] => {
+    const entries: TimesheetEntry[] = [];
+    const current = new Date(start);
+    current.setHours(0, 0, 0, 0);
+    const endNorm = new Date(end);
+    endNorm.setHours(0, 0, 0, 0);
+
+    while (current <= endNorm) {
+        const currentLoopDate = new Date(current);
         
         // Find record for this specific day using YYYY-MM-DD comparison
         const loopDateStr = `${currentLoopDate.getFullYear()}-${(currentLoopDate.getMonth() + 1).toString().padStart(2, '0')}-${currentLoopDate.getDate().toString().padStart(2, '0')}`;
         
         const actualRecord = records.find(r => {
-            // Handle camelCase vs snake_case
             const rawDate = r.workingDate || (r as any).working_date;
             if (!rawDate) return false;
 
             let rYear, rMonth, rDay;
-            
             if (typeof rawDate === 'string') {
-                // Check if it's ISO string or Date only
                 if (rawDate.includes('T')) {
                      const d = new Date(rawDate);
                      rYear = d.getFullYear();
                      rMonth = d.getMonth() + 1;
                      rDay = d.getDate();
                 } else {
-                     // Assume YYYY-MM-DD
                      const parts = rawDate.split('-');
                      rYear = parseInt(parts[0]);
                      rMonth = parseInt(parts[1]);
@@ -195,6 +204,7 @@ export const generateMonthlyEntries = (date: Date, now: Date, records: EmployeeA
         });
 
         entries.push(mapAttendanceToEntry(currentLoopDate, now, actualRecord));
+        current.setDate(current.getDate() + 1);
     }
     return entries;
 };
