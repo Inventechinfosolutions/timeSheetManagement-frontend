@@ -42,20 +42,22 @@ const Calendar = ({
   const navigate = useNavigate();
   const { records } = useAppSelector((state: RootState) => state.attendance);
   const { entity } = useAppSelector(
-    (state: RootState) => state.employeeDetails
+    (state: RootState) => state.employeeDetails,
   );
   const { currentUser } = useAppSelector((state: RootState) => state.user);
   // @ts-ignore - Assuming masterHolidays is in RootState but type might not be fully updated in IDE
   const { holidays } = useAppSelector(
-    (state: RootState) => state.masterHolidays || { holidays: [] }
+    (state: RootState) => state.masterHolidays || { holidays: [] },
   );
-  // const { currentUser } = useAppSelector((state: RootState) => state.user);
   const { blockers } = useAppSelector(
-    (state: RootState) => state.timesheetBlocker
+    (state: RootState) => state.timesheetBlocker,
   );
 
   const isAdmin = currentUser?.userType === UserType.ADMIN;
-  const currentEmployeeId = propEmployeeId || entity?.employeeId || (!isAdmin ? currentUser?.employeeId : undefined);
+  const currentEmployeeId =
+    propEmployeeId ||
+    entity?.employeeId ||
+    (!isAdmin ? currentUser?.employeeId : undefined);
   const holidaysFetched = useRef(false);
   const attendanceFetchedKey = useRef<string | null>(null);
 
@@ -75,13 +77,17 @@ const Calendar = ({
 
   // Fetch attendance data and blockers when month/employee changes
   useEffect(() => {
-    if (!currentEmployeeId || (isAdmin && currentEmployeeId.toLowerCase() === "admin")) return;
+    if (
+      !currentEmployeeId ||
+      (isAdmin && currentEmployeeId.toLowerCase() === "admin")
+    )
+      return;
     if (propEntries) return;
 
     const fetchKey = `${currentEmployeeId}-${
       displayDate.getMonth() + 1
     }-${displayDate.getFullYear()}`;
-    
+
     if (attendanceFetchedKey.current === fetchKey) return;
     attendanceFetchedKey.current = fetchKey;
 
@@ -91,7 +97,7 @@ const Calendar = ({
         employeeId: currentEmployeeId,
         month: (displayDate.getMonth() + 1).toString().padStart(2, "0"),
         year: displayDate.getFullYear().toString(),
-      })
+      }),
     );
   }, [dispatch, currentEmployeeId, displayDate, propEntries, isAdmin]);
 
@@ -105,7 +111,7 @@ const Calendar = ({
     const newDate = new Date(
       displayDate.getFullYear(),
       displayDate.getMonth() - 1,
-      1
+      1,
     );
     if (onMonthChange) {
       onMonthChange(newDate);
@@ -118,7 +124,7 @@ const Calendar = ({
     const newDate = new Date(
       displayDate.getFullYear(),
       displayDate.getMonth() + 1,
-      1
+      1,
     );
     if (onMonthChange) {
       onMonthChange(newDate);
@@ -131,12 +137,12 @@ const Calendar = ({
     const start = new Date(
       displayDate.getFullYear(),
       displayDate.getMonth(),
-      1
+      1,
     );
     const end = new Date(
       displayDate.getFullYear(),
       displayDate.getMonth() + 1,
-      0
+      0,
     );
 
     const format = (d: Date) => {
@@ -156,13 +162,13 @@ const Calendar = ({
 
     const filteredEntries = entries.filter((e) => {
       const d = new Date(e.fullDate);
-      const entryDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const entryDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
       return entryDateStr >= fromDateStr && entryDateStr <= toDateStr;
     });
 
     const totalHours = filteredEntries.reduce(
       (sum, entry) => sum + (entry.totalHours || 0),
-      0
+      0,
     );
 
     downloadPdf({
@@ -173,7 +179,7 @@ const Calendar = ({
       month: `${downloadDateRange.from} to ${downloadDateRange.to}`,
       entries: filteredEntries,
       totalHours: totalHours,
-      holidays: holidays
+      holidays: holidays,
     });
 
     setIsDownloadModalOpen(false);
@@ -207,10 +213,10 @@ const Calendar = ({
   const checkIsHoliday = (year: number, month: number, day: number) => {
     if (!holidays || holidays.length === 0) return null;
     const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(
-      day
+      day,
     ).padStart(2, "0")}`;
     return holidays.find(
-      (h: any) => h.holidayDate === dateStr || h.date === dateStr
+      (h: any) => h.holidayDate === dateStr || h.date === dateStr,
     );
   };
 
@@ -226,13 +232,13 @@ const Calendar = ({
   const firstDay = new Date(
     displayDate.getFullYear(),
     displayDate.getMonth(),
-    1
+    1,
   ).getDay();
   const firstDayIndex = firstDay === 0 ? 6 : firstDay - 1;
   const daysInMonth = new Date(
     displayDate.getFullYear(),
     displayDate.getMonth() + 1,
-    0
+    0,
   ).getDate();
 
   const blanks = Array.from({ length: firstDayIndex }, (_, i) => i);
@@ -249,8 +255,8 @@ const Calendar = ({
           isSmall
             ? "p-3 rounded-xl"
             : isSidebar
-            ? "p-4 rounded-xl"
-            : "p-6 rounded-[20px] flex-1 h-full overflow-hidden"
+              ? "p-4 rounded-xl"
+              : "p-6 rounded-[20px] flex-1 h-full overflow-hidden"
         }`}
       >
         {!isSmall && (
@@ -331,11 +337,15 @@ const Calendar = ({
                 </span>
                 <button
                   onClick={handleNextMonth}
-                  disabled={displayDate.getMonth() === new Date().getMonth() && displayDate.getFullYear() === new Date().getFullYear()}
+                  disabled={
+                    displayDate.getMonth() === new Date().getMonth() &&
+                    displayDate.getFullYear() === new Date().getFullYear()
+                  }
                   className={`p-1.5 rounded-lg transition-all active:scale-90 ${
                     isSidebar ? "p-1" : ""
                   } ${
-                    displayDate.getMonth() === new Date().getMonth() && displayDate.getFullYear() === new Date().getFullYear()
+                    displayDate.getMonth() === new Date().getMonth() &&
+                    displayDate.getFullYear() === new Date().getFullYear()
                       ? "text-gray-300 cursor-not-allowed"
                       : "text-[#A3AED0] hover:text-[#4318FF] hover:bg-white hover:shadow-sm"
                   }`}
@@ -410,8 +420,8 @@ const Calendar = ({
                   isSmall
                     ? "text-[7px] mb-0.5"
                     : isSidebar
-                    ? "text-[9px] mb-1"
-                    : "text-[10px] py-2"
+                      ? "text-[9px] mb-1"
+                      : "text-[10px] py-2"
                 }`}
               >
                 {day}
@@ -437,12 +447,12 @@ const Calendar = ({
               const cellDate = new Date(
                 displayDate.getFullYear(),
                 displayDate.getMonth(),
-                day
+                day,
               );
               const holiday = checkIsHoliday(
                 displayDate.getFullYear(),
                 displayDate.getMonth(),
-                day
+                day,
               );
               const isToday =
                 day === now.getDate() &&
@@ -451,7 +461,7 @@ const Calendar = ({
 
               const isBlocked = isDateBlocked(cellDate);
               const blockedReason = isBlocked ? getBlockedReason(cellDate) : "";
-              
+
               // Determine if the day is incomplete (has data but marked as Not Updated)
               const isIncomplete =
                 entry &&
@@ -459,17 +469,18 @@ const Calendar = ({
                 !entry.isToday &&
                 !entry.isWeekend &&
                 !holiday &&
-                (!entry.totalHours && entry.status !== "Leave");
+                !entry.totalHours &&
+                entry.status !== "Leave";
 
               // Status Logic for Styling
-              const baseHover = "hover:shadow-md hover:-translate-y-1 transition-all duration-300";
+              const baseHover =
+                "hover:shadow-md hover:-translate-y-1 transition-all duration-300";
               let cellClass = `bg-white border-gray-100 ${baseHover}`;
               let textClass = "text-[#2B3674]";
               let statusLabel = entry?.status || "-";
 
               if (isToday) {
-                cellClass =
-                  `bg-white ring-2 ring-[#4318FF] shadow-lg shadow-blue-200 z-10 ${baseHover}`;
+                cellClass = `bg-white ring-2 ring-[#4318FF] shadow-lg shadow-blue-200 z-10 ${baseHover}`;
                 textClass = "text-[#4318FF]";
                 if (statusLabel === "-") statusLabel = "";
               } else if (isBlocked) {
@@ -482,8 +493,7 @@ const Calendar = ({
                 entry?.status === "WFH" ||
                 entry?.status === "Client Visit"
               ) {
-                cellClass =
-                  `bg-[#E6FFFA] border-transparent hover:bg-[#D1FAE5] ${baseHover}`;
+                cellClass = `bg-[#E6FFFA] border-transparent hover:bg-[#D1FAE5] ${baseHover}`;
                 textClass = "text-[#01B574] font-bold";
                 if (!entry?.totalHours || Number(entry.totalHours) === 0) {
                   statusLabel = "";
@@ -492,19 +502,16 @@ const Calendar = ({
                 entry?.status === "Half Day" ||
                 isIncomplete // Using Orange for Incomplete to match Logic
               ) {
-                cellClass =
-                  `bg-[#FEF3C7] border-transparent hover:bg-[#FDE68A] ${baseHover}`; // Amber-100 -> Amber-200 hover
+                cellClass = `bg-[#FEF3C7] border-transparent hover:bg-[#FDE68A] ${baseHover}`; // Amber-100 -> Amber-200 hover
                 textClass = "text-yellow-600 font-bold";
                 if (!entry?.totalHours || Number(entry.totalHours) === 0) {
                   statusLabel = isIncomplete ? "Not Updated" : "";
                 }
               } else if (entry?.status === "Leave") {
-                cellClass =
-                  `bg-[#FEE2E2] border-transparent hover:bg-[#FECACA] ${baseHover}`; // Red-100 -> Red-200 hover
+                cellClass = `bg-[#FEE2E2] border-transparent hover:bg-[#FECACA] ${baseHover}`; // Red-100 -> Red-200 hover
                 textClass = "text-red-600 font-bold";
               } else if (holiday) {
-                cellClass =
-                  `bg-[#DBEAFE] border-transparent hover:bg-[#BFDBFE] ${baseHover}`; // Blue-100 -> Blue-200 hover
+                cellClass = `bg-[#DBEAFE] border-transparent hover:bg-[#BFDBFE] ${baseHover}`; // Blue-100 -> Blue-200 hover
                 textClass = "text-blue-600 font-bold";
                 statusLabel = holiday.name;
               } else if (entry?.isWeekend) {
@@ -512,9 +519,9 @@ const Calendar = ({
                 textClass = "text-red-600 font-bold";
                 statusLabel = "WEEKEND";
               } else if (entry?.isFuture) {
-                 cellClass = `bg-gray-50 border-transparent hover:bg-gray-100 ${baseHover}`;
-                 textClass = "text-gray-400 font-bold";
-                 statusLabel = "UPCOMING";
+                cellClass = `bg-gray-50 border-transparent hover:bg-gray-100 ${baseHover}`;
+                textClass = "text-gray-400 font-bold";
+                statusLabel = "UPCOMING";
               }
 
               return (
@@ -525,26 +532,25 @@ const Calendar = ({
                       "Calendar: Day clicked:",
                       day,
                       "Month:",
-                      displayDate.getMonth()
+                      displayDate.getMonth(),
                     );
                     if (onNavigateToDate) {
                       onNavigateToDate(day);
-                    } else if (currentUser?.userType === UserType.EMPLOYEE) {
+                    } else {
                       const targetDate = new Date(
                         displayDate.getFullYear(),
                         displayDate.getMonth(),
-                        day
+                        day,
                       );
                       const dateStr = targetDate.toISOString().split("T")[0];
-                      const isParamView =
-                        window.location.pathname.includes(
-                          "/admin-dashboard/working-details"
-                        );
+                      const isParamView = window.location.pathname.includes(
+                        "/admin-dashboard/working-details",
+                      );
 
                       // Navigate based on view context
                       if (isParamView && currentEmployeeId) {
                         navigate(
-                          `/admin-dashboard/timesheet/${currentEmployeeId}/${dateStr}`
+                          `/admin-dashboard/timesheet/${currentEmployeeId}/${dateStr}`,
                         );
                       } else {
                         // Standard employee view
@@ -568,14 +574,19 @@ const Calendar = ({
                           <AlertCircle size={14} className="text-red-600" />
                         </div>
                         <div className="space-y-0.5">
-                          <p className="text-[9px] font-black text-[#2B3674] leading-tight uppercase tracking-tight">Timesheet Blocked</p>
+                          <p className="text-[9px] font-black text-[#2B3674] leading-tight uppercase tracking-tight">
+                            Timesheet Blocked
+                          </p>
                           <p className="text-[10px] font-extrabold text-[#4318FF]">
-                           {isAdmin ? "Unblock" : "Contact Admin"}
+                            {isAdmin ? "Unblock" : "Contact Admin"}
                           </p>
                         </div>
                         {blockedReason && (
                           <div className="mt-1 pt-1 border-t border-gray-100 w-full px-1">
-                            <p className="text-[8px] text-[#A3AED0] font-bold italic truncate overflow-hidden whitespace-nowrap" title={blockedReason}>
+                            <p
+                              className="text-[8px] text-[#A3AED0] font-bold italic truncate overflow-hidden whitespace-nowrap"
+                              title={blockedReason}
+                            >
                               "{blockedReason}"
                             </p>
                           </div>
@@ -615,45 +626,48 @@ const Calendar = ({
                           holiday
                             ? "bg-[#00A3C4]/20"
                             : isBlocked
-                            ? "bg-gray-300"
-                            : "bg-gray-100"
+                              ? "bg-gray-300"
+                              : "bg-gray-100"
                         }`}
                       ></div>
                     )}
                   </div>
 
-                   <div
+                  <div
                     className={`text-[8px] font-bold uppercase truncate w-full text-center px-1 py-1 rounded-md mt-1 backdrop-blur-sm
                          ${
                            isBlocked
                              ? "text-white bg-gray-400/80"
                              : holiday
-                             ? "text-white bg-[#1890FF]/70"
-                             : entry?.status === "Full Day" && statusLabel
-                             ? "text-white bg-[#01B574]"
-                             : (entry?.status === "Half Day" || isIncomplete) &&
-                               statusLabel
-                             ? "text-white bg-[#FFB020]/80"
-                             : entry?.status === "Leave"
-                             ? "text-white bg-[#EE5D50]/70"
-                             : entry?.isWeekend
-                             ? "text-white bg-[#EE5D50]/70"
-                             : "text-white bg-gray-400/60"
+                               ? "text-white bg-[#1890FF]/70"
+                               : entry?.status === "Full Day" && statusLabel
+                                 ? "text-white bg-[#01B574]"
+                                 : (entry?.status === "Half Day" ||
+                                       isIncomplete) &&
+                                     statusLabel
+                                   ? "text-white bg-[#FFB020]/80"
+                                   : entry?.status === "Leave"
+                                     ? "text-white bg-[#EE5D50]/70"
+                                     : entry?.isWeekend
+                                       ? "text-white bg-[#EE5D50]/70"
+                                       : "text-white bg-gray-400/60"
                          }
                     `}
                   >
                     {isBlocked
                       ? "BLOCKED"
                       : holiday
-                      ? holiday.name
-                      : isIncomplete && !statusLabel
-                      ? "Not Updated"
-                      : statusLabel}
+                        ? holiday.name
+                        : isIncomplete && !statusLabel
+                          ? "Not Updated"
+                          : statusLabel}
                   </div>
 
-                   {isIncomplete && (
+                  {isIncomplete && (
                     <div className="absolute top-2 right-2 w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center shadow-sm animate-pulse">
-                      <span className="text-white text-[10px] font-bold">!</span>
+                      <span className="text-white text-[10px] font-bold">
+                        !
+                      </span>
                     </div>
                   )}
                 </div>
@@ -706,7 +720,10 @@ const Calendar = ({
                     }
                     className="w-full pl-4 pr-12 py-3 bg-[#F4F7FE] border-transparent rounded-xl text-[#2B3674] font-bold focus:outline-none focus:ring-2 focus:ring-[#4318FF] transition-all cursor-pointer"
                   />
-                  <CalendarIcon size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#2B3674]/50 pointer-events-none" />
+                  <CalendarIcon
+                    size={18}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#2B3674]/50 pointer-events-none"
+                  />
                 </div>
               </div>
               <div className="space-y-1.5">
@@ -725,7 +742,10 @@ const Calendar = ({
                     }
                     className="w-full pl-4 pr-12 py-3 bg-[#F4F7FE] border-transparent rounded-xl text-[#2B3674] font-bold focus:outline-none focus:ring-2 focus:ring-[#4318FF] transition-all cursor-pointer"
                   />
-                  <CalendarIcon size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#2B3674]/50 pointer-events-none" />
+                  <CalendarIcon
+                    size={18}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#2B3674]/50 pointer-events-none"
+                  />
                 </div>
               </div>
             </div>
