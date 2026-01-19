@@ -4,7 +4,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Save,
-  CheckCircle,
   AlertCircle,
   Lock,
 } from "lucide-react";
@@ -86,7 +85,6 @@ const MyTimesheet = ({
     type: "success" | "error" | "info";
   }>({ show: false, message: "", type: "success" });
 
-  const holidaysFetched = useRef(false);
   const lastAttendanceKey = useRef<string | null>(null);
   const today = useMemo(() => new Date(), []);
 
@@ -595,7 +593,6 @@ const MyTimesheet = ({
             });
 
             // Logic from old code: Red if weekend w/o status OR if it is a holiday
-            const isRed = day.isWeekend && !day.status;
             const isSelected =
               selectedDateId &&
               new Date(selectedDateId).toDateString() ===
@@ -626,33 +623,6 @@ const MyTimesheet = ({
               // Administrative Block
               bg = "bg-gray-100/60 opacity-60 grayscale";
               badge = "bg-gray-200 text-gray-500";
-            } else if (day.isToday) {
-              // Base highlight for today
-              border = "border-[#4318FF] border-2";
-              shadow =
-                "shadow-[0px_4px_20px_rgba(67,24,255,0.15)] ring-2 ring-blue-100";
-
-              // Color based on status even if it's today
-              if (
-                day.status === "Full Day" ||
-                day.status === "WFH" ||
-                day.status === "Client Visit"
-              ) {
-                bg = "bg-[#E6FFFA]";
-                badge = "bg-[#01B574] text-white font-bold";
-              } else if (day.status === "Half Day") {
-                bg = "bg-[#FEF3C7]";
-                badge = "bg-[#FFB020]/80 text-white font-bold";
-              } else if (day.status === "Leave") {
-                bg = "bg-[#FEE2E2]";
-                badge = "bg-[#EE5D50]/70 text-white font-bold";
-              } else if (holiday || (day.status as any) === "Holiday") {
-                bg = "bg-[#DBEAFE]";
-                badge = "bg-[#1890FF]/70 text-white font-bold";
-              } else {
-                bg = "bg-white";
-                badge = "bg-gray-400/80 text-white font-bold";
-              }
             } else if (
               (day.status === "Full Day" ||
                 day.status === "WFH" ||
@@ -683,10 +653,7 @@ const MyTimesheet = ({
               bg = "bg-[#FEF3C7]";
               badge = "bg-[#FFB020]/80 text-white font-bold";
               border = "border-[#FFB020]/20";
-            } else if (
-              day.status === "Pending" ||
-              day.status === "Not Updated"
-            ) {
+            } else if (day.status === "Pending") {
               bg = "bg-[#FEF3C7]";
               badge = "bg-[#FFB020]/80 text-white font-bold";
               border = "border-[#FFB020]/20";

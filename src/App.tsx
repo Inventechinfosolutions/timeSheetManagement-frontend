@@ -20,7 +20,7 @@ import { UserType } from "./reducers/user.reducer";
 const EmployeeActivation = lazy(() => import("./Login/EmployeeActivation"));
 const FcManagerActivation = lazy(() => import("./Login/FcManagerActivation"));
 const FcManagerResetPassword = lazy(
-  () => import("./Login/FcManagerResetPassword")
+  () => import("./Login/FcManagerResetPassword"),
 );
 const SetPassword = lazy(() => import("./Login/SetPassword"));
 
@@ -35,7 +35,7 @@ import ChangePassword from "./EmployeeDashboard/ChangePassword";
 import AdminDashboard from "./AdminDashboard/AdminDashboard";
 import EmpRegistration from "./AdminDashboard/EmpRegistration";
 import AdminEmployeeTimesheetWrapper from "./AdminDashboard/AdminEmployeeTimesheetWrapper";
-import AdminRegistration from "./AdminDashboard/AdminRegistration";
+
 import ActivationSuccess from "./Login/ActivationSuccess";
 import AdminEmployeeTimesheetList from "./AdminDashboard/AdminEmployeeTimesheetList";
 import EmployeeListView from "./AdminDashboard/EmployeeListView";
@@ -274,8 +274,8 @@ function App() {
                     (c) =>
                       c &&
                       ["/about", "/dashboard", "/forgot-password"].includes(
-                        c.path
-                      )
+                        c.path,
+                      ),
                   )
                   .map((config) => (
                     <Route

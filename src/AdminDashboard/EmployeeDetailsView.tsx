@@ -11,7 +11,12 @@ import {
   Building,
   CreditCard,
   ArrowLeft,
+  Lock,
+  CheckCircle,
+  X,
+  AlertCircle,
 } from "lucide-react";
+import { resetPassword } from "../reducers/employeeDetails.reducer";
 
 const EmployeeDetailsView = () => {
   const { employeeId } = useParams<{ employeeId: string }>();
@@ -23,6 +28,13 @@ const EmployeeDetailsView = () => {
   const [viewedProfileImage, setViewedProfileImage] = useState<string | null>(
     null,
   );
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [resetError, setResetError] = useState("");
+  const [resetSuccess, setResetSuccess] = useState(false);
 
   useEffect(() => {
     if (
@@ -88,6 +100,40 @@ const EmployeeDetailsView = () => {
   const avatarLetter = (employee.fullName || employee.name || "?")
     .charAt(0)
     .toUpperCase();
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetError("");
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setResetError("Passwords do not match");
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      setResetError("Password must be at least 6 characters long");
+      return;
+    }
+
+    try {
+      await dispatch(
+        resetPassword({
+          loginId: employee.employeeId,
+          password: passwordData.newPassword,
+          confirmPassword: passwordData.confirmPassword, // Include if DTO requires it, otherwise ignored
+        }),
+      ).unwrap();
+
+      setResetSuccess(true);
+      setTimeout(() => {
+        setIsResetModalOpen(false);
+        setResetSuccess(false);
+        setPasswordData({ newPassword: "", confirmPassword: "" });
+      }, 2000);
+    } catch (err: any) {
+      setResetError(err?.message || "Failed to reset password");
+    }
+  };
 
   return (
     <div className="px-4 md:px-8 py-2 md:py-8 w-full max-w-[1400px] mx-auto animate-in fade-in duration-500 space-y-3 md:space-y-6">
@@ -157,6 +203,18 @@ const EmployeeDetailsView = () => {
             </div>
           </div>
         </div>
+
+        {!employee.resetRequired && (
+          <div className="absolute top-4 right-4 md:top-10 md:right-10 z-20">
+            <button
+              onClick={() => setIsResetModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-md border border-white/30 text-white rounded-xl text-sm font-bold hover:bg-white/30 transition-all shadow-lg"
+            >
+              <Lock size={16} />
+              <span className="hidden sm:inline">Reset Password</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Personal Information Card */}
@@ -262,6 +320,91 @@ const EmployeeDetailsView = () => {
           </div>
         </div>
       </div>
+      {/* Reset Password Modal */}
+      {isResetModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm border border-gray-100 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100">
+              <h3 className="text-xl font-bold text-[#2B3674]">
+                Reset Password
+              </h3>
+              <button
+                onClick={() => setIsResetModalOpen(false)}
+                className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6">
+              {resetSuccess ? (
+                <div className="flex flex-col items-center justify-center text-center py-4 text-emerald-600 animate-in fade-in zoom-in-95 duration-300">
+                  <div className="bg-emerald-100 p-3 rounded-full mb-3">
+                    <CheckCircle size={32} />
+                  </div>
+                  <p className="font-bold text-lg">
+                    Password Reset Successfully!
+                  </p>
+                </div>
+              ) : (
+                <form onSubmit={handleResetPassword} className="space-y-4">
+                  {resetError && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs font-semibold text-red-600 flex gap-2">
+                      <AlertCircle size={16} className="shrink-0" />
+                      {resetError}
+                    </div>
+                  )}
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">
+                      New Password
+                    </label>
+                    <input
+                      type="password"
+                      value={passwordData.newPassword}
+                      onChange={(e) =>
+                        setPasswordData({
+                          ...passwordData,
+                          newPassword: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none transition-all text-sm"
+                      placeholder="Enter new password"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">
+                      Confirm Password
+                    </label>
+                    <input
+                      type="password"
+                      value={passwordData.confirmPassword}
+                      onChange={(e) =>
+                        setPasswordData({
+                          ...passwordData,
+                          confirmPassword: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none transition-all text-sm"
+                      placeholder="Confirm new password"
+                      required
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full py-3 mt-2 bg-gradient-to-r from-[#4318FF] to-[#868CFF] text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all active:scale-95"
+                  >
+                    Update Password
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

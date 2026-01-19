@@ -390,18 +390,21 @@ const Calendar = ({
             {[
               {
                 label: "Full Day/WFH",
-                color: "bg-[#E6FFFA]",
-                border: "border-[#01B574]",
+                color: "bg-emerald-50",
+                border: "border-emerald-200",
+                text: "text-emerald-700",
               },
               {
                 label: "Half Day",
-                color: "bg-[#FFF9E5]",
-                border: "border-[#FFB020]",
+                color: "bg-amber-50",
+                border: "border-amber-200",
+                text: "text-amber-700",
               },
               {
                 label: "Leave/Absent",
-                color: "bg-[#FDF2F2]",
-                border: "border-[#EE5D50]",
+                color: "bg-red-50",
+                border: "border-red-200",
+                text: "text-red-700",
               },
               {
                 label: "Today",
@@ -411,18 +414,20 @@ const Calendar = ({
               },
               {
                 label: "Holiday",
-                color: "bg-[#E6F7FF]",
-                border: "border-[#00A3C4]",
+                color: "bg-blue-50",
+                border: "border-blue-200",
+                text: "text-blue-700",
               },
               {
                 label: "Blocked",
                 color: "bg-gray-100",
                 border: "border-gray-200",
+                text: "text-gray-500",
               },
             ].map((item) => (
               <div
                 key={item.label}
-                className="flex items-center gap-2 text-xs font-bold text-gray-400 whitespace-nowrap"
+                className="flex items-center gap-2 text-xs font-bold text-gray-500 whitespace-nowrap"
               >
                 <div
                   className={`w-3 h-3 rounded-full ${item.color} border ${item.border}`}
@@ -520,34 +525,34 @@ const Calendar = ({
                 entry?.status === "WFH" ||
                 entry?.status === "Client Visit"
               ) {
-                cellClass = `bg-[#E6FFFA] border-transparent hover:bg-[#D1FAE5] ${baseHover}`;
-                textClass = "text-[#01B574] font-bold";
+                cellClass = `bg-emerald-50 border-transparent hover:bg-emerald-100 ${baseHover}`;
+                textClass = "text-emerald-700 font-bold";
                 if (!entry?.totalHours || Number(entry.totalHours) === 0) {
                   statusLabel = "";
                 }
               } else if (
                 entry?.status === "Half Day" ||
-                isIncomplete // Using Orange for Incomplete to match Logic
+                isIncomplete // Using Amber for Incomplete
               ) {
-                cellClass = `bg-[#FEF3C7] border-transparent hover:bg-[#FDE68A] ${baseHover}`; // Amber-100 -> Amber-200 hover
-                textClass = "text-yellow-600 font-bold";
+                cellClass = `bg-amber-50 border-transparent hover:bg-amber-100 ${baseHover}`;
+                textClass = "text-amber-700 font-bold";
                 if (!entry?.totalHours || Number(entry.totalHours) === 0) {
                   statusLabel = isIncomplete ? "Not Updated" : "";
                 }
               } else if (entry?.status === "Leave") {
-                cellClass = `bg-[#FEE2E2] border-transparent hover:bg-[#FECACA] ${baseHover}`; // Red-100 -> Red-200 hover
-                textClass = "text-red-600 font-bold";
+                cellClass = `bg-red-50 border-transparent hover:bg-red-100 ${baseHover}`;
+                textClass = "text-red-700 font-bold";
               } else if (holiday) {
-                cellClass = `bg-[#DBEAFE] border-transparent hover:bg-[#BFDBFE] ${baseHover}`; // Blue-100 -> Blue-200 hover
-                textClass = "text-blue-600 font-bold";
+                cellClass = `bg-blue-50 border-transparent hover:bg-blue-100 ${baseHover}`;
+                textClass = "text-blue-700 font-bold";
                 statusLabel = holiday.name;
               } else if (entry?.isWeekend) {
-                cellClass = `bg-[#FEE2E2] border-transparent text-red-600 hover:bg-[#FECACA] ${baseHover}`;
+                cellClass = `bg-red-50 border-transparent text-red-600 hover:bg-red-100 ${baseHover}`;
                 textClass = "text-red-600 font-bold";
                 statusLabel = "WEEKEND";
               } else if (entry?.isFuture) {
-                cellClass = `bg-gray-50 border-transparent hover:bg-gray-100 ${baseHover}`;
-                textClass = "text-gray-400 font-bold";
+                cellClass = `bg-white border-transparent hover:bg-gray-50 ${baseHover}`;
+                textClass = "text-gray-300 font-bold";
                 statusLabel = "UPCOMING";
               }
 
@@ -674,9 +679,9 @@ const Calendar = ({
                                      statusLabel
                                    ? "text-white bg-[#FFB020]/80"
                                    : entry?.status === "Leave"
-                                     ? "text-white bg-[#EE5D50]/70"
+                                     ? "text-white bg-red-400/70"
                                      : entry?.isWeekend
-                                       ? "text-white bg-[#EE5D50]/70"
+                                       ? "text-white bg-red-400/70"
                                        : "text-white bg-gray-400/60"
                          }
                     `}
@@ -691,7 +696,7 @@ const Calendar = ({
                   </div>
 
                   {isIncomplete && (
-                    <div className="absolute top-2 right-2 w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center shadow-sm animate-pulse">
+                    <div className="absolute top-2 right-2 w-4 h-4 bg-orange-500 rounded-full flex items-center justify-center shadow-sm animate-pulse">
                       <span className="text-white text-[10px] font-bold">
                         !
                       </span>

@@ -219,7 +219,7 @@ const userSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(createUser.fulfilled, (state, action: PayloadAction<any>) => {
+      .addCase(createUser.fulfilled, (state) => {
         state.loading = false;
         // User created successfully, but not logged in yet
         state.error = null;

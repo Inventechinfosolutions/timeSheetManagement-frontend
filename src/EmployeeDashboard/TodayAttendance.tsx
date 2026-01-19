@@ -1,25 +1,19 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
-    LayoutGrid,
-    Clock,
-    AlertTriangle,
-    Edit,
-    Calendar as CalendarIcon
-} from 'lucide-react';
-import { useAppDispatch, useAppSelector } from '../hooks';
-import { 
-    fetchMonthlyAttendance
-} from '../reducers/employeeAttendance.reducer';
-import { 
-    getEntity,
-    setCurrentUser
-} from '../reducers/employeeDetails.reducer';
-import { 
-    generateMonthlyEntries
-} from '../utils/attendanceUtils';
-import Calendar from './CalendarView';
-import { RootState } from '../store';
+  Clock,
+  AlertTriangle,
+  Edit,
+  Calendar as CalendarIcon,
+} from "lucide-react";
+import { useAppDispatch, useAppSelector } from "../hooks";
+import { fetchMonthlyAttendance } from "../reducers/employeeAttendance.reducer";
+import { getEntity, setCurrentUser } from "../reducers/employeeDetails.reducer";
+import { generateMonthlyEntries } from "../utils/attendanceUtils";
+import Calendar from "./CalendarView";
+import AttendancePieChart from "./AttendancePieChart";
+import WeeklyHoursChart from "./WeeklyHoursChart";
+import { RootState } from "../store";
 
 interface Props {
   setActiveTab?: (tab: string) => void;
@@ -35,10 +29,10 @@ const TodayAttendance = ({
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { records, loading } = useAppSelector(
-    (state: RootState) => state.attendance
+    (state: RootState) => state.attendance,
   );
   const { entity } = useAppSelector(
-    (state: RootState) => state.employeeDetails
+    (state: RootState) => state.employeeDetails,
   );
   const { currentUser } = useAppSelector((state: RootState) => state.user);
   const currentEmployeeId = entity?.employeeId;
@@ -48,28 +42,28 @@ const TodayAttendance = ({
   const [now] = useState(() => new Date());
   const [calendarDate, setCalendarDate] = useState(new Date());
 
-    // Fetch entity if missing name but we have an ID to fetch
-    useEffect(() => {
-        if (!entity?.fullName && (currentEmployeeId || currentUser?.loginId)) {
-            const searchTerm = currentEmployeeId || currentUser?.loginId;
-            if (searchTerm) {
-                if (detailsFetched.current) return;
-                detailsFetched.current = true;
-                
-                dispatch(getEntity(searchTerm))
-                    .unwrap()
-                    .then((found) => {
-                         if (found) {
-                             dispatch(setCurrentUser(found));
-                         }
-                    })
-                    .catch(err => {
-                         detailsFetched.current = false; // Reset on failure so it can retry
-                         console.error("Failed to fetch employee details:", err);
-                    });
+  // Fetch entity if missing name but we have an ID to fetch
+  useEffect(() => {
+    if (!entity?.fullName && (currentEmployeeId || currentUser?.loginId)) {
+      const searchTerm = currentEmployeeId || currentUser?.loginId;
+      if (searchTerm) {
+        if (detailsFetched.current) return;
+        detailsFetched.current = true;
+
+        dispatch(getEntity(searchTerm))
+          .unwrap()
+          .then((found) => {
+            if (found) {
+              dispatch(setCurrentUser(found));
             }
-        }
-    }, [dispatch, entity, currentEmployeeId, currentUser]);
+          })
+          .catch((err) => {
+            detailsFetched.current = false; // Reset on failure so it can retry
+            console.error("Failed to fetch employee details:", err);
+          });
+      }
+    }
+  }, [dispatch, entity, currentEmployeeId, currentUser]);
 
   // 1. Separate "Today's" Data - ALWAYS based on current real-time Month
   // This ensures "Today's Attendance" card never changes when navigating calendar
@@ -109,10 +103,10 @@ const TodayAttendance = ({
           employeeId: currentEmployeeId,
           month: (date.getMonth() + 1).toString().padStart(2, "0"),
           year: date.getFullYear().toString(),
-        })
+        }),
       );
     },
-    [dispatch, currentEmployeeId]
+    [dispatch, currentEmployeeId],
   );
 
   useEffect(() => {
@@ -136,7 +130,7 @@ const TodayAttendance = ({
         navigate(navTarget, { state });
       }
     },
-    [setScrollToDate, setActiveTab, navigate]
+    [setScrollToDate, setActiveTab, navigate],
   );
 
   const handleNavigate = (timestamp: number) => {
@@ -201,25 +195,29 @@ const TodayAttendance = ({
           >
             {/* Top Label */}
             <div className="h-[25%] flex items-center justify-center">
-                <h3 className="text-white text-base font-medium tracking-wide">Total Full Days</h3>
+              <h3 className="text-white text-base font-medium tracking-wide">
+                Total Full Days
+              </h3>
             </div>
 
             {/* Glass Panel */}
             <div className="h-[75%] bg-white/20 backdrop-blur-md rounded-[24px] border border-white/30 flex flex-col items-center justify-center relative overflow-hidden shadow-inner">
-                 {/* Glossy shine reflection */}
-                 <div className="absolute -top-20 -left-20 w-60 h-60 bg-white/20 rounded-full blur-3xl pointer-events-none"></div>
+              {/* Glossy shine reflection */}
+              <div className="absolute -top-20 -left-20 w-60 h-60 bg-white/20 rounded-full blur-3xl pointer-events-none"></div>
 
-                <h2 className="text-6xl font-bold text-white drop-shadow-md mb-2 relative z-10">
+              <h2 className="text-6xl font-bold text-white drop-shadow-md mb-2 relative z-10">
                 {
                   currentMonthEntries.filter(
                     (e) =>
                       e.status === "Full Day" ||
                       e.status === "WFH" ||
-                      e.status === "Client Visit"
+                      e.status === "Client Visit",
                   ).length
                 }
-                </h2>
-                <p className="text-white/90 text-sm font-medium tracking-wide relative z-10">Within SLA</p>
+              </h2>
+              <p className="text-white/90 text-sm font-medium tracking-wide relative z-10">
+                Within SLA
+              </p>
             </div>
           </div>
 
@@ -233,18 +231,22 @@ const TodayAttendance = ({
           >
             {/* Top Label */}
             <div className="h-[25%] flex items-center justify-center">
-                <h3 className="text-white text-base font-medium tracking-wide">Total Half Days</h3>
+              <h3 className="text-white text-base font-medium tracking-wide">
+                Total Half Days
+              </h3>
             </div>
 
-             {/* Glass Panel */}
+            {/* Glass Panel */}
             <div className="h-[75%] bg-white/20 backdrop-blur-md rounded-[24px] border border-white/30 flex flex-col items-center justify-center relative overflow-hidden shadow-inner">
-                {/* Glossy shine reflection */}
-                <div className="absolute -top-20 -left-20 w-60 h-60 bg-white/20 rounded-full blur-3xl pointer-events-none"></div>
+              {/* Glossy shine reflection */}
+              <div className="absolute -top-20 -left-20 w-60 h-60 bg-white/20 rounded-full blur-3xl pointer-events-none"></div>
 
-                <h2 className="text-6xl font-bold text-white drop-shadow-md mb-2 relative z-10">
+              <h2 className="text-6xl font-bold text-white drop-shadow-md mb-2 relative z-10">
                 {records.filter((r) => r.status === "Half Day").length}
-                </h2>
-                <p className="text-white/90 text-sm font-medium tracking-wide relative z-10">Approaching Limit</p>
+              </h2>
+              <p className="text-white/90 text-sm font-medium tracking-wide relative z-10">
+                Approaching Limit
+              </p>
             </div>
           </div>
 
@@ -256,20 +258,24 @@ const TodayAttendance = ({
               background: "linear-gradient(135deg, #F87171 0%, #DC2626 100%)",
             }}
           >
-             {/* Top Label */}
-             <div className="h-[25%] flex items-center justify-center">
-                <h3 className="text-white text-base font-medium tracking-wide">Total Absent Days</h3>
+            {/* Top Label */}
+            <div className="h-[25%] flex items-center justify-center">
+              <h3 className="text-white text-base font-medium tracking-wide">
+                Total Absent Days
+              </h3>
             </div>
 
-             {/* Glass Panel */}
+            {/* Glass Panel */}
             <div className="h-[75%] bg-white/20 backdrop-blur-md rounded-[24px] border border-white/30 flex flex-col items-center justify-center relative overflow-hidden shadow-inner">
-                 {/* Glossy shine reflection */}
-                <div className="absolute -top-20 -left-20 w-60 h-60 bg-white/20 rounded-full blur-3xl pointer-events-none"></div>
+              {/* Glossy shine reflection */}
+              <div className="absolute -top-20 -left-20 w-60 h-60 bg-white/20 rounded-full blur-3xl pointer-events-none"></div>
 
-                <h2 className="text-6xl font-bold text-white drop-shadow-md mb-2 relative z-10">
+              <h2 className="text-6xl font-bold text-white drop-shadow-md mb-2 relative z-10">
                 {records.filter((r) => r.status === "Leave").length}
-                </h2>
-                <p className="text-white/90 text-sm font-medium tracking-wide relative z-10">Action Required</p>
+              </h2>
+              <p className="text-white/90 text-sm font-medium tracking-wide relative z-10">
+                Action Required
+              </p>
             </div>
           </div>
         </div>
@@ -320,7 +326,7 @@ const TodayAttendance = ({
               <p className="text-3xl font-black text-gray-800 tracking-tight">
                 {(() => {
                   const workedDays = records.filter(
-                    (e) => (e.totalHours || 0) > 0
+                    (e) => (e.totalHours || 0) > 0,
                   );
                   return workedDays
                     .reduce((acc, curr) => acc + (curr.totalHours || 0), 0)
@@ -340,19 +346,24 @@ const TodayAttendance = ({
               </h4>
               <div className="flex items-baseline gap-1">
                 <p className="text-3xl font-black text-gray-800 tracking-tight">
-                    {
+                  {
                     currentMonthEntries.filter(
-                        (day) =>
-                        day.status === "Not Updated" && day.fullDate < new Date()
+                      (day) =>
+                        day.status === "Not Updated" &&
+                        day.fullDate < new Date(),
                     ).length
-                    }
+                  }
                 </p>
-                <span className="text-sm text-gray-400 font-bold">
-                  Days
-                </span>
+                <span className="text-sm text-gray-400 font-bold">Days</span>
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <AttendancePieChart data={currentMonthEntries} />
+          <WeeklyHoursChart data={records} currentDate={calendarDate} />
         </div>
 
         <div className="flex justify-start">
@@ -390,7 +401,7 @@ const TodayAttendance = ({
                 const targetDate = new Date(
                   calendarDate.getFullYear(),
                   calendarDate.getMonth(),
-                  day
+                  day,
                 );
                 handleNavigate(targetDate.getTime());
               }}

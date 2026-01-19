@@ -234,7 +234,7 @@ const EmpWorkingDetails = () => {
                         onClick={() => handleViewDetails(emp.id)}
                         className="inline-flex items-center gap-2 bg-transparent border-none cursor-pointer text-[#4318FF] text-sm font-bold hover:underline transition-all hover:scale-105 active:scale-95"
                       >
-                        <Eye size={16} /> View Details
+                        <Eye size={16} />
                       </button>
                     </td>
                   </tr>

@@ -50,7 +50,7 @@ const EmployeeTimeSheetMobileCard = ({
               className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#4318FF]/5 text-[#4318FF] font-bold text-sm hover:bg-[#4318FF] hover:text-white transition-all active:scale-95 shadow-sm"
             >
               <Edit size={16} />
-              <span>Edit Timesheet</span>
+              {/* <span>Edit Timesheet</span> */}
             </button>
           </div>
         </div>
