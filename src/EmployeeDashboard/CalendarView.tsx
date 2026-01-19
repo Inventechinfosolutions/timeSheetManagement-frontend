@@ -14,6 +14,7 @@ import { generateMonthlyEntries } from "../utils/attendanceUtils";
 import { TimesheetEntry } from "../types";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import { fetchMonthlyAttendance } from "../reducers/employeeAttendance.reducer";
+import { UserType } from "../reducers/user.reducer";
 
 interface CalendarProps {
   now?: Date;
@@ -42,6 +43,7 @@ const Calendar = ({
   const { holidays } = useAppSelector(
     (state: RootState) => state.masterHolidays || { holidays: [] }
   );
+  const { currentUser } = useAppSelector((state: RootState) => state.user);
 
   const currentEmployeeId = entity?.employeeId;
   const holidaysFetched = useRef(false);
@@ -370,7 +372,7 @@ const Calendar = ({
                   onClick={() => {
                     if (onNavigateToDate) {
                       onNavigateToDate(day);
-                    } else {
+                    } else if (currentUser?.userType === UserType.EMPLOYEE) {
                       const targetDate = new Date(
                         displayDate.getFullYear(),
                         displayDate.getMonth(),
