@@ -119,22 +119,22 @@ const AdminEmployeeTimesheetWrapper = () => {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#F4F7FE] p-4 md:p-8 pt-6">
-      <div className="mb-6 flex flex-shrink-0 items-center justify-between">
-        <div className="flex flex-col gap-1">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#F4F7FE] px-4 md:px-8 py-6">
+      <div className="mb-4 flex flex-shrink-0 items-center justify-between gap-2">
+        <div className="flex flex-col gap-0.5 flex-1 min-w-0">
           <button
             onClick={handleBack}
-            className="flex items-center gap-2 text-gray-400 hover:text-[#4318FF] transition-colors group"
+            className="flex items-center gap-1.5 text-gray-400 hover:text-[#4318FF] transition-colors group w-fit"
           >
             <ArrowLeft
-              size={18}
-              className="group-hover:-translate-x-1 transition-transform"
+              size={16}
+              className="group-hover:-translate-x-1 transition-transform flex-shrink-0"
             />
-            <span className="text-sm font-semibold tracking-wide">
+            <span className="text-xs font-semibold tracking-wide">
               Back to employee list
             </span>
           </button>
-          <h2 className="text-xl font-bold text-[#2B3674] mt-1">
+          <h2 className="text-base sm:text-lg font-bold text-[#2B3674] truncate">
             Employee Timesheet:{" "}
             {employee
               ? employee.fullName || employee.name || employee.employeeId
@@ -144,14 +144,14 @@ const AdminEmployeeTimesheetWrapper = () => {
 
         <button
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 px-6 py-2 bg-[#4318FF] text-white rounded-xl text-sm font-bold shadow-lg hover:shadow-[#4318FF]/20 hover:-translate-y-0.5 transition-all"
+          className="flex items-center justify-center gap-1.5 px-4 py-2 bg-[#4318FF] text-white rounded-xl text-xs font-bold shadow-lg hover:shadow-[#4318FF]/20 transition-all flex-shrink-0"
         >
-          <Lock size={16} />
-          Block
+          <Lock size={14} />
+          <span className="hidden sm:inline">Block</span>
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto no-scrollbar pb-8">
+      <div className="flex-1 overflow-y-auto no-scrollbar">
         <MyTimesheet
           employeeId={employeeId!}
           readOnly={false}

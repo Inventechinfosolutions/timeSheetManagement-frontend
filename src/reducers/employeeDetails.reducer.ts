@@ -48,11 +48,15 @@ export const getEntities = createAsyncThunk<
   {
     search?: string;
     department?: string;
+    page?: number;
+    limit?: number;
+    sort?: string;
+    order?: string;
   },
   ThunkConfig
 >(
   'employeeDetails/fetch_entity_list',
-  async ({ search, department }, { rejectWithValue }) => {
+  async ({ search, department, page, limit, sort, order }, { rejectWithValue }) => {
     try {
       const params: any = {
         search: search || '',
@@ -61,6 +65,11 @@ export const getEntities = createAsyncThunk<
       if (department && department !== 'All') {
         params.department = department;
       }
+
+      if (page) params.page = page;
+      if (limit) params.limit = limit;
+      if (sort) params.sort = sort;
+      if (order) params.order = order;
 
       const queryParams = new URLSearchParams(params);
       const response = await axios.get(`${apiUrl}?${queryParams.toString()}`);

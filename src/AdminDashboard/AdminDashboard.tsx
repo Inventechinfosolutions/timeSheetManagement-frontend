@@ -29,7 +29,7 @@ const AdminDashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedDept, setSelectedDept] = useState("All");
-  const itemsPerPage = 8;
+  const itemsPerPage = 10;
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -118,6 +118,8 @@ const AdminDashboard = () => {
   useEffect(() => {
     dispatch(
       getEntities({
+        page: currentPage,
+        limit: itemsPerPage,
         search: debouncedSearchTerm,
         department: selectedDept === "All" ? undefined : selectedDept,
       }),
@@ -195,6 +197,7 @@ const AdminDashboard = () => {
   });
 
   const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+  const currentItems = employees;
 
   const toggleEmp = (id: string) => {
     const next = new Set(selectedEmps);
@@ -463,7 +466,7 @@ const AdminDashboard = () => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-100">
-            {employees.map((emp, index) => (
+            {currentItems.map((emp, index) => (
               <tr
                 key={emp.id}
                 className={`${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]/50"} hover:bg-[#E9EDF7] hover:shadow-[0px_4px_25px_rgba(112,144,176,0.18)] hover:scale-[1.01] transition-all duration-300 cursor-pointer group`}

@@ -13,7 +13,10 @@ import {
 import { downloadPdf } from "../utils/downloadPdf";
 import { useAppSelector, useAppDispatch } from "../hooks";
 import { RootState } from "../store";
-import { generateMonthlyEntries, generateRangeEntries } from "../utils/attendanceUtils";
+import {
+  generateMonthlyEntries,
+  generateRangeEntries,
+} from "../utils/attendanceUtils";
 import { TimesheetEntry } from "../types";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import { fetchMonthlyAttendance } from "../reducers/employeeAttendance.reducer";
@@ -166,20 +169,27 @@ const Calendar = ({
 
       // 1. Use existing data from Redux state instead of making a new API call
       // Filter records that fall within the selected date range
-      const filteredRecords = records.filter(record => {
-        const recordDate = new Date(record.workingDate).toISOString().split('T')[0];
+      const filteredRecords = records.filter((record) => {
+        const recordDate = new Date(record.workingDate)
+          .toISOString()
+          .split("T")[0];
         return recordDate >= fromDateStr && recordDate <= toDateStr;
       });
 
       // 2. Generate full range entries (including weekends/holidays/not-updated)
       const start = new Date(fromDateStr);
       const end = new Date(toDateStr);
-      
-      const rangeEntries = generateRangeEntries(start, end, now, filteredRecords);
+
+      const rangeEntries = generateRangeEntries(
+        start,
+        end,
+        now,
+        filteredRecords,
+      );
 
       const totalHours = rangeEntries.reduce(
         (sum, entry) => sum + (entry.totalHours || 0),
-        0
+        0,
       );
 
       // 3. Generate PDF
@@ -191,7 +201,7 @@ const Calendar = ({
         month: `${fromDateStr} to ${toDateStr}`,
         entries: rangeEntries,
         totalHours: totalHours,
-        holidays: holidays || []
+        holidays: holidays || [],
       });
 
       setIsDownloadModalOpen(false);
@@ -779,14 +789,14 @@ const Calendar = ({
               <button
                 onClick={handleConfirmDownload}
                 disabled={isDownloading}
-                className={`flex-1 px-4 py-3 text-xs font-bold text-white bg-gradient-to-r from-[#4318FF] to-[#868CFF] rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5 active:scale-95 tracking-wide uppercase ${isDownloading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                className={`flex-1 px-4 py-3 text-xs font-bold text-white bg-gradient-to-r from-[#4318FF] to-[#868CFF] rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5 active:scale-95 tracking-wide uppercase ${isDownloading ? "opacity-70 cursor-not-allowed" : ""}`}
               >
                 {isDownloading ? (
                   <Loader2 size={16} className="animate-spin" />
                 ) : (
                   <Download size={16} />
                 )}
-                {isDownloading ? 'Fetching...' : 'Download PDF'}
+                {isDownloading ? "Fetching..." : "Download PDF"}
               </button>
             </div>
           </div>
