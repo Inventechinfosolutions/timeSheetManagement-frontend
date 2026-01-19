@@ -2,16 +2,31 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { getEntity } from "../reducers/employeeDetails.reducer";
-import { ArrowLeft, Loader2, Lock, X, Calendar as CalendarIcon, ShieldAlert } from "lucide-react";
+import {
+  ArrowLeft,
+  Loader2,
+  Lock,
+  X,
+  Calendar as CalendarIcon,
+  ShieldAlert,
+} from "lucide-react";
 import MyTimesheet from "../EmployeeDashboard/MyTimesheet";
-import { applyBlocker, fetchBlockers, deleteBlocker } from "../reducers/timesheetBlocker.reducer";
+import {
+  applyBlocker,
+  fetchBlockers,
+  deleteBlocker,
+} from "../reducers/timesheetBlocker.reducer";
 
 const AdminEmployeeTimesheetWrapper = () => {
   const { employeeId } = useParams<{ employeeId: string }>();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const { entities, entity, loading } = useAppSelector((state) => state.employeeDetails);
-  const { blockers, loading: blockerLoading } = useAppSelector((state) => state.timesheetBlocker);
+  const { entities, entity, loading } = useAppSelector(
+    (state) => state.employeeDetails,
+  );
+  const { blockers, loading: blockerLoading } = useAppSelector(
+    (state) => state.timesheetBlocker,
+  );
   const { currentUser } = useAppSelector((state) => state.user);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -24,13 +39,13 @@ const AdminEmployeeTimesheetWrapper = () => {
       if (!entity || (entity.employeeId || entity.id) !== employeeId) {
         dispatch(getEntity(employeeId));
       }
-      dispatch(fetchBlockers(employeeId));
     }
-  }, [dispatch, employeeId, entity]);
+  }, [dispatch, employeeId]);
 
-  const employee = (entity && (entity.employeeId || entity.id) === employeeId) 
-    ? entity 
-    : entities.find((e: any) => (e.employeeId || e.id) === employeeId);
+  const employee =
+    entity && (entity.employeeId || entity.id) === employeeId
+      ? entity
+      : entities.find((e: any) => (e.employeeId || e.id) === employeeId);
 
   const handleBack = () => {
     navigate("/admin-dashboard/timesheet-list");
@@ -43,14 +58,16 @@ const AdminEmployeeTimesheetWrapper = () => {
     }
 
     try {
-      await dispatch(applyBlocker({
-        employeeId: employeeId!,
-        blockedFrom: fromDate,
-        blockedTo: toDate,
-        reason: reason || "Admin Blocked",
-        blockedBy: currentUser?.employeeId || "Admin"
-      })).unwrap();
-      
+      await dispatch(
+        applyBlocker({
+          employeeId: employeeId!,
+          blockedFrom: fromDate,
+          blockedTo: toDate,
+          reason: reason || "Admin Blocked",
+          blockedBy: currentUser?.employeeId || "Admin",
+        }),
+      ).unwrap();
+
       setIsModalOpen(false);
       setFromDate("");
       setToDate("");
@@ -89,8 +106,13 @@ const AdminEmployeeTimesheetWrapper = () => {
           onClick={handleBack}
           className="flex items-center gap-2 text-gray-400 hover:text-[#4318FF] transition-colors group"
         >
-          <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
-          <span className="text-sm font-semibold tracking-wide">Back to employee list</span>
+          <ArrowLeft
+            size={18}
+            className="group-hover:-translate-x-1 transition-transform"
+          />
+          <span className="text-sm font-semibold tracking-wide">
+            Back to employee list
+          </span>
         </button>
       </div>
     );
@@ -104,11 +126,19 @@ const AdminEmployeeTimesheetWrapper = () => {
             onClick={handleBack}
             className="flex items-center gap-2 text-gray-400 hover:text-[#4318FF] transition-colors group"
           >
-            <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
-            <span className="text-sm font-semibold tracking-wide">Back to employee list</span>
+            <ArrowLeft
+              size={18}
+              className="group-hover:-translate-x-1 transition-transform"
+            />
+            <span className="text-sm font-semibold tracking-wide">
+              Back to employee list
+            </span>
           </button>
-          <h2 className="text-2xl font-bold text-[#2B3674] mt-1">
-            Employee Timesheet: {employee ? (employee.fullName || employee.name || employee.employeeId) : 'Loading...'}
+          <h2 className="text-xl font-bold text-[#2B3674] mt-1">
+            Employee Timesheet:{" "}
+            {employee
+              ? employee.fullName || employee.name || employee.employeeId
+              : "Loading..."}
           </h2>
         </div>
 
@@ -121,10 +151,10 @@ const AdminEmployeeTimesheetWrapper = () => {
         </button>
       </div>
 
-      <div className="flex-1 overflow-hidden pb-12">
-        <MyTimesheet 
-          employeeId={employeeId!} 
-          readOnly={false} 
+      <div className="flex-1 overflow-y-auto no-scrollbar pb-8">
+        <MyTimesheet
+          employeeId={employeeId!}
+          readOnly={false}
           onBlockedClick={() => setIsModalOpen(true)}
         />
       </div>
@@ -139,11 +169,15 @@ const AdminEmployeeTimesheetWrapper = () => {
                   <ShieldAlert className="w-6 h-6 text-red-500" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-[#2B3674]">Block Timesheet</h3>
-                  <p className="text-xs text-gray-500 font-medium tracking-wide">Select date range to restrict editing</p>
+                  <h3 className="text-xl font-bold text-[#2B3674]">
+                    Block Timesheet
+                  </h3>
+                  <p className="text-xs text-gray-500 font-medium tracking-wide">
+                    Select date range to restrict editing
+                  </p>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={() => setIsModalOpen(false)}
                 className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
                 aria-label="Close modal"
@@ -155,11 +189,13 @@ const AdminEmployeeTimesheetWrapper = () => {
             <div className="space-y-5">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-[#2B3674] ml-1">From Date</label>
+                  <label className="text-sm font-bold text-[#2B3674] ml-1">
+                    From Date
+                  </label>
                   <div className="relative">
                     <CalendarIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input 
-                      type="date" 
+                    <input
+                      type="date"
                       value={fromDate}
                       onChange={(e) => setFromDate(e.target.value)}
                       className="w-full pl-11 pr-4 py-3 bg-[#F4F7FE] border-none rounded-2xl text-sm text-[#2B3674] font-bold focus:ring-2 focus:ring-[#4318FF] transition-all"
@@ -167,11 +203,13 @@ const AdminEmployeeTimesheetWrapper = () => {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-[#2B3674] ml-1">To Date</label>
+                  <label className="text-sm font-bold text-[#2B3674] ml-1">
+                    To Date
+                  </label>
                   <div className="relative">
                     <CalendarIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input 
-                      type="date" 
+                    <input
+                      type="date"
                       value={toDate}
                       onChange={(e) => setToDate(e.target.value)}
                       className="w-full pl-11 pr-4 py-3 bg-[#F4F7FE] border-none rounded-2xl text-sm text-[#2B3674] font-bold focus:ring-2 focus:ring-[#4318FF] transition-all"
@@ -181,8 +219,10 @@ const AdminEmployeeTimesheetWrapper = () => {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-bold text-[#2B3674] ml-1">Block Reason</label>
-                <textarea 
+                <label className="text-sm font-bold text-[#2B3674] ml-1">
+                  Block Reason
+                </label>
+                <textarea
                   placeholder="e.g. Monthly Payroll Verification"
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
@@ -191,7 +231,7 @@ const AdminEmployeeTimesheetWrapper = () => {
               </div>
 
               <div className="pt-2">
-                <button 
+                <button
                   onClick={handleApplyBlock}
                   className="w-full py-4 bg-[#4318FF] text-white rounded-2xl font-bold shadow-lg shadow-[#4318FF]/20 hover:shadow-[#4318FF]/40 hover:-translate-y-0.5 active:scale-95 transition-all text-sm uppercase tracking-wider flex items-center justify-center gap-2"
                 >
@@ -202,25 +242,33 @@ const AdminEmployeeTimesheetWrapper = () => {
               {/* Existing Blockers List */}
               {blockers.length > 0 && (
                 <div className="mt-6 pt-6 border-t border-gray-100">
-                   <h4 className="text-xs font-black text-[#A3AED0] uppercase tracking-widest mb-4">Active Locks</h4>
-                   <div className="space-y-3 max-h-[150px] overflow-y-auto no-scrollbar">
-                      {blockers.map((b) => (
-                        <div key={b.id} className="flex items-center justify-between p-3 bg-red-50/50 rounded-xl border border-red-100">
-                          <div className="flex flex-col">
-                            <span className="text-[10px] font-black text-red-600 uppercase">
-                              {new Date(b.blockedFrom).toLocaleDateString()} - {new Date(b.blockedTo).toLocaleDateString()}
-                            </span>
-                            <span className="text-[10px] text-gray-500 font-medium">{b.reason}</span>
-                          </div>
-                          <button 
-                            onClick={() => handleDeleteBlock(b.id!)}
-                            className="p-1.5 hover:bg-red-100 rounded-lg text-red-500 transition-colors"
-                          >
-                            <X size={14} />
-                          </button>
+                  <h4 className="text-xs font-black text-[#A3AED0] uppercase tracking-widest mb-4">
+                    Active Locks
+                  </h4>
+                  <div className="space-y-3 max-h-[150px] overflow-y-auto no-scrollbar">
+                    {blockers.map((b) => (
+                      <div
+                        key={b.id}
+                        className="flex items-center justify-between p-3 bg-red-50/50 rounded-xl border border-red-100"
+                      >
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-black text-red-600 uppercase">
+                            {new Date(b.blockedFrom).toLocaleDateString()} -{" "}
+                            {new Date(b.blockedTo).toLocaleDateString()}
+                          </span>
+                          <span className="text-[10px] text-gray-500 font-medium">
+                            {b.reason}
+                          </span>
                         </div>
-                      ))}
-                   </div>
+                        <button
+                          onClick={() => handleDeleteBlock(b.id!)}
+                          className="p-1.5 hover:bg-red-100 rounded-lg text-red-500 transition-colors"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

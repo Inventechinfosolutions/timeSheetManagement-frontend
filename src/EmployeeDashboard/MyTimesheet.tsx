@@ -48,17 +48,21 @@ const MyTimesheet = ({
   const { currentUser } = useAppSelector((state) => state.user);
   // @ts-ignore
   const { holidays } = useAppSelector(
-    (state) => (state as any).masterHolidays || { holidays: [] }
+    (state) => (state as any).masterHolidays || { holidays: [] },
   );
   const { blockers } = useAppSelector((state) => state.timesheetBlocker);
 
   const isAdmin = currentUser?.userType === UserType.ADMIN;
-  const currentEmployeeId = propEmployeeId || entity?.employeeId || (!isAdmin ? currentUser?.employeeId : undefined);
+  const currentEmployeeId =
+    propEmployeeId ||
+    entity?.employeeId ||
+    (!isAdmin ? currentUser?.employeeId : undefined);
 
   // 1. viewMonth/now state
   const [now, setNow] = useState<Date>(() => {
     if (propNow) return propNow;
-    if (location.state?.selectedDate) return new Date(location.state.selectedDate);
+    if (location.state?.selectedDate)
+      return new Date(location.state.selectedDate);
     if (date) return new Date(date);
     return new Date();
   });
@@ -119,12 +123,16 @@ const MyTimesheet = ({
 
   // Fetch attendance and blockers when month/employee changes
   useEffect(() => {
-    if (!currentEmployeeId || (isAdmin && currentEmployeeId.toLowerCase() === "admin")) return;
-    
+    if (
+      !currentEmployeeId ||
+      (isAdmin && currentEmployeeId.toLowerCase() === "admin")
+    )
+      return;
+
     const fetchKey = `${currentEmployeeId}-${
       now.getMonth() + 1
     }-${now.getFullYear()}`;
-    
+
     if (lastAttendanceKey.current === fetchKey) return;
     lastAttendanceKey.current = fetchKey;
 
@@ -134,7 +142,7 @@ const MyTimesheet = ({
         employeeId: currentEmployeeId,
         month: (now.getMonth() + 1).toString().padStart(2, "0"),
         year: now.getFullYear().toString(),
-      })
+      }),
     );
   }, [dispatch, currentEmployeeId, now, isAdmin]);
 
@@ -164,7 +172,7 @@ const MyTimesheet = ({
     if (toast.show) {
       const timer = setTimeout(
         () => setToast((prev) => ({ ...prev, show: false })),
-        3000
+        3000,
       );
       return () => clearTimeout(timer);
     }
@@ -173,7 +181,7 @@ const MyTimesheet = ({
   const isDateBlocked = (date: Date) => {
     const d = new Date(date);
     d.setHours(0, 0, 0, 0);
-    return blockers.some(b => {
+    return blockers.some((b) => {
       const start = new Date(b.blockedFrom);
       start.setHours(0, 0, 0, 0);
       const end = new Date(b.blockedTo);
@@ -185,7 +193,7 @@ const MyTimesheet = ({
   const getBlockedReason = (date: Date) => {
     const d = new Date(date);
     d.setHours(0, 0, 0, 0);
-    const blocker = blockers.find(b => {
+    const blocker = blockers.find((b) => {
       const start = new Date(b.blockedFrom);
       start.setHours(0, 0, 0, 0);
       const end = new Date(b.blockedTo);
@@ -230,7 +238,7 @@ const MyTimesheet = ({
     } else {
       const entryDate = new Date(localEntries[entryIndex].fullDate);
       const dateStrLocal = `${entryDate.getFullYear()}-${String(
-        entryDate.getMonth() + 1
+        entryDate.getMonth() + 1,
       ).padStart(2, "0")}-${String(entryDate.getDate()).padStart(2, "0")}`;
 
       const isHoliday = holidays?.find((h: any) => {
@@ -253,7 +261,7 @@ const MyTimesheet = ({
         // 0 hours on a weekday: Determine if Leave or Upcoming
         const todayZero = new Date();
         todayZero.setHours(0, 0, 0, 0);
-        
+
         const entryDateZero = new Date(entryDate);
         entryDateZero.setHours(0, 0, 0, 0);
 
@@ -327,11 +335,14 @@ const MyTimesheet = ({
     }
 
     // Force "Leave" status for past days with 0 hours
-    const todayStr = new Date().toISOString().split('T')[0];
-    payload.forEach(item => {
-        if ((!item.totalHours || Number(item.totalHours) === 0) && item.workingDate <= todayStr) {
-            item.status = "Leave";
-        }
+    const todayStr = new Date().toISOString().split("T")[0];
+    payload.forEach((item) => {
+      if (
+        (!item.totalHours || Number(item.totalHours) === 0) &&
+        item.workingDate < todayStr
+      ) {
+        item.status = "Leave";
+      }
     });
 
     try {
@@ -341,9 +352,13 @@ const MyTimesheet = ({
           employeeId: currentEmployeeId,
           month: (now.getMonth() + 1).toString().padStart(2, "0"),
           year: now.getFullYear().toString(),
-        })
+        }),
       );
-      setToast({ show: true, message: "Data Saved Successfully", type: "success" });
+      setToast({
+        show: true,
+        message: "Data Saved Successfully",
+        type: "success",
+      });
     } catch (error: any) {
       console.warn("Bulk API failed, attempting sequential fallback...", error);
       let successCount = 0;
@@ -354,7 +369,7 @@ const MyTimesheet = ({
               updateAttendanceRecord({
                 id: item.id,
                 data: { totalHours: item.totalHours, status: item.status },
-              })
+              }),
             ).unwrap();
           } else {
             await dispatch(
@@ -363,7 +378,7 @@ const MyTimesheet = ({
                 workingDate: item.workingDate,
                 totalHours: item.totalHours,
                 status: item.status,
-              })
+              }),
             ).unwrap();
           }
           successCount++;
@@ -377,11 +392,15 @@ const MyTimesheet = ({
             employeeId: currentEmployeeId,
             month: (now.getMonth() + 1).toString().padStart(2, "0"),
             year: now.getFullYear().toString(),
-          })
+          }),
         );
         setToast({ show: true, message: "Data Saved", type: "success" });
       } else {
-        setToast({ show: true, message: (error?.response?.data?.message || "Failed to save records."), type: "error" });
+        setToast({
+          show: true,
+          message: error?.response?.data?.message || "Failed to save records.",
+          type: "error",
+        });
       }
     }
   };
@@ -389,12 +408,12 @@ const MyTimesheet = ({
   // Calculations
   const monthTotalHours = localEntries.reduce(
     (acc, entry) => acc + (entry.totalHours || 0),
-    0
+    0,
   );
   const firstDayOfMonth = new Date(
     now.getFullYear(),
     now.getMonth(),
-    1
+    1,
   ).getDay();
   const paddingDays = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
   const weekdays = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
@@ -553,13 +572,13 @@ const MyTimesheet = ({
               localInputValues[idx] !== undefined
                 ? localInputValues[idx]
                 : displayVal === 0
-                ? ""
-                : displayVal.toString();
+                  ? ""
+                  : displayVal.toString();
             const dateStr = `${day.fullDate.getFullYear()}-${String(
-              day.fullDate.getMonth() + 1
+              day.fullDate.getMonth() + 1,
             ).padStart(2, "0")}-${String(day.fullDate.getDate()).padStart(
               2,
-              "0"
+              "0",
             )}`;
 
             const holiday = holidays?.find((h: any) => {
@@ -573,7 +592,7 @@ const MyTimesheet = ({
             });
 
             // Logic from old code: Red if weekend w/o status OR if it is a holiday
-            const isRed = (day.isWeekend && !day.status); 
+            const isRed = day.isWeekend && !day.status;
             const isSelected =
               selectedDateId &&
               new Date(selectedDateId).toDateString() ===
@@ -584,11 +603,13 @@ const MyTimesheet = ({
                 : "";
 
             const isBlocked = isDateBlocked(day.fullDate);
-            const blockedReason = isBlocked ? getBlockedReason(day.fullDate) : "";
-            
+            const blockedReason = isBlocked
+              ? getBlockedReason(day.fullDate)
+              : "";
+
             // Logic for "isEditable" matches old code + new styling check
             const isEditable =
-              (!readOnly) &&
+              !readOnly &&
               (isAdmin || isEditableMonth(day.fullDate)) &&
               !isBlocked;
 
@@ -649,9 +670,7 @@ else if (
               bg = "bg-[#FEE2E2]";
               badge = "bg-[#EE5D50]/70 text-white font-bold";
               border = "border-[#EE5D50]/10";
-            } else if (
-              day.status === "Half Day" && displayVal !== 0
-            ) {
+            } else if (day.status === "Half Day" && displayVal !== 0) {
               bg = "bg-[#FEF3C7]";
               badge = "bg-[#FFB020]/80 text-white font-bold";
               border = "border-[#FFB020]/20";
@@ -668,10 +687,12 @@ else if (
                 key={idx}
                 className={`relative flex flex-col justify-between p-1.5 rounded-2xl border transition-all duration-300 min-h-[120px] group 
                             ${border} ${shadow} ${highlightClass} ${bg} ${
-                  isBlocked
-                    ? (isAdmin ? "cursor-pointer" : "cursor-not-allowed")
-                    : "hover:-translate-y-1 hover:shadow-lg"
-                }`}
+                              isBlocked
+                                ? isAdmin
+                                  ? "cursor-pointer"
+                                  : "cursor-not-allowed"
+                                : "hover:-translate-y-1 hover:shadow-lg"
+                            }`}
                 onClick={() => {
                   if (isBlocked && isAdmin && onBlockedClick) {
                     onBlockedClick();
@@ -686,14 +707,19 @@ else if (
                         <AlertCircle size={14} className="text-red-600" />
                       </div>
                       <div className="space-y-0.5">
-                        <p className="text-[9px] font-black text-[#2B3674] leading-tight uppercase tracking-tight">Timesheet Blocked</p>
+                        <p className="text-[9px] font-black text-[#2B3674] leading-tight uppercase tracking-tight">
+                          Timesheet Blocked
+                        </p>
                         <p className="text-[10px] font-extrabold text-[#4318FF]">
                           {isAdmin ? "Unblock" : "Contact Admin"}
                         </p>
                       </div>
                       {blockedReason && (
                         <div className="mt-1 pt-1 border-t border-gray-100 w-full px-1">
-                          <p className="text-[8px] text-[#A3AED0] font-bold italic truncate overflow-hidden whitespace-nowrap" title={blockedReason}>
+                          <p
+                            className="text-[8px] text-[#A3AED0] font-bold italic truncate overflow-hidden whitespace-nowrap"
+                            title={blockedReason}
+                          >
                             "{blockedReason}"
                           </p>
                         </div>
@@ -715,9 +741,9 @@ else if (
                     {day.date}
                   </div>
                   {isBlocked && !isAdmin && (
-                     <div className="p-1 rounded-full bg-red-50 text-red-500 border border-red-100">
-                        <Lock size={8} strokeWidth={3} />
-                     </div>
+                    <div className="p-1 rounded-full bg-red-50 text-red-500 border border-red-100">
+                      <Lock size={8} strokeWidth={3} />
+                    </div>
                   )}
                 </div>
 
@@ -733,7 +759,13 @@ else if (
                             ? "text-gray-400 cursor-not-allowed"
                             : "text-[#2B3674] group-hover:scale-105 focus:scale-105"
                         }`}
-                      placeholder={(day.status === "Weekend" || (day.status as any) === "WEEKEND" || holiday) ? "-" : "0"}
+                      placeholder={
+                        day.status === "Weekend" ||
+                        (day.status as any) === "WEEKEND" ||
+                        holiday
+                          ? "-"
+                          : "0"
+                      }
                       value={inputValue}
                       onChange={(e) => handleHoursInput(idx, e.target.value)}
                       onBlur={() => handleInputBlur(idx)}
@@ -751,17 +783,20 @@ else if (
                 <div
                   className={`w-full py-1.5 rounded-lg text-center text-[8px] font-black uppercase tracking-wider truncate px-1 shadow-sm z-10 mt-auto ${badge}`}
                 >
-                  {isBlocked 
-                      ? "BLOCKED"
-                      : day.status === "Full Day" || day.status === "Half Day" || day.status === "WFH" || day.status === "Client Visit"
+                  {isBlocked
+                    ? "BLOCKED"
+                    : day.status === "Full Day" ||
+                        day.status === "Half Day" ||
+                        day.status === "WFH" ||
+                        day.status === "Client Visit"
                       ? day.status
-                      : (day.status === "Holiday" || holiday)
-                      ? holiday?.holidayName || holiday?.name || "HOLIDAY"
-                      : (day.status === "Weekend" || day.isWeekend)
-                      ? "WEEKEND"
-                      : day.status === "Not Updated"
-                      ? "Not Updated"
-                      : day.status || "UPCOMING"}
+                      : day.status === "Holiday" || holiday
+                        ? holiday?.holidayName || holiday?.name || "HOLIDAY"
+                        : day.status === "Weekend" || day.isWeekend
+                          ? "WEEKEND"
+                          : day.status === "Not Updated"
+                            ? "Not Updated"
+                            : day.status || "UPCOMING"}
                 </div>
               </div>
             );

@@ -1,8 +1,9 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "../store";
-import { useEffect } from "react";
-import { getEntity, setCurrentUser } from "../reducers/employeeDetails.reducer";
+import { useState, useEffect } from "react";
+import axios from "axios";
+import { getEntity } from "../reducers/employeeDetails.reducer";
 import {
   User,
   Mail,
@@ -16,21 +17,51 @@ const EmployeeDetailsView = () => {
   const { employeeId } = useParams<{ employeeId: string }>();
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
-  const { entities, entity, loading } = useSelector((state: RootState) => state.employeeDetails);
-
-  useEffect(() => {
-    if (employeeId && (!entity || (entity.employeeId !== employeeId && entity.id !== Number(employeeId)))) {
-      dispatch(getEntity(employeeId));
-    }
-  }, [dispatch, employeeId, entity]); // Added entity to dependency array
-
-  const employeeFromList = entities.find(
-    (e: any) => (e.employeeId === employeeId || e.id === Number(employeeId))
+  const { entities, entity, loading } = useSelector(
+    (state: RootState) => state.employeeDetails,
+  );
+  const [viewedProfileImage, setViewedProfileImage] = useState<string | null>(
+    null,
   );
 
-  const employee = (entity && (entity.employeeId === employeeId || entity.id === Number(employeeId))) 
-    ? entity 
-    : employeeFromList;
+  useEffect(() => {
+    if (
+      employeeId &&
+      !loading &&
+      (!entity ||
+        Object.keys(entity).length === 0 ||
+        (entity.employeeId !== employeeId && entity.id !== Number(employeeId)))
+    ) {
+      dispatch(getEntity(employeeId));
+    }
+  }, [dispatch, employeeId]); // Removed entity from dependency array
+
+  useEffect(() => {
+    if (employeeId) {
+      // Use direct axios call to avoid Redux side effects (like updating the global header avatar)
+      axios
+        .get(`/api/employee-details/profile-image/${employeeId}/view`, {
+          responseType: "blob",
+        })
+        .then((response) => {
+          const blobUrl = URL.createObjectURL(response.data);
+          setViewedProfileImage(blobUrl);
+        })
+        .catch(() => {
+          setViewedProfileImage(null);
+        });
+    }
+  }, [employeeId]);
+
+  const employeeFromList = entities.find(
+    (e: any) => e.employeeId === employeeId || e.id === Number(employeeId),
+  );
+
+  const employee =
+    entity &&
+    (entity.employeeId === employeeId || entity.id === Number(employeeId))
+      ? entity
+      : employeeFromList;
 
   if (loading && !employee) {
     return (
@@ -54,7 +85,9 @@ const EmployeeDetailsView = () => {
     );
   }
 
-  const avatarLetter = (employee.fullName || employee.name || "?").charAt(0).toUpperCase();
+  const avatarLetter = (employee.fullName || employee.name || "?")
+    .charAt(0)
+    .toUpperCase();
 
   return (
     <div className="px-4 md:px-8 pt-6 pb-8 w-full max-w-[1400px] mx-auto animate-in fade-in duration-500 space-y-3">
@@ -64,8 +97,13 @@ const EmployeeDetailsView = () => {
           onClick={() => navigate(-1)}
           className="flex items-center gap-2 text-gray-400 hover:text-[#4318FF] transition-colors group"
         >
-          <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
-          <span className="text-sm font-semibold tracking-wide">Back to employee list</span>
+          <ArrowLeft
+            size={18}
+            className="group-hover:-translate-x-1 transition-transform"
+          />
+          <span className="text-sm font-semibold tracking-wide">
+            Back to employee list
+          </span>
         </button>
       </div>
 
@@ -81,12 +119,20 @@ const EmployeeDetailsView = () => {
 
         {/* Content */}
         <div className="relative z-10 p-4 flex flex-col md:flex-row items-center md:items-start gap-5">
-           {/* Avatar Area */}
+          {/* Avatar Area */}
           <div className="flex flex-col items-center gap-2">
-            <div className="p-1 rounded-full bg-white shadow-xl">
-              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#4318FF] to-[#00A3C4] flex items-center justify-center text-white text-3xl font-black shadow-inner">
-                {avatarLetter}
-              </div>
+            <div className="p-1 rounded-full bg-white shadow-xl overflow-hidden">
+              {viewedProfileImage ? (
+                <img
+                  src={viewedProfileImage}
+                  alt="Profile"
+                  className="w-24 h-24 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#4318FF] to-[#00A3C4] flex items-center justify-center text-white text-3xl font-black shadow-inner">
+                  {avatarLetter}
+                </div>
+              )}
             </div>
           </div>
 
@@ -191,7 +237,7 @@ const EmployeeDetailsView = () => {
                 value={employee.designation || ""}
                 className="w-full pl-11 pr-4 py-2.5 border-2 border-gray-100 rounded-xl bg-gray-50/50 text-[#1B2559] text-sm font-semibold transition-all"
               />
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-orange-50 flex items-center justify-center" >
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-orange-50 flex items-center justify-center">
                 <Briefcase className="text-[#FFB020] w-4 h-4" />
               </div>
             </div>

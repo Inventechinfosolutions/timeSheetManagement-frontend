@@ -22,6 +22,7 @@ interface EmployeeDetailsState {
   updating: boolean;
   totalItems: number;
   updateSuccess: boolean;
+  profileImageUrl: string | null;
 }
 
 const initialState: EmployeeDetailsState = {
@@ -32,6 +33,7 @@ const initialState: EmployeeDetailsState = {
   updating: false,
   totalItems: 0,
   updateSuccess: false,
+  profileImageUrl: null,
 };
 
 
@@ -198,6 +200,12 @@ export const EmployeeDetailsSlice = createSlice({
         state.updating = false;
         state.updateSuccess = true;
         state.entity = {};
+      })
+      .addCase(fetchProfileImage.fulfilled, (state: EmployeeDetailsState, action: PayloadAction<string>) => {
+        state.profileImageUrl = action.payload;
+      })
+      .addCase(uploadProfileImage.fulfilled, (state: EmployeeDetailsState) => {
+        state.profileImageUrl = null; // Trigger re-fetch or state update
       })
       .addMatcher(isFulfilled(getEntities), (state: EmployeeDetailsState, action: PayloadAction<any>) => {
         const response = action.payload;

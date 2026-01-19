@@ -18,7 +18,9 @@ import defaultAvatar from "../assets/default-avatar.jpg";
 
 const MyProfile = () => {
   const dispatch = useAppDispatch();
-  const { entity } = useAppSelector((state) => state.employeeDetails);
+  const { entity, profileImageUrl } = useAppSelector(
+    (state) => state.employeeDetails,
+  );
   const { currentUser } = useAppSelector((state) => state.user);
 
   // Identify current user ID from the session (set during login)
@@ -39,7 +41,6 @@ const MyProfile = () => {
   // Use entity values or fallbacks
   // Default to a local asset if no image found in entity
   const defaultImage = defaultAvatar;
-  const [profileImage, setProfileImage] = useState(defaultImage);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const detailsFetched = useRef(false);
   const imageFetchedForId = useRef<string | null>(null);
@@ -48,36 +49,37 @@ const MyProfile = () => {
   useEffect(() => {
     console.log(
       "MyProfile: Component mounted or searchId changed:",
-      currentSearchId
+      currentSearchId,
     );
   }, [currentSearchId]);
 
   // Effect: Fetch Full Employee Details & Profile Image
   useEffect(() => {
     if (currentSearchId && !detailsFetched.current) {
-      console.log("MyProfile: Initial fetch via direct API for:", currentSearchId);
+      console.log(
+        "MyProfile: Initial fetch via direct API for:",
+        currentSearchId,
+      );
       detailsFetched.current = true;
-      
+
       dispatch(getEntities({ search: String(currentSearchId) }))
         .unwrap()
         .then((response: any) => {
-           const list = Array.isArray(response) ? response : response.data || [];
-           const foundUser = list.length > 0 ? list[0] : null;
+          const list = Array.isArray(response) ? response : response.data || [];
+          const foundUser = list.length > 0 ? list[0] : null;
 
           if (foundUser) {
             dispatch(setCurrentUser(foundUser));
-            
+
             // Immediately fetch the profile image if we have an ID
             const empId = foundUser.employeeId || foundUser.id;
             if (empId && imageFetchedForId.current !== String(empId)) {
-                imageFetchedForId.current = String(empId);
-                dispatch(fetchProfileImage(String(empId)))
-                    .unwrap()
-                    .then((blobUrl) => setProfileImage(blobUrl))
-                    .catch(() => {
-                        imageFetchedForId.current = null;
-                        setProfileImage(defaultImage);
-                    });
+              imageFetchedForId.current = String(empId);
+              dispatch(fetchProfileImage(String(empId)))
+                .unwrap()
+                .catch(() => {
+                  imageFetchedForId.current = null;
+                });
             }
           }
         })
@@ -89,11 +91,7 @@ const MyProfile = () => {
   }, [dispatch, currentSearchId]);
 
   // Sync state with entity updates from other components
-  useEffect(() => {
-    if (entity?.profileImage || entity?.image) {
-      setProfileImage(entity.profileImage || entity.image);
-    }
-  }, [entity]);
+  // (No longer needed since we use profileImageUrl from Redux)
 
   const [uploadStatus, setUploadStatus] = useState<
     "idle" | "success" | "error"
@@ -102,21 +100,17 @@ const MyProfile = () => {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // 1. Show Preview Immediately
+      // 1. Show Preview Immediately (Optional, but let's wait for upload to be safe or use a local preview if needed.
+      // For now, let's just trigger upload and let fetchProfileImage handle the update)
       setUploadStatus("idle");
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfileImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
 
       // 2. Upload to Backend Immediately
       // The thunk expects { employeeId: string, file: File }
       const idToUse = displayEmployeeId || String(currentDbId || "");
-      
+
       if (!idToUse) {
-          console.error("No employee ID available for upload");
-          return;
+        console.error("No employee ID available for upload");
+        return;
       }
 
       dispatch(uploadProfileImage({ employeeId: idToUse, file }))
@@ -124,6 +118,8 @@ const MyProfile = () => {
         .then(() => {
           console.log("Profile image uploaded successfully");
           setUploadStatus("success");
+          // Re-fetch image to update Redux state (and Header)
+          dispatch(fetchProfileImage(idToUse));
           // Clear message after 3 seconds
           setTimeout(() => setUploadStatus("idle"), 3000);
         })
@@ -165,9 +161,9 @@ const MyProfile = () => {
                 className="hidden"
                 accept="image/*"
               />
-              <div className="p-1 rounded-full bg-white shadow-xl">
+              <div className="p-1 rounded-full bg-white shadow-xl overflow-hidden">
                 <img
-                  src={profileImage}
+                  src={profileImageUrl || defaultImage}
                   alt="Profile"
                   className="w-20 h-20 rounded-full object-cover"
                 />
