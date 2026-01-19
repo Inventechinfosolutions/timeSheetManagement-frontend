@@ -98,7 +98,7 @@ const AdminEmployeeTimesheetWrapper = () => {
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#F4F7FE] p-4 md:p-8 pt-6">
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-6 flex flex-shrink-0 items-center justify-between">
         <div className="flex flex-col gap-1">
           <button
             onClick={handleBack}
@@ -107,7 +107,7 @@ const AdminEmployeeTimesheetWrapper = () => {
             <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
             <span className="text-sm font-semibold tracking-wide">Back to employee list</span>
           </button>
-          <h2 className="text-xl font-bold text-[#2B3674] mt-1">
+          <h2 className="text-2xl font-bold text-[#2B3674] mt-1">
             Employee Timesheet: {employee ? (employee.fullName || employee.name || employee.employeeId) : 'Loading...'}
           </h2>
         </div>
@@ -121,7 +121,7 @@ const AdminEmployeeTimesheetWrapper = () => {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto no-scrollbar pb-8">
+      <div className="flex-1 overflow-hidden pb-12">
         <MyTimesheet 
           employeeId={employeeId!} 
           readOnly={false} 

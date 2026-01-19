@@ -257,7 +257,7 @@ const MyTimesheet = ({
         const entryDateZero = new Date(entryDate);
         entryDateZero.setHours(0, 0, 0, 0);
 
-        if (entryDateZero < todayZero) {
+        if (entryDateZero <= todayZero) {
           newStatus = "Leave";
         } else {
           newStatus = "UPCOMING";
@@ -291,7 +291,7 @@ const MyTimesheet = ({
       const currentTotal = entry.totalHours || 0;
       const originalTotal = baseEntries[idx]?.totalHours || 0;
 
-      if (currentTotal !== originalTotal) {
+      if (currentTotal !== originalTotal || entry.status !== baseEntries[idx]?.status) {
         const d = entry.fullDate;
         const workingDate = `${d.getFullYear()}-${(d.getMonth() + 1)
           .toString()
@@ -329,7 +329,7 @@ const MyTimesheet = ({
     // Force "Leave" status for past days with 0 hours
     const todayStr = new Date().toISOString().split('T')[0];
     payload.forEach(item => {
-        if ((!item.totalHours || Number(item.totalHours) === 0) && item.workingDate < todayStr) {
+        if ((!item.totalHours || Number(item.totalHours) === 0) && item.workingDate <= todayStr) {
             item.status = "Leave";
         }
     });
@@ -427,7 +427,6 @@ const MyTimesheet = ({
         </div>
       )}
 
-      {/* Main Card Container */}
       <div className="flex-1 bg-white rounded-[20px] p-4 shadow-[0px_20px_50px_0px_#111c440d] border border-gray-100 overflow-hidden mt-1 flex flex-col">
         {/* Header Controls */}
         <div className="flex justify-between items-center mb-4 px-2">
@@ -480,6 +479,52 @@ const MyTimesheet = ({
               </button>
             )}
           </div>
+        </div>
+
+        {/* Legend - Added to match img 1 */}
+        <div className="flex items-center gap-x-6 gap-y-2 flex-wrap mb-4 px-2 overflow-x-auto pb-2 scrollbar-none">
+          {[
+            {
+              label: "Full Day/WFH",
+              color: "bg-[#E6FFFA]",
+              border: "border-[#01B574]",
+            },
+            {
+              label: "Half Day",
+              color: "bg-[#FFF9E5]",
+              border: "border-[#FFB020]",
+            },
+            {
+              label: "Leave/Absent",
+              color: "bg-[#FDF2F2]",
+              border: "border-[#EE5D50]",
+            },
+            {
+              label: "Today",
+              color: "bg-[#4318FF]",
+              border: "border-transparent",
+            },
+            {
+              label: "Holiday",
+              color: "bg-[#E6F7FF]",
+              border: "border-[#00A3C4]",
+            },
+            {
+              label: "Blocked",
+              color: "bg-gray-100",
+              border: "border-gray-200",
+            },
+          ].map((item) => (
+            <div
+              key={item.label}
+              className="flex items-center gap-2 text-[10px] font-bold text-gray-400 whitespace-nowrap uppercase tracking-wider"
+            >
+              <div
+                className={`w-3 h-3 rounded-full ${item.color} border ${item.border}`}
+              ></div>
+              <span>{item.label}</span>
+            </div>
+          ))}
         </div>
 
         {/* Days Header */}
@@ -557,7 +602,30 @@ const MyTimesheet = ({
                 // Administrative Block
                 bg = "bg-gray-100/60 opacity-60 grayscale";
                 badge = "bg-gray-200 text-gray-500";
-            } else if (
+            } else if (day.isToday) {
+                // Base highlight for today
+                border = "border-[#4318FF] border-2";
+                shadow = "shadow-[0px_4px_20px_rgba(67,24,255,0.15)] ring-2 ring-blue-100";
+                
+                // Color based on status even if it's today
+                if (day.status === "Full Day" || day.status === "WFH" || day.status === "Client Visit") {
+                  bg = "bg-[#E6FFFA]";
+                  badge = "bg-[#01B574] text-white font-bold";
+                } else if (day.status === "Half Day") {
+                  bg = "bg-[#FEF3C7]";
+                  badge = "bg-[#FFB020]/80 text-white font-bold";
+                } else if (day.status === "Leave") {
+                  bg = "bg-[#FEE2E2]";
+                  badge = "bg-[#EE5D50]/70 text-white font-bold";
+                } else if (holiday || (day.status as any) === "Holiday") {
+                  bg = "bg-[#DBEAFE]";
+                  badge = "bg-[#1890FF]/70 text-white font-bold";
+                } else {
+                  bg = "bg-white";
+                  badge = "bg-gray-400/80 text-white font-bold";
+                }
+            } 
+else if (
               (day.status === "Full Day" || day.status === "WFH" || day.status === "Client Visit") &&
               (displayVal !== 0)
             ) {
@@ -588,15 +656,11 @@ const MyTimesheet = ({
               badge = "bg-[#FFB020]/80 text-white font-bold";
               border = "border-[#FFB020]/20";
             } else if (
-              day.status === "Pending"
+              day.status === "Pending" || day.status === "Not Updated"
             ) {
               bg = "bg-[#FEF3C7]";
               badge = "bg-[#FFB020]/80 text-white font-bold";
               border = "border-[#FFB020]/20";
-            } else if (day.isToday) {
-              bg = "bg-white";
-              border = "border-[#4318FF]";
-              shadow = "shadow-[0px_4px_20px_rgba(67,24,255,0.15)]";
             }
 
             return (
