@@ -420,7 +420,7 @@ const MyTimesheet = ({
   const weekdays = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
   return (
-    <div className="flex flex-col h-full max-h-full overflow-hidden bg-[#F4F7FE] py-2 md:px-6 md:pt-4 md:pb-0 relative">
+    <div className="flex flex-col h-full max-h-full overflow-hidden bg-[#F4F7FE] py-2 px-1 md:px-6 md:pt-4 md:pb-0 relative">
       {loading && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/30 backdrop-blur-[2px]">
           <div className="animate-spin rounded-full h-10 w-10 border-b-4 border-[#4318FF]"></div>
@@ -449,35 +449,47 @@ const MyTimesheet = ({
 
       <div className="flex-1 bg-white rounded-[20px] p-4 shadow-[0px_20px_50px_0px_#111c440d] border border-gray-100 overflow-hidden mt-1 flex flex-col">
         {/* Header Controls */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 gap-3 sm:gap-0 px-2">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handlePrevMonth}
-              className="p-1 hover:bg-gray-50 rounded-lg transition-all text-gray-400 hover:text-[#4318FF]"
-            >
-              <ChevronLeft size={20} strokeWidth={2} />
-            </button>
-            <p className="text-base sm:text-lg font-bold text-[#2B3674] min-w-[140px] text-center">
-              {now.toLocaleDateString("en-US", {
-                month: "long",
-                year: "numeric",
-              })}
-            </p>
-            <button
-              onClick={handleNextMonth}
-              disabled={!canGoNextMonth()}
-              className={`p-1 rounded-lg transition-all ${
-                !canGoNextMonth()
-                  ? "text-gray-300 cursor-not-allowed"
-                  : "hover:bg-gray-50 text-gray-400 hover:text-[#4318FF]"
-              }`}
-            >
-              <ChevronRight size={20} strokeWidth={2} />
-            </button>
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mb-4 gap-4 sm:gap-0 px-2">
+          <div className="flex items-center justify-between sm:justify-start gap-4">
+            <div className="flex items-center gap-1">
+              <button
+                onClick={handlePrevMonth}
+                className="p-1.5 hover:bg-gray-50 rounded-lg transition-all text-gray-400 hover:text-[#4318FF]"
+              >
+                <ChevronLeft size={20} strokeWidth={2.5} />
+              </button>
+              <p className="text-base sm:text-lg font-bold text-[#2B3674] min-w-[140px] text-center">
+                {now.toLocaleDateString("en-US", {
+                  month: "long",
+                  year: "numeric",
+                })}
+              </p>
+              <button
+                onClick={handleNextMonth}
+                disabled={!canGoNextMonth()}
+                className={`p-1.5 rounded-lg transition-all ${
+                  !canGoNextMonth()
+                    ? "text-gray-300 cursor-not-allowed"
+                    : "hover:bg-gray-50 text-gray-400 hover:text-[#4318FF]"
+                }`}
+              >
+                <ChevronRight size={20} strokeWidth={2.5} />
+              </button>
+            </div>
+
+            {/* Total Hours Mobile (Show when sm:hidden) */}
+            <div className="sm:hidden text-right">
+              <p className="text-[8px] uppercase font-black text-gray-400 tracking-wider leading-none mb-0.5">
+                Total
+              </p>
+              <p className="text-lg font-black text-[#4318FF] leading-none">
+                {monthTotalHours.toFixed(1)}
+              </p>
+            </div>
           </div>
 
           <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-            <div className="text-right">
+            <div className="hidden sm:block text-right">
               <p className="text-[9px] uppercase font-bold text-gray-400 tracking-wider leading-none mb-0.5">
                 Total Hours
               </p>
@@ -491,18 +503,17 @@ const MyTimesheet = ({
             {(!readOnly || isAdmin) && (
               <button
                 onClick={onSaveAll}
-                className="flex items-center gap-1.5 px-4 sm:px-6 py-2 bg-linear-to-r from-[#4318FF] to-[#868CFF] text-white rounded-xl font-bold text-[10px] sm:text-xs shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all transform hover:-translate-y-0.5 active:scale-95 tracking-wide uppercase"
+                className="flex items-center justify-center gap-1.5 px-4 py-2 bg-[#4318FF] text-white rounded-xl font-bold text-[10px] shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all active:scale-95 tracking-wide uppercase"
               >
                 <Save size={14} />
-                <span className="hidden sm:inline">Save Changes</span>
-                <span className="sm:hidden">Save</span>
+                <span>Save</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* Legend - Hidden on mobile for cleaner look */}
-        <div className="hidden md:flex items-center gap-x-6 gap-y-2 flex-wrap mb-3 px-2 overflow-x-auto pb-2 scrollbar-none">
+        {/* Legend */}
+        <div className="flex items-center gap-x-6 gap-y-2 flex-nowrap overflow-x-auto pb-4 scrollbar-none px-2 mb-2">
           {[
             {
               label: "Full Day/WFH",
@@ -564,7 +575,7 @@ const MyTimesheet = ({
           {Array.from({ length: paddingDays }).map((_, idx) => (
             <div
               key={`p-${idx}`}
-              className="min-h-[80px] md:min-h-[90px] rounded-2xl bg-gray-50/30 border border-dashed border-gray-100"
+              className="min-h-[60px] md:min-h-[90px] rounded-2xl bg-gray-50/30 border border-dashed border-gray-100"
             ></div>
           ))}
           {localEntries.map((day, idx) => {
@@ -654,7 +665,10 @@ const MyTimesheet = ({
               bg = "bg-[#FEE2E2]";
               badge = "bg-[#EE5D50]/70 text-white font-bold";
               border = "border-[#EE5D50]/10";
-            } else if (day.status === "Pending" || day.status === "Not Updated") {
+            } else if (
+              day.status === "Pending" ||
+              day.status === "Not Updated"
+            ) {
               bg = "bg-[#FEF3C7]";
               badge = "bg-[#FFB020]/80 text-white font-bold";
               border = "border-[#FFB020]/20";
@@ -663,7 +677,7 @@ const MyTimesheet = ({
             return (
               <div
                 key={idx}
-                className={`relative flex flex-col justify-between p-1.5 rounded-2xl border transition-all duration-300 min-h-[120px] group 
+                className={`relative flex flex-col justify-between p-1 md:p-1.5 rounded-xl md:rounded-2xl border transition-all duration-300 min-h-[100px] md:min-h-[120px] group 
                             ${border} ${shadow} ${highlightClass} ${bg} ${
                               isBlocked
                                 ? isAdmin

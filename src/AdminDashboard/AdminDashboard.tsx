@@ -574,7 +574,7 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <div className="flex justify-center mb-20">
         {/* Bar Chart: Comparison */}
         {/* <div className="bg-white p-6 rounded-[24px] shadow-[0px_18px_40px_rgba(112,144,176,0.08)]">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
@@ -724,7 +724,7 @@ const AdminDashboard = () => {
         </div> */}
 
         {/* Donut Chart: Distribution */}
-        <div className="bg-white p-6 rounded-[24px] shadow-[0px_18px_40px_rgba(112,144,176,0.08)]">
+        <div className="bg-white p-6 rounded-[24px] shadow-[0px_18px_40px_rgba(112,144,176,0.08)] max-w-[700px] w-full">
           <div className="flex justify-between items-center mb-6">
             <h4 className="text-lg font-bold text-[#2B3674] flex items-center gap-2">
               Employee Distribution
