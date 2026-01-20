@@ -120,7 +120,7 @@ const AdminEmployeeTimesheetWrapper = () => {
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#F4F7FE] px-4 md:px-8 py-6">
-      <div className="mb-4 flex flex-shrink-0 items-center justify-between gap-2">
+      <div className="mb-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-2 bg-white/50 p-3 rounded-2xl md:bg-transparent md:p-0">
         <div className="flex flex-col gap-0.5 flex-1 min-w-0">
           <button
             onClick={handleBack}
@@ -135,7 +135,6 @@ const AdminEmployeeTimesheetWrapper = () => {
             </span>
           </button>
           <h2 className="text-base sm:text-lg font-bold text-[#2B3674] truncate">
-            Employee Timesheet:{" "}
             {employee
               ? employee.fullName || employee.name || employee.employeeId
               : "Loading..."}
@@ -144,10 +143,10 @@ const AdminEmployeeTimesheetWrapper = () => {
 
         <button
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center justify-center gap-1.5 px-4 py-2 bg-[#4318FF] text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all transform hover:-translate-y-0.5 active:scale-95 flex-shrink-0"
+          className="flex items-center justify-center gap-1.5 px-4 py-2 bg-[#4318FF] text-white rounded-xl text-[10px] font-bold shadow-lg hover:shadow-[#4318FF]/20 transition-all w-fit self-end sm:self-center"
         >
-          <Lock size={14} />
-          <span className="hidden sm:inline">Block</span>
+          <Lock size={12} />
+          <span>Block</span>
         </button>
       </div>
 

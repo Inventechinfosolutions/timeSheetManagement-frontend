@@ -18,9 +18,9 @@ import { UserType } from "./reducers/user.reducer";
 
 // Lazy load authentication components
 const EmployeeActivation = lazy(() => import("./Login/EmployeeActivation"));
-const FcManagerActivation = lazy(() => import("./Login/FcManagerActivation"));
+const FcManagerActivation = lazy(() => import("./Login/TimeSheetActivation"));
 const FcManagerResetPassword = lazy(
-  () => import("./Login/FcManagerResetPassword"),
+  () => import("./Login/TimeSheetResetPassword")
 );
 const SetPassword = lazy(() => import("./Login/SetPassword"));
 
@@ -42,6 +42,7 @@ import EmployeeListView from "./AdminDashboard/EmployeeListView";
 import EmployeeDetailsView from "./AdminDashboard/EmployeeDetailsView";
 import EmpWorkingDetails from "./AdminDashboard/EmpWorkingDetails";
 import AdminEmployeeCalendarView from "./AdminDashboard/AdminEmployeeCalendarView";
+import DailyStatus from "./AdminDashboard/DailyStatus";
 
 const EmployeeTabWrapper = () => {
   const { tab } = useParams<{ tab: string }>();
@@ -74,6 +75,8 @@ const AdminTabWrapper = () => {
       return <EmpWorkingDetails />;
     case "activation-success":
       return <ActivationSuccess />;
+    case "daily-attendance":
+      return <DailyStatus />;
     default:
       return <Navigate to="/admin-dashboard" replace />;
   }
