@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../store';
 import { resetPasswordEmployee, clearResetPasswordState } from '../reducers/public.reducer';
-import { Loader2, CheckCircle, AlertCircle, Eye, EyeOff, Lock, KeyRound, ArrowLeft } from 'lucide-react';
+import { Loader2, CheckCircle, AlertCircle, Eye, EyeOff, Lock, KeyRound, ArrowLeft, User } from 'lucide-react';
 import { message } from 'antd';
 import inventechLogo from '../assets/inventech-logo.jpg';
 
@@ -33,22 +33,22 @@ const ResetPassword: React.FC = () => {
   }, [dispatch]);
 
   // Handle success
-  // useEffect(() => {
-  //   if (resetPasswordResponse?.success) {
-  //     setTimeout(() => {
-  //       navigate('/landing');
-  //     }, 3000);
-  //   }
-  // }, [resetPasswordResponse, navigate]);
+  useEffect(() => {
+    if (resetPasswordResponse?.success) {
+      setTimeout(() => {
+        navigate('/landing');
+      }, 3000);
+    }
+  }, [resetPasswordResponse, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLocalError(null);
 
-    if (!token) {
-      setLocalError('Invalid or missing reset token.');
-      return;
-    }
+    // if (!token) {
+    //   setLocalError('Invalid or missing reset token.');
+    //   return;
+    // }
 
     if (newPassword !== confirmPassword) {
       setLocalError('Passwords do not match.');
@@ -60,12 +60,12 @@ const ResetPassword: React.FC = () => {
       return;
     }
 
-    console.log("Submitting reset password", { token, password: newPassword });
+    console.log("Submitting reset password", { loginId, password: newPassword });
     try {
-      await dispatch(resetPasswordEmployee({ token, password: newPassword })).unwrap();
-    } catch (err) {
+      await dispatch(resetPasswordEmployee({ loginId, password: newPassword })).unwrap();
+    } catch (err: any) {
       console.error("Failed to reset password", err);
-      setLocalError("Failed to reset password. Please try again or request a new link.");
+      setLocalError(err?.message || err || "Failed to reset password. Please try again or request a new link.");
     }
   };
 
@@ -131,6 +131,20 @@ const ResetPassword: React.FC = () => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-blue-100 uppercase tracking-widest ml-1">Login ID</label>
+              <div className="relative group">
+                <input
+                  type="text"
+                  value={loginId || ''}
+                  readOnly
+                  disabled
+                  className="w-full pl-10 pr-4 py-3.5 bg-white/50 border border-transparent rounded-xl text-gray-900 text-sm font-semibold cursor-not-allowed opacity-80"
+                />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 w-5 h-5" />
+              </div>
+            </div>
+
             <div className="space-y-2">
               <label className="text-[10px] font-bold text-blue-100 uppercase tracking-widest ml-1">New Password</label>
               <div className="relative group">
