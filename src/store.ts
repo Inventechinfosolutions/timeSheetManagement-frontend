@@ -6,6 +6,7 @@ import employeeLink from './reducers/employeeLink.reducer';
 import publicReducer from './reducers/public.reducer';
 import masterHolidayReducer from './reducers/masterHoliday.reducer';
 import timesheetBlockerReducer from './reducers/timesheetBlocker.reducer';
+import notificationReducer from './reducers/notification.reducer';
 
 export const store = configureStore({
   reducer: {
@@ -16,6 +17,7 @@ export const store = configureStore({
     public: publicReducer,
     masterHolidays: masterHolidayReducer,
     timesheetBlocker: timesheetBlockerReducer,
+    notifications: notificationReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

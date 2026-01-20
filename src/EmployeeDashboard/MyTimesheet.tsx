@@ -621,8 +621,8 @@ const MyTimesheet = ({
 
             if (isBlocked) {
               // Administrative Block
-              bg = "bg-gray-100/60 opacity-60 grayscale";
-              badge = "bg-gray-200 text-gray-500";
+              bg = "bg-gray-200 opacity-90 grayscale";
+              badge = "bg-gray-600 text-white";
             } else if (
               (day.status === "Full Day" ||
                 day.status === "WFH" ||
@@ -632,6 +632,11 @@ const MyTimesheet = ({
               bg = "bg-[#E6FFFA]";
               badge = "bg-[#01B574] text-white font-bold";
               border = "border-[#01B574]/20";
+            } else if (day.status === "Half Day" && displayVal !== 0) {
+              // Moved UP: Prioritize Half Day over Weekend/Holiday checks
+              bg = "bg-[#FEF3C7]";
+              badge = "bg-[#FFB020]/80 text-white font-bold";
+              border = "border-[#FFB020]/20";
             } else if (day.status === "Client Visit") {
               bg = "bg-[#DBEAFE]";
               badge = "bg-[#4318FF]/70 text-white font-bold";
@@ -649,11 +654,7 @@ const MyTimesheet = ({
               bg = "bg-[#FEE2E2]";
               badge = "bg-[#EE5D50]/70 text-white font-bold";
               border = "border-[#EE5D50]/10";
-            } else if (day.status === "Half Day" && displayVal !== 0) {
-              bg = "bg-[#FEF3C7]";
-              badge = "bg-[#FFB020]/80 text-white font-bold";
-              border = "border-[#FFB020]/20";
-            } else if (day.status === "Pending") {
+            } else if (day.status === "Pending" || day.status === "Not Updated") {
               bg = "bg-[#FEF3C7]";
               badge = "bg-[#FFB020]/80 text-white font-bold";
               border = "border-[#FFB020]/20";
@@ -730,11 +731,11 @@ const MyTimesheet = ({
                     <input
                       type="text"
                       disabled={!isEditable}
-                      className={`w-full h-10 text-center text-3xl font-bold bg-transparent transition-all focus:outline-none focus:ring-0
+                      className={`w-full h-10 text-center text-3xl font-medium bg-transparent transition-all focus:outline-none focus:ring-0
                         ${
                           !isEditable
                             ? "text-gray-400 cursor-not-allowed"
-                            : "text-[#2B3674] group-hover:scale-105 focus:scale-105"
+                            : "text-gray-800 group-hover:scale-105 focus:scale-105"
                         }`}
                       placeholder={
                         day.status === "Weekend" ||
@@ -748,17 +749,17 @@ const MyTimesheet = ({
                       onBlur={() => handleInputBlur(idx)}
                     />
                     {isEditable && (
-                      <div className="absolute bottom-0 w-12 h-0.5 bg-[#4318FF]/30 rounded-full group-hover/input:bg-[#4318FF] transition-colors"></div>
+                      <div className="absolute bottom-0 w-12 h-0.5 bg-black/20 rounded-full group-hover/input:bg-black transition-colors"></div>
                     )}
                   </div>
-                  <span className="text-[9px] text-[#A3AED0] font-semibold uppercase tracking-wider">
+                  <span className="text-[9px] text-black font-semibold uppercase tracking-wider">
                     hours
                   </span>
                 </div>
 
                 {/* Bottom: Status Badge */}
                 <div
-                  className={`w-full py-1.5 rounded-lg text-center text-[8px] font-black uppercase tracking-wider truncate px-1 shadow-sm z-10 mt-auto ${badge}`}
+                  className={`w-full py-1.5 rounded-lg text-center text-[10px] font-black uppercase tracking-wider truncate px-1 shadow-sm z-10 mt-auto ${badge}`}
                 >
                   {isBlocked
                     ? "BLOCKED"

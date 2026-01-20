@@ -1,8 +1,15 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { LogOut, Bell, User, ChevronDown } from "lucide-react";
+import { LogOut, Bell, User, ChevronDown, ArrowLeft, Check } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { logoutUser } from "../reducers/user.reducer";
 import { fetchProfileImage } from "../reducers/employeeDetails.reducer";
+import {
+  fetchNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+  fetchNotificationDetails,
+  clearSelectedNotification,
+} from "../reducers/notification.reducer";
 import { useState, useRef, useEffect } from "react";
 import defaultAvatar from "../assets/default-avatar.jpg";
 import "./Header.css";
@@ -15,11 +22,48 @@ const Header = () => {
     (state) => state.employeeDetails,
   );
   const { currentUser } = useAppSelector((state) => state.user);
+  const { notifications, unreadCount, selectedNotification, loading } = useAppSelector(
+    (state) => state.notifications
+  );
+  
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'detail'>('list');
+  const notificationRef = useRef<HTMLDivElement>(null);
+
   // Check if user is admin
   const isAdmin = currentUser?.userType === "ADMIN";
+
+  // Fetch notifications on mount (if employee)
+  useEffect(() => {
+    if (!isAdmin && entity?.employeeId) {
+      dispatch(fetchNotifications(entity.employeeId));
+    }
+  }, [dispatch, isAdmin, entity?.employeeId]);
+
+  const handleNotificationClick = (id: number) => {
+    dispatch(fetchNotificationDetails(id));
+    setViewMode('detail');
+  };
+
+  const handleBackToList = () => {
+    setViewMode('list');
+    dispatch(clearSelectedNotification());
+  };
+
+  const handleMarkAsRead = (id: number) => {
+    dispatch(markNotificationRead(id));
+    // Optionally go back to list or stay on detail page showing it's read
+    // For better UX, let's keep it on detail view but update UI (handled by re-render from store)
+  };
+
+  const handleMarkAllAsRead = () => {
+    if (entity?.employeeId) {
+      dispatch(markAllNotificationsRead(entity.employeeId));
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -53,18 +97,14 @@ const Header = () => {
 
   // Fetch profile image - ONLY for the logged-in user, not the viewed entity (if Admin)
   useEffect(() => {
-    // If the user is an admin, we don't want the header to change based on the viewed entity.
-    // In this system, admins show "A" by default. If we eventually want an admin image,
-    // we should fetch it based on currentUser.id, not entity.id.
     if (isAdmin) return;
-
     const profileId = entity?.employeeId || entity?.id;
     if (profileId) {
       dispatch(fetchProfileImage(String(profileId)));
     }
   }, [dispatch, entity?.employeeId, entity?.id, isAdmin]);
 
-  // Close dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -72,6 +112,17 @@ const Header = () => {
         !dropdownRef.current.contains(event.target as Node)
       ) {
         setIsDropdownOpen(false);
+      }
+      if (
+        notificationRef.current &&
+        !notificationRef.current.contains(event.target as Node)
+      ) {
+        setIsNotificationOpen(false);
+        // Reset view mode when closing
+        if (!isNotificationOpen) { // Only reset if it was open
+             setViewMode('list');
+             dispatch(clearSelectedNotification());
+        }
       }
     };
 
@@ -127,15 +178,167 @@ const Header = () => {
         </Link>
 
         <div className="flex items-center gap-3 ml-auto">
-          {/* Notification Bell */}
+          {/* Notification Bell - ONLY FOR EMPLOYEES */}
           {!isAdmin && (
-            <button className="relative p-2 hover:bg-white/10 rounded-xl transition-all group">
-              <Bell
-                size={20}
-                className="text-white group-hover:scale-110 transition-transform"
-              />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-white rounded-full shadow-[0_0_10px_rgba(255,255,255,0.8)] border border-white/20"></span>
-            </button>
+            <div className="relative" ref={notificationRef}>
+              <button
+                onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+                className={`relative p-2 rounded-xl transition-all group ${
+                  isNotificationOpen ? "bg-white text-[#4318FF]" : "hover:bg-white/10 text-white"
+                }`}
+              >
+                <Bell
+                  size={20}
+                  className={`group-hover:scale-110 transition-transform ${isNotificationOpen ? "fill-current" : ""}`}
+                />
+                <span className={`absolute top-2 right-2 w-2 h-2 rounded-full shadow-[0_0_10px_rgba(255,255,255,0.8)] border border-white/20 ${unreadCount > 0 ? "bg-red-500" : "bg-transparent"}`}></span>
+              </button>
+
+              {/* Modern Notification Popup */}
+              {isNotificationOpen && (
+                <div className="absolute right-0 mt-3 w-[400px] bg-white rounded-3xl shadow-[0px_20px_60px_-10px_rgba(0,0,0,0.15)] ring-1 ring-gray-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 origin-top-right">
+                  
+                  {viewMode === 'list' ? (
+                    <>
+                      {/* Header */}
+                      <div className="flex items-center justify-between px-6 py-5 border-b border-gray-50">
+                        <h3 className="text-lg font-bold text-[#1B2559]">Notifications</h3>
+                        <button 
+                          onClick={handleMarkAllAsRead}
+                          className="text-xs font-medium text-gray-400 hover:text-[#4318FF] transition-colors"
+                        >
+                          Mark all as read
+                        </button>
+                      </div>
+
+                      {/* Tabs */}
+                      <div className="flex items-center gap-6 px-6 border-b border-gray-50">
+                        <button className="py-3 text-sm font-bold text-[#1B2559] border-b-2 border-[#1B2559] relative">
+                          Inbox
+                          <span className="ml-2 bg-[#1B2559] text-white text-[10px] px-1.5 py-0.5 rounded-md">{notifications.length}</span>
+                        </button>
+                      </div>
+
+                      {/* Notification List */}
+                      <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
+                        {notifications.length > 0 ? (
+                          notifications.map((notif) => (
+                          <div 
+                            key={notif.id} 
+                            onClick={() => handleNotificationClick(notif.id)}
+                            className={`flex gap-4 p-5 hover:bg-gray-50/80 transition-colors border-b border-gray-50 last:border-0 group cursor-pointer relative ${!notif.isRead ? "bg-blue-50/30" : ""}`}
+                          >
+                            {/* Avatar */}
+                            <div className="relative shrink-0">
+                              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-[#4318FF]">
+                                  <Bell size={20} />
+                              </div>
+                            </div>
+
+                            {/* Content */}
+                            <div className="flex-1 space-y-1">
+                              <div className="flex justify-between items-start">
+                                  <p className="text-sm text-[#1B2559] leading-snug">
+                                    <span className="font-bold">{notif.title}</span>
+                                  </p>
+                                  {!notif.isRead && (
+                                    <span className="w-2 h-2 bg-[#4318FF] rounded-full shrink-0 mt-1.5"></span>
+                                  )}
+                              </div>
+                              
+                              <div className="flex flex-col gap-1">
+                                <span className="text-xs text-gray-500 font-medium line-clamp-2">{notif.message}</span>
+                                <span className="text-[10px] text-gray-400">
+                                  {new Date(notif.createdAt).toLocaleDateString()} {new Date(notif.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                        ) : (
+                          <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                            <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-3">
+                              <Bell size={24} className="text-gray-300" />
+                            </div>
+                            <p className="text-sm font-bold text-[#1B2559]">No new notifications</p>
+                            <p className="text-xs text-gray-400 mt-1 max-w-[200px]">
+                              You're all caught up! Check back later for updates.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    /* Detail View */
+                    <div className="flex flex-col h-[400px]">
+                      {/* Back Header */}
+                      <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-50">
+                        <button 
+                          onClick={handleBackToList}
+                          className="p-1 rounded-full hover:bg-gray-100 text-gray-500 transition-colors"
+                        >
+                          <ArrowLeft size={20} />
+                        </button>
+                        <h3 className="text-lg font-bold text-[#1B2559]">Message</h3>
+                      </div>
+
+                      {/* Content */}
+                      <div className="flex-1 p-6 overflow-y-auto custom-scrollbar">
+                         {loading ? (
+                           <div className="flex items-center justify-center h-full">
+                             <div className="w-8 h-8 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
+                           </div>
+                         ) : selectedNotification ? (
+                           <div className="space-y-4">
+                              <div className="flex items-start gap-4">
+                                <div className="w-12 h-12 rounded-full bg-linear-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/30 shrink-0">
+                                  <Bell size={24} />
+                                </div>
+                                <div>
+                                   <h2 className="text-xl font-bold text-[#1B2559] leading-tight mb-2">
+                                     {selectedNotification.title}
+                                   </h2>
+                                   <p className="text-xs font-bold text-gray-400">
+                                     {new Date(selectedNotification.createdAt).toLocaleDateString()} at {new Date(selectedNotification.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                   </p>
+                                </div>
+                              </div>
+                              
+                              <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                                <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
+                                  {selectedNotification.message}
+                                </p>
+                              </div>
+                           </div>
+                         ) : (
+                           <div className="text-center text-gray-500">Notification not found</div>
+                         )}
+                      </div>
+
+                      {/* Footer Actions */}
+                      {selectedNotification && !selectedNotification.isRead && (
+                         <div className="p-6 border-t border-gray-50 bg-gray-50/50">
+                            <button 
+                              onClick={() => handleMarkAsRead(selectedNotification.id)}
+                              className="w-full py-3 rounded-xl bg-[#4318FF] text-white font-bold text-sm shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:-translate-y-0.5 active:scale-95 transition-all flex items-center justify-center gap-2"
+                            >
+                              <Check size={18} />
+                              Mark as Read
+                            </button>
+                         </div>
+                      )}
+                      {selectedNotification && selectedNotification.isRead && (
+                         <div className="p-6 border-t border-gray-50 bg-gray-50/50 text-center">
+                            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-100 text-green-700 text-xs font-bold uppercase tracking-wide">
+                              <Check size={14} /> Read
+                            </span>
+                         </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           )}
 
           {/* Profile Dropdown */}
