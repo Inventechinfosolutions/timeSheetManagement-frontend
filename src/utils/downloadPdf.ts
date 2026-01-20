@@ -166,10 +166,20 @@ export const downloadPdf = ({
 
             let status = (entry.status || "").toUpperCase();
             
-            // Prioritize Specific Holiday Name from Master List
-            if (holiday) {
+            // 1. Check if Work was done (Priority 1)
+            // If the status indicates work (Full Day, Half Day, WFH, etc), KEEP IT.
+            // Do NOT overwrite with Holiday name.
+            const isWorkingStatus = status.includes("FULL DAY") || status.includes("HALF DAY") || status === "WFH" || status === "CLIENT VISIT";
+
+            if (isWorkingStatus) {
+                // Keep the status as is (e.g. "FULL DAY")
+            } 
+            // 2. Check for Holiday (Priority 2) - Only if not working
+            else if (holiday) {
                 status = (holiday.holidayName || holiday.name || "HOLIDAY").toUpperCase();
-            } else if (!status || status === "NOT UPDATED" || status === "PENDING" || status === "HOLIDAY") {
+            } 
+            // 3. Fallbacks (Priority 3)
+            else if (!status || status === "NOT UPDATED" || status === "PENDING" || status === "HOLIDAY") {
                  if (entry.isWeekend) status = "WEEKEND";
                  else if (!entry.isFuture) status = "NOT UPDATED";
             }

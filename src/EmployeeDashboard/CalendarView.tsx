@@ -45,7 +45,7 @@ const Calendar = ({
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { records } = useAppSelector((state: RootState) => state.attendance);
-  const { entity } = useAppSelector(
+    const { entity, entities } = useAppSelector(
     (state: RootState) => state.employeeDetails,
   );
   const { currentUser } = useAppSelector((state: RootState) => state.user);
@@ -160,7 +160,20 @@ const Calendar = ({
   };
 
   const handleConfirmDownload = () => {
-    if (!entity || !currentEmployeeId) return;
+    if (!currentEmployeeId) return;
+
+    // Resolve the correct employee object
+    let downloadEntity = entity;
+    if (currentEmployeeId && entity?.employeeId !== currentEmployeeId) {
+      const found = entities?.find(
+        (e: any) => e.employeeId === currentEmployeeId,
+      );
+      if (found) downloadEntity = found;
+    }
+
+    if (!downloadEntity) {
+      console.warn("Could not find employee details for PDF");
+    }
 
     try {
       setIsDownloading(true);
@@ -194,10 +207,10 @@ const Calendar = ({
 
       // 3. Generate PDF
       downloadPdf({
-        employeeName: entity.fullName || "Employee",
+        employeeName: downloadEntity?.fullName || "Employee",
         employeeId: currentEmployeeId,
-        designation: entity.designation,
-        department: entity.department,
+        designation: downloadEntity?.designation,
+        department: downloadEntity?.department,
         month: `${fromDateStr} to ${toDateStr}`,
         entries: rangeEntries,
         totalHours: totalHours,
@@ -517,7 +530,7 @@ const Calendar = ({
                 if (statusLabel === "-") statusLabel = "";
               } else if (isBlocked) {
                 cellClass =
-                  "bg-gray-100/60 opacity-60 grayscale border border-gray-200 shadow-inner cursor-not-allowed";
+                  "bg-gray-200 opacity-90 grayscale border border-gray-200 shadow-inner cursor-not-allowed";
                 textClass = "text-gray-500";
                 statusLabel = "Blocked";
               } else if (
@@ -627,7 +640,7 @@ const Calendar = ({
                     </div>
                   )}
                   <span
-                    className={`text-sm font-bold ${textClass} mb-1 flex items-center justify-center w-6 h-6 rounded-full ${
+                    className={`text-sm font-bold text-black mb-1 flex items-center justify-center w-6 h-6 rounded-full ${
                       isToday ? "bg-[#4318FF] text-white" : ""
                     } `}
                   >
@@ -644,11 +657,11 @@ const Calendar = ({
                     {!isBlocked && entry?.totalHours ? (
                       <div className="text-center">
                         <span
-                          className={`text-lg font-black ${textClass} leading-none`}
+                          className={`text-2xl font-medium text-gray-800 leading-none`}
                         >
                           {entry.totalHours}
                         </span>
-                        <span className="block text-[8px] font-bold text-gray-400 uppercase">
+                        <span className="block text-[8px] font-bold text-black uppercase">
                           hrs
                         </span>
                       </div>
@@ -666,10 +679,10 @@ const Calendar = ({
                   </div>
 
                   <div
-                    className={`text-[8px] font-bold uppercase truncate w-full text-center px-1 py-1 rounded-md mt-1 backdrop-blur-sm
+                    className={`text-[10px] font-bold uppercase truncate w-full text-center px-1 py-1 rounded-md mt-1 backdrop-blur-sm
                          ${
                            isBlocked
-                             ? "text-white bg-gray-400/80"
+                             ? "text-white bg-gray-600"
                              : holiday
                                ? "text-white bg-[#1890FF]/70"
                                : entry?.status === "Full Day" && statusLabel
@@ -682,7 +695,7 @@ const Calendar = ({
                                      ? "text-white bg-red-400/70"
                                      : entry?.isWeekend
                                        ? "text-white bg-red-400/70"
-                                       : "text-white bg-gray-400/60"
+                                       : "text-white bg-gray-500"
                          }
                     `}
                   >

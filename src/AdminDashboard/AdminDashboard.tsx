@@ -19,12 +19,19 @@ import {
 } from "lucide-react";
 import {
   fetchAllEmployeesMonthlyAttendance,
+  fetchMonthlyAttendance,
   AttendanceStatus,
 } from "../reducers/employeeAttendance.reducer";
+/* New Import: fetchHolidays needed */
+import { fetchHolidays } from "../reducers/masterHoliday.reducer"; // Fixed filename
 import { downloadPdf } from "../utils/downloadPdf";
-import { generateMonthlyEntries } from "../utils/attendanceUtils";
+import {
+  generateMonthlyEntries,
+  generateRangeEntries,
+} from "../utils/attendanceUtils";
 
 const AdminDashboard = () => {
+  /* ... hooks and state ... */
   const dispatch = useAppDispatch();
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -48,6 +55,12 @@ const AdminDashboard = () => {
 
   const { entities, totalItems } = useAppSelector(
     (state: RootState) => state.employeeDetails,
+  );
+  
+  // Select holidays from store
+  // @ts-ignore - Assuming masterHolidays is in RootState
+  const { holidays } = useAppSelector(
+    (state: RootState) => state.masterHolidays || { holidays: [] },
   );
 
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
@@ -108,7 +121,11 @@ const AdminDashboard = () => {
         year: currentYear,
       }),
     );
+    // Fetch holidays so they are available for PDF export
+    dispatch(fetchHolidays());
   }, [dispatch, currentMonth, currentYear]);
+
+  // ... (rest of effects)
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 500);
@@ -126,6 +143,7 @@ const AdminDashboard = () => {
     );
   }, [dispatch, currentPage, debouncedSearchTerm, selectedDept]);
 
+  // ... (stats calculation)
   // Aggregate stats from the bulk data
   const stats = useMemo(() => {
     const allAttendance = Object.values(employeeRecords).flat();
@@ -164,6 +182,7 @@ const AdminDashboard = () => {
     };
   }, [employeeRecords]);
 
+  // ... (employee mapping)
   const employees = entities.map((emp: any) => {
     const empId = emp.employeeId || emp.id;
     const empRecords = employeeRecords[empId] || [];
@@ -226,21 +245,62 @@ const AdminDashboard = () => {
         selectedEmps.has(e.employeeId || e.id),
       );
       const start = new Date(exportStartDate);
+      const end = new Date(exportEndDate);
 
-      const monthStr = start.toLocaleString("default", {
-        month: "long",
-        year: "numeric",
-      });
+      // Generate formatted month string for the PDF title
+      const rangeStr = `${start.toLocaleDateString("en-US", { month: "short", year: "numeric", day: "numeric" })} to ${end.toLocaleDateString("en-US", { month: "short", year: "numeric", day: "numeric" })}`;
+
+      // Calculate all month-years in the range
+      const monthsToFetch: { month: string; year: string }[] = [];
+      const current = new Date(start);
+      // Set to 1st of month to avoid edge cases when iterating
+      current.setDate(1);
+
+      while (current <= end) {
+        monthsToFetch.push({
+          month: (current.getMonth() + 1).toString().padStart(2, "0"),
+          year: current.getFullYear().toString(),
+        });
+        current.setMonth(current.getMonth() + 1);
+      }
+      // Also check the end date month just in case
+      const endMonth = (end.getMonth() + 1).toString().padStart(2, "0");
+      const endYear = end.getFullYear().toString();
+      const lastInList = monthsToFetch[monthsToFetch.length - 1];
+      if (
+        !lastInList ||
+        lastInList.month !== endMonth ||
+        lastInList.year !== endYear
+      ) {
+        monthsToFetch.push({ month: endMonth, year: endYear });
+      }
 
       for (const emp of selected) {
         const empId = emp.employeeId || emp.id;
+        let allRecords: any[] = [];
 
-        // Use existing data or fetch if needed
-        let records = employeeRecords[empId] || [];
+        // Fetch missing months for this employee
+        for (const { month, year } of monthsToFetch) {
+          // We must fetch individually because employeeRecords usually only has ONE month loaded globally
+          // or we can use unwrap to get raw data
+          try {
+            const result = await dispatch(
+              fetchMonthlyAttendance({
+                employeeId: empId,
+                month,
+                year,
+              }),
+            ).unwrap();
+            if (result) {
+              allRecords = [...allRecords, ...result];
+            }
+          } catch (e) {
+            console.warn(`Failed to fetch data for ${empId} - ${month}/${year}`);
+          }
+        }
 
-        // If range spans dates outside current records, we ideally fetch them.
-        // For now, using entries from current month bulk data.
-        const entries = generateMonthlyEntries(start, new Date(), records);
+        // Generate entries for the FULL range
+        const entries = generateRangeEntries(start, end, new Date(), allRecords);
         const totalHours = entries.reduce(
           (acc, curr) => acc + (curr.totalHours || 0),
           0,
@@ -250,14 +310,15 @@ const AdminDashboard = () => {
           employeeName: emp.fullName || emp.name,
           employeeId: empId,
           department: emp.department,
-          month: monthStr,
+          designation: emp.designation, // Added to fix "N/A"
+          month: rangeStr, // Shows full range path
           entries: entries,
           totalHours: totalHours,
-          holidays: [], // Could be fetched from store
+          holidays: holidays || [], // Passed holidays from store
         });
 
         // Small delay to prevent browser blocking multiple downloads
-        await new Promise((r) => setTimeout(r, 300));
+        await new Promise((r) => setTimeout(r, 500));
       }
       setIsExportModalOpen(false);
       setExportStep("employees");
