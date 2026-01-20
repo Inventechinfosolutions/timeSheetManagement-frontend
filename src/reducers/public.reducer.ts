@@ -37,6 +37,21 @@ export interface ResetPasswordResponse {
   message: string;
 }
 
+export interface ForgotPasswordOtpDto {
+  loginId: string;
+  email: string;
+}
+
+export interface VerifyOtpDto {
+  loginId: string;
+  otp: string;
+}
+
+export interface ResetPasswordOtpDto {
+  loginId: string;
+  newPassword: string;
+}
+
 interface PublicState {
   // Login
   loginResponse: LoginResponse | null;
@@ -52,6 +67,13 @@ interface PublicState {
   resetPasswordResponse: ResetPasswordResponse | null;
   resetPasswordLoading: boolean;
   resetPasswordError: string | null;
+
+  // OTP Flow
+  otpSent: boolean;
+  otpVerified: boolean;
+  otpLoading: boolean;
+  otpError: string | null;
+  resetSuccess: boolean;
 }
 
 // ============ Initial State ============
@@ -68,6 +90,12 @@ const initialState: PublicState = {
   resetPasswordResponse: null,
   resetPasswordLoading: false,
   resetPasswordError: null,
+
+  otpSent: false,
+  otpVerified: false,
+  otpLoading: false,
+  otpError: null,
+  resetSuccess: false,
 };
 
 // ============ API Configuration ============
@@ -147,6 +175,63 @@ export const resetPasswordEmployee = createAsyncThunk(
   }
 );
 
+/**
+ * Step 1: Request OTP
+ * POST /api/auth/forgot-password
+ */
+export const forgotPasswordOtp = createAsyncThunk(
+  "public/forgot_password_otp",
+  async (dto: ForgotPasswordOtpDto, { rejectWithValue }) => {
+    try {
+      const response = await axios.post(`${apiUrl}/auth/forgot-password`, dto);
+      return response.data;
+    } catch (error: any) {
+      if (axios.isAxiosError(error)) {
+        return rejectWithValue(error.response?.data?.message || error.message || "Failed to send OTP");
+      }
+      return rejectWithValue("An unknown error occurred while sending OTP");
+    }
+  }
+);
+
+/**
+ * Step 2: Verify OTP
+ * POST /api/auth/verify-otp
+ */
+export const verifyOtp = createAsyncThunk(
+  "public/verify_otp",
+  async (dto: VerifyOtpDto, { rejectWithValue }) => {
+    try {
+      const response = await axios.post(`${apiUrl}/auth/verify-otp`, dto);
+      return response.data;
+    } catch (error: any) {
+      if (axios.isAxiosError(error)) {
+        return rejectWithValue(error.response?.data?.message || error.message || "Invalid OTP");
+      }
+      return rejectWithValue("An unknown error occurred while verifying OTP");
+    }
+  }
+);
+
+/**
+ * Step 3: Reset Password
+ * POST /api/auth/reset-password
+ */
+export const resetPasswordOtp = createAsyncThunk(
+  "public/reset_password_otp",
+  async (dto: ResetPasswordOtpDto, { rejectWithValue }) => {
+    try {
+      const response = await axios.post(`${apiUrl}/auth/reset-password`, dto);
+      return response.data;
+    } catch (error: any) {
+      if (axios.isAxiosError(error)) {
+        return rejectWithValue(error.response?.data?.message || error.message || "Failed to reset password");
+      }
+      return rejectWithValue("An unknown error occurred while resetting password");
+    }
+  }
+);
+
 // ============ Slice ============
 
 export const PublicSlice = createSlice({
@@ -170,6 +255,14 @@ export const PublicSlice = createSlice({
       state.resetPasswordResponse = null;
       state.resetPasswordLoading = false;
       state.resetPasswordError = null;
+    },
+    // Clear OTP flow state
+    clearOtpState: (state) => {
+      state.otpSent = false;
+      state.otpVerified = false;
+      state.otpLoading = false;
+      state.otpError = null;
+      state.resetSuccess = false;
     },
     // Clear all public state
     clearAllPublicState: () => initialState,
@@ -222,6 +315,45 @@ export const PublicSlice = createSlice({
         state.resetPasswordLoading = false;
         state.resetPasswordError = action.payload as string || action.error.message || "Password reset failed";
       });
+
+    // ========== OTP Flow ==========
+    builder
+      .addCase(forgotPasswordOtp.pending, (state) => {
+        state.otpLoading = true;
+        state.otpError = null;
+      })
+      .addCase(forgotPasswordOtp.fulfilled, (state) => {
+        state.otpLoading = false;
+        state.otpSent = true;
+      })
+      .addCase(forgotPasswordOtp.rejected, (state, action) => {
+        state.otpLoading = false;
+        state.otpError = action.payload as string;
+      })
+      .addCase(verifyOtp.pending, (state) => {
+        state.otpLoading = true;
+        state.otpError = null;
+      })
+      .addCase(verifyOtp.fulfilled, (state) => {
+        state.otpLoading = false;
+        state.otpVerified = true;
+      })
+      .addCase(verifyOtp.rejected, (state, action) => {
+        state.otpLoading = false;
+        state.otpError = action.payload as string;
+      })
+      .addCase(resetPasswordOtp.pending, (state) => {
+        state.otpLoading = true;
+        state.otpError = null;
+      })
+      .addCase(resetPasswordOtp.fulfilled, (state) => {
+        state.otpLoading = false;
+        state.resetSuccess = true;
+      })
+      .addCase(resetPasswordOtp.rejected, (state, action) => {
+        state.otpLoading = false;
+        state.otpError = action.payload as string;
+      });
   },
 });
 
@@ -231,6 +363,7 @@ export const {
   clearLoginState,
   clearActivationState,
   clearResetPasswordState,
+  clearOtpState,
   clearAllPublicState,
 } = PublicSlice.actions;
 
