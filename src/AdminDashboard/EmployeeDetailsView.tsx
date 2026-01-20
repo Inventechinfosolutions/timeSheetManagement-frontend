@@ -204,7 +204,7 @@ const EmployeeDetailsView = () => {
           </div>
         </div>
 
-        {!employee.resetRequired && (
+        {/* {!employee.resetRequired && (
           <div className="absolute top-4 right-4 md:top-10 md:right-10 z-20">
             <button
               onClick={() => setIsResetModalOpen(true)}
@@ -214,7 +214,7 @@ const EmployeeDetailsView = () => {
               <span className="hidden sm:inline">Reset Password</span>
             </button>
           </div>
-        )}
+        )} */}
       </div>
 
       {/* Personal Information Card */}
