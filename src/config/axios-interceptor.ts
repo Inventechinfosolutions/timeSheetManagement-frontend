@@ -45,35 +45,35 @@ const setupAxiosInterceptors = (onUnauthenticated: () => void) => {
   };
  
   const onResponseError = (err: AxiosError) => {
-    const status = err.status || (err.response ? err.response.status : 0);
+    // const status = err.status || (err.response ? err.response.status : 0);
  
-    if (status === 401) {
-      // Clear storage
+    // if (status === 401) {
+    //   // Clear storage
  
-      Storage.session.remove('TimeSheet-authenticationToken');
+    //   Storage.session.remove('TimeSheet-authenticationToken');
  
-      // Show notification
-      console.error('Session Expired: Your session has expired. Please login again.');
+    //   // Show notification
+    //   console.error('Session Expired: Your session has expired. Please login again.');
  
-      // Call onUnauthenticated which will trigger navigation to signin
-      if (onUnauthenticated) {
-        onUnauthenticated();
-      }
-    } else if (status === 403) {
-      window.location.replace("/error-pages/error-403");
-    } else if (status === 404) {
-      // window.location.replace('/error-pages/error-404');
-    } else if (status === 500) {
-      // window.location.replace('/error-pages/error-500');
-    } else if (status === 503) {
-      window.location.replace("/error-pages/error-503");
-    } else if (!(err.config as any)?.skipErrorMessage) {
-        // console.error("An unexpected error occurred. Please try again later.");
-    } else if (status === 400 && err.response?.data) {
-        message.error((err.response.data as any)?.message || 'Bad Request', 3);
-    }
+    //   // Call onUnauthenticated which will trigger navigation to signin
+    //   if (onUnauthenticated) {
+    //     onUnauthenticated();
+    //   }
+    // } else if (status === 403) {
+    //   window.location.replace("/error-pages/error-403");
+    // } else if (status === 404) {
+    //   // window.location.replace('/error-pages/error-404');
+    // } else if (status === 500) {
+    //   // window.location.replace('/error-pages/error-500');
+    // } else if (status === 503) {
+    //   window.location.replace("/error-pages/error-503");
+    // } else if (!(err.config as any)?.skipErrorMessage) {
+    //     // console.error("An unexpected error occurred. Please try again later.");
+    // } else if (status === 400 && err.response?.data) {
+    //     message.error((err.response.data as any)?.message || 'Bad Request', 3);
+    // }
  
-    return Promise.reject(err);
+    // return Promise.reject(err);
   };
  
   axios.interceptors.request.use(onRequestSuccess);
