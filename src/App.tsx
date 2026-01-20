@@ -42,6 +42,7 @@ import EmployeeListView from "./AdminDashboard/EmployeeListView";
 import EmployeeDetailsView from "./AdminDashboard/EmployeeDetailsView";
 import EmpWorkingDetails from "./AdminDashboard/EmpWorkingDetails";
 import AdminEmployeeCalendarView from "./AdminDashboard/AdminEmployeeCalendarView";
+import DailyStatus from "./AdminDashboard/DailyStatus";
 
 const EmployeeTabWrapper = () => {
   const { tab } = useParams<{ tab: string }>();
@@ -74,6 +75,8 @@ const AdminTabWrapper = () => {
       return <EmpWorkingDetails />;
     case "activation-success":
       return <ActivationSuccess />;
+    case "daily-attendance":
+      return <DailyStatus />;
     default:
       return <Navigate to="/admin-dashboard" replace />;
   }

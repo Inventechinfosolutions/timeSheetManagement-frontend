@@ -125,20 +125,22 @@ const EmpWorkingDetails = () => {
   return (
     <div className="p-5 bg-[#F4F7FE] min-h-screen font-sans">
       <div className="max-w-[1600px] mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-          <h1 className="text-2xl font-bold text-[#2B3674] m-0">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
+          <h1 className="text-xl md:text-2xl font-bold text-[#2B3674] m-0">
             Employee Working Details
           </h1>
 
-          <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
             {/* Modern Custom Dropdown */}
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="flex items-center gap-2 px-5 py-2.5 bg-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] text-[#2B3674] font-bold text-sm hover:bg-gray-50 transition-all border border-transparent focus:border-[#4318FF]/20"
+                className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-2 px-5 py-2.5 bg-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] text-[#2B3674] font-bold text-sm hover:bg-gray-50 transition-all border border-transparent focus:border-[#4318FF]/20"
               >
-                <Filter size={16} className="text-[#4318FF]" />
-                <span>{selectedDepartment}</span>
+                <div className="flex items-center gap-2">
+                  <Filter size={16} className="text-[#4318FF]" />
+                  <span>{selectedDepartment}</span>
+                </div>
                 <ChevronDown
                   size={16}
                   className={`text-[#A3AED0] transition-transform duration-300 ${isDropdownOpen ? "rotate-180" : ""}`}
@@ -146,7 +148,7 @@ const EmpWorkingDetails = () => {
               </button>
 
               {isDropdownOpen && (
-                <div className="absolute top-full right-0 mt-2 w-48 bg-white/80 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-white/20 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="absolute top-full left-0 mt-2 w-full sm:w-48 bg-white/80 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-white/20 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                   <div className="px-3 py-1 mb-1">
                     <span className="text-[10px] font-black text-[#A3AED0] uppercase tracking-widest pl-2">
                       Departments
@@ -175,7 +177,7 @@ const EmpWorkingDetails = () => {
             </div>
 
             {/* Search Box */}
-            <div className="flex items-center bg-white rounded-full px-5 py-2.5 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] min-w-[250px] flex-1 md:flex-initial border border-transparent focus-within:border-[#4318FF]/20 transition-all">
+            <div className="flex items-center bg-white rounded-full px-5 py-2.5 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] min-w-0 sm:min-w-[250px] flex-1 border border-transparent focus-within:border-[#4318FF]/20 transition-all">
               <Search size={18} className="text-[#A3AED0] mr-2" />
               <input
                 type="text"
