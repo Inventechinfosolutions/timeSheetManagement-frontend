@@ -144,7 +144,7 @@ const AdminEmployeeTimesheetWrapper = () => {
 
         <button
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center justify-center gap-1.5 px-4 py-2 bg-[#4318FF] text-white rounded-xl text-xs font-bold shadow-lg hover:shadow-[#4318FF]/20 transition-all flex-shrink-0"
+          className="flex items-center justify-center gap-1.5 px-4 py-2 bg-[#4318FF] text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all transform hover:-translate-y-0.5 active:scale-95 flex-shrink-0"
         >
           <Lock size={14} />
           <span className="hidden sm:inline">Block</span>
