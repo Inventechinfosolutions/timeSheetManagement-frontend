@@ -18,9 +18,9 @@ import { UserType } from "./reducers/user.reducer";
 
 // Lazy load authentication components
 const EmployeeActivation = lazy(() => import("./Login/EmployeeActivation"));
-const FcManagerActivation = lazy(() => import("./Login/FcManagerActivation"));
+const FcManagerActivation = lazy(() => import("./Login/TimeSheetActivation"));
 const FcManagerResetPassword = lazy(
-  () => import("./Login/FcManagerResetPassword"),
+  () => import("./Login/TimeSheetResetPassword")
 );
 const SetPassword = lazy(() => import("./Login/SetPassword"));
 
