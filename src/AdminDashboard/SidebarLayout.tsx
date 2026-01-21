@@ -67,7 +67,7 @@ const SidebarLayout = ({
       {/* Mobile Menu Trigger - Floating Pulse Button */}
       <button
         onClick={() => setIsMobileOpen(true)}
-        className={`md:hidden fixed z-1001 left-4 top-[75px] w-11 h-11 bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 flex items-center justify-center text-[#4318FF] active:scale-90 transition-all duration-300
+        className={`md:hidden fixed z-1001 left-4 top-[55px] w-11 h-11 bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 flex items-center justify-center text-[#4318FF] active:scale-90 transition-all duration-300
                     ${
                       isMobileOpen
                         ? "opacity-0 scale-90 pointer-events-none"

@@ -16,10 +16,13 @@ interface MobileMyTimesheetProps {
   readOnly: boolean;
   isDateBlocked: (date: Date) => boolean;
   isEditableMonth: (date: Date) => boolean;
+  isHoliday: (date: Date) => boolean;
 
   onBlockedClick?: () => void;
   localInputValues: Record<number, string>;
   onInputBlur: (index: number) => void;
+  selectedDateId: number | null;
+  isHighlighted: boolean;
 }
 
 const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
@@ -35,10 +38,13 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
   readOnly,
   isDateBlocked,
   isEditableMonth,
+  isHoliday,
 
   onBlockedClick,
   localInputValues,
   onInputBlur,
+  selectedDateId,
+  isHighlighted,
 }) => {
   // Sort entries to match Mon-Sun order
   const sortedEntries = [...currentWeekEntries].sort((a, b) => {
@@ -51,49 +57,49 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
   });
 
   return (
-    <div className="flex flex-col h-full bg-[#f8f9fa] p-4 relative overflow-y-auto custom-scrollbar">
+    <div className="flex flex-col bg-[#F4F7FE] p-2 sm:p-4 relative no-scrollbar">
       {loading && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/30 backdrop-blur-[2px]">
           <div className="animate-spin rounded-full h-10 w-10 border-b-4 border-[#4318FF]"></div>
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
+      {/* Header - Card Style */}
+      <div className="bg-white rounded-[20px] px-5 py-3 shadow-sm border border-gray-50 flex justify-between items-center mb-4">
         <div>
-          <h2 className="text-2xl font-bold text-[#2B3674]">
+          <h2 className="text-lg font-black text-[#2B3674]">
             {currentMonthName}
           </h2>
-          <div className="flex items-baseline gap-1">
-            <span className="text-sm font-medium text-gray-400">Total:</span>
-            <span className="text-lg font-black text-[#4318FF]">
-              {monthTotalHours.toFixed(1)} hrs
+          <div className="flex items-baseline gap-1.5 mt-0.5">
+            <span className="text-xs font-bold text-gray-400 uppercase tracking-tight">Total:</span>
+            <span className="text-xl font-black text-[#4318FF]">
+              {monthTotalHours.toFixed(1)} <span className="text-[10px]">hrs</span>
             </span>
           </div>
         </div>
         {(!readOnly || isAdmin) && (
           <button
             onClick={onSave}
-            className="p-3 bg-[#4318FF] text-white rounded-2xl shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
+            className="p-4 bg-linear-to-br from-[#4318FF] to-[#5D38FF] text-white rounded-[20px] shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
           >
-            <Save size={20} />
+            <Save size={22} strokeWidth={2.5} />
           </button>
         )}
       </div>
 
       {/* Weekly View Container */}
-      <div className="flex-1 flex flex-col justify-center items-center gap-8">
+      <div className="flex-1 flex flex-col justify-center items-center gap-4 md:gap-8">
         <div className="flex items-center justify-between w-full h-full">
           {/* Left Arrow */}
           <button
             onClick={onPrevWeek}
-            className="p-2 bg-blue-100/50 text-[#4318FF] rounded-xl hover:bg-blue-100 transition-colors shrink-0 mr-4"
+            className="p-2 bg-blue-100/50 text-[#4318FF] rounded-xl hover:bg-blue-100 transition-colors shrink-0 mr-1 sm:mr-4"
           >
-            <ChevronLeft size={24} strokeWidth={2.5} />
+            <ChevronLeft size={20} strokeWidth={2.5} />
           </button>
 
           {/* Grid of Days */}
-          <div className="flex-1 grid grid-cols-3 gap-x-10 gap-y-14 justify-items-center px-2">
+          <div className="flex-1 grid grid-cols-3 gap-x-1 sm:gap-x-6 gap-y-6 sm:gap-y-12 justify-items-center px-0.5">
             {sortedEntries.map(({ entry, originalIndex }) => {
               const displayVal = entry.totalHours || 0;
 
@@ -110,24 +116,31 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
                 (isAdmin || isEditableMonth(entry.fullDate)) &&
                 !isBlocked;
 
-              // Styling logic:
-              // 1. Red (#FF0000) for Leave/Weekend/Holiday
-              // 2. Green (#01B574) for Present (hours > 0)
-              // 3. Gray for Pending/Not Updated
+              // Styling logic (Matching MobileResponsiveCalendarPage)
+              let bg = "bg-white text-gray-600 border-gray-200"; // Default
+              const hours = Number(entry.totalHours || 0);
+              const isHolidayDate = isHoliday(entry.fullDate);
 
-              let bg = "bg-gray-100 border-gray-300 text-gray-500"; // Default: Pending (Darker Gray)
-
-              if ((entry.totalHours || 0) > 0) {
-                bg = "bg-[#01B574]/15 border-[#01B574]/80 text-[#01B574]"; // Green Group (Present) - Takes priority
-              } else if (
-                entry.isWeekend ||
-                entry.status === "Leave" ||
-                entry.status === "Holiday"
-              ) {
-                bg = "bg-[#FF0000]/15 border-[#FF0000]/80 text-[#FF0000]"; // Red Group (Darker)
+              if (entry.isToday) {
+                bg = "bg-white ring-2 ring-[#4318FF] text-[#4318FF] border-transparent font-extrabold shadow-md";
               } else if (isBlocked) {
-                bg = "bg-gray-200 border-gray-400 opacity-70";
+                bg = "bg-gray-200 border border-gray-400 text-gray-500 font-bold";
+              } else if (entry.status === "Full Day" || entry.status === "Half Day" || hours > 0) {
+                bg = "bg-green-100 border border-green-600 text-black font-bold";
+              } else if (entry.status === "Leave") {
+                bg = "bg-red-200 border border-red-600 text-black font-bold";
+              } else if (isHolidayDate || entry.status === "Holiday") {
+                bg = "bg-blue-100 border border-blue-500 text-black font-bold";
+              } else if (entry.isWeekend) {
+                bg = "bg-pink-100 border border-pink-400 text-black font-bold";
               }
+
+              // Highlighting logic from navigation
+              const isDateHighlighted =
+                selectedDateId &&
+                new Date(selectedDateId).toDateString() ===
+                  entry.fullDate.toDateString() &&
+                isHighlighted;
 
               // Special centering for Sunday
               const isSunday = entry.fullDate.getDay() === 0;
@@ -137,17 +150,28 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
                   key={originalIndex}
                   className={`flex flex-col items-center gap-2 ${
                     isSunday ? "col-start-2" : ""
-                  }`}
+                  } ${isDateHighlighted ? "z-50" : ""}`}
                 >
-                  <span className="text-sm font-bold text-[#2B3674]">
+                  <span
+                    className={`text-sm font-bold ${
+                      isDateHighlighted
+                        ? "text-[#4318FF] scale-110 transition-transform"
+                        : "text-[#2B3674]"
+                    }`}
+                  >
                     {entry.fullDate.toLocaleDateString("en-US", {
                       weekday: "short",
                     })}
                   </span>
                   <div
-                    className={`relative w-20 h-14 rounded-xl flex items-center justify-center transition-all shadow-sm border ${bg} ${
-                      entry.isToday ? "ring-2 ring-[#4318FF]" : ""
-                    }`}
+                    className={`relative w-[64px] h-[48px] sm:w-20 sm:h-14 rounded-xl flex items-center justify-center transition-all shadow-sm border ${bg} 
+                      ${entry.isToday ? "ring-2 ring-[#4318FF] shadow-md" : ""}
+                      ${
+                        isDateHighlighted
+                          ? "ring-4 ring-[#4318FF] ring-offset-2 scale-110 animate-pulse shadow-xl"
+                          : ""
+                      }
+                    `}
                     onClick={() => {
                       if (isBlocked && isAdmin && onBlockedClick)
                         onBlockedClick();
@@ -164,7 +188,7 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
                     <input
                       type="text"
                       disabled={!isEditable}
-                      className="w-full h-full bg-transparent text-center text-xl font-bold focus:outline-none"
+                      className="w-full h-full bg-transparent text-center text-xl font-bold focus:outline-none placeholder:text-gray-300"
                       value={inputValue}
                       onChange={(e) =>
                         onHoursInput(originalIndex, e.target.value)
@@ -186,44 +210,28 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
           {/* Right Arrow */}
           <button
             onClick={onNextWeek}
-            className="p-2 bg-blue-100/50 text-[#4318FF] rounded-xl hover:bg-blue-100 transition-colors shrink-0 ml-4"
+            className="p-2 bg-blue-100/50 text-[#4318FF] rounded-xl hover:bg-blue-100 transition-colors shrink-0 ml-1 sm:ml-4"
           >
-            <ChevronRight size={24} strokeWidth={2.5} />
+            <ChevronRight size={20} strokeWidth={2.5} />
           </button>
         </div>
       </div>
 
       {/* Legend - Minimized for mobile */}
-      <div className="mt-auto pt-4 flex flex-wrap justify-center gap-3">
+      <div className="pt-4 flex flex-wrap justify-center gap-x-3 gap-y-2 mb-2">
         {[
-          {
-            label: "Holiday",
-            color: "bg-[#FF0000]/15",
-            border: "border-[#FF0000]/80",
-          },
-          {
-            label: "Leave",
-            color: "bg-[#FF0000]/15",
-            border: "border-[#FF0000]/80",
-          },
-          {
-            label: "Present",
-            color: "bg-[#01B574]/15",
-            border: "border-[#01B574]/80",
-          },
-          {
-            label: "Today",
-            color: "bg-gray-100",
-            border: "border-[3px] border-[#4318FF]",
-          },
+          { label: "Full Day", className: "bg-green-100 border-green-600" },
+          { label: "Half Day", className: "bg-green-100 border-green-600" },
+          { label: "Leave", className: "bg-red-200 border-red-600" },
+          { label: "Holiday", className: "bg-blue-100 border-blue-500" },
+          { label: "Today", className: "bg-white border-2 border-[#4318FF]" },
+          { label: "Blocked", className: "bg-gray-200 border-gray-400" },
         ].map((item) => (
           <div key={item.label} className="flex items-center gap-1.5">
             <div
-              className={`w-3 h-3 rounded-full border ${item.color || "bg-gray-100"} ${
-                item.border || "border-gray-200"
-              }`}
+              className={`w-3 h-3 rounded-full border ${item.className}`}
             ></div>
-            <span className="text-[10px] font-black text-[#85aedb] uppercase tracking-wider">
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
               {item.label}
             </span>
           </div>

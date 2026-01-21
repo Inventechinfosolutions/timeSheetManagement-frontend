@@ -27,10 +27,11 @@ const ResetPassword = lazy(() => import("./EmployeeDashboard/ResetPassword"));
 
 // Employee Dashboard Components
 import MyTimesheet from "./EmployeeDashboard/MyTimesheet";
-import FullTimesheet from "./EmployeeDashboard/CalendarView";
 import MyProfile from "./EmployeeDashboard/MyProfile";
 import TodayAttendance from "./EmployeeDashboard/TodayAttendance";
 import ChangePassword from "./EmployeeDashboard/ChangePassword";
+import AttendanceViewWrapper from "./EmployeeDashboard/CalenderViewWrapper";
+import MobileResponsiveCalendarPage from "./EmployeeDashboard/MobileResponsiveCalendarPage";
 
 // Admin Dashboard Components
 import AdminDashboard from "./AdminDashboard/AdminDashboard";
@@ -42,7 +43,7 @@ import AdminEmployeeTimesheetList from "./AdminDashboard/AdminEmployeeTimesheetL
 import EmployeeListView from "./AdminDashboard/EmployeeListView";
 import EmployeeDetailsView from "./AdminDashboard/EmployeeDetailsView";
 import EmpWorkingDetails from "./AdminDashboard/EmpWorkingDetails";
-import AdminEmployeeCalendarView from "./AdminDashboard/AdminEmployeeCalendarView";
+import AdminEmployeeCalenderWrapper from "./AdminDashboard/AdminEmployeeCalenderWrapper";
 import DailyStatus from "./AdminDashboard/DailyStatus";
 
 const EmployeeTabWrapper = () => {
@@ -52,11 +53,13 @@ const EmployeeTabWrapper = () => {
     case "my-timesheet":
       return <MyTimesheet />;
     case "timesheet-view":
-      return <FullTimesheet />;
+      return <AttendanceViewWrapper />;
     case "my-profile":
       return <MyProfile />;
     case "change-password":
       return <ChangePassword />;
+    case "calendar-view":
+      return <MobileResponsiveCalendarPage />;
     default:
       return <Navigate to="/employee-dashboard" replace />;
   }
@@ -180,6 +183,7 @@ function App() {
         <Route path="/login" element={<Navigate to="/landing" replace />} />
 
         <Route path="/welcome" element={<Navigate to="/landing" replace />} />
+        <Route path="/portal" element={<Navigate to="/landing" replace />} />
         <Route path="/" element={<Navigate to="/landing" replace />} />
 
         {/* Home & Landing Routes from Config */}
@@ -238,9 +242,7 @@ function App() {
                     path="timesheet-view/:employeeId/:date?"
                     element={
                       <Suspense fallback={<Spin />}>
-                        <div className="flex flex-col h-full overflow-hidden">
-                          <AdminEmployeeTimesheetWrapper />
-                        </div>
+                        <AdminEmployeeTimesheetWrapper />
                       </Suspense>
                     }
                   />
@@ -250,7 +252,7 @@ function App() {
                   />
                   <Route
                     path="working-details/:employeeId"
-                    element={<AdminEmployeeCalendarView />}
+                    element={<AdminEmployeeCalenderWrapper />}
                   />
                   <Route path=":tab/:date?" element={<AdminTabWrapper />} />
                 </Route>
