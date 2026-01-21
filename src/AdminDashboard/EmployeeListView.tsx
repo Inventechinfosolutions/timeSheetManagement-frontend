@@ -21,18 +21,17 @@ import {
   Filter,
   Upload,
   X,
-  CheckCircle,
   AlertCircle,
   User,
   Mail,
   Briefcase,
   Building,
-  CreditCard,
   Loader2,
-  Send,
   RefreshCw,
   Copy,
   ExternalLink,
+  CheckCircle,
+  CreditCard,
 } from "lucide-react";
 
 const EmployeeListView = () => {
@@ -153,6 +152,9 @@ const EmployeeListView = () => {
     userStatus: emp.userStatus,
     resetRequired: emp.resetRequired,
     rawId: emp.employeeId, // Store employeeId string for API calls
+    createdAt: emp.createdAt,
+    lastLoggedIn: emp.lastLoggedIn,
+    isActive: emp.userStatus === "ACTIVE" && !emp.resetRequired,
   }));
 
   const currentItems = employees;
@@ -455,29 +457,24 @@ const EmployeeListView = () => {
                         <Eye size={18} />
                       </button>
 
-                      {emp.resetRequired ? (
-                        <button
-                          onClick={() => handleResendActivation(emp.rawId)}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all text-xs font-bold border
-                            ${
-                              emp.userStatus === "DRAFT"
-                                ? "bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200"
-                                : "bg-amber-50 text-amber-600 hover:bg-amber-100 border-amber-200"
-                            }`}
-                          title={
-                            emp.userStatus === "DRAFT"
-                              ? "Send Activation Link"
-                              : "Resend Activation Link"
-                          }
-                        >
-                          {emp.userStatus === "DRAFT" ? (
-                            <Send size={14} />
-                          ) : (
+                      {(() => {
+                        // Only show button if user needs reset AND 24 hours have passed
+                        const createdDate = new Date(emp.createdAt).getTime();
+                        const now = new Date().getTime();
+                        const diffHours = (now - createdDate) / (1000 * 60 * 60);
+                        const shouldShowButton = emp.resetRequired && !emp.isActive && diffHours >= 24;
+
+                        return shouldShowButton ? (
+                          <button
+                            onClick={() => handleResendActivation(emp.rawId)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all text-xs font-bold border bg-amber-50 text-amber-600 hover:bg-amber-100 border-amber-200"
+                            title="Resend Activation Link"
+                          >
                             <RefreshCw size={14} />
-                          )}
-                          {emp.userStatus === "DRAFT" ? "Send" : "Resend"}
-                        </button>
-                      ) : null}
+                            Resend
+                          </button>
+                        ) : null;
+                      })()}
                     </div>
                   </td>
                 </tr>

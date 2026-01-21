@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, ArrowLeft, Loader2, CheckCircle, Shield, Search, KeyRound, Lock, Eye, EyeOff } from 'lucide-react';
+import { Mail, ArrowLeft, Loader2, CheckCircle, Shield, Search } from 'lucide-react';
 import { Modal, Input, message } from 'antd';
 import inventechLogo from '../assets/inventech-logo.jpg';
 import { useAppSelector, useAppDispatch } from '../hooks';
 import { getEntities, setCurrentUser } from '../reducers/employeeDetails.reducer';
-import { forgotPasswordOtp, verifyOtp, resetPasswordOtp, clearAllPublicState, clearOtpState } from '../reducers/public.reducer';
+import { forgotPasswordOtp, clearAllPublicState, clearOtpState } from '../reducers/public.reducer';
 
-type ResetStep = 'ID' | 'EMAIL' | 'OTP' | 'RESET' | 'SUCCESS';
+type ResetStep = 'ID' | 'EMAIL' | 'SUCCESS';
 
 const ForgotPassword: React.FC = () => {
   const navigate = useNavigate();
@@ -23,16 +23,12 @@ const ForgotPassword: React.FC = () => {
   
   // Redux State
   const { entity } = useAppSelector((state) => state.employeeDetails);
-  const { otpLoading, otpError, otpSent, otpVerified, resetSuccess } = useAppSelector((state) => state.public);
+  const { otpLoading, otpError, otpSent } = useAppSelector((state) => state.public);
   
   // Local State
   const [step, setStep] = useState<ResetStep>('ID');
   const [email, setEmail] = useState('');
   const [loginId, setLoginId] = useState('');
-  const [otp, setOtp] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   // Modal State for ID Lookup
@@ -42,21 +38,14 @@ const ForgotPassword: React.FC = () => {
 
   // Sync Redux step changes with Local step
   useEffect(() => {
-    if (otpSent && step === 'EMAIL') {
-      setStep('OTP');
-      message.success('OTP sent to your email');
-    }
-    if (otpVerified && step === 'OTP') {
-      setStep('RESET');
-      message.success('OTP verified successfully');
-    }
-    if (resetSuccess && step === 'RESET') {
+    if (otpSent && step === 'EMAIL') { // 'otpSent' here means 'link sent' based on backend response
       setStep('SUCCESS');
+      message.success('Reset link sent to your email');
     }
     if (otpError) {
       setError(otpError);
     }
-  }, [otpSent, otpVerified, resetSuccess, otpError, step]);
+  }, [otpSent, otpError, step]);
 
   // Handle ID Identification
   const handleIdSubmit = async () => {
@@ -87,37 +76,11 @@ const ForgotPassword: React.FC = () => {
     }
   };
 
-  // Step 1: Send OTP
-  const handleSendOtp = async (e: React.FormEvent) => {
+  // Step 1: Send Reset Link
+  const handleSendLink = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    dispatch(forgotPasswordOtp({ loginId, email }));
-  };
-
-  // Step 2: Verify OTP
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (otp.length !== 6) {
-      setError('Please enter a valid 6-digit OTP');
-      return;
-    }
-    setError(null);
-    dispatch(verifyOtp({ loginId, otp }));
-  };
-
-  // Step 3: Reset Password
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newPassword !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-    if (newPassword.length < 6) {
-      setError('Password must be at least 6 characters');
-      return;
-    }
-    setError(null);
-    dispatch(resetPasswordOtp({ loginId, newPassword }));
+    dispatch(forgotPasswordOtp({ loginId, email })); // Reusing existing thunk as it calls the backend trigger
   };
 
   const resetAll = () => {
@@ -137,10 +100,10 @@ const ForgotPassword: React.FC = () => {
           <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-500/30">
             <CheckCircle className="w-12 h-12 text-white" />
           </div>
-          <h2 className="text-3xl font-bold text-white mb-4">Password Reset!</h2>
+          <h2 className="text-3xl font-bold text-white mb-4">Link Sent!</h2>
           <p className="text-blue-100 mb-8 opacity-90 leading-relaxed">
-            Your password has been successfully updated. <br />
-            You can now log in with your new credentials.
+            A password reset link has been sent to your email. <br />
+            Please check your inbox and follow the instructions.
           </p>
           <button
             onClick={resetAll}
@@ -207,13 +170,9 @@ const ForgotPassword: React.FC = () => {
           </div>
           <h1 className="text-2xl font-bold text-white mb-2">
             {step === 'EMAIL' && 'Confirm Email'}
-            {step === 'OTP' && 'Verify OTP'}
-            {step === 'RESET' && 'New Password'}
           </h1>
           <p className="text-blue-100 text-sm opacity-90">
-            {step === 'EMAIL' && 'We will send a 6-digit OTP to your registered email.'}
-            {step === 'OTP' && `Entering the code sent to ${email.replace(/(.{3})(.*)(@.*)/, "$1***$3")}`}
-            {step === 'RESET' && 'Set a strong password for your account.'}
+            {step === 'EMAIL' && 'We will send a password reset link to your registered email.'}
           </p>
         </div>
 
@@ -223,9 +182,9 @@ const ForgotPassword: React.FC = () => {
           </div>
         )}
 
-        {/* STEP 1: SEND OTP FORM */}
+        {/* STEP 1: SEND LINK FORM */}
         {step === 'EMAIL' && (
-          <form onSubmit={handleSendOtp} className="space-y-6">
+          <form onSubmit={handleSendLink} className="space-y-6">
             <div className="space-y-2">
               <label className="text-[10px] font-bold text-blue-100 uppercase tracking-widest ml-1">Registered Email</label>
               <div className="relative">
@@ -238,88 +197,7 @@ const ForgotPassword: React.FC = () => {
               disabled={otpLoading}
               className="w-full bg-white text-[#1c9cc0] font-bold py-3.5 rounded-xl shadow-lg flex items-center justify-center gap-2"
             >
-              {otpLoading ? <Loader2 className="animate-spin" /> : 'SEND OTP'}
-            </button>
-          </form>
-        )}
-
-        {/* STEP 2: VERIFY OTP FORM */}
-        {step === 'OTP' && (
-          <form onSubmit={handleVerifyOtp} className="space-y-6 text-center">
-            <div className="space-y-4">
-              <label className="text-[10px] font-bold text-blue-100 uppercase tracking-widest">Enter 6-Digit OTP</label>
-              <Input
-                placeholder="000000"
-                maxLength={6}
-                size="large"
-                className="text-center text-2xl h-16 rounded-xl font-mono tracking-[0.5em]"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={otpLoading}
-              className="w-full bg-white text-[#1c9cc0] font-bold py-3.5 rounded-xl shadow-lg flex items-center justify-center gap-2"
-            >
-              {otpLoading ? <Loader2 className="animate-spin" /> : 'VERIFY OTP'}
-            </button>
-            <button
-              type="button"
-              onClick={handleSendOtp}
-              className="text-white text-xs hover:underline opacity-80"
-            >
-              Didn't receive code? Resend
-            </button>
-          </form>
-        )}
-
-        {/* STEP 3: RESET PASSWORD FORM */}
-        {step === 'RESET' && (
-          <form onSubmit={handleResetPassword} className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-blue-100 uppercase tracking-widest ml-1">New Password</label>
-              <div className="relative group">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="At least 6 characters"
-                  className="w-full pl-10 pr-10 py-3.5 bg-white/90 border border-transparent focus:border-white/50 rounded-xl text-gray-900 text-sm"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  required
-                />
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-5 h-5" />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#1c9cc0]"
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-blue-100 uppercase tracking-widest ml-1">Confirm Password</label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Re-enter password"
-                  className="w-full pl-10 pr-10 py-3.5 bg-white/90 border border-transparent focus:border-white/50 rounded-xl text-gray-900 text-sm"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                />
-                <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-5 h-5" />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={otpLoading}
-              className="w-full bg-white text-[#1c9cc0] font-bold py-3.5 rounded-xl shadow-lg flex items-center justify-center gap-2 mt-4"
-            >
-              {otpLoading ? <Loader2 className="animate-spin" /> : 'UPDATE PASSWORD'}
+              {otpLoading ? <Loader2 className="animate-spin" /> : 'SEND RESET LINK'}
             </button>
           </form>
         )}
