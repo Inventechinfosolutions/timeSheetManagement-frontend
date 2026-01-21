@@ -205,7 +205,7 @@ const Header = () => {
                         <h3 className="text-lg font-bold text-[#1B2559]">Notifications</h3>
                         <button 
                           onClick={handleMarkAllAsRead}
-                          className="text-xs font-medium text-gray-400 hover:text-[#4318FF] transition-colors"
+                          className="text-xs font-bold text-[#4318FF] hover:bg-blue-50 px-3 py-1 rounded-lg transition-all active:scale-95"
                         >
                           Mark all as read
                         </button>

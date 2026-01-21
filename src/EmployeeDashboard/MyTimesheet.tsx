@@ -489,15 +489,15 @@ const MyTimesheet = ({
           </div>
 
           <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-            <div className="hidden sm:block text-right">
-              <p className="text-[9px] uppercase font-bold text-gray-400 tracking-wider leading-none mb-0.5">
-                Total Hours
+            <div className="flex flex-col sm:flex-row items-end sm:items-baseline gap-1 sm:gap-2">
+              <p className="text-xs sm:text-sm uppercase font-bold text-gray-700 tracking-wider leading-none">
+                TOTAL HOURS :
               </p>
-              <div className="flex items-baseline justify-end gap-1">
+              <div className="flex items-baseline gap-1">
                 <p className="text-xl sm:text-2xl font-black text-[#4318FF] leading-none">
                   {monthTotalHours.toFixed(1)}
                 </p>
-                <span className="text-[10px] font-bold text-gray-400">hrs</span>
+                <span className="text-[10px] font-bold text-gray-700">hrs</span>
               </div>
             </div>
             {(!readOnly || isAdmin) && (
@@ -516,7 +516,7 @@ const MyTimesheet = ({
         <div className="flex items-center gap-x-6 gap-y-2 flex-nowrap overflow-x-auto pb-4 scrollbar-none px-2 mb-2">
           {[
             {
-              label: "Full Day/WFH",
+              label: "Full Day",
               color: "bg-[#E6FFFA]",
               border: "border-[#01B574]",
             },
@@ -526,7 +526,7 @@ const MyTimesheet = ({
               border: "border-[#FFB020]",
             },
             {
-              label: "Leave/Absent",
+              label: "Leave",
               color: "bg-[#FDF2F2]",
               border: "border-[#EE5D50]",
             },
@@ -548,7 +548,7 @@ const MyTimesheet = ({
           ].map((item) => (
             <div
               key={item.label}
-              className="flex items-center gap-2 text-[10px] font-bold text-gray-400 whitespace-nowrap uppercase tracking-wider"
+              className="flex items-center gap-2 text-[10px] font-bold text-gray-600 whitespace-nowrap uppercase tracking-wider"
             >
               <div
                 className={`w-3 h-3 rounded-full ${item.color} border ${item.border}`}
@@ -559,11 +559,11 @@ const MyTimesheet = ({
         </div>
 
         {/* Days Header */}
-        <div className="grid grid-cols-7 gap-2 md:gap-3 mb-2 px-2 border-b border-gray-50 pb-2">
-          {weekdays.map((day) => (
+        <div className="grid grid-cols-7 gap-4 mb-2 px-2 border-b border-gray-50 pb-2">
+          {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
             <div
               key={day}
-              className="text-center text-[9px] md:text-[10px] font-black text-gray-400 tracking-wider uppercase"
+              className="text-center text-[11px] font-black text-gray-700 uppercase tracking-wider"
             >
               {day}
             </div>
@@ -626,7 +626,7 @@ const MyTimesheet = ({
 
             // Updated Styling Logic
             let bg = "bg-white hover:border-[#4318FF]/20";
-            let badge = "bg-gray-50 text-gray-400";
+            let badge = "bg-gray-50 text-gray-500";
             let border = "border-transparent";
             let shadow = "shadow-[0px_2px_15px_rgba(0,0,0,0.02)]";
 
@@ -672,6 +672,9 @@ const MyTimesheet = ({
               bg = "bg-[#FEF3C7]";
               badge = "bg-[#FFB020]/80 text-white font-bold";
               border = "border-[#FFB020]/20";
+            }
+            if (day.isToday) {
+              bg = "bg-white ring-2 ring-[#4318FF] shadow-lg shadow-blue-500/20 z-10";
             }
 
             return (
