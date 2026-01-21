@@ -19,9 +19,11 @@ import {
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import {
   generateMonthlyEntries,
+  generateRangeEntries,
   isEditableMonth,
 } from "../utils/attendanceUtils";
 import { fetchBlockers } from "../reducers/timesheetBlocker.reducer";
+import MobileMyTimesheet from "./MobileMyTimesheet";
 
 interface TimesheetProps {
   now?: Date;
@@ -85,8 +87,104 @@ const MyTimesheet = ({
     type: "success" | "error" | "info";
   }>({ show: false, message: "", type: "success" });
 
-  const lastAttendanceKey = useRef<string | null>(null);
   const today = useMemo(() => new Date(), []);
+
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
+  const [shouldSetLastWeek, setShouldSetLastWeek] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const weeks = useMemo(() => {
+    const w: { entry: TimesheetEntry; originalIndex: number }[][] = [];
+    let currentWeek: { entry: TimesheetEntry; originalIndex: number }[] = [];
+
+    localEntries.forEach((entry, idx) => {
+      currentWeek.push({ entry, originalIndex: idx });
+      // Break on Sunday (getDay() === 0)
+      if (entry.fullDate.getDay() === 0) {
+        if (currentWeek.length > 0) {
+          w.push(currentWeek);
+          currentWeek = [];
+        }
+      }
+    });
+    // Push remaining days if any (shouldn't happen with padding but safer)
+    if (currentWeek.length > 0) w.push(currentWeek);
+    return w;
+  }, [localEntries]);
+
+  // Update currentWeekIndex when localEntries changes (e.g. month changed)
+
+  const lastMonthRef = useRef<string>("");
+
+  useEffect(() => {
+    const currentMonthKey = `${now.getMonth()}-${now.getFullYear()}`;
+
+    if (shouldSetLastWeek) {
+      setCurrentWeekIndex(weeks.length - 1);
+      setShouldSetLastWeek(false);
+      lastMonthRef.current = currentMonthKey;
+      return;
+    }
+
+    // Only reset current week index if the month/year has changed
+    if (lastMonthRef.current !== currentMonthKey) {
+      lastMonthRef.current = currentMonthKey;
+
+      // Default to the week containing today if in current month, else first week
+      if (
+        now.getMonth() === today.getMonth() &&
+        now.getFullYear() === today.getFullYear()
+      ) {
+        const todayDay = today.getDate();
+        let weekIdx = 0;
+        let found = false;
+        for (let i = 0; i < localEntries.length; i++) {
+          if (localEntries[i].date === todayDay) {
+            setCurrentWeekIndex(weekIdx);
+            found = true;
+            break;
+          }
+          if (localEntries[i].fullDate.getDay() === 0) weekIdx++;
+        }
+        if (!found) setCurrentWeekIndex(0);
+      } else {
+        setCurrentWeekIndex(0);
+      }
+    }
+  }, [localEntries, now, today, shouldSetLastWeek, weeks.length]);
+
+  const handleNextWeek = () => {
+    if (currentWeekIndex < weeks.length - 1) {
+      setCurrentWeekIndex(currentWeekIndex + 1);
+    } else {
+      const next = new Date(now);
+      next.setMonth(next.getMonth() + 1);
+      if (next <= new Date()) {
+        setNow(next);
+        setCurrentWeekIndex(0);
+      }
+    }
+  };
+
+  const handlePrevWeek = () => {
+    if (currentWeekIndex > 0) {
+      setCurrentWeekIndex(currentWeekIndex - 1);
+    } else {
+      const prev = new Date(now);
+      prev.setMonth(prev.getMonth() - 1);
+      setNow(prev);
+      setShouldSetLastWeek(true);
+    }
+  };
+  const lastAttendanceKey = useRef<string | null>(null);
 
   // Sync state with props when they change (critical for Admin View)
   useEffect(() => {
@@ -418,6 +516,31 @@ const MyTimesheet = ({
   ).getDay();
   const paddingDays = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
   const weekdays = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+
+  if (isMobile) {
+    return (
+      <MobileMyTimesheet
+        currentWeekEntries={weeks[currentWeekIndex] || []}
+        onPrevWeek={handlePrevWeek}
+        onNextWeek={handleNextWeek}
+        onHoursInput={handleHoursInput}
+        onSave={onSaveAll}
+        monthTotalHours={monthTotalHours}
+        currentMonthName={now.toLocaleDateString("en-US", {
+          month: "long",
+          year: "numeric",
+        })}
+        loading={loading}
+        isAdmin={isAdmin}
+        readOnly={readOnly}
+        isDateBlocked={isDateBlocked}
+        isEditableMonth={isEditableMonth}
+        onBlockedClick={onBlockedClick}
+        localInputValues={localInputValues}
+        onInputBlur={handleInputBlur}
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col h-full max-h-full overflow-hidden bg-[#F4F7FE] py-2 px-1 md:px-6 md:pt-4 md:pb-0 relative">
