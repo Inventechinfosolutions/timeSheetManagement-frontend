@@ -7,6 +7,7 @@ const EmployeeDashboard = lazy(
   () => import("./EmployeeDashboard/EmployeeDashboard")
 );
 const ForgotPassword = lazy(() => import("./EmployeeDashboard/ForgotPassword"));
+const ResetPassword = lazy(() => import("./EmployeeDashboard/ResetPassword"));
 
 export const mainComponentConfigs = [
   {
@@ -28,5 +29,9 @@ export const mainComponentConfigs = [
   {
     path: "/employee-dashboard",
     Component: EmployeeDashboard,
+  },
+  {
+    path: "/reset-password",
+    Component: ResetPassword,
   },
 ];

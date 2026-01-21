@@ -402,7 +402,7 @@ const Calendar = ({
           <div className="flex items-center gap-x-6 gap-y-2 flex-wrap mb-4 overflow-x-auto pb-2 scrollbar-none">
             {[
               {
-                label: "Full Day/WFH",
+                label: "Full Day",
                 color: "bg-emerald-50",
                 border: "border-emerald-200",
                 text: "text-emerald-700",
@@ -414,7 +414,7 @@ const Calendar = ({
                 text: "text-amber-700",
               },
               {
-                label: "Leave/Absent",
+                label: "Leave",
                 color: "bg-red-50",
                 border: "border-red-200",
                 text: "text-red-700",
@@ -440,7 +440,7 @@ const Calendar = ({
             ].map((item) => (
               <div
                 key={item.label}
-                className="flex items-center gap-2 text-xs font-bold text-gray-500 whitespace-nowrap"
+                className="flex items-center gap-2 text-xs font-bold text-gray-600 whitespace-nowrap"
               >
                 <div
                   className={`w-3 h-3 rounded-full ${item.color} border ${item.border}`}
@@ -461,7 +461,7 @@ const Calendar = ({
             {daysOfWeek.map((day) => (
               <div
                 key={day}
-                className={`text-center font-black text-[#A3AED0] uppercase tracking-widest ${
+                className={`text-center text-xs font-black text-gray-700 uppercase tracking-wide ${
                   isSmall
                     ? "text-[7px] mb-0.5"
                     : isSidebar

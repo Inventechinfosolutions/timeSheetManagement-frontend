@@ -23,6 +23,7 @@ const FcManagerResetPassword = lazy(
   () => import("./Login/TimeSheetResetPassword")
 );
 const SetPassword = lazy(() => import("./Login/SetPassword"));
+const ResetPassword = lazy(() => import("./EmployeeDashboard/ResetPassword"));
 
 // Employee Dashboard Components
 import MyTimesheet from "./EmployeeDashboard/MyTimesheet";
@@ -141,6 +142,21 @@ function App() {
               }
             >
               <FcManagerResetPassword />
+            </Suspense>
+          }
+        />
+
+        <Route
+          path="/reset-password"
+          element={
+            <Suspense
+              fallback={
+                <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                  Loading...
+                </div>
+              }
+            >
+              <ResetPassword />
             </Suspense>
           }
         />

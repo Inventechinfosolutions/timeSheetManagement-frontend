@@ -29,7 +29,7 @@ export interface EmployeeActivationResponse {
 
 export interface ResetPasswordDto {
   token: string;
-  newPassword: string;
+  password: string;
 }
 
 export interface ResetPasswordResponse {
@@ -155,22 +155,22 @@ export const verifyActivationEmployee = createAsyncThunk(
  * Reset Employee Password
  * POST /api/public/reset-password-employee
  */
-export const resetPasswordEmployee = createAsyncThunk(
+export const resetPasswordEmployee = createAsyncThunk<any, any>(
   "public/reset_password_employee",
-  async (resetPasswordDto: ResetPasswordDto, { rejectWithValue }) => {
+  async (payload: any, { rejectWithValue }) => {
     try {
-      const response = await axios.post<ResetPasswordResponse>(
+      const response = await axios.post(
         `${apiUrl}/public/reset-password-employee`,
-        resetPasswordDto
+        payload
       );
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       if (axios.isAxiosError(error)) {
         return rejectWithValue(
           error.response?.data?.message || error.message || "Password reset failed"
         );
       }
-      return rejectWithValue("An unknown error occurred during password reset");
+      return rejectWithValue(error.message || "An unknown error occurred");
     }
   }
 );
