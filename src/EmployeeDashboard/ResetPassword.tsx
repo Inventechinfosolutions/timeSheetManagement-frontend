@@ -63,6 +63,7 @@ const ResetPassword: React.FC = () => {
     console.log("Submitting reset password", { loginId, password: newPassword });
     try {
       await dispatch(resetPasswordEmployee({ loginId, password: newPassword })).unwrap();
+      navigate('/landing');
     } catch (err: any) {
       console.error("Failed to reset password", err);
       setLocalError(err?.message || err || "Failed to reset password. Please try again or request a new link.");
