@@ -136,7 +136,7 @@ const MyProfile = () => {
   };
 
   return (
-    <div className="px-5 md:px-8 pt-6 pb-24 w-full max-w-[1000px] mx-auto animate-in fade-in duration-500 space-y-6 md:space-y-8">
+    <div className="overflow-y-auto md:overflow-visible custom-scrollbar px-5 md:px-8 pt-6 pb-0 w-full max-w-[1000px] mx-auto animate-in fade-in duration-500 space-y-6 md:space-y-8">
       {/* Top Card - User Header with Gradient */}
       <div className="relative overflow-hidden rounded-[20px] md:rounded-[32px] shadow-[0px_20px_50px_0px_#111c440d] border border-gray-100">
         {/* Gradient Background */}
@@ -213,7 +213,7 @@ const MyProfile = () => {
       {/* Personal Information Card */}
       <div className="bg-white rounded-[20px] md:rounded-[32px] p-6 md:p-8 shadow-[0px_20px_50px_0px_#111c440d] border border-gray-100">
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#667eea] to-[#764ba2] flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-linear-to-br from-[#667eea] to-[#764ba2] flex items-center justify-center">
             <User size={20} className="text-white" />
           </div>
           <h2 className="text-xl font-bold text-[#1B2559]">

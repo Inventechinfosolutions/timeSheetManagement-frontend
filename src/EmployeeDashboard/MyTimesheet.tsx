@@ -120,46 +120,52 @@ const MyTimesheet = ({
     return w;
   }, [localEntries]);
 
-  // Update currentWeekIndex when localEntries changes (e.g. month changed)
-
   const lastMonthRef = useRef<string>("");
 
+  // Update currentWeekIndex when month changes or a date is selected from calendar
   useEffect(() => {
     const currentMonthKey = `${now.getMonth()}-${now.getFullYear()}`;
 
-    if (shouldSetLastWeek) {
-      setCurrentWeekIndex(weeks.length - 1);
-      setShouldSetLastWeek(false);
-      lastMonthRef.current = currentMonthKey;
-      return;
-    }
-
-    // Only reset current week index if the month/year has changed
+    // 1. Month change logic
     if (lastMonthRef.current !== currentMonthKey) {
       lastMonthRef.current = currentMonthKey;
-
-      // Default to the week containing today if in current month, else first week
-      if (
-        now.getMonth() === today.getMonth() &&
-        now.getFullYear() === today.getFullYear()
-      ) {
-        const todayDay = today.getDate();
-        let weekIdx = 0;
-        let found = false;
-        for (let i = 0; i < localEntries.length; i++) {
-          if (localEntries[i].date === todayDay) {
-            setCurrentWeekIndex(weekIdx);
-            found = true;
-            break;
-          }
-          if (localEntries[i].fullDate.getDay() === 0) weekIdx++;
-        }
-        if (!found) setCurrentWeekIndex(0);
-      } else {
-        setCurrentWeekIndex(0);
+      if (shouldSetLastWeek) {
+        setCurrentWeekIndex(weeks.length - 1);
+        setShouldSetLastWeek(false);
+        return;
       }
     }
-  }, [localEntries, now, today, shouldSetLastWeek, weeks.length]);
+
+    // 2. Week selection logic (Triggered by month change OR selectedDateId change)
+    const targetDate = selectedDateId
+      ? new Date(selectedDateId)
+      : now.getMonth() === today.getMonth() &&
+          now.getFullYear() === today.getFullYear()
+        ? today
+        : null;
+
+    if (targetDate && localEntries.length > 0) {
+      const targetDay = targetDate.getDate();
+      let weekIdx = 0;
+      let found = false;
+      for (let i = 0; i < localEntries.length; i++) {
+        if (localEntries[i].date === targetDay) {
+          setCurrentWeekIndex(weekIdx);
+          found = true;
+          break;
+        }
+        if (localEntries[i].fullDate.getDay() === 0) weekIdx++;
+      }
+      if (!found) setCurrentWeekIndex(0);
+    }
+  }, [
+    localEntries,
+    now,
+    today,
+    shouldSetLastWeek,
+    weeks.length,
+    selectedDateId,
+  ]);
 
   const handleNextWeek = () => {
     if (currentWeekIndex < weeks.length - 1) {
@@ -199,8 +205,20 @@ const MyTimesheet = ({
   useEffect(() => {
     if (propSelectedDateId && propSelectedDateId !== selectedDateId) {
       setSelectedDateId(propSelectedDateId);
+      setIsHighlighted(true);
     }
   }, [propSelectedDateId]);
+
+  // Handle navigation highlight trigger
+  useEffect(() => {
+    if (selectedDateId) {
+      setIsHighlighted(true);
+      const timer = setTimeout(() => {
+        setIsHighlighted(false);
+      }, 5000); // 5 seconds as requested
+      return () => clearTimeout(timer);
+    }
+  }, [selectedDateId]);
 
   // Handle navigation state updates
   useEffect(() => {
@@ -297,6 +315,24 @@ const MyTimesheet = ({
       return d >= start && d <= end;
     });
     return blocker?.reason || "Admin Blocked";
+  };
+
+  const isHoliday = (date: Date) => {
+    const d = new Date(date);
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+      2,
+      "0",
+    )}-${String(d.getDate()).padStart(2, "0")}`;
+
+    return holidays?.some((h: any) => {
+      const hDate = h.holidayDate || h.date;
+      if (!hDate) return false;
+      const normalizedHDate =
+        typeof hDate === "string"
+          ? hDate.split("T")[0]
+          : new Date(hDate).toISOString().split("T")[0];
+      return normalizedHDate === dateStr;
+    });
   };
 
   // Handlers
@@ -535,9 +571,12 @@ const MyTimesheet = ({
         readOnly={readOnly}
         isDateBlocked={isDateBlocked}
         isEditableMonth={isEditableMonth}
+        isHoliday={isHoliday}
         onBlockedClick={onBlockedClick}
         localInputValues={localInputValues}
         onInputBlur={handleInputBlur}
+        selectedDateId={selectedDateId}
+        isHighlighted={isHighlighted}
       />
     );
   }

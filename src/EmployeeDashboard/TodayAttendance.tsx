@@ -9,9 +9,9 @@ import {
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { fetchMonthlyAttendance } from "../reducers/employeeAttendance.reducer";
 import { getEntity, setCurrentUser } from "../reducers/employeeDetails.reducer";
-import { fetchHolidaysByMonthAndYear, fetchYearWeekends } from "../reducers/masterHoliday.reducer";
+import { fetchHolidaysByMonthAndYear } from "../reducers/masterHoliday.reducer";
 import { generateMonthlyEntries } from "../utils/attendanceUtils";
-import Calendar from "./CalendarView";
+import AttendanceViewWrapper from "./CalenderViewWrapper";
 import AttendancePieChart from "./AttendancePieChart";
 import { RootState } from "../store";
 
@@ -35,7 +35,7 @@ const TodayAttendance = ({
     (state: RootState) => state.employeeDetails,
   );
   const { currentUser } = useAppSelector((state: RootState) => state.user);
-  const { holidays, weekends } = useAppSelector(
+  const { holidays } = useAppSelector(
     (state: RootState) => state.masterHolidays
   );
   const currentEmployeeId = entity?.employeeId;
@@ -69,18 +69,17 @@ const TodayAttendance = ({
   }, [dispatch, entity, currentEmployeeId, currentUser]);
 
   // Fetch Master Data (Holidays & Weekends) whenever the calendar view changes (Month/Year)
+  // Removed as per user request to reduce API calling for dashboard charts
+  /*
   useEffect(() => {
     const year = calendarDate.getFullYear();
     const month = calendarDate.getMonth() + 1;
 
     dispatch(fetchHolidaysByMonthAndYear({ month, year }));
-    // dispatch(fetchYearWeekends({ year })); // Disable Master Weekend Fetch as per user request
   }, [dispatch, calendarDate]);
-
-
+  */
 
   // 1. Separate "Today's" Data - ALWAYS based on current real-time Month
-  // This ensures "Today's Attendance" card never changes when navigating calendar
   const todayStatsEntry = useMemo(() => {
     // Generate entries for the ACTUAL current month (now)
     const entries = generateMonthlyEntries(now, now, records);
@@ -88,9 +87,6 @@ const TodayAttendance = ({
   }, [now, records]);
 
   // 2. Calendar / Stats Data - Based on SELECTED `calendarDate`
-  // This drives the "This Month" stats and the Calendar grid
-  // 2. Calendar / Stats Data - Based on SELECTED `calendarDate`
-  // This drives the "This Month" stats and the Calendar grid
   const currentMonthEntries = useMemo(() => {
     const entries = generateMonthlyEntries(calendarDate, now, records);
 
@@ -108,9 +104,7 @@ const TodayAttendance = ({
       });
 
       if (isMasterHoliday) {
-        // Holiday overrides Weekend, Pending, Leave, Absent
-        // It does NOT override explicit work statuses if user worked on holiday (optional, but safer to preserve work)
-        if (
+         if (
           day.status !== "Full Day" &&
           day.status !== "Half Day" &&
           day.status !== "WFH" &&
@@ -134,7 +128,7 @@ const TodayAttendance = ({
 
   const fetchAttendanceData = useCallback(
     (date: Date) => {
-      if (!currentEmployeeId) return; // Guard to prevent calls with undefined ID
+      if (!currentEmployeeId) return;
 
       const fetchKey = `${currentEmployeeId}-${
         date.getMonth() + 1
@@ -181,7 +175,7 @@ const TodayAttendance = ({
     if (onNavigate) {
       onNavigate(timestamp);
     } else {
-      handleDateNavigator(timestamp); // Using the new handleDateNavigator
+      handleDateNavigator(timestamp);
     }
   };
 
@@ -192,7 +186,6 @@ const TodayAttendance = ({
       </div>
     );
 
-  // Initial fallback if loading not started yet
   if (!todayStatsEntry && !loading && records.length === 0)
     return (
       <div className="p-8 text-center text-gray-500">Initializing entry...</div>
@@ -200,8 +193,8 @@ const TodayAttendance = ({
 
   return (
     <div className="flex flex-col h-full w-full overflow-hidden bg-gray-50/50">
-      {/* Header - "Application Intake" Reference Style */}
-      <div className="px-6 py-5 bg-white border-b border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4">
+      {/* Header */}
+      <div className="px-6 py-5 bg-gradient-to-r from-blue-100 via-blue-50 to-white border-b border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-[#1B2559]">
             Employee Dashboard
@@ -228,21 +221,20 @@ const TodayAttendance = ({
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
 
-
-        {/* Middle Section: Info Cards (White) */}
+        {/* Middle Section: Info Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Card 1: Green - Total Week Hours */}
-          <div className="bg-gradient-to-br from-emerald-100 via-emerald-50 to-white rounded-[12px] p-6 border border-gray-100 shadow-sm flex flex-col items-start gap-3 h-full relative overflow-hidden group hover:shadow-md transition-all">
-            <div className="p-3 rounded-xl bg-[#10B981]/10 text-[#10B981]">
+          {/* Card 1 */}
+          <div className="bg-gradient-to-br from-[#81B4FF] to-[#3B82F6] rounded-[12px] p-6 border border-transparent shadow-sm flex flex-col items-start gap-3 h-full relative overflow-hidden group hover:shadow-md transition-all">
+            <div className="p-3 rounded-xl bg-[#E6FFFA] text-[#10B981]">
               <Clock size={24} strokeWidth={2} />
             </div>
             <div className="w-full">
-              <h4 className="text-sm font-bold text-gray-800 mb-3">
+              <h4 className="text-sm font-bold text-white mb-3">
                 Total Week Hours
               </h4>
-              <div className="w-full border-t border-gray-300 my-2"></div>
+              <div className="w-full border-t border-white/20 my-2"></div>
               <div className="flex flex-col">
-                <span className="text-3xl font-bold text-[#2563EB]">
+                <span className="text-3xl font-bold text-white">
                   {(() => {
                     const d = new Date(now);
                     const day = d.getDay();
@@ -264,25 +256,25 @@ const TodayAttendance = ({
                       .toFixed(1);
                   })()}
                 </span>
-                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">
+                <span className="text-[10px] font-bold text-blue-100 uppercase tracking-widest mt-1">
                   Hours
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Card 2: Orange - Total Monthly Hours */}
-          <div className="bg-gradient-to-br from-amber-100 via-amber-50 to-white rounded-[12px] p-6 border border-gray-100 shadow-sm flex flex-col items-start gap-3 h-full relative overflow-hidden group hover:shadow-md transition-all">
-            <div className="p-3 rounded-xl bg-[#F59E0B]/10 text-[#F59E0B]">
+          {/* Card 2 */}
+          <div className="bg-gradient-to-br from-[#81B4FF] to-[#3B82F6] rounded-[12px] p-6 border border-transparent shadow-sm flex flex-col items-start gap-3 h-full relative overflow-hidden group hover:shadow-md transition-all">
+            <div className="p-3 rounded-xl bg-[#FEF3C7] text-[#F59E0B]">
               <CalendarIcon size={24} strokeWidth={2} />
             </div>
             <div className="w-full">
-              <h4 className="text-sm font-bold text-gray-800 mb-3">
+              <h4 className="text-sm font-bold text-white mb-3">
                 Total Monthly Hours
               </h4>
-              <div className="w-full border-t border-gray-300 my-2"></div>
+              <div className="w-full border-t border-white/20 my-2"></div>
               <div className="flex flex-col">
-                <span className="text-3xl font-bold text-[#2563EB]">
+                <span className="text-3xl font-bold text-white">
                   {(() => {
                     const workedDays = records.filter(
                       (e) => (e.totalHours || 0) > 0,
@@ -292,25 +284,25 @@ const TodayAttendance = ({
                       .toFixed(1);
                   })()}
                 </span>
-                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">
+                <span className="text-[10px] font-bold text-blue-100 uppercase tracking-widest mt-1">
                   Hours
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Card 3: Red - Pending Updates */}
-          <div className="bg-gradient-to-br from-rose-100 via-rose-50 to-white rounded-[12px] p-6 border border-gray-100 shadow-sm flex flex-col items-start gap-3 h-full relative overflow-hidden group hover:shadow-md transition-all">
-            <div className="p-3 rounded-xl bg-[#E11D48]/10 text-[#E11D48]">
+          {/* Card 3 */}
+          <div className="bg-gradient-to-br from-[#81B4FF] to-[#3B82F6] rounded-[12px] p-6 border border-transparent shadow-sm flex flex-col items-start gap-3 h-full relative overflow-hidden group hover:shadow-md transition-all">
+            <div className="p-3 rounded-xl bg-[#FEE2E2] text-[#E11D48]">
               <AlertTriangle size={24} strokeWidth={2} />
             </div>
             <div className="w-full">
-              <h4 className="text-sm font-bold text-gray-800 mb-3">
+              <h4 className="text-sm font-bold text-white mb-3">
                 Pending Updates
               </h4>
-              <div className="w-full border-t border-gray-300 my-2"></div>
+              <div className="w-full border-t border-white/20 my-2"></div>
               <div className="flex flex-col">
-                <span className="text-3xl font-bold text-[#2563EB]">
+                <span className="text-3xl font-bold text-white">
                   {
                     currentMonthEntries.filter(
                       (day) =>
@@ -319,7 +311,7 @@ const TodayAttendance = ({
                     ).length
                   }
                 </span>
-                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">
+                <span className="text-[10px] font-bold text-blue-100 uppercase tracking-widest mt-1">
                   Days
                 </span>
               </div>
@@ -342,6 +334,7 @@ const TodayAttendance = ({
             currentMonth={calendarDate}
             onMonthChange={(date) => {
               setCalendarDate(date);
+              fetchAttendanceData(date);
             }}
           />
         </div>
@@ -369,10 +362,10 @@ const TodayAttendance = ({
             </div>
           </div>
           <div className="p-4">
-            <Calendar
+            <AttendanceViewWrapper
               now={now}
               currentDate={calendarDate}
-              entries={currentMonthEntries}
+              entries={currentMonthEntries as any}
               onMonthChange={(date) => {
                 setCalendarDate(date);
                 fetchAttendanceData(date);

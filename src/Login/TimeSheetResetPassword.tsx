@@ -6,12 +6,9 @@ import {
   EyeOff, 
   Loader2, 
   CheckCircle, 
-  Home, 
-  Bell, 
-  Mail, 
-  ChevronDown,
-  LayoutGrid
+  Home
 } from 'lucide-react';
+import Header from '../components/Header';
 import { resetPasswordEmployee, clearResetPasswordState } from '../reducers/public.reducer';
 import { changePassword, clearPasswordChangeSuccess, clearError as clearUserError, logoutUser, setResetRequired } from '../reducers/user.reducer';
 import { AppDispatch, RootState } from '../store';
@@ -125,55 +122,13 @@ const FcManagerResetPassword: React.FC = () => {
     const errorMessage = localError || (isForgotMode ? resetPasswordError : userError);
 
     return (
-        <div className="min-h-screen bg-[#f8f9fc] flex flex-col font-sans">
+        <div className="h-screen bg-[#F4F7FE] flex flex-col font-sans overflow-y-auto custom-scrollbar">
             {/* Top Header */}
-            <header className="h-20 bg-white border-b border-gray-100 flex items-center justify-between px-6 sticky top-0 z-50">
-                <div className="flex items-center gap-4">
-                    
-                    <div>
-                        <div className="flex items-center gap-2">
-                            {/* <span className="font-bold text-[#2B3674]">FM000088</span> */}
-                            <ChevronDown size={14} className="text-gray-400" />
-                        </div>
-                        <span className="text-xs font-semibold text-gray-500">Time Sheet Management</span>
-                    </div>
-                    
-                    <div className="h-8 w-px bg-gray-200 mx-4 hidden lg:block"></div>
-                    
-                    <button className="p-2 hover:bg-gray-50 rounded-lg transition-colors text-gray-500 hidden lg:block">
-                        <LayoutGrid size={20} />
-                    </button>
-                    
-                    <div className="hidden lg:block">
-                        <img src={inventechLogo} alt="Keonics" className="h-10 ml-4 mix-blend-multiply" />
-                    </div>
-                </div>
+            <Header hideNotifications={true} hideProfile={true} />
 
-                <div className="flex items-center gap-3">
-                    <button className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-50 text-gray-500 relative transition-all">
-                        <Bell size={20} />
-                        <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-                    </button>
-                    <button className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-50 text-gray-500 transition-all">
-                        <Mail size={20} />
-                    </button>
-                    
-                </div>
-            </header>
-
-            <div className="flex flex-1 overflow-hidden">
-                {/* Sidebar */}
-                <aside className="w-64 bg-white border-r border-gray-100 hidden md:flex flex-col py-6">
-                    <div className="px-4 mb-8">
-                        <div className="flex items-center gap-3 p-3 bg-blue-50/50 text-[#00a3c4] rounded-xl cursor-default group transition-all">
-                            <Home size={20} className="group-hover:scale-110 transition-transform" />
-                            <span className="font-bold text-sm">Home</span>
-                        </div>
-                    </div>
-                </aside>
-
+            <div className="flex flex-1">
                 {/* Main Content Area */}
-                <main className="flex-1 bg-[#F4F7FE] overflow-y-auto p-4 md:p-8 flex items-center justify-center">
+                <main className="flex-1 p-4 md:p-12 lg:p-20 flex items-start justify-center">
                     <div className="w-full max-w-lg">
                         {success ? (
                             <div className="bg-white rounded-[2rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.06)] p-12 text-center animate-in zoom-in-95 duration-500">
@@ -261,10 +216,14 @@ const FcManagerResetPassword: React.FC = () => {
 
                                     <button
                                         type="submit"
-                                        disabled={isLoading}
-                                        className="w-full bg-gray-100 text-[#A3AED0] hover:bg-[#00a3c4] hover:text-white font-black text-sm tracking-widest py-5 rounded-2xl transition-all shadow-lg active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 uppercase overflow-hidden relative group/btn"
+                                        disabled={isLoading || !password || !confirmPassword}
+                                        className={`w-full font-black text-sm tracking-widest py-5 rounded-2xl transition-all shadow-lg active:scale-[0.98] flex items-center justify-center gap-2 uppercase overflow-hidden relative group/btn
+                                            ${(isLoading || !password || !confirmPassword) 
+                                                ? 'bg-gray-100 text-[#A3AED0] cursor-not-allowed opacity-80 shadow-none' 
+                                                : 'bg-[#00a3c4] text-white hover:bg-[#0081dd] shadow-[#00a3c4]/20 hover:shadow-[#00a3c4]/40 cursor-pointer'}
+                                        `}
                                     >
-                                        <div className="absolute inset-0 bg-blue-400/10 opacity-0 group-hover/btn:opacity-100 transition-opacity"></div>
+                                        <div className="absolute inset-0 bg-white/10 opacity-0 group-hover/btn:opacity-100 transition-opacity"></div>
                                         {isLoading ? (
                                             <>
                                                 <Loader2 className="w-5 h-5 animate-spin" />

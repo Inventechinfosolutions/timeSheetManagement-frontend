@@ -66,7 +66,7 @@ const SidebarLayout = ({
       {/* Mobile Menu Trigger - Floating Pulse Button */}
       <button
         onClick={() => setIsMobileOpen(true)}
-        className={`md:hidden fixed z-[1001] left-4 top-[75px] w-11 h-11 bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 flex items-center justify-center text-[#4318FF] active:scale-90 transition-all duration-300
+        className={`md:hidden fixed z-1001 left-4 top-[55px] w-11 h-11 bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 flex items-center justify-center text-[#4318FF] active:scale-90 transition-all duration-300
                     ${
                       isMobileOpen
                         ? "opacity-0 scale-90 pointer-events-none"
@@ -85,7 +85,7 @@ const SidebarLayout = ({
  
       {/* Premium Mobile Backdrop */}
       <div
-        className={`md:hidden fixed inset-0 bg-[#111c44]/60 backdrop-blur-md z-[2000] transition-all duration-500 ease-in-out
+        className={`md:hidden fixed inset-0 bg-[#111c44]/60 backdrop-blur-md z-2000 transition-all duration-500 ease-in-out
                     ${
                       isMobileOpen
                         ? "opacity-100 pointer-events-auto"
@@ -105,7 +105,7 @@ const SidebarLayout = ({
       ></div>
  
       <aside
-        className={`fixed top-0 md:absolute md:top-0 md:left-0 h-full md:h-full flex flex-col shrink-0 transition-all duration-300 ease-in-out z-[2001] md:z-30 text-white
+        className={`fixed top-0 md:absolute md:top-0 md:left-0 h-full md:h-full flex flex-col shrink-0 transition-all duration-300 ease-in-out z-2001 md:z-30 text-white
                     ${
                       isMobileOpen
                         ? "translate-x-0 w-72"
@@ -244,7 +244,7 @@ const SidebarLayout = ({
                 {!isOpen && !isMobileOpen && (
                   <div className="hidden md:block absolute left-[calc(100%+10px)] top-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#111c44] text-white text-xs font-bold rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 whitespace-nowrap z-50">
                     {item.name}
-                    <div className="absolute top-1/2 -left-1 -translate-y-1/2 border-[4px] border-r-[#111c44] border-l-transparent border-t-transparent border-b-transparent"></div>
+                    <div className="absolute top-1/2 -left-1 -translate-y-1/2 border-4 border-r-[#111c44] border-l-transparent border-t-transparent border-b-transparent"></div>
                   </div>
                 )}
               </div>
@@ -253,7 +253,7 @@ const SidebarLayout = ({
         </nav>
       </aside>
  
-      <main className="flex-1 overflow-hidden h-full relative no-scrollbar flex flex-col bg-[#F4F7FE]">
+      <main className="flex flex-col relative no-scrollbar bg-[#F4F7FE] w-full">
         {children}
       </main>
     </div>
