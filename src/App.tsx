@@ -18,9 +18,9 @@ import { UserType } from "./reducers/user.reducer";
 
 // Lazy load authentication components
 const EmployeeActivation = lazy(() => import("./Login/EmployeeActivation"));
-const FcManagerActivation = lazy(() => import("./Login/TimeSheetActivation"));
-const FcManagerResetPassword = lazy(
-  () => import("./Login/TimeSheetResetPassword")
+const TimesheetActivation = lazy(() => import("./Login/TimeSheetActivation"));
+const TimesheetResetPassword = lazy(
+  () => import("./Login/StartingTimesheetResetPassword")
 );
 const SetPassword = lazy(() => import("./Login/SetPassword"));
 const ResetPassword = lazy(() => import("./EmployeeDashboard/ResetPassword"));
@@ -32,6 +32,7 @@ import TodayAttendance from "./EmployeeDashboard/TodayAttendance";
 import ChangePassword from "./EmployeeDashboard/ChangePassword";
 import AttendanceViewWrapper from "./EmployeeDashboard/CalenderViewWrapper";
 import MobileResponsiveCalendarPage from "./EmployeeDashboard/MobileResponsiveCalendarPage";
+import LeaveManagement from "./EmployeeDashboard/LeaveManagement";
 
 // Admin Dashboard Components
 import AdminDashboard from "./AdminDashboard/AdminDashboard";
@@ -60,6 +61,8 @@ const EmployeeTabWrapper = () => {
       return <ChangePassword />;
     case "calendar-view":
       return <MobileResponsiveCalendarPage />;
+    case "leave-management":
+      return <LeaveManagement />;
     default:
       return <Navigate to="/employee-dashboard" replace />;
   }
@@ -129,7 +132,7 @@ function App() {
                 </div>
               }
             >
-              <FcManagerActivation />
+              <TimesheetActivation />
             </Suspense>
           }
         />
@@ -144,7 +147,7 @@ function App() {
                 </div>
               }
             >
-              <FcManagerResetPassword />
+              <TimesheetResetPassword />
             </Suspense>
           }
         />

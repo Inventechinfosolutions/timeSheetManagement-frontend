@@ -5,7 +5,7 @@ import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { verifyActivationEmployee, clearActivationState } from '../reducers/public.reducer';
 import { AppDispatch, RootState } from '../store';
 
-const FcManagerActivation: React.FC = () => {
+const TimesheetActivation: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
@@ -114,4 +114,4 @@ const FcManagerActivation: React.FC = () => {
   );
 };
 
-export default FcManagerActivation;
+export default TimesheetActivation;

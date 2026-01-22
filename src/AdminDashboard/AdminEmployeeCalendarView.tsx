@@ -66,7 +66,7 @@ const AdminEmployeeCalendarView = () => {
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-[#F4F7FE]">
+    <div className="bg-[#F4F7FE]">
       <div className="px-0 md:px-2">
         <Calendar
           currentDate={displayDate}

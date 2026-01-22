@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Settings,
   Users,
@@ -30,6 +30,9 @@ const SidebarLayout = ({
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const { tab } = useParams<{ tab?: string }>();
   const dispatch = useDispatch<AppDispatch>();
+  
+  // Ref for the main scrollable content area
+  const mainContentRef = useRef<HTMLDivElement>(null);
 
   // Determine active tab from URL if not explicitly provided
   const derivedActiveTab = useMemo(() => {
@@ -52,6 +55,13 @@ const SidebarLayout = ({
     dispatch(getEntities({ search: "" }));
   }, [dispatch]);
 
+  // Scroll to top when tab changes
+  useEffect(() => {
+    if (mainContentRef.current) {
+      mainContentRef.current.scrollTop = 0;
+    }
+  }, [derivedActiveTab]);
+
   // Sidebar opens if it's either hovered OR locked
   const isOpen = isHovered || isLocked;
 
@@ -63,7 +73,7 @@ const SidebarLayout = ({
   ];
 
   return (
-    <div className="flex w-full h-full bg-[#f8f9fa] font-sans text-[#2B3674] overflow-hidden relative">
+    <div className="flex w-full h-screen bg-[#f8f9fa] font-sans text-[#2B3674] overflow-hidden relative">
       {/* Mobile Menu Trigger - Floating Pulse Button */}
       <button
         onClick={() => setIsMobileOpen(true)}
@@ -249,7 +259,10 @@ const SidebarLayout = ({
         </nav>
       </aside>
 
-      <main className="flex-1 overflow-y-auto h-full relative no-scrollbar flex flex-col bg-[#F4F7FE]">
+      <main 
+        ref={mainContentRef}
+        className="flex-1 min-h-0 h-full relative no-scrollbar flex flex-col bg-[#F4F7FE] overflow-auto"
+      >
         {children}
       </main>
     </div>

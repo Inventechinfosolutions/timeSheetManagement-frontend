@@ -151,7 +151,7 @@ export const downloadPdf = ({
         currentY += 4;
 
         const tableRows: any[] = [];
-        let mFullDays = 0, mHalfDays = 0, mLeaves = 0, mTotalHours = 0;
+        let mFullDays = 0, mHalfDays = 0, mLeaves = 0, mNotUpdated = 0, mTotalHours = 0;
 
         monthEntries.forEach(entry => {
             const dateStr = new Date(entry.fullDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -181,12 +181,14 @@ export const downloadPdf = ({
             // 3. Fallbacks (Priority 3)
             else if (!status || status === "NOT UPDATED" || status === "PENDING" || status === "HOLIDAY") {
                  if (entry.isWeekend) status = "WEEKEND";
+                 else if (entry.isToday && !entry.totalHours) status = "PENDING";
                  else if (!entry.isFuture) status = "NOT UPDATED";
             }
 
             if (status.includes("FULL DAY") || status === "WFH" || status === "CLIENT VISIT") mFullDays++;
             else if (status.includes("HALF DAY")) mHalfDays++;
             else if (status.includes("LEAVE") || status === "ABSENT") mLeaves++;
+            else if (status === "NOT UPDATED") mNotUpdated++;
             mTotalHours += (entry.totalHours || 0);
 
             tableRows.push([dateStr, entry.dayName, hours, status]);
@@ -250,10 +252,11 @@ export const downloadPdf = ({
         doc.setTextColor(blueColor);
         
         const summaryY = currentY + 7.5;
-        doc.text(`Full Days: ${mFullDays}`, 25, summaryY);
-        doc.text(`Half Days: ${mHalfDays}`, 70, summaryY);
-        doc.text(`Leaves: ${mLeaves}`, 115, summaryY);
-        doc.text(`Total Hours: ${mTotalHours.toFixed(1)}`, 160, summaryY);
+        doc.text(`Full Days: ${mFullDays}`, 18, summaryY);
+        doc.text(`Half Days: ${mHalfDays}`, 54, summaryY);
+        doc.text(`Leaves: ${mLeaves}`, 90, summaryY);
+        doc.text(`Not Updated: ${mNotUpdated}`, 126, summaryY);
+        doc.text(`Total Hours: ${mTotalHours.toFixed(1)}`, 165, summaryY);
 
         currentY += 18;
     });

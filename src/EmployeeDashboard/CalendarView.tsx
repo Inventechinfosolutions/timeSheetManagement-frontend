@@ -31,6 +31,7 @@ interface CalendarProps {
   onMonthChange?: (date: Date) => void;
   entries?: TimesheetEntry[];
   employeeId?: string;
+  scrollable?: boolean;
 }
 
 const Calendar = ({
@@ -41,6 +42,7 @@ const Calendar = ({
   onMonthChange,
   entries: propEntries,
   employeeId: propEmployeeId,
+  scrollable = true,
 }: CalendarProps) => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -286,9 +288,9 @@ const Calendar = ({
 
   return (
     <div
-      className={`animate-in fade-in duration-500 h-full flex flex-col ${
-        !isSmall && !isSidebar ? "p-4 md:p-6" : ""
-      }`}
+      className={`animate-in fade-in duration-500 flex flex-col ${
+        scrollable ? "h-full flex-1 min-h-0" : ""
+      } ${!isSmall && !isSidebar ? "p-4 md:p-6" : ""}`}
     >
       <div
         className={`bg-white shadow-[0px_20px_50px_0px_#111c440d] border border-gray-100 flex flex-col ${
@@ -296,7 +298,7 @@ const Calendar = ({
             ? "p-3 rounded-xl"
             : isSidebar
               ? "p-4 rounded-xl"
-              : "p-6 rounded-[20px] flex-1 h-full overflow-hidden"
+              : `p-6 rounded-[20px] ${scrollable ? "flex-1 h-full overflow-hidden" : ""}`
         }`}
       >
         {!isSmall && (
@@ -330,7 +332,7 @@ const Calendar = ({
               {!isSmall && !isSidebar && (
                 <button
                   onClick={handleDownload}
-                  className="hidden md:flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-[#4318FF] to-[#868CFF] text-white rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 text-xs font-bold tracking-wide uppercase group"
+                  className="hidden md:flex items-center gap-2 px-6 py-2.5 bg-linear-to-r from-[#4318FF] to-[#868CFF] text-white rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 text-xs font-bold tracking-wide uppercase group"
                   title="Download Monthly Report"
                 >
                   <Download
@@ -344,7 +346,7 @@ const Calendar = ({
               {!isSmall && !isSidebar && (
                 <button
                   onClick={handleDownload}
-                  className="md:hidden flex p-2.5 bg-gradient-to-r from-[#4318FF] to-[#868CFF] text-white rounded-xl shadow-lg shadow-blue-500/30 active:scale-95 transition-all"
+                  className="md:hidden flex p-2.5 bg-linear-to-r from-[#4318FF] to-[#868CFF] text-white rounded-xl shadow-lg shadow-blue-500/30 active:scale-95 transition-all"
                   title="Download Monthly Report"
                 >
                   <Download size={18} strokeWidth={2.5} />
@@ -409,9 +411,9 @@ const Calendar = ({
               },
               {
                 label: "Half Day",
-                color: "bg-amber-50",
-                border: "border-amber-200",
-                text: "text-amber-700",
+                color: "bg-emerald-50",
+                border: "border-emerald-200",
+                text: "text-emerald-700",
               },
               {
                 label: "Leave",
@@ -451,7 +453,7 @@ const Calendar = ({
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 flex flex-col relative">
+        <div className={`flex flex-col relative ${scrollable ? "flex-1 overflow-y-auto custom-scrollbar pr-1 min-h-0" : ""}`}>
           {/* Weekday Header */}
           <div
             className={`grid grid-cols-7 sticky top-0 bg-white z-20 pb-2 border-b border-gray-50 ${
@@ -535,6 +537,7 @@ const Calendar = ({
                 statusLabel = "Blocked";
               } else if (
                 entry?.status === "Full Day" ||
+                entry?.status === "Half Day" ||
                 entry?.status === "WFH" ||
                 entry?.status === "Client Visit"
               ) {
@@ -544,13 +547,12 @@ const Calendar = ({
                   statusLabel = "";
                 }
               } else if (
-                entry?.status === "Half Day" ||
-                isIncomplete // Using Amber for Incomplete
+                isIncomplete // Only Not Updated remains Amber
               ) {
                 cellClass = `bg-amber-50 border-transparent hover:bg-amber-100 ${baseHover}`;
                 // textClass = "text-amber-700 font-bold";
                 if (!entry?.totalHours || Number(entry.totalHours) === 0) {
-                  statusLabel = isIncomplete ? "Not Updated" : "";
+                  statusLabel = "Not Updated";
                 }
               } else if (entry?.status === "Leave") {
                 cellClass = `bg-red-50 border-transparent hover:bg-red-100 ${baseHover}`;
@@ -685,17 +687,17 @@ const Calendar = ({
                              ? "text-white bg-gray-600"
                              : holiday
                                ? "text-white bg-[#1890FF]/70"
-                               : entry?.status === "Full Day" && statusLabel
-                                 ? "text-white bg-[#01B574]"
-                                 : (entry?.status === "Half Day" ||
-                                       isIncomplete) &&
-                                     statusLabel
-                                   ? "text-white bg-[#FFB020]/80"
+                                : (entry?.status === "Full Day" ||
+                                    entry?.status === "Half Day") &&
+                                  statusLabel
+                                  ? "text-white bg-[#01B574]"
+                                  : isIncomplete && statusLabel
+                                    ? "text-white bg-[#FFB020]/80"
                                    : entry?.status === "Leave"
                                      ? "text-white bg-red-400/70"
                                      : entry?.isWeekend
                                        ? "text-white bg-red-400/70"
-                                       : "text-white bg-gray-500"
+                                       : "text-white bg-[#64748B]/90"
                          }
                     `}
                   >
@@ -807,7 +809,7 @@ const Calendar = ({
               <button
                 onClick={handleConfirmDownload}
                 disabled={isDownloading}
-                className={`flex-1 px-4 py-3 text-xs font-bold text-white bg-gradient-to-r from-[#4318FF] to-[#868CFF] rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5 active:scale-95 tracking-wide uppercase ${isDownloading ? "opacity-70 cursor-not-allowed" : ""}`}
+                className={`flex-1 px-4 py-3 text-xs font-bold text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5 active:scale-95 tracking-wide uppercase ${isDownloading ? "opacity-70 cursor-not-allowed" : ""}`}
               >
                 {isDownloading ? (
                   <Loader2 size={16} className="animate-spin" />
