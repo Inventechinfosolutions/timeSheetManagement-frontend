@@ -1,6 +1,6 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig, type AxiosResponse } from "axios";
 import { Storage } from "../utils/storage-util";
-import { message } from "antd";
+
  
  
 const TIMEOUT = 1 * 60 * 1000;
@@ -15,7 +15,7 @@ const setLoading = (loading: boolean) => {
   console.log('Loading state:', loading);
 };
  
-const setupAxiosInterceptors = (onUnauthenticated: () => void) => {
+const setupAxiosInterceptors = (_onUnauthenticated: () => void) => {
   const onRequestSuccess = (config: InternalAxiosRequestConfig) => {
     const token =
       Storage.local.get("TimeSheet-authenticationToken") ||
@@ -44,8 +44,8 @@ const setupAxiosInterceptors = (onUnauthenticated: () => void) => {
     return response;
   };
  
-  const onResponseError = (err: AxiosError) => {
-    // const status = err.status || (err.response ? err.response.status : 0);
+  const onResponseError = (_error: AxiosError) => {
+    // const status = error.status || (error.response ? error.response.status : 0);
  
     // if (status === 401) {
     //   // Clear storage

@@ -6,21 +6,37 @@ import {
   fetchMonthlyAttendance,
   AttendanceStatus,
 } from "../reducers/employeeAttendance.reducer";
-import { ArrowLeft, Clock, CalendarCheck, Lock, ShieldAlert, X, Calendar as CalendarIcon } from "lucide-react";
+import {
+  ArrowLeft,
+  Clock,
+  CalendarCheck,
+  Lock,
+  ShieldAlert,
+  X,
+  Calendar as CalendarIcon,
+} from "lucide-react";
 import AdminEmployeeCalendarView from "./AdminEmployeeCalendarView";
 import MobileResponsiveCalendarPage from "../EmployeeDashboard/MobileResponsiveCalendarPage";
-import { applyBlocker, fetchBlockers, deleteBlocker } from "../reducers/timesheetBlocker.reducer";
+import {
+  applyBlocker,
+  fetchBlockers,
+  deleteBlocker,
+} from "../reducers/timesheetBlocker.reducer";
 
 const AdminEmployeeCalenderWrapper = () => {
   const { employeeId } = useParams<{ employeeId: string }>();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
-  const [displayDate, setDisplayDate] = useState(new Date());
+  const [displayDate] = useState(new Date());
 
   const { records } = useAppSelector((state: RootState) => state.attendance);
-  const { entities } = useAppSelector((state: RootState) => state.employeeDetails);
-  const { blockers } = useAppSelector((state: RootState) => state.timesheetBlocker);
+  const { entities } = useAppSelector(
+    (state: RootState) => state.employeeDetails,
+  );
+  const { blockers } = useAppSelector(
+    (state: RootState) => state.timesheetBlocker,
+  );
   const { currentUser } = useAppSelector((state) => state.user);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -122,12 +138,12 @@ const AdminEmployeeCalenderWrapper = () => {
             Back to employee list
           </span>
         </button>
-        
+
         <div className="flex items-center justify-between gap-4">
           <h2 className="text-2xl md:text-4xl font-black text-[#2B3674] leading-tight truncate">
             {employee.fullName || employee.name}
           </h2>
-          
+
           <button
             onClick={() => setIsModalOpen(true)}
             className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#4318FF] text-white rounded-xl text-[10px] md:text-xs font-bold shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 active:scale-95 transition-all shrink-0 uppercase tracking-widest"
@@ -184,8 +200,8 @@ const AdminEmployeeCalenderWrapper = () => {
       {/* Calendar View (Now part of the outer scroll) */}
       <div className="shrink-0">
         {isMobile ? (
-          <MobileResponsiveCalendarPage 
-            employeeId={employeeId} 
+          <MobileResponsiveCalendarPage
+            employeeId={employeeId}
             navigationPath="/admin-dashboard/timesheet/:employeeId"
           />
         ) : (

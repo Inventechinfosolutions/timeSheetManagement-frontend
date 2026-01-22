@@ -1,4 +1,4 @@
-import { Calendar, Clock, Save } from "lucide-react";
+import { Calendar, Clock } from "lucide-react";
 import { TimesheetEntry } from "../types";
 
 interface MobileTimesheetCardProps {
@@ -8,12 +8,12 @@ interface MobileTimesheetCardProps {
   handleUpdateEntry?: (
     index: number,
     field: keyof TimesheetEntry,
-    value: any
+    value: any,
   ) => void;
   handleSave?: (index: number) => void;
   calculateTotal: (
     login: string | null | undefined,
-    logout: string | null | undefined
+    logout: string | null | undefined,
   ) => string;
 
   CustomTimePicker?: any;
@@ -26,7 +26,7 @@ export const MobileTimesheetCard = ({
   index,
   isEditable,
   handleUpdateEntry,
-  handleSave,
+  // handleSave,
   calculateTotal,
   CustomTimePicker,
   highlightedRow,
@@ -106,7 +106,9 @@ export const MobileTimesheetCard = ({
         <div className="flex items-center gap-3">
           <div
             className={`w-12 h-10 rounded-xl flex items-center justify-center ${
-              day.isToday ? "bg-teal-50 text-[#00A3C4]" : "bg-gray-50 text-gray-400"
+              day.isToday
+                ? "bg-teal-50 text-[#00A3C4]"
+                : "bg-gray-50 text-gray-400"
             }`}
           >
             <Calendar size={20} />
@@ -132,17 +134,19 @@ export const MobileTimesheetCard = ({
                           day.status === "Full Day"
                             ? "bg-[#01B574] text-white"
                             : day.status === "WFH"
-                            ? "bg-[#A3AED0] text-white"
-                            : day.status === "Leave"
-                            ? "bg-[#EE5D50] text-white"
-                            : day.status === "Half Day"
-                            ? "bg-[#FFB547] text-white"
-                            : day.status === "Client Visit"
-                            ? "bg-[#6366F1] text-white"
-                            : day.status === "Pending" ||
-                              (!day.isFuture && day.loginTime && !day.logoutTime)
-                            ? "bg-[#F6AD55] text-white"
-                            : "text-gray-400"
+                              ? "bg-[#A3AED0] text-white"
+                              : day.status === "Leave"
+                                ? "bg-[#EE5D50] text-white"
+                                : day.status === "Half Day"
+                                  ? "bg-[#FFB547] text-white"
+                                  : day.status === "Client Visit"
+                                    ? "bg-[#6366F1] text-white"
+                                    : day.status === "Pending" ||
+                                        (!day.isFuture &&
+                                          day.loginTime &&
+                                          !day.logoutTime)
+                                      ? "bg-[#F6AD55] text-white"
+                                      : "text-gray-400"
                         }
                     `}
           >
@@ -166,7 +170,8 @@ export const MobileTimesheetCard = ({
             />
           ) : (
             <div className="flex items-center gap-2 text-sm font-bold text-[#2B3674]">
-              {day.loginTime || "--:--"} <Clock size={12} className="text-gray-400" />
+              {day.loginTime || "--:--"}{" "}
+              <Clock size={12} className="text-gray-400" />
             </div>
           )}
         </div>
@@ -185,7 +190,8 @@ export const MobileTimesheetCard = ({
             />
           ) : (
             <div className="flex items-center gap-2 text-sm font-bold text-[#2B3674]">
-              {day.logoutTime || "--:--"} <Clock size={12} className="text-gray-400" />
+              {day.logoutTime || "--:--"}{" "}
+              <Clock size={12} className="text-gray-400" />
             </div>
           )}
         </div>
@@ -199,7 +205,6 @@ export const MobileTimesheetCard = ({
           </p>
         </div>
       </div>
-
     </div>
   );
 };

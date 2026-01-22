@@ -26,10 +26,7 @@ import {
 } from "../reducers/employeeAttendance.reducer";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import { downloadPdf } from "../utils/downloadPdf";
-import {
-  generateMonthlyEntries,
-  generateRangeEntries,
-} from "../utils/attendanceUtils";
+import { generateRangeEntries } from "../utils/attendanceUtils";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -59,13 +56,14 @@ const AdminDashboard = () => {
   } | null>(null);
 
   // Chart Logic States
-  const [sortOption, setSortOption] = useState("hours_desc");
-  const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
-  const sortDropdownRef = useRef<HTMLDivElement>(null);
+  // Chart Logic States
+  const [sortOption] = useState("hours_desc");
+  // const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
+  // const sortDropdownRef = useRef<HTMLDivElement>(null);
 
-  const [comparisonDept, setComparisonDept] = useState("All");
-  const [isComparisonDeptOpen, setIsComparisonDeptOpen] = useState(false);
-  const comparisonDeptRef = useRef<HTMLDivElement>(null);
+  // const [comparisonDept] = useState("All");
+  // const [isComparisonDeptOpen, setIsComparisonDeptOpen] = useState(false);
+  // const comparisonDeptRef = useRef<HTMLDivElement>(null);
 
   // Export Modal States
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
@@ -117,12 +115,6 @@ const AdminDashboard = () => {
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        comparisonDeptRef.current &&
-        !comparisonDeptRef.current.contains(event.target as Node)
-      ) {
-        setIsComparisonDeptOpen(false);
-      }
       if (
         modalDeptRef.current &&
         !modalDeptRef.current.contains(event.target as Node)

@@ -29,11 +29,11 @@ const EmployeeTimesheetView = ({
 }: FullTimesheetProps) => {
   // Calculate summary statistics
   const presentDays = entries.filter(
-    (e) => e.status === "Full Day" || e.status === "Half Day"
+    (e) => e.status === "Full Day" || e.status === "Half Day",
   ).length;
 
   const totalHours = Math.round(
-    entries.reduce((acc, curr) => acc + (curr.totalHours || 0), 0)
+    entries.reduce((acc, curr) => acc + (curr.totalHours || 0), 0),
   );
 
   const incompleteDays = entries.filter(
@@ -41,7 +41,9 @@ const EmployeeTimesheetView = ({
       !day.isFuture &&
       !day.isToday &&
       !day.isWeekend &&
-      (day.status === "Pending" || day.status === "Not Updated" || (!day.totalHours && day.status !== "Leave"))
+      (day.status === "Pending" ||
+        day.status === "Not Updated" ||
+        (!day.totalHours && day.status !== "Leave")),
   ).length;
 
   // PDF Download State
@@ -55,7 +57,6 @@ const EmployeeTimesheetView = ({
       return;
     }
 
-    
     const filteredEntries = entries.filter((entry) => {
       // Normalize entry date to YYYY-MM-DD string for safe comparison with input values
       const d = new Date(entry.fullDate);
@@ -76,8 +77,8 @@ const EmployeeTimesheetView = ({
     const tableBody = filteredEntries.map((entry) => [
       entry.formattedDate,
       entry.dayName,
-      entry.status,
-      entry.totalHours || "0",
+      entry.status || "",
+      (entry.totalHours || "0").toString(),
     ]);
 
     autoTable(doc, {
@@ -258,7 +259,8 @@ const EmployeeTimesheetView = ({
               if (
                 !day.isFuture &&
                 !day.isToday &&
-                (!day.totalHours && day.status !== "Leave")
+                !day.totalHours &&
+                day.status !== "Leave"
               ) {
                 return (
                   <div key={day.date}>
@@ -396,7 +398,7 @@ const EmployeeTimesheetView = ({
 
                     {/* Total Hours */}
                     <div className="flex justify-center font-bold text-[#2B3674]">
-                      {day.totalHours ? day.totalHours : '0'}
+                      {day.totalHours ? day.totalHours : "0"}
                     </div>
 
                     {/* Status Badge */}
@@ -407,10 +409,10 @@ const EmployeeTimesheetView = ({
                                               day.status === "Full Day"
                                                 ? "bg-[#01B574] text-white shadow-[0_2px_10px_-2px_rgba(1,181,116,0.4)]"
                                                 : day.status === "Leave"
-                                                ? "bg-[#EE5D50] text-white shadow-[0_2px_10px_-2px_rgba(238,93,80,0.4)]"
-                                                : day.status === "Half Day"
-                                                ? "bg-[#FFB547] text-white shadow-[0_2px_10px_-2px_rgba(255,181,71,0.4)]"
-                                                : "text-gray-400"
+                                                  ? "bg-[#EE5D50] text-white shadow-[0_2px_10px_-2px_rgba(238,93,80,0.4)]"
+                                                  : day.status === "Half Day"
+                                                    ? "bg-[#FFB547] text-white shadow-[0_2px_10px_-2px_rgba(255,181,71,0.4)]"
+                                                    : "text-gray-400"
                                             }
                                         `}
                       >
@@ -444,10 +446,10 @@ const EmployeeTimesheetView = ({
                                               day.status === "Full Day"
                                                 ? "bg-[#01B574] text-white shadow-[0_2px_10px_-2px_rgba(1,181,116,0.4)]"
                                                 : day.status === "Leave"
-                                                ? "bg-[#EE5D50] text-white shadow-[0_2px_10px_-2px_rgba(238,93,80,0.4)]"
-                                                : day.status === "Half Day"
-                                                ? "bg-[#FFB547] text-white shadow-[0_2px_10px_-2px_rgba(255,181,71,0.4)]"
-                                                : "text-gray-400"
+                                                  ? "bg-[#EE5D50] text-white shadow-[0_2px_10px_-2px_rgba(238,93,80,0.4)]"
+                                                  : day.status === "Half Day"
+                                                    ? "bg-[#FFB547] text-white shadow-[0_2px_10px_-2px_rgba(255,181,71,0.4)]"
+                                                    : "text-gray-400"
                                             }
                                         `}
                       >
@@ -461,7 +463,7 @@ const EmployeeTimesheetView = ({
                           Total
                         </span>
                         <div className="font-bold text-[#2B3674]">
-                          {day.totalHours ? day.totalHours : '0'}
+                          {day.totalHours ? day.totalHours : "0"}
                         </div>
                       </div>
                     </div>

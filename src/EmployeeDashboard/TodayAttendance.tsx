@@ -9,7 +9,6 @@ import {
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { fetchMonthlyAttendance } from "../reducers/employeeAttendance.reducer";
 import { getEntity, setCurrentUser } from "../reducers/employeeDetails.reducer";
-import { fetchHolidaysByMonthAndYear } from "../reducers/masterHoliday.reducer";
 import { generateMonthlyEntries } from "../utils/attendanceUtils";
 import AttendanceViewWrapper from "./CalenderViewWrapper";
 import AttendancePieChart from "./AttendancePieChart";
@@ -36,7 +35,7 @@ const TodayAttendance = ({
   );
   const { currentUser } = useAppSelector((state: RootState) => state.user);
   const { holidays } = useAppSelector(
-    (state: RootState) => state.masterHolidays
+    (state: RootState) => state.masterHolidays,
   );
   const currentEmployeeId = entity?.employeeId;
   const detailsFetched = useRef(false);
@@ -104,7 +103,7 @@ const TodayAttendance = ({
       });
 
       if (isMasterHoliday) {
-         if (
+        if (
           day.status !== "Full Day" &&
           day.status !== "Half Day" &&
           day.status !== "WFH" &&
@@ -220,7 +219,6 @@ const TodayAttendance = ({
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
-
         {/* Middle Section: Info Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Card 1 */}
@@ -321,16 +319,16 @@ const TodayAttendance = ({
 
         {/* Charts Section */}
         <div className="w-full md:w-1/2 mx-auto">
-          <AttendancePieChart 
+          <AttendancePieChart
             data={records.filter((r) => {
-               const rawDate = r.workingDate || (r as any).working_date;
-               if (!rawDate) return false;
-               const d = new Date(rawDate);
-               return (
-                 d.getMonth() === calendarDate.getMonth() && 
-                 d.getFullYear() === calendarDate.getFullYear()
-               );
-            })} 
+              const rawDate = r.workingDate || (r as any).working_date;
+              if (!rawDate) return false;
+              const d = new Date(rawDate);
+              return (
+                d.getMonth() === calendarDate.getMonth() &&
+                d.getFullYear() === calendarDate.getFullYear()
+              );
+            })}
             currentMonth={calendarDate}
             onMonthChange={(date) => {
               setCalendarDate(date);

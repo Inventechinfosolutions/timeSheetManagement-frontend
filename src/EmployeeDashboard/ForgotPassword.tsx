@@ -1,13 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Mail, ArrowLeft, Loader2, CheckCircle, Shield, Search } from 'lucide-react';
-import { Modal, Input, message } from 'antd';
-import inventechLogo from '../assets/inventech-logo.jpg';
-import { useAppSelector, useAppDispatch } from '../hooks';
-import { getEntities, setCurrentUser } from '../reducers/employeeDetails.reducer';
-import { forgotPasswordOtp, clearAllPublicState, clearOtpState } from '../reducers/public.reducer';
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Mail, ArrowLeft, Loader2, CheckCircle, Search } from "lucide-react";
+import { Modal, Input, message } from "antd";
+import inventechLogo from "../assets/inventech-logo.jpg";
+import { useAppSelector, useAppDispatch } from "../hooks";
+import {
+  getEntities,
+  setCurrentUser,
+} from "../reducers/employeeDetails.reducer";
+import {
+  forgotPasswordOtp,
+  clearAllPublicState,
+  clearOtpState,
+} from "../reducers/public.reducer";
 
-type ResetStep = 'ID' | 'EMAIL' | 'SUCCESS';
+type ResetStep = "ID" | "EMAIL" | "SUCCESS";
 
 const ForgotPassword: React.FC = () => {
   const navigate = useNavigate();
@@ -20,27 +27,30 @@ const ForgotPassword: React.FC = () => {
       dispatch(clearOtpState());
     };
   }, [dispatch]);
-  
+
   // Redux State
-  const { entity } = useAppSelector((state) => state.employeeDetails);
-  const { otpLoading, otpError, otpSent } = useAppSelector((state) => state.public);
-  
+  // const { entity } = useAppSelector((state) => state.employeeDetails);
+  const { otpLoading, otpError, otpSent } = useAppSelector(
+    (state) => state.public,
+  );
+
   // Local State
-  const [step, setStep] = useState<ResetStep>('ID');
-  const [email, setEmail] = useState('');
-  const [loginId, setLoginId] = useState('');
+  const [step, setStep] = useState<ResetStep>("ID");
+  const [email, setEmail] = useState("");
+  const [loginId, setLoginId] = useState("");
   const [error, setError] = useState<string | null>(null);
-  
+
   // Modal State for ID Lookup
   const [isIdModalOpen, setIsIdModalOpen] = useState(true);
-  const [searchId, setSearchId] = useState('');
+  const [searchId, setSearchId] = useState("");
   const [isIdentifying, setIsIdentifying] = useState(false);
 
   // Sync Redux step changes with Local step
   useEffect(() => {
-    if (otpSent && step === 'EMAIL') { // 'otpSent' here means 'link sent' based on backend response
-      setStep('SUCCESS');
-      message.success('Reset link sent to your email');
+    if (otpSent && step === "EMAIL") {
+      // 'otpSent' here means 'link sent' based on backend response
+      setStep("SUCCESS");
+      message.success("Reset link sent to your email");
     }
     if (otpError) {
       setError(otpError);
@@ -50,27 +60,29 @@ const ForgotPassword: React.FC = () => {
   // Handle ID Identification
   const handleIdSubmit = async () => {
     if (!searchId.trim()) {
-      message.error('Please enter your Employee ID');
+      message.error("Please enter your Employee ID");
       return;
     }
 
     setIsIdentifying(true);
     try {
-      const response: any = await dispatch(getEntities({ search: searchId.trim() })).unwrap();
+      const response: any = await dispatch(
+        getEntities({ search: searchId.trim() }),
+      ).unwrap();
       const list = Array.isArray(response) ? response : response.data || [];
       const foundUser = list.length > 0 ? list[0] : null;
 
       if (foundUser) {
         dispatch(setCurrentUser(foundUser));
-        setEmail(foundUser.email || '');
+        setEmail(foundUser.email || "");
         setLoginId(foundUser.employeeId || searchId.trim()); // Use internal ID if available, else what was typed
         setIsIdModalOpen(false);
-        setStep('EMAIL');
+        setStep("EMAIL");
       } else {
-        message.error('No employee found with this ID');
+        message.error("No employee found with this ID");
       }
     } catch (err) {
-      message.error('Error searching for employee');
+      message.error("Error searching for employee");
     } finally {
       setIsIdentifying(false);
     }
@@ -85,10 +97,10 @@ const ForgotPassword: React.FC = () => {
 
   const resetAll = () => {
     dispatch(clearAllPublicState());
-    navigate('/landing');
+    navigate("/landing");
   };
 
-  if (step === 'SUCCESS') {
+  if (step === "SUCCESS") {
     return (
       <div className="min-h-screen w-full flex items-center justify-center p-4 bg-[#1c9cc0] relative overflow-hidden">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -122,19 +134,26 @@ const ForgotPassword: React.FC = () => {
       <Modal
         title={null}
         open={isIdModalOpen}
-        onCancel={() => navigate('/landing')}
+        onCancel={() => navigate("/landing")}
         footer={null}
         centered
         closable={false}
         styles={{
-            mask: { backdropFilter: 'blur(8px)', backgroundColor: 'rgba(28, 156, 192, 0.4)' },
-            content: { borderRadius: '24px', padding: 0, overflow: 'hidden' }
+          mask: {
+            backdropFilter: "blur(8px)",
+            backgroundColor: "rgba(28, 156, 192, 0.4)",
+          },
+          body: { borderRadius: "24px", padding: 0, overflow: "hidden" },
         }}
       >
         <div className="p-8 sm:p-10 bg-white text-center">
           <Search className="w-12 h-12 text-[#1c9cc0] mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Identify Yourself</h2>
-          <p className="text-gray-500 text-sm mb-8">Please enter your Employee ID to proceed.</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Identify Yourself
+          </h2>
+          <p className="text-gray-500 text-sm mb-8">
+            Please enter your Employee ID to proceed.
+          </p>
           <div className="space-y-6">
             <Input
               placeholder="Employee ID"
@@ -149,7 +168,11 @@ const ForgotPassword: React.FC = () => {
               disabled={isIdentifying}
               className="w-full bg-[#1c9cc0] text-white font-bold py-3.5 rounded-xl shadow-lg disabled:opacity-70 flex items-center justify-center gap-2"
             >
-              {isIdentifying ? <Loader2 className="animate-spin" /> : 'IDENTIFY EMPLOYEE'}
+              {isIdentifying ? (
+                <Loader2 className="animate-spin" />
+              ) : (
+                "IDENTIFY EMPLOYEE"
+              )}
             </button>
           </div>
         </div>
@@ -158,7 +181,7 @@ const ForgotPassword: React.FC = () => {
       {/* Main Container */}
       <div className="w-full max-w-md bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 p-8 sm:p-10 relative z-10">
         <button
-          onClick={() => navigate('/landing')}
+          onClick={() => navigate("/landing")}
           className="absolute left-6 top-6 text-blue-100 hover:text-white transition-colors flex items-center gap-1 text-xs font-semibold"
         >
           <ArrowLeft size={16} /> BACK
@@ -166,13 +189,18 @@ const ForgotPassword: React.FC = () => {
 
         <div className="text-center mb-8 mt-4">
           <div className="w-16 h-16 bg-white/20 rounded-2xl p-2 mx-auto mb-4 flex items-center justify-center">
-             <img src={inventechLogo} alt="Logo" className="w-full h-full object-contain mix-blend-multiply opacity-90 rounded-xl" />
+            <img
+              src={inventechLogo}
+              alt="Logo"
+              className="w-full h-full object-contain mix-blend-multiply opacity-90 rounded-xl"
+            />
           </div>
           <h1 className="text-2xl font-bold text-white mb-2">
-            {step === 'EMAIL' && 'Confirm Email'}
+            {step === "EMAIL" && "Confirm Email"}
           </h1>
           <p className="text-blue-100 text-sm opacity-90">
-            {step === 'EMAIL' && 'We will send a password reset link to your registered email.'}
+            {step === "EMAIL" &&
+              "We will send a password reset link to your registered email."}
           </p>
         </div>
 
@@ -183,12 +211,18 @@ const ForgotPassword: React.FC = () => {
         )}
 
         {/* STEP 1: SEND LINK FORM */}
-        {step === 'EMAIL' && (
+        {step === "EMAIL" && (
           <form onSubmit={handleSendLink} className="space-y-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-blue-100 uppercase tracking-widest ml-1">Registered Email</label>
+              <label className="text-[10px] font-bold text-blue-100 uppercase tracking-widest ml-1">
+                Registered Email
+              </label>
               <div className="relative">
-                <Input value={email} readOnly className="pl-10 h-12 bg-white/20 border-white/30 text-white rounded-xl" />
+                <Input
+                  value={email}
+                  readOnly
+                  className="pl-10 h-12 bg-white/20 border-white/30 text-white rounded-xl"
+                />
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-100 w-5 h-5" />
               </div>
             </div>
@@ -197,7 +231,11 @@ const ForgotPassword: React.FC = () => {
               disabled={otpLoading}
               className="w-full bg-white text-[#1c9cc0] font-bold py-3.5 rounded-xl shadow-lg flex items-center justify-center gap-2"
             >
-              {otpLoading ? <Loader2 className="animate-spin" /> : 'SEND RESET LINK'}
+              {otpLoading ? (
+                <Loader2 className="animate-spin" />
+              ) : (
+                "SEND RESET LINK"
+              )}
             </button>
           </form>
         )}

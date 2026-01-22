@@ -11,14 +11,14 @@ import {
 } from "lucide-react";
 import { useAppSelector } from "../hooks";
 import { useParams } from "react-router-dom";
- 
+
 interface SidebarLayoutProps {
   children: React.ReactNode;
   activeTab?: string;
   onTabChange?: (tab: string) => void;
   onLogout?: () => void;
 }
- 
+
 const SidebarLayout = ({
   children,
   activeTab = "Dashboard",
@@ -29,7 +29,7 @@ const SidebarLayout = ({
   const [isLocked, setIsLocked] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const { tab } = useParams<{ tab?: string }>();
- 
+
   // Get employee details from Redux
   const { entity } = useAppSelector((state) => state.employeeDetails);
 
@@ -52,7 +52,7 @@ const SidebarLayout = ({
 
   // Sidebar opens if it's either hovered OR locked
   const isOpen = isHovered || isLocked;
- 
+
   const sidebarItems = [
     { name: "Dashboard", icon: LayoutGrid },
     { name: "My Timesheet", icon: Calendar },
@@ -60,7 +60,7 @@ const SidebarLayout = ({
     { name: "My Profile", icon: User },
     //{ name: 'Change Password', icon: Lock },
   ];
- 
+
   return (
     <div className="flex w-full h-full bg-[#f8f9fa] font-sans text-[#2B3674] overflow-hidden relative">
       {/* Mobile Menu Trigger - Floating Pulse Button */}
@@ -82,7 +82,7 @@ const SidebarLayout = ({
           </span>
         </div>
       </button>
- 
+
       {/* Premium Mobile Backdrop */}
       <div
         className={`md:hidden fixed inset-0 bg-[#111c44]/60 backdrop-blur-md z-2000 transition-all duration-500 ease-in-out
@@ -94,7 +94,7 @@ const SidebarLayout = ({
                 `}
         onClick={() => setIsMobileOpen(false)}
       />
- 
+
       {/* Spacer to prevent layout shift when locked.
                 When unlocked, it stays small (w-20). When locked, it takes full space (w-64).
             */}
@@ -103,7 +103,7 @@ const SidebarLayout = ({
           isOpen ? "w-64" : "w-20"
         } hidden md:block`}
       ></div>
- 
+
       <aside
         className={`fixed top-0 md:absolute md:top-0 md:left-0 h-full md:h-full flex flex-col shrink-0 transition-all duration-300 ease-in-out z-2001 md:z-30 text-white
                     ${
@@ -146,7 +146,7 @@ const SidebarLayout = ({
             <div className="shrink-0 transition-transform duration-300 hover:scale-110 p-2 bg-white/10 rounded-xl backdrop-blur-sm">
               <AlarmClock className="w-6 h-6 text-white" />
             </div>
- 
+
             <div
               className={`flex flex-col transition-all duration-300 origin-left
                             ${
@@ -164,7 +164,7 @@ const SidebarLayout = ({
               </span>
             </div>
           </div>
- 
+
           {/* Lock/Unlock Button */}
           <button
             onClick={() => setIsLocked(!isLocked)}
@@ -180,7 +180,7 @@ const SidebarLayout = ({
             {isLocked ? <Lock size={16} /> : <Unlock size={16} />}
           </button>
         </div>
- 
+
         {/* Divider */}
         <div className="px-4 mb-1">
           <div
@@ -189,10 +189,10 @@ const SidebarLayout = ({
             }`}
           ></div>
         </div>
- 
+
         {/* Navigation Items */}
         <nav
-          className="flex-1 px-4 space-y-2 mt-0.5 overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [&::webkit-scrollbar]:w-0 [&::-webkit-scrollbar]:h-0"
+          className="flex-1 px-4 space-y-2 mt-0.5 overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [&::-webkit-scrollbar]:w-0 [&::-webkit-scrollbar]:h-0"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
           {sidebarItems.map((item) => {
@@ -225,7 +225,7 @@ const SidebarLayout = ({
                       }`}
                     />
                   </div>
- 
+
                   {/* Label */}
                   <span
                     className={`text-sm whitespace-nowrap transition-all duration-300 relative z-10
@@ -239,7 +239,7 @@ const SidebarLayout = ({
                     {item.name}
                   </span>
                 </button>
- 
+
                 {/* Tooltip */}
                 {!isOpen && !isMobileOpen && (
                   <div className="hidden md:block absolute left-[calc(100%+10px)] top-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#111c44] text-white text-xs font-bold rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 whitespace-nowrap z-50">
@@ -252,12 +252,12 @@ const SidebarLayout = ({
           })}
         </nav>
       </aside>
- 
+
       <main className="flex flex-col relative no-scrollbar bg-[#F4F7FE] w-full">
         {children}
       </main>
     </div>
   );
 };
- 
+
 export default SidebarLayout;

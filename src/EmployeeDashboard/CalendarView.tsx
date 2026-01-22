@@ -45,7 +45,7 @@ const Calendar = ({
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { records } = useAppSelector((state: RootState) => state.attendance);
-    const { entity, entities } = useAppSelector(
+  const { entity, entities } = useAppSelector(
     (state: RootState) => state.employeeDetails,
   );
   const { currentUser } = useAppSelector((state: RootState) => state.user);
@@ -62,7 +62,7 @@ const Calendar = ({
     propEmployeeId ||
     entity?.employeeId ||
     (!isAdmin ? currentUser?.employeeId : undefined);
-  const holidaysFetched = useRef(false);
+  // const holidaysFetched = useRef(false);
   const attendanceFetchedKey = useRef<string | null>(null);
 
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
@@ -521,17 +521,17 @@ const Calendar = ({
               const baseHover =
                 "hover:shadow-md hover:-translate-y-1 transition-all duration-300";
               let cellClass = `bg-white border-gray-100 ${baseHover}`;
-              let textClass = "text-[#2B3674]";
+              // let textClass = "text-[#2B3674]";
               let statusLabel = entry?.status || "-";
 
               if (isToday) {
                 cellClass = `bg-white ring-2 ring-[#4318FF] shadow-lg shadow-blue-200 z-10 ${baseHover}`;
-                textClass = "text-[#4318FF]";
+                // textClass = "text-[#4318FF]";
                 if (statusLabel === "-") statusLabel = "";
               } else if (isBlocked) {
                 cellClass =
                   "bg-gray-200 opacity-90 grayscale border border-gray-200 shadow-inner cursor-not-allowed";
-                textClass = "text-gray-500";
+                // textClass = "text-gray-500";
                 statusLabel = "Blocked";
               } else if (
                 entry?.status === "Full Day" ||
@@ -539,7 +539,7 @@ const Calendar = ({
                 entry?.status === "Client Visit"
               ) {
                 cellClass = `bg-emerald-50 border-transparent hover:bg-emerald-100 ${baseHover}`;
-                textClass = "text-emerald-700 font-bold";
+                // textClass = "text-emerald-700 font-bold";
                 if (!entry?.totalHours || Number(entry.totalHours) === 0) {
                   statusLabel = "";
                 }
@@ -548,24 +548,24 @@ const Calendar = ({
                 isIncomplete // Using Amber for Incomplete
               ) {
                 cellClass = `bg-amber-50 border-transparent hover:bg-amber-100 ${baseHover}`;
-                textClass = "text-amber-700 font-bold";
+                // textClass = "text-amber-700 font-bold";
                 if (!entry?.totalHours || Number(entry.totalHours) === 0) {
                   statusLabel = isIncomplete ? "Not Updated" : "";
                 }
               } else if (entry?.status === "Leave") {
                 cellClass = `bg-red-50 border-transparent hover:bg-red-100 ${baseHover}`;
-                textClass = "text-red-700 font-bold";
+                // textClass = "text-red-700 font-bold";
               } else if (holiday) {
                 cellClass = `bg-blue-50 border-transparent hover:bg-blue-100 ${baseHover}`;
-                textClass = "text-blue-700 font-bold";
+                // textClass = "text-blue-700 font-bold";
                 statusLabel = holiday.name;
               } else if (entry?.isWeekend) {
                 cellClass = `bg-red-50 border-transparent text-red-600 hover:bg-red-100 ${baseHover}`;
-                textClass = "text-red-600 font-bold";
+                // textClass = "text-red-600 font-bold";
                 statusLabel = "WEEKEND";
               } else if (entry?.isFuture) {
                 cellClass = `bg-white border-transparent hover:bg-gray-50 ${baseHover}`;
-                textClass = "text-gray-300 font-bold";
+                // textClass = "text-gray-300 font-bold";
                 statusLabel = "UPCOMING";
               }
 

@@ -19,7 +19,6 @@ import {
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import {
   generateMonthlyEntries,
-  generateRangeEntries,
   isEditableMonth,
 } from "../utils/attendanceUtils";
 import { fetchBlockers } from "../reducers/timesheetBlocker.reducer";
@@ -551,7 +550,7 @@ const MyTimesheet = ({
     1,
   ).getDay();
   const paddingDays = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
-  const weekdays = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+  // const weekdays = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
   if (isMobile) {
     return (
@@ -836,7 +835,8 @@ const MyTimesheet = ({
               border = "border-[#FFB020]/20";
             }
             if (day.isToday) {
-              bg = "bg-white ring-2 ring-[#4318FF] shadow-lg shadow-blue-500/20 z-10";
+              bg =
+                "bg-white ring-2 ring-[#4318FF] shadow-lg shadow-blue-500/20 z-10";
             }
 
             return (

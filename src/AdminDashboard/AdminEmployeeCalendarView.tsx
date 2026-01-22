@@ -4,7 +4,7 @@ import { useAppDispatch, useAppSelector } from "../hooks";
 import { RootState } from "../store";
 import {
   fetchMonthlyAttendance,
-  AttendanceStatus,
+  // AttendanceStatus,
 } from "../reducers/employeeAttendance.reducer";
 import Calendar from "../EmployeeDashboard/CalendarView";
 import { ArrowLeft, ClipboardList } from "lucide-react";

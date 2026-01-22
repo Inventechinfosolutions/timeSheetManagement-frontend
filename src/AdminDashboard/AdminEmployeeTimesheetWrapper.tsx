@@ -24,9 +24,7 @@ const AdminEmployeeTimesheetWrapper = () => {
   const { entities, entity, loading } = useAppSelector(
     (state) => state.employeeDetails,
   );
-  const { blockers, loading: blockerLoading } = useAppSelector(
-    (state) => state.timesheetBlocker,
-  );
+  const { blockers } = useAppSelector((state) => state.timesheetBlocker);
   const { currentUser } = useAppSelector((state) => state.user);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -141,14 +139,16 @@ const AdminEmployeeTimesheetWrapper = () => {
               Back to employee list
             </span>
           </button>
-          
+
           <div className="flex items-center justify-between gap-4">
-            <h2 className={`font-black text-[#2B3674] truncate leading-tight ${isMobile ? 'text-2xl' : 'text-4xl'}`}>
+            <h2
+              className={`font-black text-[#2B3674] truncate leading-tight ${isMobile ? "text-2xl" : "text-4xl"}`}
+            >
               {employee
                 ? employee.fullName || employee.name || employee.employeeId
                 : "Loading..."}
             </h2>
-            
+
             <button
               onClick={() => setIsModalOpen(true)}
               className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#4318FF] text-white rounded-xl text-[10px] md:text-xs font-bold shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 active:scale-95 transition-all shrink-0 uppercase tracking-widest"

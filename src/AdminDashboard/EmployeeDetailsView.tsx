@@ -11,7 +11,6 @@ import {
   Building,
   CreditCard,
   ArrowLeft,
-  Lock,
   CheckCircle,
   X,
   AlertCircle,

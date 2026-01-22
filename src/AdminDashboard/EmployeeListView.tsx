@@ -28,8 +28,6 @@ import {
   Building,
   Loader2,
   RefreshCw,
-  Copy,
-  ExternalLink,
   CheckCircle,
   CreditCard,
 } from "lucide-react";
@@ -69,7 +67,7 @@ const EmployeeListView = () => {
     loginId?: string;
     password?: string;
   } | null>(null);
-  const [copySuccess, setCopySuccess] = useState<string>("");
+  // const [copySuccess, setCopySuccess] = useState<string>("");
 
   const departments = [
     "All",
@@ -278,14 +276,6 @@ const EmployeeListView = () => {
     });
   };
 
-  const copyToClipboard = (text: string, field: string) => {
-    if (text) {
-      navigator.clipboard.writeText(text);
-      setCopySuccess(field);
-      setTimeout(() => setCopySuccess(""), 2000);
-    }
-  };
-
   // Handle success after employee creation
   useEffect(() => {
     if (updateSuccess && isCreateModalOpen) {
@@ -461,8 +451,10 @@ const EmployeeListView = () => {
                         // Only show button if user needs reset AND 24 hours have passed
                         const createdDate = new Date(emp.createdAt).getTime();
                         const now = new Date().getTime();
-                        const diffHours = (now - createdDate) / (1000 * 60 * 60);
-                        const shouldShowButton = emp.resetRequired && !emp.isActive && diffHours >= 24;
+                        const diffHours =
+                          (now - createdDate) / (1000 * 60 * 60);
+                        const shouldShowButton =
+                          emp.resetRequired && !emp.isActive && diffHours >= 24;
 
                         return shouldShowButton ? (
                           <button
