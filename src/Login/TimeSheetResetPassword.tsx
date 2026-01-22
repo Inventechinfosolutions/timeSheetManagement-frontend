@@ -16,7 +16,7 @@ import {
 import { AppDispatch, RootState } from "../store";
 import inventechLogo from "../assets/inventech-logo.jpg";
 
-const FcManagerResetPassword: React.FC = () => {
+const StartingTimesheetResetPassword: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const dispatch = useDispatch<AppDispatch>();
@@ -315,4 +315,4 @@ const FcManagerResetPassword: React.FC = () => {
   );
 };
 
-export default FcManagerResetPassword;
+export default StartingTimesheetResetPassword;

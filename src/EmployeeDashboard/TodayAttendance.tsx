@@ -193,7 +193,7 @@ const TodayAttendance = ({
   return (
     <div className="flex flex-col h-full w-full overflow-hidden bg-gray-50/50">
       {/* Header */}
-      <div className="px-6 py-5 bg-gradient-to-r from-blue-100 via-blue-50 to-white border-b border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="px-6 py-5 bg-linear-to-r from-blue-100 via-blue-50 to-white border-b border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-[#1B2559]">
             Employee Dashboard
@@ -222,7 +222,7 @@ const TodayAttendance = ({
         {/* Middle Section: Info Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Card 1 */}
-          <div className="bg-gradient-to-br from-[#81B4FF] to-[#3B82F6] rounded-[12px] p-6 border border-transparent shadow-sm flex flex-col items-start gap-3 h-full relative overflow-hidden group hover:shadow-md transition-all">
+          <div className="bg-linear-to-br from-[#81B4FF] to-[#3B82F6] rounded-[12px] p-6 border border-transparent shadow-sm flex flex-col items-start gap-3 h-full relative overflow-hidden group hover:shadow-md transition-all">
             <div className="p-3 rounded-xl bg-[#E6FFFA] text-[#10B981]">
               <Clock size={24} strokeWidth={2} />
             </div>
@@ -262,7 +262,7 @@ const TodayAttendance = ({
           </div>
 
           {/* Card 2 */}
-          <div className="bg-gradient-to-br from-[#81B4FF] to-[#3B82F6] rounded-[12px] p-6 border border-transparent shadow-sm flex flex-col items-start gap-3 h-full relative overflow-hidden group hover:shadow-md transition-all">
+          <div className="bg-linear-to-br from-[#81B4FF] to-[#3B82F6] rounded-[12px] p-6 border border-transparent shadow-sm flex flex-col items-start gap-3 h-full relative overflow-hidden group hover:shadow-md transition-all">
             <div className="p-3 rounded-xl bg-[#FEF3C7] text-[#F59E0B]">
               <CalendarIcon size={24} strokeWidth={2} />
             </div>
@@ -290,7 +290,7 @@ const TodayAttendance = ({
           </div>
 
           {/* Card 3 */}
-          <div className="bg-gradient-to-br from-[#81B4FF] to-[#3B82F6] rounded-[12px] p-6 border border-transparent shadow-sm flex flex-col items-start gap-3 h-full relative overflow-hidden group hover:shadow-md transition-all">
+          <div className="bg-linear-to-br from-[#81B4FF] to-[#3B82F6] rounded-[12px] p-6 border border-transparent shadow-sm flex flex-col items-start gap-3 h-full relative overflow-hidden group hover:shadow-md transition-all">
             <div className="p-3 rounded-xl bg-[#FEE2E2] text-[#E11D48]">
               <AlertTriangle size={24} strokeWidth={2} />
             </div>
@@ -305,7 +305,8 @@ const TodayAttendance = ({
                     currentMonthEntries.filter(
                       (day) =>
                         day.status === "Not Updated" &&
-                        day.fullDate < new Date(),
+                        !day.isToday &&
+                        !day.isFuture,
                     ).length
                   }
                 </span>
@@ -320,15 +321,7 @@ const TodayAttendance = ({
         {/* Charts Section */}
         <div className="w-full md:w-1/2 mx-auto">
           <AttendancePieChart
-            data={records.filter((r) => {
-              const rawDate = r.workingDate || (r as any).working_date;
-              if (!rawDate) return false;
-              const d = new Date(rawDate);
-              return (
-                d.getMonth() === calendarDate.getMonth() &&
-                d.getFullYear() === calendarDate.getFullYear()
-              );
-            })}
+            data={currentMonthEntries}
             currentMonth={calendarDate}
             onMonthChange={(date) => {
               setCalendarDate(date);
@@ -340,7 +333,7 @@ const TodayAttendance = ({
         <div className="flex justify-center">
           <button
             onClick={() => handleNavigate(now.getTime())}
-            className="px-8 py-3 rounded-xl text-white font-bold bg-gradient-to-r from-[#868CFF] to-[#4318FF] shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all flex items-center gap-2 transform active:scale-95"
+            className="px-8 py-3 rounded-xl text-white font-bold bg-linear-to-r from-[#868CFF] to-[#4318FF] shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all flex items-center gap-2 transform active:scale-95"
           >
             <Edit size={18} />
             <span>Update Today's Attendance</span>

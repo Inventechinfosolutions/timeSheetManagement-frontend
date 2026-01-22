@@ -23,6 +23,7 @@ interface MobileMyTimesheetProps {
   onInputBlur: (index: number) => void;
   selectedDateId: number | null;
   isHighlighted: boolean;
+  containerClassName?: string;
 }
 
 const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
@@ -45,6 +46,7 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
   onInputBlur,
   selectedDateId,
   isHighlighted,
+  containerClassName,
 }) => {
   // Sort entries to match Mon-Sun order
   const sortedEntries = [...currentWeekEntries].sort((a, b) => {
@@ -57,7 +59,7 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
   });
 
   return (
-    <div className="flex flex-col bg-[#F4F7FE] p-2 sm:p-4 relative no-scrollbar">
+    <div className={containerClassName || "flex flex-col bg-[#F4F7FE] px-3 py-2 relative no-scrollbar"}>
       {loading && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/30 backdrop-blur-[2px]">
           <div className="animate-spin rounded-full h-10 w-10 border-b-4 border-[#4318FF]"></div>
@@ -80,9 +82,10 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
         {(!readOnly || isAdmin) && (
           <button
             onClick={onSave}
-            className="p-4 bg-linear-to-br from-[#4318FF] to-[#5D38FF] text-white rounded-[20px] shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
+            className="flex items-center gap-2 px-4 py-3 bg-linear-to-br from-[#4318FF] to-[#5D38FF] text-white rounded-2xl shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
           >
-            <Save size={22} strokeWidth={2.5} />
+            <Save size={18} strokeWidth={2.5} />
+            <span className="text-xs font-bold uppercase tracking-wider">Save</span>
           </button>
         )}
       </div>
@@ -118,21 +121,22 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
 
               // Styling logic (Matching MobileResponsiveCalendarPage)
               let bg = "bg-white text-gray-600 border-gray-200"; // Default
-              const hours = Number(entry.totalHours || 0);
               const isHolidayDate = isHoliday(entry.fullDate);
 
               if (entry.isToday) {
                 bg = "bg-white ring-2 ring-[#4318FF] text-[#4318FF] border-transparent font-extrabold shadow-md";
               } else if (isBlocked) {
                 bg = "bg-gray-200 border border-gray-400 text-gray-500 font-bold";
-              } else if (entry.status === "Full Day" || entry.status === "Half Day" || hours > 0) {
-                bg = "bg-green-100 border border-green-600 text-black font-bold";
+              } else if (entry.status === "Full Day" || entry.status === "Half Day" || entry.status === "WFH") {
+                bg = "bg-green-100 border border-green-500 text-black font-bold";
               } else if (entry.status === "Leave") {
                 bg = "bg-red-200 border border-red-600 text-black font-bold";
               } else if (isHolidayDate || entry.status === "Holiday") {
                 bg = "bg-blue-100 border border-blue-500 text-black font-bold";
               } else if (entry.isWeekend) {
                 bg = "bg-pink-100 border border-pink-400 text-black font-bold";
+              } else if (entry.status === "Not Updated" || entry.status === "Pending") {
+                bg = "bg-white border border-gray-300 text-gray-600 font-bold";
               }
 
               // Highlighting logic from navigation
@@ -220,9 +224,9 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
       {/* Legend - Minimized for mobile */}
       <div className="pt-4 flex flex-wrap justify-center gap-x-3 gap-y-2 mb-2">
         {[
-          { label: "Full Day", className: "bg-green-100 border-green-600" },
-          { label: "Half Day", className: "bg-green-100 border-green-600" },
+          { label: "Present", className: "bg-green-100 border-green-600" },
           { label: "Leave", className: "bg-red-200 border-red-600" },
+          { label: "Not Updated", className: "bg-white border-gray-300" },
           { label: "Holiday", className: "bg-blue-100 border-blue-500" },
           { label: "Today", className: "bg-white border-2 border-[#4318FF]" },
           { label: "Blocked", className: "bg-gray-200 border-gray-400" },

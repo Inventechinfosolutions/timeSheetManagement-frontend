@@ -30,6 +30,7 @@ interface TimesheetProps {
   readOnly?: boolean;
   selectedDateId?: number | null;
   onBlockedClick?: () => void;
+  containerClassName?: string;
 }
 
 const MyTimesheet = ({
@@ -38,6 +39,7 @@ const MyTimesheet = ({
   readOnly = false,
   selectedDateId: propSelectedDateId,
   onBlockedClick,
+  containerClassName,
 }: TimesheetProps) => {
   const { date } = useParams<{ date?: string }>();
   const location = useLocation();
@@ -69,11 +71,15 @@ const MyTimesheet = ({
 
   // 2. Highlighting state
   const [selectedDateId, setSelectedDateId] = useState<number | null>(() => {
-    if (location.state?.timestamp) return location.state.timestamp;
+    if (location.state?.selectedDate)
+      return new Date(location.state.selectedDate).getTime();
     if (date) return new Date(date).getTime();
     return propSelectedDateId || null;
   });
   const [isHighlighted, setIsHighlighted] = useState(false);
+  const [lastHighlightTrigger, setLastHighlightTrigger] = useState<
+    number | null
+  >(location.state?.timestamp || null);
 
   // 3. View/Input state
   const [localEntries, setLocalEntries] = useState<TimesheetEntry[]>([]);
@@ -85,6 +91,11 @@ const MyTimesheet = ({
     message: string;
     type: "success" | "error" | "info";
   }>({ show: false, message: "", type: "success" });
+
+  const [inputError, setInputError] = useState<{
+    index: number;
+    message: string;
+  } | null>(null);
 
   const today = useMemo(() => new Date(), []);
 
@@ -124,9 +135,12 @@ const MyTimesheet = ({
   // Update currentWeekIndex when month changes or a date is selected from calendar
   useEffect(() => {
     const currentMonthKey = `${now.getMonth()}-${now.getFullYear()}`;
+    const hasMonthChanged = lastMonthRef.current !== currentMonthKey;
+    
+    // Only proceed if month changed OR a specific date was explicitly selected/highlighted
+    if (!hasMonthChanged && !selectedDateId) return;
 
-    // 1. Month change logic
-    if (lastMonthRef.current !== currentMonthKey) {
+    if (hasMonthChanged) {
       lastMonthRef.current = currentMonthKey;
       if (shouldSetLastWeek) {
         setCurrentWeekIndex(weeks.length - 1);
@@ -157,14 +171,7 @@ const MyTimesheet = ({
       }
       if (!found) setCurrentWeekIndex(0);
     }
-  }, [
-    localEntries,
-    now,
-    today,
-    shouldSetLastWeek,
-    weeks.length,
-    selectedDateId,
-  ]);
+  }, [now, selectedDateId, shouldSetLastWeek, weeks.length]);
 
   const handleNextWeek = () => {
     if (currentWeekIndex < weeks.length - 1) {
@@ -222,12 +229,22 @@ const MyTimesheet = ({
   // Handle navigation state updates
   useEffect(() => {
     if (location.state?.selectedDate) {
-      setNow(new Date(location.state.selectedDate));
+      const targetDate = new Date(location.state.selectedDate);
+      setNow(targetDate);
+      setSelectedDateId(targetDate.getTime());
+
+      // If timestamp is different, it's a new click/navigation event
+      if (
+        location.state.timestamp &&
+        location.state.timestamp !== lastHighlightTrigger
+      ) {
+        setLastHighlightTrigger(location.state.timestamp);
+        setIsHighlighted(false);
+        // Minimal delay to ensure React picks up the state change for animation reset
+        setTimeout(() => setIsHighlighted(true), 50);
+      }
     }
-    if (location.state?.timestamp) {
-      setSelectedDateId(location.state.timestamp);
-    }
-  }, [location.state]);
+  }, [location.state, lastHighlightTrigger]);
 
   // Fetch holidays on mount
   useEffect(() => {
@@ -356,10 +373,31 @@ const MyTimesheet = ({
   const handleHoursInput = (entryIndex: number, val: string) => {
     if (readOnly) return;
     if (isDateBlocked(localEntries[entryIndex].fullDate)) return;
+    
+    // Prevent typing if currently showing an error for this field
+    if (inputError?.index === entryIndex) return;
+
     if (!/^\d*\.?\d*$/.test(val)) return;
-    setLocalInputValues((prev) => ({ ...prev, [entryIndex]: val }));
 
     const num = parseFloat(val);
+
+    // Validation: Max 24 hours
+    if (num > 24) {
+      setInputError({ index: entryIndex, message: "Max hours: 24" });
+
+      // Clear the invalid value immediately so when error disappears it is empty/reset
+      setLocalInputValues((prev) => ({ ...prev, [entryIndex]: "" }));
+      
+      // Clear error after 2 seconds
+      setTimeout(() => {
+        setInputError(null);
+      }, 2000);
+
+      return;
+    }
+
+    setLocalInputValues((prev) => ({ ...prev, [entryIndex]: val }));
+
     const hours = isNaN(num) ? 0 : num;
 
     let newStatus: string = localEntries[entryIndex].status || "Not Updated";
@@ -544,13 +582,13 @@ const MyTimesheet = ({
     (acc, entry) => acc + (entry.totalHours || 0),
     0,
   );
+
   const firstDayOfMonth = new Date(
     now.getFullYear(),
     now.getMonth(),
     1,
   ).getDay();
   const paddingDays = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
-  // const weekdays = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
   if (isMobile) {
     return (
@@ -576,12 +614,13 @@ const MyTimesheet = ({
         onInputBlur={handleInputBlur}
         selectedDateId={selectedDateId}
         isHighlighted={isHighlighted}
+        containerClassName={containerClassName}
       />
     );
   }
 
   return (
-    <div className="flex flex-col h-full max-h-full overflow-hidden bg-[#F4F7FE] py-2 px-1 md:px-6 md:pt-4 md:pb-0 relative">
+    <div className={`flex flex-col ${containerClassName || "h-full max-h-full overflow-hidden bg-[#F4F7FE] py-2 px-1 md:px-6 md:pt-4 md:pb-0 relative"}`}>
       {loading && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/30 backdrop-blur-[2px]">
           <div className="animate-spin rounded-full h-10 w-10 border-b-4 border-[#4318FF]"></div>
@@ -677,19 +716,19 @@ const MyTimesheet = ({
         <div className="flex items-center gap-x-6 gap-y-2 flex-nowrap overflow-x-auto pb-4 scrollbar-none px-2 mb-2">
           {[
             {
-              label: "Full Day",
+              label: "Present",
               color: "bg-[#E6FFFA]",
               border: "border-[#01B574]",
             },
             {
-              label: "Half Day",
-              color: "bg-[#FFF9E5]",
-              border: "border-[#FFB020]",
+              label: "Leave",
+              color: "bg-[#FEE2E2]",
+              border: "border-[#EE5D50]",
             },
             {
-              label: "Leave",
-              color: "bg-[#FDF2F2]",
-              border: "border-[#EE5D50]",
+              label: "Not Updated",
+              color: "bg-[#FEF3C7]",
+              border: "border-[#FFB020]",
             },
             {
               label: "Today",
@@ -702,9 +741,19 @@ const MyTimesheet = ({
               border: "border-[#00A3C4]",
             },
             {
+              label: "Pending",
+              color: "bg-[#F8FAFC]",
+              border: "border-[#64748B]",
+            },
+            {
+              label: "Upcoming",
+              color: "bg-[#F8FAFC]",
+              border: "border-[#64748B]",
+            },
+            {
               label: "Blocked",
               color: "bg-gray-100",
-              border: "border-gray-200",
+              border: "border-gray-300",
             },
           ].map((item) => (
             <div
@@ -797,6 +846,7 @@ const MyTimesheet = ({
               badge = "bg-gray-600 text-white";
             } else if (
               (day.status === "Full Day" ||
+                day.status === "Half Day" ||
                 day.status === "WFH" ||
                 day.status === "Client Visit") &&
               displayVal !== 0
@@ -804,11 +854,6 @@ const MyTimesheet = ({
               bg = "bg-[#E6FFFA]";
               badge = "bg-[#01B574] text-white font-bold";
               border = "border-[#01B574]/20";
-            } else if (day.status === "Half Day" && displayVal !== 0) {
-              // Moved UP: Prioritize Half Day over Weekend/Holiday checks
-              bg = "bg-[#FEF3C7]";
-              badge = "bg-[#FFB020]/80 text-white font-bold";
-              border = "border-[#FFB020]/20";
             } else if (day.status === "Client Visit") {
               bg = "bg-[#DBEAFE]";
               badge = "bg-[#4318FF]/70 text-white font-bold";
@@ -826,18 +871,22 @@ const MyTimesheet = ({
               bg = "bg-[#FEE2E2]";
               badge = "bg-[#EE5D50]/70 text-white font-bold";
               border = "border-[#EE5D50]/10";
-            } else if (
-              day.status === "Pending" ||
-              day.status === "Not Updated"
-            ) {
+            } else if (day.status === "Not Updated") {
               bg = "bg-[#FEF3C7]";
               badge = "bg-[#FFB020]/80 text-white font-bold";
               border = "border-[#FFB020]/20";
+            } else if (day.status === "Pending" || !day.status) {
+              // Pending or Upcoming (no status)
+              bg = "bg-[#F8FAFC]";
+              badge = "bg-[#64748B]/90 text-white font-bold";
+              border = "border-[#E2E8F0]";
             }
             if (day.isToday) {
               bg =
                 "bg-white ring-2 ring-[#4318FF] shadow-lg shadow-blue-500/20 z-10";
             }
+
+            const isError = inputError?.index === idx;
 
             return (
               <div
@@ -909,12 +958,14 @@ const MyTimesheet = ({
                   <div className="relative group/input w-full flex justify-center">
                     <input
                       type="text"
-                      disabled={!isEditable}
-                      className={`w-full h-10 text-center text-3xl font-medium bg-transparent transition-all focus:outline-none focus:ring-0
+                      disabled={!isEditable || isError}
+                      className={`w-full h-10 text-center font-medium bg-transparent transition-all focus:outline-none focus:ring-0
                         ${
                           !isEditable
                             ? "text-gray-400 cursor-not-allowed"
-                            : "text-gray-800 group-hover:scale-105 focus:scale-105"
+                            : isError
+                              ? "text-red-500 text-[10px] font-bold animate-pulse"
+                              : "text-gray-800 text-3xl group-hover:scale-105 focus:scale-105"
                         }`}
                       placeholder={
                         day.status === "Weekend" ||
@@ -923,11 +974,11 @@ const MyTimesheet = ({
                           ? "-"
                           : "0"
                       }
-                      value={inputValue}
+                      value={isError ? inputError.message : inputValue}
                       onChange={(e) => handleHoursInput(idx, e.target.value)}
                       onBlur={() => handleInputBlur(idx)}
                     />
-                    {isEditable && (
+                    {isEditable && !isError && (
                       <div className="absolute bottom-0 w-12 h-0.5 bg-black/20 rounded-full group-hover/input:bg-black transition-colors"></div>
                     )}
                   </div>

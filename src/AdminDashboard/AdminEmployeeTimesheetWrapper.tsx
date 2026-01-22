@@ -123,26 +123,26 @@ const AdminEmployeeTimesheetWrapper = () => {
     );
   }
   return (
-    <div className="flex flex-col bg-[#F4F7FE] px-4 md:px-8 py-4 md:py-6">
+    <div className="flex flex-col h-full overflow-hidden bg-[#F4F7FE] px-4 md:px-6 py-3 md:py-4 relative">
       {/* Premium Responsive Header */}
-      <div className="mb-0 md:mb-2 flex flex-col gap-4 bg-white/40 md:bg-transparent p-4 md:p-0 rounded-3xl md:rounded-none border border-white/50 md:border-none backdrop-blur-sm md:backdrop-blur-none shadow-sm md:shadow-none">
-        <div className="flex flex-col gap-2">
+      <div className="mb-2 flex flex-col gap-2 bg-white/40 md:bg-transparent p-3 md:p-0 rounded-2xl md:rounded-none border border-white/50 md:border-none backdrop-blur-sm md:backdrop-blur-none shadow-sm md:shadow-none shrink-0">
+        <div className="flex flex-col gap-1">
           <button
             onClick={handleBack}
             className="flex items-center gap-1.5 text-gray-400 hover:text-[#4318FF] transition-colors group w-fit"
           >
             <ArrowLeft
-              size={14}
+              size={12}
               className="group-hover:-translate-x-1 transition-transform shrink-0"
             />
-            <span className="text-[10px] md:text-xs font-bold tracking-widest uppercase">
+            <span className="text-[9px] md:text-[10px] font-bold tracking-widest uppercase">
               Back to employee list
             </span>
           </button>
 
           <div className="flex items-center justify-between gap-4">
             <h2
-              className={`font-black text-[#2B3674] truncate leading-tight ${isMobile ? "text-2xl" : "text-4xl"}`}
+              className={`font-black text-[#2B3674] truncate leading-tight ${isMobile ? "text-xl" : "text-2xl"}`}
             >
               {employee
                 ? employee.fullName || employee.name || employee.employeeId
@@ -151,7 +151,7 @@ const AdminEmployeeTimesheetWrapper = () => {
 
             <button
               onClick={() => setIsModalOpen(true)}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#4318FF] text-white rounded-xl text-[10px] md:text-xs font-bold shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 active:scale-95 transition-all shrink-0 uppercase tracking-widest"
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-[#4318FF] text-white rounded-xl text-[10px] md:text-[11px] font-bold shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 active:scale-95 transition-all shrink-0 uppercase tracking-widest"
             >
               <Lock size={12} strokeWidth={2.5} />
               <span>Block</span>
@@ -160,11 +160,12 @@ const AdminEmployeeTimesheetWrapper = () => {
         </div>
       </div>
 
-      <div className="no-scrollbar mt-4 md:mt-6">
+      <div className="flex-1 overflow-hidden min-h-0">
         <MyTimesheet
           employeeId={employeeId!}
           readOnly={false}
           onBlockedClick={() => setIsModalOpen(true)}
+          containerClassName="h-full overflow-hidden shadow-none border-none bg-transparent"
         />
       </div>
 

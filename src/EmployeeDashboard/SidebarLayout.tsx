@@ -45,6 +45,8 @@ const SidebarLayout = ({
         return "My Profile";
       case "change-password":
         return "Change Password";
+      case "leave-management":
+        return "Leave Management";
       default:
         return "Dashboard";
     }
@@ -57,6 +59,7 @@ const SidebarLayout = ({
     { name: "Dashboard", icon: LayoutGrid },
     { name: "My Timesheet", icon: Calendar },
     { name: "Timesheet View", icon: Eye },
+    { name: "Leave Management", icon: Calendar },
     { name: "My Profile", icon: User },
     //{ name: 'Change Password', icon: Lock },
   ];
@@ -253,7 +256,7 @@ const SidebarLayout = ({
         </nav>
       </aside>
 
-      <main className="flex flex-col relative no-scrollbar bg-[#F4F7FE] w-full">
+      <main className="flex-1 min-h-0 h-full relative no-scrollbar flex flex-col bg-[#F4F7FE] overflow-auto">
         {children}
       </main>
     </div>

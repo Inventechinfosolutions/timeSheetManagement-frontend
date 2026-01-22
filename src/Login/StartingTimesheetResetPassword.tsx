@@ -25,7 +25,7 @@ import {
 import { AppDispatch, RootState } from "../store";
 import inventechLogo from "../assets/inventech-logo.jpg";
 
-const FcManagerResetPassword: React.FC = () => {
+const TimesheetResetPassword: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const dispatch = useDispatch<AppDispatch>();
@@ -166,7 +166,7 @@ const FcManagerResetPassword: React.FC = () => {
           <div className="hidden lg:block">
             <img
               src={inventechLogo}
-              alt="Keonics"
+              alt="Inventech"
               className="h-10 ml-4 mix-blend-multiply"
             />
           </div>
@@ -358,11 +358,11 @@ const FcManagerResetPassword: React.FC = () => {
           alt="Keonics"
           className="h-4 grayscale opacity-50"
         />
-        Karnataka State Electronics Development Corporation Limited | Designed
+       Timesheet | Designed
         and Developed by <span>Inventech Info Solutions</span>
       </footer>
     </div>
   );
 };
 
-export default FcManagerResetPassword;
+export default TimesheetResetPassword;

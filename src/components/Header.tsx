@@ -174,7 +174,7 @@ const Header = ({ hideNotifications = false, hideProfile = false }: HeaderProps)
           <div className="flex items-center gap-1.5 md:gap-3 ml-auto md:ml-0">
             <Link
               to="/about"
-              className={`px-3 py-1.5 rounded-xl font-medium text-xs md:text-sm transition-all duration-200 
+              className={`px-3 py-1.5 rounded-xl font-bold text-sm md:text-[15px] transition-all duration-200 
                 ${
                   location.pathname === "/about"
                     ? "bg-white text-[#4318FF] shadow-lg"
@@ -210,7 +210,7 @@ const Header = ({ hideNotifications = false, hideProfile = false }: HeaderProps)
 
                 {/* Modern Notification Popup */}
                 {isNotificationOpen && (
-                  <div className="fixed md:absolute left-[16px] right-[16px] md:left-auto md:right-0 top-[180px] md:top-auto md:mt-3 md:w-[400px] bg-white rounded-3xl shadow-[0px_20px_60px_-10px_rgba(0,0,0,0.15)] ring-1 ring-gray-100 z-[10000] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 origin-top md:origin-top-right">
+                  <div className="fixed md:absolute left-[16px] right-[16px] md:left-auto md:right-0 top-[110px] md:top-auto md:mt-3 md:w-[400px] bg-white rounded-3xl shadow-[0px_20px_60px_-10px_rgba(0,0,0,0.15)] ring-1 ring-gray-100 z-[10000] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 origin-top md:origin-top-right">
                     {viewMode === "list" ? (
                       <>
                         {/* Header */}
@@ -396,7 +396,7 @@ const Header = ({ hideNotifications = false, hideProfile = false }: HeaderProps)
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="flex items-center gap-1.5 md:gap-2 pl-2 pr-1 md:px-3 py-1.5 hover:bg-white/10 rounded-xl transition-all group"
+                  className="flex items-center gap-1.5 md:gap-2 pl-2 pr-2 md:px-3 py-1.5 hover:bg-white/10 rounded-xl transition-all group"
                 >
                   <div className="flex items-center gap-1.5 md:gap-2">
                     <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white font-bold text-sm shadow-inner ring-1 ring-white/30 overflow-hidden">
@@ -411,14 +411,14 @@ const Header = ({ hideNotifications = false, hideProfile = false }: HeaderProps)
                       )}
                     </div>
                     <div className="flex flex-col items-start translate-y-[1px]">
-                      <span className="text-[10px] font-bold text-white transition-colors leading-none">
+                      <span className="text-[12px] md:text-sm font-bold text-white transition-colors leading-none">
                         {isAdmin
                           ? "Admin"
                           : entity?.firstName ||
                             entity?.fullName?.split(" ")[0] ||
                             "User"}
                       </span>
-                      <span className="text-[8px] text-blue-100/80 leading-none mt-0.5">
+                      <span className="text-[9.5px] md:text-[11px] text-blue-100/80 leading-none mt-1">
                         {isAdmin
                           ? "Administrator"
                           : entity?.employeeId || "Employee"}

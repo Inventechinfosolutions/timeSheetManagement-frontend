@@ -1,11 +1,11 @@
-import { useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
   PieChart,
   Pie,
   Cell,
   ResponsiveContainer,
-  Tooltip,
   Legend,
+  Sector
 } from "recharts";
 import { ChevronLeft, ChevronRight, PieChart as PieChartIcon } from "lucide-react";
 
@@ -28,44 +28,127 @@ const AttendancePieChart = ({
       "Absent/Leave": 0,
       Holiday: 0,
       Weekend: 0,
+      "Not Updated": 0,
       Pending: 0,
     };
 
     data.forEach((record) => {
+      // Basic normalization of status
       const status = record.status ? String(record.status).toUpperCase() : "";
       
+      // Determine effective date (handle both raw record and TimesheetEntry structure)
+      const recordDate = record.fullDate ? new Date(record.fullDate) : (record.workingDate ? new Date(record.workingDate) : null);
+      const isFuture = recordDate ? recordDate > new Date() : false;
+
+      // Skip future dates to keep the chart focused on historical attendance
+      if (isFuture) return;
+
       if (
         status === "FULL DAY" ||
+        status === "HALF DAY" ||
         status === "WFH" ||
         status === "CLIENT VISIT"
       ) {
         counts["Present"]++;
-      } else if (status === "HALF DAY") {
-        counts["Half Day"]++;
       } else if (status === "LEAVE" || status === "ABSENT") {
         counts["Absent/Leave"]++;
       } else if (status === "HOLIDAY") {
         counts["Holiday"]++;
-      } else if (status === "WEEKEND") {
+      } else if (status === "WEEKEND" || record.isWeekend) {
         counts["Weekend"]++;
       } else {
-        counts["Pending"]++;
+        // Fallback for Not Updated, Pending, or any other past dates
+        counts["Not Updated"]++;
       }
     });
 
     return [
-      { name: "Full Day", value: counts["Present"], color: "#10B981" },
-      { name: "Half Day", value: counts["Half Day"], color: "#F59E0B" },
+      { name: "Present", value: counts["Present"], color: "#10B981" },
       { name: "Leave", value: counts["Absent/Leave"], color: "#E11D48" },
       { name: "Holiday", value: counts["Holiday"], color: "#2563EB" },
       { name: "Weekend", value: counts["Weekend"], color: "#38BDF8" },
+      { name: "Not Updated", value: counts["Not Updated"], color: "#F97316" },
     ].filter((item) => item.value > 0);
   }, [data]);
+
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+
+  const onPieClick = (_: any, index: number) => {
+    setActiveIndex(index);
+  };
+
+  const renderActiveShape = (props: any) => {
+    const { 
+      cx, cy, innerRadius, outerRadius, startAngle, endAngle, 
+      fill, payload, value 
+    } = props;
+
+    return (
+      <g>
+        {/* Shadow filter for the label box */}
+        <defs>
+          <filter id="activeShapeShadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
+            <feOffset dx="0" dy="2" result="offsetblur" />
+            <feComponentTransfer>
+              <feFuncA type="linear" slope="0.1" />
+            </feComponentTransfer>
+            <feMerge>
+              <feMergeNode />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
+        {/* Highlighted sector with larger radius */}
+        <Sector
+          cx={cx}
+          cy={cy}
+          innerRadius={innerRadius}
+          outerRadius={outerRadius + 8}
+          startAngle={startAngle}
+          endAngle={endAngle}
+          fill={fill}
+          style={{ filter: 'drop-shadow(0px 4px 6px rgba(0,0,0,0.1))' }}
+        />
+        
+        {/* Label background box */}
+        <rect
+          x={cx - 55}
+          y={cy - 20}
+          width={110}
+          height={40}
+          rx={12}
+          fill="white"
+          stroke="#f1f5f9"
+          strokeWidth={1}
+          style={{ filter: 'url(#activeShapeShadow)' }}
+        />
+
+        {/* Label text */}
+        <text
+          x={cx}
+          y={cy}
+          dy={5}
+          textAnchor="middle"
+          fill="#1B2559"
+          style={{ 
+            fontSize: '13px', 
+            fontWeight: '700',
+            fontFamily: 'inherit'
+          }}
+        >
+          {payload.name} : {value}
+        </text>
+      </g>
+    );
+  };
 
   const handlePrevMonth = () => {
     const prev = new Date(currentMonth);
     prev.setMonth(prev.getMonth() - 1);
     onMonthChange(prev);
+    setActiveIndex(null); // Reset selection on month change
   };
 
   const isCurrentMonth = useMemo(() => {
@@ -81,6 +164,7 @@ const AttendancePieChart = ({
     const next = new Date(currentMonth);
     next.setMonth(next.getMonth() + 1);
     onMonthChange(next);
+    setActiveIndex(null); // Reset selection on month change
   };
 
   const formattedMonth = currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' });
@@ -155,8 +239,20 @@ const AttendancePieChart = ({
                 <stop offset="0%" stopColor="#A5F3FC" />
                 <stop offset="100%" stopColor="#0EA5E9" />
               </linearGradient>
+              <linearGradient id="gradNotUpdated" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#FB923C" />
+                <stop offset="100%" stopColor="#F97316" />
+              </linearGradient>
+              <linearGradient id="gradPending" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#94A3B8" />
+                <stop offset="100%" stopColor="#64748B" />
+              </linearGradient>
             </defs>
             <Pie
+              {...({
+                activeIndex: activeIndex ?? undefined,
+                activeShape: renderActiveShape,
+              } as any)}
               data={chartData}
               cx="50%"
               cy="50%"
@@ -164,30 +260,27 @@ const AttendancePieChart = ({
               outerRadius="90%"
               paddingAngle={5}
               dataKey="value"
+              onClick={onPieClick}
+              stroke="none"
+              style={{ cursor: 'pointer', outline: 'none' }}
             >
               {chartData.map((entry, index) => {
                 let fillUrl = "url(#gradWeekend)";
-                if (entry.name === "Full Day") fillUrl = "url(#gradPresent)";
-                else if (entry.name === "Half Day") fillUrl = "url(#gradHalfDay)";
+                if (entry.name === "Present") fillUrl = "url(#gradPresent)";
                 else if (entry.name === "Leave") fillUrl = "url(#gradLeave)";
                 else if (entry.name === "Holiday") fillUrl = "url(#gradHoliday)";
+                else if (entry.name === "Not Updated") fillUrl = "url(#gradNotUpdated)";
                 
                 return (
                   <Cell key={`cell-${index}`} fill={fillUrl} stroke="none" />
                 );
               })}
             </Pie>
-            <Tooltip
-              contentStyle={{
-                borderRadius: "12px",
-                border: "none",
-                boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
-              }}
-            />
             <Legend 
               verticalAlign="bottom" 
-              height={36} 
+              height={60} 
               iconType="circle" 
+              wrapperStyle={{ fontSize: '12px' }}
             />
           </PieChart>
         </ResponsiveContainer>

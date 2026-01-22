@@ -461,12 +461,12 @@ const AdminDashboard = () => {
   };
 
   return (
-    <div className={styles.container}>
+    <div className={`${styles.container} h-full overflow-y-auto custom-scrollbar`}>
       {/* Stats Section */}
       <div className={styles.cardGrid}>
         <div
           className={styles.statCard(
-            "bg-gradient-to-br from-[#4318FF] to-[#5BC4FF]",
+            "bg-linear-to-br from-[#4318FF] to-[#5BC4FF]",
           )}
         >
           <div className={styles.glassInner} />
@@ -488,7 +488,7 @@ const AdminDashboard = () => {
 
         <div
           className={styles.statCard(
-            "bg-gradient-to-br from-[#868CFF] to-[#4318FF]",
+            "bg-linear-to-br from-[#868CFF] to-[#4318FF]",
           )}
         >
           <div className={styles.glassInner} />
@@ -508,7 +508,7 @@ const AdminDashboard = () => {
 
         <div
           className={styles.statCard(
-            "bg-gradient-to-br from-[#05CD99] to-[#48BB78]",
+            "bg-linear-to-br from-[#05CD99] to-[#48BB78]",
           )}
         >
           <div className={styles.glassInner} />
@@ -526,7 +526,7 @@ const AdminDashboard = () => {
 
         <div
           className={styles.statCard(
-            "bg-gradient-to-br from-[#FF9060] to-[#FF5C00]",
+            "bg-linear-to-br from-[#FF9060] to-[#FF5C00]",
           )}
         >
           <div className={styles.glassInner} />
@@ -558,7 +558,7 @@ const AdminDashboard = () => {
           </button>
           <button
             onClick={() => setIsExportModalOpen(true)}
-            className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-[#4318FF] to-[#868CFF] text-white rounded-xl text-xs font-black shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all duration-300 transform hover:-translate-y-0.5"
+            className="flex items-center gap-2 px-6 py-2.5 bg-linear-to-r from-[#4318FF] to-[#868CFF] text-white rounded-xl text-xs font-black shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all duration-300 transform hover:-translate-y-0.5"
           >
             <Download size={16} />
             <span>Bulk Export PDF</span>
@@ -567,153 +567,7 @@ const AdminDashboard = () => {
       </div>
 
       <div className="flex justify-center mb-20">
-        {/* Bar Chart: Comparison */}
-        {/* <div className="bg-white p-6 rounded-[24px] shadow-[0px_18px_40px_rgba(112,144,176,0.08)]">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-            <h4 className="text-lg font-bold text-[#2B3674] flex items-center gap-2">
-              Top Employees (Hours)
-              <div className="p-2 bg-gray-100 rounded-lg">
-                <Users size={16} className="text-gray-500" />
-              </div>
-            </h4>
-            <div className="relative" ref={comparisonDeptRef}>
-              <button
-                onClick={() => setIsComparisonDeptOpen(!isComparisonDeptOpen)}
-                className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-lg border border-gray-100 text-[#2B3674] font-bold text-xs hover:bg-gray-50 shadow-sm"
-              >
-                <Filter size={12} className="text-[#4318FF]" />
-                <span>
-                  {comparisonDept === "All"
-                    ? "All Departments"
-                    : comparisonDept}
-                </span>
-                <ChevronDown
-                  size={12}
-                  className={`text-[#A3AED0] transition-transform ${isComparisonDeptOpen ? "rotate-180" : ""}`}
-                />
-              </button>
-              {isComparisonDeptOpen && (
-                <div className="absolute top-full right-0 mt-2 w-40 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-50">
-                  {[
-                    "All",
-                    "HR",
-                    "IT",
-                    "Sales",
-                    "Marketing",
-                    "Finance",
-                    "Engineering",
-                    "Design",
-                    "Admin",
-                  ].map((d) => (
-                    <button
-                      key={d}
-                      onClick={() => {
-                        setComparisonDept(d);
-                        setIsComparisonDeptOpen(false);
-                        const params = {
-                          page: 1,
-                          limit: 1000,
-                          department: d === "All" ? undefined : d,
-                        };
-                        dispatch(getEntities(params)).then((action: any) => {
-                          if (d === "All" && action.payload) {
-                            const data = action.payload;
-                            const list = Array.isArray(data)
-                              ? data
-                              : data.data || [];
-                            setGlobalStatsCache({
-                              entities: list,
-                              totalItems:
-                                data.totalItems || data.total || list.length,
-                            });
-                          }
-                        });
-                      }}
-                      className={`w-full text-left px-4 py-1.5 text-xs font-semibold hover:bg-gray-50 ${comparisonDept === d ? "text-[#4318FF] bg-[#4318FF]/5" : "text-[#2B3674]"}`}
-                    >
-                      {d === "All" ? "All Departments" : d}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="h-[360px] overflow-y-auto pr-2 custom-scrollbar">
-            <div
-              className="w-full"
-              style={{
-                height: `${Math.max(360, chartData.comparison.series[0].data.length * 30)}px`,
-              }}
-            >
-              <Chart
-                series={chartData.comparison.series}
-                type="bar"
-                height="100%"
-                width="100%"
-                options={{
-                  ...chartData.comparison.commonOptions,
-                  xaxis: {
-                    categories: chartData.comparison.categories,
-                    labels: { show: false },
-                    axisBorder: { show: false },
-                    axisTicks: { show: false },
-                    max: chartData.comparison.maxHours,
-                    min: 0,
-                  },
-                  yaxis: {
-                    labels: {
-                      style: { colors: "#A3AED0", fontSize: "12px" },
-                      maxWidth: 80,
-                      minWidth: 80,
-                    },
-                  },
-                }}
-              />
-            </div>
-          </div>
-          <div className="h-[60px] w-full border-t border-gray-100">
-            <Chart
-              series={[{ data: [] }]}
-              type="bar"
-              height="100%"
-              width="100%"
-              options={{
-                ...chartData.comparison.commonOptions,
-                chart: {
-                  ...chartData.comparison.commonOptions.chart,
-                  sparkline: { enabled: false },
-                },
-                xaxis: {
-                  max: chartData.comparison.maxHours,
-                  min: 0,
-                  labels: {
-                    show: true,
-                    style: { colors: "#A3AED0", fontSize: "12px" },
-                  },
-                  axisBorder: { show: false },
-                  axisTicks: { show: true },
-                  title: {
-                    text: "Total Working Hours",
-                    style: {
-                      color: "#A3AED0",
-                      fontSize: "12px",
-                      fontWeight: 600,
-                    },
-                  },
-                },
-                yaxis: {
-                  show: false,
-                  labels: { show: false, minWidth: 80, maxWidth: 80 },
-                },
-                grid: {
-                  show: false,
-                  padding: { top: 0, right: 0, bottom: 0, left: 10 },
-                },
-                tooltip: { enabled: false },
-              }}
-            />
-          </div>
-        </div> */}
+       
 
         {/* Donut Chart: Distribution */}
         <div className="bg-white p-6 rounded-[24px] shadow-[0px_18px_40px_rgba(112,144,176,0.08)] max-w-[700px] w-full">
@@ -739,7 +593,7 @@ const AdminDashboard = () => {
 
       {/* Export Modal */}
       {isExportModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
           <div
             className="absolute inset-0 bg-[#2B3674]/20 backdrop-blur-md"
             onClick={() => {
@@ -751,7 +605,7 @@ const AdminDashboard = () => {
             className={`relative bg-white w-full transition-all duration-500 rounded-[32px] shadow-2xl overflow-hidden flex flex-col ${exportStep === "employees" ? "max-w-3xl h-[720px]" : "max-w-md h-[480px]"}`}
           >
             {/* Modal Header */}
-            <div className="p-8 border-b border-gray-100 flex justify-between items-center flex-shrink-0">
+            <div className="p-8 border-b border-gray-100 flex justify-between items-center shrink-0">
               <div className="flex items-center gap-4">
                 {exportStep === "range" && (
                   <button
@@ -787,7 +641,7 @@ const AdminDashboard = () => {
 
             {exportStep === "employees" ? (
               <div className="flex-1 flex flex-col min-h-0 px-10 py-6">
-                <div className="flex gap-4 items-center mb-8 flex-shrink-0">
+                <div className="flex gap-4 items-center mb-8 shrink-0">
                   <div className="relative" ref={modalDeptRef}>
                     <button
                       onClick={() => setIsModalDeptOpen(!isModalDeptOpen)}
@@ -803,7 +657,7 @@ const AdminDashboard = () => {
                       />
                     </button>
                     {isModalDeptOpen && (
-                      <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-[110]">
+                      <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 z-110 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                         {[
                           "All",
                           "HR",
@@ -886,7 +740,7 @@ const AdminDashboard = () => {
                             </td>
                             <td className="p-4 border-b border-gray-50">
                               <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#4318FF] to-[#5BC4FF] flex items-center justify-center text-white font-black text-[10px]">
+                                <div className="w-10 h-10 rounded-xl bg-linear-to-br from-[#F4F7FE] to-white flex items-center justify-center border border-white shrink-0 group-hover:scale-110 transition-transform">
                                   {emp.fullName?.charAt(0) || "U"}
                                 </div>
                                 <span className="font-bold text-[#2B3674] text-sm">
@@ -903,7 +757,7 @@ const AdminDashboard = () => {
                     </tbody>
                   </table>
                 </div>
-                <div className="p-8 border-t border-gray-100 flex justify-between items-center bg-[#F8F9FC] flex-shrink-0">
+                <div className="p-8 border-t border-gray-100 flex justify-between items-center bg-[#F8F9FC] shrink-0">
                   <span className="text-sm font-bold text-[#A3AED0]">
                     {selectedEmps.size} selected
                   </span>
@@ -967,7 +821,7 @@ const AdminDashboard = () => {
                       <button
                         onClick={handleBulkExport}
                         disabled={isExporting}
-                        className="flex items-center gap-4 px-10 py-4 bg-gradient-to-r from-[#4318FF] to-[#868CFF] text-white rounded-[16px] font-black text-[11px] disabled:opacity-70 shadow-lg shadow-blue-500/20"
+                        className="flex items-center gap-4 px-10 py-4 bg-linear-to-r from-[#4318FF] to-[#868CFF] text-white rounded-[16px] font-black text-[11px] disabled:opacity-70 shadow-lg shadow-blue-500/20"
                       >
                         {isExporting ? "GENERATING..." : "DOWNLOAD PDF"}{" "}
                         {!isExporting && <Download size={16} />}

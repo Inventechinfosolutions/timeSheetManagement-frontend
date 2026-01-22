@@ -123,24 +123,24 @@ const AdminEmployeeCalenderWrapper = () => {
   if (!employee) return null;
 
   return (
-    <div className="flex flex-col bg-[#F4F7FE]">
+    <div className="flex flex-col h-full bg-[#F4F7FE]">
       {/* Sticky Top Navigation & Header */}
-      <div className="sticky top-0 z-30 bg-[#F4F7FE] px-4 md:px-8 py-4 border-b border-gray-100/80 backdrop-blur-md shadow-sm">
+      <div className="sticky top-0 z-30 bg-[#F4F7FE] px-4 md:px-8 py-3 md:py-4 border-b border-gray-100/80 backdrop-blur-md shadow-sm shrink-0">
         <button
           onClick={handleBack}
-          className="flex items-center gap-1.5 text-gray-400 hover:text-[#4318FF] transition-colors group mb-1.5"
+          className="flex items-center gap-1.5 text-gray-400 hover:text-[#4318FF] transition-colors group mb-1"
         >
           <ArrowLeft
-            size={14}
+            size={12}
             className="group-hover:-translate-x-1 transition-transform"
           />
-          <span className="text-[10px] md:text-xs font-bold tracking-widest uppercase">
+          <span className="text-[9px] md:text-[10px] font-bold tracking-widest uppercase">
             Back to employee list
           </span>
         </button>
 
         <div className="flex items-center justify-between gap-4">
-          <h2 className="text-2xl md:text-4xl font-black text-[#2B3674] leading-tight truncate">
+          <h2 className="text-xl md:text-2xl font-black text-[#2B3674] leading-tight truncate">
             {employee.fullName || employee.name}
           </h2>
 
@@ -154,59 +154,61 @@ const AdminEmployeeCalenderWrapper = () => {
         </div>
       </div>
 
-      {/* Summary Stats Section */}
-      <div className="px-4 md:px-8 pt-6 pb-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div className="bg-white rounded-2xl p-4 md:p-6 shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition-all">
-            <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-[#E6FFFA] flex items-center justify-center text-[#01B574] shrink-0">
-              <CalendarCheck size={24} />
-            </div>
-            <div>
-              <p className="text-[10px] md:text-sm font-medium text-gray-500 mb-0.5">
-                Total Present Days
-              </p>
-              <div className="flex items-baseline gap-2">
-                <h3 className="text-xl md:text-3xl font-black text-[#2B3674]">
-                  {presentDays}
-                </h3>
-                <span className="text-[10px] font-bold text-[#01B574] bg-[#E6FFFA] px-2 py-0.5 rounded-full">
-                  Days
-                </span>
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        {/* Summary Stats Section */}
+        <div className="px-4 md:px-8 pt-6 pb-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="bg-white rounded-2xl p-4 md:p-6 shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition-all">
+              <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-[#E6FFFA] flex items-center justify-center text-[#01B574] shrink-0">
+                <CalendarCheck size={24} />
+              </div>
+              <div>
+                <p className="text-[10px] md:text-sm font-medium text-gray-500 mb-0.5">
+                  Total Present Days
+                </p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-xl md:text-3xl font-black text-[#2B3674]">
+                    {presentDays}
+                  </h3>
+                  <span className="text-[10px] font-bold text-[#01B574] bg-[#E6FFFA] px-2 py-0.5 rounded-full">
+                    Days
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
-
-          <div className="bg-white rounded-2xl p-4 md:p-6 shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition-all">
-            <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-[#F4F7FE] flex items-center justify-center text-[#4318FF] shrink-0">
-              <Clock size={24} />
-            </div>
-            <div>
-              <p className="text-[10px] md:text-sm font-medium text-gray-500 mb-0.5">
-                Total Working Hours
-              </p>
-              <div className="flex items-baseline gap-2">
-                <h3 className="text-xl md:text-3xl font-black text-[#2B3674]">
-                  {avgHours}
-                </h3>
-                <span className="text-[10px] font-bold text-[#4318FF] bg-[#F4F7FE] px-2 py-0.5 rounded-full">
-                  Hours
-                </span>
+ 
+            <div className="bg-white rounded-2xl p-4 md:p-6 shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition-all">
+              <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-[#F4F7FE] flex items-center justify-center text-[#4318FF] shrink-0">
+                <Clock size={24} />
+              </div>
+              <div>
+                <p className="text-[10px] md:text-sm font-medium text-gray-500 mb-0.5">
+                  Total Working Hours
+                </p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-xl md:text-3xl font-black text-[#2B3674]">
+                    {avgHours}
+                  </h3>
+                  <span className="text-[10px] font-bold text-[#4318FF] bg-[#F4F7FE] px-2 py-0.5 rounded-full">
+                    Hours
+                  </span>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Calendar View (Now part of the outer scroll) */}
-      <div className="shrink-0">
-        {isMobile ? (
-          <MobileResponsiveCalendarPage
-            employeeId={employeeId}
-            navigationPath="/admin-dashboard/timesheet/:employeeId"
-          />
-        ) : (
-          <AdminEmployeeCalendarView />
-        )}
+ 
+        {/* Calendar View */}
+        <div className="px-0 md:px-2 pb-10">
+          {isMobile ? (
+            <MobileResponsiveCalendarPage
+              employeeId={employeeId}
+              navigationPath="/admin-dashboard/timesheet/:employeeId"
+            />
+          ) : (
+            <AdminEmployeeCalendarView />
+          )}
+        </div>
       </div>
       {/* Responsive Block Modal */}
       {isModalOpen && (

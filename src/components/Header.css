@@ -84,7 +84,7 @@
 @media (max-width: 768px) {
   .header-container {
     height: auto;
-    padding: 8px 0 4px 16px; /* Restored some padding for balance */
+    padding: 8px 16px 4px 16px; /* Added right padding for screen edge gap */
     flex-direction: column;
     gap: 6px; /* Added gap between logo and navigation row */
     align-items: center;
