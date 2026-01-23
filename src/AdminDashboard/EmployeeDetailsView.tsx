@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "../store";
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { getEntity } from "../reducers/employeeDetails.reducer";
+import { getEntity, updateEntity } from "../reducers/employeeDetails.reducer";
 import {
   User,
   Mail,
@@ -34,6 +34,15 @@ const EmployeeDetailsView = () => {
   });
   const [resetError, setResetError] = useState("");
   const [resetSuccess, setResetSuccess] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedData, setEditedData] = useState({
+    fullName: "",
+    employeeId: "",
+    department: "",
+    designation: "",
+    email: "",
+  });
+  const [showConfirm, setShowConfirm] = useState(false);
 
   useEffect(() => {
     if (
@@ -74,6 +83,18 @@ const EmployeeDetailsView = () => {
       ? entity
       : employeeFromList;
 
+  useEffect(() => {
+    if (employee) {
+      setEditedData({
+        fullName: employee.fullName || employee.name || "",
+        employeeId: employee.employeeId || employee.id || "",
+        department: employee.department || "",
+        designation: employee.designation || "",
+        email: employee.email || "",
+      });
+    }
+  }, [employee]);
+
   if (loading && !employee) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -95,6 +116,38 @@ const EmployeeDetailsView = () => {
       </div>
     );
   }
+
+  const handleEdit = () => {
+    setIsEditing(true);
+  };
+
+  const handleSave = () => {
+    setShowConfirm(true);
+  };
+
+  const confirmSave = async () => {
+    try {
+      await axios.put(`/api/employee-details/${employee.employeeId}`, editedData);
+      setIsEditing(false);
+      setShowConfirm(false);
+      // Refresh the entity
+      dispatch(getEntity(employeeId!));
+    } catch (error) {
+      console.error("Failed to update employee:", error);
+      setShowConfirm(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setEditedData({
+      fullName: employee.fullName || employee.name || "",
+      employeeId: employee.employeeId || employee.id || "",
+      department: employee.department || "",
+      designation: employee.designation || "",
+      email: employee.email || "",
+    });
+    setIsEditing(false);
+  };
 
   const avatarLetter = (employee.fullName || employee.name || "?")
     .charAt(0)
@@ -218,13 +271,38 @@ const EmployeeDetailsView = () => {
 
       {/* Personal Information Card */}
       <div className="bg-white rounded-2xl md:rounded-[24px] p-5 sm:p-6 md:p-8 shadow-[0px_20px_50px_0px_#111c440d] border border-gray-100 mb-4 md:mb-8">
-        <div className="flex items-center gap-3 mb-5">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#667eea] to-[#764ba2] flex items-center justify-center shadow-lg shadow-purple-200">
-            <User size={20} className="text-white" />
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#667eea] to-[#764ba2] flex items-center justify-center shadow-lg shadow-purple-200">
+              <User size={20} className="text-white" />
+            </div>
+            <h2 className="text-xl font-bold text-[#1B2559]">
+              Personal Information
+            </h2>
           </div>
-          <h2 className="text-xl font-bold text-[#1B2559]">
-            Personal Information
-          </h2>
+          {!isEditing ? (
+            <button
+              onClick={handleEdit}
+              className="px-4 py-2 bg-[#4318FF] text-white rounded-xl font-bold text-sm hover:bg-[#3311CC] transition-all"
+            >
+              Edit
+            </button>
+          ) : (
+            <div className="flex gap-2">
+              <button
+                onClick={handleSave}
+                className="px-4 py-2 bg-green-500 text-white rounded-xl font-bold text-sm hover:bg-green-600 transition-all"
+              >
+                Save
+              </button>
+              <button
+                onClick={handleCancel}
+                className="px-4 py-2 bg-gray-500 text-white rounded-xl font-bold text-sm hover:bg-gray-600 transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-7">
@@ -236,9 +314,12 @@ const EmployeeDetailsView = () => {
             <div className="relative group">
               <input
                 type="text"
-                disabled
-                value={employee.fullName || employee.name || ""}
-                className="w-full pl-11 pr-4 py-2.5 border-2 border-gray-100 rounded-xl bg-gray-50/50 text-[#1B2559] text-sm font-semibold transition-all"
+                disabled={!isEditing}
+                value={isEditing ? editedData.fullName : (employee.fullName || employee.name || "")}
+                onChange={(e) => setEditedData({ ...editedData, fullName: e.target.value })}
+                className={`w-full pl-11 pr-4 py-2.5 border-2 rounded-xl text-[#1B2559] text-sm font-semibold transition-all ${
+                  isEditing ? "border-gray-200 focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white" : "border-gray-100 bg-gray-50/50"
+                }`}
               />
               <div className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
                 <User className="text-[#667eea] w-4 h-4" />
@@ -256,7 +337,7 @@ const EmployeeDetailsView = () => {
                 type="text"
                 disabled
                 value={employee.employeeId || employee.id || ""}
-                className="w-full pl-11 pr-4 py-2.5 border-2 border-gray-100 rounded-xl bg-gray-50/50 text-[#1B2559] text-sm font-semibold transition-all"
+                className="w-full pl-11 pr-4 py-2.5 border-2 border-gray-100 rounded-xl bg-gray-50/50 text-[#1B2559] text-sm font-semibold transition-all cursor-not-allowed"
               />
               <div className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-purple-50 flex items-center justify-center">
                 <CreditCard className="text-[#764ba2] w-4 h-4" />
@@ -270,12 +351,27 @@ const EmployeeDetailsView = () => {
               Department
             </label>
             <div className="relative group">
-              <input
-                type="text"
-                disabled
-                value={employee.department || "IT"}
-                className="w-full pl-11 pr-4 py-2.5 border-2 border-gray-100 rounded-xl bg-gray-50/50 text-[#1B2559] text-sm font-semibold transition-all"
-              />
+              {isEditing ? (
+                <select
+                  value={editedData.department}
+                  onChange={(e) => setEditedData({ ...editedData, department: e.target.value })}
+                  className="w-full pl-11 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white text-[#1B2559] text-sm font-semibold transition-all appearance-none"
+                >
+                  <option value="HR">HR</option>
+                  <option value="IT">IT</option>
+                  <option value="Finance">Finance</option>
+                  <option value="Admin">Admin</option>
+                  <option value="Designer">Designer</option>
+                  <option value="Business Analyst">Business Analyst</option>
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  disabled
+                  value={employee.department || "IT"}
+                  className="w-full pl-11 pr-4 py-2.5 border-2 border-gray-100 rounded-xl bg-gray-50/50 text-[#1B2559] text-sm font-semibold transition-all"
+                />
+              )}
               <div className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-green-50 flex items-center justify-center">
                 <Building className="text-[#05CD99] w-4 h-4" />
               </div>
@@ -290,9 +386,12 @@ const EmployeeDetailsView = () => {
             <div className="relative group">
               <input
                 type="text"
-                disabled
-                value={employee.designation || ""}
-                className="w-full pl-11 pr-4 py-2.5 border-2 border-gray-100 rounded-xl bg-gray-50/50 text-[#1B2559] text-sm font-semibold transition-all"
+                disabled={!isEditing}
+                value={isEditing ? editedData.designation : (employee.designation || "")}
+                onChange={(e) => setEditedData({ ...editedData, designation: e.target.value })}
+                className={`w-full pl-11 pr-4 py-2.5 border-2 rounded-xl text-[#1B2559] text-sm font-semibold transition-all ${
+                  isEditing ? "border-gray-200 focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white" : "border-gray-100 bg-gray-50/50"
+                }`}
               />
               <div className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-orange-50 flex items-center justify-center">
                 <Briefcase className="text-[#FFB020] w-4 h-4" />
@@ -308,9 +407,12 @@ const EmployeeDetailsView = () => {
             <div className="relative group">
               <input
                 type="email"
-                disabled
-                value={employee.email || ""}
-                className="w-full pl-11 pr-4 py-2.5 border-2 border-gray-100 rounded-xl bg-gray-50/50 text-[#1B2559] text-sm font-semibold transition-all"
+                disabled={!isEditing}
+                value={isEditing ? editedData.email : (employee.email || "")}
+                onChange={(e) => setEditedData({ ...editedData, email: e.target.value })}
+                className={`w-full pl-11 pr-4 py-2.5 border-2 rounded-xl text-[#1B2559] text-sm font-semibold transition-all ${
+                  isEditing ? "border-gray-200 focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white" : "border-gray-100 bg-gray-50/50"
+                }`}
               />
               <div className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center">
                 <Mail className="text-[#EE5D50] w-4 h-4" />
@@ -319,6 +421,40 @@ const EmployeeDetailsView = () => {
           </div>
         </div>
       </div>
+      {/* Confirmation Modal */}
+      {showConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm border border-gray-100 animate-in zoom-in-95 duration-200">
+            <div className="p-6">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <AlertCircle size={32} className="text-blue-600" />
+                </div>
+                <h3 className="text-xl font-bold text-[#2B3674] mb-2">
+                  Confirm Changes
+                </h3>
+                <p className="text-gray-600 text-sm mb-6">
+                  Are you sure you want to save the changes to this employee's details?
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowConfirm(false)}
+                    className="flex-1 px-4 py-3 text-sm font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmSave}
+                    className="flex-1 px-4 py-3 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Reset Password Modal */}
       {isResetModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">

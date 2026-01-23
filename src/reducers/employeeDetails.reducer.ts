@@ -135,6 +135,19 @@ export const partialUpdateEntity = createAsyncThunk<any, { employeeId: string; e
   }
 );
 
+export const updateEmployeeStatus = createAsyncThunk<any, { employeeId: string; status: string }, ThunkConfig>(
+  'employeeDetails/update_status',
+  async ({ employeeId, status }, { dispatch, rejectWithValue }) => {
+    try {
+      const response = await axios.patch(`${apiUrl}/${employeeId}/status`, { status });
+      dispatch(getEntity(employeeId));
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || error.message || 'Request failed');
+    }
+  }
+);
+
 export const deleteEntity = createAsyncThunk<any, string, ThunkConfig>(
   'employeeDetails/delete_entity',
   async (employeeId, { dispatch, rejectWithValue }) => {
@@ -287,7 +300,7 @@ export const EmployeeDetailsSlice = createSlice({
         state.totalItems = response.totalItems || response.total || state.entities.length;
       })
       .addMatcher(
-        isFulfilled(createEntity, updateEntity, partialUpdateEntity, resetPassword, resendActivationLink),
+        isFulfilled(createEntity, updateEntity, partialUpdateEntity, resetPassword, resendActivationLink, updateEmployeeStatus),
         (state: EmployeeDetailsState, action: PayloadAction<any>) => {
           state.updating = false;
           state.loading = false;
@@ -296,7 +309,7 @@ export const EmployeeDetailsSlice = createSlice({
         }
       )
       .addMatcher(
-        isPending(getEntities, getEntity, createEntity, updateEntity, deleteEntity, partialUpdateEntity, resetPassword, resendActivationLink),
+        isPending(getEntities, getEntity, createEntity, updateEntity, deleteEntity, partialUpdateEntity, resetPassword, resendActivationLink, updateEmployeeStatus),
         (state: EmployeeDetailsState) => {
           state.errorMessage = null;
           state.updateSuccess = false;

@@ -136,7 +136,7 @@ const MyProfile = () => {
   };
 
   return (
-    <div className="overflow-y-auto md:overflow-visible custom-scrollbar px-5 md:px-8 pt-6 pb-0 w-full max-w-[1000px] mx-auto animate-in fade-in duration-500 space-y-6 md:space-y-8">
+    <div className="overflow-y-auto custom-scrollbar px-5 md:px-8 pt-6 pb-0 w-full max-w-[1000px] mx-auto animate-in fade-in duration-500 space-y-6 md:space-y-8">
       {/* Top Card - User Header with Gradient */}
       <div className="relative overflow-hidden rounded-[20px] md:rounded-[32px] shadow-[0px_20px_50px_0px_#111c440d] border border-gray-100">
         {/* Gradient Background */}
