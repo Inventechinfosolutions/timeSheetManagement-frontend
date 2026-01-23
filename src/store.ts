@@ -7,6 +7,8 @@ import publicReducer from './reducers/public.reducer';
 import masterHolidayReducer from './reducers/masterHoliday.reducer';
 import timesheetBlockerReducer from './reducers/timesheetBlocker.reducer';
 import notificationReducer from './reducers/notification.reducer';
+import leaveRequestReducer from './reducers/leaveRequest.reducer';
+import leaveNotificationReducer from './reducers/leaveNotification.reducer';
 
 export const store = configureStore({
   reducer: {
@@ -18,6 +20,8 @@ export const store = configureStore({
     masterHolidays: masterHolidayReducer,
     timesheetBlocker: timesheetBlockerReducer,
     notifications: notificationReducer,
+    leaveRequest: leaveRequestReducer,
+    leaveNotification: leaveNotificationReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

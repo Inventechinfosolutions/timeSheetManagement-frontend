@@ -15,6 +15,8 @@ const AdminLayout = () => {
         return "Employee Details";
       case "working-details":
         return "Working Details";
+      case "requests":
+        return "Requests";
       case "timesheet-list":
       case "timesheet-view":
         return "Timesheet";
@@ -32,6 +34,8 @@ const AdminLayout = () => {
       navigate("/admin-dashboard/timesheet-list");
     } else if (tabName === "Working Details") {
       navigate("/admin-dashboard/working-details");
+    } else if (tabName === "Requests") {
+      navigate("/admin-dashboard/requests");
     } else if (tabName === "System Dashboard") {
       navigate("/admin-dashboard");
     }

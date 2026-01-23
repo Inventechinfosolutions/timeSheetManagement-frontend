@@ -7,6 +7,7 @@ import {
   Unlock,
   Menu,
   ClipboardList,
+  MessageSquare,
 } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
@@ -46,6 +47,8 @@ const SidebarLayout = ({
         return "Timesheet";
       case "working-details":
         return "Working Details";
+      case "requests":
+        return "Requests";
       default:
         return "System Dashboard";
     }
@@ -70,6 +73,7 @@ const SidebarLayout = ({
     { name: "Employee Details", icon: Users },
     { name: "Timesheet", icon: AlarmClock },
     { name: "Working Details", icon: ClipboardList },
+    { name: "Requests", icon: MessageSquare },
   ];
 
   return (
