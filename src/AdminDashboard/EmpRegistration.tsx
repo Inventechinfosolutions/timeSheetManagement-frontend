@@ -8,6 +8,7 @@ import {
   CreditCard,
   Loader2,
   CheckCircle,
+  ArrowLeft,
 } from "lucide-react";
 import { createEntity, reset } from "../reducers/employeeDetails.reducer";
 import { useAppDispatch, useAppSelector } from "../hooks";
@@ -17,7 +18,7 @@ const Registration = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { loading, updateSuccess, errorMessage, entity } = useAppSelector(
-    (state: RootState) => state.employeeDetails
+    (state: RootState) => state.employeeDetails,
   );
 
   const [formData, setFormData] = useState({
@@ -66,11 +67,12 @@ const Registration = () => {
   }, [updateSuccess, errorMessage, dispatch, navigate, formData, entity]);
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: name === "employeeId" ? value.toUpperCase() : value,
     });
   };
 
@@ -97,45 +99,51 @@ const Registration = () => {
   };
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center p-4 font-sans text-gray-800 lg:p-4 lg:pt-0 relative">
-      {/* Back Button */}
-      <div className="w-full max-w-4xl mb-2">
+    <div className="w-full min-h-full flex flex-col items-center justify-start p-4 sm:p-6 lg:p-8 font-sans text-gray-800 relative pb-20">
+      <div className="w-full max-w-4xl mb-6">
         <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors font-medium group"
+          onClick={() => navigate("/admin-dashboard/timesheet-list")}
+          className="flex items-center gap-2 text-gray-400 hover:text-[#4318FF] transition-colors group"
         >
-          <span>Back</span>
+          <ArrowLeft
+            size={18}
+            className="group-hover:-translate-x-1 transition-transform"
+          />
+          <span className="text-sm font-semibold tracking-wide">
+            Back to employee list
+          </span>
         </button>
       </div>
+
       {/* Main Card - Full Width Registration */}
-      <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden">
+      <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-visible mb-8">
         {/* Form Container */}
-        <div className="w-full bg-white px-8 py-4 lg:px-12 lg:py-6 flex flex-col justify-center h-full overflow-hidden">
-          <div className="mb-3">
-            <h2 className="text-2xl font-bold text-gray-900 mb-1">
+        <div className="w-full bg-white px-5 py-8 sm:px-8 sm:py-10 lg:px-12 lg:py-12 flex flex-col justify-center">
+          <div className="mb-6">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
               Create an Employee Account
             </h2>
-            <p className="text-gray-400 text-xs">
+            <p className="text-gray-500 text-xs sm:text-sm">
               Create an employee account and manage their workforce efficiently.
             </p>
           </div>
 
           {error && (
-            <div className="mb-4 p-2.5 bg-red-50 border border-red-200 rounded-lg text-red-600 text-xs animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl text-red-600 text-xs sm:text-sm animate-in fade-in slide-in-from-top-2 duration-300">
               {error}
             </div>
           )}
 
           {showSuccess && (
-            <div className="mb-4 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-600 flex items-center gap-3 animate-in fade-in zoom-in-95 duration-500 shadow-sm">
-              <div className="bg-emerald-100 p-1.5 rounded-full">
+            <div className="mb-6 p-4 bg-emerald-50 border border-emerald-100 rounded-xl text-emerald-600 flex items-center gap-3 animate-in fade-in zoom-in-95 duration-500 shadow-sm">
+              <div className="bg-emerald-100 p-2 rounded-full shadow-sm">
                 <CheckCircle className="w-5 h-5" />
               </div>
               <div>
                 <p className="text-sm font-bold">
                   Account Created Successfully!
                 </p>
-                <p className="text-[10px] opacity-80">
+                <p className="text-[11px] opacity-80 leading-tight mt-0.5">
                   The employee can now login with their credentials. Form reset
                   for next entry.
                 </p>
@@ -143,13 +151,17 @@ const Registration = () => {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-6"
+            autoComplete="off"
+          >
             {/* Inner Card wrapping inputs */}
-            <div className="border border-gray-100 rounded-2xl p-4 shadow-sm bg-white/50">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
+            <div className="border border-gray-100 rounded-2xl p-5 sm:p-8 shadow-sm bg-gray-50/30">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 {/* Full Name */}
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-0.5">
                     Full Name
                   </label>
                   <div className="relative group">
@@ -157,18 +169,19 @@ const Registration = () => {
                       type="text"
                       name="fullName"
                       placeholder="John Doe"
-                      className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all placeholder-gray-300 text-gray-700 text-xs"
+                      className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#4318FF]/20 focus:border-[#4318FF] outline-none transition-all placeholder-gray-300 text-gray-700 text-sm font-medium"
                       value={formData.fullName}
                       onChange={handleChange}
+                      autoComplete="nope"
                       required
                     />
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                   </div>
                 </div>
 
                 {/* Employee ID */}
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-0.5">
                     Employee ID
                   </label>
                   <div className="relative group">
@@ -176,24 +189,31 @@ const Registration = () => {
                       type="text"
                       name="employeeId"
                       placeholder="EMP-1234"
-                      className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all placeholder-gray-300 text-gray-700 text-xs"
+                      className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#4318FF]/20 focus:border-[#4318FF] outline-none transition-all placeholder-gray-300 text-gray-700 text-sm font-medium"
                       value={formData.employeeId}
                       onChange={handleChange}
+                      onInput={(e) =>
+                        (e.currentTarget.value =
+                          e.currentTarget.value.toUpperCase())
+                      }
+                      pattern="[A-Z0-9-]*"
+                      title="Employee ID should contain only uppercase letters, numbers, and hyphens"
+                      autoComplete="nope"
                       required
                     />
-                    <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+                    <CreditCard className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                   </div>
                 </div>
 
                 {/* Department */}
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-0.5">
                     Department
                   </label>
                   <div className="relative group">
                     <select
                       name="department"
-                      className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-md focus:ring-1 focus:ring-[#00A3C4] focus:border-[#00A3C4] outline-none transition-all text-gray-700 text-xs appearance-none bg-white"
+                      className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#4318FF]/20 focus:border-[#4318FF] outline-none transition-all text-gray-700 text-sm font-semibold appearance-none bg-white"
                       value={formData.department}
                       onChange={handleChange}
                       required
@@ -207,13 +227,13 @@ const Registration = () => {
                       <option value="Marketing">Marketing</option>
                       <option value="Finance">Finance</option>
                     </select>
-                    <Building className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5 pointer-events-none" />
+                    <Building className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
                   </div>
                 </div>
 
                 {/* Designation */}
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-0.5">
                     Designation
                   </label>
                   <div className="relative group">
@@ -221,19 +241,19 @@ const Registration = () => {
                       type="text"
                       name="designation"
                       placeholder="Senior Developer"
-                      className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-md focus:ring-1 focus:ring-[#00A3C4] focus:border-[#00A3C4] outline-none transition-all placeholder-gray-300 text-gray-700 text-xs"
+                      className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#4318FF]/20 focus:border-[#4318FF] outline-none transition-all placeholder-gray-300 text-gray-700 text-sm font-medium"
                       value={formData.designation}
                       onChange={handleChange}
                       required
                     />
-                    <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+                    <Briefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                   </div>
                 </div>
               </div>
 
               {/* Email */}
-              <div className="space-y-1 mb-4">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-0.5">
                   Email Address
                 </label>
                 <div className="relative group">
@@ -241,72 +261,33 @@ const Registration = () => {
                     type="email"
                     name="email"
                     placeholder="john.doe@inventech.com"
-                    className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all placeholder-gray-300 text-gray-700 text-xs"
+                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#4318FF]/20 focus:border-[#4318FF] outline-none transition-all placeholder-gray-300 text-gray-700 text-sm font-medium"
                     value={formData.email}
                     onChange={handleChange}
+                    autoComplete="new-password"
                     required
                   />
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Password */}
-                <div className="space-y-1">
-                  {/* <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">
-                    Password
-                  </label> */}
-                  <div className="relative group">
-                    {/* <input
-                      type="password"
-                      name="password"
-                      placeholder="••••••••"
-                      className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-md focus:ring-1 focus:ring-[#00A3C4] focus:border-[#00A3C4] outline-none transition-all placeholder-gray-300 text-gray-700 text-xs"
-                      value={formData.password}
-                      onChange={handleChange}
-                      required
-                    /> */}
-                    {/* <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" /> */}
-                  </div>
-                </div>
-
-                {/* Confirm Password */}
-                <div className="space-y-1">
-                  {/* <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">
-                    Confirm Password
-                  </label> */}
-                  <div className="relative group">
-                    {/* <input
-                      type="password"
-                      name="confirmPassword"
-                      placeholder="••••••••"
-                      className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-md focus:ring-1 focus:ring-[#00A3C4] focus:border-[#00A3C4] outline-none transition-all placeholder-gray-300 text-gray-700 text-xs"
-                      value={formData.confirmPassword}
-                      onChange={handleChange}
-                      required
-                    /> */}
-                    {/* <Shield className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" /> */}
-                  </div>
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                 </div>
               </div>
             </div>
 
             {/* Buttons Row */}
-            <div className="flex gap-4 mt-6 pt-1">
+            <div className="pt-4">
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full relative overflow-hidden bg-linear-to-r from-[#4318FF] to-[#868CFF] text-white font-black py-3 px-6 rounded-xl transition-all shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 text-[10px] transform hover:-translate-y-0.5 group disabled:opacity-70 disabled:cursor-not-allowed tracking-widest uppercase"
+                className="w-full relative overflow-hidden bg-linear-to-r from-[#4318FF] to-[#868CFF] text-white font-black py-4 px-6 rounded-2xl transition-all shadow-xl shadow-blue-500/30 hover:shadow-blue-500/40 text-sm sm:text-base transform hover:-translate-y-1 group disabled:opacity-70 disabled:cursor-not-allowed tracking-widest uppercase active:scale-95"
               >
                 {/* Shimmer Effect */}
                 {!loading && (
-                  <div className="absolute inset-0 w-[200%] h-full bg-linear-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-[shimmer_3s_infinite]"></div>
+                  <div className="absolute inset-0 w-[200%] h-full bg-linear-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-[shimmer_3s_infinite]"></div>
                 )}
 
                 <span className="relative z-10 flex items-center justify-center gap-2">
                   {loading ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <Loader2 className="w-5 h-5 animate-spin" />
                       CREATING...
                     </>
                   ) : (

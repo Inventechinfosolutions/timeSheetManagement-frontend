@@ -29,12 +29,27 @@ export interface EmployeeActivationResponse {
 
 export interface ResetPasswordDto {
   token: string;
-  newPassword: string;
+  password: string;
 }
 
 export interface ResetPasswordResponse {
   success: boolean;
   message: string;
+}
+
+export interface ForgotPasswordOtpDto {
+  loginId: string;
+  email: string;
+}
+
+export interface VerifyOtpDto {
+  loginId: string;
+  otp: string;
+}
+
+export interface ResetPasswordOtpDto {
+  loginId: string;
+  newPassword: string;
 }
 
 interface PublicState {
@@ -52,6 +67,18 @@ interface PublicState {
   resetPasswordResponse: ResetPasswordResponse | null;
   resetPasswordLoading: boolean;
   resetPasswordError: string | null;
+  
+  // Verify Reset Token
+  tokenVerified: boolean;
+  tokenVerificationLoading: boolean;
+  tokenVerificationError: string | null;
+
+  // OTP Flow
+  otpSent: boolean;
+  otpVerified: boolean;
+  otpLoading: boolean;
+  otpError: string | null;
+  resetSuccess: boolean;
 }
 
 // ============ Initial State ============
@@ -68,6 +95,16 @@ const initialState: PublicState = {
   resetPasswordResponse: null,
   resetPasswordLoading: false,
   resetPasswordError: null,
+  
+  tokenVerified: false,
+  tokenVerificationLoading: false,
+  tokenVerificationError: null,
+
+  otpSent: false,
+  otpVerified: false,
+  otpLoading: false,
+  otpError: null,
+  resetSuccess: false,
 };
 
 // ============ API Configuration ============
@@ -124,25 +161,105 @@ export const verifyActivationEmployee = createAsyncThunk(
 );
 
 /**
+ * Verify Reset Token
+ * GET /api/auth/verify-reset-token?token=xxx&loginId=xxx
+ */
+export const verifyResetToken = createAsyncThunk(
+  "public/verify_reset_token",
+  async ({ token, loginId }: { token: string; loginId: string }, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(
+        `${apiUrl}/auth/verify-reset-token?token=${encodeURIComponent(token)}&loginId=${encodeURIComponent(loginId)}`
+      );
+      return response.data;
+    } catch (error: any) {
+      if (axios.isAxiosError(error)) {
+        return rejectWithValue(
+          error.response?.data?.message || error.message || "Token verification failed"
+        );
+      }
+      return rejectWithValue("An unknown error occurred during token verification");
+    }
+  }
+);
+
+/**
  * Reset Employee Password
  * POST /api/public/reset-password-employee
  */
-export const resetPasswordEmployee = createAsyncThunk(
+export const resetPasswordEmployee = createAsyncThunk<any, any>(
   "public/reset_password_employee",
-  async (resetPasswordDto: ResetPasswordDto, { rejectWithValue }) => {
+  async (payload: any, { rejectWithValue }) => {
     try {
-      const response = await axios.post<ResetPasswordResponse>(
+      const response = await axios.post(
         `${apiUrl}/public/reset-password-employee`,
-        resetPasswordDto
+        payload
       );
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       if (axios.isAxiosError(error)) {
         return rejectWithValue(
           error.response?.data?.message || error.message || "Password reset failed"
         );
       }
-      return rejectWithValue("An unknown error occurred during password reset");
+      return rejectWithValue(error.message || "An unknown error occurred");
+    }
+  }
+);
+
+/**
+ * Step 1: Request OTP
+ * POST /api/auth/forgot-password
+ */
+export const forgotPasswordOtp = createAsyncThunk(
+  "public/forgot_password_otp",
+  async (dto: ForgotPasswordOtpDto, { rejectWithValue }) => {
+    try {
+      const response = await axios.post(`${apiUrl}/auth/forgot-password`, dto);
+      return response.data;
+    } catch (error: any) {
+      if (axios.isAxiosError(error)) {
+        return rejectWithValue(error.response?.data?.message || error.message || "Failed to send OTP");
+      }
+      return rejectWithValue("An unknown error occurred while sending OTP");
+    }
+  }
+);
+
+/**
+ * Step 2: Verify OTP
+ * POST /api/auth/verify-otp
+ */
+export const verifyOtp = createAsyncThunk(
+  "public/verify_otp",
+  async (dto: VerifyOtpDto, { rejectWithValue }) => {
+    try {
+      const response = await axios.post(`${apiUrl}/auth/verify-otp`, dto);
+      return response.data;
+    } catch (error: any) {
+      if (axios.isAxiosError(error)) {
+        return rejectWithValue(error.response?.data?.message || error.message || "Invalid OTP");
+      }
+      return rejectWithValue("An unknown error occurred while verifying OTP");
+    }
+  }
+);
+
+/**
+ * Step 3: Reset Password
+ * POST /api/auth/reset-password
+ */
+export const resetPasswordOtp = createAsyncThunk(
+  "public/reset_password_otp",
+  async (dto: ResetPasswordOtpDto, { rejectWithValue }) => {
+    try {
+      const response = await axios.post(`${apiUrl}/auth/reset-password`, dto);
+      return response.data;
+    } catch (error: any) {
+      if (axios.isAxiosError(error)) {
+        return rejectWithValue(error.response?.data?.message || error.message || "Failed to reset password");
+      }
+      return rejectWithValue("An unknown error occurred while resetting password");
     }
   }
 );
@@ -170,6 +287,20 @@ export const PublicSlice = createSlice({
       state.resetPasswordResponse = null;
       state.resetPasswordLoading = false;
       state.resetPasswordError = null;
+    },
+    // Clear token verification state
+    clearTokenVerificationState: (state) => {
+      state.tokenVerified = false;
+      state.tokenVerificationLoading = false;
+      state.tokenVerificationError = null;
+    },
+    // Clear OTP flow state
+    clearOtpState: (state) => {
+      state.otpSent = false;
+      state.otpVerified = false;
+      state.otpLoading = false;
+      state.otpError = null;
+      state.resetSuccess = false;
     },
     // Clear all public state
     clearAllPublicState: () => initialState,
@@ -207,6 +338,24 @@ export const PublicSlice = createSlice({
         state.activationError = action.payload as string || action.error.message || "Activation verification failed";
       });
 
+    // ========== Verify Reset Token ==========
+    builder
+      .addCase(verifyResetToken.pending, (state) => {
+        state.tokenVerificationLoading = true;
+        state.tokenVerificationError = null;
+        state.tokenVerified = false;
+      })
+      .addCase(verifyResetToken.fulfilled, (state) => {
+        state.tokenVerificationLoading = false;
+        state.tokenVerified = true;
+        state.tokenVerificationError = null;
+      })
+      .addCase(verifyResetToken.rejected, (state, action) => {
+        state.tokenVerificationLoading = false;
+        state.tokenVerified = false;
+        state.tokenVerificationError = action.payload as string || action.error.message || "Token verification failed";
+      });
+
     // ========== Reset Password Employee ==========
     builder
       .addCase(resetPasswordEmployee.pending, (state) => {
@@ -222,6 +371,45 @@ export const PublicSlice = createSlice({
         state.resetPasswordLoading = false;
         state.resetPasswordError = action.payload as string || action.error.message || "Password reset failed";
       });
+
+    // ========== OTP Flow ==========
+    builder
+      .addCase(forgotPasswordOtp.pending, (state) => {
+        state.otpLoading = true;
+        state.otpError = null;
+      })
+      .addCase(forgotPasswordOtp.fulfilled, (state) => {
+        state.otpLoading = false;
+        state.otpSent = true;
+      })
+      .addCase(forgotPasswordOtp.rejected, (state, action) => {
+        state.otpLoading = false;
+        state.otpError = action.payload as string;
+      })
+      .addCase(verifyOtp.pending, (state) => {
+        state.otpLoading = true;
+        state.otpError = null;
+      })
+      .addCase(verifyOtp.fulfilled, (state) => {
+        state.otpLoading = false;
+        state.otpVerified = true;
+      })
+      .addCase(verifyOtp.rejected, (state, action) => {
+        state.otpLoading = false;
+        state.otpError = action.payload as string;
+      })
+      .addCase(resetPasswordOtp.pending, (state) => {
+        state.otpLoading = true;
+        state.otpError = null;
+      })
+      .addCase(resetPasswordOtp.fulfilled, (state) => {
+        state.otpLoading = false;
+        state.resetSuccess = true;
+      })
+      .addCase(resetPasswordOtp.rejected, (state, action) => {
+        state.otpLoading = false;
+        state.otpError = action.payload as string;
+      });
   },
 });
 
@@ -231,6 +419,8 @@ export const {
   clearLoginState,
   clearActivationState,
   clearResetPasswordState,
+  clearTokenVerificationState,
+  clearOtpState,
   clearAllPublicState,
 } = PublicSlice.actions;
 

@@ -71,3 +71,24 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   background: transparent;
   cursor: pointer;
 }
+
+/* Previous month days: Keep space to preserve alignment */
+.hide-other-months .ant-picker-cell-prev {
+  visibility: hidden !important;
+  pointer-events: none;
+}
+
+/* Next month days: Remove space entirely */
+.hide-other-months .ant-picker-cell-next {
+  display: none !important;
+}
+
+/* Hide rows that contain ONLY invisible days to remove bottom whitespace */
+.hide-other-months tr:not(:has(.ant-picker-cell-in-view)) {
+  display: none !important;
+}
+
+/* Compact the body padding */
+.hide-other-months .ant-picker-body {
+  padding-bottom: 0 !important;
+}

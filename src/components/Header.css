@@ -67,7 +67,9 @@
   border-radius: 6px;
   font-weight: 500;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
 }
 
 .nav-button:hover {
@@ -81,18 +83,36 @@
 
 @media (max-width: 768px) {
   .header-container {
-    flex-direction: column;
     height: auto;
-    padding: 15px 20px;
+    padding: 8px 16px 4px 16px; /* Added right padding for screen edge gap */
+    flex-direction: column;
+    gap: 6px; /* Added gap between logo and navigation row */
+    align-items: center;
   }
 
-  .header-nav {
+  .header-logo {
+    flex: 0 1 auto;
     width: 100%;
+    display: flex;
     justify-content: center;
-    margin-top: 10px;
+    padding-right: 16px; /* Keep logo centered relative to screen */
   }
 
-  .logo-link h2 {
-    font-size: 1.2rem;
+  .header-logo > div {
+    transform: scale(0.9);
+    transform-origin: center center;
+  }
+
+  .header-container .ml-auto {
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-end;
+    padding: 0;
+    gap: 12px;
+  }
+
+  /* Ensure the items stay grouped on the right */
+  .header-container .ml-auto > * {
+    flex: 0 0 auto;
   }
 }

@@ -116,13 +116,11 @@ export const fetchAttendanceByDate = createAsyncThunk(
   }
 );
 
-// 5. Fetch Worked Days: GET /worked-days/:employeeId?startDate=...&endDate=...
+// 5. Fetch Worked Days: GET /worked-days/:employeeId/:startDate/:endDate
 export const fetchWorkedDays = createAsyncThunk(
   'attendance/fetchWorkedDays',
   async ({ employeeId, startDate, endDate }: { employeeId: string; startDate: string; endDate: string }) => {
-    const response = await axios.get(`${apiUrl}/worked-days/${employeeId}`, {
-      params: { startDate, endDate },
-    });
+    const response = await axios.get(`${apiUrl}/worked-days/${employeeId}/${startDate}/${endDate}`);
     return response.data;
   }
 );
@@ -246,7 +244,7 @@ const attendanceSlice = createSlice({
       // 2. ADD MATCHERS SECOND
       // HANDLE GLOBAL LOADING (Pending states)
       .addMatcher(
-        (action: any) => action.type.endsWith('/pending'),
+        (action: any) => action.type.startsWith('attendance/') && action.type.endsWith('/pending'),
         (state: AttendanceState) => {
           state.loading = true;
           state.error = null;
@@ -275,7 +273,7 @@ const attendanceSlice = createSlice({
 
       // HANDLE GLOBAL ERRORS (Rejected states)
       .addMatcher(
-        (action: any) => action.type.endsWith('/rejected'),
+        (action: any) => action.type.startsWith('attendance/') && action.type.endsWith('/rejected'),
         (state: AttendanceState, action: any) => {
           state.loading = false;
           // Capture the error message from Axios

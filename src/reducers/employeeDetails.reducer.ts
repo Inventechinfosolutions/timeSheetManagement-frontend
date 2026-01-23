@@ -22,6 +22,9 @@ interface EmployeeDetailsState {
   updating: boolean;
   totalItems: number;
   updateSuccess: boolean;
+  profileImageUrl: string | null;
+  uploadLoading: boolean;
+  uploadResult: any | null;
 }
 
 const initialState: EmployeeDetailsState = {
@@ -32,6 +35,9 @@ const initialState: EmployeeDetailsState = {
   updating: false,
   totalItems: 0,
   updateSuccess: false,
+  profileImageUrl: null,
+  uploadLoading: false,
+  uploadResult: null,
 };
 
 
@@ -46,11 +52,15 @@ export const getEntities = createAsyncThunk<
   {
     search?: string;
     department?: string;
+    page?: number;
+    limit?: number;
+    sort?: string;
+    order?: string;
   },
   ThunkConfig
 >(
   'employeeDetails/fetch_entity_list',
-  async ({ search, department }, { rejectWithValue }) => {
+  async ({ search, department, page, limit, sort, order }, { rejectWithValue }) => {
     try {
       const params: any = {
         search: search || '',
@@ -59,6 +69,11 @@ export const getEntities = createAsyncThunk<
       if (department && department !== 'All') {
         params.department = department;
       }
+
+      if (page) params.page = page;
+      if (limit) params.limit = limit;
+      if (sort) params.sort = sort;
+      if (order) params.order = order;
 
       const queryParams = new URLSearchParams(params);
       const response = await axios.get(`${apiUrl}?${queryParams.toString()}`);
@@ -112,6 +127,19 @@ export const partialUpdateEntity = createAsyncThunk<any, { employeeId: string; e
   async ({ employeeId, entity }, { dispatch, rejectWithValue }) => {
     try {
       const response = await axios.patch(`${apiUrl}/${employeeId}`, cleanEntity(entity));
+      dispatch(getEntity(employeeId));
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || error.message || 'Request failed');
+    }
+  }
+);
+
+export const updateEmployeeStatus = createAsyncThunk<any, { employeeId: string; status: string }, ThunkConfig>(
+  'employeeDetails/update_status',
+  async ({ employeeId, status }, { dispatch, rejectWithValue }) => {
+    try {
+      const response = await axios.patch(`${apiUrl}/${employeeId}/status`, { status });
       dispatch(getEntity(employeeId));
       return response.data;
     } catch (error: any) {
@@ -179,6 +207,44 @@ export const fetchProfileImage = createAsyncThunk<string, string, ThunkConfig>(
   }
 );
 
+export const bulkUploadEmployees = createAsyncThunk<any, File, ThunkConfig>(
+  'employeeDetails/bulk_upload',
+  async (file, { dispatch, rejectWithValue }) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await axios.post(`${apiUrl}/bulk-upload`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      // Refresh the employee list after successful upload
+      if (response.data.successCount > 0) {
+        dispatch(getEntities({ search: '' }));
+      }
+      
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || { message: error.message || 'Upload failed' });
+    }
+  }
+);
+
+
+export const resendActivationLink = createAsyncThunk<any, string, ThunkConfig>(
+  'employeeDetails/resend_activation',
+  async (employeeId, { rejectWithValue }) => {
+    try {
+      const response = await axios.post(`${apiUrl}/${employeeId}/resend-activation`);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || error.message || 'Request failed');
+    }
+  }
+);
+
 export const EmployeeDetailsSlice = createSlice({
   name: 'employeeDetails',
   initialState,
@@ -186,6 +252,10 @@ export const EmployeeDetailsSlice = createSlice({
     reset: () => initialState,
     setCurrentUser: (state, action: PayloadAction<any>) => {
       state.entity = action.payload;
+    },
+    clearUploadResult: (state) => {
+      state.uploadResult = null;
+      state.uploadLoading = false;
     },
   },
   extraReducers: (builder: ActionReducerMapBuilder<EmployeeDetailsState>) => {
@@ -199,6 +269,30 @@ export const EmployeeDetailsSlice = createSlice({
         state.updateSuccess = true;
         state.entity = {};
       })
+      .addCase(fetchProfileImage.fulfilled, (state: EmployeeDetailsState, action: PayloadAction<string>) => {
+        state.profileImageUrl = action.payload;
+      })
+      .addCase(uploadProfileImage.fulfilled, (state: EmployeeDetailsState) => {
+        state.profileImageUrl = null; // Trigger re-fetch or state update
+      })
+      .addCase(bulkUploadEmployees.pending, (state) => {
+        state.uploadLoading = true;
+        state.uploadResult = null;
+        state.errorMessage = null;
+      })
+      .addCase(bulkUploadEmployees.fulfilled, (state, action: PayloadAction<any>) => {
+        state.uploadLoading = false;
+        state.uploadResult = action.payload;
+      })
+      .addCase(bulkUploadEmployees.rejected, (state, action: PayloadAction<any>) => {
+        state.uploadLoading = false;
+        state.errorMessage = action.payload?.message || 'Upload failed';
+        state.uploadResult = action.payload;
+      })
+      .addCase(resendActivationLink.fulfilled, (state) => {
+        state.uploadLoading = false;
+        state.updateSuccess = true;
+      })
       .addMatcher(isFulfilled(getEntities), (state: EmployeeDetailsState, action: PayloadAction<any>) => {
         const response = action.payload;
         state.loading = false;
@@ -206,7 +300,7 @@ export const EmployeeDetailsSlice = createSlice({
         state.totalItems = response.totalItems || response.total || state.entities.length;
       })
       .addMatcher(
-        isFulfilled(createEntity, updateEntity, partialUpdateEntity, resetPassword),
+        isFulfilled(createEntity, updateEntity, partialUpdateEntity, resetPassword, resendActivationLink, updateEmployeeStatus),
         (state: EmployeeDetailsState, action: PayloadAction<any>) => {
           state.updating = false;
           state.loading = false;
@@ -215,7 +309,7 @@ export const EmployeeDetailsSlice = createSlice({
         }
       )
       .addMatcher(
-        isPending(getEntities, getEntity, createEntity, updateEntity, deleteEntity, partialUpdateEntity, resetPassword),
+        isPending(getEntities, getEntity, createEntity, updateEntity, deleteEntity, partialUpdateEntity, resetPassword, resendActivationLink, updateEmployeeStatus),
         (state: EmployeeDetailsState) => {
           state.errorMessage = null;
           state.updateSuccess = false;
@@ -225,15 +319,15 @@ export const EmployeeDetailsSlice = createSlice({
       )
       .addMatcher(
         (action: any) => action.type.endsWith('/rejected'),
-        (state: EmployeeDetailsState, action: PayloadAction<any>) => {
+        (state: EmployeeDetailsState, action: any) => {
           state.loading = false;
           state.updating = false;
-          state.errorMessage = action.payload || 'An error occurred';
+          state.errorMessage = action.payload?.message || action.error?.message || 'Operation failed';
         }
       );
   },
 });
 
-export const { reset, setCurrentUser } = EmployeeDetailsSlice.actions;
+export const { reset, setCurrentUser, clearUploadResult } = EmployeeDetailsSlice.actions;
 
 export default EmployeeDetailsSlice.reducer;

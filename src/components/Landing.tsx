@@ -26,7 +26,7 @@ const Landing = () => {
   useEffect(() => {
     if (isAuthenticated && currentUser) {
       if (Number(currentUser.resetRequired) === 1) {
-        navigate("/fcManager/reset-password");
+        navigate("/timesheet/reset-password");
       } else if (currentUser.userType?.toUpperCase() === UserType.EMPLOYEE) {
         navigate("/employee-dashboard");
       } else if (currentUser.userType?.toUpperCase() === UserType.ADMIN) {
@@ -41,19 +41,6 @@ const Landing = () => {
       dispatch(clearError());
     };
   }, [dispatch]);
-
-  const handleRoleSelect = (role: string, name: string) => {
-    console.log(`Selected role: ${role}, Name: ${name}`);
-    // In a real app, you'd store the selected user context here
-    if (role === "employee") {
-      dispatch(setCurrentUser({ employeeId: loginId }));
-      navigate("/employee-dashboard/change-password", {
-        state: { currentPassword: password },
-      });
-    } else {
-      alert(`Logged in as ${name} (${role})`);
-    }
-  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

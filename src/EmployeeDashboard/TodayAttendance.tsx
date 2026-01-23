@@ -1,25 +1,18 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
-    LayoutGrid,
-    Clock,
-    AlertTriangle,
-    Edit,
-    Calendar as CalendarIcon
-} from 'lucide-react';
-import { useAppDispatch, useAppSelector } from '../hooks';
-import { 
-    fetchMonthlyAttendance
-} from '../reducers/employeeAttendance.reducer';
-import { 
-    getEntity,
-    setCurrentUser
-} from '../reducers/employeeDetails.reducer';
-import { 
-    generateMonthlyEntries
-} from '../utils/attendanceUtils';
-import Calendar from './CalendarView';
-import { RootState } from '../store';
+  Clock,
+  AlertTriangle,
+  Edit,
+  Calendar as CalendarIcon,
+} from "lucide-react";
+import { useAppDispatch, useAppSelector } from "../hooks";
+import { fetchMonthlyAttendance } from "../reducers/employeeAttendance.reducer";
+import { getEntity, setCurrentUser } from "../reducers/employeeDetails.reducer";
+import { generateMonthlyEntries } from "../utils/attendanceUtils";
+import AttendanceViewWrapper from "./CalenderViewWrapper";
+import AttendancePieChart from "./AttendancePieChart";
+import { RootState } from "../store";
 
 interface Props {
   setActiveTab?: (tab: string) => void;
@@ -35,12 +28,15 @@ const TodayAttendance = ({
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { records, loading } = useAppSelector(
-    (state: RootState) => state.attendance
+    (state: RootState) => state.attendance,
   );
   const { entity } = useAppSelector(
-    (state: RootState) => state.employeeDetails
+    (state: RootState) => state.employeeDetails,
   );
   const { currentUser } = useAppSelector((state: RootState) => state.user);
+  const { holidays } = useAppSelector(
+    (state: RootState) => state.masterHolidays,
+  );
   const currentEmployeeId = entity?.employeeId;
   const detailsFetched = useRef(false);
   const attendanceFetchedKey = useRef<string | null>(null);
@@ -48,31 +44,41 @@ const TodayAttendance = ({
   const [now] = useState(() => new Date());
   const [calendarDate, setCalendarDate] = useState(new Date());
 
-    // Fetch entity if missing name but we have an ID to fetch
-    useEffect(() => {
-        if (!entity?.fullName && (currentEmployeeId || currentUser?.loginId)) {
-            const searchTerm = currentEmployeeId || currentUser?.loginId;
-            if (searchTerm) {
-                if (detailsFetched.current) return;
-                detailsFetched.current = true;
-                
-                dispatch(getEntity(searchTerm))
-                    .unwrap()
-                    .then((found) => {
-                         if (found) {
-                             dispatch(setCurrentUser(found));
-                         }
-                    })
-                    .catch(err => {
-                         detailsFetched.current = false; // Reset on failure so it can retry
-                         console.error("Failed to fetch employee details:", err);
-                    });
+  // Fetch entity if missing name but we have an ID to fetch
+  useEffect(() => {
+    if (!entity?.fullName && (currentEmployeeId || currentUser?.loginId)) {
+      const searchTerm = currentEmployeeId || currentUser?.loginId;
+      if (searchTerm) {
+        if (detailsFetched.current) return;
+        detailsFetched.current = true;
+
+        dispatch(getEntity(searchTerm))
+          .unwrap()
+          .then((found) => {
+            if (found) {
+              dispatch(setCurrentUser(found));
             }
-        }
-    }, [dispatch, entity, currentEmployeeId, currentUser]);
+          })
+          .catch((err) => {
+            detailsFetched.current = false; // Reset on failure so it can retry
+            console.error("Failed to fetch employee details:", err);
+          });
+      }
+    }
+  }, [dispatch, entity, currentEmployeeId, currentUser]);
+
+  // Fetch Master Data (Holidays & Weekends) whenever the calendar view changes (Month/Year)
+  // Removed as per user request to reduce API calling for dashboard charts
+  /*
+  useEffect(() => {
+    const year = calendarDate.getFullYear();
+    const month = calendarDate.getMonth() + 1;
+
+    dispatch(fetchHolidaysByMonthAndYear({ month, year }));
+  }, [dispatch, calendarDate]);
+  */
 
   // 1. Separate "Today's" Data - ALWAYS based on current real-time Month
-  // This ensures "Today's Attendance" card never changes when navigating calendar
   const todayStatsEntry = useMemo(() => {
     // Generate entries for the ACTUAL current month (now)
     const entries = generateMonthlyEntries(now, now, records);
@@ -80,10 +86,35 @@ const TodayAttendance = ({
   }, [now, records]);
 
   // 2. Calendar / Stats Data - Based on SELECTED `calendarDate`
-  // This drives the "This Month" stats and the Calendar grid
   const currentMonthEntries = useMemo(() => {
-    return generateMonthlyEntries(calendarDate, now, records);
-  }, [calendarDate, now, records]);
+    const entries = generateMonthlyEntries(calendarDate, now, records);
+
+    // Merge Master Holidays to align with MyTimesheet logic
+    return entries.map((day) => {
+      const dateStr = day.fullDate.toISOString().split("T")[0];
+      const isMasterHoliday = holidays.find((h) => {
+        const hDate = h.date || (h as any).holidayDate;
+        if (!hDate) return false;
+        return (
+          (typeof hDate === "string"
+            ? hDate.split("T")[0]
+            : new Date(hDate).toISOString().split("T")[0]) === dateStr
+        );
+      });
+
+      if (isMasterHoliday) {
+        if (
+          day.status !== "Full Day" &&
+          day.status !== "Half Day" &&
+          day.status !== "WFH" &&
+          day.status !== "Client Visit"
+        ) {
+          return { ...day, status: "Holiday" };
+        }
+      }
+      return day;
+    });
+  }, [calendarDate, now, records, holidays]);
 
   const displayEntry =
     todayStatsEntry ||
@@ -96,7 +127,7 @@ const TodayAttendance = ({
 
   const fetchAttendanceData = useCallback(
     (date: Date) => {
-      if (!currentEmployeeId) return; // Guard to prevent calls with undefined ID
+      if (!currentEmployeeId) return;
 
       const fetchKey = `${currentEmployeeId}-${
         date.getMonth() + 1
@@ -109,10 +140,10 @@ const TodayAttendance = ({
           employeeId: currentEmployeeId,
           month: (date.getMonth() + 1).toString().padStart(2, "0"),
           year: date.getFullYear().toString(),
-        })
+        }),
       );
     },
-    [dispatch, currentEmployeeId]
+    [dispatch, currentEmployeeId],
   );
 
   useEffect(() => {
@@ -136,14 +167,14 @@ const TodayAttendance = ({
         navigate(navTarget, { state });
       }
     },
-    [setScrollToDate, setActiveTab, navigate]
+    [setScrollToDate, setActiveTab, navigate],
   );
 
   const handleNavigate = (timestamp: number) => {
     if (onNavigate) {
       onNavigate(timestamp);
     } else {
-      handleDateNavigator(timestamp); // Using the new handleDateNavigator
+      handleDateNavigator(timestamp);
     }
   };
 
@@ -154,7 +185,6 @@ const TodayAttendance = ({
       </div>
     );
 
-  // Initial fallback if loading not started yet
   if (!todayStatsEntry && !loading && records.length === 0)
     return (
       <div className="p-8 text-center text-gray-500">Initializing entry...</div>
@@ -162,8 +192,8 @@ const TodayAttendance = ({
 
   return (
     <div className="flex flex-col h-full w-full overflow-hidden bg-gray-50/50">
-      {/* Header - "Application Intake" Reference Style */}
-      <div className="px-6 py-5 bg-white border-b border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4">
+      {/* Header */}
+      <div className="px-6 py-5 bg-linear-to-r from-blue-100 via-blue-50 to-white border-b border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-[#1B2559]">
             Employee Dashboard
@@ -189,165 +219,98 @@ const TodayAttendance = ({
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
-        {/* Top Row: Colorful Stats Cards (Reference Style) */}
+        {/* Middle Section: Info Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Card 1: Total Full Days - Green */}
-          <div
-            onClick={() => handleNavigate(calendarDate.getTime())}
-            className="group relative h-44 rounded-[30px] p-2 overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-green-500/40"
-            style={{
-              background: "linear-gradient(135deg, #4ADE80 0%, #16A34A 100%)",
-            }}
-          >
-            {/* Top Label */}
-            <div className="h-[25%] flex items-center justify-center">
-                <h3 className="text-white text-base font-medium tracking-wide">Total Full Days</h3>
-            </div>
-
-            {/* Glass Panel */}
-            <div className="h-[75%] bg-white/20 backdrop-blur-md rounded-[24px] border border-white/30 flex flex-col items-center justify-center relative overflow-hidden shadow-inner">
-                 {/* Glossy shine reflection */}
-                 <div className="absolute -top-20 -left-20 w-60 h-60 bg-white/20 rounded-full blur-3xl pointer-events-none"></div>
-
-                <h2 className="text-6xl font-bold text-white drop-shadow-md mb-2 relative z-10">
-                {
-                  currentMonthEntries.filter(
-                    (e) =>
-                      e.status === "Full Day" ||
-                      e.status === "WFH" ||
-                      e.status === "Client Visit"
-                  ).length
-                }
-                </h2>
-                <p className="text-white/90 text-sm font-medium tracking-wide relative z-10">Within SLA</p>
-            </div>
-          </div>
-
-          {/* Card 2: Total Half Days - Orange */}
-          <div
-            onClick={() => handleNavigate(calendarDate.getTime())}
-            className="group relative h-44 rounded-[30px] p-2 overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-orange-500/40"
-            style={{
-              background: "linear-gradient(135deg, #FDBA74 0%, #EA580C 100%)",
-            }}
-          >
-            {/* Top Label */}
-            <div className="h-[25%] flex items-center justify-center">
-                <h3 className="text-white text-base font-medium tracking-wide">Total Half Days</h3>
-            </div>
-
-             {/* Glass Panel */}
-            <div className="h-[75%] bg-white/20 backdrop-blur-md rounded-[24px] border border-white/30 flex flex-col items-center justify-center relative overflow-hidden shadow-inner">
-                {/* Glossy shine reflection */}
-                <div className="absolute -top-20 -left-20 w-60 h-60 bg-white/20 rounded-full blur-3xl pointer-events-none"></div>
-
-                <h2 className="text-6xl font-bold text-white drop-shadow-md mb-2 relative z-10">
-                {records.filter((r) => r.status === "Half Day").length}
-                </h2>
-                <p className="text-white/90 text-sm font-medium tracking-wide relative z-10">Approaching Limit</p>
-            </div>
-          </div>
-
-          {/* Card 3: Total Absent Days - Red */}
-          <div
-            onClick={() => handleNavigate(calendarDate.getTime())}
-            className="group relative h-44 rounded-[30px] p-2 overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-red-500/40"
-            style={{
-              background: "linear-gradient(135deg, #F87171 0%, #DC2626 100%)",
-            }}
-          >
-             {/* Top Label */}
-             <div className="h-[25%] flex items-center justify-center">
-                <h3 className="text-white text-base font-medium tracking-wide">Total Absent Days</h3>
-            </div>
-
-             {/* Glass Panel */}
-            <div className="h-[75%] bg-white/20 backdrop-blur-md rounded-[24px] border border-white/30 flex flex-col items-center justify-center relative overflow-hidden shadow-inner">
-                 {/* Glossy shine reflection */}
-                <div className="absolute -top-20 -left-20 w-60 h-60 bg-white/20 rounded-full blur-3xl pointer-events-none"></div>
-
-                <h2 className="text-6xl font-bold text-white drop-shadow-md mb-2 relative z-10">
-                {records.filter((r) => r.status === "Leave").length}
-                </h2>
-                <p className="text-white/90 text-sm font-medium tracking-wide relative z-10">Action Required</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Middle Section: Info Cards (White) */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-row items-center gap-5 transition-all hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
-            <div className="w-12 h-12 rounded-xl bg-blue-50/80 flex items-center justify-center text-blue-600 shadow-sm group-hover:scale-110 transition-transform">
+          {/* Card 1 */}
+          <div className="bg-linear-to-br from-[#81B4FF] to-[#3B82F6] rounded-[12px] p-6 border border-transparent shadow-sm flex flex-col items-start gap-3 h-full relative overflow-hidden group hover:shadow-md transition-all">
+            <div className="p-3 rounded-xl bg-[#E6FFFA] text-[#10B981]">
               <Clock size={24} strokeWidth={2} />
             </div>
-            <div>
-              <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">
+            <div className="w-full">
+              <h4 className="text-sm font-bold text-white mb-3">
                 Total Week Hours
               </h4>
-              <p className="text-3xl font-black text-gray-800 tracking-tight">
-                {(() => {
-                  const d = new Date(now);
-                  const day = d.getDay();
-                  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-                  const weekStart = new Date(d.setDate(diff));
-                  weekStart.setHours(0, 0, 0, 0);
-                  const weekEnd = new Date(weekStart);
-                  weekEnd.setDate(weekStart.getDate() + 6);
-                  weekEnd.setHours(23, 59, 59, 999);
+              <div className="w-full border-t border-white/20 my-2"></div>
+              <div className="flex flex-col">
+                <span className="text-3xl font-bold text-white">
+                  {(() => {
+                    const d = new Date(now);
+                    const day = d.getDay();
+                    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+                    const weekStart = new Date(d.setDate(diff));
+                    weekStart.setHours(0, 0, 0, 0);
+                    const weekEnd = new Date(weekStart);
+                    weekEnd.setDate(weekStart.getDate() + 6);
+                    weekEnd.setHours(23, 59, 59, 999);
 
-                  const weekEntries = records.filter((r) => {
-                    const rawDate = r.workingDate || (r as any).working_date;
-                    if (!rawDate) return false;
-                    const rDate = new Date(rawDate);
-                    return rDate >= weekStart && rDate <= weekEnd;
-                  });
-                  return weekEntries
-                    .reduce((acc, curr) => acc + (curr.totalHours || 0), 0)
-                    .toFixed(1);
-                })()}
-              </p>
+                    const weekEntries = records.filter((r) => {
+                      const rawDate = r.workingDate || (r as any).working_date;
+                      if (!rawDate) return false;
+                      const rDate = new Date(rawDate);
+                      return rDate >= weekStart && rDate <= weekEnd;
+                    });
+                    return weekEntries
+                      .reduce((acc, curr) => acc + (curr.totalHours || 0), 0)
+                      .toFixed(1);
+                  })()}
+                </span>
+                <span className="text-[10px] font-bold text-blue-100 uppercase tracking-widest mt-1">
+                  Hours
+                </span>
+              </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-row items-center gap-5 transition-all hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
-            <div className="w-12 h-12 rounded-xl bg-purple-50/80 flex items-center justify-center text-purple-600 shadow-sm">
+          {/* Card 2 */}
+          <div className="bg-linear-to-br from-[#81B4FF] to-[#3B82F6] rounded-[12px] p-6 border border-transparent shadow-sm flex flex-col items-start gap-3 h-full relative overflow-hidden group hover:shadow-md transition-all">
+            <div className="p-3 rounded-xl bg-[#FEF3C7] text-[#F59E0B]">
               <CalendarIcon size={24} strokeWidth={2} />
             </div>
-            <div>
-              <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">
+            <div className="w-full">
+              <h4 className="text-sm font-bold text-white mb-3">
                 Total Monthly Hours
               </h4>
-              <p className="text-3xl font-black text-gray-800 tracking-tight">
-                {(() => {
-                  const workedDays = records.filter(
-                    (e) => (e.totalHours || 0) > 0
-                  );
-                  return workedDays
-                    .reduce((acc, curr) => acc + (curr.totalHours || 0), 0)
-                    .toFixed(1);
-                })()}
-              </p>
+              <div className="w-full border-t border-white/20 my-2"></div>
+              <div className="flex flex-col">
+                <span className="text-3xl font-bold text-white">
+                  {(() => {
+                    const workedDays = records.filter(
+                      (e) => (e.totalHours || 0) > 0,
+                    );
+                    return workedDays
+                      .reduce((acc, curr) => acc + (curr.totalHours || 0), 0)
+                      .toFixed(1);
+                  })()}
+                </span>
+                <span className="text-[10px] font-bold text-blue-100 uppercase tracking-widest mt-1">
+                  Hours
+                </span>
+              </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-row items-center gap-5 transition-all hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
-            <div className="w-12 h-12 rounded-xl bg-orange-50/80 flex items-center justify-center text-orange-500 shadow-sm">
+          {/* Card 3 */}
+          <div className="bg-linear-to-br from-[#81B4FF] to-[#3B82F6] rounded-[12px] p-6 border border-transparent shadow-sm flex flex-col items-start gap-3 h-full relative overflow-hidden group hover:shadow-md transition-all">
+            <div className="p-3 rounded-xl bg-[#FEE2E2] text-[#E11D48]">
               <AlertTriangle size={24} strokeWidth={2} />
             </div>
-            <div>
-              <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">
+            <div className="w-full">
+              <h4 className="text-sm font-bold text-white mb-3">
                 Pending Updates
               </h4>
-              <div className="flex items-baseline gap-1">
-                <p className="text-3xl font-black text-gray-800 tracking-tight">
-                    {
+              <div className="w-full border-t border-white/20 my-2"></div>
+              <div className="flex flex-col">
+                <span className="text-3xl font-bold text-white">
+                  {
                     currentMonthEntries.filter(
-                        (day) =>
-                        day.status === "Not Updated" && day.fullDate < new Date()
+                      (day) =>
+                        day.status === "Not Updated" &&
+                        !day.isToday &&
+                        !day.isFuture,
                     ).length
-                    }
-                </p>
-                <span className="text-sm text-gray-400 font-bold">
+                  }
+                </span>
+                <span className="text-[10px] font-bold text-blue-100 uppercase tracking-widest mt-1">
                   Days
                 </span>
               </div>
@@ -355,10 +318,22 @@ const TodayAttendance = ({
           </div>
         </div>
 
-        <div className="flex justify-start">
+        {/* Charts Section */}
+        <div className="w-full md:w-1/2 mx-auto">
+          <AttendancePieChart
+            data={currentMonthEntries}
+            currentMonth={calendarDate}
+            onMonthChange={(date) => {
+              setCalendarDate(date);
+              fetchAttendanceData(date);
+            }}
+          />
+        </div>
+
+        <div className="flex justify-center">
           <button
             onClick={() => handleNavigate(now.getTime())}
-            className="px-8 py-3 rounded-xl text-white font-bold bg-gradient-to-r from-[#868CFF] to-[#4318FF] shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all flex items-center gap-2 transform active:scale-95"
+            className="px-8 py-3 rounded-xl text-white font-bold bg-linear-to-r from-[#868CFF] to-[#4318FF] shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all flex items-center gap-2 transform active:scale-95"
           >
             <Edit size={18} />
             <span>Update Today's Attendance</span>
@@ -378,10 +353,10 @@ const TodayAttendance = ({
             </div>
           </div>
           <div className="p-4">
-            <Calendar
+            <AttendanceViewWrapper
               now={now}
               currentDate={calendarDate}
-              entries={currentMonthEntries}
+              entries={currentMonthEntries as any}
               onMonthChange={(date) => {
                 setCalendarDate(date);
                 fetchAttendanceData(date);
@@ -390,7 +365,7 @@ const TodayAttendance = ({
                 const targetDate = new Date(
                   calendarDate.getFullYear(),
                   calendarDate.getMonth(),
-                  day
+                  day,
                 );
                 handleNavigate(targetDate.getTime());
               }}

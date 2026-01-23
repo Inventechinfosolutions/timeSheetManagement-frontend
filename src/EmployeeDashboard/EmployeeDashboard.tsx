@@ -22,7 +22,7 @@ const EmployeeDashboard = () => {
 
   // Redux
   const dispatch = useAppDispatch();
-  const { records } = useAppSelector((state) => state.attendance);
+  const {} = useAppSelector((state) => state.attendance);
   const { entity } = useAppSelector((state) => state.employeeDetails);
   const currentEmployeeId = entity?.employeeId;
 
@@ -44,10 +44,10 @@ const EmployeeDashboard = () => {
           employeeId: currentEmployeeId,
           month: (date.getMonth() + 1).toString().padStart(2, "0"),
           year: date.getFullYear().toString(),
-        })
+        }),
       );
     },
-    [dispatch, currentEmployeeId]
+    [dispatch, currentEmployeeId],
   );
 
   useEffect(() => {
@@ -87,7 +87,7 @@ const EmployeeDashboard = () => {
               const targetDate = new Date(
                 fullTimesheetDate.getFullYear(),
                 fullTimesheetDate.getMonth(),
-                day
+                day,
               );
               handleDateNavigator(targetDate.getTime());
             }}

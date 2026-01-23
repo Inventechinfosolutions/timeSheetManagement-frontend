@@ -4,7 +4,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Save,
-  CheckCircle,
   AlertCircle,
   Lock,
 } from "lucide-react";
@@ -23,6 +22,7 @@ import {
   isEditableMonth,
 } from "../utils/attendanceUtils";
 import { fetchBlockers } from "../reducers/timesheetBlocker.reducer";
+import MobileMyTimesheet from "./MobileMyTimesheet";
 
 interface TimesheetProps {
   now?: Date;
@@ -30,6 +30,7 @@ interface TimesheetProps {
   readOnly?: boolean;
   selectedDateId?: number | null;
   onBlockedClick?: () => void;
+  containerClassName?: string;
 }
 
 const MyTimesheet = ({
@@ -38,6 +39,7 @@ const MyTimesheet = ({
   readOnly = false,
   selectedDateId: propSelectedDateId,
   onBlockedClick,
+  containerClassName,
 }: TimesheetProps) => {
   const { date } = useParams<{ date?: string }>();
   const location = useLocation();
@@ -48,28 +50,36 @@ const MyTimesheet = ({
   const { currentUser } = useAppSelector((state) => state.user);
   // @ts-ignore
   const { holidays } = useAppSelector(
-    (state) => (state as any).masterHolidays || { holidays: [] }
+    (state) => (state as any).masterHolidays || { holidays: [] },
   );
   const { blockers } = useAppSelector((state) => state.timesheetBlocker);
 
   const isAdmin = currentUser?.userType === UserType.ADMIN;
-  const currentEmployeeId = propEmployeeId || entity?.employeeId || (!isAdmin ? currentUser?.employeeId : undefined);
+  const currentEmployeeId =
+    propEmployeeId ||
+    entity?.employeeId ||
+    (!isAdmin ? currentUser?.employeeId : undefined);
 
   // 1. viewMonth/now state
   const [now, setNow] = useState<Date>(() => {
     if (propNow) return propNow;
-    if (location.state?.selectedDate) return new Date(location.state.selectedDate);
+    if (location.state?.selectedDate)
+      return new Date(location.state.selectedDate);
     if (date) return new Date(date);
     return new Date();
   });
 
   // 2. Highlighting state
   const [selectedDateId, setSelectedDateId] = useState<number | null>(() => {
-    if (location.state?.timestamp) return location.state.timestamp;
+    if (location.state?.selectedDate)
+      return new Date(location.state.selectedDate).getTime();
     if (date) return new Date(date).getTime();
     return propSelectedDateId || null;
   });
   const [isHighlighted, setIsHighlighted] = useState(false);
+  const [lastHighlightTrigger, setLastHighlightTrigger] = useState<
+    number | null
+  >(location.state?.timestamp || null);
 
   // 3. View/Input state
   const [localEntries, setLocalEntries] = useState<TimesheetEntry[]>([]);
@@ -82,9 +92,111 @@ const MyTimesheet = ({
     type: "success" | "error" | "info";
   }>({ show: false, message: "", type: "success" });
 
-  const holidaysFetched = useRef(false);
-  const lastAttendanceKey = useRef<string | null>(null);
+  const [inputError, setInputError] = useState<{
+    index: number;
+    message: string;
+  } | null>(null);
+
   const today = useMemo(() => new Date(), []);
+
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
+  const [shouldSetLastWeek, setShouldSetLastWeek] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const weeks = useMemo(() => {
+    const w: { entry: TimesheetEntry; originalIndex: number }[][] = [];
+    let currentWeek: { entry: TimesheetEntry; originalIndex: number }[] = [];
+
+    localEntries.forEach((entry, idx) => {
+      currentWeek.push({ entry, originalIndex: idx });
+      // Break on Sunday (getDay() === 0)
+      if (entry.fullDate.getDay() === 0) {
+        if (currentWeek.length > 0) {
+          w.push(currentWeek);
+          currentWeek = [];
+        }
+      }
+    });
+    // Push remaining days if any (shouldn't happen with padding but safer)
+    if (currentWeek.length > 0) w.push(currentWeek);
+    return w;
+  }, [localEntries]);
+
+  const lastMonthRef = useRef<string>("");
+
+  // Update currentWeekIndex when month changes or a date is selected from calendar
+  useEffect(() => {
+    const currentMonthKey = `${now.getMonth()}-${now.getFullYear()}`;
+    const hasMonthChanged = lastMonthRef.current !== currentMonthKey;
+    
+    // Only proceed if month changed OR a specific date was explicitly selected/highlighted
+    if (!hasMonthChanged && !selectedDateId) return;
+
+    if (hasMonthChanged) {
+      lastMonthRef.current = currentMonthKey;
+      if (shouldSetLastWeek) {
+        setCurrentWeekIndex(weeks.length - 1);
+        setShouldSetLastWeek(false);
+        return;
+      }
+    }
+
+    // 2. Week selection logic (Triggered by month change OR selectedDateId change)
+    const targetDate = selectedDateId
+      ? new Date(selectedDateId)
+      : now.getMonth() === today.getMonth() &&
+          now.getFullYear() === today.getFullYear()
+        ? today
+        : null;
+
+    if (targetDate && localEntries.length > 0) {
+      const targetDay = targetDate.getDate();
+      let weekIdx = 0;
+      let found = false;
+      for (let i = 0; i < localEntries.length; i++) {
+        if (localEntries[i].date === targetDay) {
+          setCurrentWeekIndex(weekIdx);
+          found = true;
+          break;
+        }
+        if (localEntries[i].fullDate.getDay() === 0) weekIdx++;
+      }
+      if (!found) setCurrentWeekIndex(0);
+    }
+  }, [now, selectedDateId, shouldSetLastWeek, weeks.length]);
+
+  const handleNextWeek = () => {
+    if (currentWeekIndex < weeks.length - 1) {
+      setCurrentWeekIndex(currentWeekIndex + 1);
+    } else {
+      const next = new Date(now);
+      next.setMonth(next.getMonth() + 1);
+      if (next <= new Date()) {
+        setNow(next);
+        setCurrentWeekIndex(0);
+      }
+    }
+  };
+
+  const handlePrevWeek = () => {
+    if (currentWeekIndex > 0) {
+      setCurrentWeekIndex(currentWeekIndex - 1);
+    } else {
+      const prev = new Date(now);
+      prev.setMonth(prev.getMonth() - 1);
+      setNow(prev);
+      setShouldSetLastWeek(true);
+    }
+  };
+  const lastAttendanceKey = useRef<string | null>(null);
 
   // Sync state with props when they change (critical for Admin View)
   useEffect(() => {
@@ -99,18 +211,40 @@ const MyTimesheet = ({
   useEffect(() => {
     if (propSelectedDateId && propSelectedDateId !== selectedDateId) {
       setSelectedDateId(propSelectedDateId);
+      setIsHighlighted(true);
     }
   }, [propSelectedDateId]);
+
+  // Handle navigation highlight trigger
+  useEffect(() => {
+    if (selectedDateId) {
+      setIsHighlighted(true);
+      const timer = setTimeout(() => {
+        setIsHighlighted(false);
+      }, 5000); // 5 seconds as requested
+      return () => clearTimeout(timer);
+    }
+  }, [selectedDateId]);
 
   // Handle navigation state updates
   useEffect(() => {
     if (location.state?.selectedDate) {
-      setNow(new Date(location.state.selectedDate));
+      const targetDate = new Date(location.state.selectedDate);
+      setNow(targetDate);
+      setSelectedDateId(targetDate.getTime());
+
+      // If timestamp is different, it's a new click/navigation event
+      if (
+        location.state.timestamp &&
+        location.state.timestamp !== lastHighlightTrigger
+      ) {
+        setLastHighlightTrigger(location.state.timestamp);
+        setIsHighlighted(false);
+        // Minimal delay to ensure React picks up the state change for animation reset
+        setTimeout(() => setIsHighlighted(true), 50);
+      }
     }
-    if (location.state?.timestamp) {
-      setSelectedDateId(location.state.timestamp);
-    }
-  }, [location.state]);
+  }, [location.state, lastHighlightTrigger]);
 
   // Fetch holidays on mount
   useEffect(() => {
@@ -119,12 +253,16 @@ const MyTimesheet = ({
 
   // Fetch attendance and blockers when month/employee changes
   useEffect(() => {
-    if (!currentEmployeeId || (isAdmin && currentEmployeeId.toLowerCase() === "admin")) return;
-    
+    if (
+      !currentEmployeeId ||
+      (isAdmin && currentEmployeeId.toLowerCase() === "admin")
+    )
+      return;
+
     const fetchKey = `${currentEmployeeId}-${
       now.getMonth() + 1
     }-${now.getFullYear()}`;
-    
+
     if (lastAttendanceKey.current === fetchKey) return;
     lastAttendanceKey.current = fetchKey;
 
@@ -134,7 +272,7 @@ const MyTimesheet = ({
         employeeId: currentEmployeeId,
         month: (now.getMonth() + 1).toString().padStart(2, "0"),
         year: now.getFullYear().toString(),
-      })
+      }),
     );
   }, [dispatch, currentEmployeeId, now, isAdmin]);
 
@@ -164,7 +302,7 @@ const MyTimesheet = ({
     if (toast.show) {
       const timer = setTimeout(
         () => setToast((prev) => ({ ...prev, show: false })),
-        3000
+        3000,
       );
       return () => clearTimeout(timer);
     }
@@ -173,7 +311,7 @@ const MyTimesheet = ({
   const isDateBlocked = (date: Date) => {
     const d = new Date(date);
     d.setHours(0, 0, 0, 0);
-    return blockers.some(b => {
+    return blockers.some((b) => {
       const start = new Date(b.blockedFrom);
       start.setHours(0, 0, 0, 0);
       const end = new Date(b.blockedTo);
@@ -185,7 +323,7 @@ const MyTimesheet = ({
   const getBlockedReason = (date: Date) => {
     const d = new Date(date);
     d.setHours(0, 0, 0, 0);
-    const blocker = blockers.find(b => {
+    const blocker = blockers.find((b) => {
       const start = new Date(b.blockedFrom);
       start.setHours(0, 0, 0, 0);
       const end = new Date(b.blockedTo);
@@ -193,6 +331,24 @@ const MyTimesheet = ({
       return d >= start && d <= end;
     });
     return blocker?.reason || "Admin Blocked";
+  };
+
+  const isHoliday = (date: Date) => {
+    const d = new Date(date);
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+      2,
+      "0",
+    )}-${String(d.getDate()).padStart(2, "0")}`;
+
+    return holidays?.some((h: any) => {
+      const hDate = h.holidayDate || h.date;
+      if (!hDate) return false;
+      const normalizedHDate =
+        typeof hDate === "string"
+          ? hDate.split("T")[0]
+          : new Date(hDate).toISOString().split("T")[0];
+      return normalizedHDate === dateStr;
+    });
   };
 
   // Handlers
@@ -217,10 +373,31 @@ const MyTimesheet = ({
   const handleHoursInput = (entryIndex: number, val: string) => {
     if (readOnly) return;
     if (isDateBlocked(localEntries[entryIndex].fullDate)) return;
+    
+    // Prevent typing if currently showing an error for this field
+    if (inputError?.index === entryIndex) return;
+
     if (!/^\d*\.?\d*$/.test(val)) return;
-    setLocalInputValues((prev) => ({ ...prev, [entryIndex]: val }));
 
     const num = parseFloat(val);
+
+    // Validation: Max 24 hours
+    if (num > 24) {
+      setInputError({ index: entryIndex, message: "Max hours: 24" });
+
+      // Clear the invalid value immediately so when error disappears it is empty/reset
+      setLocalInputValues((prev) => ({ ...prev, [entryIndex]: "" }));
+      
+      // Clear error after 2 seconds
+      setTimeout(() => {
+        setInputError(null);
+      }, 2000);
+
+      return;
+    }
+
+    setLocalInputValues((prev) => ({ ...prev, [entryIndex]: val }));
+
     const hours = isNaN(num) ? 0 : num;
 
     let newStatus: string = localEntries[entryIndex].status || "Not Updated";
@@ -230,7 +407,7 @@ const MyTimesheet = ({
     } else {
       const entryDate = new Date(localEntries[entryIndex].fullDate);
       const dateStrLocal = `${entryDate.getFullYear()}-${String(
-        entryDate.getMonth() + 1
+        entryDate.getMonth() + 1,
       ).padStart(2, "0")}-${String(entryDate.getDate()).padStart(2, "0")}`;
 
       const isHoliday = holidays?.find((h: any) => {
@@ -253,11 +430,11 @@ const MyTimesheet = ({
         // 0 hours on a weekday: Determine if Leave or Upcoming
         const todayZero = new Date();
         todayZero.setHours(0, 0, 0, 0);
-        
+
         const entryDateZero = new Date(entryDate);
         entryDateZero.setHours(0, 0, 0, 0);
 
-        if (entryDateZero < todayZero) {
+        if (entryDateZero <= todayZero) {
           newStatus = "Leave";
         } else {
           newStatus = "UPCOMING";
@@ -291,7 +468,10 @@ const MyTimesheet = ({
       const currentTotal = entry.totalHours || 0;
       const originalTotal = baseEntries[idx]?.totalHours || 0;
 
-      if (currentTotal !== originalTotal) {
+      if (
+        currentTotal !== originalTotal ||
+        entry.status !== baseEntries[idx]?.status
+      ) {
         const d = entry.fullDate;
         const workingDate = `${d.getFullYear()}-${(d.getMonth() + 1)
           .toString()
@@ -327,11 +507,14 @@ const MyTimesheet = ({
     }
 
     // Force "Leave" status for past days with 0 hours
-    const todayStr = new Date().toISOString().split('T')[0];
-    payload.forEach(item => {
-        if ((!item.totalHours || Number(item.totalHours) === 0) && item.workingDate < todayStr) {
-            item.status = "Leave";
-        }
+    const todayStr = new Date().toISOString().split("T")[0];
+    payload.forEach((item) => {
+      if (
+        (!item.totalHours || Number(item.totalHours) === 0) &&
+        item.workingDate < todayStr
+      ) {
+        item.status = "Leave";
+      }
     });
 
     try {
@@ -341,9 +524,13 @@ const MyTimesheet = ({
           employeeId: currentEmployeeId,
           month: (now.getMonth() + 1).toString().padStart(2, "0"),
           year: now.getFullYear().toString(),
-        })
+        }),
       );
-      setToast({ show: true, message: "Data Saved Successfully", type: "success" });
+      setToast({
+        show: true,
+        message: "Data Saved Successfully",
+        type: "success",
+      });
     } catch (error: any) {
       console.warn("Bulk API failed, attempting sequential fallback...", error);
       let successCount = 0;
@@ -354,7 +541,7 @@ const MyTimesheet = ({
               updateAttendanceRecord({
                 id: item.id,
                 data: { totalHours: item.totalHours, status: item.status },
-              })
+              }),
             ).unwrap();
           } else {
             await dispatch(
@@ -363,7 +550,7 @@ const MyTimesheet = ({
                 workingDate: item.workingDate,
                 totalHours: item.totalHours,
                 status: item.status,
-              })
+              }),
             ).unwrap();
           }
           successCount++;
@@ -377,11 +564,15 @@ const MyTimesheet = ({
             employeeId: currentEmployeeId,
             month: (now.getMonth() + 1).toString().padStart(2, "0"),
             year: now.getFullYear().toString(),
-          })
+          }),
         );
         setToast({ show: true, message: "Data Saved", type: "success" });
       } else {
-        setToast({ show: true, message: (error?.response?.data?.message || "Failed to save records."), type: "error" });
+        setToast({
+          show: true,
+          message: error?.response?.data?.message || "Failed to save records.",
+          type: "error",
+        });
       }
     }
   };
@@ -389,18 +580,47 @@ const MyTimesheet = ({
   // Calculations
   const monthTotalHours = localEntries.reduce(
     (acc, entry) => acc + (entry.totalHours || 0),
-    0
+    0,
   );
+
   const firstDayOfMonth = new Date(
     now.getFullYear(),
     now.getMonth(),
-    1
+    1,
   ).getDay();
   const paddingDays = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
-  const weekdays = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+
+  if (isMobile) {
+    return (
+      <MobileMyTimesheet
+        currentWeekEntries={weeks[currentWeekIndex] || []}
+        onPrevWeek={handlePrevWeek}
+        onNextWeek={handleNextWeek}
+        onHoursInput={handleHoursInput}
+        onSave={onSaveAll}
+        monthTotalHours={monthTotalHours}
+        currentMonthName={now.toLocaleDateString("en-US", {
+          month: "long",
+          year: "numeric",
+        })}
+        loading={loading}
+        isAdmin={isAdmin}
+        readOnly={readOnly}
+        isDateBlocked={isDateBlocked}
+        isEditableMonth={isEditableMonth}
+        isHoliday={isHoliday}
+        onBlockedClick={onBlockedClick}
+        localInputValues={localInputValues}
+        onInputBlur={handleInputBlur}
+        selectedDateId={selectedDateId}
+        isHighlighted={isHighlighted}
+        containerClassName={containerClassName}
+      />
+    );
+  }
 
   return (
-    <div className="flex flex-col h-full max-h-full overflow-hidden bg-[#F4F7FE] p-2 md:px-6 md:pt-4 md:pb-0 relative">
+    <div className={`flex flex-col ${containerClassName || "h-full max-h-full overflow-hidden bg-[#F4F7FE] py-2 px-1 md:px-6 md:pt-4 md:pb-0 relative"}`}>
       {loading && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/30 backdrop-blur-[2px]">
           <div className="animate-spin rounded-full h-10 w-10 border-b-4 border-[#4318FF]"></div>
@@ -427,19 +647,18 @@ const MyTimesheet = ({
         </div>
       )}
 
-      {/* Main Card Container */}
       <div className="flex-1 bg-white rounded-[20px] p-4 shadow-[0px_20px_50px_0px_#111c440d] border border-gray-100 overflow-hidden mt-1 flex flex-col">
         {/* Header Controls */}
-        <div className="flex justify-between items-center mb-4 px-2">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center bg-[#F4F7FE] rounded-xl p-1">
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mb-4 gap-4 sm:gap-0 px-2">
+          <div className="flex items-center justify-between sm:justify-start gap-4">
+            <div className="flex items-center gap-1">
               <button
                 onClick={handlePrevMonth}
-                className="p-1.5 hover:bg-white hover:shadow-sm rounded-lg transition-all text-[#A3AED0] hover:text-[#4318FF]"
+                className="p-1.5 hover:bg-gray-50 rounded-lg transition-all text-gray-400 hover:text-[#4318FF]"
               >
-                <ChevronLeft size={18} strokeWidth={2.5} />
+                <ChevronLeft size={20} strokeWidth={2.5} />
               </button>
-              <p className="text-sm font-bold text-[#2B3674] min-w-[120px] text-center px-2">
+              <p className="text-base sm:text-lg font-bold text-[#2B3674] min-w-[140px] text-center">
                 {now.toLocaleDateString("en-US", {
                   month: "long",
                   year: "numeric",
@@ -451,43 +670,110 @@ const MyTimesheet = ({
                 className={`p-1.5 rounded-lg transition-all ${
                   !canGoNextMonth()
                     ? "text-gray-300 cursor-not-allowed"
-                    : "hover:bg-white hover:shadow-sm text-[#A3AED0] hover:text-[#4318FF]"
+                    : "hover:bg-gray-50 text-gray-400 hover:text-[#4318FF]"
                 }`}
               >
-                <ChevronRight size={18} strokeWidth={2.5} />
+                <ChevronRight size={20} strokeWidth={2.5} />
               </button>
+            </div>
+
+            {/* Total Hours Mobile (Show when sm:hidden) */}
+            <div className="sm:hidden text-right">
+              <p className="text-[8px] uppercase font-black text-gray-400 tracking-wider leading-none mb-0.5">
+                Total
+              </p>
+              <p className="text-lg font-black text-[#4318FF] leading-none">
+                {monthTotalHours.toFixed(1)}
+              </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-6">
-            <div className="text-right">
-              <p className="text-[10px] uppercase font-bold text-[#A3AED0] tracking-widest leading-none mb-1">
-                Total Hours
+          <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+            <div className="flex flex-col sm:flex-row items-end sm:items-baseline gap-1 sm:gap-2">
+              <p className="text-xs sm:text-sm uppercase font-bold text-gray-700 tracking-wider leading-none">
+                TOTAL HOURS :
               </p>
-              <div className="flex items-baseline justify-end gap-1">
-                <p className="text-2xl font-black text-[#4318FF] leading-none">
+              <div className="flex items-baseline gap-1">
+                <p className="text-xl sm:text-2xl font-black text-[#4318FF] leading-none">
                   {monthTotalHours.toFixed(1)}
                 </p>
-                <span className="text-xs font-bold text-[#A3AED0]">hrs</span>
+                <span className="text-[10px] font-bold text-gray-700">hrs</span>
               </div>
             </div>
             {(!readOnly || isAdmin) && (
               <button
                 onClick={onSaveAll}
-                className="flex items-center gap-2 px-6 py-2.5 bg-linear-to-r from-[#4318FF] to-[#868CFF] text-white rounded-xl font-bold text-xs shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all transform hover:-translate-y-0.5 active:scale-95 tracking-wide uppercase"
+                className="flex items-center justify-center gap-1.5 px-4 py-2 bg-[#4318FF] text-white rounded-xl font-bold text-[10px] shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all active:scale-95 tracking-wide uppercase"
               >
-                <Save size={16} /> Save Changes
+                <Save size={14} />
+                <span>Save</span>
               </button>
             )}
           </div>
         </div>
 
+        {/* Legend */}
+        <div className="flex items-center gap-x-6 gap-y-2 flex-nowrap overflow-x-auto pb-4 scrollbar-none px-2 mb-2">
+          {[
+            {
+              label: "Present",
+              color: "bg-[#E6FFFA]",
+              border: "border-[#01B574]",
+            },
+            {
+              label: "Leave",
+              color: "bg-[#FEE2E2]",
+              border: "border-[#EE5D50]",
+            },
+            {
+              label: "Not Updated",
+              color: "bg-[#FEF3C7]",
+              border: "border-[#FFB020]",
+            },
+            {
+              label: "Today",
+              color: "bg-[#4318FF]",
+              border: "border-transparent",
+            },
+            {
+              label: "Holiday",
+              color: "bg-[#E6F7FF]",
+              border: "border-[#00A3C4]",
+            },
+            {
+              label: "Pending",
+              color: "bg-[#F8FAFC]",
+              border: "border-[#64748B]",
+            },
+            {
+              label: "Upcoming",
+              color: "bg-[#F8FAFC]",
+              border: "border-[#64748B]",
+            },
+            {
+              label: "Blocked",
+              color: "bg-gray-100",
+              border: "border-gray-300",
+            },
+          ].map((item) => (
+            <div
+              key={item.label}
+              className="flex items-center gap-2 text-[10px] font-bold text-gray-600 whitespace-nowrap uppercase tracking-wider"
+            >
+              <div
+                className={`w-3 h-3 rounded-full ${item.color} border ${item.border}`}
+              ></div>
+              <span>{item.label}</span>
+            </div>
+          ))}
+        </div>
+
         {/* Days Header */}
-        <div className="grid grid-cols-7 gap-3 mb-2 px-2 border-b border-gray-50 pb-3">
-          {weekdays.map((day) => (
+        <div className="grid grid-cols-7 gap-4 mb-2 px-2 border-b border-gray-50 pb-2">
+          {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
             <div
               key={day}
-              className="text-center text-[10px] font-black text-[#A3AED0] tracking-[0.2em] uppercase"
+              className="text-center text-[11px] font-black text-gray-700 uppercase tracking-wider"
             >
               {day}
             </div>
@@ -495,11 +781,11 @@ const MyTimesheet = ({
         </div>
 
         {/* Calendar Grid */}
-        <div className="grid grid-cols-7 gap-3 overflow-y-auto max-h-full pr-1 pb-4 px-2 scroll-smooth flex-1 custom-scrollbar">
+        <div className="grid grid-cols-7 gap-2 md:gap-3 overflow-y-auto max-h-full pr-1 pb-2 px-2 scroll-smooth flex-1 custom-scrollbar">
           {Array.from({ length: paddingDays }).map((_, idx) => (
             <div
               key={`p-${idx}`}
-              className="min-h-[90px] rounded-2xl bg-gray-50/30 border border-dashed border-gray-100"
+              className="min-h-[60px] md:min-h-[90px] rounded-2xl bg-gray-50/30 border border-dashed border-gray-100"
             ></div>
           ))}
           {localEntries.map((day, idx) => {
@@ -508,13 +794,13 @@ const MyTimesheet = ({
               localInputValues[idx] !== undefined
                 ? localInputValues[idx]
                 : displayVal === 0
-                ? ""
-                : displayVal.toString();
+                  ? ""
+                  : displayVal.toString();
             const dateStr = `${day.fullDate.getFullYear()}-${String(
-              day.fullDate.getMonth() + 1
+              day.fullDate.getMonth() + 1,
             ).padStart(2, "0")}-${String(day.fullDate.getDate()).padStart(
               2,
-              "0"
+              "0",
             )}`;
 
             const holiday = holidays?.find((h: any) => {
@@ -528,7 +814,6 @@ const MyTimesheet = ({
             });
 
             // Logic from old code: Red if weekend w/o status OR if it is a holiday
-            const isRed = (day.isWeekend && !day.status); 
             const isSelected =
               selectedDateId &&
               new Date(selectedDateId).toDateString() ===
@@ -539,27 +824,32 @@ const MyTimesheet = ({
                 : "";
 
             const isBlocked = isDateBlocked(day.fullDate);
-            const blockedReason = isBlocked ? getBlockedReason(day.fullDate) : "";
-            
+            const blockedReason = isBlocked
+              ? getBlockedReason(day.fullDate)
+              : "";
+
             // Logic for "isEditable" matches old code + new styling check
             const isEditable =
-              (!readOnly) &&
+              !readOnly &&
               (isAdmin || isEditableMonth(day.fullDate)) &&
               !isBlocked;
 
             // Updated Styling Logic
             let bg = "bg-white hover:border-[#4318FF]/20";
-            let badge = "bg-gray-50 text-gray-400";
+            let badge = "bg-gray-50 text-gray-500";
             let border = "border-transparent";
             let shadow = "shadow-[0px_2px_15px_rgba(0,0,0,0.02)]";
 
             if (isBlocked) {
-                // Administrative Block
-                bg = "bg-gray-100/60 opacity-60 grayscale";
-                badge = "bg-gray-200 text-gray-500";
+              // Administrative Block
+              bg = "bg-gray-200 opacity-90 grayscale";
+              badge = "bg-gray-600 text-white";
             } else if (
-              (day.status === "Full Day" || day.status === "WFH" || day.status === "Client Visit") &&
-              (displayVal !== 0)
+              (day.status === "Full Day" ||
+                day.status === "Half Day" ||
+                day.status === "WFH" ||
+                day.status === "Client Visit") &&
+              displayVal !== 0
             ) {
               bg = "bg-[#E6FFFA]";
               badge = "bg-[#01B574] text-white font-bold";
@@ -581,33 +871,34 @@ const MyTimesheet = ({
               bg = "bg-[#FEE2E2]";
               badge = "bg-[#EE5D50]/70 text-white font-bold";
               border = "border-[#EE5D50]/10";
-            } else if (
-              day.status === "Half Day" && displayVal !== 0
-            ) {
+            } else if (day.status === "Not Updated") {
               bg = "bg-[#FEF3C7]";
               badge = "bg-[#FFB020]/80 text-white font-bold";
               border = "border-[#FFB020]/20";
-            } else if (
-              day.status === "Pending"
-            ) {
-              bg = "bg-[#FEF3C7]";
-              badge = "bg-[#FFB020]/80 text-white font-bold";
-              border = "border-[#FFB020]/20";
-            } else if (day.isToday) {
-              bg = "bg-white";
-              border = "border-[#4318FF]";
-              shadow = "shadow-[0px_4px_20px_rgba(67,24,255,0.15)]";
+            } else if (day.status === "Pending" || !day.status) {
+              // Pending or Upcoming (no status)
+              bg = "bg-[#F8FAFC]";
+              badge = "bg-[#64748B]/90 text-white font-bold";
+              border = "border-[#E2E8F0]";
             }
+            if (day.isToday) {
+              bg =
+                "bg-white ring-2 ring-[#4318FF] shadow-lg shadow-blue-500/20 z-10";
+            }
+
+            const isError = inputError?.index === idx;
 
             return (
               <div
                 key={idx}
-                className={`relative flex flex-col justify-between p-1.5 rounded-2xl border transition-all duration-300 min-h-[120px] group 
+                className={`relative flex flex-col justify-between p-1 md:p-1.5 rounded-xl md:rounded-2xl border transition-all duration-300 min-h-[100px] md:min-h-[120px] group 
                             ${border} ${shadow} ${highlightClass} ${bg} ${
-                  isBlocked
-                    ? (isAdmin ? "cursor-pointer" : "cursor-not-allowed")
-                    : "hover:-translate-y-1 hover:shadow-lg"
-                }`}
+                              isBlocked
+                                ? isAdmin
+                                  ? "cursor-pointer"
+                                  : "cursor-not-allowed"
+                                : "hover:-translate-y-1 hover:shadow-lg"
+                            }`}
                 onClick={() => {
                   if (isBlocked && isAdmin && onBlockedClick) {
                     onBlockedClick();
@@ -622,14 +913,19 @@ const MyTimesheet = ({
                         <AlertCircle size={14} className="text-red-600" />
                       </div>
                       <div className="space-y-0.5">
-                        <p className="text-[9px] font-black text-[#2B3674] leading-tight uppercase tracking-tight">Timesheet Blocked</p>
+                        <p className="text-[9px] font-black text-[#2B3674] leading-tight uppercase tracking-tight">
+                          Timesheet Blocked
+                        </p>
                         <p className="text-[10px] font-extrabold text-[#4318FF]">
                           {isAdmin ? "Unblock" : "Contact Admin"}
                         </p>
                       </div>
                       {blockedReason && (
                         <div className="mt-1 pt-1 border-t border-gray-100 w-full px-1">
-                          <p className="text-[8px] text-[#A3AED0] font-bold italic truncate overflow-hidden whitespace-nowrap" title={blockedReason}>
+                          <p
+                            className="text-[8px] text-[#A3AED0] font-bold italic truncate overflow-hidden whitespace-nowrap"
+                            title={blockedReason}
+                          >
                             "{blockedReason}"
                           </p>
                         </div>
@@ -651,9 +947,9 @@ const MyTimesheet = ({
                     {day.date}
                   </div>
                   {isBlocked && !isAdmin && (
-                     <div className="p-1 rounded-full bg-red-50 text-red-500 border border-red-100">
-                        <Lock size={8} strokeWidth={3} />
-                     </div>
+                    <div className="p-1 rounded-full bg-red-50 text-red-500 border border-red-100">
+                      <Lock size={8} strokeWidth={3} />
+                    </div>
                   )}
                 </div>
 
@@ -662,42 +958,53 @@ const MyTimesheet = ({
                   <div className="relative group/input w-full flex justify-center">
                     <input
                       type="text"
-                      disabled={!isEditable}
-                      className={`w-full h-10 text-center text-3xl font-bold bg-transparent transition-all focus:outline-none focus:ring-0
+                      disabled={!isEditable || isError}
+                      className={`w-full h-10 text-center font-medium bg-transparent transition-all focus:outline-none focus:ring-0
                         ${
                           !isEditable
                             ? "text-gray-400 cursor-not-allowed"
-                            : "text-[#2B3674] group-hover:scale-105 focus:scale-105"
+                            : isError
+                              ? "text-red-500 text-[10px] font-bold animate-pulse"
+                              : "text-gray-800 text-3xl group-hover:scale-105 focus:scale-105"
                         }`}
-                      placeholder={(day.status === "Weekend" || (day.status as any) === "WEEKEND" || holiday) ? "-" : "0"}
-                      value={inputValue}
+                      placeholder={
+                        day.status === "Weekend" ||
+                        (day.status as any) === "WEEKEND" ||
+                        holiday
+                          ? "-"
+                          : "0"
+                      }
+                      value={isError ? inputError.message : inputValue}
                       onChange={(e) => handleHoursInput(idx, e.target.value)}
                       onBlur={() => handleInputBlur(idx)}
                     />
-                    {isEditable && (
-                      <div className="absolute bottom-0 w-12 h-0.5 bg-[#4318FF]/30 rounded-full group-hover/input:bg-[#4318FF] transition-colors"></div>
+                    {isEditable && !isError && (
+                      <div className="absolute bottom-0 w-12 h-0.5 bg-black/20 rounded-full group-hover/input:bg-black transition-colors"></div>
                     )}
                   </div>
-                  <span className="text-[9px] text-[#A3AED0] font-semibold uppercase tracking-wider">
+                  <span className="text-[9px] text-black font-semibold uppercase tracking-wider">
                     hours
                   </span>
                 </div>
 
                 {/* Bottom: Status Badge */}
                 <div
-                  className={`w-full py-1.5 rounded-lg text-center text-[8px] font-black uppercase tracking-wider truncate px-1 shadow-sm z-10 mt-auto ${badge}`}
+                  className={`w-full py-1.5 rounded-lg text-center text-[10px] font-black uppercase tracking-wider truncate px-1 shadow-sm z-10 mt-auto ${badge}`}
                 >
-                  {isBlocked 
-                      ? "BLOCKED"
-                      : day.status === "Full Day" || day.status === "Half Day" || day.status === "WFH" || day.status === "Client Visit"
+                  {isBlocked
+                    ? "BLOCKED"
+                    : day.status === "Full Day" ||
+                        day.status === "Half Day" ||
+                        day.status === "WFH" ||
+                        day.status === "Client Visit"
                       ? day.status
-                      : (day.status === "Holiday" || holiday)
-                      ? holiday?.holidayName || holiday?.name || "HOLIDAY"
-                      : (day.status === "Weekend" || day.isWeekend)
-                      ? "WEEKEND"
-                      : day.status === "Not Updated"
-                      ? "Not Updated"
-                      : day.status || "UPCOMING"}
+                      : day.status === "Holiday" || holiday
+                        ? holiday?.holidayName || holiday?.name || "HOLIDAY"
+                        : day.status === "Weekend" || day.isWeekend
+                          ? "WEEKEND"
+                          : day.status === "Not Updated"
+                            ? "Not Updated"
+                            : day.status || "UPCOMING"}
                 </div>
               </div>
             );

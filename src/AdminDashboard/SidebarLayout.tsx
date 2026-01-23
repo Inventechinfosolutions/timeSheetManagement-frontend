@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Settings,
   Users,
@@ -7,18 +7,19 @@ import {
   Unlock,
   Menu,
   ClipboardList,
+  MessageSquare,
 } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "../store";
 import { getEntities } from "../reducers/employeeDetails.reducer";
- 
+
 interface SidebarLayoutProps {
   children: React.ReactNode;
   activeTab?: string;
   onTabChange?: (tab: string) => void;
 }
- 
+
 const SidebarLayout = ({
   children,
   activeTab = "Dashboard",
@@ -30,7 +31,10 @@ const SidebarLayout = ({
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const { tab } = useParams<{ tab?: string }>();
   const dispatch = useDispatch<AppDispatch>();
- 
+  
+  // Ref for the main scrollable content area
+  const mainContentRef = useRef<HTMLDivElement>(null);
+
   // Determine active tab from URL if not explicitly provided
   const derivedActiveTab = useMemo(() => {
     if (activeTab && activeTab !== "Dashboard") return activeTab;
@@ -43,31 +47,41 @@ const SidebarLayout = ({
         return "Timesheet";
       case "working-details":
         return "Working Details";
+      case "requests":
+        return "Requests";
       default:
         return "System Dashboard";
     }
   }, [tab, activeTab]);
- 
+
   useEffect(() => {
     dispatch(getEntities({ search: "" }));
   }, [dispatch]);
- 
+
+  // Scroll to top when tab changes
+  useEffect(() => {
+    if (mainContentRef.current) {
+      mainContentRef.current.scrollTop = 0;
+    }
+  }, [derivedActiveTab]);
+
   // Sidebar opens if it's either hovered OR locked
   const isOpen = isHovered || isLocked;
- 
+
   const sidebarItems = [
     { name: "System Dashboard", icon: Settings },
     { name: "Employee Details", icon: Users },
     { name: "Timesheet", icon: AlarmClock },
     { name: "Working Details", icon: ClipboardList },
+    { name: "Requests", icon: MessageSquare },
   ];
- 
+
   return (
-    <div className="flex w-full h-full bg-[#f8f9fa] font-sans text-[#2B3674] overflow-hidden relative">
+    <div className="flex w-full h-screen bg-[#f8f9fa] font-sans text-[#2B3674] overflow-hidden relative">
       {/* Mobile Menu Trigger - Floating Pulse Button */}
       <button
         onClick={() => setIsMobileOpen(true)}
-        className={`md:hidden fixed z-1001 left-4 top-[75px] w-11 h-11 bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 flex items-center justify-center text-[#4318FF] active:scale-90 transition-all duration-300
+        className={`md:hidden fixed z-1001 left-4 top-[55px] w-11 h-11 bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 flex items-center justify-center text-[#4318FF] active:scale-90 transition-all duration-300
                     ${
                       isMobileOpen
                         ? "opacity-0 scale-90 pointer-events-none"
@@ -83,7 +97,7 @@ const SidebarLayout = ({
           </span>
         </div>
       </button>
- 
+
       {/* Premium Mobile Backdrop */}
       <div
         className={`md:hidden fixed inset-0 bg-[#111c44]/60 backdrop-blur-md z-2000 transition-all duration-500 ease-in-out
@@ -95,14 +109,14 @@ const SidebarLayout = ({
                 `}
         onClick={() => setIsMobileOpen(false)}
       />
- 
+
       {/* Spacer to prevent layout shift when locked */}
       <div
         className={`shrink-0 transition-all duration-300 ease-in-out ${
           isOpen ? "w-64" : "w-20"
         } hidden md:block`}
       ></div>
- 
+
       <aside
         className={`fixed top-0 md:absolute md:top-0 md:left-0 h-full md:h-full flex flex-col shrink-0 transition-all duration-300 ease-in-out z-2001 md:z-30 text-white
                     ${
@@ -163,7 +177,7 @@ const SidebarLayout = ({
               </span>
             </div>
           </div>
- 
+
           {/* Lock Toggle */}
           <button
             onClick={() => setIsLocked(!isLocked)}
@@ -179,7 +193,7 @@ const SidebarLayout = ({
             {isLocked ? <Lock size={16} /> : <Unlock size={16} />}
           </button>
         </div>
- 
+
         {/* Divider */}
         <div className="px-4 mb-1">
           <div
@@ -188,10 +202,10 @@ const SidebarLayout = ({
             }`}
           ></div>
         </div>
- 
+
         {/* Navigation Items */}
         <nav
-          className="flex-1 px-4 space-y-2 mt-0.5 overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [&::webkit-scrollbar]:w-0 [&::-webkit-scrollbar]:h-0"
+          className="flex-1 px-4 space-y-2 mt-0.5 overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [&::-webkit-scrollbar]:w-0 [&::-webkit-scrollbar]:h-0"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
           {sidebarItems.map((item) => {
@@ -235,7 +249,7 @@ const SidebarLayout = ({
                     {item.name}
                   </span>
                 </button>
- 
+
                 {/* Tooltip */}
                 {!isOpen && (
                   <div className="hidden md:block absolute left-[calc(100%+10px)] top-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#111c44] text-white text-xs font-bold rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 whitespace-nowrap z-50">
@@ -248,12 +262,15 @@ const SidebarLayout = ({
           })}
         </nav>
       </aside>
- 
-      <main className="flex-1 overflow-y-auto h-full relative no-scrollbar flex flex-col bg-[#F4F7FE]">
+
+      <main 
+        ref={mainContentRef}
+        className="flex-1 min-h-0 h-full relative no-scrollbar flex flex-col bg-[#F4F7FE] overflow-auto"
+      >
         {children}
       </main>
     </div>
   );
 };
- 
+
 export default SidebarLayout;
