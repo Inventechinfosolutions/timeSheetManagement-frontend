@@ -92,3 +92,36 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 .hide-other-months .ant-picker-body {
   padding-bottom: 0 !important;
 }
+
+/* Dropdown Item Flip Animation */
+@keyframes flip-in-x {
+  0% {
+    opacity: 0;
+    transform: perspective(400px) rotateX(90deg) translateY(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(400px) rotateX(0deg) translateY(0);
+  }
+}
+
+.animate-flip-in {
+  opacity: 0;
+  animation: flip-in-x 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Button Text Cycling Animation */
+@keyframes flip-up {
+  0% {
+    transform: translateY(10px) rotateX(-90deg);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0) rotateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-flip-up {
+  animation: flip-up 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
