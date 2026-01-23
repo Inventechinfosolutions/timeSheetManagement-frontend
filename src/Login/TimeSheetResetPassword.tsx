@@ -6,6 +6,8 @@ import Header from "../components/Header";
 import {
   resetPasswordEmployee,
   clearResetPasswordState,
+  verifyResetToken,
+  clearTokenVerificationState,
 } from "../reducers/public.reducer";
 import {
   changePassword,
@@ -23,11 +25,18 @@ const StartingTimesheetResetPassword: React.FC = () => {
 
   // Check for token to determine mode: Public (Forgot Password) vs Authenticated (Force Reset)
   const token = searchParams.get("token");
+  const loginId = searchParams.get("loginId");
   const isForgotMode = !!token;
 
   // State from Public Slice
-  const { resetPasswordLoading, resetPasswordError, resetPasswordResponse } =
-    useSelector((state: RootState) => state.public);
+  const { 
+    resetPasswordLoading, 
+    resetPasswordError, 
+    resetPasswordResponse,
+    tokenVerified,
+    tokenVerificationLoading,
+    tokenVerificationError,
+  } = useSelector((state: RootState) => state.public);
 
   // State from User Slice
   const {
@@ -45,6 +54,13 @@ const StartingTimesheetResetPassword: React.FC = () => {
 
   const [localError, setLocalError] = useState("");
   const [success, setSuccess] = useState(false);
+
+  // Verify token on page load (only for forgot password mode)
+  useEffect(() => {
+    if (isForgotMode && token && loginId) {
+      dispatch(verifyResetToken({ token, loginId }));
+    }
+  }, [isForgotMode, token, loginId, dispatch]);
 
   useEffect(() => {
     if (resetPasswordResponse?.success || passwordChangeSuccess) {
@@ -65,6 +81,7 @@ const StartingTimesheetResetPassword: React.FC = () => {
   useEffect(() => {
     return () => {
       dispatch(clearResetPasswordState());
+      dispatch(clearTokenVerificationState());
       dispatch(clearPasswordChangeSuccess());
       dispatch(clearUserError());
     };
@@ -97,6 +114,12 @@ const StartingTimesheetResetPassword: React.FC = () => {
       return;
     }
 
+    // Check if token is verified (for forgot password mode)
+    if (isForgotMode && !tokenVerified) {
+      setLocalError("Please wait for token verification to complete.");
+      return;
+    }
+
     if (!isValidPassword || !passwordsMatch) {
       setLocalError(
         "Please ensure all requirements are met and passwords match.",
@@ -116,6 +139,7 @@ const StartingTimesheetResetPassword: React.FC = () => {
       dispatch(
         resetPasswordEmployee({
           token: token!,
+          loginId: loginId!,
           newPassword: password,
         }),
       );
@@ -130,8 +154,16 @@ const StartingTimesheetResetPassword: React.FC = () => {
   };
 
   const isLoading = isForgotMode ? resetPasswordLoading : userLoading;
-  const errorMessage =
-    localError || (isForgotMode ? resetPasswordError : userError);
+  const isVerifying = isForgotMode && tokenVerificationLoading;
+  
+  // Determine error message - prioritize token verification error
+  const errorMessage = 
+    (isForgotMode && tokenVerificationError) 
+      ? tokenVerificationError 
+      : localError || (isForgotMode ? resetPasswordError : userError);
+  
+  // Check if form should be disabled (token expired or invalid)
+  const isTokenInvalid = isForgotMode && !tokenVerificationLoading && !tokenVerified && !!tokenVerificationError;
 
   return (
     <div className="h-screen bg-[#F4F7FE] flex flex-col font-sans overflow-y-auto custom-scrollbar">
@@ -176,6 +208,14 @@ const StartingTimesheetResetPassword: React.FC = () => {
                       : "Please update your password to continue."}
                   </p>
                 </div>
+
+                {/* Loading State for Token Verification */}
+                {isVerifying && (
+                  <div className="mb-8 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-r-xl text-blue-600 font-semibold text-sm animate-in slide-in-from-left-4 duration-300 flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Verifying reset token...</span>
+                  </div>
+                )}
 
                 {/* Error Alert */}
                 {errorMessage && (
@@ -243,10 +283,12 @@ const StartingTimesheetResetPassword: React.FC = () => {
 
                   <button
                     type="submit"
-                    disabled={isLoading || !password || !confirmPassword}
+                    disabled={isLoading || isVerifying || isTokenInvalid || !password || !confirmPassword}
                     className={`w-full font-black text-sm tracking-widest py-5 rounded-2xl transition-all shadow-lg active:scale-[0.98] flex items-center justify-center gap-2 uppercase overflow-hidden relative group/btn
                                             ${
                                               isLoading ||
+                                              isVerifying ||
+                                              isTokenInvalid ||
                                               !password ||
                                               !confirmPassword
                                                 ? "bg-gray-100 text-[#A3AED0] cursor-not-allowed opacity-80 shadow-none"

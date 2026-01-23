@@ -67,6 +67,11 @@ interface PublicState {
   resetPasswordResponse: ResetPasswordResponse | null;
   resetPasswordLoading: boolean;
   resetPasswordError: string | null;
+  
+  // Verify Reset Token
+  tokenVerified: boolean;
+  tokenVerificationLoading: boolean;
+  tokenVerificationError: string | null;
 
   // OTP Flow
   otpSent: boolean;
@@ -90,6 +95,10 @@ const initialState: PublicState = {
   resetPasswordResponse: null,
   resetPasswordLoading: false,
   resetPasswordError: null,
+  
+  tokenVerified: false,
+  tokenVerificationLoading: false,
+  tokenVerificationError: null,
 
   otpSent: false,
   otpVerified: false,
@@ -147,6 +156,29 @@ export const verifyActivationEmployee = createAsyncThunk(
         );
       }
       return rejectWithValue("An unknown error occurred during activation verification");
+    }
+  }
+);
+
+/**
+ * Verify Reset Token
+ * GET /api/auth/verify-reset-token?token=xxx&loginId=xxx
+ */
+export const verifyResetToken = createAsyncThunk(
+  "public/verify_reset_token",
+  async ({ token, loginId }: { token: string; loginId: string }, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(
+        `${apiUrl}/auth/verify-reset-token?token=${encodeURIComponent(token)}&loginId=${encodeURIComponent(loginId)}`
+      );
+      return response.data;
+    } catch (error: any) {
+      if (axios.isAxiosError(error)) {
+        return rejectWithValue(
+          error.response?.data?.message || error.message || "Token verification failed"
+        );
+      }
+      return rejectWithValue("An unknown error occurred during token verification");
     }
   }
 );
@@ -256,6 +288,12 @@ export const PublicSlice = createSlice({
       state.resetPasswordLoading = false;
       state.resetPasswordError = null;
     },
+    // Clear token verification state
+    clearTokenVerificationState: (state) => {
+      state.tokenVerified = false;
+      state.tokenVerificationLoading = false;
+      state.tokenVerificationError = null;
+    },
     // Clear OTP flow state
     clearOtpState: (state) => {
       state.otpSent = false;
@@ -298,6 +336,24 @@ export const PublicSlice = createSlice({
       .addCase(verifyActivationEmployee.rejected, (state, action) => {
         state.activationLoading = false;
         state.activationError = action.payload as string || action.error.message || "Activation verification failed";
+      });
+
+    // ========== Verify Reset Token ==========
+    builder
+      .addCase(verifyResetToken.pending, (state) => {
+        state.tokenVerificationLoading = true;
+        state.tokenVerificationError = null;
+        state.tokenVerified = false;
+      })
+      .addCase(verifyResetToken.fulfilled, (state) => {
+        state.tokenVerificationLoading = false;
+        state.tokenVerified = true;
+        state.tokenVerificationError = null;
+      })
+      .addCase(verifyResetToken.rejected, (state, action) => {
+        state.tokenVerificationLoading = false;
+        state.tokenVerified = false;
+        state.tokenVerificationError = action.payload as string || action.error.message || "Token verification failed";
       });
 
     // ========== Reset Password Employee ==========
@@ -363,6 +419,7 @@ export const {
   clearLoginState,
   clearActivationState,
   clearResetPasswordState,
+  clearTokenVerificationState,
   clearOtpState,
   clearAllPublicState,
 } = PublicSlice.actions;
