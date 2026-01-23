@@ -15,7 +15,7 @@ const EmployeeLayout = () => {
       case "timesheet-view": return "Timesheet View";
       case "my-profile": return "My Profile";
       case "change-password": return "Change Password";
-      case "leave-management": return "Leave Management";
+      case "leave-management": return "Work Management";
       default: return "Dashboard";
     }
   };
@@ -34,7 +34,7 @@ const EmployeeLayout = () => {
       case "Change Password":
         navigate("/employee-dashboard/change-password");
         break;
-      case "Leave Management":
+      case "Work Management":
         navigate("/employee-dashboard/leave-management");
         break;
       default:

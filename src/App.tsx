@@ -46,6 +46,7 @@ import EmployeeDetailsView from "./AdminDashboard/EmployeeDetailsView";
 import EmpWorkingDetails from "./AdminDashboard/EmpWorkingDetails";
 import AdminEmployeeCalenderWrapper from "./AdminDashboard/AdminEmployeeCalenderWrapper";
 import DailyStatus from "./AdminDashboard/DailyStatus";
+import Requests from "./AdminDashboard/Requests";
 
 const EmployeeTabWrapper = () => {
   const { tab } = useParams<{ tab: string }>();
@@ -84,6 +85,8 @@ const AdminTabWrapper = () => {
       return <ActivationSuccess />;
     case "daily-attendance":
       return <DailyStatus />;
+    case "requests":
+      return <Requests />;
     default:
       return <Navigate to="/admin-dashboard" replace />;
   }
@@ -123,7 +126,7 @@ function App() {
           }
         />
         <Route
-          path="/fcManager/activate"
+          path="/timesheet/activate"
           element={
             <Suspense
               fallback={
@@ -138,7 +141,7 @@ function App() {
         />
 
         <Route
-          path="/fcManager/reset-password"
+          path="/timesheet/reset-password"
           element={
             <Suspense
               fallback={
@@ -153,7 +156,7 @@ function App() {
         />
 
         <Route
-          path="/reset-password"
+          path="/timesheet/reset-password"
           element={
             <Suspense
               fallback={
@@ -169,7 +172,7 @@ function App() {
 
         {/* Set Password Route - for first-time password setup */}
         <Route
-          path="/set-password"
+          path="/timeesheet/set-password"
           element={
             <Suspense
               fallback={

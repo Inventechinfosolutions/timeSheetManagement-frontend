@@ -11,6 +11,12 @@ import {
   clearSelectedNotification,
 } from "../reducers/notification.reducer";
 import { useState, useRef, useEffect } from "react";
+import {
+  fetchUnreadNotifications,
+  fetchEmployeeUpdates,
+  markAsRead as markLeaveNotifRead,
+  markEmployeeUpdateRead,
+} from "../reducers/leaveNotification.reducer";
 import "./Header.css";
 
 interface HeaderProps {
@@ -26,9 +32,19 @@ const Header = ({ hideNotifications = false, hideProfile = false }: HeaderProps)
     (state) => state.employeeDetails,
   );
   const { currentUser } = useAppSelector((state) => state.user);
-  const { notifications, unreadCount, selectedNotification, loading } = useAppSelector(
+  // Check if user is admin
+  const isAdmin = currentUser?.userType === "ADMIN";
+
+  const { notifications, unreadCount: attendanceUnreadCount, selectedNotification, loading } = useAppSelector(
     (state) => state.notifications
   );
+  const { unread: leaveNotifications, employeeUpdates } = useAppSelector(
+    (state) => state.leaveNotification
+  );
+  
+  const unreadCount = isAdmin 
+    ? leaveNotifications.length 
+    : attendanceUnreadCount + employeeUpdates.length;
   
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -37,13 +53,15 @@ const Header = ({ hideNotifications = false, hideProfile = false }: HeaderProps)
   const [viewMode, setViewMode] = useState<'list' | 'detail'>('list');
   const notificationRef = useRef<HTMLDivElement>(null);
 
-  // Check if user is admin
-  const isAdmin = currentUser?.userType === "ADMIN";
 
-  // Fetch notifications on mount (if employee)
+
+  // Fetch notifications on mount
   useEffect(() => {
-    if (!isAdmin && entity?.employeeId) {
-      dispatch(fetchNotifications(entity.employeeId));
+    if (isAdmin) {
+      dispatch(fetchUnreadNotifications());
+    } else if (entity?.employeeId) {
+      dispatch(fetchNotifications(entity?.employeeId));
+      dispatch(fetchEmployeeUpdates(entity?.employeeId));
     }
   }, [dispatch, isAdmin, entity?.employeeId]);
 
@@ -57,15 +75,23 @@ const Header = ({ hideNotifications = false, hideProfile = false }: HeaderProps)
     dispatch(clearSelectedNotification());
   };
 
-  const handleMarkAsRead = (id: number) => {
-    dispatch(markNotificationRead(id));
-    // Optionally go back to list or stay on detail page showing it's read
-    // For better UX, let's keep it on detail view but update UI (handled by re-render from store)
+  const handleMarkAsRead = (id: number, type?: 'leave' | 'attendance' | 'status_update') => {
+    if (isAdmin) {
+      dispatch(markLeaveNotifRead(id));
+      setViewMode('list');
+    } else {
+      if (type === 'status_update') {
+        dispatch(markEmployeeUpdateRead(id));
+      } else {
+        dispatch(markNotificationRead(id));
+      }
+    }
   };
 
   const handleMarkAllAsRead = () => {
-    if (entity?.employeeId) {
-      dispatch(markAllNotificationsRead(entity.employeeId));
+    const notificationId = isAdmin ? currentUser?.employeeId : entity?.employeeId;
+    if (notificationId) {
+      dispatch(markAllNotificationsRead(notificationId));
     }
   };
 
@@ -184,8 +210,8 @@ const Header = ({ hideNotifications = false, hideProfile = false }: HeaderProps)
               About
             </Link>
 
-            {/* Notification Bell - ONLY FOR EMPLOYEES */}
-            {!isAdmin && !hideNotifications && (
+            {/* Notification Bell */}
+            {!hideNotifications && (
               <div className="relative" ref={notificationRef}>
                 <button
                   onClick={() => setIsNotificationOpen(!isNotificationOpen)}
@@ -218,12 +244,14 @@ const Header = ({ hideNotifications = false, hideProfile = false }: HeaderProps)
                           <h3 className="text-lg font-bold text-[#1B2559]">
                             Notifications
                           </h3>
-                          <button
-                            onClick={handleMarkAllAsRead}
-                            className="text-xs font-bold text-[#4318FF] hover:bg-blue-50 px-3 py-1 rounded-lg transition-all active:scale-95"
-                          >
-                            Mark all as read
-                          </button>
+                          {!isAdmin && (
+                            <button
+                              onClick={handleMarkAllAsRead}
+                              className="text-xs font-bold text-[#4318FF] hover:bg-blue-50 px-3 py-1 rounded-lg transition-all active:scale-95"
+                            >
+                              Mark all as read
+                            </button>
+                          )}
                         </div>
 
                         {/* Tabs */}
@@ -231,74 +259,168 @@ const Header = ({ hideNotifications = false, hideProfile = false }: HeaderProps)
                           <button className="py-3 text-sm font-bold text-[#1B2559] border-b-2 border-[#1B2559] relative">
                             Inbox
                             <span className="ml-2 bg-[#1B2559] text-white text-[10px] px-1.5 py-0.5 rounded-md">
-                              {notifications.length}
+                              {unreadCount}
                             </span>
                           </button>
                         </div>
 
                         {/* Notification List */}
                         <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
-                          {notifications.length > 0 ? (
-                            notifications.map((notif) => (
-                              <div
-                                key={notif.id}
-                                onClick={() => handleNotificationClick(notif.id)}
-                                className={`flex gap-4 p-5 hover:bg-gray-50/80 transition-colors border-b border-gray-50 last:border-0 group cursor-pointer relative ${
-                                  !notif.isRead ? "bg-blue-50/30" : ""
-                                }`}
-                              >
-                                {/* Avatar */}
-                                <div className="relative shrink-0">
-                                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-[#4318FF]">
-                                    <Bell size={18} />
+                          {isAdmin ? (
+                            leaveNotifications.length > 0 ? (
+                              leaveNotifications.map((notif) => (
+                                <div
+                                  key={notif.id}
+                                  onClick={() => {
+                                    navigate("/admin-dashboard/requests");
+                                    setIsNotificationOpen(false);
+                                  }}
+                                  className="flex gap-4 p-5 hover:bg-gray-50/80 transition-colors border-b border-gray-50 last:border-0 group cursor-pointer relative bg-blue-50/30"
+                                >
+                                  {/* Avatar */}
+                                  <div className="relative shrink-0">
+                                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-[#4318FF]">
+                                      <Bell size={18} />
+                                    </div>
                                   </div>
-                                </div>
 
-                                {/* Content */}
-                                <div className="flex-1 space-y-1">
-                                  <div className="flex justify-between items-start">
-                                    <p className="text-sm text-[#1B2559] leading-snug">
-                                      <span className="font-bold">
-                                        {notif.title}
+                                  {/* Content */}
+                                  <div className="flex-1 space-y-1">
+                                    <div className="flex justify-between items-start">
+                                      <p className="text-sm text-[#1B2559] leading-snug font-bold">
+                                        {notif.requestType} Request
+                                      </p>
+                                      <button 
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleMarkAsRead(notif.id);
+                                        }}
+                                        className="text-[10px] text-[#4318FF] hover:underline font-bold"
+                                      >
+                                        Dismiss
+                                      </button>
+                                    </div>
+
+                                    <div className="flex flex-col gap-1">
+                                      <span className="text-xs text-gray-500 font-medium">
+                                        <span className="font-bold text-[#2B3674]">{notif.employeeName}</span> applied for {notif.requestType}.
                                       </span>
-                                    </p>
-                                    {!notif.isRead && (
-                                      <span className="w-2 h-2 bg-[#4318FF] rounded-full shrink-0 mt-1.5"></span>
-                                    )}
-                                  </div>
-
-                                  <div className="flex flex-col gap-1">
-                                    <span className="text-xs text-gray-500 font-medium line-clamp-2">
-                                      {notif.message}
-                                    </span>
-                                    <span className="text-[10px] text-gray-400">
-                                      {new Date(
-                                        notif.createdAt,
-                                      ).toLocaleDateString()}{" "}
-                                      {new Date(
-                                        notif.createdAt,
-                                      ).toLocaleTimeString([], {
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                      })}
-                                    </span>
+                                      <span className="text-[10px] text-gray-400">
+                                        {notif.fromDate} to {notif.toDate}
+                                      </span>
+                                    </div>
                                   </div>
                                 </div>
+                              ))
+                            ) : (
+                              <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-3">
+                                  <Bell size={24} className="text-gray-300" />
+                                </div>
+                                <p className="text-sm font-bold text-[#1B2559]">No new requests</p>
+                                <p className="text-xs text-gray-400 mt-1">
+                                  All leave applications have been reviewed.
+                                </p>
                               </div>
-                            ))
+                            )
                           ) : (
-                            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-                              <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-3">
-                                <Bell size={24} className="text-gray-300" />
-                              </div>
-                              <p className="text-sm font-bold text-[#1B2559]">
-                                No new notifications
-                              </p>
-                              <p className="text-xs text-gray-400 mt-1 max-w-[200px]">
-                                You're all caught up! Check back later for
-                                updates.
-                              </p>
-                            </div>
+                            /* Employee View -- Mixed Notifications */
+                            <>
+                              {/* Status Updates Section */}
+                              {employeeUpdates.length > 0 && (
+                                <div className="border-b border-gray-100 pb-2 mb-2">
+                                  <h4 className="px-5 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                                    Updates
+                                  </h4>
+                                  {employeeUpdates.map((update) => (
+                                    <div
+                                      key={`update-${update.id}`}
+                                      className="flex gap-4 p-5 hover:bg-gray-50/80 transition-colors border-b border-gray-50 last:border-0 group cursor-pointer relative bg-green-50/30"
+                                    >
+                                      <div className="relative shrink-0">
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white ${
+                                          update.status === 'Approved' ? 'bg-green-500' : 'bg-red-500'
+                                        }`}>
+                                          {update.status === 'Approved' ? <Check size={18} /> : <LogOut size={18} className="rotate-45" />}
+                                        </div>
+                                      </div>
+                                      <div className="flex-1 space-y-1">
+                                        <div className="flex justify-between items-start">
+                                          <p className="text-sm text-[#1B2559] leading-snug font-bold">
+                                            Request {update.status}
+                                          </p>
+                                          <button 
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleMarkAsRead(update.id, 'status_update');
+                                            }}
+                                            className="text-[10px] text-[#4318FF] hover:underline font-bold"
+                                          >
+                                            Dismiss
+                                          </button>
+                                        </div>
+                                        <div className="flex flex-col gap-1">
+                                          <span className="text-xs text-gray-500 font-medium">
+                                            Your <span className="font-bold text-[#2B3674]">{update.requestType}</span> request has been <span className={`font-bold ${update.status === 'Approved' ? 'text-green-600' : 'text-red-600'}`}>{update.status}</span>.
+                                          </span>
+                                          <span className="text-[10px] text-gray-400">
+                                            {update.fromDate} to {update.toDate}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              
+                              {/* Regular Notifications */}
+                              {notifications.length > 0 ? (
+                                notifications.map((notif) => (
+                                  <div
+                                    key={notif.id}
+                                    onClick={() => handleNotificationClick(notif.id)}
+                                    className={`flex gap-4 p-5 hover:bg-gray-50/80 transition-colors border-b border-gray-50 last:border-0 group cursor-pointer relative ${
+                                      !notif.isRead ? "bg-blue-50/30" : ""
+                                    }`}
+                                  >
+                                    <div className="relative shrink-0">
+                                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-[#4318FF]">
+                                        <Bell size={18} />
+                                      </div>
+                                    </div>
+                                    <div className="flex-1 space-y-1">
+                                      <div className="flex justify-between items-start">
+                                        <p className="text-sm text-[#1B2559] leading-snug">
+                                          <span className="font-bold">{notif.title}</span>
+                                        </p>
+                                        {!notif.isRead && (
+                                          <span className="w-2 h-2 bg-[#4318FF] rounded-full shrink-0 mt-1.5"></span>
+                                        )}
+                                      </div>
+                                      <div className="flex flex-col gap-1">
+                                        <span className="text-xs text-gray-500 font-medium line-clamp-2">{notif.message}</span>
+                                        <span className="text-[10px] text-gray-400">
+                                          {new Date(notif.createdAt).toLocaleDateString()}{" "}
+                                          {new Date(notif.createdAt).toLocaleTimeString([], {
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                          })}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))
+                              ) : (
+                                employeeUpdates.length === 0 && (
+                                  <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-3">
+                                      <Bell size={24} className="text-gray-300" />
+                                    </div>
+                                    <p className="text-sm font-bold text-[#1B2559]">No new notifications</p>
+                                  </div>
+                                )
+                              )}
+                            </>
                           )}
                         </div>
                       </>

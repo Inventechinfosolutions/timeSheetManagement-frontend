@@ -25,7 +25,7 @@ const Landing = () => {
   useEffect(() => {
     if (isAuthenticated && currentUser) {
       if (Number(currentUser.resetRequired) === 1) {
-        navigate("/fcManager/reset-password");
+        navigate("/timesheet/reset-password");
       } else if (currentUser.userType?.toUpperCase() === UserType.EMPLOYEE) {
         navigate("/employee-dashboard");
       } else if (currentUser.userType?.toUpperCase() === UserType.ADMIN) {

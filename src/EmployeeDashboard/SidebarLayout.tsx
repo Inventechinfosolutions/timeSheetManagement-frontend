@@ -46,7 +46,7 @@ const SidebarLayout = ({
       case "change-password":
         return "Change Password";
       case "leave-management":
-        return "Leave Management";
+        return "Work Management";
       default:
         return "Dashboard";
     }
@@ -59,7 +59,7 @@ const SidebarLayout = ({
     { name: "Dashboard", icon: LayoutGrid },
     { name: "My Timesheet", icon: Calendar },
     { name: "Timesheet View", icon: Eye },
-    { name: "Leave Management", icon: Calendar },
+    { name: "Work Management", icon: Calendar },
     { name: "My Profile", icon: User },
     //{ name: 'Change Password', icon: Lock },
   ];
