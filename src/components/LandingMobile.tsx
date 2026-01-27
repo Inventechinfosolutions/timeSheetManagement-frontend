@@ -1,5 +1,6 @@
 import { User, Eye, EyeOff, Lock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import inventLogo from "../assets/invent-logo.svg";
 
 interface LandingMobileProps {
   loginId: string;
@@ -31,6 +32,11 @@ const LandingMobile = ({
   return (
     <div className="flex w-full flex-col justify-center bg-white p-8 md:hidden mb-20 rounded-[15px] ">
       <div className="mb-10 text-center">
+            <img
+              src={inventLogo}
+              alt="Invent Logo"
+              className="h-16 mx-auto mb-5"
+            />
         <h1 className="mb-2 text-3xl font-black tracking-tight text-[#2D3748]">
           LOGIN
         </h1>

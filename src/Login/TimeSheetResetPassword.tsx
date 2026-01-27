@@ -191,9 +191,9 @@ const StartingTimesheetResetPassword: React.FC = () => {
                 >
                   Go to Landing Page
                 </button>
-                <p className="text-blue-400 text-xs font-semibold animate-pulse">
+                {/* <p className="text-blue-400 text-xs font-semibold animate-pulse">
                   Redirecting in a few seconds...
-                </p>
+                </p> */}
               </div>
             ) : (
               <div className="bg-white rounded-3xl shadow-[0_30px_80px_rgba(0,0,0,0.08)] border border-gray-100 p-10 md:p-14 relative overflow-hidden group">

@@ -5,6 +5,7 @@ import { useAppDispatch, useAppSelector } from "../hooks";
 import { setCurrentUser } from "../reducers/employeeDetails.reducer";
 import { loginUser, clearError, UserType } from "../reducers/user.reducer";
 import loginVisual from "../assets/login_visual.jpg";
+import inventLogo from "../assets/invent-logo.svg";
 import LandingMobile from "./LandingMobile";
 
 const Landing = () => {
@@ -92,6 +93,11 @@ const Landing = () => {
         {/* LEFT SIDE - LOGIN FORM */}
         <div className="w-full md:w-[45%] p-10 md:p-14 flex flex-col justify-center relative bg-white z-10">
           <div className="mb-10 text-center">
+            <img
+              src={inventLogo}
+              alt="Invent Logo"
+              className="h-16 mx-auto mb-5"
+            />
             <h1 className="text-3xl font-black text-[#2D3748] mb-2 tracking-tight">
               LOGIN
             </h1>
@@ -164,8 +170,6 @@ const Landing = () => {
             >
               {isSubmitting || loading ? "Authenticating..." : "Login Now"}
             </button>
-
-           
           </form>
         </div>
 

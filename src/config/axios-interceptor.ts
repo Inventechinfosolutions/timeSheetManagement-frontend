@@ -5,7 +5,6 @@ import { Storage } from "../utils/storage-util";
  
 const TIMEOUT = 1 * 60 * 1000;
 axios.defaults.timeout = TIMEOUT;
-axios.defaults.baseURL = 'http://localhost:3000';
 //axios.defaults.baseURL = 'http://localhost:3000';
 axios.defaults.withCredentials = true;
  
