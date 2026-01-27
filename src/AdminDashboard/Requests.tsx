@@ -20,13 +20,19 @@ import {
   getAllLeaveRequests,
   updateLeaveRequestStatus,
   getLeaveRequestById,
+  getLeaveRequestFiles,
+  previewLeaveRequestFile,
+  downloadLeaveRequestFile,
 } from "../reducers/leaveRequest.reducer";
+import { getEntity } from "../reducers/employeeDetails.reducer";
+// } from "../reducers/leaveRequest.reducer";
 import {
   createAttendanceRecord,
   submitBulkAttendance,
   AttendanceStatus,
   OfficeLocation,
 } from "../reducers/employeeAttendance.reducer";
+import CommonMultipleUploader from "../EmployeeDashboard/CommonMultipleUploader";
 import dayjs from "dayjs";
 import { notification } from "antd";
 
@@ -38,6 +44,7 @@ const Requests = () => {
   const [selectedDept, setSelectedDept] = useState("All");
   const [isDeptOpen, setIsDeptOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
+  const [selectedOwnerId, setSelectedOwnerId] = useState<number | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{
@@ -78,6 +85,71 @@ const Requests = () => {
     status: "Approved" | "Rejected",
     employeeName: string,
   ) => {
+    if (
+      window.confirm(
+        `Are you sure you want to ${status.toLowerCase()} this request?`,
+      )
+    ) {
+      try {
+        if (status === "Approved") {
+          // Find the request details locally since we don't return them from update call immediately
+          const request = (entities || []).find((r) => r.id === id);
+          if (request) {
+            const startDate = dayjs(request.fromDate);
+            const endDate = dayjs(request.toDate);
+            const diffDays = endDate.diff(startDate, "day");
+
+            const attendancePayload: any[] = [];
+
+            // Loop through dates
+            for (let i = 0; i <= diffDays; i++) {
+              const currentDate = startDate.add(i, "day").format("YYYY-MM-DD"); // Ensuring string format YYYY-MM-DD
+
+              let attendanceData: any = {
+                employeeId: request.employeeId,
+                workingDate: currentDate,
+                totalHours: 0,
+              };
+
+              if (
+                request.requestType === "Apply Leave" ||
+                request.requestType === "Leave"
+              ) {
+                attendanceData.status = AttendanceStatus.LEAVE;
+                // location is optional/null
+              } else if (request.requestType === "Work From Home") {
+                // attendanceData.status = undefined; // Let backend default or set null
+                attendanceData.workLocation = "WFH"; // Passing string directly if enum doesn't match perfectly, or OfficeLocation.WORK_FROM_HOME if matched
+              } else if (request.requestType === "Client Visit") {
+                // attendanceData.status = undefined;
+                attendanceData.workLocation = "Client Visit";
+              }
+
+              attendancePayload.push(attendanceData);
+            }
+
+            // Fire ONE Bulk API Call from Frontend
+            if (attendancePayload.length > 0) {
+              await dispatch(submitBulkAttendance(attendancePayload)).unwrap();
+              console.log(
+                `Frontend: Created bulk attendance for ${attendancePayload.length} days`,
+              );
+            }
+          }
+        }
+
+        await dispatch(updateLeaveRequestStatus({ id, status })).unwrap();
+        notification.success({
+          message: "Status Updated",
+          description: `Notification sent to ${employeeName}`,
+          placement: "topRight",
+          duration: 3,
+        });
+      } catch (error) {
+        notification.error({
+          message: "Update Failed",
+          description: "Could not update request status.",
+        });
     setConfirmModal({ isOpen: true, id, status, employeeName });
   };
 
@@ -408,6 +480,15 @@ const Requests = () => {
                               const data = await dispatch(
                                 getLeaveRequestById(req.id),
                               ).unwrap();
+
+                              // Also fetch employee details to get their internal numeric ID
+                              if (req.employeeId) {
+                                const employeeData = await dispatch(
+                                  getEntity(req.employeeId),
+                                ).unwrap();
+                                setSelectedOwnerId(employeeData.id);
+                              }
+
                               setSelectedRequest(data);
                               setIsViewModalOpen(true);
                             } catch (err) {
@@ -640,6 +721,26 @@ const Requests = () => {
                 </label>
                 <div className="w-full px-5 py-4 rounded-[20px] bg-[#F4F7FE] font-medium text-[#2B3674] min-h-[120px] whitespace-pre-wrap leading-relaxed">
                   {selectedRequest.description || "No description provided."}
+                </div>
+              </div>
+
+              {/* Supporting Documents (Gallery View) */}
+              <div className="space-y-4">
+                <label className="text-sm font-bold text-[#2B3674] ml-1">
+                  Supporting Documents
+                </label>
+                <div className="p-1">
+                  <CommonMultipleUploader
+                    entityType="LEAVE_REQUEST"
+                    entityId={selectedOwnerId || 0}
+                    refId={selectedRequest.id}
+                    refType="DOCUMENT"
+                    disabled={true}
+                    fetchOnMount={true}
+                    getFiles={getLeaveRequestFiles}
+                    previewFile={previewLeaveRequestFile}
+                    downloadFile={downloadLeaveRequestFile}
+                  />
                 </div>
               </div>
 
