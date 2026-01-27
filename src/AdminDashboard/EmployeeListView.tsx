@@ -14,7 +14,7 @@ import {
 } from "../reducers/employeeDetails.reducer";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import {
-  Eye,
+  Pencil,
   Search,
   UserPlus,
   ChevronLeft,
@@ -589,9 +589,9 @@ const EmployeeListView = () => {
                         <button
                           onClick={() => handleViewDetails(emp.rawId)}
                           className="inline-flex items-center gap-2 bg-transparent border-none cursor-pointer text-[#4318FF] text-sm font-bold hover:underline transition-all hover:scale-105 active:scale-95"
-                          title="View Details"
+                          title="Edit Details"
                         >
-                          <Eye size={16} />
+                          <Pencil size={16} />
                         </button>
 
                         {(() => {

@@ -1,13 +1,18 @@
 import { useState, useRef, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "../hooks";
-import { DatePicker, ConfigProvider } from 'antd';
-import dayjs from 'dayjs';
+import { DatePicker, ConfigProvider } from "antd";
+import dayjs from "dayjs";
 import {
   getLeaveHistory,
   getLeaveStats,
   submitLeaveRequest,
   resetSubmitSuccess,
   updateLeaveRequestStatus,
+  uploadLeaveRequestFile,
+  downloadLeaveRequestFile,
+  previewLeaveRequestFile,
+  deleteLeaveRequestFile,
+  getLeaveRequestFiles,
 } from "../reducers/leaveRequest.reducer";
 import {
   Home,
@@ -22,12 +27,17 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { notification } from "antd";
+import CommonMultipleUploader from "./CommonMultipleUploader";
 
 const LeaveManagement = () => {
   const dispatch = useAppDispatch();
-  const { entities = [], stats = null, loading, submitSuccess, error } = useAppSelector(
-    (state) => state.leaveRequest || {}
-  );
+  const {
+    entities = [],
+    stats = null,
+    loading,
+    submitSuccess,
+    error,
+  } = useAppSelector((state) => state.leaveRequest || {});
   const { entity } = useAppSelector((state) => state.employeeDetails);
   const currentUser = useAppSelector((state) => state.user.currentUser);
   const employeeId = entity?.employeeId || currentUser?.employeeId;
@@ -41,22 +51,23 @@ const LeaveManagement = () => {
 
   const disabledDate = (current: any) => {
     if (!current) return false;
-    
+
     // Normalize current date to start of day for comparison
-    const currentDate = current.startOf('day');
-    const today = dayjs().startOf('day');
+    const currentDate = current.startOf("day");
+    const today = dayjs().startOf("day");
 
     // Disable past dates
     if (currentDate.isBefore(today)) {
       return true;
     }
-    
+
     return (entities || []).some((req: any) => {
-      if (!req || req.status === "Rejected" || req.status === "Cancelled") return false;
-      
-      const startDate = dayjs(req.fromDate).startOf('day');
-      const endDate = dayjs(req.toDate).startOf('day');
-      
+      if (!req || req.status === "Rejected" || req.status === "Cancelled")
+        return false;
+
+      const startDate = dayjs(req.fromDate).startOf("day");
+      const endDate = dayjs(req.toDate).startOf("day");
+
       return (
         (currentDate.isSame(startDate) || currentDate.isAfter(startDate)) &&
         (currentDate.isSame(endDate) || currentDate.isBefore(endDate))
@@ -66,7 +77,12 @@ const LeaveManagement = () => {
 
   const validateForm = () => {
     let isValid = true;
-    const newErrors = { title: "", description: "", startDate: "", endDate: "" };
+    const newErrors = {
+      title: "",
+      description: "",
+      startDate: "",
+      endDate: "",
+    };
 
     if (!formData.title.trim()) {
       newErrors.title = "Title is required";
@@ -90,9 +106,10 @@ const LeaveManagement = () => {
   };
   const handleSubmit = () => {
     if (validateForm()) {
-      const duration = formData.startDate && formData.endDate 
-        ? dayjs(formData.endDate).diff(dayjs(formData.startDate), 'day') + 1 
-        : 0;
+      const duration =
+        formData.startDate && formData.endDate
+          ? dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1
+          : 0;
 
       dispatch(
         submitLeaveRequest({
@@ -104,7 +121,7 @@ const LeaveManagement = () => {
           toDate: formData.endDate,
           duration,
           submittedDate: new Date().toISOString().split("T")[0],
-        })
+        }),
       );
     }
   };
@@ -157,6 +174,10 @@ const LeaveManagement = () => {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewMode, setIsViewMode] = useState(false);
+  const [selectedRequestId, setSelectedRequestId] = useState<number | null>(
+    null,
+  );
+  const [uploaderKey, setUploaderKey] = useState(0);
   const [selectedLeaveType, setSelectedLeaveType] = useState("");
   const [formData, setFormData] = useState({
     title: "",
@@ -168,15 +189,18 @@ const LeaveManagement = () => {
   const handleOpenModal = (label: string) => {
     setIsApplyOpen(false);
     setIsViewMode(false);
+    setSelectedRequestId(null);
+    setUploaderKey((prev) => prev + 1); // Increment to reset uploader
     setSelectedLeaveType(label);
     setIsModalOpen(true);
     setErrors({ title: "", description: "", startDate: "", endDate: "" });
     // Clear any previous global errors from the store
-    dispatch(resetSubmitSuccess()); 
+    dispatch(resetSubmitSuccess());
   };
 
   const handleViewApplication = (item: any) => {
     setIsViewMode(true);
+    setSelectedRequestId(item.id);
     setSelectedLeaveType(item.requestType);
     setFormData({
       title: item.title,
@@ -189,11 +213,16 @@ const LeaveManagement = () => {
   };
 
   const handleCancel = (id: number) => {
-    if (window.confirm("Are you sure you want to cancel this request?") && employeeId) {
-      dispatch(updateLeaveRequestStatus({ id, status: "Cancelled" })).then(() => {
-        dispatch(getLeaveStats(employeeId));
-        dispatch(getLeaveHistory(employeeId));
-      });
+    if (
+      window.confirm("Are you sure you want to cancel this request?") &&
+      employeeId
+    ) {
+      dispatch(updateLeaveRequestStatus({ id, status: "Cancelled" })).then(
+        () => {
+          dispatch(getLeaveStats(employeeId));
+          dispatch(getLeaveHistory(employeeId));
+        },
+      );
     }
   };
 
@@ -214,7 +243,7 @@ const LeaveManagement = () => {
   /* Button Animation Logic */
   const [animIndex, setAnimIndex] = useState(0);
   const [isBtnHovered, setIsBtnHovered] = useState(false);
-  
+
   const animatedOptions = [
     { label: "Apply", icon: Plus, color: "text-[#4318FF]" }, // Default
     { label: "Leave", icon: Calendar, color: "text-red-500" },
@@ -245,9 +274,7 @@ const LeaveManagement = () => {
       {/* Header */}
       <div className="sticky top-0 z-40 bg-[#F4F7FE] -mx-4 px-4 py-2 mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all">
         <div>
-          <h1 className="text-2xl font-bold text-[#2B3674]">
-            Work Management
-          </h1>
+          <h1 className="text-2xl font-bold text-[#2B3674]">Work Management</h1>
           <p className="text-sm text-gray-500 mt-1">
             View your leave balance and request new leaves
           </p>
@@ -260,8 +287,8 @@ const LeaveManagement = () => {
       <div className="relative bg-gradient-to-r from-[#4318FF] to-[#868CFF] rounded-[20px] p-6 md:p-8 mb-8 shadow-xl shadow-blue-500/20 group animate-in fade-in slide-in-from-bottom-4 duration-700">
         {/* Decorative Elements Wrapper for Overflow */}
         <div className="absolute inset-0 overflow-hidden rounded-[20px]">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl group-hover:bg-white/20 transition-all duration-700" />
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-black/10 rounded-full translate-y-1/2 -translate-x-1/2 blur-2xl" />
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl group-hover:bg-white/20 transition-all duration-700" />
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-black/10 rounded-full translate-y-1/2 -translate-x-1/2 blur-2xl" />
         </div>
 
         <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
@@ -278,11 +305,12 @@ const LeaveManagement = () => {
               <span className="text-blue-200">Apply in seconds.</span>
             </h2>
             <p className="text-blue-100 text-sm font-medium max-w-xl">
-              Select your leave type, dates, and reason. Your manager will be notified instantly.
+              Select your leave type, dates, and reason. Your manager will be
+              notified instantly.
             </p>
           </div>
 
-          <div 
+          <div
             className="relative bg-white/10 backdrop-blur-md border border-white/20 p-1.5 rounded-2xl md:rotate-3 transition-transform group-hover:rotate-0 duration-500"
             ref={dropdownRef}
           >
@@ -292,39 +320,41 @@ const LeaveManagement = () => {
               onClick={handleSmartClick}
               className="bg-white px-8 py-3.5 rounded-xl font-bold shadow-lg hover:shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer text-sm min-w-[200px]"
             >
-              <div key={animIndex} className={`flex items-center gap-2 animate-flip-up ${currentOption.color}`}>
+              <div
+                key={animIndex}
+                className={`flex items-center gap-2 animate-flip-up ${currentOption.color}`}
+              >
                 <currentOption.icon size={18} />
                 <span>{currentOption.label}</span>
               </div>
             </button>
 
             {/* Dropdown Menu Moved Here */}
-             {isApplyOpen && (
-            <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-gray-100 p-2 animate-in fade-in slide-in-from-top-2 z-50 text-left">
-              <div className="flex flex-col gap-1">
-                {applyOptions.map((option, idx) => (
-                  <button
-                    key={idx}
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl font-medium hover:bg-gray-50 transition-all text-left group/item"
-                    onClick={() => handleOpenModal(option.label)}
-                  >
-                    <div
-                      className={`p-2 rounded-lg bg-gray-50 group-hover/item:bg-white group-hover/item:shadow-sm transition-all ${option.color}`}
+            {isApplyOpen && (
+              <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-gray-100 p-2 animate-in fade-in slide-in-from-top-2 z-50 text-left">
+                <div className="flex flex-col gap-1">
+                  {applyOptions.map((option, idx) => (
+                    <button
+                      key={idx}
+                      className="flex items-center gap-3 px-4 py-3 rounded-xl font-medium hover:bg-gray-50 transition-all text-left group/item"
+                      onClick={() => handleOpenModal(option.label)}
                     >
-                      <option.icon size={18} />
-                    </div>
-                    <span className="font-bold text-sm text-[#2B3674]">
-                      {option.label}
-                    </span>
-                  </button>
-                ))}
+                      <div
+                        className={`p-2 rounded-lg bg-gray-50 group-hover/item:bg-white group-hover/item:shadow-sm transition-all ${option.color}`}
+                      >
+                        <option.icon size={18} />
+                      </div>
+                      <span className="font-bold text-sm text-[#2B3674]">
+                        {option.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
           </div>
         </div>
       </div>
-
 
       {/* Leave Balance Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 mt-4">
@@ -416,79 +446,92 @@ const LeaveManagement = () => {
                       <div className="bg-gray-50 p-4 rounded-full">
                         <Calendar size={32} className="text-gray-300" />
                       </div>
-                      <p className="font-medium text-sm">
-                        No Request found
-                      </p>
+                      <p className="font-medium text-sm">No Request found</p>
                     </div>
                   </td>
                 </tr>
               ) : (
                 entities.map((item, index) => (
-                <tr
-                  key={index}
-                  className={`group transition-all duration-200 ${
-                    index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"
-                  } hover:bg-[#F1F4FF]`}
-                >
-                  <td className="py-4 pl-10 pr-4 text-[#2B3674] text-sm font-bold">
-                    {item.fullName || currentUser?.aliasLoginName || "User"} ({item.employeeId})
-                  </td>
-                  <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
-                    {item.requestType === "Apply Leave" ? "Leave" : item.requestType}
-                  </td>
-                  <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
-                    {item.submittedDate ? dayjs(item.submittedDate).format("DD MMM - YYYY") : (item.created_at ? dayjs(item.created_at).format("DD MMM - YYYY") : "-")}
-                  </td>
-                  <td className="py-4 px-4 text-center">
-                    <div className="text-sm font-bold text-[#2B3674]">
-                      {dayjs(item.fromDate).format("DD MMM")} - {dayjs(item.toDate).format("DD MMM - YYYY")}
-                    </div>
-                    <p className="text-[10px] text-[#4318FF] font-black mt-1 uppercase tracking-wider">
-                      Total: {item.duration || (dayjs(item.toDate).diff(dayjs(item.fromDate), 'day') + 1)} Day(s)
-                    </p>
-                  </td>
-                  <td className="py-4 px-4 text-center">
-                    <div className="flex items-center justify-center gap-3">
-                      <button
-                        onClick={() => handleViewApplication(item)}
-                        className="p-2 text-blue-600 bg-blue-50/50 hover:bg-blue-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-blue-200 active:scale-90"
-                        title="View Application"
-                      >
-                        <Eye size={18} />
-                      </button>
-                      {item.status === "Pending" && (
+                  <tr
+                    key={index}
+                    className={`group transition-all duration-200 ${
+                      index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"
+                    } hover:bg-[#F1F4FF]`}
+                  >
+                    <td className="py-4 pl-10 pr-4 text-[#2B3674] text-sm font-bold">
+                      {item.fullName || currentUser?.aliasLoginName || "User"} (
+                      {item.employeeId})
+                    </td>
+                    <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
+                      {item.requestType === "Apply Leave"
+                        ? "Leave"
+                        : item.requestType}
+                    </td>
+                    <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
+                      {item.submittedDate
+                        ? dayjs(item.submittedDate).format("DD MMM - YYYY")
+                        : item.created_at
+                          ? dayjs(item.created_at).format("DD MMM - YYYY")
+                          : "-"}
+                    </td>
+                    <td className="py-4 px-4 text-center">
+                      <div className="text-sm font-bold text-[#2B3674]">
+                        {dayjs(item.fromDate).format("DD MMM")} -{" "}
+                        {dayjs(item.toDate).format("DD MMM - YYYY")}
+                      </div>
+                      <p className="text-[10px] text-[#4318FF] font-black mt-1 uppercase tracking-wider">
+                        Total:{" "}
+                        {item.duration ||
+                          dayjs(item.toDate).diff(dayjs(item.fromDate), "day") +
+                            1}{" "}
+                        Day(s)
+                      </p>
+                    </td>
+                    <td className="py-4 px-4 text-center">
+                      <div className="flex items-center justify-center gap-3">
                         <button
-                          onClick={() => handleCancel(item.id)}
-                          className="p-2 text-red-500 bg-red-50/50 hover:bg-red-500 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
-                          title="Cancel Request"
+                          onClick={() => handleViewApplication(item)}
+                          className="p-2 text-blue-600 bg-blue-50/50 hover:bg-blue-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-blue-200 active:scale-90"
+                          title="View Application"
                         >
-                          <XCircle size={18} />
+                          <Eye size={18} />
                         </button>
-                      )}
+                        {item.status === "Pending" && (
+                          <button
+                            onClick={() => handleCancel(item.id)}
+                            className="p-2 text-red-500 bg-red-50/50 hover:bg-red-500 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
+                            title="Cancel Request"
+                          >
+                            <XCircle size={18} />
+                          </button>
+                        )}
 
-                      <span
-                        className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all
+                        <span
+                          className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all
                           ${
                             item.status === "Approved"
                               ? "bg-green-50 text-green-600 border-green-200"
                               : item.status === "Pending"
-                              ? "bg-yellow-50 text-yellow-600 border-yellow-200"
-                              : item.status === "Cancelled"
-                              ? "bg-yellow-50 text-yellow-600 border-yellow-200"
-                              : "bg-red-50 text-red-600 border-red-200"
+                                ? "bg-yellow-50 text-yellow-600 border-yellow-200"
+                                : item.status === "Cancelled"
+                                  ? "bg-yellow-50 text-yellow-600 border-yellow-200"
+                                  : "bg-red-50 text-red-600 border-red-200"
                           }
                         `}
-                      >
-                        {item.status === "Pending" && (
-                          <RotateCcw size={12} className="animate-spin-slow" />
-                        )}
-                        {item.status}
-                      </span>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
+                        >
+                          {item.status === "Pending" && (
+                            <RotateCcw
+                              size={12}
+                              className="animate-spin-slow"
+                            />
+                          )}
+                          {item.status}
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -497,8 +540,8 @@ const LeaveManagement = () => {
       {/* Application Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div 
-            className="absolute inset-0 bg-[#2B3674]/30 backdrop-blur-sm" 
+          <div
+            className="absolute inset-0 bg-[#2B3674]/30 backdrop-blur-sm"
             onClick={handleCloseModal}
           />
           <div className="relative w-full max-w-xl bg-white rounded-[32px] overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-300">
@@ -506,14 +549,14 @@ const LeaveManagement = () => {
             <div className="p-8 pb-0">
               <div className="flex justify-between items-start mb-6">
                 {isViewMode && (
-                  <button 
+                  <button
                     onClick={handleCloseModal}
                     className="p-2 hover:bg-gray-100 rounded-full transition-colors order-first"
                   >
                     <ArrowLeft size={20} className="text-gray-400" />
                   </button>
                 )}
-                <button 
+                <button
                   onClick={handleCloseModal}
                   className="p-2 hover:bg-gray-100 rounded-full transition-colors order-last"
                 >
@@ -544,7 +587,9 @@ const LeaveManagement = () => {
               )}
               {/* Title Field */}
               <div className="space-y-2">
-                <label className="text-sm font-bold text-[#2B3674] ml-1">Title</label>
+                <label className="text-sm font-bold text-[#2B3674] ml-1">
+                  Title
+                </label>
                 {isViewMode ? (
                   <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none">
                     {formData.title}
@@ -558,9 +603,15 @@ const LeaveManagement = () => {
                         errors.title ? "border-red-500" : "border-transparent"
                       } focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400`}
                       value={formData.title}
-                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, title: e.target.value })
+                      }
                     />
-                    {errors.title && <p className="text-red-500 text-xs mt-1 ml-2">{errors.title}</p>}
+                    {errors.title && (
+                      <p className="text-red-500 text-xs mt-1 ml-2">
+                        {errors.title}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
@@ -568,7 +619,9 @@ const LeaveManagement = () => {
               {/* Dates Row */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-[#2B3674] ml-1">Start Date</label>
+                  <label className="text-sm font-bold text-[#2B3674] ml-1">
+                    Start Date
+                  </label>
                   {isViewMode ? (
                     <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] text-center">
                       {dayjs(formData.startDate).format("DD-MM-YYYY")}
@@ -580,30 +633,47 @@ const LeaveManagement = () => {
                           token: {
                             borderRadius: 16,
                             controlHeight: 48,
-                            colorBgContainer: '#F4F7FE',
-                            colorBorder: 'transparent',
-                            colorPrimary: '#4318FF',
+                            colorBgContainer: "#F4F7FE",
+                            colorBorder: "transparent",
+                            colorPrimary: "#4318FF",
                           },
-                          components: { DatePicker: { cellHeight: 28, cellWidth: 28 } }
+                          components: {
+                            DatePicker: { cellHeight: 28, cellWidth: 28 },
+                          },
                         }}
                       >
                         <DatePicker
                           popupClassName="hide-other-months"
                           disabledDate={disabledDate}
                           className={`w-full px-5! py-3! rounded-[20px]! bg-[#F4F7FE]! border-none! focus:bg-white! focus:border-[#4318FF]! transition-all font-bold! text-[#2B3674]! shadow-none`}
-                          value={formData.startDate ? dayjs(formData.startDate) : null}
-                          onChange={(date) => setFormData({ ...formData, startDate: date ? date.format('YYYY-MM-DD') : "" })}
+                          value={
+                            formData.startDate
+                              ? dayjs(formData.startDate)
+                              : null
+                          }
+                          onChange={(date) =>
+                            setFormData({
+                              ...formData,
+                              startDate: date ? date.format("YYYY-MM-DD") : "",
+                            })
+                          }
                           format="DD-MM-YYYY"
                           placeholder="dd-mm-yyyy"
                           suffixIcon={null}
                         />
                       </ConfigProvider>
-                      {errors.startDate && <p className="text-red-500 text-xs mt-1 ml-2">{errors.startDate}</p>}
+                      {errors.startDate && (
+                        <p className="text-red-500 text-xs mt-1 ml-2">
+                          {errors.startDate}
+                        </p>
+                      )}
                     </>
                   )}
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-[#2B3674] ml-1">End Date</label>
+                  <label className="text-sm font-bold text-[#2B3674] ml-1">
+                    End Date
+                  </label>
                   {isViewMode ? (
                     <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] text-center">
                       {dayjs(formData.endDate).format("DD-MM-YYYY")}
@@ -615,25 +685,38 @@ const LeaveManagement = () => {
                           token: {
                             borderRadius: 16,
                             controlHeight: 48,
-                            colorBgContainer: '#F4F7FE',
-                            colorBorder: 'transparent',
-                            colorPrimary: '#4318FF',
+                            colorBgContainer: "#F4F7FE",
+                            colorBorder: "transparent",
+                            colorPrimary: "#4318FF",
                           },
-                          components: { DatePicker: { cellHeight: 28, cellWidth: 28 } }
+                          components: {
+                            DatePicker: { cellHeight: 28, cellWidth: 28 },
+                          },
                         }}
                       >
                         <DatePicker
                           popupClassName="hide-other-months"
                           disabledDate={disabledDate}
                           className={`w-full px-5! py-3! rounded-[20px]! bg-[#F4F7FE]! border-none! focus:bg-white! focus:border-[#4318FF]! transition-all font-bold! text-[#2B3674]! shadow-none`}
-                          value={formData.endDate ? dayjs(formData.endDate) : null}
-                          onChange={(date) => setFormData({ ...formData, endDate: date ? date.format('YYYY-MM-DD') : "" })}
+                          value={
+                            formData.endDate ? dayjs(formData.endDate) : null
+                          }
+                          onChange={(date) =>
+                            setFormData({
+                              ...formData,
+                              endDate: date ? date.format("YYYY-MM-DD") : "",
+                            })
+                          }
                           format="DD-MM-YYYY"
                           placeholder="dd-mm-yyyy"
                           suffixIcon={null}
                         />
                       </ConfigProvider>
-                      {errors.endDate && <p className="text-red-500 text-xs mt-1 ml-2">{errors.endDate}</p>}
+                      {errors.endDate && (
+                        <p className="text-red-500 text-xs mt-1 ml-2">
+                          {errors.endDate}
+                        </p>
+                      )}
                     </>
                   )}
                 </div>
@@ -641,12 +724,14 @@ const LeaveManagement = () => {
 
               {/* Duration Field */}
               <div className="space-y-2">
-                <label className="text-sm font-bold text-[#2B3674] ml-1">Duration</label>
+                <label className="text-sm font-bold text-[#2B3674] ml-1">
+                  Duration
+                </label>
                 <div className="w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] font-bold text-[#4318FF] flex items-center justify-between">
                   <span>Total Days:</span>
                   <span className="bg-white px-4 py-1 rounded-lg shadow-sm border border-blue-100">
-                    {formData.startDate && formData.endDate 
-                      ? `${dayjs(formData.endDate).diff(dayjs(formData.startDate), 'day') + 1} Day(s)`
+                    {formData.startDate && formData.endDate
+                      ? `${dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1} Day(s)`
                       : "0 Days"}
                   </span>
                 </div>
@@ -654,7 +739,9 @@ const LeaveManagement = () => {
 
               {/* Description Field */}
               <div className="space-y-2">
-                <label className="text-sm font-bold text-[#2B3674] ml-1">Description</label>
+                <label className="text-sm font-bold text-[#2B3674] ml-1">
+                  Description
+                </label>
                 {isViewMode ? (
                   <div className="w-full px-5 py-4 rounded-[20px] bg-[#F4F7FE] font-medium text-[#2B3674] min-h-[120px] whitespace-pre-wrap leading-relaxed">
                     {formData.description || "No description provided."}
@@ -665,14 +752,57 @@ const LeaveManagement = () => {
                       rows={4}
                       placeholder="Please provide details about your request..."
                       className={`w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] border ${
-                        errors.description ? "border-red-500" : "border-transparent"
+                        errors.description
+                          ? "border-red-500"
+                          : "border-transparent"
                       } focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium text-[#2B3674] placeholder:font-medium placeholder:text-gray-400 resize-none`}
                       value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          description: e.target.value,
+                        })
+                      }
                     />
-                    {errors.description && <p className="text-red-500 text-xs mt-1 ml-2">{errors.description}</p>}
+                    {errors.description && (
+                      <p className="text-red-500 text-xs mt-1 ml-2">
+                        {errors.description}
+                      </p>
+                    )}
                   </div>
                 )}
+              </div>
+
+              {/* Document Upload Section - Only show when not in view mode */}
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-[#2B3674] ml-1">
+                  Supporting Documents {isViewMode ? "" : "(Optional)"}
+                </label>
+                <div className="bg-[#F4F7FE] rounded-2xl p-4">
+                  <CommonMultipleUploader
+                    key={isViewMode ? selectedRequestId : uploaderKey}
+                    entityType="LEAVE_REQUEST"
+                    entityId={
+                      (entity?.id || currentUser?.id) &&
+                      !isNaN(Number(entity?.id || currentUser?.id))
+                        ? Number(entity?.id || currentUser?.id)
+                        : 0
+                    }
+                    refId={isViewMode ? selectedRequestId || 0 : 0}
+                    refType="DOCUMENT"
+                    fetchOnMount={isViewMode} // Don't fetch old refId 0 files in apply mode
+                    uploadFile={uploadLeaveRequestFile}
+                    downloadFile={downloadLeaveRequestFile}
+                    previewFile={previewLeaveRequestFile}
+                    deleteFile={deleteLeaveRequestFile}
+                    getFiles={getLeaveRequestFiles}
+                    maxFiles={5}
+                    allowedTypes={["images", "pdf"]}
+                    successMessage="Document uploaded successfully"
+                    deleteMessage="Document deleted successfully"
+                    disabled={isViewMode}
+                  />
+                </div>
               </div>
 
               {/* Actions Footer */}

@@ -30,6 +30,8 @@ interface LeaveRequestState {
   loading: boolean;
   error: string | null;
   submitSuccess: boolean;
+  uploadedFiles: any[];
+  fileLoading: boolean;
 }
 
 const initialState: LeaveRequestState = {
@@ -38,6 +40,8 @@ const initialState: LeaveRequestState = {
   loading: false,
   error: null,
   submitSuccess: false,
+  uploadedFiles: [],
+  fileLoading: false,
 };
 
 // Async Thunk for Getting Leave History
@@ -150,6 +154,99 @@ export const getLeaveRequestById = createAsyncThunk(
   }
 );
 
+// File Upload Actions
+export const uploadLeaveRequestFile = createAsyncThunk(
+  "leaveRequest/uploadFile",
+  async ({ entityId, refId, refType, entityType, formData }: any, { rejectWithValue }) => {
+    try {
+      const response = await axios.post(
+        `${apiUrl}/upload-file/entityId/${entityId}/refId/${refId}?refType=${refType}&entityType=${entityType}`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to upload file");
+    }
+  }
+);
+
+export const downloadLeaveRequestFile = createAsyncThunk(
+  "leaveRequest/downloadFile",
+  async ({ entityId, refId, refType, entityType, key }: any, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(
+        `${apiUrl}/entityId/${entityId}/refId/${refId}/download-file?key=${key}&refType=${refType}&entityType=${entityType}`,
+        {
+          responseType: "blob",
+        }
+      );
+      return {
+        data: response.data,
+        headers: response.headers,
+      };
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to download file");
+    }
+  }
+);
+
+export const previewLeaveRequestFile = createAsyncThunk(
+  "leaveRequest/previewFile",
+  async ({ entityId, refId, refType, entityType, key }: any, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(
+        `${apiUrl}/entityId/${entityId}/refId/${refId}/view?key=${key}&refType=${refType}&entityType=${entityType}`,
+        {
+          responseType: "blob",
+        }
+      );
+      return {
+        data: response.data,
+        headers: response.headers,
+      };
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to preview file");
+    }
+  }
+);
+
+export const deleteLeaveRequestFile = createAsyncThunk(
+  "leaveRequest/deleteFile",
+  async ({ entityId, refId, refType, entityType, key }: any, { rejectWithValue }) => {
+    try {
+      await axios.delete(
+        `${apiUrl}/entityId/${entityId}/refId/${refId}/delete?key=${key}&refType=${refType}&entityType=${entityType}`
+      );
+      return key;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to delete file");
+    }
+  }
+);
+
+export const getLeaveRequestFiles = createAsyncThunk(
+  "leaveRequest/getFiles",
+  async ({ entityId, refId, refType, entityType }: any, { rejectWithValue }) => {
+    try {
+      const queryParams = new URLSearchParams();
+      if (refType) queryParams.append("refType", refType);
+      queryParams.append("entityType", entityType);
+
+      const response = await axios.get(
+        `${apiUrl}/entityId/${entityId}/refId/${refId}/get-files?${queryParams.toString()}`
+      );
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to fetch files");
+    }
+  }
+);
+
 const leaveRequestSlice = createSlice({
   name: "leaveRequest",
   initialState,
@@ -224,6 +321,42 @@ const leaveRequestSlice = createSlice({
       if (index !== -1) {
         state.entities[index].status = updatedItem.status;
       }
+    });
+
+    // File Upload
+    builder.addCase(uploadLeaveRequestFile.pending, (state) => {
+      state.fileLoading = true;
+    });
+    builder.addCase(uploadLeaveRequestFile.fulfilled, (state, action) => {
+      state.fileLoading = false;
+      const uploadedData = action.payload.data?.data || action.payload.data || action.payload;
+      if (Array.isArray(uploadedData)) {
+        state.uploadedFiles.push(...uploadedData);
+      } else {
+        state.uploadedFiles.push(uploadedData);
+      }
+    });
+    builder.addCase(uploadLeaveRequestFile.rejected, (state, action) => {
+      state.fileLoading = false;
+      state.error = action.payload as string;
+    });
+
+    // Fetch Files
+    builder.addCase(getLeaveRequestFiles.pending, (state) => {
+      state.fileLoading = true;
+    });
+    builder.addCase(getLeaveRequestFiles.fulfilled, (state, action) => {
+      state.fileLoading = false;
+      state.uploadedFiles = action.payload.data || action.payload;
+    });
+    builder.addCase(getLeaveRequestFiles.rejected, (state, action) => {
+      state.fileLoading = false;
+      state.error = action.payload as string;
+    });
+
+    // Delete File
+    builder.addCase(deleteLeaveRequestFile.fulfilled, (state, action) => {
+      state.uploadedFiles = state.uploadedFiles.filter((f) => f.key !== action.payload);
     });
   },
 });

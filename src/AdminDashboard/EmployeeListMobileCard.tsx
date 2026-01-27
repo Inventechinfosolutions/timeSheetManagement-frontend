@@ -1,4 +1,4 @@
-import { Eye, RefreshCw } from "lucide-react";
+import { Pencil, RefreshCw } from "lucide-react";
 
 interface Employee {
   id: string;
@@ -113,9 +113,9 @@ const EmployeeListMobileCard = ({
                 <button
                   onClick={() => onViewDetails(emp.rawId)}
                   className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#4318FF]/5 text-[#4318FF] font-bold text-sm hover:bg-[#4318FF] hover:text-white transition-all active:scale-95 shadow-sm"
-                  title="View Details"
+                  title="Edit Details"
                 >
-                  <Eye size={16} />
+                  <Pencil size={16} />
                 </button>
               </div>
             </div>
