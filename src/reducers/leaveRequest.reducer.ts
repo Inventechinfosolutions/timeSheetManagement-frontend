@@ -56,12 +56,31 @@ export const getLeaveHistory = createAsyncThunk(
 // Async Thunk for Getting All Leave Requests (Admin)
 export const getAllLeaveRequests = createAsyncThunk(
   "leaveRequest/getAll",
-  async (_, { rejectWithValue }) => {
+  async (
+    filters: { department?: string; status?: string; search?: string } = {},
+    { rejectWithValue }
+  ) => {
     try {
-      const response = await axios.get(apiUrl);
+      const params = new URLSearchParams();
+      if (filters.department && filters.department !== "All") {
+        params.append("department", filters.department);
+      }
+      if (filters.status && filters.status !== "All") {
+        params.append("status", filters.status);
+      }
+      if (filters.search) {
+        params.append("search", filters.search);
+      }
+
+      const queryString = params.toString();
+      const url = queryString ? `${apiUrl}?${queryString}` : apiUrl;
+      
+      const response = await axios.get(url);
       return response.data;
     } catch (error: any) {
-      return rejectWithValue(error.response?.data || "Failed to fetch all requests");
+      return rejectWithValue(
+        error.response?.data || "Failed to fetch all requests"
+      );
     }
   }
 );
@@ -114,6 +133,19 @@ export const updateLeaveRequestStatus = createAsyncThunk(
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data || `Failed to ${status.toLowerCase()} request`);
+    }
+  }
+);
+
+// Async Thunk for Getting Single Leave Request by ID
+export const getLeaveRequestById = createAsyncThunk(
+  "leaveRequest/getById",
+  async (id: number, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`${apiUrl}/${id}`);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to fetch request details");
     }
   }
 );

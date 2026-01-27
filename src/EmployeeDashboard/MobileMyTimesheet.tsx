@@ -48,18 +48,18 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
   isHighlighted,
   containerClassName,
 }) => {
-  // Sort entries to match Mon-Sun order
+  // Sort entries to match Sun-Sat order (0-6)
   const sortedEntries = [...currentWeekEntries].sort((a, b) => {
-    const dayA = a.entry.fullDate.getDay();
-    const dayB = b.entry.fullDate.getDay();
-    // Adjust Sunday from 0 to 7 to handle Mon-Sun sorting
-    const adjustedA = dayA === 0 ? 7 : dayA;
-    const adjustedB = dayB === 0 ? 7 : dayB;
-    return adjustedA - adjustedB;
+    return a.entry.fullDate.getDay() - b.entry.fullDate.getDay();
   });
 
   return (
-    <div className={containerClassName || "flex flex-col bg-[#F4F7FE] px-3 py-2 relative no-scrollbar"}>
+    <div
+      className={
+        containerClassName ||
+        "flex flex-col bg-[#F4F7FE] px-3 py-2 relative no-scrollbar"
+      }
+    >
       {loading && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/30 backdrop-blur-[2px]">
           <div className="animate-spin rounded-full h-10 w-10 border-b-4 border-[#4318FF]"></div>
@@ -73,9 +73,12 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
             {currentMonthName}
           </h2>
           <div className="flex items-baseline gap-1.5 mt-0.5">
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-tight">Total:</span>
+            <span className="text-xs font-bold text-gray-400 uppercase tracking-tight">
+              Total:
+            </span>
             <span className="text-xl font-black text-[#4318FF]">
-              {monthTotalHours.toFixed(1)} <span className="text-[10px]">hrs</span>
+              {monthTotalHours.toFixed(1)}{" "}
+              <span className="text-[10px]">hrs</span>
             </span>
           </div>
         </div>
@@ -85,7 +88,9 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
             className="flex items-center gap-2 px-4 py-3 bg-linear-to-br from-[#4318FF] to-[#5D38FF] text-white rounded-2xl shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
           >
             <Save size={18} strokeWidth={2.5} />
-            <span className="text-xs font-bold uppercase tracking-wider">Save</span>
+            <span className="text-xs font-bold uppercase tracking-wider">
+              Save
+            </span>
           </button>
         )}
       </div>
@@ -124,18 +129,28 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
               const isHolidayDate = isHoliday(entry.fullDate);
 
               if (entry.isToday) {
-                bg = "bg-white ring-2 ring-[#4318FF] text-[#4318FF] border-transparent font-extrabold shadow-md";
+                bg =
+                  "bg-white ring-2 ring-[#4318FF] text-[#4318FF] border-transparent font-extrabold shadow-md";
               } else if (isBlocked) {
-                bg = "bg-gray-200 border border-gray-400 text-gray-500 font-bold";
-              } else if (entry.status === "Full Day" || entry.status === "Half Day" || entry.status === "WFH") {
-                bg = "bg-green-100 border border-green-500 text-black font-bold";
+                bg =
+                  "bg-gray-200 border border-gray-400 text-gray-500 font-bold";
+              } else if (
+                entry.status === "Full Day" ||
+                entry.status === "Half Day" ||
+                entry.status === "WFH"
+              ) {
+                bg =
+                  "bg-green-100 border border-green-500 text-black font-bold";
               } else if (entry.status === "Leave") {
                 bg = "bg-red-200 border border-red-600 text-black font-bold";
               } else if (isHolidayDate || entry.status === "Holiday") {
                 bg = "bg-blue-100 border border-blue-500 text-black font-bold";
               } else if (entry.isWeekend) {
                 bg = "bg-pink-100 border border-pink-400 text-black font-bold";
-              } else if (entry.status === "Not Updated" || entry.status === "Pending") {
+              } else if (
+                entry.status === "Not Updated" ||
+                entry.status === "Pending"
+              ) {
                 bg = "bg-white border border-gray-300 text-gray-600 font-bold";
               }
 
@@ -146,14 +161,14 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
                   entry.fullDate.toDateString() &&
                 isHighlighted;
 
-              // Special centering for Sunday
-              const isSunday = entry.fullDate.getDay() === 0;
+              // Special centering for Saturday (last day in Sun-Sat week)
+              const isSaturday = entry.fullDate.getDay() === 6;
 
               return (
                 <div
                   key={originalIndex}
                   className={`flex flex-col items-center gap-2 ${
-                    isSunday ? "col-start-2" : ""
+                    isSaturday ? "col-start-2" : ""
                   } ${isDateHighlighted ? "z-50" : ""}`}
                 >
                   <span

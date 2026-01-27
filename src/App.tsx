@@ -156,7 +156,7 @@ function App() {
         />
 
         <Route
-          path="/timesheet/reset-password"
+          path="/reset-password"
           element={
             <Suspense
               fallback={
@@ -172,7 +172,7 @@ function App() {
 
         {/* Set Password Route - for first-time password setup */}
         <Route
-          path="/timeesheet/set-password"
+          path="/set-password"
           element={
             <Suspense
               fallback={
