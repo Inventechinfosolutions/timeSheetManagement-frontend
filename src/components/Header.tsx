@@ -23,6 +23,8 @@ import {
   fetchEmployeeUpdates,
   markAsRead as markLeaveNotifRead,
   markEmployeeUpdateRead,
+  markAllAsRead as markAllLeaveRequestsRead,
+  markAllEmployeeUpdatesRead,
 } from "../reducers/leaveNotification.reducer";
 import "./Header.css";
 import InventLogo from "../assets/invent-logo.svg";
@@ -108,7 +110,15 @@ const Header = ({
       ? currentUser?.employeeId
       : entity?.employeeId;
     if (notificationId) {
+      // 1. Mark Generic Notifications as Read
       dispatch(markAllNotificationsRead(notificationId));
+
+      // 2. Mark Leave Notifications as Read
+      if (isAdmin) {
+        dispatch(markAllLeaveRequestsRead());
+      } else {
+        dispatch(markAllEmployeeUpdatesRead(notificationId));
+      }
     }
   };
 

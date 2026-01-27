@@ -9,6 +9,7 @@ import {
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { fetchMonthlyAttendance } from "../reducers/employeeAttendance.reducer";
 import { getEntity, setCurrentUser } from "../reducers/employeeDetails.reducer";
+import { fetchEmployeeUpdates } from "../reducers/leaveNotification.reducer";
 import { generateMonthlyEntries } from "../utils/attendanceUtils";
 import AttendanceViewWrapper from "./CalenderViewWrapper";
 import AttendancePieChart from "./AttendancePieChart";
@@ -66,6 +67,13 @@ const TodayAttendance = ({
       }
     }
   }, [dispatch, entity, currentEmployeeId, currentUser]);
+
+  // Refresh updates whenever dashboard is accessed
+  useEffect(() => {
+    if (currentEmployeeId) {
+      dispatch(fetchEmployeeUpdates(currentEmployeeId));
+    }
+  }, [dispatch, currentEmployeeId]);
 
   // Fetch Master Data (Holidays & Weekends) whenever the calendar view changes (Month/Year)
   // Removed as per user request to reduce API calling for dashboard charts

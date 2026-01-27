@@ -8,6 +8,7 @@ import {
   submitLeaveRequest,
   resetSubmitSuccess,
   updateLeaveRequestStatus,
+  getLeaveRequestById,
 } from "../reducers/leaveRequest.reducer";
 import {
   Home,
@@ -23,6 +24,24 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { notification } from "antd";
+
+const isCancellationAllowed = (submittedDate: string) => {
+  if (!submittedDate) return true;
+  const submission = dayjs(submittedDate).startOf('day');
+  const deadline = submission.add(1, 'day').set('hour', 10).set('minute', 0).set('second', 0);
+  return dayjs().isBefore(deadline);
+};
+
+const datePickerTheme = {
+  token: {
+    borderRadius: 16,
+    controlHeight: 48,
+    colorBgContainer: '#F4F7FE',
+    colorBorder: 'transparent',
+    colorPrimary: '#4318FF',
+  },
+  components: { DatePicker: { cellHeight: 28, cellWidth: 28 } }
+};
 
 const LeaveManagement = () => {
   const dispatch = useAppDispatch();
@@ -63,6 +82,14 @@ const LeaveManagement = () => {
         (currentDate.isSame(endDate) || currentDate.isBefore(endDate))
       );
     });
+  };
+
+  const disabledEndDate = (current: any) => {
+    if (disabledDate(current)) return true;
+    if (formData.startDate) {
+      return current && current.isBefore(dayjs(formData.startDate).startOf('day'));
+    }
+    return false;
   };
 
   const validateForm = () => {
@@ -181,16 +208,26 @@ const LeaveManagement = () => {
   };
 
   const handleViewApplication = (item: any) => {
-    setIsViewMode(true);
-    setSelectedLeaveType(item.requestType);
-    setFormData({
-      title: item.title,
-      description: item.description,
-      startDate: item.fromDate,
-      endDate: item.toDate,
+    dispatch(getLeaveRequestById(item.id)).then((action) => {
+      if (getLeaveRequestById.fulfilled.match(action)) {
+        const fetchedItem = action.payload;
+        setIsViewMode(true);
+        setSelectedLeaveType(fetchedItem.requestType);
+        setFormData({
+          title: fetchedItem.title,
+          description: fetchedItem.description,
+          startDate: fetchedItem.fromDate,
+          endDate: fetchedItem.toDate,
+        });
+        setIsModalOpen(true);
+        setErrors({ title: "", description: "", startDate: "", endDate: "" });
+      } else {
+        notification.error({
+          message: "Error",
+          description: "Failed to fetch request details",
+        });
+      }
     });
-    setIsModalOpen(true);
-    setErrors({ title: "", description: "", startDate: "", endDate: "" });
   };
 
   const handleCancel = (id: number) => {
@@ -254,6 +291,32 @@ const LeaveManagement = () => {
     } else {
       handleOpenModal(currentOption.label);
     }
+  };
+
+  const renderCancelButton = (item: any) => {
+    const canCancel = isCancellationAllowed(item.submittedDate || item.created_at);
+    
+    if (canCancel) {
+      return (
+        <button
+          onClick={() => handleCancel(item.id)}
+          className="p-2 text-red-500 bg-red-50/50 hover:bg-red-500 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
+          title="Cancel Request"
+        >
+          <XCircle size={18} />
+        </button>
+      );
+    }
+
+    return (
+      <button
+        disabled
+        className="p-2 text-gray-300 bg-gray-50 rounded-xl cursor-not-allowed"
+        title="Cancellation unavailable (Deadline: 10 AM next day)"
+      >
+        <XCircle size={18} />
+      </button>
+    );
   };
 
   return (
@@ -473,13 +536,7 @@ const LeaveManagement = () => {
                         <Eye size={18} />
                       </button>
                       {item.status === "Pending" && (
-                        <button
-                          onClick={() => handleCancel(item.id)}
-                          className="p-2 text-red-500 bg-red-50/50 hover:bg-red-500 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
-                          title="Cancel Request"
-                        >
-                          <XCircle size={18} />
-                        </button>
+                        renderCancelButton(item)
                       )}
 
                       <span
@@ -512,7 +569,7 @@ const LeaveManagement = () => {
 
       {/* Application Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
           <div 
             className="absolute inset-0 bg-[#2B3674]/30 backdrop-blur-sm" 
             onClick={handleCloseModal}
@@ -592,23 +649,23 @@ const LeaveManagement = () => {
                   ) : (
                     <>
                       <ConfigProvider
-                        theme={{
-                          token: {
-                            borderRadius: 16,
-                            controlHeight: 48,
-                            colorBgContainer: '#F4F7FE',
-                            colorBorder: 'transparent',
-                            colorPrimary: '#4318FF',
-                          },
-                          components: { DatePicker: { cellHeight: 28, cellWidth: 28 } }
-                        }}
+                        theme={datePickerTheme}
                       >
                         <DatePicker
                           popupClassName="hide-other-months"
                           disabledDate={disabledDate}
                           className={`w-full px-5! py-3! rounded-[20px]! bg-[#F4F7FE]! border-none! focus:bg-white! focus:border-[#4318FF]! transition-all font-bold! text-[#2B3674]! shadow-none`}
                           value={formData.startDate ? dayjs(formData.startDate) : null}
-                          onChange={(date) => setFormData({ ...formData, startDate: date ? date.format('YYYY-MM-DD') : "" })}
+                          onChange={(date) => {
+                              const newStartDate = date ? date.format('YYYY-MM-DD') : "";
+                              setFormData(prev => {
+                                  const newData = { ...prev, startDate: newStartDate };
+                                  if (newData.endDate && newData.startDate && dayjs(newData.endDate).isBefore(dayjs(newData.startDate))) {
+                                      newData.endDate = "";
+                                  }
+                                  return newData;
+                              });
+                          }}
                           format="DD-MM-YYYY"
                           placeholder="dd-mm-yyyy"
                           suffixIcon={null}
@@ -627,20 +684,11 @@ const LeaveManagement = () => {
                   ) : (
                     <>
                       <ConfigProvider
-                        theme={{
-                          token: {
-                            borderRadius: 16,
-                            controlHeight: 48,
-                            colorBgContainer: '#F4F7FE',
-                            colorBorder: 'transparent',
-                            colorPrimary: '#4318FF',
-                          },
-                          components: { DatePicker: { cellHeight: 28, cellWidth: 28 } }
-                        }}
+                        theme={datePickerTheme}
                       >
                         <DatePicker
                           popupClassName="hide-other-months"
-                          disabledDate={disabledDate}
+                          disabledDate={disabledEndDate}
                           className={`w-full px-5! py-3! rounded-[20px]! bg-[#F4F7FE]! border-none! focus:bg-white! focus:border-[#4318FF]! transition-all font-bold! text-[#2B3674]! shadow-none`}
                           value={formData.endDate ? dayjs(formData.endDate) : null}
                           onChange={(date) => setFormData({ ...formData, endDate: date ? date.format('YYYY-MM-DD') : "" })}
@@ -725,7 +773,7 @@ const LeaveManagement = () => {
 
       {/* Cancel Confirmation Modal */}
       {cancelModal.isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
           <div 
             className="absolute inset-0 bg-[#2B3674]/40 backdrop-blur-sm transition-opacity"
             onClick={() => setCancelModal({ ...cancelModal, isOpen: false })}
