@@ -116,7 +116,8 @@ const notificationSlice = createSlice({
       .addCase(fetchNotifications.fulfilled, (state, action: PayloadAction<Notification[]>) => {
         state.loading = false;
         state.notifications = action.payload;
-        state.unreadCount = action.payload.length; // Assuming backend returns only unread or list of notifications
+        // Correctly count only unread items
+        state.unreadCount = action.payload.filter(n => !n.isRead).length;
       })
       .addCase(fetchNotifications.rejected, (state, action) => {
         state.loading = false;

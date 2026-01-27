@@ -6,11 +6,10 @@ import {
   EyeOff,
   Loader2,
   CheckCircle,
-  Home,
-  Bell,
-  Mail,
-  ChevronDown,
-  LayoutGrid,
+  Lock,
+  Check,
+  X,
+  ShieldCheck,
 } from "lucide-react";
 import {
   resetPasswordEmployee,
@@ -23,7 +22,7 @@ import {
   logoutUser,
 } from "../reducers/user.reducer";
 import { AppDispatch, RootState } from "../store";
-import inventechLogo from "../assets/inventech-logo.jpg";
+import inventLogo from "../assets/invent-logo.svg";
 
 const TimesheetResetPassword: React.FC = () => {
   const navigate = useNavigate();
@@ -79,23 +78,30 @@ const TimesheetResetPassword: React.FC = () => {
     };
   }, [dispatch]);
 
+  const passwordsMatch =
+    password === confirmPassword && confirmPassword.length > 0;
+
   const requirements = [
-    { label: "At least 8 characters or more.", met: password.length >= 8 },
+    { label: "At least 8 characters", met: password.length >= 8 },
     {
-      label: "Include uppercase and lowercase letters, numbers, and symbols.",
-      met: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])/.test(password),
+      label: "Uppercase & lowercase letters",
+      met: /^(?=.*[a-z])(?=.*[A-Z])/.test(password),
     },
     {
-      label:
-        "Avoid using familiar names, common words, or predictable phrases.",
+      label: "Number & symbol (@$!%*?&#)",
+      met: /^(?=.*\d)(?=.*[@$!%*?&#])/.test(password),
+    },
+    {
+      label: "No common patterns (123, abc)",
       met: password.length >= 8 && !/^(password|123456|qwerty)/i.test(password),
     },
-    { label: "Max 20 character can be used.", met: password.length <= 20 },
+    {
+      label: "Passwords match",
+      met: passwordsMatch,
+    },
   ];
 
   const isValidPassword = requirements.every((r) => r.met);
-  const passwordsMatch =
-    password === confirmPassword && confirmPassword.length > 0;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,224 +148,177 @@ const TimesheetResetPassword: React.FC = () => {
   const errorMessage =
     localError || (isForgotMode ? resetPasswordError : userError);
 
+  if (success) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center p-4 bg-[#EFEBF5] relative overflow-hidden font-sans">
+        <div className="absolute top-[-5%] left-[5%] w-48 h-48 bg-[#585CE5] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
+        <div className="bg-white rounded-[2rem] shadow-2xl p-12 text-center max-w-md w-full animate-in zoom-in-95 duration-500 relative z-10 border border-white/50">
+          <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-green-100/50 shadow-sm">
+            <CheckCircle className="w-12 h-12 text-green-500" />
+          </div>
+          <h2 className="text-3xl font-black text-[#2D3748] mb-2 tracking-tight">
+            Success!
+          </h2>
+          <p className="text-gray-500 font-medium mb-8">
+            Your password has been securely updated.
+          </p>
+          <button
+            onClick={() => navigate("/landing")}
+            className="w-full bg-[#6C63FF] hover:bg-[#5a52d5] text-white px-8 py-4 rounded-xl font-bold transition-all shadow-lg active:scale-95 mb-4"
+          >
+            Go to Login
+          </button>
+          {/* <p className="text-[#6C63FF] text-xs font-bold animate-pulse">
+            Redirecting automatically...
+          </p> */}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-[#f8f9fc] flex flex-col font-sans">
-      {/* Top Header */}
-      <header className="h-20 bg-white border-b border-gray-100 flex items-center justify-between px-6 sticky top-0 z-50">
-        <div className="flex items-center gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              {/* <span className="font-bold text-[#2B3674]">FM000088</span> */}
-              <ChevronDown size={14} className="text-gray-400" />
-            </div>
-            <span className="text-xs font-semibold text-gray-500">
-              Time Sheet Management
-            </span>
-          </div>
+    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-[#EFEBF5] relative overflow-y-auto overflow-x-hidden font-sans">
+      {/* Background Shapes */}
+      <div className="absolute top-[-5%] left-[5%] w-48 h-48 bg-[#585CE5] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
+      <div className="absolute bottom-[-10%] right-[-5%] w-96 h-96 bg-white rounded-full mix-blend-overlay filter blur-3xl opacity-40"></div>
 
-          <div className="h-8 w-px bg-gray-200 mx-4 hidden lg:block"></div>
-
-          <button className="p-2 hover:bg-gray-50 rounded-lg transition-colors text-gray-500 hidden lg:block">
-            <LayoutGrid size={20} />
-          </button>
-
-          <div className="hidden lg:block">
-            <img
-              src={inventechLogo}
-              alt="Inventech"
-              className="h-10 ml-4 mix-blend-multiply"
-            />
-          </div>
+      {/* Main Single Card - Removed Right Side Visual */}
+      <div className="w-full max-w-md bg-white rounded-[18px] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-500 relative z-10 p-8 md:p-12">
+        <div className="mb-8 text-center">
+          <img
+            src={inventLogo}
+            alt="Invent Logo"
+            className="h-14 mx-auto mb-6"
+          />
+          <h1 className="text-3xl font-black text-[#2D3748] mb-2 tracking-tight">
+            {isForgotMode ? "New Password" : "Change Password"}
+          </h1>
+          <p className="text-gray-400 text-[13px] font-medium tracking-wide">
+            {isForgotMode
+              ? "Create a secure password to access your account."
+              : "Update your credentials to keep your account safe."}
+          </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-50 text-gray-500 relative transition-all">
-            <Bell size={20} />
-            <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-          </button>
-          <button className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-50 text-gray-500 transition-all">
-            <Mail size={20} />
-          </button>
-        </div>
-      </header>
-
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
-        <aside className="w-64 bg-white border-r border-gray-100 hidden md:flex flex-col py-6">
-          <div className="px-4 mb-8">
-            <div className="flex items-center gap-3 p-3 bg-blue-50/50 text-[#00a3c4] rounded-xl cursor-default group transition-all">
-              <Home
-                size={20}
-                className="group-hover:scale-110 transition-transform"
-              />
-              <span className="font-bold text-sm">Home</span>
-            </div>
+        {/* Error Message */}
+        {errorMessage && (
+          <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-xl text-sm font-semibold border border-red-100 flex items-start gap-2 animate-in slide-in-from-top-2">
+            <X size={18} className="mt-0.5 shrink-0" />
+            <span>{errorMessage}</span>
           </div>
-        </aside>
+        )}
 
-        {/* Main Content Area */}
-        <main className="flex-1 bg-[#F4F7FE] overflow-y-auto p-4 md:p-8 flex items-center justify-center">
-          <div className="w-full max-w-lg">
-            {success ? (
-              <div className="bg-white rounded-[2rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.06)] p-12 text-center animate-in zoom-in-95 duration-500">
-                <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-8 border-4 border-white shadow-sm">
-                  <CheckCircle className="w-14 h-14 text-green-500" />
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-4">
+            {/* Password Input */}
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-500 ml-1 uppercase tracking-wider">
+                New Password
+              </label>
+              <div className="relative group">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter new password"
+                  className="w-full pl-12 pr-12 py-4 bg-[#F0F2F5] border-2 border-transparent focus:border-[#6C63FF]/30 rounded-2xl text-[#4A5568] placeholder-gray-400 text-sm focus:bg-[#E8EAED] transition-all duration-200 font-semibold outline-none"
+                  required
+                />
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <Lock className="text-gray-400 h-5 w-5 group-focus-within:text-[#6C63FF] transition-colors" />
                 </div>
-                <h2 className="text-3xl font-extrabold text-[#2B3674] mb-4">
-                  Success!
-                </h2>
-                <p className="text-gray-500 font-medium mb-6">
-                  Password details updated successfully.
-                </p>
                 <button
-                  onClick={() => navigate("/landing")}
-                  className="bg-[#0095ff] hover:bg-[#0081dd] text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg active:scale-95 mb-4"
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
                 >
-                  Go to Landing Page
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
-                <p className="text-blue-400 text-xs font-semibold animate-pulse">
-                  Redirecting in a few seconds...
-                </p>
               </div>
-            ) : (
-              <div className="bg-white rounded-3xl shadow-[0_30px_80px_rgba(0,0,0,0.08)] border border-gray-100 p-10 md:p-14 relative overflow-hidden group">
-                {/* Form Title */}
-                <div className="text-center mb-10">
-                  <h2 className="text-4xl font-extrabold text-[#2B3674] mb-3 tracking-tight group-hover:scale-[1.01] transition-transform">
-                    {isForgotMode ? "Set Password" : "Change Password"}
-                  </h2>
-                  <p className="text-[#A3AED0] font-medium text-lg max-w-xs mx-auto">
-                    {isForgotMode
-                      ? "Create a secure password to complete your account setup."
-                      : "Please update your password to continue."}
-                  </p>
+            </div>
+
+            {/* Confirm Password Input */}
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-500 ml-1 uppercase tracking-wider">
+                Confirm Password
+              </label>
+              <div className="relative group">
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Re-enter password"
+                  className="w-full pl-12 pr-12 py-4 bg-[#F0F2F5] border-2 border-transparent focus:border-[#6C63FF]/30 rounded-2xl text-[#4A5568] placeholder-gray-400 text-sm focus:bg-[#E8EAED] transition-all duration-200 font-semibold outline-none"
+                  required
+                />
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <ShieldCheck className="text-gray-400 h-5 w-5 group-focus-within:text-[#6C63FF] transition-colors" />
                 </div>
-
-                {/* Error Alert */}
-                {errorMessage && (
-                  <div className="mb-8 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-xl text-red-600 font-semibold text-sm animate-in slide-in-from-left-4 duration-300">
-                    {errorMessage}
-                  </div>
-                )}
-
-                <form onSubmit={handleSubmit} className="space-y-8">
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold text-[#2B3674] ml-1 flex items-center gap-1">
-                      <span className="text-red-500">*</span> New Password
-                    </label>
-                    <div className="relative group/field">
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="New Password"
-                        className="w-full px-6 py-4 bg-white border-2 border-gray-100 rounded-2xl focus:border-[#01B574] focus:ring-0 transition-all outline-none text-[#2B3674] font-medium pr-14 group-hover/field:border-gray-200"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#2B3674] transition-colors p-2"
-                      >
-                        {showPassword ? (
-                          <EyeOff size={20} />
-                        ) : (
-                          <Eye size={20} />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold text-[#2B3674] ml-1 flex items-center gap-1">
-                      <span className="text-red-500">*</span> Confirm Password
-                    </label>
-                    <div className="relative group/field">
-                      <input
-                        type={showConfirmPassword ? "text" : "password"}
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        placeholder="Confirm New Password"
-                        className="w-full px-6 py-4 bg-white border-2 border-gray-100 rounded-2xl focus:border-[#01B574] focus:ring-0 transition-all outline-none text-[#2B3674] font-medium pr-14 group-hover/field:border-gray-200"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setShowConfirmPassword(!showConfirmPassword)
-                        }
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#2B3674] transition-colors p-2"
-                      >
-                        {showConfirmPassword ? (
-                          <EyeOff size={20} />
-                        ) : (
-                          <Eye size={20} />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full bg-gray-100 text-[#A3AED0] hover:bg-[#00a3c4] hover:text-white font-black text-sm tracking-widest py-5 rounded-2xl transition-all shadow-lg active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 uppercase overflow-hidden relative group/btn"
-                  >
-                    <div className="absolute inset-0 bg-blue-400/10 opacity-0 group-hover/btn:opacity-100 transition-opacity"></div>
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        {isForgotMode
-                          ? "Setting Password..."
-                          : "Updating Password..."}
-                      </>
-                    ) : isForgotMode ? (
-                      "SET PASSWORD"
-                    ) : (
-                      "UPDATE PASSWORD"
-                    )}
-                  </button>
-
-                  <div className="bg-gray-50/50 rounded-2xl p-6 border border-gray-100/50">
-                    <p className="text-sm font-bold text-[#2B3674] mb-3">
-                      Note:
-                    </p>
-                    <ul className="space-y-2.5">
-                      {requirements.map((req, index) => (
-                        <li
-                          key={index}
-                          className={`text-[12px] font-bold flex items-start gap-2 transition-all ${
-                            password
-                              ? req.met
-                                ? "text-green-600"
-                                : "text-red-500"
-                              : "text-gray-400"
-                          }`}
-                        >
-                          <span className="mt-0.5 opacity-80">
-                            {index + 1}.
-                          </span>
-                          <span className="leading-tight">{req.label}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </form>
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff size={18} />
+                  ) : (
+                    <Eye size={18} />
+                  )}
+                </button>
               </div>
-            )}
+            </div>
           </div>
-        </main>
+
+          {/* Requirements List */}
+          <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3">
+              Security Requirements
+            </p>
+            <div className="grid grid-cols-1 gap-2">
+              {requirements.map((req, index) => (
+                <div
+                  key={index}
+                  className={`flex items-center gap-3 text-xs font-semibold transition-all duration-300 ${
+                    req.met ? "text-gray-700" : "text-gray-400"
+                  }`}
+                >
+                  <div
+                    className={`w-5 h-5 rounded-full flex items-center justify-center border-2 transition-all ${
+                      req.met
+                        ? "bg-green-500 border-green-500 text-white"
+                        : "border-gray-200 bg-transparent"
+                    }`}
+                  >
+                    {req.met && <Check size={12} strokeWidth={3} />}
+                  </div>
+                  <span className={req.met ? "opacity-100" : "opacity-70"}>
+                    {req.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={isLoading || !password || !confirmPassword}
+            className="w-full bg-[#6C63FF] hover:bg-[#5a52d5] text-white font-bold py-4 rounded-xl shadow-[0_10px_20px_-10px_rgba(108,99,255,0.5)] active:scale-[0.98] transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed text-sm tracking-widest uppercase flex items-center justify-center gap-2"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              "Update Password"
+            )}
+          </button>
+        </form>
       </div>
 
-      {/* Sticky Footer */}
-      <footer className="h-14 bg-white border-t border-gray-100 flex items-center justify-center px-6 text-[11px] font-bold text-gray-400 gap-2">
-        Copyright © -
-        <img
-          src={inventechLogo}
-          alt="Keonics"
-          className="h-4 grayscale opacity-50"
-        />
-       Timesheet | Designed
-        and Developed by <span>Inventech Info Solutions</span>
+      {/* Footer */}
+      <footer className="absolute bottom-4 text-center w-full text-[10px] text-gray-400 font-semibold tracking-wide uppercase opacity-60 hover:opacity-100 transition-opacity">
+        Secure • Fast • Reliable
       </footer>
     </div>
   );

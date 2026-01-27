@@ -7,7 +7,7 @@ import {
   Unlock,
   Menu,
   ClipboardList,
-  MessageSquare,
+  Bell,
 } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
@@ -48,7 +48,7 @@ const SidebarLayout = ({
       case "working-details":
         return "Working Details";
       case "requests":
-        return "Requests";
+        return "Notification";
       default:
         return "System Dashboard";
     }
@@ -73,7 +73,7 @@ const SidebarLayout = ({
     { name: "Employee Details", icon: Users },
     { name: "Timesheet", icon: AlarmClock },
     { name: "Working Details", icon: ClipboardList },
-    { name: "Requests", icon: MessageSquare },
+    { name: "Notification", icon: Bell }, // Notification item with Bell icon
   ];
 
   return (

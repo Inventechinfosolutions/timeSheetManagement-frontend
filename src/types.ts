@@ -17,5 +17,6 @@ export interface TimesheetEntry {
     isEditing: boolean;
     isSaved: boolean;
     totalHours?: number;
+    workLocation?: string;
 }
    

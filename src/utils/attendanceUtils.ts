@@ -145,6 +145,7 @@ export const mapAttendanceToEntry = (
         status: mapStatus(attendance?.status, isFuture, isToday, isWeekend, totalHours),
         isEditing: false,
         isSaved: !!attendance?.id,
+        workLocation: attendance?.location || (attendance as any)?.workLocation || (attendance as any)?.work_location, // Map workLocation
         isSavedLogout: !!attendance?.logoutTime && attendance.logoutTime !== "00:00:00" && !attendance.logoutTime.includes("NaN"),
     } as TimesheetEntry;
 };

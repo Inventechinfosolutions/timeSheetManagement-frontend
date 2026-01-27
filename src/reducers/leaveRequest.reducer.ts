@@ -12,7 +12,7 @@ export interface LeaveRequest {
   toDate: string;
   title: string;
   description: string;
-  status: "Pending" | "Approved" | "Rejected";
+  status: "Pending" | "Approved" | "Rejected" | "Cancelled";
   created_at?: string;
   submittedDate?: string;
   duration?: number;
@@ -127,7 +127,7 @@ export const deleteLeaveRequest = createAsyncThunk(
 // Async Thunk for Updating Request Status (Admin)
 export const updateLeaveRequestStatus = createAsyncThunk(
   "leaveRequest/updateStatus",
-  async ({ id, status }: { id: number; status: "Approved" | "Rejected" }, { rejectWithValue }) => {
+  async ({ id, status }: { id: number; status: "Approved" | "Rejected" | "Cancelled" }, { rejectWithValue }) => {
     try {
       const response = await axios.post(`${apiUrl}/${id}/update-status`, { status });
       return response.data;
