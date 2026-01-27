@@ -20,7 +20,7 @@ import { UserType } from "./reducers/user.reducer";
 const EmployeeActivation = lazy(() => import("./Login/EmployeeActivation"));
 const TimesheetActivation = lazy(() => import("./Login/TimeSheetActivation"));
 const TimesheetResetPassword = lazy(
-  () => import("./Login/StartingTimesheetResetPassword")
+  () => import("./Login/StartingTimesheetResetPassword"),
 );
 const SetPassword = lazy(() => import("./Login/SetPassword"));
 const ResetPassword = lazy(() => import("./EmployeeDashboard/ResetPassword"));
@@ -194,7 +194,7 @@ function App() {
 
         {/* Home & Landing Routes from Config */}
         {mainComponentConfigs
-          .filter((c) => c && ["/landing"].includes(c.path))
+          .filter((c) => c && ["/landing", "/forgot-password"].includes(c.path))
           .map((config) => (
             <Route
               key={config.path}
@@ -297,13 +297,7 @@ function App() {
                   ))}
 
                 {mainComponentConfigs
-                  .filter(
-                    (c) =>
-                      c &&
-                      ["/about", "/dashboard", "/forgot-password"].includes(
-                        c.path,
-                      ),
-                  )
+                  .filter((c) => c && ["/about", "/dashboard"].includes(c.path))
                   .map((config) => (
                     <Route
                       key={config.path}

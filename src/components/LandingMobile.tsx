@@ -30,24 +30,24 @@ const LandingMobile = ({
   const navigate = useNavigate();
 
   return (
-    <div className="flex w-full flex-col justify-center bg-white p-8 md:hidden mb-20 rounded-[15px] ">
+    <div className="flex w-full flex-col justify-center bg-white p-8 md:hidden mb-20 rounded-[15px] animate-fade-in-up">
       <div className="mb-10 text-center">
-            <img
-              src={inventLogo}
-              alt="Invent Logo"
-              className="h-16 mx-auto mb-5"
-            />
-        <h1 className="mb-2 text-3xl font-black tracking-tight text-[#2D3748]">
+        <img
+          src={inventLogo}
+          alt="Invent Logo"
+          className="h-16 mx-auto mb-5 animate-fade-in-up animation-delay-100"
+        />
+        <h1 className="mb-2 text-3xl font-black tracking-tight text-[#2D3748] animate-fade-in-up animation-delay-200">
           LOGIN
         </h1>
-        <p className="text-[13px] font-medium tracking-wide text-gray-400">
+        <p className="text-[13px] font-medium tracking-wide text-gray-400 animate-fade-in-up animation-delay-300">
           Enter your credentials to access the dashboard
         </p>
       </div>
 
       {/* Error Message */}
       {error && (
-        <div className="mb-6 slide-in-from-top-2 animate-in rounded-lg border border-red-100 bg-red-50 p-3 text-xs font-bold text-red-600">
+        <div className="mb-6 slide-in-from-top-2 animate-in rounded-lg border border-red-100 bg-red-50 p-3 text-xs font-bold text-red-600 animate-fade-in-up animation-delay-400">
           {error}
         </div>
       )}
@@ -55,7 +55,7 @@ const LandingMobile = ({
       <form onSubmit={handleLogin} className="space-y-6">
         <div className="space-y-5">
           {/* Username Input */}
-          <div className="group relative">
+          <div className="group relative animate-fade-in-up animation-delay-400">
             <input
               type="text"
               placeholder="Username"
@@ -70,7 +70,7 @@ const LandingMobile = ({
           </div>
 
           {/* Password Input */}
-          <div className="group relative">
+          <div className="group relative animate-fade-in-up animation-delay-500">
             <input
               type={showPassword ? "text" : "password"}
               placeholder="Password"
@@ -92,7 +92,7 @@ const LandingMobile = ({
             </button>
           </div>
 
-          <div className="flex justify-end">
+          <div className="flex justify-end animate-fade-in-up animation-delay-600">
             <button
               type="button"
               onClick={() => navigate("/forgot-password")}
@@ -105,8 +105,8 @@ const LandingMobile = ({
 
         <button
           type="submit"
-          disabled={isSubmitting || loading}
-          className="mt-4 w-full rounded-xl bg-[#6C63FF] py-4 text-sm font-bold tracking-wide text-white shadow-[0_10px_20px_-10px_rgba(108,99,255,0.5)] transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 cursor-pointer"
+          disabled={isSubmitting || loading || !loginId || !password}
+          className="mt-4 w-full rounded-xl bg-[#6C63FF] py-4 text-sm font-bold tracking-wide text-white shadow-[0_10px_20px_-10px_rgba(108,99,255,0.5)] transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45 cursor-pointer animate-fade-in-up animation-delay-600"
         >
           {isSubmitting || loading ? "Authenticating..." : "Login Now"}
         </button>
