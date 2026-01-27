@@ -7,7 +7,7 @@ import {
   getLeaveStats,
   submitLeaveRequest,
   resetSubmitSuccess,
-  deleteLeaveRequest,
+  updateLeaveRequestStatus,
 } from "../reducers/leaveRequest.reducer";
 import {
   Home,
@@ -17,11 +17,9 @@ import {
   Calendar,
   Plus,
   Briefcase,
-  ChevronDown,
   Eye,
   RotateCcw,
   ArrowLeft,
-  Trash2,
 } from "lucide-react";
 import { notification } from "antd";
 
@@ -54,7 +52,7 @@ const LeaveManagement = () => {
     }
     
     return (entities || []).some((req: any) => {
-      if (!req || req.status === "Rejected") return false;
+      if (!req || req.status === "Rejected" || req.status === "Cancelled") return false;
       
       const startDate = dayjs(req.fromDate).startOf('day');
       const endDate = dayjs(req.toDate).startOf('day');
@@ -190,10 +188,11 @@ const LeaveManagement = () => {
     setErrors({ title: "", description: "", startDate: "", endDate: "" });
   };
 
-  const handleDelete = (id: number) => {
-    if (window.confirm("Are you sure you want to delete this request?") && employeeId) {
-      dispatch(deleteLeaveRequest(id)).then(() => {
+  const handleCancel = (id: number) => {
+    if (window.confirm("Are you sure you want to cancel this request?") && employeeId) {
+      dispatch(updateLeaveRequestStatus({ id, status: "Cancelled" })).then(() => {
         dispatch(getLeaveStats(employeeId));
+        dispatch(getLeaveHistory(employeeId));
       });
     }
   };
@@ -207,10 +206,39 @@ const LeaveManagement = () => {
   };
 
   const applyOptions = [
-    { label: "Apply Leave", icon: Calendar, color: "text-[#4318FF]" },
+    { label: "Leave", icon: Calendar, color: "text-[#4318FF]" },
     { label: "Work From Home", icon: Home, color: "text-[#38A169]" },
     { label: "Client Visit", icon: MapPin, color: "text-[#FFB547]" },
   ];
+
+  /* Button Animation Logic */
+  const [animIndex, setAnimIndex] = useState(0);
+  const [isBtnHovered, setIsBtnHovered] = useState(false);
+  
+  const animatedOptions = [
+    { label: "Apply", icon: Plus, color: "text-[#4318FF]" }, // Default
+    { label: "Leave", icon: Calendar, color: "text-red-500" },
+    { label: "Work From Home", icon: Home, color: "text-[#38A169]" },
+    { label: "Client Visit", icon: MapPin, color: "text-[#FFB547]" },
+  ];
+  const currentOption = animatedOptions[animIndex];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!isBtnHovered && !isApplyOpen) {
+        setAnimIndex((prev) => (prev + 1) % animatedOptions.length);
+      }
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [isBtnHovered, isApplyOpen]);
+
+  const handleSmartClick = () => {
+    if (currentOption.label === "Apply") {
+      setIsApplyOpen(!isApplyOpen);
+    } else {
+      handleOpenModal(currentOption.label);
+    }
+  };
 
   return (
     <div className="p-4 md:px-8 md:pb-8 md:pt-0 bg-[#F4F7FE] min-h-screen font-sans text-[#2B3674]">
@@ -225,25 +253,54 @@ const LeaveManagement = () => {
           </p>
         </div>
 
-        {/* Apply Button with Dropdown */}
-        <div className="relative z-50" ref={dropdownRef}>
-          <button
-            onClick={() => setIsApplyOpen(!isApplyOpen)}
-            className="flex items-center gap-2 px-6 py-3 bg-[#4318FF] text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all hover:-translate-y-0.5 active:scale-95 group"
-          >
-            <Plus size={18} />
-            <span>Apply</span>
-            <ChevronDown
-              size={16}
-              className={`transition-transform duration-300 ${
-                isApplyOpen ? "rotate-180" : ""
-              }`}
-            />
-          </button>
+        {/* Apply Button Removed */}
+      </div>
 
-          {/* Dropdown Menu */}
-          {isApplyOpen && (
-            <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-gray-100 p-2 animate-in fade-in slide-in-from-top-2">
+      {/* Hero Action Card */}
+      <div className="relative bg-gradient-to-r from-[#4318FF] to-[#868CFF] rounded-[20px] p-6 md:p-8 mb-8 shadow-xl shadow-blue-500/20 group animate-in fade-in slide-in-from-bottom-4 duration-700">
+        {/* Decorative Elements Wrapper for Overflow */}
+        <div className="absolute inset-0 overflow-hidden rounded-[20px]">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl group-hover:bg-white/20 transition-all duration-700" />
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-black/10 rounded-full translate-y-1/2 -translate-x-1/2 blur-2xl" />
+        </div>
+
+        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex flex-col gap-3 text-center md:text-left">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/20 backdrop-blur-md rounded-full w-fit mx-auto md:mx-0 border border-white/10">
+              <Briefcase size={12} className="text-blue-100" />
+              <span className="text-[10px] font-bold tracking-wider uppercase text-blue-50">
+                Quick Action
+              </span>
+            </div>
+            <h2 className="text-2xl md:text-3xl font-black tracking-tight leading-tight text-white">
+              Need time off?
+              <br />
+              <span className="text-blue-200">Apply in seconds.</span>
+            </h2>
+            <p className="text-blue-100 text-sm font-medium max-w-xl">
+              Select your leave type, dates, and reason. Your manager will be notified instantly.
+            </p>
+          </div>
+
+          <div 
+            className="relative bg-white/10 backdrop-blur-md border border-white/20 p-1.5 rounded-2xl md:rotate-3 transition-transform group-hover:rotate-0 duration-500"
+            ref={dropdownRef}
+          >
+            <button
+              onMouseEnter={() => setIsBtnHovered(true)}
+              onMouseLeave={() => setIsBtnHovered(false)}
+              onClick={handleSmartClick}
+              className="bg-white px-8 py-3.5 rounded-xl font-bold shadow-lg hover:shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer text-sm min-w-[200px]"
+            >
+              <div key={animIndex} className={`flex items-center gap-2 animate-flip-up ${currentOption.color}`}>
+                <currentOption.icon size={18} />
+                <span>{currentOption.label}</span>
+              </div>
+            </button>
+
+            {/* Dropdown Menu Moved Here */}
+             {isApplyOpen && (
+            <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-gray-100 p-2 animate-in fade-in slide-in-from-top-2 z-50 text-left">
               <div className="flex flex-col gap-1">
                 {applyOptions.map((option, idx) => (
                   <button
@@ -264,41 +321,6 @@ const LeaveManagement = () => {
               </div>
             </div>
           )}
-        </div>
-      </div>
-
-      {/* Hero Action Card */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-[#4318FF] to-[#868CFF] rounded-[20px] p-6 md:p-8 mb-8 shadow-xl shadow-blue-500/20 group animate-in fade-in slide-in-from-bottom-4 duration-700">
-        {/* Decorative Elements */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl group-hover:bg-white/20 transition-all duration-700" />
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-black/10 rounded-full translate-y-1/2 -translate-x-1/2 blur-2xl" />
-
-        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex flex-col gap-3 text-center md:text-left">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/20 backdrop-blur-md rounded-full w-fit mx-auto md:mx-0 border border-white/10">
-              <Briefcase size={12} className="text-blue-100" />
-              <span className="text-[10px] font-bold tracking-wider uppercase text-blue-50">
-                Quick Action
-              </span>
-            </div>
-            <h2 className="text-2xl md:text-3xl font-black tracking-tight leading-tight text-white">
-              Need time off?
-              <br />
-              <span className="text-blue-200">Apply in seconds.</span>
-            </h2>
-            <p className="text-blue-100 text-sm font-medium max-w-xl">
-              Select your leave type, dates, and reason. Your manager will be notified instantly.
-            </p>
-          </div>
-
-          <div className="bg-white/10 backdrop-blur-md border border-white/20 p-1.5 rounded-2xl md:rotate-3 transition-transform group-hover:rotate-0 duration-500">
-            <button
-              onClick={() => setIsApplyOpen(!isApplyOpen)}
-              className="bg-white text-[#4318FF] px-8 py-3.5 rounded-xl font-bold shadow-lg hover:shadow-xl active:scale-95 transition-all flex items-center gap-2 cursor-pointer text-sm"
-            >
-              <Plus size={18} />
-              Application
-            </button>
           </div>
         </div>
       </div>
@@ -412,7 +434,7 @@ const LeaveManagement = () => {
                     {item.fullName || currentUser?.aliasLoginName || "User"} ({item.employeeId})
                   </td>
                   <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
-                    {item.requestType}
+                    {item.requestType === "Apply Leave" ? "Leave" : item.requestType}
                   </td>
                   <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
                     {item.submittedDate ? dayjs(item.submittedDate).format("DD MMM - YYYY") : (item.created_at ? dayjs(item.created_at).format("DD MMM - YYYY") : "-")}
@@ -436,11 +458,11 @@ const LeaveManagement = () => {
                       </button>
                       {item.status === "Pending" && (
                         <button
-                          onClick={() => handleDelete(item.id)}
+                          onClick={() => handleCancel(item.id)}
                           className="p-2 text-red-500 bg-red-50/50 hover:bg-red-500 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
-                          title="Delete Request"
+                          title="Cancel Request"
                         >
-                          <Trash2 size={18} />
+                          <XCircle size={18} />
                         </button>
                       )}
 
@@ -450,6 +472,8 @@ const LeaveManagement = () => {
                             item.status === "Approved"
                               ? "bg-green-50 text-green-600 border-green-200"
                               : item.status === "Pending"
+                              ? "bg-yellow-50 text-yellow-600 border-yellow-200"
+                              : item.status === "Cancelled"
                               ? "bg-yellow-50 text-yellow-600 border-yellow-200"
                               : "bg-red-50 text-red-600 border-red-200"
                           }

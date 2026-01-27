@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { CheckCircle, XCircle, Clock, Search, Eye, User, MapPin, Home, Briefcase, Filter, ChevronDown, ArrowLeft, X } from "lucide-react";
 import { getAllLeaveRequests, updateLeaveRequestStatus } from "../reducers/leaveRequest.reducer";
+import { createAttendanceRecord, submitBulkAttendance, AttendanceStatus, OfficeLocation } from "../reducers/employeeAttendance.reducer";
 import dayjs from "dayjs";
 import { notification } from "antd";
 
@@ -34,6 +35,48 @@ const Requests = () => {
   const handleUpdateStatus = async (id: number, status: "Approved" | "Rejected", employeeName: string) => {
     if (window.confirm(`Are you sure you want to ${status.toLowerCase()} this request?`)) {
       try {
+        if (status === "Approved") {
+          // Find the request details locally since we don't return them from update call immediately
+          const request = (entities || []).find(r => r.id === id);
+          if (request) {
+               const startDate = dayjs(request.fromDate);
+               const endDate = dayjs(request.toDate);
+               const diffDays = endDate.diff(startDate, 'day');
+               
+               const attendancePayload: any[] = [];
+
+               // Loop through dates
+               for (let i = 0; i <= diffDays; i++) {
+                   const currentDate = startDate.add(i, 'day').format('YYYY-MM-DD'); // Ensuring string format YYYY-MM-DD
+                   
+                   let attendanceData: any = {
+                       employeeId: request.employeeId,
+                       workingDate: currentDate,
+                       totalHours: 0,
+                   };
+
+                   if (request.requestType === 'Apply Leave' || request.requestType === 'Leave') {
+                       attendanceData.status = AttendanceStatus.LEAVE;
+                       // location is optional/null
+                   } else if (request.requestType === 'Work From Home') {
+                       // attendanceData.status = undefined; // Let backend default or set null
+                       attendanceData.workLocation = 'WFH'; // Passing string directly if enum doesn't match perfectly, or OfficeLocation.WORK_FROM_HOME if matched
+                   } else if (request.requestType === 'Client Visit') {
+                        // attendanceData.status = undefined;
+                        attendanceData.workLocation = 'Client Visit';
+                   }
+
+                   attendancePayload.push(attendanceData);
+               }
+
+               // Fire ONE Bulk API Call from Frontend
+               if (attendancePayload.length > 0) {
+                   await dispatch(submitBulkAttendance(attendancePayload)).unwrap();
+                   console.log(`Frontend: Created bulk attendance for ${attendancePayload.length} days`);
+               }
+          }
+        }
+        
         await dispatch(updateLeaveRequestStatus({ id, status })).unwrap();
         notification.success({
           message: "Status Updated",

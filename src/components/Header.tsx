@@ -46,18 +46,18 @@ const Header = ({
   // Check if user is admin
   const isAdmin = currentUser?.userType === "ADMIN";
 
-  const {
-    notifications,
-    unreadCount: attendanceUnreadCount,
-    selectedNotification,
-    loading,
-  } = useAppSelector((state) => state.notifications);
-  const { unread: leaveNotifications, employeeUpdates } = useAppSelector(
-    (state) => state.leaveNotification,
+  const { notifications, unreadCount: attendanceUnreadCount, selectedNotification, loading } = useAppSelector(
+    (state) => state.notifications
   );
+  const { unread: rawLeaveNotifications, employeeUpdates } = useAppSelector(
+    (state) => state.leaveNotification
+  );
+  
+  // Filter out Cancelled requests from Admin notifications
+  const leaveNotifications = rawLeaveNotifications.filter(n => n.status !== 'Cancelled');
 
-  const unreadCount = isAdmin
-    ? leaveNotifications.length
+  const unreadCount = isAdmin 
+    ? leaveNotifications.length 
     : attendanceUnreadCount + employeeUpdates.length;
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);

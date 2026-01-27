@@ -537,15 +537,23 @@ const Calendar = ({
                 statusLabel = "Blocked";
               } else if (
                 entry?.status === "Full Day" ||
-                entry?.status === "Half Day" ||
-                entry?.status === "WFH" ||
-                entry?.status === "Client Visit"
+                entry?.status === "Half Day"
               ) {
                 cellClass = `bg-emerald-50 border-transparent hover:bg-emerald-100 ${baseHover}`;
                 // textClass = "text-emerald-700 font-bold";
                 if (!entry?.totalHours || Number(entry.totalHours) === 0) {
                   statusLabel = "";
                 }
+              } else if (
+                entry?.workLocation === "Client Visit" ||
+                entry?.status === "Client Visit"
+              ) {
+                cellClass = `bg-blue-50 border-transparent hover:bg-blue-100 ${baseHover}`;
+              } else if (
+                entry?.workLocation === "WFH" ||
+                entry?.status === "WFH"
+              ) {
+                cellClass = `bg-blue-50 border-transparent hover:bg-blue-100 ${baseHover}`;
               } else if (
                 isIncomplete // Only Not Updated remains Amber
               ) {
@@ -691,8 +699,13 @@ const Calendar = ({
                                     entry?.status === "Half Day") &&
                                   statusLabel
                                   ? "text-white bg-[#01B574]"
-                                  : isIncomplete && statusLabel
-                                    ? "text-white bg-[#FFB020]/80"
+                                  : (entry?.workLocation === "Client Visit" ||
+                                      entry?.status === "Client Visit" ||
+                                      entry?.workLocation === "WFH" ||
+                                      entry?.status === "WFH")
+                                    ? "text-white bg-[#4318FF]/70"
+                                    : isIncomplete && statusLabel
+                                      ? "text-white bg-[#FFB020]/80"
                                    : entry?.status === "Leave"
                                      ? "text-white bg-red-400/70"
                                      : entry?.isWeekend
@@ -705,9 +718,11 @@ const Calendar = ({
                       ? "BLOCKED"
                       : holiday
                         ? holiday.name
-                        : isIncomplete && !statusLabel
-                          ? "Not Updated"
-                          : statusLabel}
+                        : entry?.workLocation
+                          ? entry.workLocation
+                          : isIncomplete && !statusLabel
+                            ? "Not Updated"
+                            : statusLabel}
                   </div>
 
                   {isIncomplete && (
