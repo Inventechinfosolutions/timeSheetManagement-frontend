@@ -38,10 +38,13 @@ const Header = ({ hideNotifications = false, hideProfile = false }: HeaderProps)
   const { notifications, unreadCount: attendanceUnreadCount, selectedNotification, loading } = useAppSelector(
     (state) => state.notifications
   );
-  const { unread: leaveNotifications, employeeUpdates } = useAppSelector(
+  const { unread: rawLeaveNotifications, employeeUpdates } = useAppSelector(
     (state) => state.leaveNotification
   );
   
+  // Filter out Cancelled requests from Admin notifications
+  const leaveNotifications = rawLeaveNotifications.filter(n => n.status !== 'Cancelled');
+
   const unreadCount = isAdmin 
     ? leaveNotifications.length 
     : attendanceUnreadCount + employeeUpdates.length;

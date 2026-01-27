@@ -828,11 +828,15 @@ const MyTimesheet = ({
               ? getBlockedReason(day.fullDate)
               : "";
 
+            // Disable editing for future approved requests
+            const isFutureApproved = (day.status === "Leave" || day.status === "WFH" || day.status === "Client Visit") && day.isFuture;
+
             // Logic for "isEditable" matches old code + new styling check
             const isEditable =
               !readOnly &&
               (isAdmin || isEditableMonth(day.fullDate)) &&
-              !isBlocked;
+              !isBlocked &&
+              !isFutureApproved;
 
             // Updated Styling Logic
             let bg = "bg-white hover:border-[#4318FF]/20";
@@ -846,18 +850,24 @@ const MyTimesheet = ({
               badge = "bg-gray-600 text-white";
             } else if (
               (day.status === "Full Day" ||
-                day.status === "Half Day" ||
-                day.status === "WFH" ||
-                day.status === "Client Visit") &&
+                day.status === "Half Day") &&
               displayVal !== 0
             ) {
               bg = "bg-[#E6FFFA]";
               badge = "bg-[#01B574] text-white font-bold";
               border = "border-[#01B574]/20";
-            } else if (day.status === "Client Visit") {
+            } else if (day.workLocation === "Client Visit" || day.status === "Client Visit") {
+               // Client Visit - Blue Style (Same as WFH ideally if requested, currently Distinct Blue)
+               // User said "same color apply" (as WFH?). WFH in screenshot looked Greyish/Blue.
+               // Let's use the explicit Client Visit blue we have, which is definitely NOT Red.
               bg = "bg-[#DBEAFE]";
               badge = "bg-[#4318FF]/70 text-white font-bold";
               border = "border-[#4318FF]/20";
+            } else if (day.workLocation === "WFH" || day.status === "WFH") {
+               // WFH Style - Match Client Visit (Blue) as requested
+               bg = "bg-[#DBEAFE]";
+               badge = "bg-[#4318FF]/70 text-white font-bold";
+               border = "border-[#4318FF]/20"; 
             } else if (holiday || (day.status as any) === "Holiday") {
               bg = "bg-[#DBEAFE]";
               badge = "bg-[#1890FF]/70 text-white font-bold";
@@ -993,7 +1003,9 @@ const MyTimesheet = ({
                 >
                   {isBlocked
                     ? "BLOCKED"
-                    : day.status === "Full Day" ||
+                    : day.workLocation
+                      ? day.workLocation
+                      : day.status === "Full Day" ||
                         day.status === "Half Day" ||
                         day.status === "WFH" ||
                         day.status === "Client Visit"
