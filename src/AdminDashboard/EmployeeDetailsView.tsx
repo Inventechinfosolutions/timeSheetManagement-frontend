@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "../store";
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { getEntity, updateEntity } from "../reducers/employeeDetails.reducer";
+import { getEntity } from "../reducers/employeeDetails.reducer";
 import {
   User,
   Mail,
@@ -127,7 +127,10 @@ const EmployeeDetailsView = () => {
 
   const confirmSave = async () => {
     try {
-      await axios.put(`/api/employee-details/${employee.employeeId}`, editedData);
+      await axios.put(
+        `/api/employee-details/${employee.employeeId}`,
+        editedData,
+      );
       setIsEditing(false);
       setShowConfirm(false);
       // Refresh the entity
@@ -315,10 +318,18 @@ const EmployeeDetailsView = () => {
               <input
                 type="text"
                 disabled={!isEditing}
-                value={isEditing ? editedData.fullName : (employee.fullName || employee.name || "")}
-                onChange={(e) => setEditedData({ ...editedData, fullName: e.target.value })}
+                value={
+                  isEditing
+                    ? editedData.fullName
+                    : employee.fullName || employee.name || ""
+                }
+                onChange={(e) =>
+                  setEditedData({ ...editedData, fullName: e.target.value })
+                }
                 className={`w-full pl-11 pr-4 py-2.5 border-2 rounded-xl text-[#1B2559] text-sm font-semibold transition-all ${
-                  isEditing ? "border-gray-200 focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white" : "border-gray-100 bg-gray-50/50"
+                  isEditing
+                    ? "border-gray-200 focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white"
+                    : "border-gray-100 bg-gray-50/50"
                 }`}
               />
               <div className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
@@ -354,7 +365,9 @@ const EmployeeDetailsView = () => {
               {isEditing ? (
                 <select
                   value={editedData.department}
-                  onChange={(e) => setEditedData({ ...editedData, department: e.target.value })}
+                  onChange={(e) =>
+                    setEditedData({ ...editedData, department: e.target.value })
+                  }
                   className="w-full pl-11 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white text-[#1B2559] text-sm font-semibold transition-all appearance-none"
                 >
                   <option value="HR">HR</option>
@@ -387,10 +400,18 @@ const EmployeeDetailsView = () => {
               <input
                 type="text"
                 disabled={!isEditing}
-                value={isEditing ? editedData.designation : (employee.designation || "")}
-                onChange={(e) => setEditedData({ ...editedData, designation: e.target.value })}
+                value={
+                  isEditing
+                    ? editedData.designation
+                    : employee.designation || ""
+                }
+                onChange={(e) =>
+                  setEditedData({ ...editedData, designation: e.target.value })
+                }
                 className={`w-full pl-11 pr-4 py-2.5 border-2 rounded-xl text-[#1B2559] text-sm font-semibold transition-all ${
-                  isEditing ? "border-gray-200 focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white" : "border-gray-100 bg-gray-50/50"
+                  isEditing
+                    ? "border-gray-200 focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white"
+                    : "border-gray-100 bg-gray-50/50"
                 }`}
               />
               <div className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-orange-50 flex items-center justify-center">
@@ -408,10 +429,14 @@ const EmployeeDetailsView = () => {
               <input
                 type="email"
                 disabled={!isEditing}
-                value={isEditing ? editedData.email : (employee.email || "")}
-                onChange={(e) => setEditedData({ ...editedData, email: e.target.value })}
+                value={isEditing ? editedData.email : employee.email || ""}
+                onChange={(e) =>
+                  setEditedData({ ...editedData, email: e.target.value })
+                }
                 className={`w-full pl-11 pr-4 py-2.5 border-2 rounded-xl text-[#1B2559] text-sm font-semibold transition-all ${
-                  isEditing ? "border-gray-200 focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white" : "border-gray-100 bg-gray-50/50"
+                  isEditing
+                    ? "border-gray-200 focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white"
+                    : "border-gray-100 bg-gray-50/50"
                 }`}
               />
               <div className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center">
@@ -434,7 +459,8 @@ const EmployeeDetailsView = () => {
                   Confirm Changes
                 </h3>
                 <p className="text-gray-600 text-sm mb-6">
-                  Are you sure you want to save the changes to this employee's details?
+                  Are you sure you want to save the changes to this employee's
+                  details?
                 </p>
                 <div className="flex gap-3">
                   <button

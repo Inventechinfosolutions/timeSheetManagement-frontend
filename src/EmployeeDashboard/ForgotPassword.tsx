@@ -1,13 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Mail,
-  ArrowLeft,
-  Loader2,
-  CheckCircle,
-  Search,
-  User,
-} from "lucide-react";
+import { Mail, ArrowLeft, Loader2, CheckCircle, User } from "lucide-react";
 import { message } from "antd";
 import inventLogo from "../assets/invent-logo.svg";
 import { useAppSelector, useAppDispatch } from "../hooks";

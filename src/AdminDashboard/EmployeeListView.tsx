@@ -9,7 +9,6 @@ import {
   createEntity,
   reset,
   resendActivationLink,
-  partialUpdateEntity,
   updateEmployeeStatus,
 } from "../reducers/employeeDetails.reducer";
 import { useAppDispatch, useAppSelector } from "../hooks";
@@ -549,7 +548,6 @@ const EmployeeListView = () => {
                     </td>
                     <td className="py-4 px-4 text-center">
                       <button
-                        align="center"
                         onClick={(e) => {
                           e.stopPropagation();
                           if (emp.isActive) {

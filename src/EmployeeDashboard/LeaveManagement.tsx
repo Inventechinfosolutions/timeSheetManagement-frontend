@@ -26,7 +26,6 @@ import {
   Eye,
   RotateCcw,
   ArrowLeft,
-  CheckCircle,
 } from "lucide-react";
 import { notification } from "antd";
 import CommonMultipleUploader from "./CommonMultipleUploader";
@@ -241,6 +240,7 @@ const LeaveManagement = () => {
       if (getLeaveRequestById.fulfilled.match(action)) {
         const fetchedItem = action.payload;
         setIsViewMode(true);
+        setSelectedRequestId(fetchedItem.id);
         setSelectedLeaveType(fetchedItem.requestType);
         setFormData({
           title: fetchedItem.title,
@@ -284,6 +284,7 @@ const LeaveManagement = () => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setIsViewMode(false);
+    setSelectedRequestId(null);
     setFormData({ title: "", description: "", startDate: "", endDate: "" });
     setErrors({ title: "", description: "", startDate: "", endDate: "" });
     dispatch(resetSubmitSuccess());
@@ -702,21 +703,7 @@ const LeaveManagement = () => {
                     </div>
                   ) : (
                     <>
-                      <ConfigProvider
-                        theme={{
-                          token: {
-                            borderRadius: 16,
-                            controlHeight: 48,
-                            colorBgContainer: "#F4F7FE",
-                            colorBorder: "transparent",
-                            colorPrimary: "#4318FF",
-                          },
-                          components: {
-                            DatePicker: { cellHeight: 28, cellWidth: 28 },
-                          },
-                        }}
-                        theme={datePickerTheme}
-                      >
+                      <ConfigProvider theme={datePickerTheme}>
                         <DatePicker
                           popupClassName="hide-other-months"
                           disabledDate={disabledDate}
@@ -770,21 +757,7 @@ const LeaveManagement = () => {
                     </div>
                   ) : (
                     <>
-                      <ConfigProvider
-                        theme={{
-                          token: {
-                            borderRadius: 16,
-                            controlHeight: 48,
-                            colorBgContainer: "#F4F7FE",
-                            colorBorder: "transparent",
-                            colorPrimary: "#4318FF",
-                          },
-                          components: {
-                            DatePicker: { cellHeight: 28, cellWidth: 28 },
-                          },
-                        }}
-                        theme={datePickerTheme}
-                      >
+                      <ConfigProvider theme={datePickerTheme}>
                         <DatePicker
                           popupClassName="hide-other-months"
                           disabledDate={disabledEndDate}

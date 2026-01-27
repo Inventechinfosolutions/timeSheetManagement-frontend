@@ -337,8 +337,9 @@ const CommonMultipleUploader: React.FC<CommonMultipleUploaderProps> = ({
         return;
       }
 
-      // Skip if fetchOnMount is false and ID hasn't changed from null
-      if (!fetchOnMount && lastFetchedIdRef.current === null) {
+      // If fetchOnMount is false, we should never fetch in this effect.
+      // This allows the component to start with an empty list for new applications.
+      if (!fetchOnMount) {
         lastFetchedIdRef.current = entityId;
         return;
       }
@@ -691,38 +692,6 @@ const CommonMultipleUploader: React.FC<CommonMultipleUploaderProps> = ({
       showSuccessMessage(deleteMessage);
     } catch (error) {
       showErrorMessage("Failed to delete file");
-    }
-  };
-
-  const refreshFileList = async () => {
-    if (!getFiles) return;
-    try {
-      const response = await dispatch(
-        getFiles({
-          entityId,
-          refId,
-          refType,
-          entityType,
-        }),
-      ).unwrap();
-
-      const data = Array.isArray(response) ? response : response?.data || [];
-      const relevantFiles =
-        data.filter((file: FileListResponse) => file.refType === refType) || [];
-
-      const formattedFiles: UploadFile[] = relevantFiles.map(
-        (file: FileListResponse) => ({
-          uid: file.key,
-          name: file.name,
-          status: "done" as const,
-          url: (file as any).url || (file as any).image_url || "",
-        }),
-      );
-
-      setExistingFiles(formattedFiles);
-      setFileList(relevantFiles);
-    } catch (error) {
-      console.error("Error refreshing file list:", error);
     }
   };
 

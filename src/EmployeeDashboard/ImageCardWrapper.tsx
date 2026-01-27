@@ -89,12 +89,7 @@ const ImageCardWrapper: React.FC<ImageCardWrapperProps> = ({
             <Button
               type="default"
               size="small"
-              icon={
-                <EyeOutlined
-                  onPointerEnterCapture={undefined}
-                  onPointerLeaveCapture={undefined}
-                />
-              }
+              icon={<EyeOutlined />}
               onClick={(e) => {
                 e.stopPropagation();
                 onPreview(file, e as React.MouseEvent);
@@ -107,12 +102,7 @@ const ImageCardWrapper: React.FC<ImageCardWrapperProps> = ({
             <Button
               type="default"
               size="small"
-              icon={
-                <DownloadOutlined
-                  onPointerEnterCapture={undefined}
-                  onPointerLeaveCapture={undefined}
-                />
-              }
+              icon={<DownloadOutlined />}
               onClick={(e) => {
                 e.stopPropagation();
                 onDownload(file, e as React.MouseEvent);
