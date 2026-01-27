@@ -270,13 +270,13 @@ const Calendar = ({
     year: "numeric",
   });
 
-  const daysOfWeek = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+  const daysOfWeek = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
   const firstDay = new Date(
     displayDate.getFullYear(),
     displayDate.getMonth(),
     1,
   ).getDay();
-  const firstDayIndex = firstDay === 0 ? 6 : firstDay - 1;
+  const firstDayIndex = firstDay;
   const daysInMonth = new Date(
     displayDate.getFullYear(),
     displayDate.getMonth() + 1,
@@ -453,7 +453,9 @@ const Calendar = ({
           </div>
         )}
 
-        <div className={`flex flex-col relative ${scrollable ? "flex-1 overflow-y-auto custom-scrollbar pr-1 min-h-0" : ""}`}>
+        <div
+          className={`flex flex-col relative ${scrollable ? "flex-1 overflow-y-auto custom-scrollbar pr-1 min-h-0" : ""}`}
+        >
           {/* Weekday Header */}
           <div
             className={`grid grid-cols-7 sticky top-0 bg-white z-20 pb-2 border-b border-gray-50 ${
@@ -687,12 +689,12 @@ const Calendar = ({
                              ? "text-white bg-gray-600"
                              : holiday
                                ? "text-white bg-[#1890FF]/70"
-                                : (entry?.status === "Full Day" ||
-                                    entry?.status === "Half Day") &&
-                                  statusLabel
-                                  ? "text-white bg-[#01B574]"
-                                  : isIncomplete && statusLabel
-                                    ? "text-white bg-[#FFB020]/80"
+                               : (entry?.status === "Full Day" ||
+                                     entry?.status === "Half Day") &&
+                                   statusLabel
+                                 ? "text-white bg-[#01B574]"
+                                 : isIncomplete && statusLabel
+                                   ? "text-white bg-[#FFB020]/80"
                                    : entry?.status === "Leave"
                                      ? "text-white bg-red-400/70"
                                      : entry?.isWeekend

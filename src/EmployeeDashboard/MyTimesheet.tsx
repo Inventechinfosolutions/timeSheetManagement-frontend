@@ -117,8 +117,8 @@ const MyTimesheet = ({
 
     localEntries.forEach((entry, idx) => {
       currentWeek.push({ entry, originalIndex: idx });
-      // Break on Sunday (getDay() === 0)
-      if (entry.fullDate.getDay() === 0) {
+      // Break on Saturday (getDay() === 6)
+      if (entry.fullDate.getDay() === 6) {
         if (currentWeek.length > 0) {
           w.push(currentWeek);
           currentWeek = [];
@@ -136,7 +136,7 @@ const MyTimesheet = ({
   useEffect(() => {
     const currentMonthKey = `${now.getMonth()}-${now.getFullYear()}`;
     const hasMonthChanged = lastMonthRef.current !== currentMonthKey;
-    
+
     // Only proceed if month changed OR a specific date was explicitly selected/highlighted
     if (!hasMonthChanged && !selectedDateId) return;
 
@@ -167,7 +167,7 @@ const MyTimesheet = ({
           found = true;
           break;
         }
-        if (localEntries[i].fullDate.getDay() === 0) weekIdx++;
+        if (localEntries[i].fullDate.getDay() === 6) weekIdx++;
       }
       if (!found) setCurrentWeekIndex(0);
     }
@@ -373,7 +373,7 @@ const MyTimesheet = ({
   const handleHoursInput = (entryIndex: number, val: string) => {
     if (readOnly) return;
     if (isDateBlocked(localEntries[entryIndex].fullDate)) return;
-    
+
     // Prevent typing if currently showing an error for this field
     if (inputError?.index === entryIndex) return;
 
@@ -387,7 +387,7 @@ const MyTimesheet = ({
 
       // Clear the invalid value immediately so when error disappears it is empty/reset
       setLocalInputValues((prev) => ({ ...prev, [entryIndex]: "" }));
-      
+
       // Clear error after 2 seconds
       setTimeout(() => {
         setInputError(null);
@@ -588,7 +588,7 @@ const MyTimesheet = ({
     now.getMonth(),
     1,
   ).getDay();
-  const paddingDays = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
+  const paddingDays = firstDayOfMonth;
 
   if (isMobile) {
     return (
@@ -620,7 +620,9 @@ const MyTimesheet = ({
   }
 
   return (
-    <div className={`flex flex-col ${containerClassName || "h-full max-h-full overflow-hidden bg-[#F4F7FE] py-2 px-1 md:px-6 md:pt-4 md:pb-0 relative"}`}>
+    <div
+      className={`flex flex-col ${containerClassName || "h-full max-h-full overflow-hidden bg-[#F4F7FE] py-2 px-1 md:px-6 md:pt-4 md:pb-0 relative"}`}
+    >
       {loading && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/30 backdrop-blur-[2px]">
           <div className="animate-spin rounded-full h-10 w-10 border-b-4 border-[#4318FF]"></div>
@@ -770,7 +772,7 @@ const MyTimesheet = ({
 
         {/* Days Header */}
         <div className="grid grid-cols-7 gap-4 mb-2 px-2 border-b border-gray-50 pb-2">
-          {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
+          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
             <div
               key={day}
               className="text-center text-[11px] font-black text-gray-700 uppercase tracking-wider"
