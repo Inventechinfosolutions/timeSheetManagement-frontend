@@ -1,8 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Mail, ArrowLeft, Loader2, CheckCircle, Search } from "lucide-react";
-import { Modal, Input, message } from "antd";
-import inventechLogo from "../assets/inventech-logo.jpg";
+import {
+  Mail,
+  ArrowLeft,
+  Loader2,
+  CheckCircle,
+  Search,
+  User,
+} from "lucide-react";
+import { message } from "antd";
+import inventLogo from "../assets/invent-logo.svg";
 import { useAppSelector, useAppDispatch } from "../hooks";
 import {
   getEntities,
@@ -38,11 +45,9 @@ const ForgotPassword: React.FC = () => {
   const [step, setStep] = useState<ResetStep>("ID");
   const [email, setEmail] = useState("");
   const [loginId, setLoginId] = useState("");
-  const [error, setError] = useState<string | null>(null);
-
-  // Modal State for ID Lookup
-  const [isIdModalOpen, setIsIdModalOpen] = useState(true);
+  // 'searchId' is currently used for the ID step input
   const [searchId, setSearchId] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const [isIdentifying, setIsIdentifying] = useState(false);
 
   // Sync Redux step changes with Local step
@@ -57,14 +62,17 @@ const ForgotPassword: React.FC = () => {
     }
   }, [otpSent, otpError, step]);
 
-  // Handle ID Identification
-  const handleIdSubmit = async () => {
+  // Handle ID Identification (Step 1)
+  const handleIdSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+
     if (!searchId.trim()) {
       message.error("Please enter your Employee ID");
       return;
     }
 
     setIsIdentifying(true);
+    setError(null);
     try {
       const response: any = await dispatch(
         getEntities({ search: searchId.trim() }),
@@ -75,24 +83,25 @@ const ForgotPassword: React.FC = () => {
       if (foundUser) {
         dispatch(setCurrentUser(foundUser));
         setEmail(foundUser.email || "");
-        setLoginId(foundUser.employeeId || searchId.trim()); // Use internal ID if available, else what was typed
-        setIsIdModalOpen(false);
+        setLoginId(foundUser.employeeId || searchId.trim());
         setStep("EMAIL");
       } else {
-        message.error("No employee found with this ID");
+        setError("No employee found with this ID");
+        //message.error("No employee found with this ID");
       }
     } catch (err) {
-      message.error("Error searching for employee");
+      setError("Error searching for employee");
+      //message.error("Error searching for employee");
     } finally {
       setIsIdentifying(false);
     }
   };
 
-  // Step 1: Send Reset Link
+  // Handle Send Link (Step 2)
   const handleSendLink = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    dispatch(forgotPasswordOtp({ loginId, email })); // Reusing existing thunk as it calls the backend trigger
+    dispatch(forgotPasswordOtp({ loginId, email }));
   };
 
   const resetAll = () => {
@@ -100,144 +109,172 @@ const ForgotPassword: React.FC = () => {
     navigate("/landing");
   };
 
-  if (step === "SUCCESS") {
-    return (
-      <div className="min-h-screen w-full flex items-center justify-center p-4 bg-[#1c9cc0] relative overflow-hidden">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-0 left-1/4 w-96 h-96 bg-white/10 rounded-full blur-3xl -translate-y-1/2"></div>
-          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-white/10 rounded-full blur-3xl translate-y-1/2"></div>
-        </div>
-
-        <div className="w-full max-w-md bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 p-8 sm:p-10 relative z-10 text-center animate-in fade-in zoom-in-95 duration-500">
-          <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-500/30">
-            <CheckCircle className="w-12 h-12 text-white" />
-          </div>
-          <h2 className="text-3xl font-bold text-white mb-4">Link Sent!</h2>
-          <p className="text-blue-100 mb-8 opacity-90 leading-relaxed">
-            A password reset link has been sent to your email. <br />
-            Please check your inbox and follow the instructions.
-          </p>
-          <button
-            onClick={resetAll}
-            className="w-full bg-white text-[#1c9cc0] font-bold py-3.5 rounded-xl shadow-lg hover:bg-blue-50 transition-all duration-200"
-          >
-            Back to Login
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-[#1c9cc0] relative overflow-hidden">
-      {/* Step 0: ID Lookup Modal */}
-      <Modal
-        title={null}
-        open={isIdModalOpen}
-        onCancel={() => navigate("/landing")}
-        footer={null}
-        centered
-        closable={false}
-        styles={{
-          mask: {
-            backdropFilter: "blur(8px)",
-            backgroundColor: "rgba(28, 156, 192, 0.4)",
-          },
-          body: { borderRadius: "24px", padding: 0, overflow: "hidden" },
-        }}
-      >
-        <div className="p-8 sm:p-10 bg-white text-center">
-          <Search className="w-12 h-12 text-[#1c9cc0] mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Identify Yourself
-          </h2>
-          <p className="text-gray-500 text-sm mb-8">
-            Please enter your Employee ID to proceed.
-          </p>
-          <div className="space-y-6">
-            <Input
-              placeholder="Employee ID"
-              size="large"
-              className="rounded-xl h-12"
-              value={searchId}
-              onChange={(e) => setSearchId(e.target.value)}
-              onPressEnter={handleIdSubmit}
+    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-[#EFEBF5] relative overflow-hidden font-sans">
+      {/* Page Background Shapes */}
+      <div className="absolute top-[-5%] left-[5%] w-48 h-48 bg-[#585CE5] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
+      <div className="absolute bottom-[-10%] right-[-5%] w-96 h-96 bg-white rounded-full mix-blend-overlay filter blur-3xl opacity-40"></div>
+
+      {/* Main Card */}
+      <div className="w-full max-w-[480px] bg-white rounded-[24px] shadow-2xl p-8 sm:p-12 relative z-10 animate-in fade-in zoom-in-95 duration-500 border border-white/40">
+        {/* Back Button */}
+        {step !== "SUCCESS" && (
+          <button
+            onClick={() =>
+              step === "EMAIL" ? setStep("ID") : navigate("/landing")
+            }
+            className="absolute left-8 top-8 text-gray-400 hover:text-[#6C63FF] transition-colors flex items-center gap-2 text-xs font-bold tracking-wide group"
+          >
+            <ArrowLeft
+              size={16}
+              className="group-hover:-translate-x-1 transition-transform duration-200"
             />
-            <button
-              onClick={handleIdSubmit}
-              disabled={isIdentifying}
-              className="w-full bg-[#1c9cc0] text-white font-bold py-3.5 rounded-xl shadow-lg disabled:opacity-70 flex items-center justify-center gap-2"
-            >
-              {isIdentifying ? (
-                <Loader2 className="animate-spin" />
-              ) : (
-                "IDENTIFY EMPLOYEE"
-              )}
-            </button>
-          </div>
-        </div>
-      </Modal>
+            {step === "EMAIL" ? "BACK" : "LOGIN"}
+          </button>
+        )}
 
-      {/* Main Container */}
-      <div className="w-full max-w-md bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 p-8 sm:p-10 relative z-10">
-        <button
-          onClick={() => navigate("/landing")}
-          className="absolute left-6 top-6 text-blue-100 hover:text-white transition-colors flex items-center gap-1 text-xs font-semibold"
-        >
-          <ArrowLeft size={16} /> BACK
-        </button>
-
+        {/* LOGO Header */}
         <div className="text-center mb-8 mt-4">
-          <div className="w-16 h-16 bg-white/20 rounded-2xl p-2 mx-auto mb-4 flex items-center justify-center">
-            <img
-              src={inventechLogo}
-              alt="Logo"
-              className="w-full h-full object-contain mix-blend-multiply opacity-90 rounded-xl"
-            />
-          </div>
-          <h1 className="text-2xl font-bold text-white mb-2">
-            {step === "EMAIL" && "Confirm Email"}
-          </h1>
-          <p className="text-blue-100 text-sm opacity-90">
-            {step === "EMAIL" &&
-              "We will send a password reset link to your registered email."}
-          </p>
+          <img src={inventLogo} alt="Logo" className="h-12 mx-auto mb-6" />
+
+          {step === "ID" && (
+            <>
+              <h1 className="text-2xl font-black text-[#2D3748] mb-2 tracking-tight">
+                Forgot Password?
+              </h1>
+              <p className="text-gray-500 text-[14px] font-medium leading-relaxed">
+                Enter your Employee ID to identify your account.
+              </p>
+            </>
+          )}
+
+          {step === "EMAIL" && (
+            <>
+              <h1 className="text-2xl font-black text-[#2D3748] mb-2 tracking-tight">
+                Confirm Details
+              </h1>
+              <p className="text-gray-500 text-[14px] font-medium leading-relaxed">
+                We'll send a reset link to this email address.
+              </p>
+            </>
+          )}
+
+          {step === "SUCCESS" && (
+            <div className="flex flex-col items-center">
+              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6 animate-in zoom-in duration-300">
+                <CheckCircle className="w-10 h-10 text-green-600" />
+              </div>
+              <h1 className="text-2xl font-black text-[#2D3748] mb-2 tracking-tight">
+                Check Your Inbox!
+              </h1>
+              <p className="text-gray-500 text-[14px] font-medium leading-relaxed mb-6">
+                We've sent a password reset link to <br />{" "}
+                <span className="text-[#6C63FF] font-semibold">{email}</span>
+              </p>
+            </div>
+          )}
         </div>
 
-        {error && (
-          <div className="mb-6 p-3 bg-red-500/20 border border-red-500/50 rounded-xl text-white text-xs font-semibold text-center">
-            {error}
+        {/* Error Message */}
+        {error && step !== "SUCCESS" && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3 animate-in slide-in-from-top-2">
+            <div className="mt-0.5 w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
+            <p className="text-red-600 text-xs font-bold leading-relaxed">
+              {error}
+            </p>
           </div>
         )}
 
-        {/* STEP 1: SEND LINK FORM */}
-        {step === "EMAIL" && (
-          <form onSubmit={handleSendLink} className="space-y-6">
+        {/* STEP 1: ID INPUT */}
+        {step === "ID" && (
+          <form onSubmit={handleIdSubmit} className="space-y-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-blue-100 uppercase tracking-widest ml-1">
-                Registered Email
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">
+                Employee ID
               </label>
-              <div className="relative">
-                <Input
-                  value={email}
-                  readOnly
-                  className="pl-10 h-12 bg-white/20 border-white/30 text-white rounded-xl"
+              <div className="relative group">
+                <input
+                  type="text"
+                  placeholder="e.g. EMP123"
+                  className="w-full pl-12 pr-4 py-4 bg-[#F0F2F5] border-none rounded-2xl text-[#2D3748] placeholder-gray-400 text-sm focus:ring-2 focus:ring-[#6C63FF]/20 focus:bg-[#E8EAED] transition-all duration-200 font-semibold"
+                  value={searchId}
+                  onChange={(e) => setSearchId(e.target.value)}
+                  disabled={isIdentifying}
+                  autoFocus
                 />
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-100 w-5 h-5" />
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <User className="text-gray-400 h-5 w-5 group-focus-within:text-[#6C63FF] transition-colors" />
+                </div>
               </div>
             </div>
+
             <button
               type="submit"
-              disabled={otpLoading}
-              className="w-full bg-white text-[#1c9cc0] font-bold py-3.5 rounded-xl shadow-lg flex items-center justify-center gap-2"
+              disabled={isIdentifying || !searchId.trim()}
+              className="w-full bg-[#6C63FF] hover:bg-[#5a52d5] text-white font-bold py-4 rounded-xl shadow-[0_10px_20px_-10px_rgba(108,99,255,0.5)] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-45 disabled:cursor-not-allowed disabled:shadow-none"
             >
-              {otpLoading ? (
-                <Loader2 className="animate-spin" />
+              {isIdentifying ? (
+                <>
+                  <Loader2 className="animate-spin w-5 h-5" />
+                  <span className="text-sm tracking-wide">Searching...</span>
+                </>
               ) : (
-                "SEND RESET LINK"
+                <span className="text-sm tracking-wide">CONTINUE</span>
               )}
             </button>
           </form>
+        )}
+
+        {/* STEP 2: CONFIRM EMAIL */}
+        {step === "EMAIL" && (
+          <form onSubmit={handleSendLink} className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">
+                Registered Email
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={email}
+                  readOnly
+                  className="w-full pl-12 pr-4 py-4 bg-[#F0F2F5] border-none rounded-2xl text-[#2D3748] text-sm font-semibold cursor-not-allowed opacity-80"
+                />
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <Mail className="text-gray-400 h-5 w-5" />
+                </div>
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <CheckCircle className="text-green-500 h-5 w-5" />
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={otpLoading}
+              className="w-full bg-[#6C63FF] hover:bg-[#5a52d5] text-white font-bold py-4 rounded-xl shadow-[0_10px_20px_-10px_rgba(108,99,255,0.5)] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+            >
+              {otpLoading ? (
+                <>
+                  <Loader2 className="animate-spin w-5 h-5" />
+                  <span className="text-sm tracking-wide">SENDING LINK...</span>
+                </>
+              ) : (
+                <span className="text-sm tracking-wide">SEND RESET LINK</span>
+              )}
+            </button>
+          </form>
+        )}
+
+        {/* STEP 3: SUCCESS VIEW */}
+        {step === "SUCCESS" && (
+          <div>
+            <button
+              onClick={resetAll}
+              className="w-full bg-[#F0F2F5] hover:bg-[#E2E8F0] text-[#2D3748] font-bold py-4 rounded-xl transition-all duration-200 text-sm tracking-wide"
+            >
+              Back to Login
+            </button>
+          </div>
         )}
       </div>
     </div>

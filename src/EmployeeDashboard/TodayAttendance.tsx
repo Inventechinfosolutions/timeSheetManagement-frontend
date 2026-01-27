@@ -9,6 +9,7 @@ import {
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { fetchMonthlyAttendance } from "../reducers/employeeAttendance.reducer";
 import { getEntity, setCurrentUser } from "../reducers/employeeDetails.reducer";
+import { fetchEmployeeUpdates } from "../reducers/leaveNotification.reducer";
 import { generateMonthlyEntries } from "../utils/attendanceUtils";
 import AttendanceViewWrapper from "./CalenderViewWrapper";
 import AttendancePieChart from "./AttendancePieChart";
@@ -67,6 +68,13 @@ const TodayAttendance = ({
     }
   }, [dispatch, entity, currentEmployeeId, currentUser]);
 
+  // Refresh updates whenever dashboard is accessed
+  useEffect(() => {
+    if (currentEmployeeId) {
+      dispatch(fetchEmployeeUpdates(currentEmployeeId));
+    }
+  }, [dispatch, currentEmployeeId]);
+
   // Fetch Master Data (Holidays & Weekends) whenever the calendar view changes (Month/Year)
   // Removed as per user request to reduce API calling for dashboard charts
   /*
@@ -91,7 +99,9 @@ const TodayAttendance = ({
 
     // Merge Master Holidays to align with MyTimesheet logic
     return entries.map((day) => {
-      const dateStr = day.fullDate.toISOString().split("T")[0];
+      const dateStr = `${day.fullDate.getFullYear()}-${String(
+        day.fullDate.getMonth() + 1,
+      ).padStart(2, "0")}-${String(day.fullDate.getDate()).padStart(2, "0")}`;
       const isMasterHoliday = holidays.find((h) => {
         const hDate = h.date || (h as any).holidayDate;
         if (!hDate) return false;

@@ -14,6 +14,7 @@ import {
   ChevronDown,
   ArrowLeft,
   X,
+  Loader2,
 } from "lucide-react";
 import {
   getAllLeaveRequests,
@@ -24,6 +25,7 @@ import {
   downloadLeaveRequestFile,
 } from "../reducers/leaveRequest.reducer";
 import { getEntity } from "../reducers/employeeDetails.reducer";
+// } from "../reducers/leaveRequest.reducer";
 import {
   createAttendanceRecord,
   submitBulkAttendance,
@@ -44,6 +46,13 @@ const Requests = () => {
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [selectedOwnerId, setSelectedOwnerId] = useState<number | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    id: number | null;
+    status: "Approved" | "Rejected" | null;
+    employeeName: string;
+  }>({ isOpen: false, id: null, status: null, employeeName: "" });
   const departments = [
     "All",
     "HR",
@@ -71,7 +80,7 @@ const Requests = () => {
 
   const filteredRequests = entities || [];
 
-  const handleUpdateStatus = async (
+  const handleUpdateStatus = (
     id: number,
     status: "Approved" | "Rejected",
     employeeName: string,
@@ -141,7 +150,82 @@ const Requests = () => {
           message: "Update Failed",
           description: "Could not update request status.",
         });
+    setConfirmModal({ isOpen: true, id, status, employeeName });
+  };
+
+  const executeStatusUpdate = async () => {
+    if (!confirmModal.id || !confirmModal.status) return;
+    const { id, status, employeeName } = confirmModal;
+
+    setIsProcessing(true);
+    try {
+      if (status === "Approved") {
+        // Find the request details locally since we don't return them from update call immediately
+        const request = (entities || []).find((r) => r.id === id);
+        if (request) {
+          const startDate = dayjs(request.fromDate);
+          const endDate = dayjs(request.toDate);
+          const diffDays = endDate.diff(startDate, "day");
+
+          const attendancePayload: any[] = [];
+
+          // Loop through dates
+          for (let i = 0; i <= diffDays; i++) {
+            const currentDate = startDate.add(i, "day").format("YYYY-MM-DD"); // Ensuring string format YYYY-MM-DD
+
+            let attendanceData: any = {
+              employeeId: request.employeeId,
+              workingDate: currentDate,
+              totalHours: 0,
+            };
+
+            if (
+              request.requestType === "Apply Leave" ||
+              request.requestType === "Leave"
+            ) {
+              attendanceData.status = AttendanceStatus.LEAVE;
+              // location is optional/null
+            } else if (request.requestType === "Work From Home") {
+              // attendanceData.status = undefined; // Let backend default or set null
+              attendanceData.workLocation = "WFH"; // Passing string directly if enum doesn't match perfectly, or OfficeLocation.WORK_FROM_HOME if matched
+            } else if (request.requestType === "Client Visit") {
+              // attendanceData.status = undefined;
+              attendanceData.workLocation = "Client Visit";
+            }
+
+            attendancePayload.push(attendanceData);
+          }
+
+          // Fire ONE Bulk API Call from Frontend
+          if (attendancePayload.length > 0) {
+            await dispatch(submitBulkAttendance(attendancePayload)).unwrap();
+            console.log(
+              `Frontend: Created bulk attendance for ${attendancePayload.length} days`,
+            );
+          }
+        }
       }
+
+      await dispatch(updateLeaveRequestStatus({ id, status })).unwrap();
+      notification.success({
+        message: "Status Updated",
+        description: `Notification sent to ${employeeName}`,
+        placement: "topRight",
+        duration: 3,
+      });
+      setConfirmModal({
+        isOpen: false,
+        id: null,
+        status: null,
+        employeeName: "",
+      });
+    } catch (error) {
+      notification.error({
+        message: "Update Failed",
+        description: "Could not update request status.",
+      });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -459,9 +543,95 @@ const Requests = () => {
         </div>
       </div>
 
+      {/* Confirmation Modal */}
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-[#2B3674]/40 backdrop-blur-sm transition-opacity"
+            onClick={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+          />
+          <div className="relative w-full max-w-md bg-white rounded-[24px] overflow-hidden shadow-[0px_20px_40px_rgba(0,0,0,0.1)] animate-in fade-in zoom-in duration-200 transform">
+            <div className="p-8 text-center">
+              <div
+                className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-6 ${
+                  confirmModal.status === "Approved"
+                    ? "bg-green-50 text-green-500"
+                    : "bg-red-50 text-red-500"
+                }`}
+              >
+                {confirmModal.status === "Approved" ? (
+                  <CheckCircle size={32} strokeWidth={2.5} />
+                ) : (
+                  <XCircle size={32} strokeWidth={2.5} />
+                )}
+              </div>
+
+              <h3 className="text-2xl font-black text-[#2B3674] mb-2">
+                {confirmModal.status === "Approved"
+                  ? "Approve Request?"
+                  : "Reject Request?"}
+              </h3>
+
+              <p className="text-gray-500 font-medium leading-relaxed mb-8">
+                Are you sure you want to{" "}
+                <span
+                  className={`font-bold ${
+                    confirmModal.status === "Approved"
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }`}
+                >
+                  {confirmModal.status?.toLowerCase()}
+                </span>{" "}
+                this request for{" "}
+                <span className="text-[#2B3674] font-bold">
+                  {confirmModal.employeeName}
+                </span>
+                ?
+                {confirmModal.status === "Approved" &&
+                  " This will automatically update attendance records."}
+              </p>
+
+              <div className="flex gap-4">
+                <button
+                  onClick={() =>
+                    setConfirmModal({ ...confirmModal, isOpen: false })
+                  }
+                  disabled={isProcessing}
+                  className="flex-1 py-3.5 rounded-xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={executeStatusUpdate}
+                  disabled={isProcessing}
+                  className={`flex-1 py-3.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${
+                    isProcessing
+                      ? "opacity-70 cursor-not-allowed"
+                      : "transform active:scale-95"
+                  } ${
+                    confirmModal.status === "Approved"
+                      ? "bg-green-500 hover:bg-green-600 shadow-green-200"
+                      : "bg-red-500 hover:bg-red-600 shadow-red-200"
+                  }`}
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="animate-spin" size={20} />
+                      Processing...
+                    </>
+                  ) : (
+                    `Confirm ${confirmModal.status}`
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {/* View Request Modal */}
       {isViewModalOpen && selectedRequest && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
           <div
             className="absolute inset-0 bg-[#2B3674]/30 backdrop-blur-sm"
             onClick={() => setIsViewModalOpen(false)}

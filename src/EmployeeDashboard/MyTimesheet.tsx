@@ -590,6 +590,21 @@ const MyTimesheet = ({
   ).getDay();
   const paddingDays = firstDayOfMonth;
 
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to selected date
+  useEffect(() => {
+    if (selectedDateId && !isMobile && localEntries.length > 0) {
+      // Small timeout to ensure DOM is rendered
+      setTimeout(() => {
+        const element = document.getElementById(`day-${selectedDateId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 100);
+    }
+  }, [selectedDateId, isMobile, localEntries]);
+
   if (isMobile) {
     return (
       <MobileMyTimesheet
@@ -783,7 +798,10 @@ const MyTimesheet = ({
         </div>
 
         {/* Calendar Grid */}
-        <div className="grid grid-cols-7 gap-2 md:gap-3 overflow-y-auto max-h-full pr-1 pb-2 px-2 scroll-smooth flex-1 custom-scrollbar">
+        <div 
+          ref={scrollContainerRef}
+          className="grid grid-cols-7 gap-2 md:gap-3 overflow-y-auto max-h-full pr-1 pb-2 px-2 scroll-smooth flex-1 custom-scrollbar"
+        >
           {Array.from({ length: paddingDays }).map((_, idx) => (
             <div
               key={`p-${idx}`}
@@ -903,6 +921,7 @@ const MyTimesheet = ({
             return (
               <div
                 key={idx}
+                id={`day-${day.fullDate.getTime()}`}
                 className={`relative flex flex-col justify-between p-1 md:p-1.5 rounded-xl md:rounded-2xl border transition-all duration-300 min-h-[100px] md:min-h-[120px] group 
                             ${border} ${shadow} ${highlightClass} ${bg} ${
                               isBlocked
