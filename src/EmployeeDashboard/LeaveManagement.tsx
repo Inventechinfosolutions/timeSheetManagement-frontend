@@ -20,6 +20,7 @@ import {
   Eye,
   RotateCcw,
   ArrowLeft,
+  CheckCircle,
 } from "lucide-react";
 import { notification } from "antd";
 
@@ -113,7 +114,7 @@ const LeaveManagement = () => {
     if (submitSuccess) {
       notification.success({
         message: "Application Submitted",
-        description: "Notification sent to Admin",
+        description: "Notification sent to Manager",
         placement: "topRight",
         duration: 3,
       });
@@ -157,6 +158,10 @@ const LeaveManagement = () => {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewMode, setIsViewMode] = useState(false);
+  const [cancelModal, setCancelModal] = useState<{
+    isOpen: boolean;
+    id: number | null;
+  }>({ isOpen: false, id: null });
   const [selectedLeaveType, setSelectedLeaveType] = useState("");
   const [formData, setFormData] = useState({
     title: "",
@@ -189,10 +194,21 @@ const LeaveManagement = () => {
   };
 
   const handleCancel = (id: number) => {
-    if (window.confirm("Are you sure you want to cancel this request?") && employeeId) {
-      dispatch(updateLeaveRequestStatus({ id, status: "Cancelled" })).then(() => {
+    setCancelModal({ isOpen: true, id });
+  };
+
+  const executeCancel = () => {
+    if (cancelModal.id && employeeId) {
+      dispatch(updateLeaveRequestStatus({ id: cancelModal.id, status: "Cancelled" })).then(() => {
         dispatch(getLeaveStats(employeeId));
         dispatch(getLeaveHistory(employeeId));
+        setCancelModal({ isOpen: false, id: null });
+        notification.success({
+            message: "Request Cancelled",
+            description: "Your request has been successfully cancelled.",
+            placement: "topRight",
+            duration: 3,
+        });
       });
     }
   };
@@ -257,7 +273,7 @@ const LeaveManagement = () => {
       </div>
 
       {/* Hero Action Card */}
-      <div className="relative bg-gradient-to-r from-[#4318FF] to-[#868CFF] rounded-[20px] p-6 md:p-8 mb-8 shadow-xl shadow-blue-500/20 group animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="relative z-30 bg-gradient-to-r from-[#4318FF] to-[#868CFF] rounded-[20px] p-6 md:p-8 mb-8 shadow-xl shadow-blue-500/20 group animate-in fade-in slide-in-from-bottom-4 duration-700">
         {/* Decorative Elements Wrapper for Overflow */}
         <div className="absolute inset-0 overflow-hidden rounded-[20px]">
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl group-hover:bg-white/20 transition-all duration-700" />
@@ -521,11 +537,11 @@ const LeaveManagement = () => {
                 </button>
               </div>
 
-              <div className="space-y-1">
-                <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 block px-1">
+              <div className="flex items-center justify-between w-full">
+                <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
                   {isViewMode ? "Viewing Application" : "Applying For"}
                 </span>
-                <h2 className="text-3xl font-black text-[#2B3674]">
+                <h2 className="text-2xl md:text-3xl font-black text-[#2B3674] text-right">
                   {selectedLeaveType}
                 </h2>
               </div>
@@ -701,6 +717,46 @@ const LeaveManagement = () => {
                     </button>
                   </>
                 )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Confirmation Modal */}
+      {cancelModal.isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 bg-[#2B3674]/40 backdrop-blur-sm transition-opacity"
+            onClick={() => setCancelModal({ ...cancelModal, isOpen: false })}
+          />
+          <div className="relative w-full max-w-md bg-white rounded-[24px] overflow-hidden shadow-[0px_20px_40px_rgba(0,0,0,0.1)] animate-in fade-in zoom-in duration-200 transform">
+            <div className="p-8 text-center">
+              <div className="mx-auto w-16 h-16 rounded-full bg-red-50 text-red-500 flex items-center justify-center mb-6">
+                <XCircle size={32} strokeWidth={2.5} />
+              </div>
+              
+              <h3 className="text-2xl font-black text-[#2B3674] mb-2">
+                Cancel Request?
+              </h3>
+              
+              <p className="text-gray-500 font-medium leading-relaxed mb-8">
+                Are you sure you want to cancel this request? This action cannot be undone.
+              </p>
+
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setCancelModal({ ...cancelModal, isOpen: false })}
+                  className="flex-1 py-3.5 rounded-xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 transition-colors"
+                >
+                  No, Keep It
+                </button>
+                <button
+                  onClick={executeCancel}
+                  className="flex-1 py-3.5 rounded-xl font-bold text-white bg-red-500 hover:bg-red-600 shadow-lg shadow-red-200 transition-all transform active:scale-95"
+                >
+                  Yes, Cancel Request
+                </button>
               </div>
             </div>
           </div>

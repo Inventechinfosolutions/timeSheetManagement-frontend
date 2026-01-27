@@ -91,7 +91,9 @@ const TodayAttendance = ({
 
     // Merge Master Holidays to align with MyTimesheet logic
     return entries.map((day) => {
-      const dateStr = day.fullDate.toISOString().split("T")[0];
+      const dateStr = `${day.fullDate.getFullYear()}-${String(
+        day.fullDate.getMonth() + 1,
+      ).padStart(2, "0")}-${String(day.fullDate.getDate()).padStart(2, "0")}`;
       const isMasterHoliday = holidays.find((h) => {
         const hDate = h.date || (h as any).holidayDate;
         if (!hDate) return false;
