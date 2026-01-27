@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { User, Eye, EyeOff, Lock } from "lucide-react";
+import { User, Eye, EyeOff, Lock, Zap } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { setCurrentUser } from "../reducers/employeeDetails.reducer";
 import { loginUser, clearError, UserType } from "../reducers/user.reducer";
-import inventechLogo from "../assets/inventech-logo.jpg";
+import loginVisual from "../assets/login_visual.jpg";
+import inventLogo from "../assets/invent-logo.svg";
+import LandingMobile from "./LandingMobile";
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -53,6 +55,13 @@ const Landing = () => {
         localStorage.setItem("userLoginId", loginId);
         dispatch(setCurrentUser({ employeeId: loginId }));
         // Effect will handle redirect
+      } else {
+        console.log(
+          "Admin login failed or user is not admin. Proceeding as Employee.",
+        );
+        // Set employee context for dashboard components
+        localStorage.setItem("userLoginId", loginId);
+        dispatch(setCurrentUser({ employeeId: loginId }));
       }
     } catch (err) {
       console.error("Login attempt failed:", err);
@@ -62,84 +71,92 @@ const Landing = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-[#1c9cc0] relative overflow-hidden">
-      {/* Background Decoration */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-white/10 rounded-full blur-3xl -translate-y-1/2"></div>
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-white/10 rounded-full blur-3xl translate-y-1/2"></div>
-      </div>
+    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-[#EFEBF5] relative overflow-hidden font-sans">
+      {/* Page Background Shapes from Design */}
+      <div className="absolute top-[-5%] left-[5%] w-48 h-48 bg-[#585CE5] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
+      <div className="absolute bottom-[-10%] right-[-5%] w-96 h-96 bg-white rounded-full mix-blend-overlay filter blur-3xl opacity-40"></div>
 
-      <div className="w-full max-w-md bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 p-8 sm:p-10 relative z-10 animate-in fade-in zoom-in-95 duration-500">
-        {/* Logo & Header */}
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-white/20 rounded-2xl p-2 mx-auto mb-4 border border-white/30 shadow-inner flex items-center justify-center">
+      {/* Main Container */}
+      <LandingMobile
+        loginId={loginId}
+        setLoginId={setLoginId}
+        password={password}
+        setPassword={setPassword}
+        showPassword={showPassword}
+        setShowPassword={setShowPassword}
+        handleLogin={handleLogin}
+        isSubmitting={isSubmitting}
+        loading={loading}
+        error={error}
+      />
+      <div className="hidden md:flex w-full max-w-[1100px] h-auto min-h-[600px] bg-white rounded-[18px] shadow-2xl overflow-hidden flex-col md:flex-row animate-in fade-in zoom-in-95 duration-500 relative z-10">
+        {/* LEFT SIDE - LOGIN FORM */}
+        <div className="w-full md:w-[45%] p-10 md:p-14 flex flex-col justify-center relative bg-white z-10">
+          <div className="mb-10 text-center">
             <img
-              src={inventechLogo}
-              alt="Logo"
-              className="w-full h-full object-contain mix-blend-multiply opacity-90 rounded-xl"
+              src={inventLogo}
+              alt="Invent Logo"
+              className="h-16 mx-auto mb-5"
             />
-          </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight mb-2">
-            Welcome Back
-          </h1>
-          <p className="text-blue-100 text-sm font-medium opacity-90">
+            <h1 className="text-3xl font-black text-[#2D3748] mb-2 tracking-tight">
+              LOGIN
+            </h1>
+          <p className="text-gray-400 text-[13px] font-medium tracking-wide">
             Enter your credentials to access the dashboard
           </p>
         </div>
 
         {/* Error Message */}
         {error && (
-          <div className="mb-6 p-4 bg-red-500/20 backdrop-blur-md border border-red-500/50 rounded-xl text-white text-sm font-semibold animate-in slide-in-from-top-2 duration-300">
+          <div className="mb-6 p-3 bg-red-50 text-red-600 rounded-lg text-xs font-bold border border-red-100 animate-in slide-in-from-top-2">
             {error}
           </div>
         )}
 
-        {/* Login Form */}
-        <form onSubmit={handleLogin} className="space-y-5">
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-blue-100 uppercase tracking-wider ml-1">
-              Login ID
-            </label>
+          <form onSubmit={handleLogin} className="space-y-6">
+            <div className="space-y-5">
+              {/* Username Input */}
             <div className="relative group">
               <input
                 type="text"
-                placeholder="User ID"
-                className="w-full pl-10 pr-4 py-3 bg-white/90 border border-transparent focus:border-white/50 rounded-xl focus:ring-0 text-gray-900 placeholder-gray-500 text-sm transition-all shadow-inner focus:bg-white"
+                placeholder="Username"
+                className="w-full pl-12 pr-4 py-4 bg-[#F0F2F5] border-none rounded-2xl text-[#4A5568] placeholder-gray-400 text-sm focus:ring-2 focus:ring-[#6C63FF]/20 focus:bg-[#E8EAED] transition-all duration-200 font-semibold"
                 value={loginId}
                 onChange={(e) => setLoginId(e.target.value)}
                 required
               />
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-4.5 h-4.5 group-focus-within:text-[#1c9cc0] transition-colors" />
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                <User className="text-gray-400 h-5 w-5" />
+              </div>
             </div>
-          </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-blue-100 uppercase tracking-wider ml-1">
-              Password
-            </label>
+              {/* Password Input */}
             <div className="relative group">
               <input
                 type={showPassword ? "text" : "password"}
                 placeholder="Password"
-                className="w-full pl-10 pr-10 py-3 bg-white/90 border border-transparent focus:border-white/50 rounded-xl focus:ring-0 text-gray-900 placeholder-gray-500 text-sm transition-all shadow-inner focus:bg-white"
+                className="w-full pl-12 pr-12 py-4 bg-[#F0F2F5] border-none rounded-2xl text-[#4A5568] placeholder-gray-400 text-sm focus:ring-2 focus:ring-[#6C63FF]/20 focus:bg-[#E8EAED] transition-all duration-200 font-semibold"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-4.5 h-4.5 group-focus-within:text-[#1c9cc0] transition-colors" />
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                <Lock className="text-gray-400 h-5 w-5" />
+              </div>
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 p-1"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none p-1 transition-colors"
               >
-                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
+
             <div className="flex justify-end">
               <button
                 type="button"
                 onClick={() => navigate("/forgot-password")}
-                className="text-[11px] text-blue-100 hover:text-white transition-colors hover:underline"
+                className="cursor-pointer text-xs font-bold text-[#A0AEC0] hover:text-[#6C63FF] transition-colors mt-1"
               >
                 Forgot Password?
               </button>
@@ -149,11 +166,40 @@ const Landing = () => {
           <button
             type="submit"
             disabled={isSubmitting || loading}
-            className="w-full bg-linear-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-900/20 active:scale-[0.98] transition-all duration-200 mt-2 disabled:opacity-70 disabled:cursor-not-allowed"
-          >
-            {isSubmitting || loading ? "Authenticating..." : "Login"}
-          </button>
-        </form>
+            className="w-full bg-[#6C63FF] hover:bg-[#5a52d5] text-white font-bold py-4 rounded-xl shadow-[0_10px_20px_-10px_rgba(108,99,255,0.5)] active:scale-[0.98] transition-all duration-200 mt-4 disabled:opacity-70 disabled:cursor-not-allowed text-sm tracking-wide cursor-pointer"
+            >
+              {isSubmitting || loading ? "Authenticating..." : "Login Now"}
+            </button>
+          </form>
+        </div>
+
+        {/* RIGHT SIDE - VISUAL */}
+        <div className="hidden md:flex md:w-[55%] bg-[#6C63FF] relative items-center justify-center p-12 overflow-hidden">
+          {/* Background Patterns for Right Panel */}
+          <div className="absolute inset-0">
+            <div className="absolute top-[-50%] right-[-50%] w-[100%] h-[100%] border-[60px] border-white/5 rounded-full animate-[spin_120s_linear_infinite]"></div>
+            <div className="absolute bottom-[-20%] left-[-20%] w-[80%] h-[80%] border-[40px] border-white/5 rounded-full animate-[spin_80s_linear_infinite_reverse]"></div>
+          </div>
+
+          {/* Glass Card Container for Image */}
+          <div className="relative z-10 w-[320px] h-[440px] rounded-[32px] border border-white/20 bg-white/10 backdrop-blur-md shadow-2xl flex items-center justify-center overflow-hidden transform hover:scale-105 transition-transform duration-700">
+            {/* Actual Image */}
+            <div className="absolute inset-3 rounded-[24px] overflow-hidden shadow-inner">
+              <img
+                src={loginVisual}
+                alt="Login Visual"
+                className="w-full h-full object-cover transform scale-110"
+              />
+            </div>
+            {/* Gradient Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#6C63FF]/50 via-transparent to-transparent pointer-events-none"></div>
+          </div>
+
+          {/* Floating 'Zap' Icon */}
+          <div className="absolute bottom-[20%] right-[20%] w-16 h-16 bg-white rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.12)] flex items-center justify-center animate-bounce duration-[3000ms] z-20">
+            <Zap className="text-[#F6AD55] h-7 w-7 fill-current drop-shadow-sm" />
+          </div>
+        </div>
       </div>
     </div>
   );
