@@ -27,6 +27,7 @@ import {
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import { downloadPdf } from "../utils/downloadPdf";
 import { generateRangeEntries } from "../utils/attendanceUtils";
+import { fetchUnreadNotifications } from "../reducers/leaveNotification.reducer";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -111,6 +112,11 @@ const AdminDashboard = () => {
     // Fetch holidays for PDF export
     dispatch(fetchHolidays());
   }, [dispatch, currentMonth, currentYear]);
+
+  // Refresh admin notifications on load
+  useEffect(() => {
+    dispatch(fetchUnreadNotifications());
+  }, [dispatch]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {

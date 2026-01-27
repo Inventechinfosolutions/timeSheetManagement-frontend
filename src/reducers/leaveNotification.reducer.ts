@@ -95,6 +95,19 @@ export const markEmployeeUpdateRead = createAsyncThunk(
   }
 );
 
+// Employee: Mark all updates as read
+export const markAllEmployeeUpdatesRead = createAsyncThunk(
+  "leaveNotification/markAllEmployeeUpdatesRead",
+  async (employeeId: string, { rejectWithValue }) => {
+    try {
+      await axios.post(`${apiUrl}/employee/${employeeId}/notifications/mark-all-read`);
+      return employeeId;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to mark all updates as read");
+    }
+  }
+);
+
 const leaveNotificationSlice = createSlice({
   name: "leaveNotification",
   initialState,
@@ -134,6 +147,9 @@ const leaveNotificationSlice = createSlice({
       })
       .addCase(markEmployeeUpdateRead.fulfilled, (state, action) => {
         state.employeeUpdates = state.employeeUpdates.filter((n) => n.id !== action.payload);
+      })
+      .addCase(markAllEmployeeUpdatesRead.fulfilled, (state) => {
+        state.employeeUpdates = [];
       });
   },
 });
