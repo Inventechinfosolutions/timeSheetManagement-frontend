@@ -22,6 +22,10 @@ export interface LeaveRequest {
 
 interface LeaveRequestState {
   entities: LeaveRequest[];
+  totalItems: number;
+  totalPages: number;
+  currentPage: number;
+  limit: number;
   stats: {
     leave: { applied: number; approved: number; rejected: number; total: number };
     wfh: { applied: number; approved: number; rejected: number; total: number };
@@ -36,6 +40,10 @@ interface LeaveRequestState {
 
 const initialState: LeaveRequestState = {
   entities: [],
+  totalItems: 0,
+  totalPages: 1,
+  currentPage: 1,
+  limit: 10,
   stats: null,
   loading: false,
   error: null,
@@ -47,9 +55,21 @@ const initialState: LeaveRequestState = {
 // Async Thunk for Getting Leave History
 export const getLeaveHistory = createAsyncThunk(
   "leaveRequest/getHistory",
-  async (employeeId: string, { rejectWithValue }) => {
+  async (
+    { employeeId, page, limit }: { employeeId: string; page?: number; limit?: number },
+    { rejectWithValue }
+  ) => {
     try {
-      const response = await axios.get(`${apiUrl}/employee/${employeeId}`);
+      const params = new URLSearchParams();
+      if (page) params.append("page", page.toString());
+      if (limit) params.append("limit", limit.toString());
+
+      const queryString = params.toString();
+      const url = queryString
+        ? `${apiUrl}/employee/${employeeId}?${queryString}`
+        : `${apiUrl}/employee/${employeeId}`;
+
+      const response = await axios.get(url);
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data || "Failed to fetch history");
@@ -61,7 +81,7 @@ export const getLeaveHistory = createAsyncThunk(
 export const getAllLeaveRequests = createAsyncThunk(
   "leaveRequest/getAll",
   async (
-    filters: { department?: string; status?: string; search?: string } = {},
+    filters: { department?: string; status?: string; search?: string; page?: number; limit?: number } = {},
     { rejectWithValue }
   ) => {
     try {
@@ -74,6 +94,12 @@ export const getAllLeaveRequests = createAsyncThunk(
       }
       if (filters.search) {
         params.append("search", filters.search);
+      }
+      if (filters.page) {
+        params.append("page", filters.page.toString());
+      }
+      if (filters.limit) {
+        params.append("limit", filters.limit.toString());
       }
 
       const queryString = params.toString();
@@ -263,7 +289,25 @@ const leaveRequestSlice = createSlice({
     });
     builder.addCase(getLeaveHistory.fulfilled, (state, action) => {
       state.loading = false;
-      state.entities = action.payload;
+      const payload = action.payload;
+      if (payload && payload.data && Array.isArray(payload.data)) {
+        state.entities = payload.data;
+        state.totalItems = payload.total || payload.data.length;
+        state.totalPages = payload.totalPages || 1;
+        state.currentPage = payload.page || 1;
+        state.limit = payload.limit || 10;
+      } else if (Array.isArray(payload)) {
+        state.entities = payload;
+        state.totalItems = payload.length;
+        state.totalPages = 1;
+        state.currentPage = 1;
+        state.limit = 10;
+      } else {
+        state.entities = [];
+        state.totalItems = 0;
+        state.totalPages = 1;
+        state.currentPage = 1;
+      }
     });
     builder.addCase(getLeaveHistory.rejected, (state, action) => {
       state.loading = false;
@@ -277,7 +321,25 @@ const leaveRequestSlice = createSlice({
     });
     builder.addCase(getAllLeaveRequests.fulfilled, (state, action) => {
       state.loading = false;
-      state.entities = action.payload;
+      const payload = action.payload;
+      if (payload && payload.data && Array.isArray(payload.data)) {
+        state.entities = payload.data;
+        state.totalItems = payload.total || payload.data.length;
+        state.totalPages = payload.totalPages || 1;
+        state.currentPage = payload.page || 1;
+        state.limit = payload.limit || 10;
+      } else if (Array.isArray(payload)) {
+        state.entities = payload;
+        state.totalItems = payload.length;
+        state.totalPages = 1;
+        state.currentPage = 1;
+        state.limit = 10;
+      } else {
+        state.entities = [];
+        state.totalItems = 0;
+        state.totalPages = 1;
+        state.currentPage = 1;
+      }
     });
     builder.addCase(getAllLeaveRequests.rejected, (state, action) => {
       state.loading = false;

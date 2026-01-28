@@ -15,6 +15,8 @@ import {
   ArrowLeft,
   X,
   Loader2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import {
   getAllLeaveRequests,
@@ -46,6 +48,11 @@ const Requests = () => {
   const [selectedOwnerId, setSelectedOwnerId] = useState<number | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  const { totalItems, totalPages } = useAppSelector(
+    (state) => state.leaveRequest,
+  );
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
     id: number | null;
@@ -70,12 +77,18 @@ const Requests = () => {
           department: selectedDept,
           status: filterStatus,
           search: searchTerm,
+          page: currentPage,
+          limit: itemsPerPage,
         }),
       );
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [dispatch, selectedDept, filterStatus, searchTerm]);
+  }, [dispatch, selectedDept, filterStatus, searchTerm, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedDept, filterStatus, searchTerm]);
 
   const filteredRequests = entities || [];
 
@@ -481,6 +494,55 @@ const Requests = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        <div className="flex flex-col sm:flex-row justify-between items-center mt-6 p-6 lg:px-10 lg:pb-10 gap-6">
+          <div className="text-sm font-bold text-[#A3AED0] text-center sm:text-left">
+            Showing{" "}
+            <span className="text-[#2B3674]">
+              {totalItems > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}
+            </span>{" "}
+            to{" "}
+            <span className="text-[#2B3674]">
+              {Math.min(currentPage * itemsPerPage, totalItems)}
+            </span>{" "}
+            of <span className="text-[#2B3674]">{totalItems}</span> entries
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className={`p-2 rounded-xl border border-[#E9EDF7] transition-all flex items-center justify-center
+              ${
+                currentPage === 1
+                  ? "bg-gray-50 text-gray-300 cursor-not-allowed"
+                  : "bg-white text-[#4318FF] hover:bg-[#4318FF]/5 active:scale-90 shadow-sm"
+              }`}
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <div className="bg-[#F4F7FE] px-4 py-1.5 rounded-xl border border-transparent">
+              <span className="text-xs font-black text-[#2B3674] tracking-widest">
+                {currentPage} / {totalPages > 0 ? totalPages : 1}
+              </span>
+            </div>
+            <button
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+              }
+              disabled={currentPage === totalPages || totalPages === 0}
+              className={`p-2 rounded-xl border border-[#E9EDF7] transition-all flex items-center justify-center
+              ${
+                currentPage === totalPages || totalPages === 0
+                  ? "bg-gray-50 text-gray-300 cursor-not-allowed"
+                  : "bg-white text-[#4318FF] hover:bg-[#4318FF]/5 active:scale-90 shadow-sm"
+              }`}
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Confirmation Modal */}
@@ -571,31 +633,24 @@ const Requests = () => {
       )}
       {/* View Request Modal */}
       {isViewModalOpen && selectedRequest && (
-        <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-100 flex items-start justify-center p-4 pt-20">
           <div
             className="absolute inset-0 bg-[#2B3674]/30 backdrop-blur-sm"
             onClick={() => setIsViewModalOpen(false)}
           />
           <div className="relative w-full max-w-xl bg-white rounded-[32px] overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-300 flex flex-col max-h-[85vh]">
             {/* Modal Header */}
-            <div className="p-8 pb-0 shrink-0">
-              <div className="flex justify-between items-start mb-6">
+            <div className="pt-1 px-4 pb-0 shrink-0">
+              <div className="flex justify-between items-start mb-0">
                 <button
                   onClick={() => setIsViewModalOpen(false)}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors order-first"
+                  className="p-1 hover:bg-gray-100 rounded-full transition-colors ml-auto"
                 >
-                  <ArrowLeft size={20} className="text-gray-400" />
-                </button>
-                <button
-                  onClick={() => setIsViewModalOpen(false)}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors order-last"
-                >
-                  <X size={20} className="text-gray-400" />
+                  <X size={20} className="text-gray-700" />
                 </button>
               </div>
-
-              <div className="flex justify-between items-center px-1 border-b border-gray-100 pb-4 mb-4">
-                <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+              <div className="flex justify-between items-center px-1 border-b border-gray-100 pb-3 mb-3">
+                <span className="text-lg font-black uppercase tracking-widest text-gray-400">
                   Viewing Application
                 </span>
                 <h2 className="text-3xl font-black text-[#2B3674]">
@@ -607,13 +662,13 @@ const Requests = () => {
             </div>
 
             {/* Modal Body */}
-            <div className="p-8 space-y-6 overflow-y-auto custom-scrollbar flex-1">
+            <div className="p-6 space-y-2 overflow-y-auto custom-scrollbar flex-1">
               {/* Title Field */}
               <div className="space-y-2">
                 <label className="text-sm font-bold text-[#2B3674] ml-1">
                   Title
                 </label>
-                <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none">
+                <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none break-words">
                   {selectedRequest.title}
                 </div>
               </div>
@@ -661,39 +716,27 @@ const Requests = () => {
                 <label className="text-sm font-bold text-[#2B3674] ml-1">
                   Description
                 </label>
-                <div className="w-full px-5 py-4 rounded-[20px] bg-[#F4F7FE] font-medium text-[#2B3674] min-h-[120px] whitespace-pre-wrap leading-relaxed">
+                <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-medium text-[#2B3674] min-h-[60px] whitespace-pre-wrap break-words leading-relaxed">
                   {selectedRequest.description || "No description provided."}
                 </div>
               </div>
 
               {/* Supporting Documents (Gallery View) */}
-              <div className="space-y-4">
+              <div className="space-y-1">
                 <label className="text-sm font-bold text-[#2B3674] ml-1">
                   Supporting Documents
                 </label>
-                <div className="p-1">
-                  <CommonMultipleUploader
-                    entityType="LEAVE_REQUEST"
-                    entityId={selectedOwnerId || 0}
-                    refId={selectedRequest.id}
-                    refType="DOCUMENT"
-                    disabled={true}
-                    fetchOnMount={true}
-                    getFiles={getLeaveRequestFiles}
-                    previewFile={previewLeaveRequestFile}
-                    downloadFile={downloadLeaveRequestFile}
-                  />
-                </div>
-              </div>
-
-              {/* Actions Footer */}
-              <div className="pt-4 drop-shadow-sm">
-                <button
-                  onClick={() => setIsViewModalOpen(false)}
-                  className="w-full py-4 bg-white border-2 border-gray-50 text-gray-400 font-black rounded-2xl hover:bg-gray-50 hover:text-[#4318FF] transition-all duration-300"
-                >
-                  CLOSE
-                </button>
+                <CommonMultipleUploader
+                  entityType="LEAVE_REQUEST"
+                  entityId={selectedOwnerId || 0}
+                  refId={selectedRequest.id}
+                  refType="DOCUMENT"
+                  disabled={true}
+                  fetchOnMount={true}
+                  getFiles={getLeaveRequestFiles}
+                  previewFile={previewLeaveRequestFile}
+                  downloadFile={downloadLeaveRequestFile}
+                />
               </div>
             </div>
           </div>
