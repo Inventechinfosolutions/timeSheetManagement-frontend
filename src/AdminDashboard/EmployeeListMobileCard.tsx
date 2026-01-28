@@ -1,4 +1,4 @@
-import { Pencil, RefreshCw } from "lucide-react";
+import { Pencil, RefreshCw, Eye } from "lucide-react";
 
 interface Employee {
   id: string;
@@ -14,6 +14,7 @@ interface Employee {
 interface EmployeeListMobileCardProps {
   employees: Employee[];
   onViewDetails: (empId: string) => void;
+  onViewDashboard: (empId: string) => void;
   onResendActivation: (empId: string) => void;
   onToggleStatus: (empId: string) => void;
 }
@@ -21,9 +22,13 @@ interface EmployeeListMobileCardProps {
 const EmployeeListMobileCard = ({
   employees,
   onViewDetails,
+  onViewDashboard,
   onResendActivation,
   onToggleStatus,
 }: EmployeeListMobileCardProps) => {
+// ... existing body ...
+// ... around line 113 inside the actions div ...
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {employees.map((emp) => {
@@ -76,7 +81,7 @@ const EmployeeListMobileCard = ({
                   className={`relative w-20 h-7 rounded-full transition-all duration-300 flex items-center ${
                     emp.isActive
                       ? "bg-[#0095FF] cursor-pointer"
-                      : "bg-gray-300 cursor-not-allowed opacity-60"
+                      : "bg-red-300 cursor-not-allowed"
                   }`}
                   title={
                     !emp.isActive
@@ -110,6 +115,13 @@ const EmployeeListMobileCard = ({
                     {/* Resend */}
                   </button>
                 )}
+                <button
+                  onClick={() => onViewDashboard(emp.rawId)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#4318FF]/5 text-[#4318FF] font-bold text-sm hover:bg-[#4318FF] hover:text-white transition-all active:scale-95 shadow-sm"
+                  title="View Dashboard"
+                >
+                  <Eye size={16} />
+                </button>
                 <button
                   onClick={() => onViewDetails(emp.rawId)}
                   className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#4318FF]/5 text-[#4318FF] font-bold text-sm hover:bg-[#4318FF] hover:text-white transition-all active:scale-95 shadow-sm"

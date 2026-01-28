@@ -198,3 +198,13 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 .pause-on-hover:hover {
   animation-play-state: paused;
 }
+/* Hide default password reveal button to avoid double icons */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+
+input[type="password"]::-webkit-password-reveal-button {
+  display: none;
+  -webkit-appearance: none;
+}

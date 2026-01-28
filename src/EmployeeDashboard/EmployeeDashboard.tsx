@@ -39,6 +39,9 @@ const EmployeeDashboard = () => {
   // Data Fetching
   const fetchAttendance = useCallback(
     (date: Date) => {
+      // Prevent Admin from triggering employee attendance fetches
+      if (!currentEmployeeId || currentEmployeeId === 'Admin') return;
+
       dispatch(
         fetchMonthlyAttendance({
           employeeId: currentEmployeeId,

@@ -47,6 +47,7 @@ import EmpWorkingDetails from "./AdminDashboard/EmpWorkingDetails";
 import AdminEmployeeCalenderWrapper from "./AdminDashboard/AdminEmployeeCalenderWrapper";
 import DailyStatus from "./AdminDashboard/DailyStatus";
 import Requests from "./AdminDashboard/Requests";
+import AdminViewEmployeeDashboard from "./AdminDashboard/AdminViewEmployeeDashboard";
 
 const EmployeeTabWrapper = () => {
   const { tab } = useParams<{ tab: string }>();
@@ -251,6 +252,10 @@ function App() {
                         <AdminEmployeeTimesheetWrapper />
                       </Suspense>
                     }
+                  />
+                  <Route 
+                    path="view-attendance/:employeeId"
+                    element={<AdminViewEmployeeDashboard />}
                   />
                   <Route
                     path="employee-details/:employeeId"
