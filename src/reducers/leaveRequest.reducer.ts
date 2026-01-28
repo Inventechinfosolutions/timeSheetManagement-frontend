@@ -286,7 +286,7 @@ const leaveRequestSlice = createSlice({
 
     // Get Stats
     builder.addCase(getLeaveStats.fulfilled, (state, action) => {
-      state.stats = action.payload;
+      state.stats = action.payload.data || action.payload;
     });
 
     // Submit Request

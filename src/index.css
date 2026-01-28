@@ -39,6 +39,16 @@
     background: #cbd5e0;
   }
 
+  .mask-linear-fade {
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      black 10%,
+      black 90%,
+      transparent
+    );
+  }
+
   /* Custom Animations */
   @keyframes fadeInUp {
     from {
@@ -169,4 +179,22 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 .animate-flip-up {
   animation: flip-up 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* Marquee Animation */
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 30s linear infinite;
+}
+
+.pause-on-hover:hover {
+  animation-play-state: paused;
 }

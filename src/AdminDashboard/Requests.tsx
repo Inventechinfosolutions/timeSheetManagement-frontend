@@ -369,7 +369,9 @@ const Requests = () => {
                           {getIcon(req.requestType)}
                         </div>
                         <span className="text-sm font-semibold text-[#2B3674]">
-                          {req.requestType}
+                          {req.requestType === "Apply Leave"
+                            ? "Leave"
+                            : req.requestType}
                         </span>
                       </div>
                     </td>
@@ -592,7 +594,9 @@ const Requests = () => {
                   Viewing Application
                 </span>
                 <h2 className="text-3xl font-black text-[#2B3674]">
-                  {selectedRequest.requestType}
+                  {selectedRequest.requestType === "Apply Leave"
+                    ? "Leave"
+                    : selectedRequest.requestType}
                 </h2>
               </div>
             </div>
