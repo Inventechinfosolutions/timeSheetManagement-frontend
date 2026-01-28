@@ -25,6 +25,7 @@ import {
   Eye,
   RotateCcw,
   ArrowLeft,
+  Loader2,
 } from "lucide-react";
 import { notification } from "antd";
 import CommonMultipleUploader from "./CommonMultipleUploader";
@@ -203,6 +204,7 @@ const LeaveManagement = () => {
     startDate: "",
     endDate: "",
   });
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const handleOpenModal = (label: string) => {
     setIsViewMode(false);
@@ -247,19 +249,24 @@ const LeaveManagement = () => {
 
   const executeCancel = () => {
     if (cancelModal.id && employeeId) {
+      setIsCancelling(true);
       dispatch(
         updateLeaveRequestStatus({ id: cancelModal.id, status: "Cancelled" }),
-      ).then(() => {
-        dispatch(getLeaveStats(employeeId));
-        dispatch(getLeaveHistory(employeeId));
-        setCancelModal({ isOpen: false, id: null });
-        notification.success({
-          message: "Request Cancelled",
-          description: "Your request has been successfully cancelled.",
-          placement: "topRight",
-          duration: 3,
+      )
+        .then(() => {
+          dispatch(getLeaveStats(employeeId));
+          dispatch(getLeaveHistory(employeeId));
+          setCancelModal({ isOpen: false, id: null });
+          notification.success({
+            message: "Request Cancelled",
+            description: "Your request has been successfully cancelled.",
+            placement: "topRight",
+            duration: 3,
+          });
+        })
+        .finally(() => {
+          setIsCancelling(false);
         });
-      });
     }
   };
 
@@ -895,9 +902,21 @@ const LeaveManagement = () => {
                 </button>
                 <button
                   onClick={executeCancel}
-                  className="flex-1 py-3.5 rounded-xl font-bold text-white bg-red-500 hover:bg-red-600 shadow-lg shadow-red-200 transition-all transform active:scale-95"
+                  disabled={isCancelling}
+                  className={`flex-1 py-3.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${
+                    isCancelling
+                      ? "bg-red-400 cursor-not-allowed opacity-80"
+                      : "bg-red-500 hover:bg-red-600 shadow-red-200 transform active:scale-95"
+                  }`}
                 >
-                  Yes, Cancel Request
+                  {isCancelling ? (
+                    <>
+                      <Loader2 className="animate-spin" size={18} />
+                      Processing...
+                    </>
+                  ) : (
+                    "Yes, Cancel Request"
+                  )}
                 </button>
               </div>
             </div>
