@@ -340,19 +340,13 @@ const LeaveManagement = () => {
         </div>
 
         <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex flex-col gap-2 text-center md:text-left">
-            <div className="inline-flex items-center gap-2 px-2 py-1 bg-white/20 backdrop-blur-md rounded-full w-fit mx-auto md:mx-0 border border-white/10">
-              <Briefcase size={10} className="text-blue-100" />
-              <span className="text-[9px] font-bold tracking-wider uppercase text-blue-50">
-                Quick Action
-              </span>
-            </div>
-            <h2 className="text-xl md:text-2xl font-black tracking-tight leading-tight text-white">
-              Need time off?
-              <span className="text-blue-200 ml-1">Apply now.</span>
+          <div className="flex flex-col gap-2 pl-5 text-center md:text-left">
+            <h2 className="text-white text-[28px] font-bold tracking-[-0.5px] m-0 leading-tight">
+              Request & Manage Attendance
             </h2>
-            <p className="text-blue-100 text-xs font-medium max-w-sm hidden md:block">
-              Select your leave type, dates, and reason.
+            <p className="text-white/85 text-[15px] font-normal m-0 max-w-sm">
+              Easily submit leaves, log remote work, or record client visits in
+              seconds.
             </p>
           </div>
 

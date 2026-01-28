@@ -1,12 +1,32 @@
-import { Outlet, useParams, useNavigate } from "react-router-dom";
+import { Outlet, useParams, useNavigate, useLocation } from "react-router-dom";
 import SidebarLayout from "../AdminDashboard/SidebarLayout";
 
 const AdminLayout = () => {
   const { tab } = useParams<{ tab: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // Determine active tab based on path parameter
+  // Determine active tab based on path parameter or current URL
   const getActiveTab = () => {
+    // Check specific paths first for sub-routes that might not resolve via simple 'tab' param
+    const path = location.pathname;
+
+    if (
+      path.includes("/admin-dashboard/employee-details/") ||
+      path.includes("/admin-dashboard/view-attendance/")
+    ) {
+      return "Employee Details";
+    }
+    if (
+      path.includes("/admin-dashboard/timesheet/") ||
+      path.includes("/admin-dashboard/timesheet-view/")
+    ) {
+      return "Timesheet";
+    }
+    if (path.includes("/admin-dashboard/working-details/")) {
+      return "Working Details";
+    }
+
     switch (tab) {
       case "registration":
         return "User & Role Management";

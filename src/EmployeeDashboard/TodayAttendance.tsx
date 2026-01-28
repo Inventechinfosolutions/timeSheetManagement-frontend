@@ -7,7 +7,10 @@ import {
   Calendar as CalendarIcon,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../hooks";
-import { fetchMonthlyAttendance, fetchDashboardStats } from "../reducers/employeeAttendance.reducer";
+import {
+  fetchMonthlyAttendance,
+  fetchDashboardStats,
+} from "../reducers/employeeAttendance.reducer";
 import { getEntity, setCurrentUser } from "../reducers/employeeDetails.reducer";
 import { fetchEmployeeUpdates } from "../reducers/leaveNotification.reducer";
 import { generateMonthlyEntries } from "../utils/attendanceUtils";
@@ -74,7 +77,7 @@ const TodayAttendance = ({
 
   // Refresh updates whenever dashboard is accessed
   useEffect(() => {
-    if (currentEmployeeId && currentEmployeeId !== 'Admin') {
+    if (currentEmployeeId && currentEmployeeId !== "Admin") {
       dispatch(fetchEmployeeUpdates(currentEmployeeId));
       dispatch(fetchDashboardStats(currentEmployeeId));
     }
@@ -131,7 +134,7 @@ const TodayAttendance = ({
 
   const fetchAttendanceData = useCallback(
     (date: Date) => {
-      if (!currentEmployeeId || currentEmployeeId === 'Admin') return;
+      if (!currentEmployeeId || currentEmployeeId === "Admin") return;
 
       const fetchKey = `${currentEmployeeId}-${
         date.getMonth() + 1
@@ -198,48 +201,49 @@ const TodayAttendance = ({
     <div className="flex flex-col h-full w-full overflow-hidden bg-gray-50/50">
       {/* Header */}
       {!viewOnly && (
-      <div className="px-6 py-5 bg-linear-to-r from-blue-100 via-blue-50 to-white border-b border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#1B2559]">
-            Employee Dashboard
-          </h1>
-          <p className="text-sm text-gray-500 font-medium mt-1">
-            Welcome back,{" "}
-            {entity?.firstName ||
-              entity?.fullName ||
-              currentUser?.aliasLoginName ||
-              "Employee"}
-          </p>
-        </div>
+        <div className="px-6 py-5 bg-linear-to-r from-blue-100 via-blue-50 to-white border-b border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-[#1B2559]">
+              Employee Dashboard
+            </h1>
+            <p className="text-sm text-gray-500 font-medium mt-1">
+              Welcome back,{" "}
+              {entity?.firstName ||
+                entity?.fullName ||
+                currentUser?.aliasLoginName ||
+                "Employee"}
+            </p>
+          </div>
 
-        <div className="flex items-center gap-3">
-          <div className="px-4 py-2 bg-[#F4F7FE] rounded-lg text-sm font-bold text-[#2B3674]">
-            {displayEntry.fullDate.toLocaleDateString("en-US", {
-              weekday: "long",
-              month: "long",
-              day: "numeric",
-            })}
+          <div className="flex items-center gap-3">
+            <div className="px-4 py-2 bg-[#F4F7FE] rounded-lg text-sm font-bold text-[#2B3674]">
+              {displayEntry.fullDate.toLocaleDateString("en-US", {
+                weekday: "long",
+                month: "long",
+                day: "numeric",
+              })}
+            </div>
           </div>
         </div>
-      </div>
       )}
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
         {/* Middle Section: Info Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Card 1 */}
-          {/* Card 1 - Total Week Hours (Light Teal/Green Theme) */}
-          {/* Card 1 - Total Week Hours (Blue Theme) */}
-          <div className="bg-linear-to-br from-[#4facfe] to-[#00f2fe] rounded-[20px] p-6 shadow-lg shadow-blue-500/30 flex flex-col items-start gap-4 h-full relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+          {/* Card 1 - Total Week Hours (Royal Blue Theme) */}
+          <div className="bg-linear-to-br from-[#4E73DF] to-[#224ABE] rounded-[20px] p-6 shadow-lg shadow-blue-500/30 flex flex-col items-start gap-4 h-full relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
             {/* Glassy Circle Decoration */}
             <div className="absolute -right-6 -top-6 w-24 h-24 bg-white/20 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500"></div>
-            
+
             <div className="h-14 w-14 flex items-center justify-center rounded-2xl bg-white/30 backdrop-blur-md border border-white/20 text-white shadow-inner z-10">
               <Clock size={28} strokeWidth={2.5} />
             </div>
-            
+
             <div className="w-full z-10 mt-1">
-              <div className="text-white font-bold text-sm uppercase tracking-wider mb-1">Total Week Hours</div>
+              <div className="text-white font-bold text-sm uppercase tracking-wider mb-1">
+                Total Week Hours
+              </div>
               <div className="w-full border-t border-white/50 my-2"></div>
               <div className="flex flex-col">
                 <span className="text-4xl font-extrabold text-white tracking-tight">
@@ -253,19 +257,19 @@ const TodayAttendance = ({
           </div>
 
           {/* Card 2 */}
-          {/* Card 2 - Total Monthly Hours (Light Orange/Amber Theme) */}
-          {/* Card 2 - Total Monthly Hours (Sky Blue Theme) */}
-          {/* Card 2 - Total Monthly Hours (Blue Theme) */}
-          <div className="bg-linear-to-br from-[#4facfe] to-[#00f2fe] rounded-[20px] p-6 shadow-lg shadow-blue-500/30 flex flex-col items-start gap-4 h-full relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-             {/* Glassy Circle Decoration */}
-             <div className="absolute -right-6 -top-6 w-24 h-24 bg-white/20 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500"></div>
-            
+          {/* Card 2 - Total Monthly Hours (Cyan Theme) */}
+          <div className="bg-linear-to-br from-[#36B9CC] to-[#258391] rounded-[20px] p-6 shadow-lg shadow-cyan-500/30 flex flex-col items-start gap-4 h-full relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+            {/* Glassy Circle Decoration */}
+            <div className="absolute -right-6 -top-6 w-24 h-24 bg-white/20 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500"></div>
+
             <div className="h-14 w-14 flex items-center justify-center rounded-2xl bg-white/30 backdrop-blur-md border border-white/20 text-white shadow-inner z-10">
               <CalendarIcon size={28} strokeWidth={2.5} />
             </div>
-            
+
             <div className="w-full z-10 mt-1">
-              <div className="text-white font-bold text-sm uppercase tracking-wider mb-1">Total Monthly Hours</div>
+              <div className="text-white font-bold text-sm uppercase tracking-wider mb-1">
+                Total Monthly Hours
+              </div>
               <div className="w-full border-t border-white/50 my-2"></div>
               <div className="flex flex-col">
                 <span className="text-4xl font-extrabold text-white tracking-tight">
@@ -279,19 +283,19 @@ const TodayAttendance = ({
           </div>
 
           {/* Card 3 */}
-          {/* Card 3 - Pending Updates (Light Red/Rose Theme) */}
-          {/* Card 3 - Pending Updates (Orange Theme) */}
-          {/* Card 3 - Pending Updates (Blue Theme) */}
-          <div className="bg-linear-to-br from-[#4facfe] to-[#00f2fe] rounded-[20px] p-6 shadow-lg shadow-blue-500/30 flex flex-col items-start gap-4 h-full relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-             {/* Glassy Circle Decoration */}
-             <div className="absolute -right-6 -top-6 w-24 h-24 bg-white/20 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500"></div>
+          {/* Card 3 - Pending Updates (Amber Theme) */}
+          <div className="bg-linear-to-br from-[#F6C23E] to-[#DDA20A] rounded-[20px] p-6 shadow-lg shadow-amber-500/30 flex flex-col items-start gap-4 h-full relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+            {/* Glassy Circle Decoration */}
+            <div className="absolute -right-6 -top-6 w-24 h-24 bg-white/20 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500"></div>
 
             <div className="h-14 w-14 flex items-center justify-center rounded-2xl bg-white/30 backdrop-blur-md border border-white/20 text-white shadow-inner z-10">
               <AlertTriangle size={28} strokeWidth={2.5} />
             </div>
-            
+
             <div className="w-full z-10 mt-1">
-              <div className="text-white font-bold text-sm uppercase tracking-wider mb-1">Pending Updates</div>
+              <div className="text-white font-bold text-sm uppercase tracking-wider mb-1">
+                Pending Updates
+              </div>
               <div className="w-full border-t border-white/50 my-2"></div>
               <div className="flex flex-col">
                 <span className="text-4xl font-extrabold text-white tracking-tight">
@@ -324,50 +328,50 @@ const TodayAttendance = ({
         </div>
 
         {!viewOnly && (
-        <div className="flex justify-center">
-          <button
-            onClick={() => handleNavigate(now.getTime())}
-            className="px-8 py-3 rounded-xl text-white font-bold bg-linear-to-r from-[#868CFF] to-[#4318FF] shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all flex items-center gap-2 transform active:scale-95"
-          >
-            <Edit size={18} />
-            <span>Update Today's Attendance</span>
-          </button>
-        </div>
+          <div className="flex justify-center">
+            <button
+              onClick={() => handleNavigate(now.getTime())}
+              className="px-8 py-3 rounded-xl text-white font-bold bg-linear-to-r from-[#868CFF] to-[#4318FF] shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all flex items-center gap-2 transform active:scale-95"
+            >
+              <Edit size={18} />
+              <span>Update Today's Attendance</span>
+            </button>
+          </div>
         )}
 
         {/* Bottom Section: Calendar/List */}
         {!viewOnly && (
-        <div className="bg-white rounded-xl shadow-[0px_10px_30px_rgba(0,0,0,0.02)] border border-gray-100/50 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-            <h3 className="text-lg font-bold text-[#1B2559]">
-              Attendance List
-            </h3>
-            <div className="flex gap-2">
-              <div className="text-xs px-3 py-1 bg-gray-50 rounded-full text-gray-500 border border-gray-100">
-                All Statuses
+          <div className="bg-white rounded-xl shadow-[0px_10px_30px_rgba(0,0,0,0.02)] border border-gray-100/50 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-[#1B2559]">
+                Attendance List
+              </h3>
+              <div className="flex gap-2">
+                <div className="text-xs px-3 py-1 bg-gray-50 rounded-full text-gray-500 border border-gray-100">
+                  All Statuses
+                </div>
               </div>
             </div>
+            <div className="p-4">
+              <AttendanceViewWrapper
+                now={now}
+                currentDate={calendarDate}
+                entries={currentMonthEntries as any}
+                onMonthChange={(date) => {
+                  setCalendarDate(date);
+                  fetchAttendanceData(date);
+                }}
+                onNavigateToDate={(day) => {
+                  const targetDate = new Date(
+                    calendarDate.getFullYear(),
+                    calendarDate.getMonth(),
+                    day,
+                  );
+                  handleNavigate(targetDate.getTime());
+                }}
+              />
+            </div>
           </div>
-          <div className="p-4">
-            <AttendanceViewWrapper
-              now={now}
-              currentDate={calendarDate}
-              entries={currentMonthEntries as any}
-              onMonthChange={(date) => {
-                setCalendarDate(date);
-                fetchAttendanceData(date);
-              }}
-              onNavigateToDate={(day) => {
-                const targetDate = new Date(
-                  calendarDate.getFullYear(),
-                  calendarDate.getMonth(),
-                  day,
-                );
-                handleNavigate(targetDate.getTime());
-              }}
-            />
-          </div>
-        </div>
         )}
       </div>
     </div>
