@@ -19,12 +19,12 @@ const EmployeeListView = lazy(
 const EmployeeDetailsView = lazy(
   () => import("../AdminDashboard/EmployeeDetailsView")
 );
-const EmpWorkingDetails = lazy(
-  () => import("../AdminDashboard/EmpWorkingDetails")
-);
-const AdminEmployeeCalendarView = lazy(
-  () => import("../AdminDashboard/AdminEmployeeCalendarView")
-);
+// const EmpWorkingDetails = lazy(
+//   () => import("../AdminDashboard/EmpWorkingDetails")
+// );
+// const AdminEmployeeCalendarView = lazy(
+//   () => import("../AdminDashboard/AdminEmployeeCalendarView")
+// );
 
 export const adminComponentConfigs = [
   {
@@ -60,14 +60,14 @@ export const adminComponentConfigs = [
     path: "/admin-dashboard/activation-success",
     Component: ActivationSuccess,
   },
-  {
-    path: "/admin-dashboard/working-details",
-    Component: EmpWorkingDetails,
-  },
-  {
-    path: "/admin-dashboard/working-details/:employeeId",
-    Component: AdminEmployeeCalendarView,
-  },
+  // {
+  //   path: "/admin-dashboard/working-details",
+  //   Component: EmpWorkingDetails,
+  // },
+  // {
+  //   path: "/admin-dashboard/working-details/:employeeId",
+  //   Component: AdminEmployeeCalendarView,
+  // },
   {
     path: "/admin-dashboard/timesheet-list",
     Component: AdminEmployeeTimesheetList,

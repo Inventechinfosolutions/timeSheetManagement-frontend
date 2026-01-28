@@ -159,6 +159,7 @@ const TodayAttendance = ({
 
   const handleDateNavigator = useCallback(
     (timestamp: number) => {
+      if (viewOnly) return;
       if (setScrollToDate) setScrollToDate(timestamp);
 
       const targetDate = new Date(timestamp);
@@ -340,39 +341,37 @@ const TodayAttendance = ({
         )}
 
         {/* Bottom Section: Calendar/List */}
-        {!viewOnly && (
-          <div className="bg-white rounded-xl shadow-[0px_10px_30px_rgba(0,0,0,0.02)] border border-gray-100/50 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-[#1B2559]">
-                Attendance List
-              </h3>
-              <div className="flex gap-2">
-                <div className="text-xs px-3 py-1 bg-gray-50 rounded-full text-gray-500 border border-gray-100">
-                  All Statuses
-                </div>
+        <div className="bg-white rounded-xl shadow-[0px_10px_30px_rgba(0,0,0,0.02)] border border-gray-100/50 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <h3 className="text-lg font-bold text-[#1B2559]">
+              Attendance List
+            </h3>
+            <div className="flex gap-2">
+              <div className="text-xs px-3 py-1 bg-gray-50 rounded-full text-gray-500 border border-gray-100">
+                All Statuses
               </div>
             </div>
-            <div className="p-4">
-              <AttendanceViewWrapper
-                now={now}
-                currentDate={calendarDate}
-                entries={currentMonthEntries as any}
-                onMonthChange={(date) => {
-                  setCalendarDate(date);
-                  fetchAttendanceData(date);
-                }}
-                onNavigateToDate={(day) => {
-                  const targetDate = new Date(
-                    calendarDate.getFullYear(),
-                    calendarDate.getMonth(),
-                    day,
-                  );
-                  handleNavigate(targetDate.getTime());
-                }}
-              />
-            </div>
           </div>
-        )}
+          <div className="p-4">
+            <AttendanceViewWrapper
+              now={now}
+              currentDate={calendarDate}
+              entries={currentMonthEntries as any}
+              onMonthChange={(date) => {
+                setCalendarDate(date);
+                fetchAttendanceData(date);
+              }}
+              onNavigateToDate={(day) => {
+                const targetDate = new Date(
+                  calendarDate.getFullYear(),
+                  calendarDate.getMonth(),
+                  day,
+                );
+                handleNavigate(targetDate.getTime());
+              }}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );

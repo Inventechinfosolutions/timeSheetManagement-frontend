@@ -60,6 +60,9 @@ const MyTimesheet = ({
     entity?.employeeId ||
     (!isAdmin ? currentUser?.employeeId : undefined);
 
+  const isAdminView = isAdmin && currentEmployeeId === "Admin";
+  const effectiveReadOnly = readOnly || isAdminView;
+
   // 1. viewMonth/now state
   const [now, setNow] = useState<Date>(() => {
     if (propNow) return propNow;
@@ -255,7 +258,7 @@ const MyTimesheet = ({
   useEffect(() => {
     if (
       !currentEmployeeId ||
-      (isAdmin && currentEmployeeId.toLowerCase() === "admin")
+      (isAdmin && currentEmployeeId === "Admin")
     )
       return;
 
@@ -371,7 +374,7 @@ const MyTimesheet = ({
   };
 
   const handleHoursInput = (entryIndex: number, val: string) => {
-    if (readOnly) return;
+    if (effectiveReadOnly) return;
     if (isDateBlocked(localEntries[entryIndex].fullDate)) return;
 
     // Prevent typing if currently showing an error for this field
@@ -460,7 +463,7 @@ const MyTimesheet = ({
   };
 
   const onSaveAll = async () => {
-    if (readOnly) return;
+    if (effectiveReadOnly) return;
     const payload: any[] = [];
     localEntries.forEach((entry, idx) => {
       if (isDateBlocked(entry.fullDate)) return;
@@ -620,7 +623,7 @@ const MyTimesheet = ({
         })}
         loading={loading}
         isAdmin={isAdmin}
-        readOnly={readOnly}
+        readOnly={effectiveReadOnly}
         isDateBlocked={isDateBlocked}
         isEditableMonth={isEditableMonth}
         isHoliday={isHoliday}
@@ -671,7 +674,12 @@ const MyTimesheet = ({
             <div className="flex items-center gap-1">
               <button
                 onClick={handlePrevMonth}
-                className="p-1.5 hover:bg-gray-50 rounded-lg transition-all text-gray-400 hover:text-[#4318FF]"
+                disabled={isAdminView}
+                className={`p-1.5 rounded-lg transition-all ${
+                  isAdminView
+                    ? "text-gray-200 cursor-not-allowed hidden"
+                    : "hover:bg-gray-50 text-gray-400 hover:text-[#4318FF]"
+                }`}
               >
                 <ChevronLeft size={20} strokeWidth={2.5} />
               </button>
@@ -683,10 +691,11 @@ const MyTimesheet = ({
               </p>
               <button
                 onClick={handleNextMonth}
-                disabled={!canGoNextMonth()}
+                disabled={!canGoNextMonth() || isAdminView}
                 className={`p-1.5 rounded-lg transition-all ${
-                  !canGoNextMonth()
-                    ? "text-gray-300 cursor-not-allowed"
+                  !canGoNextMonth() || isAdminView
+                    ? "text-gray-300 cursor-not-allowed " +
+                      (isAdminView ? "hidden" : "")
                     : "hover:bg-gray-50 text-gray-400 hover:text-[#4318FF]"
                 }`}
               >
@@ -717,7 +726,7 @@ const MyTimesheet = ({
                 <span className="text-[10px] font-bold text-gray-700">hrs</span>
               </div>
             </div>
-            {(!readOnly || isAdmin) && (
+            {(!effectiveReadOnly || (isAdmin && !isAdminView)) && (
               <button
                 onClick={onSaveAll}
                 className="flex items-center justify-center gap-1.5 px-4 py-2 bg-[#4318FF] text-white rounded-xl font-bold text-[10px] shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all active:scale-95 tracking-wide uppercase"
