@@ -31,6 +31,7 @@ import {
   RefreshCw,
   CheckCircle,
   CreditCard,
+  Eye,
 } from "lucide-react";
 import EmployeeListMobileCard from "./EmployeeListMobileCard";
 
@@ -182,6 +183,10 @@ const EmployeeListView = () => {
     if (currentPage > 1) {
       setCurrentPage((prev) => prev - 1);
     }
+  };
+
+  const handleViewDashboard = (empId: string) => {
+    navigate(`/admin-dashboard/view-attendance/${empId}`);
   };
 
   const handleViewDetails = (empId: string) => {
@@ -558,7 +563,7 @@ const EmployeeListView = () => {
                         className={`relative w-20 h-7 rounded-full transition-all duration-300 flex items-center ${
                           emp.isActive
                             ? "bg-[#0095FF] cursor-pointer"
-                            : "bg-gray-300 cursor-not-allowed opacity-60"
+                            : "bg-red-300 cursor-not-allowed"
                         }`}
                         title={
                           !emp.isActive
@@ -584,6 +589,13 @@ const EmployeeListView = () => {
                     </td>
                     <td className="py-4 pl-4 pr-10 text-center">
                       <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => handleViewDashboard(emp.rawId)}
+                          className="inline-flex items-center gap-2 bg-transparent border-none cursor-pointer text-[#4318FF] text-sm font-bold hover:underline transition-all hover:scale-105 active:scale-95"
+                          title="View Dashboard"
+                        >
+                          <Eye size={16} />
+                        </button>
                         <button
                           onClick={() => handleViewDetails(emp.rawId)}
                           className="inline-flex items-center gap-2 bg-transparent border-none cursor-pointer text-[#4318FF] text-sm font-bold hover:underline transition-all hover:scale-105 active:scale-95"
@@ -625,6 +637,7 @@ const EmployeeListView = () => {
               <EmployeeListMobileCard
                 employees={currentItems}
                 onViewDetails={handleViewDetails}
+                onViewDashboard={handleViewDashboard}
                 onResendActivation={handleResendActivation}
                 onToggleStatus={handleToggleStatus}
               />

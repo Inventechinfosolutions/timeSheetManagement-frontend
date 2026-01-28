@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import Footer from '../components/Footer'
 import { Clock, Shield, Users, Calendar, BarChart3, Download, UserCircle, Key, Laptop, Building2, MapPin, CheckCircle2 } from 'lucide-react'
 
 const About = () => {
@@ -8,21 +9,22 @@ const About = () => {
     <div className="min-h-screen bg-[#F4F7FE] pb-20">
       
       {/* Hero Section */}
-      <div className="bg-linear-to-r from-[#1c9cc0] to-[#00A3C4] text-white py-16 sm:py-24 px-4 sm:px-6 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32 blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-400/20 rounded-full -ml-32 -mb-32 blur-3xl"></div>
+      {/* Hero Section */}
+      <div className="bg-[#d1d2dd] text-[#1B2559] py-16 sm:py-24 px-4 sm:px-6 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-100/50 rounded-full -mr-32 -mt-32 blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-[#00A3C4]/10 rounded-full -ml-32 -mb-32 blur-3xl"></div>
         
         <div className="max-w-5xl mx-auto relative z-10 text-center lg:text-left">
           <button 
             onClick={() => navigate(-1)}
-            className="mb-8 inline-flex items-center text-blue-50 hover:text-white transition-colors text-sm font-medium bg-white/10 px-4 py-2 rounded-lg border border-white/20 backdrop-blur-sm"
+            className="mb-8 inline-flex items-center text-white transition-all duration-200 text-sm font-bold bg-[#4318FF] hover:bg-[#3311CC] px-6 py-2.5 rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5"
           >
             ← Back to Portal
           </button>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight mb-6 leading-tight">
-            About the <span className="text-blue-200 italic">Timesheet</span> Application
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight mb-6 leading-tight text-[#1B2559]">
+            About the <span className="text-[#5451f0] italic">Timesheet</span> Application
           </h1>
-          <p className="text-lg sm:text-xl text-blue-50 max-w-3xl leading-relaxed font-medium opacity-90">
+          <p className="text-lg sm:text-xl text-[#2c3466] max-w-3xl leading-relaxed font-medium opacity-90">
             A comprehensive attendance and workforce time-tracking solution designed to simplify daily attendance 
             management for modern hybrid teams.
           </p>
@@ -32,7 +34,7 @@ const About = () => {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 -mt-12 sm:-mt-16 relative z-20">
         {/* Core Description Card */}
         <div className="bg-white rounded-xl p-8 sm:p-12 shadow-xl shadow-blue-900/5 border border-gray-100 mb-12 transform transition-all">
-          <p className="text-gray-600 text-lg leading-relaxed text-center sm:text-left font-medium">
+          <p className="text-[#2a3161] text-lg leading-relaxed text-center sm:text-left font-medium">
             The platform ensures accurate tracking, transparency, and actionable insights for both employees and administrators. 
             Built to support modern work models such as office work, work from home, and client-site engagements, 
             we simplify workforce productivity with precision.
@@ -153,6 +155,10 @@ const About = () => {
               </div>
             </div>
           </div>
+        </div>
+        {/* Footer */}
+        <div className="mt-12">
+          <Footer />
         </div>
       </div>
     </div>

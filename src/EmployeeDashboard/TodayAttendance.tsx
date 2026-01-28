@@ -7,28 +7,31 @@ import {
   Calendar as CalendarIcon,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../hooks";
-import { fetchMonthlyAttendance } from "../reducers/employeeAttendance.reducer";
+import { fetchMonthlyAttendance, fetchDashboardStats } from "../reducers/employeeAttendance.reducer";
 import { getEntity, setCurrentUser } from "../reducers/employeeDetails.reducer";
 import { fetchEmployeeUpdates } from "../reducers/leaveNotification.reducer";
 import { generateMonthlyEntries } from "../utils/attendanceUtils";
 import AttendanceViewWrapper from "./CalenderViewWrapper";
 import AttendancePieChart from "./AttendancePieChart";
+import WorkTrendsGraph from "./WorkTrendsGraph";
 import { RootState } from "../store";
 
 interface Props {
   setActiveTab?: (tab: string) => void;
   setScrollToDate?: (date: number | null) => void;
   onNavigate?: (timestamp: number) => void;
+  viewOnly?: boolean;
 }
 
 const TodayAttendance = ({
   setActiveTab,
   setScrollToDate,
   onNavigate,
+  viewOnly = false,
 }: Props) => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const { records, loading } = useAppSelector(
+  const { records, loading, stats } = useAppSelector(
     (state: RootState) => state.attendance,
   );
   const { entity } = useAppSelector(
@@ -47,6 +50,7 @@ const TodayAttendance = ({
 
   // Fetch entity if missing name but we have an ID to fetch
   useEffect(() => {
+    if (viewOnly) return;
     if (!entity?.fullName && (currentEmployeeId || currentUser?.loginId)) {
       const searchTerm = currentEmployeeId || currentUser?.loginId;
       if (searchTerm) {
@@ -66,25 +70,15 @@ const TodayAttendance = ({
           });
       }
     }
-  }, [dispatch, entity, currentEmployeeId, currentUser]);
+  }, [dispatch, entity, currentEmployeeId, currentUser, viewOnly]);
 
   // Refresh updates whenever dashboard is accessed
   useEffect(() => {
-    if (currentEmployeeId) {
+    if (currentEmployeeId && currentEmployeeId !== 'Admin') {
       dispatch(fetchEmployeeUpdates(currentEmployeeId));
+      dispatch(fetchDashboardStats(currentEmployeeId));
     }
   }, [dispatch, currentEmployeeId]);
-
-  // Fetch Master Data (Holidays & Weekends) whenever the calendar view changes (Month/Year)
-  // Removed as per user request to reduce API calling for dashboard charts
-  /*
-  useEffect(() => {
-    const year = calendarDate.getFullYear();
-    const month = calendarDate.getMonth() + 1;
-
-    dispatch(fetchHolidaysByMonthAndYear({ month, year }));
-  }, [dispatch, calendarDate]);
-  */
 
   // 1. Separate "Today's" Data - ALWAYS based on current real-time Month
   const todayStatsEntry = useMemo(() => {
@@ -137,7 +131,7 @@ const TodayAttendance = ({
 
   const fetchAttendanceData = useCallback(
     (date: Date) => {
-      if (!currentEmployeeId) return;
+      if (!currentEmployeeId || currentEmployeeId === 'Admin') return;
 
       const fetchKey = `${currentEmployeeId}-${
         date.getMonth() + 1
@@ -203,6 +197,7 @@ const TodayAttendance = ({
   return (
     <div className="flex flex-col h-full w-full overflow-hidden bg-gray-50/50">
       {/* Header */}
+      {!viewOnly && (
       <div className="px-6 py-5 bg-linear-to-r from-blue-100 via-blue-50 to-white border-b border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-[#1B2559]">
@@ -227,101 +222,83 @@ const TodayAttendance = ({
           </div>
         </div>
       </div>
+      )}
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
         {/* Middle Section: Info Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Card 1 */}
-          <div className="bg-linear-to-br from-[#81B4FF] to-[#3B82F6] rounded-[12px] p-6 border border-transparent shadow-sm flex flex-col items-start gap-3 h-full relative overflow-hidden group hover:shadow-md transition-all">
-            <div className="p-3 rounded-xl bg-[#E6FFFA] text-[#10B981]">
-              <Clock size={24} strokeWidth={2} />
+          {/* Card 1 - Total Week Hours (Light Teal/Green Theme) */}
+          {/* Card 1 - Total Week Hours (Blue Theme) */}
+          <div className="bg-linear-to-br from-[#4facfe] to-[#00f2fe] rounded-[20px] p-6 shadow-lg shadow-blue-500/30 flex flex-col items-start gap-4 h-full relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+            {/* Glassy Circle Decoration */}
+            <div className="absolute -right-6 -top-6 w-24 h-24 bg-white/20 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500"></div>
+            
+            <div className="h-14 w-14 flex items-center justify-center rounded-2xl bg-white/30 backdrop-blur-md border border-white/20 text-white shadow-inner z-10">
+              <Clock size={28} strokeWidth={2.5} />
             </div>
-            <div className="w-full">
-              <h4 className="text-sm font-bold text-white mb-3">
-                Total Week Hours
-              </h4>
-              <div className="w-full border-t border-white/20 my-2"></div>
+            
+            <div className="w-full z-10 mt-1">
+              <div className="text-white font-bold text-sm uppercase tracking-wider mb-1">Total Week Hours</div>
+              <div className="w-full border-t border-white/50 my-2"></div>
               <div className="flex flex-col">
-                <span className="text-3xl font-bold text-white">
-                  {(() => {
-                    const d = new Date(now);
-                    const day = d.getDay();
-                    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-                    const weekStart = new Date(d.setDate(diff));
-                    weekStart.setHours(0, 0, 0, 0);
-                    const weekEnd = new Date(weekStart);
-                    weekEnd.setDate(weekStart.getDate() + 6);
-                    weekEnd.setHours(23, 59, 59, 999);
-
-                    const weekEntries = records.filter((r) => {
-                      const rawDate = r.workingDate || (r as any).working_date;
-                      if (!rawDate) return false;
-                      const rDate = new Date(rawDate);
-                      return rDate >= weekStart && rDate <= weekEnd;
-                    });
-                    return weekEntries
-                      .reduce((acc, curr) => acc + (curr.totalHours || 0), 0)
-                      .toFixed(1);
-                  })()}
+                <span className="text-4xl font-extrabold text-white tracking-tight">
+                  {stats?.totalWeekHours?.toFixed(1) || "0.0"}
                 </span>
-                <span className="text-[10px] font-bold text-blue-100 uppercase tracking-widest mt-1">
-                  Hours
+                <span className="text-[11px] font-bold text-white/80 uppercase tracking-widest mt-1">
+                  Hours recorded
                 </span>
               </div>
             </div>
           </div>
 
           {/* Card 2 */}
-          <div className="bg-linear-to-br from-[#81B4FF] to-[#3B82F6] rounded-[12px] p-6 border border-transparent shadow-sm flex flex-col items-start gap-3 h-full relative overflow-hidden group hover:shadow-md transition-all">
-            <div className="p-3 rounded-xl bg-[#FEF3C7] text-[#F59E0B]">
-              <CalendarIcon size={24} strokeWidth={2} />
+          {/* Card 2 - Total Monthly Hours (Light Orange/Amber Theme) */}
+          {/* Card 2 - Total Monthly Hours (Sky Blue Theme) */}
+          {/* Card 2 - Total Monthly Hours (Blue Theme) */}
+          <div className="bg-linear-to-br from-[#4facfe] to-[#00f2fe] rounded-[20px] p-6 shadow-lg shadow-blue-500/30 flex flex-col items-start gap-4 h-full relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+             {/* Glassy Circle Decoration */}
+             <div className="absolute -right-6 -top-6 w-24 h-24 bg-white/20 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500"></div>
+            
+            <div className="h-14 w-14 flex items-center justify-center rounded-2xl bg-white/30 backdrop-blur-md border border-white/20 text-white shadow-inner z-10">
+              <CalendarIcon size={28} strokeWidth={2.5} />
             </div>
-            <div className="w-full">
-              <h4 className="text-sm font-bold text-white mb-3">
-                Total Monthly Hours
-              </h4>
-              <div className="w-full border-t border-white/20 my-2"></div>
+            
+            <div className="w-full z-10 mt-1">
+              <div className="text-white font-bold text-sm uppercase tracking-wider mb-1">Total Monthly Hours</div>
+              <div className="w-full border-t border-white/50 my-2"></div>
               <div className="flex flex-col">
-                <span className="text-3xl font-bold text-white">
-                  {(() => {
-                    const workedDays = records.filter(
-                      (e) => (e.totalHours || 0) > 0,
-                    );
-                    return workedDays
-                      .reduce((acc, curr) => acc + (curr.totalHours || 0), 0)
-                      .toFixed(1);
-                  })()}
+                <span className="text-4xl font-extrabold text-white tracking-tight">
+                  {stats?.totalMonthlyHours?.toFixed(1) || "0.0"}
                 </span>
-                <span className="text-[10px] font-bold text-blue-100 uppercase tracking-widest mt-1">
-                  Hours
+                <span className="text-[11px] font-bold text-white/80 uppercase tracking-widest mt-1">
+                  Hours recorded
                 </span>
               </div>
             </div>
           </div>
 
           {/* Card 3 */}
-          <div className="bg-linear-to-br from-[#81B4FF] to-[#3B82F6] rounded-[12px] p-6 border border-transparent shadow-sm flex flex-col items-start gap-3 h-full relative overflow-hidden group hover:shadow-md transition-all">
-            <div className="p-3 rounded-xl bg-[#FEE2E2] text-[#E11D48]">
-              <AlertTriangle size={24} strokeWidth={2} />
+          {/* Card 3 - Pending Updates (Light Red/Rose Theme) */}
+          {/* Card 3 - Pending Updates (Orange Theme) */}
+          {/* Card 3 - Pending Updates (Blue Theme) */}
+          <div className="bg-linear-to-br from-[#4facfe] to-[#00f2fe] rounded-[20px] p-6 shadow-lg shadow-blue-500/30 flex flex-col items-start gap-4 h-full relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+             {/* Glassy Circle Decoration */}
+             <div className="absolute -right-6 -top-6 w-24 h-24 bg-white/20 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500"></div>
+
+            <div className="h-14 w-14 flex items-center justify-center rounded-2xl bg-white/30 backdrop-blur-md border border-white/20 text-white shadow-inner z-10">
+              <AlertTriangle size={28} strokeWidth={2.5} />
             </div>
-            <div className="w-full">
-              <h4 className="text-sm font-bold text-white mb-3">
-                Pending Updates
-              </h4>
-              <div className="w-full border-t border-white/20 my-2"></div>
+            
+            <div className="w-full z-10 mt-1">
+              <div className="text-white font-bold text-sm uppercase tracking-wider mb-1">Pending Updates</div>
+              <div className="w-full border-t border-white/50 my-2"></div>
               <div className="flex flex-col">
-                <span className="text-3xl font-bold text-white">
-                  {
-                    currentMonthEntries.filter(
-                      (day) =>
-                        day.status === "Not Updated" &&
-                        !day.isToday &&
-                        !day.isFuture,
-                    ).length
-                  }
+                <span className="text-4xl font-extrabold text-white tracking-tight">
+                  {stats?.pendingUpdates || 0}
                 </span>
-                <span className="text-[10px] font-bold text-blue-100 uppercase tracking-widest mt-1">
-                  Days
+                <span className="text-[11px] font-bold text-white/80 uppercase tracking-widest mt-1">
+                  Actions Required
                 </span>
               </div>
             </div>
@@ -329,17 +306,24 @@ const TodayAttendance = ({
         </div>
 
         {/* Charts Section */}
-        <div className="w-full md:w-1/2 mx-auto">
-          <AttendancePieChart
-            data={currentMonthEntries}
-            currentMonth={calendarDate}
-            onMonthChange={(date) => {
-              setCalendarDate(date);
-              fetchAttendanceData(date);
-            }}
-          />
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
+          <div className="w-full">
+            <AttendancePieChart
+              data={currentMonthEntries}
+              currentMonth={calendarDate}
+              onMonthChange={(date) => {
+                setCalendarDate(date);
+                fetchAttendanceData(date);
+              }}
+            />
+          </div>
+          <div className="w-full">
+            <WorkTrendsGraph employeeId={currentEmployeeId} />
+          </div>
         </div>
 
+        {!viewOnly && (
         <div className="flex justify-center">
           <button
             onClick={() => handleNavigate(now.getTime())}
@@ -349,8 +333,10 @@ const TodayAttendance = ({
             <span>Update Today's Attendance</span>
           </button>
         </div>
+        )}
 
         {/* Bottom Section: Calendar/List */}
+        {!viewOnly && (
         <div className="bg-white rounded-xl shadow-[0px_10px_30px_rgba(0,0,0,0.02)] border border-gray-100/50 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
             <h3 className="text-lg font-bold text-[#1B2559]">
@@ -382,6 +368,7 @@ const TodayAttendance = ({
             />
           </div>
         </div>
+        )}
       </div>
     </div>
   );
