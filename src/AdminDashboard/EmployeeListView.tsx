@@ -271,7 +271,7 @@ const EmployeeListView = () => {
     setFieldErrors((prev) => ({ ...prev, [name]: error }));
   };
 
-  const handleCreateSubmit = (e: React.FormEvent) => {
+  const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     // Check for field errors
     const hasErrors = Object.values(fieldErrors).some((error) => error !== "");
@@ -283,11 +283,44 @@ const EmployeeListView = () => {
       setGeneralError("Please fill in all fields");
       return;
     }
-    dispatch(createEntity(formData));
+
+    setGeneralError("");
+    setShowSuccess(false);
+
+    try {
+      const resultAction = await dispatch(createEntity(formData));
+      
+      if (createEntity.fulfilled.match(resultAction)) {
+        setShowSuccess(true);
+        setGeneralError("");
+        setTimeout(() => {
+          handleCloseCreateModal();
+          
+          dispatch(
+            getEntities({
+              page: currentPage,
+              limit: itemsPerPage,
+              search: debouncedSearchTerm,
+              department: selectedDepartment === "All" ? undefined : selectedDepartment,
+            })
+          );
+        }, 2000);
+      } else if (createEntity.rejected.match(resultAction)) {
+        const errorMsg = (resultAction.payload as string) || "Failed to create employee";
+        console.error("Creation failed:", errorMsg);
+        setGeneralError(errorMsg);
+        setShowSuccess(false);
+      }
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      setGeneralError("An unexpected error occurred");
+      setShowSuccess(false);
+    }
   };
 
   const handleCloseCreateModal = () => {
     setIsCreateModalOpen(false);
+    dispatch(reset());
     setFormData({
       fullName: "",
       employeeId: "",
@@ -377,51 +410,12 @@ const EmployeeListView = () => {
     });
   };
 
-  // Handle success after employee creation
-  useEffect(() => {
-    if (updateSuccess && isCreateModalOpen) {
-      setShowSuccess(true);
-      const timer = setTimeout(() => {
-        dispatch(reset());
-        setShowSuccess(false);
-        setFormData({
-          fullName: "",
-          employeeId: "",
-          department: "",
-          designation: "",
-          email: "",
-        });
-        setFieldErrors({
-          fullName: "",
-          employeeId: "",
-          department: "",
-          designation: "",
-          email: "",
-        });
-        setGeneralError("");
-        // Refresh the list
-        dispatch(
-          getEntities({
-            search: debouncedSearchTerm,
-            department:
-              selectedDepartment === "All" ? undefined : selectedDepartment,
-          }),
-        );
-        setIsCreateModalOpen(false);
-      }, 2000);
-      return () => clearTimeout(timer);
-    }
-    if (errorMessage && isCreateModalOpen) {
-      setGeneralError(errorMessage);
-    }
-  }, [
-    updateSuccess,
-    errorMessage,
-    dispatch,
-    isCreateModalOpen,
-    debouncedSearchTerm,
-    selectedDepartment,
-  ]);
+  // Handle success after employee creation - REMOVED to avoid conflict with direct handling
+  // useEffect(() => {
+  //   if (updateSuccess && isCreateModalOpen) {
+  //     // ... Logic moved to handleCreateSubmit ...
+  //   }
+  // }, ...);
 
   return (
     <div className="p-5 bg-[#F4F7FE] min-h-screen font-sans">
@@ -987,7 +981,7 @@ const EmployeeListView = () => {
                         <input
                           type="text"
                           name="fullName"
-                          placeholder="John Doe"
+                          placeholder="Employee Name"
                           className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none transition-all text-sm"
                           value={formData.fullName}
                           onChange={handleFormChange}
@@ -1004,14 +998,14 @@ const EmployeeListView = () => {
 
                     {/* Employee ID */}
                     <div className="space-y-2">
-                      <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">
+                      <label className="text-xs font-bold text-gray-600 tracking-wide">
                         Employee ID
                       </label>
                       <div className="relative">
                         <input
                           type="text"
                           name="employeeId"
-                          placeholder="EMP-1234"
+                          placeholder="Employee ID"
                           className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none transition-all text-sm"
                           value={formData.employeeId}
                           onChange={handleFormChange}
@@ -1090,7 +1084,7 @@ const EmployeeListView = () => {
                       <input
                         type="email"
                         name="email"
-                        placeholder="john.doe@inventech.com"
+                        placeholder="Employee Email"
                         className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none transition-all text-sm"
                         value={formData.email}
                         onChange={handleFormChange}

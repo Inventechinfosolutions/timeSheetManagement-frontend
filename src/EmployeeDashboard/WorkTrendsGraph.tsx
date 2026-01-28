@@ -194,7 +194,7 @@ const WorkTrendsGraph = ({ employeeId }: Props) => {
               <Area
                 type="monotone"
                 dataKey="totalLeaves"
-                name="Total Leaves"
+                name="Taken Leaves"
                 stroke="#E11D48"
                 strokeWidth={3}
                 fillOpacity={1} 

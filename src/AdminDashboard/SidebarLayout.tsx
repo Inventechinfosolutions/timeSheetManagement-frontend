@@ -45,8 +45,8 @@ const SidebarLayout = ({
         return "Employee Details";
       case "timesheet-list":
         return "Timesheet";
-      case "working-details":
-        return "Working Details";
+      // case "working-details":
+      //   return "Working Details";
       case "requests":
         return "Notification";
       default:
@@ -72,7 +72,7 @@ const SidebarLayout = ({
     { name: "System Dashboard", icon: Settings },
     { name: "Employee Details", icon: Users },
     { name: "Timesheet", icon: AlarmClock },
-    { name: "Working Details", icon: ClipboardList },
+    // { name: "Working Details", icon: ClipboardList },
     { name: "Notification", icon: Bell }, // Notification item with Bell icon
   ];
 

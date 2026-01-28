@@ -291,7 +291,7 @@ const AdminDashboard = () => {
     const trendDailyHours = days.map((day) => {
       const dateStr = `${currentYear}-${currentMonth}-${day.toString().padStart(2, "0")}`;
       let totalDayHours = 0;
-      globalEntities.forEach((emp) => {
+      globalEntities.forEach((emp: any) => {
         const empId = emp.employeeId || emp.id;
         const records = employeeRecords[empId] || [];
         const dayRecord = records.find((r) => {
@@ -399,7 +399,7 @@ const AdminDashboard = () => {
       },
       donut: {
         series: departmentsList.map(
-          (dept) => globalEntities.filter((e) => e.department === dept).length,
+          (dept) => globalEntities.filter((e: any) => e.department === dept).length,
         ),
         options: {
           labels: departmentsList,
@@ -611,7 +611,7 @@ const AdminDashboard = () => {
             className={`relative bg-white w-full transition-all duration-500 rounded-[32px] shadow-2xl overflow-hidden flex flex-col ${exportStep === "employees" ? "max-w-3xl h-[720px]" : "max-w-md h-[480px]"}`}
           >
             {/* Modal Header */}
-            <div className="p-8 border-b border-gray-100 flex justify-between items-center shrink-0">
+            <div className="px-8 py-4 border-b border-gray-100 flex justify-between items-center shrink-0">
               <div className="flex items-center gap-4">
                 {exportStep === "range" && (
                   <button
@@ -646,8 +646,8 @@ const AdminDashboard = () => {
             </div>
 
             {exportStep === "employees" ? (
-              <div className="flex-1 flex flex-col min-h-0 px-10 py-6">
-                <div className="flex gap-4 items-center mb-8 shrink-0">
+              <div className="flex-1 flex flex-col min-h-0 px-8 py-4">
+                <div className="flex gap-4 items-center mb-4 shrink-0">
                   <div className="relative" ref={modalDeptRef}>
                     <button
                       onClick={() => setIsModalDeptOpen(!isModalDeptOpen)}
@@ -763,14 +763,14 @@ const AdminDashboard = () => {
                     </tbody>
                   </table>
                 </div>
-                <div className="p-8 border-t border-gray-100 flex justify-between items-center bg-[#F8F9FC] shrink-0">
-                  <span className="text-sm font-bold text-[#A3AED0]">
+                <div className="px-8 py-3 border-t border-gray-100 flex justify-between items-center bg-[#F8F9FC] shrink-0">
+                  <span className="text-sm font-bold text-gray-700">
                     {selectedEmps.size} selected
                   </span>
                   <button
                     onClick={() => setExportStep("range")}
                     disabled={selectedEmps.size === 0}
-                    className={`flex items-center gap-2 px-8 py-3 rounded-2xl font-black text-sm transition-all ${selectedEmps.size === 0 ? "bg-gray-200 text-gray-400" : "bg-[#4318FF] text-white shadow-lg"}`}
+                    className={`flex items-center gap-2 px-6 py-2.5 rounded-2xl font-black text-sm transition-all ${selectedEmps.size === 0 ? "bg-gray-200 text-gray-400" : "bg-[#4318FF] text-white shadow-lg"}`}
                   >
                     Next Step <ChevronRight size={18} />
                   </button>
