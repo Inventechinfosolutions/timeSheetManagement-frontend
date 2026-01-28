@@ -26,6 +26,8 @@ import {
   RotateCcw,
   ArrowLeft,
   Loader2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { notification } from "antd";
 import CommonMultipleUploader from "./CommonMultipleUploader";
@@ -56,6 +58,8 @@ const LeaveManagement = () => {
   const dispatch = useAppDispatch();
   const {
     entities = [],
+    totalItems,
+    totalPages: totalPagesFromRedux,
     stats = null,
     loading,
     submitSuccess,
@@ -64,6 +68,27 @@ const LeaveManagement = () => {
   const { entity } = useAppSelector((state) => state.employeeDetails);
   const currentUser = useAppSelector((state) => state.user.currentUser);
   const employeeId = entity?.employeeId || currentUser?.employeeId;
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isViewMode, setIsViewMode] = useState(false);
+  const [selectedRequestId, setSelectedRequestId] = useState<number | null>(
+    null,
+  );
+  const [uploaderKey, setUploaderKey] = useState(0);
+  const [cancelModal, setCancelModal] = useState<{
+    isOpen: boolean;
+    id: number | null;
+  }>({ isOpen: false, id: null });
+  const [selectedLeaveType, setSelectedLeaveType] = useState("");
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    startDate: "",
+    endDate: "",
+  });
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const [errors, setErrors] = useState({
     title: "",
@@ -172,10 +197,12 @@ const LeaveManagement = () => {
 
   useEffect(() => {
     if (employeeId) {
-      dispatch(getLeaveHistory(employeeId));
+      dispatch(
+        getLeaveHistory({ employeeId, page: currentPage, limit: itemsPerPage }),
+      );
       dispatch(getLeaveStats(employeeId));
     }
-  }, [dispatch, employeeId]);
+  }, [dispatch, employeeId, currentPage]);
 
   useEffect(() => {
     if (submitSuccess && employeeId) {
@@ -187,24 +214,7 @@ const LeaveManagement = () => {
     }
   }, [submitSuccess, dispatch]);
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isViewMode, setIsViewMode] = useState(false);
-  const [selectedRequestId, setSelectedRequestId] = useState<number | null>(
-    null,
-  );
-  const [uploaderKey, setUploaderKey] = useState(0);
-  const [cancelModal, setCancelModal] = useState<{
-    isOpen: boolean;
-    id: number | null;
-  }>({ isOpen: false, id: null });
-  const [selectedLeaveType, setSelectedLeaveType] = useState("");
-  const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    startDate: "",
-    endDate: "",
-  });
-  const [isCancelling, setIsCancelling] = useState(false);
+  const totalPages = totalPagesFromRedux || 0;
 
   const handleOpenModal = (label: string) => {
     setIsViewMode(false);
@@ -342,8 +352,8 @@ const LeaveManagement = () => {
       <div className="relative z-30 bg-gradient-to-r from-[#4318FF] to-[#868CFF] rounded-[20px] p-4 md:p-6 mb-8 shadow-xl shadow-blue-500/20 group animate-in fade-in slide-in-from-bottom-4 duration-700">
         {/* Decorative Elements Wrapper for Overflow */}
         <div className="absolute inset-0 overflow-hidden rounded-[20px]">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl group-hover:bg-white/20 transition-all duration-700" />
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-black/10 rounded-full translate-y-1/2 -translate-x-1/2 blur-2xl" />
+          <div className="absolute top-[-10%] right-[-5%] w-64 h-64 bg-white/10 rounded-full blur-[60px] group-hover:bg-white/[0.12] transition-all duration-700" />
+          <div className="absolute bottom-[-20%] left-[-5%] w-48 h-48 bg-[#4318FF]/20 rounded-full blur-[40px]" />
         </div>
 
         <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-4">
@@ -572,37 +582,77 @@ const LeaveManagement = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        <div className="flex flex-col sm:flex-row justify-between items-center mt-6 p-6 lg:px-10 lg:pb-10 gap-6">
+          <div className="text-sm font-bold text-[#A3AED0] text-center sm:text-left">
+            Showing{" "}
+            <span className="text-[#2B3674]">
+              {totalItems > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}
+            </span>{" "}
+            to{" "}
+            <span className="text-[#2B3674]">
+              {Math.min(currentPage * itemsPerPage, totalItems)}
+            </span>{" "}
+            of <span className="text-[#2B3674]">{totalItems}</span> entries
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className={`p-2 rounded-xl border border-[#E9EDF7] transition-all flex items-center justify-center
+              ${
+                currentPage === 1
+                  ? "bg-gray-50 text-gray-300 cursor-not-allowed"
+                  : "bg-white text-[#4318FF] hover:bg-[#4318FF]/5 active:scale-90 shadow-sm"
+              }`}
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <div className="bg-[#F4F7FE] px-4 py-1.5 rounded-xl border border-transparent">
+              <span className="text-xs font-black text-[#2B3674] tracking-widest">
+                {currentPage} / {totalPages > 0 ? totalPages : 1}
+              </span>
+            </div>
+            <button
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+              }
+              disabled={currentPage === totalPages || totalPages === 0}
+              className={`p-2 rounded-xl border border-[#E9EDF7] transition-all flex items-center justify-center
+              ${
+                currentPage === totalPages || totalPages === 0
+                  ? "bg-gray-50 text-gray-300 cursor-not-allowed"
+                  : "bg-white text-[#4318FF] hover:bg-[#4318FF]/5 active:scale-90 shadow-sm"
+              }`}
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Application Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-100 flex items-center justify-center p-6">
+        <div className="fixed inset-0 z-100 flex items-start justify-center p-6 pt-20">
           <div
             className="absolute inset-0 bg-[#2B3674]/30 backdrop-blur-sm"
             onClick={handleCloseModal}
           />
           <div className="relative w-full max-w-xl bg-white rounded-[32px] overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-300 flex flex-col max-h-[85vh]">
             {/* Modal Header */}
-            <div className="p-8 pb-0">
-              <div className="flex justify-between items-start mb-6">
-                {isViewMode && (
-                  <button
-                    onClick={handleCloseModal}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors order-first"
-                  >
-                    <ArrowLeft size={20} className="text-gray-400" />
-                  </button>
-                )}
+            <div className="pt-1 px-4 pb-0">
+              <div className="flex justify-between items-start mb-0">
                 <button
                   onClick={handleCloseModal}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors order-last ml-auto"
+                  className="p-1 hover:bg-gray-100 rounded-full transition-colors ml-auto"
                 >
-                  <X size={20} className="text-gray-400" />
+                  <X size={20} className="text-gray-700" />
                 </button>
               </div>
-
               <div className="flex items-center justify-between w-full">
-                <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                <span className="text-lg font-black uppercase tracking-widest text-gray-400">
                   {isViewMode ? "Viewing Application" : "Applying For"}
                 </span>
                 <h2 className="text-2xl md:text-3xl font-black text-[#2B3674] text-right">
@@ -612,7 +662,7 @@ const LeaveManagement = () => {
             </div>
 
             {/* Modal Body */}
-            <div className="p-8 space-y-6 overflow-y-auto custom-scrollbar flex-1">
+            <div className="p-6 space-y-2 overflow-y-auto custom-scrollbar flex-1">
               {/* Error Message */}
               {error && (
                 <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
@@ -628,7 +678,7 @@ const LeaveManagement = () => {
                   Title
                 </label>
                 {isViewMode ? (
-                  <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none">
+                  <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none break-words">
                     {formData.title}
                   </div>
                 ) : (
@@ -769,13 +819,13 @@ const LeaveManagement = () => {
                   Description
                 </label>
                 {isViewMode ? (
-                  <div className="w-full px-5 py-4 rounded-[20px] bg-[#F4F7FE] font-medium text-[#2B3674] min-h-[120px] whitespace-pre-wrap leading-relaxed">
+                  <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-medium text-[#2B3674] min-h-[60px] whitespace-pre-wrap break-words leading-relaxed">
                     {formData.description || "No description provided."}
                   </div>
                 ) : (
                   <div className="relative">
                     <textarea
-                      rows={4}
+                      rows={3}
                       placeholder="Please provide details about your request..."
                       className={`w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] border ${
                         errors.description
@@ -804,7 +854,12 @@ const LeaveManagement = () => {
                 <label className="text-sm font-bold text-[#2B3674] ml-1">
                   Supporting Documents {isViewMode ? "" : "(Optional)"}
                 </label>
-                <div className="bg-[#F4F7FE] rounded-2xl p-4">
+                {!isViewMode && (
+                  <p className="text-xs text-gray-500 ml-1 mb-1">
+                    Accepted formats: PDF, JPG, PNG, JPEG (Max 5 files)
+                  </p>
+                )}
+                <div className="bg-[#F4F7FE] rounded-2xl p-2">
                   <CommonMultipleUploader
                     key={isViewMode ? selectedRequestId : uploaderKey}
                     entityType="LEAVE_REQUEST"
@@ -832,19 +887,12 @@ const LeaveManagement = () => {
               </div>
 
               {/* Actions Footer */}
-              <div className="pt-4 flex gap-4">
-                {isViewMode ? (
-                  <button
-                    onClick={handleCloseModal}
-                    className="w-full py-4 bg-white border-2 border-gray-50 text-gray-400 font-black rounded-2xl hover:bg-gray-50 hover:text-[#4318FF] transition-all duration-300"
-                  >
-                    CLOSE
-                  </button>
-                ) : (
+              {!isViewMode && (
+                <div className="pt-2 flex gap-4">
                   <>
                     <button
                       onClick={handleCloseModal}
-                      className="flex-1 py-4 rounded-2xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+                      className="flex-1 py-3 rounded-2xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-200 hover:text-gray-900 transition-colors"
                     >
                       Cancel
                     </button>
@@ -856,8 +904,8 @@ const LeaveManagement = () => {
                       {loading ? "Submitting..." : "Submit Application"}
                     </button>
                   </>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

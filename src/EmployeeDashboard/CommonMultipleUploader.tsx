@@ -31,7 +31,7 @@ const StyledGalleryContainer = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
   gap: 12px;
-  margin-top: 16px;
+  margin-top: 4px;
   @media (max-width: 768px) {
     grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
     gap: 10px;
@@ -128,16 +128,12 @@ export const StyledOverlay = styled.div`
     transparent 100%
   );
   padding: 6px;
-  opacity: 0;
+  opacity: 1;
   transition: opacity 0.3s ease;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
   height: 45%;
-
-  ${StyledImageCard}:hover & {
-    opacity: 1;
-  }
 `;
 
 export const StyledActionButtons = styled.div`
@@ -230,7 +226,7 @@ const StyledFileName = styled.div`
 
 const StyledEmptyState = styled.div`
   text-align: center;
-  padding: 60px 20px;
+  padding: 16px 20px;
   color: #999;
   font-size: 14px;
   background: #fafafa;
