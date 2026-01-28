@@ -192,28 +192,20 @@ const Header = ({
     <header
       className="header"
       style={{
-        background: "#1E3A8A",
+        background: "linear-gradient(37deg, #3B82F6 4.06%, #2563EB 62.76%, #1E3A8A 121.45%)",
         borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
       }}
     >
       <div className="header-container relative">
-        <img
-          src={InventLogo}
-          alt="InvenTech Logo"
-          className="h-35 w-35 object-contain brightness-0 invert"
-        />
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center">
-          <div className="flex items-center gap-3">
-            <div className="flex flex-col items-start justify-center">
-              <span className="text-xl font-bold leading-none text-white tracking-wide drop-shadow-sm">
-                InvenTech
-              </span>
-              <span className="text-[8px] font-bold tracking-[0.2em] text-blue-100 whitespace-nowrap leading-none mt-1">
-                INFO SOLUTIONS PVT. LTD.
-              </span>
-            </div>
-          </div>
+        <div className="bg-white/10 backdrop-blur-md border border-white/20 px-3 py-1 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:bg-white/20 cursor-pointer">
+          <img
+            src={InventLogo}
+            alt="InvenTech Logo"
+            className="h-8 w-auto object-contain brightness-0 invert"
+            onClick={() => navigate(isAdmin ? "/admin-dashboard" : "/employee-dashboard")}
+          />
         </div>
+
 
         <div className="flex items-center gap-1.5 md:gap-3 ml-auto">
           <Link
@@ -245,11 +237,13 @@ const Header = ({
                     isNotificationOpen ? "fill-current" : ""
                   }`}
                 />
-                <span
-                  className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full shadow-[0_0_10px_rgba(255,255,255,0.8)] border border-white/20 ${
-                    unreadCount > 0 ? "bg-red-500" : "bg-transparent"
-                  }`}
-                ></span>
+                {unreadCount > 0 && (
+                  <span
+                    className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold shadow-sm border border-white/20 px-1"
+                  >
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
               </button>
 
               {/* Modern Notification Popup */}

@@ -31,10 +31,29 @@ export interface EmployeeAttendance {
   status?: AttendanceStatus;
 }
 
+// Interface for Trends
+export interface WorkTrendData {
+  month: string;
+  year: number;
+  totalLeaves: number;
+  workFromHome: number;
+  clientVisits: number;
+}
+
+// Interface for Dashboard Stats
+export interface DashboardStats {
+  totalWeekHours: number;
+  totalMonthlyHours: number;
+  pendingUpdates: number;
+}
+
 interface AttendanceState {
   records: EmployeeAttendance[];      // List of records for the month/view
   employeeRecords: Record<string, EmployeeAttendance[]>; // Keyed by employeeId
+  trends: WorkTrendData[];            // Work Trends Data for graph
+  stats: DashboardStats | null;       // Dashboard statistics
   loading: boolean;                   // Global loading state for API calls
+  trendsLoading: boolean;             // Specific loading state for Trends Graph
   error: string | null;               // Global error message
   currentDayRecord: EmployeeAttendance | null; // Data for today's specific entry
   workedDaysSummary: {                // Summary data for worked days calculation
@@ -48,7 +67,10 @@ interface AttendanceState {
 const initialState: AttendanceState = {
   records: [],
   employeeRecords: {},
+  trends: [],
+  stats: null,
   loading: false,
+  trendsLoading: false,
   error: null,
   currentDayRecord: null,
   workedDaysSummary: null,
@@ -56,11 +78,23 @@ const initialState: AttendanceState = {
 
 const apiUrl = '/api/employee-attendance';
 
+// ... (existing thunks)
+
 // 1. Fetch Monthly Details: GET /monthly-details/:employeeId/:month/:year
 export const fetchMonthlyAttendance = createAsyncThunk(
   'attendance/fetchMonthly',
   async ({ employeeId, month, year }: { employeeId: string; month: string; year: string }) => {
     const response = await axios.get(`${apiUrl}/monthly-details/${employeeId}/${month}/${year}`);
+    return response.data;
+  }
+);
+
+// New Thunk for Trends
+export const fetchWorkTrends = createAsyncThunk(
+  'attendance/fetchWorkTrends',
+  async ({ employeeId, endDate, startDate }: { employeeId: string; endDate: string; startDate?: string }) => {
+    // Custom query format requested by user: ?From<StartDate>To<EndDate>
+    const response = await axios.get(`${apiUrl}/work-trends/${employeeId}?From${startDate}To${endDate}`);
     return response.data;
   }
 );
@@ -121,6 +155,15 @@ export const fetchWorkedDays = createAsyncThunk(
   'attendance/fetchWorkedDays',
   async ({ employeeId, startDate, endDate }: { employeeId: string; startDate: string; endDate: string }) => {
     const response = await axios.get(`${apiUrl}/worked-days/${employeeId}/${startDate}/${endDate}`);
+    return response.data;
+  }
+);
+
+// 9. Fetch Dashboard Stats: GET /dashboard-stats/:employeeId
+export const fetchDashboardStats = createAsyncThunk(
+  'attendance/fetchDashboardStats',
+  async (employeeId: string) => {
+    const response = await axios.get(`${apiUrl}/dashboard-stats/${employeeId}`);
     return response.data;
   }
 );
@@ -211,6 +254,21 @@ const attendanceSlice = createSlice({
       .addCase(fetchWorkedDays.fulfilled, (state: AttendanceState, action: PayloadAction<any>) => {
         state.loading = false;
         state.workedDaysSummary = action.payload;
+      })
+      // Specific handling for Trends to isolate loading state
+      .addCase(fetchWorkTrends.pending, (state: AttendanceState) => {
+        state.trendsLoading = true;
+      })
+      .addCase(fetchWorkTrends.fulfilled, (state: AttendanceState, action: PayloadAction<WorkTrendData[]>) => {
+        state.trendsLoading = false;
+        state.trends = action.payload;
+      })
+      .addCase(fetchWorkTrends.rejected, (state: AttendanceState, action: any) => {
+        state.trendsLoading = false;
+        state.error = action.error?.message || 'Failed to fetch trends';
+      })
+      .addCase(fetchDashboardStats.fulfilled, (state: AttendanceState, action: PayloadAction<DashboardStats>) => {
+        state.stats = action.payload;
       })
       .addCase(deleteAttendanceRecord.fulfilled, (state: AttendanceState, action: PayloadAction<number>) => {
         state.loading = false;

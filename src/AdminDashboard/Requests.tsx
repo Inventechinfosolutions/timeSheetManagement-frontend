@@ -30,6 +30,7 @@ import {
   submitBulkAttendance,
   AttendanceStatus,
 } from "../reducers/employeeAttendance.reducer";
+import { fetchUnreadNotifications } from "../reducers/leaveNotification.reducer";
 import CommonMultipleUploader from "../EmployeeDashboard/CommonMultipleUploader";
 import dayjs from "dayjs";
 import { notification } from "antd";
@@ -146,6 +147,10 @@ const Requests = () => {
         placement: "topRight",
         duration: 3,
       });
+
+      // Refresh admin notifications
+      dispatch(fetchUnreadNotifications());
+
       setConfirmModal({
         isOpen: false,
         id: null,
@@ -569,9 +574,9 @@ const Requests = () => {
             className="absolute inset-0 bg-[#2B3674]/30 backdrop-blur-sm"
             onClick={() => setIsViewModalOpen(false)}
           />
-          <div className="relative w-full max-w-xl bg-white rounded-[32px] overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-300">
+          <div className="relative w-full max-w-xl bg-white rounded-[32px] overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-300 flex flex-col max-h-[85vh]">
             {/* Modal Header */}
-            <div className="p-8 pb-0">
+            <div className="p-8 pb-0 shrink-0">
               <div className="flex justify-between items-start mb-6">
                 <button
                   onClick={() => setIsViewModalOpen(false)}
@@ -587,18 +592,18 @@ const Requests = () => {
                 </button>
               </div>
 
-              <div className="space-y-1">
-                <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 block px-1">
+              <div className="flex justify-between items-center px-1 border-b border-gray-100 pb-4 mb-4">
+                <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
                   Viewing Application
                 </span>
-                <h2 className="text-3xl font-black text-[#2B3674]">
+                <h2 className="text-xl font-black text-[#2B3674]">
                   {selectedRequest.requestType}
                 </h2>
               </div>
             </div>
 
             {/* Modal Body */}
-            <div className="p-8 space-y-6">
+            <div className="p-8 space-y-6 overflow-y-auto custom-scrollbar flex-1">
               {/* Title Field */}
               <div className="space-y-2">
                 <label className="text-sm font-bold text-[#2B3674] ml-1">

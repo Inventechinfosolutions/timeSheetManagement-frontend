@@ -170,3 +170,14 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 .animate-flip-up {
   animation: flip-up 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
+
+/* Hide default password reveal button to avoid double icons */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+
+input[type="password"]::-webkit-password-reveal-button {
+  display: none;
+  -webkit-appearance: none;
+}

@@ -12,6 +12,7 @@ interface AttendanceViewWrapperProps {
   onNavigateToDate?: (date: number) => void;
   employeeId?: string;
   variant?: "small" | "large" | "sidebar";
+  viewOnly?: boolean;
 }
 
 const AttendanceViewWrapper = (props: AttendanceViewWrapperProps) => {
