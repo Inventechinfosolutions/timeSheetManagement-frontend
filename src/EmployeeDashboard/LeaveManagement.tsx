@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { DatePicker, ConfigProvider } from "antd";
 import dayjs from "dayjs";
@@ -21,7 +21,6 @@ import {
   X,
   XCircle,
   Calendar,
-  Plus,
   Briefcase,
   Eye,
   RotateCcw,
@@ -169,24 +168,6 @@ const LeaveManagement = () => {
       });
     }
   }, [submitSuccess]);
-  const [isApplyOpen, setIsApplyOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        setIsApplyOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
 
   useEffect(() => {
     if (employeeId) {
@@ -224,11 +205,12 @@ const LeaveManagement = () => {
   });
 
   const handleOpenModal = (label: string) => {
-    setIsApplyOpen(false);
     setIsViewMode(false);
     setSelectedRequestId(null);
     setUploaderKey((prev) => prev + 1); // Increment to reset uploader
-    setSelectedLeaveType(label);
+    setSelectedLeaveType(
+      label === "Leave" || label === "Apply Leave" ? "Apply Leave" : label,
+    );
     setIsModalOpen(true);
     setErrors({ title: "", description: "", startDate: "", endDate: "" });
     // Clear any previous global errors from the store
@@ -291,38 +273,19 @@ const LeaveManagement = () => {
   };
 
   const applyOptions = [
-    { label: "Leave", icon: Calendar, color: "text-[#4318FF]" },
-    { label: "Work From Home", icon: Home, color: "text-[#38A169]" },
-    { label: "Client Visit", icon: MapPin, color: "text-[#FFB547]" },
+    { label: "Leave", icon: Calendar, color: "#4318FF" },
+    { label: "Work From Home", icon: Home, color: "#38A169" },
+    { label: "Client Visit", icon: MapPin, color: "#FFB547" },
   ];
 
-  /* Button Animation Logic */
-  const [animIndex, setAnimIndex] = useState(0);
-  const [isBtnHovered, setIsBtnHovered] = useState(false);
-
-  const animatedOptions = [
-    { label: "Apply", icon: Plus, color: "text-[#4318FF]" }, // Default
-    { label: "Leave", icon: Calendar, color: "text-red-500" },
-    { label: "Work From Home", icon: Home, color: "text-[#38A169]" },
-    { label: "Client Visit", icon: MapPin, color: "text-[#FFB547]" },
-  ];
-  const currentOption = animatedOptions[animIndex];
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (!isBtnHovered && !isApplyOpen) {
-        setAnimIndex((prev) => (prev + 1) % animatedOptions.length);
-      }
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [isBtnHovered, isApplyOpen]);
-
-  const handleSmartClick = () => {
-    if (currentOption.label === "Apply") {
-      setIsApplyOpen(!isApplyOpen);
-    } else {
-      handleOpenModal(currentOption.label);
-    }
+  const hexToRgb = (hex: string) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result
+      ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(
+          result[3],
+          16,
+        )}`
+      : "0, 0, 0";
   };
 
   const renderCancelButton = (item: any) => {
@@ -368,74 +331,67 @@ const LeaveManagement = () => {
       </div>
 
       {/* Hero Action Card */}
-      <div className="relative z-30 bg-gradient-to-r from-[#4318FF] to-[#868CFF] rounded-[20px] p-6 md:p-8 mb-8 shadow-xl shadow-blue-500/20 group animate-in fade-in slide-in-from-bottom-4 duration-700">
+      {/* Hero Action Card */}
+      <div className="relative z-30 bg-gradient-to-r from-[#4318FF] to-[#868CFF] rounded-[20px] p-4 md:p-6 mb-8 shadow-xl shadow-blue-500/20 group animate-in fade-in slide-in-from-bottom-4 duration-700">
         {/* Decorative Elements Wrapper for Overflow */}
         <div className="absolute inset-0 overflow-hidden rounded-[20px]">
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl group-hover:bg-white/20 transition-all duration-700" />
           <div className="absolute bottom-0 left-0 w-48 h-48 bg-black/10 rounded-full translate-y-1/2 -translate-x-1/2 blur-2xl" />
         </div>
 
-        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex flex-col gap-3 text-center md:text-left">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/20 backdrop-blur-md rounded-full w-fit mx-auto md:mx-0 border border-white/10">
-              <Briefcase size={12} className="text-blue-100" />
-              <span className="text-[10px] font-bold tracking-wider uppercase text-blue-50">
+        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex flex-col gap-2 text-center md:text-left">
+            <div className="inline-flex items-center gap-2 px-2 py-1 bg-white/20 backdrop-blur-md rounded-full w-fit mx-auto md:mx-0 border border-white/10">
+              <Briefcase size={10} className="text-blue-100" />
+              <span className="text-[9px] font-bold tracking-wider uppercase text-blue-50">
                 Quick Action
               </span>
             </div>
-            <h2 className="text-2xl md:text-3xl font-black tracking-tight leading-tight text-white">
+            <h2 className="text-xl md:text-2xl font-black tracking-tight leading-tight text-white">
               Need time off?
-              <br />
-              <span className="text-blue-200">Apply in seconds.</span>
+              <span className="text-blue-200 ml-1">Apply now.</span>
             </h2>
-            <p className="text-blue-100 text-sm font-medium max-w-xl">
-              Select your leave type, dates, and reason. Your manager will be
-              notified instantly.
+            <p className="text-blue-100 text-xs font-medium max-w-sm hidden md:block">
+              Select your leave type, dates, and reason.
             </p>
           </div>
 
-          <div
-            className="relative bg-white/10 backdrop-blur-md border border-white/20 p-1.5 rounded-2xl md:rotate-3 transition-transform group-hover:rotate-0 duration-500"
-            ref={dropdownRef}
-          >
-            <button
-              onMouseEnter={() => setIsBtnHovered(true)}
-              onMouseLeave={() => setIsBtnHovered(false)}
-              onClick={handleSmartClick}
-              className="bg-white px-8 py-3.5 rounded-xl font-bold shadow-lg hover:shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer text-sm min-w-[200px]"
-            >
-              <div
-                key={animIndex}
-                className={`flex items-center gap-2 animate-flip-up ${currentOption.color}`}
-              >
-                <currentOption.icon size={18} />
-                <span>{currentOption.label}</span>
-              </div>
-            </button>
-
-            {/* Dropdown Menu Moved Here */}
-            {isApplyOpen && (
-              <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-gray-100 p-2 animate-in fade-in slide-in-from-top-2 z-50 text-left">
-                <div className="flex flex-col gap-1">
+          <div className="overflow-hidden w-full md:max-w-md mask-linear-fade">
+            <div className="flex gap-4 w-max animate-marquee pause-on-hover py-2">
+              {/* Reduced duplication to 3 sets for a shorter looping distance */}
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="flex gap-4">
                   {applyOptions.map((option, idx) => (
                     <button
-                      key={idx}
-                      className="flex items-center gap-3 px-4 py-3 rounded-xl font-medium hover:bg-gray-50 transition-all text-left group/item"
+                      key={`${i}-${idx}`}
                       onClick={() => handleOpenModal(option.label)}
+                      className="group relative bg-white/10 backdrop-blur-md border border-white/20 p-2 rounded-2xl hover:bg-white transition-all duration-300 flex flex-col items-center justify-center gap-2 w-28 h-28 hover:shadow-lg hover:-translate-y-0.5 cursor-pointer"
                     >
                       <div
-                        className={`p-2 rounded-lg bg-gray-50 group-hover/item:bg-white group-hover/item:shadow-sm transition-all ${option.color}`}
+                        className="p-3 rounded-xl transition-all duration-300"
+                        style={{
+                          backgroundColor: `rgba(${hexToRgb(option.color)}, 0.2)`,
+                          color: "#ffffff",
+                        }}
                       >
-                        <option.icon size={18} />
+                        <option.icon
+                          size={28}
+                          className="transition-colors duration-300 group-hover:text-[var(--hover-color)] text-white"
+                          style={
+                            {
+                              "--hover-color": option.color,
+                            } as React.CSSProperties
+                          }
+                        />
                       </div>
-                      <span className="font-bold text-sm text-[#2B3674]">
+                      <span className="text-white font-bold text-xs group-hover:text-[#2B3674] transition-colors whitespace-nowrap">
                         {option.label}
                       </span>
                     </button>
                   ))}
                 </div>
-              </div>
-            )}
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -445,55 +401,60 @@ const LeaveManagement = () => {
         {[
           {
             label: "Leave",
-            applied: stats?.leave?.applied || 0,
-            approved: stats?.leave?.approved || 0,
-            rejected: stats?.leave?.rejected || 0,
-            total: stats?.leave?.total || 0,
+            key: "leave",
             color: "from-[#4318FF] to-[#868CFF]",
             icon: Calendar,
           },
           {
             label: "Work From Home",
-            applied: stats?.wfh?.applied || 0,
-            approved: stats?.wfh?.approved || 0,
-            rejected: stats?.wfh?.rejected || 0,
-            total: stats?.wfh?.total || 0,
+            key: "wfh",
             color: "from-[#38A169] to-[#68D391]",
             icon: Home,
           },
           {
             label: "Client Visit",
-            applied: stats?.clientVisit?.applied || 0,
-            approved: stats?.clientVisit?.approved || 0,
-            rejected: stats?.clientVisit?.rejected || 0,
-            total: stats?.clientVisit?.total || 0,
+            key: "clientVisit",
             color: "from-[#FFB547] to-[#FCCD75]",
             icon: MapPin,
           },
-        ].map((item, idx) => (
-          <div
-            key={idx}
-            className="bg-white rounded-[20px] p-6 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] relative overflow-hidden group hover:shadow-lg transition-all"
-          >
-            <div className="relative z-10">
-              <div className="flex justify-between items-start mb-4">
-                <div
-                  className={`p-3 rounded-xl bg-linear-to-r ${item.color} text-white shadow-md`}
-                >
-                  <item.icon size={24} />
+        ].map((config, idx) => {
+          // Normalize data access to be resilient to backend naming (case sensitivity)
+          // We check config.key (lowercase) and also common variations
+          const rawData =
+            (stats as any)?.[config.key] ||
+            (stats as any)?.[config.label] ||
+            {};
+          const applied = rawData.applied ?? rawData.Applied ?? 0;
+          const approved = rawData.approved ?? rawData.Approved ?? 0;
+          const rejected = rawData.rejected ?? rawData.Rejected ?? 0;
+
+          return (
+            <div
+              key={idx}
+              className="bg-white rounded-[20px] p-6 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] relative overflow-hidden group hover:shadow-lg transition-all"
+            >
+              <div className="relative z-10">
+                <div className="flex justify-between items-start mb-4">
+                  <div
+                    className={`p-3 rounded-xl bg-linear-to-r ${config.color} text-white shadow-md`}
+                  >
+                    <config.icon size={24} />
+                  </div>
+                  <span className="text-3xl font-black text-[#2B3674]">
+                    {applied}
+                  </span>
                 </div>
-                <span className="text-3xl font-black text-[#2B3674]">
-                  {item.applied}
-                </span>
-              </div>
-              <h3 className="text-lg font-bold text-[#2B3674]">{item.label}</h3>
-              <div className="mt-2 flex items-center justify-between text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                <span>Approved: {item.approved}</span>
-                <span>Rejected: {item.rejected}</span>
+                <h3 className="text-lg font-bold text-[#2B3674]">
+                  {config.label}
+                </h3>
+                <div className="mt-2 flex items-center justify-between text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                  <span>Approved: {approved}</span>
+                  <span>Rejected: {rejected}</span>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Recent Leave History */}
@@ -614,12 +575,12 @@ const LeaveManagement = () => {
 
       {/* Application Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-6">
           <div
             className="absolute inset-0 bg-[#2B3674]/30 backdrop-blur-sm"
             onClick={handleCloseModal}
           />
-          <div className="relative w-full max-w-xl bg-white rounded-[32px] overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-300">
+          <div className="relative w-full max-w-xl bg-white rounded-[32px] overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-300 flex flex-col max-h-[85vh]">
             {/* Modal Header */}
             <div className="p-8 pb-0">
               <div className="flex justify-between items-start mb-6">
@@ -633,7 +594,7 @@ const LeaveManagement = () => {
                 )}
                 <button
                   onClick={handleCloseModal}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors order-last"
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors order-last ml-auto"
                 >
                   <X size={20} className="text-gray-400" />
                 </button>
@@ -650,7 +611,7 @@ const LeaveManagement = () => {
             </div>
 
             {/* Modal Body */}
-            <div className="p-8 space-y-6">
+            <div className="p-8 space-y-6 overflow-y-auto custom-scrollbar flex-1">
               {/* Error Message */}
               {error && (
                 <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
