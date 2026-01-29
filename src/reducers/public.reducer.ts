@@ -67,7 +67,7 @@ interface PublicState {
   resetPasswordResponse: ResetPasswordResponse | null;
   resetPasswordLoading: boolean;
   resetPasswordError: string | null;
-  
+
   // Verify Reset Token
   tokenVerified: boolean;
   tokenVerificationLoading: boolean;
