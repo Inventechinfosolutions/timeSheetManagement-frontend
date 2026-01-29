@@ -19,12 +19,10 @@ const AdminLayout = () => {
     }
     if (
       path.includes("/admin-dashboard/timesheet/") ||
-      path.includes("/admin-dashboard/timesheet-view/")
+      path.includes("/admin-dashboard/timesheet-view/") ||
+      path.includes("/admin-dashboard/working-details/")
     ) {
       return "Timesheet";
-    }
-    if (path.includes("/admin-dashboard/working-details/")) {
-      return "Working Details";
     }
 
     switch (tab) {
@@ -39,6 +37,7 @@ const AdminLayout = () => {
         return "Notification";
       case "timesheet-list":
       case "timesheet-view":
+      case "working-details":
         return "Timesheet";
       default:
         return "System Dashboard";
