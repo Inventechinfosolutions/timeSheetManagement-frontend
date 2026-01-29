@@ -12,6 +12,7 @@ export enum AttendanceStatus {
   FULL_DAY = 'Full Day',
   HALF_DAY = 'Half Day',
   LEAVE = 'Leave',
+  ABSENT = 'Absent',
   PENDING = 'Pending',
   NOT_UPDATED = 'Not Updated',
   BLOCKED = 'Blocked',

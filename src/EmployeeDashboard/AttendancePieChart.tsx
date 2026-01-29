@@ -25,7 +25,8 @@ const AttendancePieChart = ({
     const counts = {
       Present: 0,
       "Half Day": 0,
-      "Absent/Leave": 0,
+      Absent: 0,
+      Leave: 0,
       Holiday: 0,
       Weekend: 0,
       "Not Updated": 0,
@@ -50,8 +51,10 @@ const AttendancePieChart = ({
         status === "CLIENT VISIT"
       ) {
         counts["Present"]++;
-      } else if (status === "LEAVE" || status === "ABSENT") {
-        counts["Absent/Leave"]++;
+      } else if (status === "ABSENT") {
+        counts["Absent"]++;
+      } else if (status === "LEAVE") {
+        counts["Leave"]++;
       } else if (status === "HOLIDAY") {
         counts["Holiday"]++;
       } else if (status === "WEEKEND" || record.isWeekend) {
@@ -64,7 +67,8 @@ const AttendancePieChart = ({
 
     return [
       { name: "Present", value: counts["Present"], color: "#10B981" },
-      { name: "Leave", value: counts["Absent/Leave"], color: "#E11D48" },
+      { name: "Absent", value: counts["Absent"], color: "#E11D48" },
+      { name: "Leave", value: counts["Leave"], color: "#EE5D50" },
       { name: "Holiday", value: counts["Holiday"], color: "#2563EB" },
       { name: "Weekend", value: counts["Weekend"], color: "#38BDF8" },
       { name: "Not Updated", value: counts["Not Updated"], color: "#F97316" },
@@ -227,9 +231,13 @@ const AttendancePieChart = ({
                 <stop offset="0%" stopColor="#F59E0B" />
                 <stop offset="100%" stopColor="#FBBF24" />
               </linearGradient>
-              <linearGradient id="gradLeave" x1="0" y1="0" x2="1" y2="1">
+              <linearGradient id="gradAbsent" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stopColor="#E11D48" />
                 <stop offset="100%" stopColor="#F43F5E" />
+              </linearGradient>
+              <linearGradient id="gradLeave" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#EE5D50" />
+                <stop offset="100%" stopColor="#F87171" />
               </linearGradient>
               <linearGradient id="gradHoliday" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stopColor="#2563EB" />
@@ -267,6 +275,7 @@ const AttendancePieChart = ({
               {chartData.map((entry, index) => {
                 let fillUrl = "url(#gradWeekend)";
                 if (entry.name === "Present") fillUrl = "url(#gradPresent)";
+                else if (entry.name === "Absent") fillUrl = "url(#gradAbsent)";
                 else if (entry.name === "Leave") fillUrl = "url(#gradLeave)";
                 else if (entry.name === "Holiday") fillUrl = "url(#gradHoliday)";
                 else if (entry.name === "Not Updated") fillUrl = "url(#gradNotUpdated)";

@@ -496,7 +496,7 @@ const MyTimesheet = ({
       } else if (dayNum === 0 || dayNum === 6) {
         newStatus = "Weekend";
       } else {
-        // 0 hours on a weekday: Determine if Leave or Upcoming
+        // 0 hours on a weekday: Determine if Absent or Upcoming
         const todayZero = new Date();
         todayZero.setHours(0, 0, 0, 0);
 
@@ -504,7 +504,7 @@ const MyTimesheet = ({
         entryDateZero.setHours(0, 0, 0, 0);
 
         if (entryDateZero <= todayZero) {
-          newStatus = "Leave";
+          newStatus = "Absent";
         } else {
           newStatus = "UPCOMING";
         }
@@ -542,14 +542,26 @@ const MyTimesheet = ({
         entry.status !== baseEntries[idx]?.status
       ) {
         const d = entry.fullDate;
+        const dayOfWeek = d.getDay(); // 0 = Sunday, 6 = Saturday
+
         const workingDate = `${d.getFullYear()}-${(d.getMonth() + 1)
           .toString()
           .padStart(2, "0")}-${d.getDate().toString().padStart(2, "0")}`;
         let derivedStatus = entry.status || "Pending";
 
-        if (derivedStatus === "Pending" || derivedStatus === "Not Updated") {
+        // For Sunday: Always set status to "Weekend" regardless of hours
+        if (dayOfWeek === 0) {
+          derivedStatus = "Weekend";
+        } 
+        // For Saturday: If hours is 0, set status to "Weekend"
+        else if (dayOfWeek === 6 && currentTotal === 0) {
+          derivedStatus = "Weekend";
+        }
+        // For other days: Calculate status based on hours
+        else if (derivedStatus === "Pending" || derivedStatus === "Not Updated") {
           if (currentTotal >= 6) derivedStatus = "Full Day";
           else if (currentTotal > 0) derivedStatus = "Half Day";
+          else if (currentTotal === 0) derivedStatus = "Absent";
         }
 
         const existingRecord = records.find((r) => {
@@ -575,14 +587,22 @@ const MyTimesheet = ({
       return;
     }
 
-    // Force "Leave" status for past days with 0 hours
-    const todayStr = new Date().toISOString().split("T")[0];
+    // Set status based on hours and day of week
     payload.forEach((item) => {
-      if (
-        (!item.totalHours || Number(item.totalHours) === 0) &&
-        item.workingDate < todayStr
-      ) {
-        item.status = "Leave";
+      const itemDate = new Date(item.workingDate);
+      const dayOfWeek = itemDate.getDay(); // 0 = Sunday, 6 = Saturday
+      
+      // Sunday: Always set status to "Weekend" (even if hours entered)
+      if (dayOfWeek === 0) {
+        item.status = "Weekend";
+      }
+      // Saturday: If hours is 0, set status to "Weekend"
+      else if (dayOfWeek === 6 && (!item.totalHours || Number(item.totalHours) === 0)) {
+        item.status = "Weekend";
+      }
+      // Other days: If hours is 0, set status to "Absent"
+      else if (!item.totalHours || Number(item.totalHours) === 0) {
+        item.status = "Absent";
       }
     });
 
@@ -812,6 +832,11 @@ const MyTimesheet = ({
               border: "border-[#01B574]",
             },
             {
+              label: "Absent",
+              color: "bg-[#FECACA]",
+              border: "border-[#DC2626]",
+            },
+            {
               label: "Leave",
               color: "bg-[#FEE2E2]",
               border: "border-[#EE5D50]",
@@ -984,6 +1009,10 @@ const MyTimesheet = ({
               bg = "bg-[#DBEAFE]";
               badge = "bg-[#1890FF]/70 text-white font-bold";
               border = "border-[#1890FF]/20";
+            } else if (day.status === "Absent") {
+              bg = "bg-[#FECACA]";
+              badge = "bg-[#DC2626]/70 text-white font-bold";
+              border = "border-[#DC2626]/20";
             } else if (
               day.status === "Leave" ||
               (day.status as any) === "Weekend" ||
@@ -1127,9 +1156,13 @@ const MyTimesheet = ({
                         ? holiday?.holidayName || holiday?.name || "HOLIDAY"
                         : day.status === "Weekend" || day.isWeekend
                           ? "WEEKEND"
-                          : day.status === "Not Updated"
-                            ? "Not Updated"
-                            : day.status || "UPCOMING"}
+                          : day.status === "Absent"
+                            ? "ABSENT"
+                            : day.status === "Leave"
+                              ? "LEAVE"
+                              : day.status === "Not Updated"
+                                ? "Not Updated"
+                                : day.status || "UPCOMING"}
                 </div>
               </div>
             );

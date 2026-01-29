@@ -427,6 +427,12 @@ const Calendar = ({
                 text: "text-emerald-700",
               },
               {
+                label: "Absent",
+                color: "bg-red-50",
+                border: "border-red-200",
+                text: "text-red-700",
+              },
+              {
                 label: "Leave",
                 color: "bg-red-50",
                 border: "border-red-200",
@@ -530,7 +536,8 @@ const Calendar = ({
                 !entry.isWeekend &&
                 !holiday &&
                 !entry.totalHours &&
-                entry.status !== "Leave";
+                entry.status !== "Leave" &&
+                entry.status !== "Absent";
 
               // Status Logic for Styling
               const baseHover =
@@ -575,6 +582,9 @@ const Calendar = ({
                 if (!entry?.totalHours || Number(entry.totalHours) === 0) {
                   statusLabel = "Not Updated";
                 }
+              } else if (entry?.status === "Absent") {
+                cellClass = `bg-red-50 border-transparent hover:bg-red-100 ${baseHover}`;
+                // textClass = "text-red-700 font-bold";
               } else if (entry?.status === "Leave") {
                 cellClass = `bg-red-50 border-transparent hover:bg-red-100 ${baseHover}`;
                 // textClass = "text-red-700 font-bold";
@@ -719,9 +729,11 @@ const Calendar = ({
                                     ? "text-white bg-[#4318FF]/70"
                                     : isIncomplete && statusLabel
                                       ? "text-white bg-[#FFB020]/80"
-                                   : entry?.status === "Leave"
-                                     ? "text-white bg-red-400/70"
-                                     : entry?.isWeekend
+                                   : entry?.status === "Absent"
+                                     ? "text-white bg-[#EE5D50]/70"
+                                     : entry?.status === "Leave"
+                                       ? "text-white bg-red-400/70"
+                                       : entry?.isWeekend
                                        ? "text-white bg-red-400/70"
                                        : "text-white bg-[#64748B]/90"
                          }
