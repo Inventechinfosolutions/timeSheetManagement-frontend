@@ -42,7 +42,7 @@ const AdminEmployeeCalendarView = () => {
   };
 
   const handleBack = () => {
-    navigate("/admin-dashboard/working-details");
+    navigate(-1);
   };
 
   if (!employee) {

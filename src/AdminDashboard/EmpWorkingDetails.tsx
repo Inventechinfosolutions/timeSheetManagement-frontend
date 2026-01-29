@@ -4,6 +4,7 @@ import { RootState } from "../store";
 import { getEntities } from "../reducers/employeeDetails.reducer";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import {
+  Edit,
   Eye,
   Search,
   ChevronLeft,
@@ -61,6 +62,7 @@ const EmpWorkingDetails = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
+      setCurrentPage(1);
     }, 500);
     return () => clearTimeout(timer);
   }, [searchTerm]);
@@ -103,7 +105,15 @@ const EmpWorkingDetails = () => {
     department: emp.department,
   }));
 
-  const currentItems = employees;
+  const currentItems = employees.filter((emp) => {
+    if (!debouncedSearchTerm) return true;
+    const s = debouncedSearchTerm.toLowerCase();
+    return (
+      emp.name.toLowerCase().includes(s) ||
+      emp.id.toString().toLowerCase().includes(s) ||
+      (emp.department && emp.department.toLowerCase().includes(s))
+    );
+  });
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
   const handleNextPage = () => {
@@ -120,6 +130,10 @@ const EmpWorkingDetails = () => {
 
   const handleViewDetails = (empId: string) => {
     navigate(`/admin-dashboard/working-details/${empId}`);
+  };
+
+  const handleViewTimesheet = (empId: string) => {
+    navigate(`/admin-dashboard/timesheet/${empId}`);
   };
 
   return (
@@ -232,12 +246,22 @@ const EmpWorkingDetails = () => {
                       {emp.department || "General"}
                     </td>
                     <td className="py-4 pl-4 pr-10 text-center">
-                      <button
-                        onClick={() => handleViewDetails(emp.id)}
-                        className="inline-flex items-center gap-2 bg-transparent border-none cursor-pointer text-[#4318FF] text-sm font-bold hover:underline transition-all hover:scale-105 active:scale-95"
-                      >
-                        <Eye size={16} />
-                      </button>
+                      <div className="flex items-center justify-center gap-4">
+                        <button
+                          onClick={() => handleViewDetails(emp.id)}
+                          className="inline-flex items-center gap-2 bg-transparent border-none cursor-pointer text-[#4318FF] text-sm font-bold hover:underline transition-all hover:scale-105 active:scale-95"
+                          title="View Working Details"
+                        >
+                          <Eye size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleViewTimesheet(emp.id)}
+                          className="inline-flex items-center gap-2 bg-transparent border-none cursor-pointer text-[#4318FF] text-sm font-bold hover:underline transition-all hover:scale-105 active:scale-95"
+                          title="Edit Timesheet"
+                        >
+                          <Edit size={16} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -251,6 +275,7 @@ const EmpWorkingDetails = () => {
               <EmpWorkingDetailsMobileCard
                 employees={currentItems}
                 onViewDetails={handleViewDetails}
+                onViewTimesheet={handleViewTimesheet}
               />
             ) : null}
           </div>

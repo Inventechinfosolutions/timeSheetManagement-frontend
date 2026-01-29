@@ -95,14 +95,8 @@ const EmployeeListView = () => {
   ];
 
   const dispatch = useAppDispatch();
-  const {
-    entities,
-    totalItems,
-    uploadLoading,
-    uploadResult,
-    loading,
- 
-  } = useAppSelector((state: RootState) => state.employeeDetails);
+  const { entities, totalItems, uploadLoading, uploadResult, loading } =
+    useAppSelector((state: RootState) => state.employeeDetails);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -121,6 +115,7 @@ const EmployeeListView = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
+      setCurrentPage(1);
     }, 500);
     return () => clearTimeout(timer);
   }, [searchTerm]);
@@ -169,7 +164,15 @@ const EmployeeListView = () => {
     isActive: emp.userStatus !== "INACTIVE",
   }));
 
-  const currentItems = employees;
+  const currentItems = employees.filter((emp) => {
+    if (!debouncedSearchTerm) return true;
+    const s = debouncedSearchTerm.toLowerCase();
+    return (
+      emp.name.toLowerCase().includes(s) ||
+      emp.id.toString().toLowerCase().includes(s) ||
+      (emp.department && emp.department.toLowerCase().includes(s))
+    );
+  });
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
   const handleNextPage = () => {
@@ -288,24 +291,26 @@ const EmployeeListView = () => {
 
     try {
       const resultAction = await dispatch(createEntity(formData));
-      
+
       if (createEntity.fulfilled.match(resultAction)) {
         setShowSuccess(true);
         setGeneralError("");
         setTimeout(() => {
           handleCloseCreateModal();
-          
+
           dispatch(
             getEntities({
               page: currentPage,
               limit: itemsPerPage,
               search: debouncedSearchTerm,
-              department: selectedDepartment === "All" ? undefined : selectedDepartment,
-            })
+              department:
+                selectedDepartment === "All" ? undefined : selectedDepartment,
+            }),
           );
         }, 2000);
       } else if (createEntity.rejected.match(resultAction)) {
-        const errorMsg = (resultAction.payload as string) || "Failed to create employee";
+        const errorMsg =
+          (resultAction.payload as string) || "Failed to create employee";
         console.error("Creation failed:", errorMsg);
         setGeneralError(errorMsg);
         setShowSuccess(false);

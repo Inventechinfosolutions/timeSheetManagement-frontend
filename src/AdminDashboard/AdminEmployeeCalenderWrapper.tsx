@@ -81,7 +81,7 @@ const AdminEmployeeCalenderWrapper = () => {
   const avgHours = totalHours.toFixed(1);
 
   const handleBack = () => {
-    navigate("/admin-dashboard/working-details");
+    navigate(-1);
   };
 
   const handleApplyBlock = async () => {
@@ -176,7 +176,7 @@ const AdminEmployeeCalenderWrapper = () => {
                 </div>
               </div>
             </div>
- 
+
             <div className="bg-white rounded-2xl p-4 md:p-6 shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition-all">
               <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-[#F4F7FE] flex items-center justify-center text-[#4318FF] shrink-0">
                 <Clock size={24} />
@@ -197,7 +197,7 @@ const AdminEmployeeCalenderWrapper = () => {
             </div>
           </div>
         </div>
- 
+
         {/* Calendar View */}
         <div className="px-0 md:px-2 pb-10">
           {isMobile ? (
