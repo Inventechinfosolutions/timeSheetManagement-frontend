@@ -346,49 +346,64 @@ const Requests = () => {
           )}
         </div>
 
-        <div className="flex gap-2 items-center">
-          <Select
-            value={selectedMonth}
-            onChange={(val) => setSelectedMonth(val)}
-            className="w-32 h-12"
-            placeholder="Select Month"
-            dropdownStyle={{ borderRadius: "12px" }}
-          >
-            <Select.Option value="All">All Months</Select.Option>
-            {months.map((m) => (
-              <Select.Option key={m.value} value={m.value}>
-                {m.label}
-              </Select.Option>
-            ))}
-          </Select>
-
-          <Select
-            value={selectedYear}
-            onChange={(val) => setSelectedYear(val)}
-            className="w-28 h-12"
-            placeholder="Select Year"
-            dropdownStyle={{ borderRadius: "12px" }}
-          >
-            {years.map((y) => (
-              <Select.Option key={y} value={y}>
-                {y}
-              </Select.Option>
-            ))}
-          </Select>
-
-          {["All", "Pending", "Approved", "Rejected"].map((status) => (
-            <button
-              key={status}
-              onClick={() => setFilterStatus(status)}
-              className={`px-6 py-3 rounded-xl font-bold text-sm transition-all h-12 flex items-center ${
-                filterStatus === status
-                  ? "bg-[#4318FF] text-white shadow-lg shadow-blue-500/30"
-                  : "bg-white text-gray-500 hover:bg-gray-50 border border-transparent"
-              }`}
+        <div className="flex flex-wrap gap-3 items-center">
+          <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
+            <Select
+              value={selectedMonth}
+              onChange={(val) => setSelectedMonth(val)}
+              className={`w-36 h-12 font-bold text-sm ${selectedMonth !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+              variant="borderless"
+              dropdownStyle={{ borderRadius: "16px" }}
+              suffixIcon={
+                <ChevronDown
+                  size={18}
+                  className={
+                    selectedMonth !== "All" ? "text-[#4318FF]" : "text-gray-400"
+                  }
+                />
+              }
             >
-              {status}
-            </button>
-          ))}
+              <Select.Option value="All">All Months</Select.Option>
+              {months.map((m) => (
+                <Select.Option key={m.value} value={m.value}>
+                  {m.label}
+                </Select.Option>
+              ))}
+            </Select>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
+            <Select
+              value={selectedYear}
+              onChange={(val) => setSelectedYear(val)}
+              className="w-28 h-12 font-bold text-sm text-[#2B3674]"
+              variant="borderless"
+              dropdownStyle={{ borderRadius: "16px" }}
+              suffixIcon={<ChevronDown size={18} className="text-gray-400" />}
+            >
+              {years.map((y) => (
+                <Select.Option key={y} value={y}>
+                  {y}
+                </Select.Option>
+              ))}
+            </Select>
+          </div>
+
+          <div className="flex gap-2 bg-white/50 p-1 rounded-2xl shadow-inner border border-gray-100/50">
+            {["All", "Pending", "Approved", "Rejected"].map((status) => (
+              <button
+                key={status}
+                onClick={() => setFilterStatus(status)}
+                className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all h-10 flex items-center ${
+                  filterStatus === status
+                    ? "bg-[#4318FF] text-white shadow-lg shadow-blue-500/30"
+                    : "text-[#2B3674] hover:bg-white hover:text-[#4318FF] hover:shadow-sm"
+                }`}
+              >
+                {status}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
