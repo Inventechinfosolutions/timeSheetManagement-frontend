@@ -208,3 +208,130 @@ input[type="password"]::-webkit-password-reveal-button {
   display: none;
   -webkit-appearance: none;
 }
+
+/* Ensure weekday headers are visible in DatePicker - HORIZONTAL LAYOUT */
+.ant-picker-weekday {
+  display: table-cell !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.ant-picker-content th {
+  display: table-cell !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  font-weight: 600 !important;
+  color: #2B3674 !important;
+  padding: 8px 4px !important;
+  text-align: center !important;
+  font-size: 0 !important;
+  width: 20px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+}
+
+.ant-picker-content th::first-letter {
+  font-size: 12px !important;
+  display: inline-block !important;
+}
+
+/* Ensure weekday row is visible and horizontal */
+.ant-picker-content thead {
+  display: table-header-group !important;
+  visibility: visible !important;
+}
+
+.ant-picker-content thead tr {
+  display: table-row !important;
+  visibility: visible !important;
+}
+
+/* Force weekday headers to be visible - more specific selectors - HORIZONTAL */
+.ant-picker-dropdown .ant-picker-content thead {
+  display: table-header-group !important;
+  visibility: visible !important;
+}
+
+.ant-picker-dropdown .ant-picker-content thead tr {
+  display: table-row !important;
+  visibility: visible !important;
+}
+
+.ant-picker-dropdown .ant-picker-content thead th {
+  display: table-cell !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  font-weight: 600 !important;
+  color: #2B3674 !important;
+  padding: 8px 4px !important;
+  text-align: center !important;
+  font-size: 0 !important;
+  width: 20px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+}
+
+.ant-picker-dropdown .ant-picker-content thead th::first-letter {
+  font-size: 12px !important;
+  display: inline-block !important;
+}
+
+/* Ensure weekday labels show for both start and end date pickers - HORIZONTAL */
+.hide-other-months .ant-picker-content thead {
+  display: table-header-group !important;
+  visibility: visible !important;
+}
+
+.hide-other-months .ant-picker-content thead tr {
+  display: table-row !important;
+  visibility: visible !important;
+}
+
+.hide-other-months .ant-picker-content thead th {
+  display: table-cell !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  font-weight: 600 !important;
+  color: #2B3674 !important;
+  padding: 8px 4px !important;
+  text-align: center !important;
+  font-size: 0 !important;
+  width: 20px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+}
+
+.hide-other-months .ant-picker-content thead th::first-letter {
+  font-size: 12px !important;
+  display: inline-block !important;
+}
+
+/* Additional class to ensure weekdays are shown - HORIZONTAL */
+.show-weekdays .ant-picker-content thead {
+  display: table-header-group !important;
+  visibility: visible !important;
+}
+
+.show-weekdays .ant-picker-content thead tr {
+  display: table-row !important;
+  visibility: visible !important;
+}
+
+.show-weekdays .ant-picker-content thead th {
+  display: table-cell !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  font-weight: 600 !important;
+  color: #2B3674 !important;
+  padding: 8px 4px !important;
+  text-align: center !important;
+  font-size: 0 !important;
+  width: 20px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+}
+
+.show-weekdays .ant-picker-content thead th::first-letter {
+  font-size: 12px !important;
+  display: inline-block !important;
+}

@@ -6,7 +6,6 @@ import {
   AlarmClock,
   Unlock,
   Menu,
-  ClipboardList,
   Bell,
 } from "lucide-react";
 import { useParams } from "react-router-dom";
