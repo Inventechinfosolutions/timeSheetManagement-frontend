@@ -24,6 +24,12 @@ const AdminLayout = () => {
     ) {
       return "Timesheet";
     }
+    if (path.includes("/admin-dashboard/working-details/")) {
+      return "Working Details";
+    }
+    if (path.includes("/admin-dashboard/work-management")) {
+      return "Work Management";
+    }
 
     switch (tab) {
       case "registration":
@@ -37,6 +43,8 @@ const AdminLayout = () => {
       case "timesheet-view":
       case "working-details":
         return "Timesheet";
+      case "work-management":
+        return "Work Management";
       default:
         return "System Dashboard";
     }
@@ -53,6 +61,8 @@ const AdminLayout = () => {
       navigate("/admin-dashboard/working-details");
     } else if (tabName === "Notification") {
       navigate("/admin-dashboard/requests");
+    } else if (tabName === "Work Management") {
+      navigate("/admin-dashboard/work-management");
     } else if (tabName === "System Dashboard") {
       navigate("/admin-dashboard");
     }
