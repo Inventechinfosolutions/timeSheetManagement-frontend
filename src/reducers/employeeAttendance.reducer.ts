@@ -45,6 +45,7 @@ export interface DashboardStats {
   totalWeekHours: number;
   totalMonthlyHours: number;
   pendingUpdates: number;
+  monthStatus: string;
 }
 
 interface AttendanceState {
@@ -62,6 +63,7 @@ interface AttendanceState {
     endDate: string;
     workedDays: number;
   } | null;
+  employeeMonthlyStats: Record<string, DashboardStats>; // Keyed by employeeId
 }
 
 const initialState: AttendanceState = {
@@ -74,6 +76,7 @@ const initialState: AttendanceState = {
   error: null,
   currentDayRecord: null,
   workedDaysSummary: null,
+  employeeMonthlyStats: {},
 };
 
 const apiUrl = '/api/employee-attendance';
@@ -171,9 +174,22 @@ export const fetchWorkedDays = createAsyncThunk(
 // 9. Fetch Dashboard Stats: GET /dashboard-stats/:employeeId
 export const fetchDashboardStats = createAsyncThunk(
   'attendance/fetchDashboardStats',
-  async (employeeId: string) => {
-    const response = await axios.get(`${apiUrl}/dashboard-stats/${employeeId}`);
-    return response.data;
+  async ({ employeeId, month, year }: { employeeId: string; month?: string; year?: string }) => {
+    const response = await axios.get(`${apiUrl}/dashboard-stats/${employeeId}`, {
+      params: { month, year }
+    });
+    return { employeeId, stats: response.data };
+  }
+);
+
+// 10. Fetch All Dashboard Stats: GET /all-dashboard-stats
+export const fetchAllDashboardStats = createAsyncThunk(
+  'attendance/fetchAllDashboardStats',
+  async ({ month, year }: { month?: string; year?: string }) => {
+    const response = await axios.get(`${apiUrl}/all-dashboard-stats`, {
+      params: { month, year }
+    });
+    return response.data; // Expected: { [employeeId]: DashboardStats }
   }
 );
 
@@ -276,8 +292,16 @@ const attendanceSlice = createSlice({
         state.trendsLoading = false;
         state.error = action.error?.message || 'Failed to fetch trends';
       })
-      .addCase(fetchDashboardStats.fulfilled, (state: AttendanceState, action: PayloadAction<DashboardStats>) => {
-        state.stats = action.payload;
+      .addCase(fetchDashboardStats.fulfilled, (state: AttendanceState, action: PayloadAction<{ employeeId: string; stats: DashboardStats }>) => {
+        state.stats = action.payload.stats;
+        state.employeeMonthlyStats[action.payload.employeeId] = action.payload.stats;
+      })
+      .addCase(fetchAllDashboardStats.fulfilled, (state: AttendanceState, action: PayloadAction<Record<string, DashboardStats>>) => {
+        state.loading = false;
+        state.employeeMonthlyStats = {
+          ...state.employeeMonthlyStats,
+          ...action.payload,
+        };
       })
       .addCase(deleteAttendanceRecord.fulfilled, (state: AttendanceState, action: PayloadAction<number>) => {
         state.loading = false;

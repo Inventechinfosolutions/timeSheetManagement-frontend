@@ -79,7 +79,7 @@ const TodayAttendance = ({
   useEffect(() => {
     if (currentEmployeeId && currentEmployeeId !== "Admin") {
       dispatch(fetchEmployeeUpdates(currentEmployeeId));
-      dispatch(fetchDashboardStats(currentEmployeeId));
+      dispatch(fetchDashboardStats({ employeeId: currentEmployeeId }));
     }
   }, [dispatch, currentEmployeeId]);
 
