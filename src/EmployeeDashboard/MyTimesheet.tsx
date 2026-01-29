@@ -443,14 +443,14 @@ const MyTimesheet = ({
 
   // Handlers
   const handlePrevMonth = () => {
-    const prev = new Date(now);
-    prev.setMonth(prev.getMonth() - 1);
+    // Create new date with day 1 to avoid month rollover issues
+    const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     setNow(prev);
   };
 
   const handleNextMonth = () => {
-    const next = new Date(now);
-    next.setMonth(next.getMonth() + 1);
+    // Create new date with day 1 to avoid month rollover issues
+    const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
     setNow(next);
   };
 

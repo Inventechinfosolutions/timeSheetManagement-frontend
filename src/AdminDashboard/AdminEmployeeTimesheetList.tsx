@@ -202,37 +202,6 @@ const AdminEmployeeTimesheetList = () => {
               <Download size={18} />
               <span className="whitespace-nowrap">Export Excel</span>
             </button>
-            {/* Period Filters */}
-            <div className="flex items-center gap-2">
-              <select
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                className="px-4 py-2 bg-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] text-[#2B3674] font-bold text-sm border border-transparent focus:border-[#4318FF]/20 outline-none cursor-pointer"
-              >
-                {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                  <option key={m} value={m}>
-                    {new Date(2000, m - 1, 1).toLocaleString("default", {
-                      month: "short",
-                    })}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                className="px-4 py-2 bg-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] text-[#2B3674] font-bold text-sm border border-transparent focus:border-[#4318FF]/20 outline-none cursor-pointer"
-              >
-                {Array.from(
-                  { length: 5 },
-                  (_, i) => new Date().getFullYear() - 2 + i,
-                ).map((y) => (
-                  <option key={y} value={y}>
-                    {y}
-                  </option>
-                ))}
-              </select>
-            </div>
-
             {/* Modern Custom Dropdown */}
             <div className="relative" ref={dropdownRef}>
               <button

@@ -79,12 +79,9 @@ const Calendar = ({
 
   // Calculate if next month navigation is allowed
   const canNavigateToNextMonth = useMemo(() => {
-    if (isAdmin) return true; // Admins can always navigate
-    const today = new Date();
-    const nextAllowedMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
-    const displayNextMonth = new Date(displayDate.getFullYear(), displayDate.getMonth() + 1, 1);
-    return displayNextMonth <= nextAllowedMonth;
-  }, [displayDate, isAdmin]);
+    // Both admins and employees can navigate to any future month
+    return true;
+  }, []);
 
   // Fetch holidays on mount
   useEffect(() => {
@@ -142,16 +139,11 @@ const Calendar = ({
       displayDate.getMonth() + 1,
       1,
     );
-    // Allow employees to navigate to next month (current + 1)
-    // Allow admins to navigate to any future month
-    const today = new Date();
-    const nextAllowedMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
-    if (isAdmin || newDate <= nextAllowedMonth) {
-      if (onMonthChange) {
-        onMonthChange(newDate);
-      } else {
-        setInternalDisplayDate(newDate);
-      }
+    // Both admins and employees can navigate to any future month
+    if (onMonthChange) {
+      onMonthChange(newDate);
+    } else {
+      setInternalDisplayDate(newDate);
     }
   };
 
