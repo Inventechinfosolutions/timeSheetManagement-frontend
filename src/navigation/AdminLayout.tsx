@@ -31,8 +31,6 @@ const AdminLayout = () => {
       case "employees":
       case "employee-details":
         return "Employee Details";
-      case "working-details":
-        return "Working Details";
       case "requests":
         return "Notification";
       case "timesheet-list":

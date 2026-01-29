@@ -21,10 +21,8 @@ import {
   X,
   XCircle,
   Calendar,
-  Briefcase,
   Eye,
   RotateCcw,
-  ArrowLeft,
   Loader2,
   ChevronLeft,
   ChevronRight,
@@ -104,8 +102,9 @@ const LeaveManagement = () => {
     const currentDate = current.startOf("day");
     const today = dayjs().startOf("day");
 
-    // Disable past dates
-    if (currentDate.isBefore(today)) {
+    // For Client Visit, allow past dates - don't disable them
+    const isClientVisit = selectedLeaveType === "Client Visit";
+    if (!isClientVisit && currentDate.isBefore(today)) {
       return true;
     }
 
@@ -124,7 +123,9 @@ const LeaveManagement = () => {
   };
 
   const disabledEndDate = (current: any) => {
-    if (disabledDate(current)) return true;
+    // For Client Visit, allow past dates
+    const isClientVisit = selectedLeaveType === "Client Visit";
+    if (!isClientVisit && disabledDate(current)) return true;
     if (formData.startDate) {
       return (
         current && current.isBefore(dayjs(formData.startDate).startOf("day"))
@@ -717,7 +718,7 @@ const LeaveManagement = () => {
                     <>
                       <ConfigProvider theme={datePickerTheme}>
                         <DatePicker
-                          popupClassName="hide-other-months"
+                          popupClassName="hide-other-months show-weekdays"
                           disabledDate={disabledDate}
                           className={`w-full px-5! py-3! rounded-[20px]! bg-[#F4F7FE]! border-none! focus:bg-white! focus:border-[#4318FF]! transition-all font-bold! text-[#2B3674]! shadow-none`}
                           value={
@@ -771,7 +772,7 @@ const LeaveManagement = () => {
                     <>
                       <ConfigProvider theme={datePickerTheme}>
                         <DatePicker
-                          popupClassName="hide-other-months"
+                          popupClassName="hide-other-months show-weekdays"
                           disabledDate={disabledEndDate}
                           className={`w-full px-5! py-3! rounded-[20px]! bg-[#F4F7FE]! border-none! focus:bg-white! focus:border-[#4318FF]! transition-all font-bold! text-[#2B3674]! shadow-none`}
                           value={

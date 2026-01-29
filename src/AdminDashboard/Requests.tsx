@@ -12,7 +12,7 @@ import {
   Briefcase,
   Filter,
   ChevronDown,
-  ArrowLeft,
+
   X,
   Loader2,
   ChevronLeft,

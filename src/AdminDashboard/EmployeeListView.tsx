@@ -101,8 +101,7 @@ const EmployeeListView = () => {
     uploadLoading,
     uploadResult,
     loading,
-    updateSuccess,
-    errorMessage,
+ 
   } = useAppSelector((state: RootState) => state.employeeDetails);
 
   // Close dropdown when clicking outside
