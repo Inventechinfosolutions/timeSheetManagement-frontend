@@ -77,7 +77,7 @@ export const isEditableMonth = (date: Date | string): boolean => {
  */
 // Map Backend Status enum to Frontend UI strings
 export const mapStatus = (
-    status: AttendanceStatus | undefined, 
+    status: AttendanceStatus | string | undefined, 
     isFuture: boolean, 
     isToday: boolean, 
     isWeekend: boolean,
@@ -85,22 +85,27 @@ export const mapStatus = (
 ): TimesheetEntry['status'] => {
     
     if (status) {
-        if (status === AttendanceStatus.LEAVE && totalHours && totalHours > 0) {
+        // Normalize status to string for comparison
+        const statusStr = typeof status === 'string' ? status : (status as AttendanceStatus);
+        
+        // Handle Leave with hours
+        if ((statusStr === AttendanceStatus.LEAVE || statusStr === 'Leave') && totalHours && totalHours > 0) {
              return totalHours >= 6 ? 'Full Day' : 'Half Day';
         }
-        if (status === AttendanceStatus.LEAVE) return 'Leave';
-        if (status === AttendanceStatus.BLOCKED) return 'Blocked';
         
-        if (status !== AttendanceStatus.PENDING || !isToday) {
-            switch (status) {
-                case AttendanceStatus.FULL_DAY: return 'Full Day';
-                case AttendanceStatus.HALF_DAY: return 'Half Day';
-                case AttendanceStatus.NOT_UPDATED: return 'Not Updated';
-                case AttendanceStatus.PENDING: return 'Pending';
-                case AttendanceStatus.HOLIDAY: return 'Holiday';
-                case AttendanceStatus.WEEKEND: return 'Weekend';
-                default: break;
-            }
+        // Direct status mappings (handle both enum and string)
+        if (statusStr === AttendanceStatus.LEAVE || statusStr === 'Leave') return 'Leave';
+        if (statusStr === AttendanceStatus.BLOCKED || statusStr === 'Blocked') return 'Blocked';
+        if (statusStr === AttendanceStatus.ABSENT || statusStr === 'Absent') return 'Absent';
+        if (statusStr === AttendanceStatus.FULL_DAY || statusStr === 'Full Day') return 'Full Day';
+        if (statusStr === AttendanceStatus.HALF_DAY || statusStr === 'Half Day') return 'Half Day';
+        if (statusStr === AttendanceStatus.NOT_UPDATED || statusStr === 'Not Updated') return 'Not Updated';
+        if (statusStr === AttendanceStatus.HOLIDAY || statusStr === 'Holiday') return 'Holiday';
+        if (statusStr === AttendanceStatus.WEEKEND || statusStr === 'Weekend') return 'Weekend';
+        
+        // Handle Pending
+        if (statusStr === AttendanceStatus.PENDING || statusStr === 'Pending') {
+            if (!isToday) return 'Pending';
         }
     }
 

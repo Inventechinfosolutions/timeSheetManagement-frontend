@@ -43,6 +43,7 @@ const EmployeeDetailsView = () => {
     email: "",
   });
   const [showConfirm, setShowConfirm] = useState(false);
+  const [updateSuccess, setUpdateSuccess] = useState(false);
 
   useEffect(() => {
     if (
@@ -127,14 +128,31 @@ const EmployeeDetailsView = () => {
 
   const confirmSave = async () => {
     try {
+      const oldEmployeeId = employee.employeeId || employee.id;
       await axios.put(
-        `/api/employee-details/${employee.employeeId}`,
+        `/api/employee-details/${oldEmployeeId}`,
         editedData,
       );
       setIsEditing(false);
       setShowConfirm(false);
-      // Refresh the entity
-      dispatch(getEntity(employeeId!));
+      setUpdateSuccess(true);
+      
+      // If employee ID changed, navigate to new employee ID and fetch with new ID
+      const newEmployeeId = editedData.employeeId;
+      if (newEmployeeId && newEmployeeId !== oldEmployeeId) {
+        // Navigate to new employee ID URL
+        navigate(`/admin-dashboard/employees/${newEmployeeId}`, { replace: true });
+        // Fetch entity with new employee ID
+        dispatch(getEntity(newEmployeeId));
+      } else {
+        // Refresh the entity with current employee ID
+        dispatch(getEntity(employeeId!));
+      }
+      
+      // Hide success message after 3 seconds
+      setTimeout(() => {
+        setUpdateSuccess(false);
+      }, 3000);
     } catch (error) {
       console.error("Failed to update employee:", error);
       setShowConfirm(false);
@@ -192,6 +210,18 @@ const EmployeeDetailsView = () => {
 
   return (
     <div className="px-4 md:px-8 py-2 md:py-8 w-full max-w-[1400px] mx-auto animate-in fade-in duration-500 space-y-3 md:space-y-6">
+      {/* Success Message */}
+      {updateSuccess && (
+        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 flex items-center gap-2 animate-in fade-in slide-in-from-top-4 duration-300 px-4 py-3 bg-white rounded-full shadow-2xl border border-green-200">
+          <div className="p-1 bg-green-100 rounded-full">
+            <CheckCircle size={16} className="text-green-600" />
+          </div>
+          <span className="font-bold text-sm text-green-700">
+            Employee details updated successfully!
+          </span>
+        </div>
+      )}
+
       {/* Navigation Back */}
       <div className="flex items-center mb-2">
         <button
@@ -346,9 +376,20 @@ const EmployeeDetailsView = () => {
             <div className="relative group">
               <input
                 type="text"
-                disabled
-                value={employee.employeeId || employee.id || ""}
-                className="w-full pl-11 pr-4 py-2.5 border-2 border-gray-100 rounded-xl bg-gray-50/50 text-[#1B2559] text-sm font-semibold transition-all cursor-not-allowed"
+                disabled={!isEditing}
+                value={
+                  isEditing
+                    ? editedData.employeeId
+                    : employee.employeeId || employee.id || ""
+                }
+                onChange={(e) =>
+                  setEditedData({ ...editedData, employeeId: e.target.value })
+                }
+                className={`w-full pl-11 pr-4 py-2.5 border-2 rounded-xl text-[#1B2559] text-sm font-semibold transition-all ${
+                  isEditing
+                    ? "border-gray-200 focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white"
+                    : "border-gray-100 bg-gray-50/50"
+                }`}
               />
               <div className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-purple-50 flex items-center justify-center">
                 <CreditCard className="text-[#764ba2] w-4 h-4" />
