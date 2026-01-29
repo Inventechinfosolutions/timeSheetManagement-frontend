@@ -77,6 +77,15 @@ const Calendar = ({
 
   const displayDate = currentDate || internalDisplayDate;
 
+  // Calculate if next month navigation is allowed
+  const canNavigateToNextMonth = useMemo(() => {
+    if (isAdmin) return true; // Admins can always navigate
+    const today = new Date();
+    const nextAllowedMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+    const displayNextMonth = new Date(displayDate.getFullYear(), displayDate.getMonth() + 1, 1);
+    return displayNextMonth <= nextAllowedMonth;
+  }, [displayDate, isAdmin]);
+
   // Fetch holidays on mount
   useEffect(() => {
     dispatch(fetchHolidays());
@@ -133,10 +142,16 @@ const Calendar = ({
       displayDate.getMonth() + 1,
       1,
     );
-    if (onMonthChange) {
-      onMonthChange(newDate);
-    } else {
-      setInternalDisplayDate(newDate);
+    // Allow employees to navigate to next month (current + 1)
+    // Allow admins to navigate to any future month
+    const today = new Date();
+    const nextAllowedMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+    if (isAdmin || newDate <= nextAllowedMonth) {
+      if (onMonthChange) {
+        onMonthChange(newDate);
+      } else {
+        setInternalDisplayDate(newDate);
+      }
     }
   };
 
@@ -379,15 +394,11 @@ const Calendar = ({
                 </span>
                 <button
                   onClick={handleNextMonth}
-                  disabled={
-                    displayDate.getMonth() === new Date().getMonth() &&
-                    displayDate.getFullYear() === new Date().getFullYear()
-                  }
+                  disabled={!canNavigateToNextMonth}
                   className={`p-1.5 rounded-lg transition-all active:scale-90 ${
                     isSidebar ? "p-1" : ""
                   } ${
-                    displayDate.getMonth() === new Date().getMonth() &&
-                    displayDate.getFullYear() === new Date().getFullYear()
+                    !canNavigateToNextMonth
                       ? "text-gray-300 cursor-not-allowed"
                       : "text-[#A3AED0] hover:text-[#4318FF] hover:bg-white hover:shadow-sm"
                   }`}

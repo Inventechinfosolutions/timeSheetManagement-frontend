@@ -436,13 +436,7 @@ const MyTimesheet = ({
   const handleNextMonth = () => {
     const next = new Date(now);
     next.setMonth(next.getMonth() + 1);
-    if (next <= new Date()) setNow(next);
-  };
-
-  const canGoNextMonth = () => {
-    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    const currentRealMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    return nextMonth <= currentRealMonth;
+    setNow(next);
   };
 
   const handleHoursInput = (entryIndex: number, val: string) => {
@@ -763,11 +757,10 @@ const MyTimesheet = ({
               </p>
               <button
                 onClick={handleNextMonth}
-                disabled={!canGoNextMonth() || isAdminView}
+                disabled={isAdminView}
                 className={`p-1.5 rounded-lg transition-all ${
-                  !canGoNextMonth() || isAdminView
-                    ? "text-gray-300 cursor-not-allowed " +
-                      (isAdminView ? "hidden" : "")
+                  isAdminView
+                    ? "text-gray-300 cursor-not-allowed hidden"
                     : "hover:bg-gray-50 text-gray-400 hover:text-[#4318FF]"
                 }`}
               >
@@ -929,22 +922,33 @@ const MyTimesheet = ({
               ? getBlockedReason(day.fullDate)
               : "";
 
-            // Disable editing for approved Leave days (any date) and for future WFH/Client Visit (cannot fill future)
+            // Disable editing for approved Leave days (any date)
+            // Client Visit and WFH days are editable (even if future)
             const isLeaveDay = day.status === "Leave";
-            const isFutureApproved =
-              (day.status === "WFH" ||
-                day.status === "Client Visit" ||
-                day.workLocation === "WFH" ||
-                day.workLocation === "Client Visit") &&
-              day.isFuture;
 
-            // Logic for "isEditable" matches old code + new styling check
+            // Check if date is in current month or next month
+            const today = new Date();
+            const currentMonth = today.getMonth();
+            const currentYear = today.getFullYear();
+            const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
+            const nextMonthYear = currentMonth === 11 ? currentYear + 1 : currentYear;
+            
+            const dayMonth = day.fullDate.getMonth();
+            const dayYear = day.fullDate.getFullYear();
+            const isCurrentOrNextMonth = 
+              (dayMonth === currentMonth && dayYear === currentYear) ||
+              (dayMonth === nextMonth && dayYear === nextMonthYear);
+
+            // Logic for "isEditable"
+            // - Admins can edit any date (except blocked/leave days)
+            // - Employees can edit current month and next month
+            // - Client Visit and WFH days are always editable (even if future)
+            // - Leave days are never editable
             const isEditable =
-              !readOnly &&
-              (isAdmin || isEditableMonth(day.fullDate)) &&
+              (isAdmin ? !isAdminView : !readOnly) &&
+              (isAdmin || isCurrentOrNextMonth || isEditableMonth(day.fullDate)) &&
               !isBlocked &&
-              !isLeaveDay &&
-              !isFutureApproved;
+              !isLeaveDay;
 
             // Updated Styling Logic
             let bg = "bg-white hover:border-[#4318FF]/20";
