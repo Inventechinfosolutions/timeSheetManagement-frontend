@@ -11,7 +11,12 @@ import {
   ChevronRight,
   ChevronDown,
   Filter,
+  Download,
+  X,
+  Loader2,
 } from "lucide-react";
+import { saveAs } from "file-saver";
+import { downloadAttendanceReport } from "../reducers/employeeAttendance.reducer";
 import EmployeeTimeSheetMobileCard from "./EmployeeTimeSheetMobileCard";
 
 const AdminEmployeeTimesheetList = () => {
@@ -27,7 +32,28 @@ const AdminEmployeeTimesheetList = () => {
 
   const [selectedDepartment, setSelectedDepartment] = useState("All");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Export State
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [downloadMonth, setDownloadMonth] = useState(new Date().getMonth() + 1);
+  const [downloadYear, setDownloadYear] = useState(new Date().getFullYear());
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleExportExcel = async () => {
+    try {
+      setIsDownloading(true);
+      const blob = await downloadAttendanceReport(downloadMonth, downloadYear);
+      saveAs(blob, `Attendance_${downloadMonth}_${downloadYear}.xlsx`);
+      setShowDownloadModal(false);
+    } catch (error) {
+      console.error("Download failed", error);
+      alert("Failed to download report");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   const departments = [
     "All",
@@ -135,6 +161,13 @@ const AdminEmployeeTimesheetList = () => {
           </h1>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+            <button
+              onClick={() => setShowDownloadModal(true)}
+              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-[#01B574] text-white rounded-full shadow-lg shadow-green-500/20 hover:shadow-green-500/40 hover:-translate-y-0.5 active:scale-95 transition-all text-sm font-bold"
+            >
+              <Download size={18} />
+              <span className="whitespace-nowrap">Export Excel</span>
+            </button>
             {/* Modern Custom Dropdown */}
             <div className="relative" ref={dropdownRef}>
               <button
@@ -327,6 +360,84 @@ const AdminEmployeeTimesheetList = () => {
           </div>
         </div>
       </div>
+
+      {/* Download Modal */}
+      {showDownloadModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 relative animate-in zoom-in-95 duration-200 border border-gray-100">
+            <button
+              onClick={() => !isDownloading && setShowDownloadModal(false)}
+              className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 transition-colors"
+              disabled={isDownloading}
+            >
+              <X size={20} />
+            </button>
+
+            <h3 className="text-xl font-black text-[#2B3674] mb-1">
+              Export Monthly Report
+            </h3>
+            <p className="text-gray-500 text-sm mb-6">
+              Select the month and year for the attendance report.
+            </p>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-[#2B3674] uppercase tracking-wider ml-1">
+                    Month
+                  </label>
+                  <select
+                    value={downloadMonth}
+                    onChange={(e) => setDownloadMonth(parseInt(e.target.value))}
+                    className="w-full p-3 bg-[#F4F7FE] border-none rounded-xl text-[#2B3674] font-bold focus:ring-2 focus:ring-[#4318FF] outline-none appearance-none cursor-pointer"
+                    disabled={isDownloading}
+                  >
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                      <option key={m} value={m}>
+                        {new Date(2000, m - 1, 1).toLocaleString("default", {
+                          month: "long",
+                        })}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-[#2B3674] uppercase tracking-wider ml-1">
+                    Year
+                  </label>
+                  <input
+                    type="number"
+                    value={downloadYear}
+                    onChange={(e) => setDownloadYear(parseInt(e.target.value))}
+                    className="w-full p-3 bg-[#F4F7FE] border-none rounded-xl text-[#2B3674] font-bold focus:ring-2 focus:ring-[#4318FF] outline-none"
+                    min="2000"
+                    max="2100"
+                    disabled={isDownloading}
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={handleExportExcel}
+                disabled={isDownloading}
+                className="w-full py-3.5 bg-[#01B574] text-white font-bold rounded-xl hover:bg-[#009963] transition-all flex items-center justify-center gap-2 mt-4 shadow-lg shadow-green-500/25 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
+              >
+                {isDownloading ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    <span>Generating...</span>
+                  </>
+                ) : (
+                  <>
+                    <Download size={18} />
+                    <span>Download Excel</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
