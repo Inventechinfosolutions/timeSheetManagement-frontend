@@ -108,6 +108,15 @@ export const fetchAllEmployeesMonthlyAttendance = createAsyncThunk(
   }
 );
 
+// 1.6 Download Monthly Report: GET /download-report
+export const downloadAttendanceReport = async (month: number, year: number) => {
+  const response = await axios.get(`${apiUrl}/download-report`, {
+    params: { month, year },
+    responseType: 'blob', // Important for file download
+  });
+  return response.data;
+};
+
 // 2. Create Attendance Record: POST /
 export const createAttendanceRecord = createAsyncThunk(
   'attendance/createRecord',
