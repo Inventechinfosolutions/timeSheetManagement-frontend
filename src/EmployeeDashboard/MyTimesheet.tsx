@@ -358,6 +358,26 @@ const MyTimesheet = ({
         };
       }
       
+      // Check if this date is a master holiday - holidays take priority over leave/WFH/Client Visit
+      const isHoliday = holidays?.find((h: any) => {
+        const hDate = h.holidayDate || h.date;
+        if (!hDate) return false;
+        const normalizedHDate =
+          typeof hDate === "string"
+            ? hDate.split("T")[0]
+            : new Date(hDate).toISOString().split("T")[0];
+        return normalizedHDate === key;
+      });
+      
+      // If it's a master holiday, don't apply overlay - keep holiday status
+      if (isHoliday) {
+        return {
+          ...e,
+          status: "Holiday" as TimesheetEntry["status"],
+          workLocation: undefined, // Clear workLocation for holidays
+        };
+      }
+      
       if (!overlay) return e;
       
       // Priority: Attendance record's workLocation takes precedence over leave request overlay
@@ -1031,6 +1051,11 @@ const MyTimesheet = ({
               bg = "bg-[#FEE2E2]";
               badge = "bg-[#EE5D50]/70 text-white font-bold";
               border = "border-[#EE5D50]/10";
+            } else if (holiday || (day.status as any) === "Holiday") {
+              // Master holidays take priority over everything (Leave, WFH, Client Visit, etc.)
+              bg = "bg-[#DBEAFE]";
+              badge = "bg-[#1890FF]/70 text-white font-bold";
+              border = "border-[#1890FF]/20";
             } else if (
               (day.status === "Full Day" ||
                 day.status === "Half Day") &&
@@ -1056,10 +1081,6 @@ const MyTimesheet = ({
                bg = "bg-[#DBEAFE]";
                badge = "bg-[#4318FF]/70 text-white font-bold";
                border = "border-[#4318FF]/20"; 
-            } else if (holiday || (day.status as any) === "Holiday") {
-              bg = "bg-[#DBEAFE]";
-              badge = "bg-[#1890FF]/70 text-white font-bold";
-              border = "border-[#1890FF]/20";
             } else if (day.status === "Absent") {
               bg = "bg-[#FECACA]";
               badge = "bg-[#DC2626]/70 text-white font-bold";
@@ -1187,19 +1208,19 @@ const MyTimesheet = ({
                 >
                   {isBlocked
                     ? "BLOCKED"
-                    : isSunday || (isSaturdayWithNoData && !day.workLocation)
-                      ? "WEEKEND"
-                      : day.status === "Leave"
-                        ? "LEAVE"
-                        : day.workLocation && (day.status as string) !== "Leave"
-                          ? day.workLocation
-                          : day.status === "Full Day" ||
-                            day.status === "Half Day" ||
-                            day.status === "WFH" ||
-                            day.status === "Client Visit"
-                          ? day.status
-                          : day.status === "Holiday" || holiday
-                            ? holiday?.holidayName || holiday?.name || "HOLIDAY"
+                    : holiday || day.status === "Holiday"
+                      ? holiday?.holidayName || holiday?.name || "HOLIDAY"
+                      : isSunday || (isSaturdayWithNoData && !day.workLocation)
+                        ? "WEEKEND"
+                        : day.status === "Leave"
+                          ? "LEAVE"
+                          : day.workLocation && (day.status as string) !== "Leave"
+                            ? day.workLocation
+                            : day.status === "Full Day" ||
+                              day.status === "Half Day" ||
+                              day.status === "WFH" ||
+                              day.status === "Client Visit"
+                            ? day.status
                             : day.status === "Absent"
                               ? "ABSENT"
                               : day.status === "Not Updated"

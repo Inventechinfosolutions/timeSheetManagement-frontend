@@ -21,6 +21,7 @@ import { TimesheetEntry } from "../types";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import { fetchMonthlyAttendance } from "../reducers/employeeAttendance.reducer";
 import { fetchBlockers } from "../reducers/timesheetBlocker.reducer";
+import { getLeaveHistory } from "../reducers/leaveRequest.reducer";
 import { UserType } from "../reducers/user.reducer";
 
 interface CalendarProps {
@@ -57,6 +58,9 @@ const Calendar = ({
   );
   const { blockers } = useAppSelector(
     (state: RootState) => state.timesheetBlocker,
+  );
+  const { entities: leaveEntities = [] } = useAppSelector(
+    (state: RootState) => (state as any).leaveRequests || { entities: [] },
   );
 
   const isAdmin = currentUser?.userType === UserType.ADMIN;
@@ -112,13 +116,226 @@ const Calendar = ({
         year: displayDate.getFullYear().toString(),
       }),
     );
+    // Also fetch leave requests so we can reflect approved Leave/WFH/Client Visit
+    // even if attendance records are not present (backend delay/lock rules).
+    dispatch(
+      getLeaveHistory({
+        employeeId: currentEmployeeId,
+        page: 1,
+        limit: 500,
+      }),
+    );
   }, [dispatch, currentEmployeeId, displayDate, propEntries, isAdmin]);
 
   // Generate entries from Redux state ONLY if not provided via props
+  // Overlay Approved leave/WFH/Client Visit from leave-requests onto timesheet entries.
   const entries = useMemo(() => {
-    if (propEntries) return propEntries;
-    return generateMonthlyEntries(displayDate, now, records);
-  }, [displayDate, now, records, propEntries]);
+    if (propEntries) {
+      // If propEntries are provided, still overlay leave requests if available
+      if (!currentEmployeeId || !Array.isArray(leaveEntities) || leaveEntities.length === 0) {
+        return propEntries;
+      }
+
+      const monthStart = new Date(displayDate.getFullYear(), displayDate.getMonth(), 1);
+      const monthEnd = new Date(displayDate.getFullYear(), displayDate.getMonth() + 1, 0);
+      const toYmd = (d: Date) =>
+        `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, "0")}-${d
+          .getDate()
+          .toString()
+          .padStart(2, "0")}`;
+
+      const overlayByDate = new Map<
+        string,
+        { status?: TimesheetEntry["status"]; workLocation?: string }
+      >();
+
+      leaveEntities
+        .filter((r: any) => r && r.employeeId === currentEmployeeId && r.status === "Approved")
+        .forEach((r: any) => {
+          const from = new Date(r.fromDate);
+          const to = new Date(r.toDate);
+          const start = from < monthStart ? monthStart : from;
+          const end = to > monthEnd ? monthEnd : to;
+          const cur = new Date(start);
+          cur.setHours(0, 0, 0, 0);
+          const endNorm = new Date(end);
+          endNorm.setHours(0, 0, 0, 0);
+
+          while (cur <= endNorm) {
+            const key = toYmd(cur);
+            // Check if this date is a master holiday - holidays take priority
+            const isHoliday = holidays?.find((h: any) => {
+              const hDate = h.holidayDate || h.date;
+              if (!hDate) return false;
+              const normalizedHDate =
+                typeof hDate === "string"
+                  ? hDate.split("T")[0]
+                  : new Date(hDate).toISOString().split("T")[0];
+              return normalizedHDate === key;
+            });
+            
+            // Don't overlay if it's a master holiday
+            if (!isHoliday) {
+              if (r.requestType === "Apply Leave" || r.requestType === "Leave") {
+                overlayByDate.set(key, { status: "Leave" });
+              } else if (r.requestType === "Work From Home") {
+                overlayByDate.set(key, { workLocation: "WFH" });
+              } else if (r.requestType === "Client Visit") {
+                overlayByDate.set(key, { workLocation: "Client Visit" });
+              }
+            }
+            cur.setDate(cur.getDate() + 1);
+          }
+        });
+
+      if (overlayByDate.size === 0) return propEntries;
+
+      return propEntries.map((e) => {
+        const key = toYmd(e.fullDate as Date);
+        const overlay = overlayByDate.get(key);
+        
+        // Sunday should always be Weekend, regardless of any overlay data
+        const dayOfWeek = (e.fullDate as Date).getDay();
+        if (dayOfWeek === 0) {
+          return {
+            ...e,
+            status: "Weekend" as TimesheetEntry["status"],
+            workLocation: undefined,
+          };
+        }
+        
+        // Check if this date is a master holiday - holidays take priority
+        const isHoliday = holidays?.find((h: any) => {
+          const hDate = h.holidayDate || h.date;
+          if (!hDate) return false;
+          const normalizedHDate =
+            typeof hDate === "string"
+              ? hDate.split("T")[0]
+              : new Date(hDate).toISOString().split("T")[0];
+          return normalizedHDate === key;
+        });
+        
+        if (isHoliday) {
+          return {
+            ...e,
+            status: "Holiday" as TimesheetEntry["status"],
+            workLocation: undefined,
+          };
+        }
+        
+        if (!overlay) return e;
+        
+        return {
+          ...e,
+          status: overlay.status ?? e.status,
+          workLocation: e.workLocation ?? overlay.workLocation,
+        };
+      });
+    }
+
+    const baseEntries = generateMonthlyEntries(displayDate, now, records);
+
+    // Overlay Approved leave/WFH/Client Visit from leave-requests onto timesheet entries.
+    if (!currentEmployeeId || !Array.isArray(leaveEntities) || leaveEntities.length === 0) {
+      return baseEntries;
+    }
+
+    const monthStart = new Date(displayDate.getFullYear(), displayDate.getMonth(), 1);
+    const monthEnd = new Date(displayDate.getFullYear(), displayDate.getMonth() + 1, 0);
+    const toYmd = (d: Date) =>
+      `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, "0")}-${d
+        .getDate()
+        .toString()
+        .padStart(2, "0")}`;
+
+    const overlayByDate = new Map<
+      string,
+      { status?: TimesheetEntry["status"]; workLocation?: string }
+    >();
+
+    leaveEntities
+      .filter((r: any) => r && r.employeeId === currentEmployeeId && r.status === "Approved")
+      .forEach((r: any) => {
+        const from = new Date(r.fromDate);
+        const to = new Date(r.toDate);
+        const start = from < monthStart ? monthStart : from;
+        const end = to > monthEnd ? monthEnd : to;
+        const cur = new Date(start);
+        cur.setHours(0, 0, 0, 0);
+        const endNorm = new Date(end);
+        endNorm.setHours(0, 0, 0, 0);
+
+        while (cur <= endNorm) {
+          const key = toYmd(cur);
+          // Check if this date is a master holiday - holidays take priority
+          const isHoliday = holidays?.find((h: any) => {
+            const hDate = h.holidayDate || h.date;
+            if (!hDate) return false;
+            const normalizedHDate =
+              typeof hDate === "string"
+                ? hDate.split("T")[0]
+                : new Date(hDate).toISOString().split("T")[0];
+            return normalizedHDate === key;
+          });
+          
+          // Don't overlay if it's a master holiday
+          if (!isHoliday) {
+            if (r.requestType === "Apply Leave" || r.requestType === "Leave") {
+              overlayByDate.set(key, { status: "Leave" });
+            } else if (r.requestType === "Work From Home") {
+              overlayByDate.set(key, { workLocation: "WFH" });
+            } else if (r.requestType === "Client Visit") {
+              overlayByDate.set(key, { workLocation: "Client Visit" });
+            }
+          }
+          cur.setDate(cur.getDate() + 1);
+        }
+      });
+
+    if (overlayByDate.size === 0) return baseEntries;
+
+    return baseEntries.map((e) => {
+      const key = toYmd(e.fullDate as Date);
+      const overlay = overlayByDate.get(key);
+      
+      // Sunday should always be Weekend, regardless of any overlay data
+      const dayOfWeek = (e.fullDate as Date).getDay();
+      if (dayOfWeek === 0) {
+        return {
+          ...e,
+          status: "Weekend" as TimesheetEntry["status"],
+          workLocation: undefined,
+        };
+      }
+      
+      // Check if this date is a master holiday - holidays take priority
+      const isHoliday = holidays?.find((h: any) => {
+        const hDate = h.holidayDate || h.date;
+        if (!hDate) return false;
+        const normalizedHDate =
+          typeof hDate === "string"
+            ? hDate.split("T")[0]
+            : new Date(hDate).toISOString().split("T")[0];
+        return normalizedHDate === key;
+      });
+      
+      if (isHoliday) {
+        return {
+          ...e,
+          status: "Holiday" as TimesheetEntry["status"],
+          workLocation: undefined,
+        };
+      }
+      
+      if (!overlay) return e;
+      
+      return {
+        ...e,
+        status: overlay.status ?? e.status,
+        workLocation: e.workLocation ?? overlay.workLocation,
+      };
+    });
+  }, [displayDate, now, records, propEntries, leaveEntities, currentEmployeeId, holidays]);
 
   const handlePrevMonth = () => {
     const newDate = new Date(
@@ -557,6 +774,11 @@ const Calendar = ({
                   "bg-gray-200 opacity-90 grayscale border border-gray-200 shadow-inner cursor-not-allowed";
                 // textClass = "text-gray-500";
                 statusLabel = "Blocked";
+              } else if (holiday) {
+                // Master holidays take priority over everything (Leave, WFH, Client Visit, etc.)
+                cellClass = `bg-blue-50 border-transparent hover:bg-blue-100 ${baseHover}`;
+                // textClass = "text-blue-700 font-bold";
+                statusLabel = holiday.name;
               } else if (isSunday || (isSaturdayWithNoData && entry && !entry.workLocation)) {
                 // Sunday: Always Weekend. Saturday: Only Weekend if no data
                 cellClass = `bg-red-50 border-transparent text-red-600 hover:bg-red-100 ${baseHover}`;
@@ -600,10 +822,6 @@ const Calendar = ({
               } else if (entry?.status === "Absent") {
                 cellClass = `bg-red-50 border-transparent hover:bg-red-100 ${baseHover}`;
                 // textClass = "text-red-700 font-bold";
-              } else if (holiday) {
-                cellClass = `bg-blue-50 border-transparent hover:bg-blue-100 ${baseHover}`;
-                // textClass = "text-blue-700 font-bold";
-                statusLabel = holiday.name;
               } else if (entry?.isFuture) {
                 cellClass = `bg-white border-transparent hover:bg-gray-50 ${baseHover}`;
                 // textClass = "text-gray-300 font-bold";
@@ -739,9 +957,9 @@ const Calendar = ({
                                       ? "text-white bg-[#FFB020]/80"
                                    : entry?.status === "Absent"
                                      ? "text-white bg-[#EE5D50]/70"
-                                     : entry?.status === "Leave"
-                                       ? "text-white bg-red-400/70"
-                                       : entry?.isWeekend
+                                   : entry?.status === "Leave"
+                                     ? "text-white bg-red-400/70"
+                                     : entry?.isWeekend
                                        ? "text-white bg-red-400/70"
                                        : "text-white bg-[#64748B]/90"
                          }
