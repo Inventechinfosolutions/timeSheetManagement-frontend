@@ -31,7 +31,7 @@ const SidebarLayout = ({
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const { tab } = useParams<{ tab?: string }>();
   const dispatch = useDispatch<AppDispatch>();
-  
+
   // Ref for the main scrollable content area
   const mainContentRef = useRef<HTMLDivElement>(null);
 
@@ -45,8 +45,8 @@ const SidebarLayout = ({
         return "Employee Details";
       case "timesheet-list":
         return "Timesheet";
-      // case "working-details":
-      //   return "Working Details";
+      case "working-details":
+        return "Timesheet";
       case "requests":
         return "Notification";
       default:
@@ -72,7 +72,6 @@ const SidebarLayout = ({
     { name: "System Dashboard", icon: Settings },
     { name: "Employee Details", icon: Users },
     { name: "Timesheet", icon: AlarmClock },
-    // { name: "Working Details", icon: ClipboardList },
     { name: "Notification", icon: Bell }, // Notification item with Bell icon
   ];
 
@@ -263,7 +262,7 @@ const SidebarLayout = ({
         </nav>
       </aside>
 
-      <main 
+      <main
         ref={mainContentRef}
         className="flex-1 min-h-0 h-full relative no-scrollbar flex flex-col bg-[#F4F7FE] overflow-auto"
       >
