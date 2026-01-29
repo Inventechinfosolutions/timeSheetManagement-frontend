@@ -61,6 +61,7 @@ const AdminEmployeeTimesheetList = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
+      setCurrentPage(1);
     }, 500);
     return () => clearTimeout(timer);
   }, [searchTerm]);
@@ -103,7 +104,15 @@ const AdminEmployeeTimesheetList = () => {
     department: emp.department,
   }));
 
-  const currentItems = employees;
+  const currentItems = employees.filter((emp) => {
+    if (!debouncedSearchTerm) return true;
+    const s = debouncedSearchTerm.toLowerCase();
+    return (
+      emp.name.toLowerCase().includes(s) ||
+      emp.id.toString().toLowerCase().includes(s) ||
+      (emp.department && emp.department.toLowerCase().includes(s))
+    );
+  });
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
   const handleNextPage = () => {

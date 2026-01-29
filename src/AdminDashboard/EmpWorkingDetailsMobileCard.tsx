@@ -1,4 +1,4 @@
-import { Eye } from "lucide-react";
+import { Edit, Eye } from "lucide-react";
 
 interface Employee {
   id: string;
@@ -9,11 +9,13 @@ interface Employee {
 interface EmpWorkingDetailsMobileCardProps {
   employees: Employee[];
   onViewDetails: (empId: string) => void;
+  onViewTimesheet: (empId: string) => void;
 }
 
 const EmpWorkingDetailsMobileCard = ({
   employees,
   onViewDetails,
+  onViewTimesheet,
 }: EmpWorkingDetailsMobileCardProps) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -45,13 +47,22 @@ const EmpWorkingDetailsMobileCard = ({
               </div>
             </div>
 
-            <button
-              onClick={() => onViewDetails(emp.id)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#4318FF]/5 text-[#4318FF] font-bold text-sm hover:bg-[#4318FF] hover:text-white transition-all active:scale-95 shadow-sm"
-            >
-              <Eye size={16} />
-              {/* <span>View Details</span> */}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => onViewDetails(emp.id)}
+                className="flex items-center justify-center p-2 rounded-xl bg-[#4318FF]/5 text-[#4318FF] hover:bg-[#4318FF] hover:text-white transition-all active:scale-95 shadow-sm"
+                title="View Working Details"
+              >
+                <Eye size={16} />
+              </button>
+              <button
+                onClick={() => onViewTimesheet(emp.id)}
+                className="flex items-center justify-center p-2 rounded-xl bg-[#4318FF]/5 text-[#4318FF] hover:bg-[#4318FF] hover:text-white transition-all active:scale-95 shadow-sm"
+                title="Edit Timesheet"
+              >
+                <Edit size={16} />
+              </button>
+            </div>
           </div>
         </div>
       ))}
