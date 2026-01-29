@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { DatePicker, ConfigProvider } from "antd";
 import dayjs from "dayjs";
@@ -15,6 +15,11 @@ import {
   getLeaveRequestFiles,
   getLeaveRequestById,
 } from "../reducers/leaveRequest.reducer";
+import { getEntities } from "../reducers/employeeDetails.reducer";
+import {
+  submitBulkAttendance,
+  AttendanceStatus,
+} from "../reducers/employeeAttendance.reducer";
 import {
   Home,
   MapPin,
@@ -26,9 +31,11 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  User,
 } from "lucide-react";
 import { notification } from "antd";
-import CommonMultipleUploader from "./CommonMultipleUploader";
+import CommonMultipleUploader from "../EmployeeDashboard/CommonMultipleUploader";
 
 const isCancellationAllowed = (submittedDate: string) => {
   if (!submittedDate) return true;
@@ -52,7 +59,7 @@ const datePickerTheme = {
   components: { DatePicker: { cellHeight: 28, cellWidth: 28 } },
 };
 
-const LeaveManagement = () => {
+const AdminLeaveManagement = () => {
   const dispatch = useAppDispatch();
   const {
     entities = [],
@@ -60,13 +67,15 @@ const LeaveManagement = () => {
     totalPages: totalPagesFromRedux,
     stats = null,
     loading,
-    submitSuccess,
     error,
   } = useAppSelector((state) => state.leaveRequest || {});
-  const { entity } = useAppSelector((state) => state.employeeDetails);
-  const currentUser = useAppSelector((state) => state.user.currentUser);
-  const employeeId = entity?.employeeId || currentUser?.employeeId;
+  const { entities: employeeList = [] } = useAppSelector(
+    (state) => state.employeeDetails || {},
+  );
 
+  const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
+  const [isEmployeeDropdownOpen, setIsEmployeeDropdownOpen] = useState(false);
+  const employeeDropdownRef = useRef<HTMLDivElement>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewMode, setIsViewMode] = useState(false);
   const [selectedRequestId, setSelectedRequestId] = useState<number | null>(
@@ -85,6 +94,7 @@ const LeaveManagement = () => {
     endDate: "",
   });
   const [isCancelling, setIsCancelling] = useState(false);
+  const [isAutoApproving, setIsAutoApproving] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -93,42 +103,22 @@ const LeaveManagement = () => {
     description: "",
     startDate: "",
     endDate: "",
+    employee: "",
   });
 
+  // Disable dates that already have approved/pending leave requests for the selected employee
   const disabledDate = (current: any) => {
-    if (!current) return false;
+    if (!current || !selectedEmployee?.employeeId) return false;
 
-    // Normalize current date to start of day for comparison
     const currentDate = current.startOf("day");
-    const today = dayjs().startOf("day");
 
-    // If no leave type is selected, use default behavior (block past dates and overlapping requests)
-    if (!selectedLeaveType) {
-      if (currentDate.isBefore(today)) {
-        return true;
-      }
-      return (entities || []).some((req: any) => {
-        if (!req || req.status === "Rejected" || req.status === "Cancelled")
-          return false;
-        const startDate = dayjs(req.fromDate).startOf("day");
-        const endDate = dayjs(req.toDate).startOf("day");
-        return (
-          (currentDate.isSame(startDate) || currentDate.isAfter(startDate)) &&
-          (currentDate.isSame(endDate) || currentDate.isBefore(endDate))
-        );
-      });
-    }
-
-    // For Client Visit, allow past dates - don't disable them
-    const isClientVisit = selectedLeaveType === "Client Visit";
-    if (!isClientVisit && currentDate.isBefore(today)) {
-      return true;
-    }
-
+    // Check if this date falls within any existing approved/pending request for the selected employee
     return (entities || []).some((req: any) => {
-      // Exclude Rejected and Cancelled requests
-      if (!req || req.status === "Rejected" || req.status === "Cancelled")
-        return false;
+      // Only check requests for the selected employee
+      if (req.employeeId !== selectedEmployee.employeeId) return false;
+
+      // Exclude rejected and cancelled requests
+      if (req.status === "Rejected" || req.status === "Cancelled") return false;
 
       // Exclude the current request if we're viewing/editing it
       if (isViewMode && selectedRequestId && req.id === selectedRequestId)
@@ -136,77 +126,86 @@ const LeaveManagement = () => {
 
       const startDate = dayjs(req.fromDate).startOf("day");
       const endDate = dayjs(req.toDate).startOf("day");
+
+      // Check if current date falls within this request's date range
       const isDateInRange =
         (currentDate.isSame(startDate) || currentDate.isAfter(startDate)) &&
         (currentDate.isSame(endDate) || currentDate.isBefore(endDate));
 
       if (!isDateInRange) return false;
 
-      const existingRequestType = req.requestType || "";
+      const existingRequestType = (req.requestType || "").trim();
 
-      // If applying for Leave: allow during Client Visit, block during Leave or Work From Home
-      if (selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave") {
-        // Allow if existing request is Client Visit (regardless of status)
-        if (existingRequestType === "Client Visit") {
-          return false; // Date is NOT disabled, allow selection
-        }
-        // Block if existing request is Leave or Work From Home
-        return (
-          existingRequestType === "Apply Leave" ||
-          existingRequestType === "Leave" ||
-          existingRequestType === "Work From Home"
-        );
+      // CRITICAL RULE: If existing request is Leave or WFH, ALWAYS block ALL new requests (including Client Visit)
+      // This check happens FIRST and doesn't depend on selectedLeaveType
+      const isExistingLeaveOrWFH =
+        existingRequestType === "Apply Leave" ||
+        existingRequestType === "Leave" ||
+        existingRequestType === "Work From Home";
+
+      if (isExistingLeaveOrWFH) {
+        // Block ANY new request (Leave, WFH, or Client Visit) if there's already a Leave or WFH
+        // This prevents applying Client Visit when Leave already exists
+        return true;
       }
 
-      // If applying for Work From Home: allow during Client Visit, block during Leave or Work From Home
-      if (selectedLeaveType === "Work From Home") {
-        // Allow if existing request is Client Visit
-        if (existingRequestType === "Client Visit") {
-          return false; // Date is NOT disabled, allow selection
-        }
-        // Block if existing request is Leave or Work From Home
-        return (
-          existingRequestType === "Apply Leave" ||
-          existingRequestType === "Leave" ||
-          existingRequestType === "Work From Home"
-        );
-      }
-
-      // If applying for Client Visit: block if existing request is Leave or WFH
-      // CRITICAL: If Leave or WFH already exists, Client Visit should be BLOCKED
-      if (selectedLeaveType === "Client Visit") {
-        // Block if existing request is Leave or WFH
+      // If existing is Client Visit, apply rules based on what we're trying to apply
+      if (existingRequestType === "Client Visit") {
+        // If applying for Leave or WFH: allow (per earlier requirement - can apply Leave/WFH during Client Visit)
         if (
-          existingRequestType === "Apply Leave" ||
-          existingRequestType === "Leave" ||
-          existingRequestType === "Work From Home"
+          selectedLeaveType === "Apply Leave" ||
+          selectedLeaveType === "Leave" ||
+          selectedLeaveType === "Work From Home"
         ) {
-          return true; // Date IS disabled, block selection
+          return false; // Allow Leave/WFH on top of Client Visit
         }
-        // Block if existing request is Client Visit (prevent duplicate)
-        if (existingRequestType === "Client Visit") {
+        // If applying for Client Visit: block duplicate Client Visit
+        if (selectedLeaveType === "Client Visit") {
           return true; // Block duplicate Client Visit
         }
-        // If no existing request matches, allow
-        return false;
+        // If selectedLeaveType is not set yet, block to be safe
+        if (!selectedLeaveType) {
+          return true;
+        }
       }
 
-      // Default: block all overlapping requests
+      // Default: if no specific rule matches and we reach here, block it for safety
       return true;
     });
   };
 
   const disabledEndDate = (current: any) => {
-    // For Client Visit, allow past dates
-    const isClientVisit = selectedLeaveType === "Client Visit";
-    if (!isClientVisit && disabledDate(current)) return true;
+    // Disable if end date is before start date
     if (formData.startDate) {
-      return (
-        current && current.isBefore(dayjs(formData.startDate).startOf("day"))
-      );
+      if (current && current.isBefore(dayjs(formData.startDate).startOf("day"))) {
+        return true;
+      }
     }
-    return false;
+    // Also check if the date is already covered by existing requests
+    return disabledDate(current);
   };
+
+  // Fetch employees on mount
+  useEffect(() => {
+    dispatch(getEntities({ search: "" }));
+  }, [dispatch]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        employeeDropdownRef.current &&
+        !employeeDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsEmployeeDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const validateForm = () => {
     let isValid = true;
@@ -215,8 +214,13 @@ const LeaveManagement = () => {
       description: "",
       startDate: "",
       endDate: "",
+      employee: "",
     };
 
+    if (!selectedEmployee) {
+      newErrors.employee = "Please select an employee";
+      isValid = false;
+    }
     if (!formData.title.trim()) {
       newErrors.title = "Title is required";
       isValid = false;
@@ -237,16 +241,20 @@ const LeaveManagement = () => {
     setErrors(newErrors);
     return isValid;
   };
-  const handleSubmit = () => {
-    if (validateForm()) {
+
+  const handleSubmit = async () => {
+    if (!validateForm() || !selectedEmployee) return;
+
+    setIsAutoApproving(true);
+    try {
       const duration =
         formData.startDate && formData.endDate
           ? dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1
           : 0;
 
-      dispatch(
+      const submitAction = await dispatch(
         submitLeaveRequest({
-          employeeId,
+          employeeId: selectedEmployee.employeeId,
           requestType: selectedLeaveType,
           title: formData.title,
           description: formData.description,
@@ -256,54 +264,169 @@ const LeaveManagement = () => {
           submittedDate: new Date().toISOString().split("T")[0],
         }),
       );
+
+      if (!submitLeaveRequest.fulfilled.match(submitAction)) {
+        notification.error({
+          message: "Submit Failed",
+          description: "Failed to submit request",
+          placement: "topRight",
+          duration: 3,
+        });
+        return;
+      }
+
+      // Update employee timesheet/attendance immediately (same as manager-approval flow in Requests.tsx)
+      // This ensures the employee calendar shows Leave/WFH/Client Visit for the approved range.
+      const startDate = dayjs(formData.startDate);
+      const endDate = dayjs(formData.endDate);
+      const diffDays = endDate.diff(startDate, "day");
+      const attendancePayload: any[] = [];
+
+      for (let i = 0; i <= diffDays; i++) {
+        const currentDate = startDate.add(i, "day").format("YYYY-MM-DD");
+        const attendanceData: any = {
+          employeeId: selectedEmployee.employeeId,
+          workingDate: currentDate,
+          totalHours: 0,
+        };
+
+        if (
+          selectedLeaveType === "Apply Leave" ||
+          selectedLeaveType === "Leave"
+        ) {
+          attendanceData.status = AttendanceStatus.LEAVE;
+        } else if (selectedLeaveType === "Work From Home") {
+          // Backend expects workLocation strings (kept consistent with Requests.tsx)
+          attendanceData.workLocation = "WFH";
+        } else if (selectedLeaveType === "Client Visit") {
+          attendanceData.workLocation = "Client Visit";
+        }
+
+        attendancePayload.push(attendanceData);
+      }
+
+      if (attendancePayload.length > 0) {
+        await dispatch(submitBulkAttendance(attendancePayload)).unwrap();
+      }
+
+      const createdRequest: any = submitAction.payload;
+      const createdId = createdRequest?.id;
+
+      if (!createdId) {
+        notification.warning({
+          message: "Submitted",
+          description:
+            "Request submitted, but auto-approval couldn't be completed (missing request id).",
+          placement: "topRight",
+          duration: 4,
+        });
+        return;
+      }
+
+      const approveAction = await dispatch(
+        updateLeaveRequestStatus({ id: createdId, status: "Approved" }),
+      );
+
+      if (!updateLeaveRequestStatus.fulfilled.match(approveAction)) {
+        notification.warning({
+          message: "Submitted",
+          description:
+            "Request submitted, but auto-approval failed. Please approve it from Requests/Notifications.",
+          placement: "topRight",
+          duration: 4,
+        });
+        return;
+      }
+
+      notification.success({
+        message: "Applied & Approved",
+        description: "Admin request is auto-approved successfully.",
+        placement: "topRight",
+        duration: 3,
+      });
+
+      // Refresh data for selected employee
+      await dispatch(
+        getLeaveHistory({
+          employeeId: selectedEmployee.employeeId,
+          page: currentPage,
+          limit: itemsPerPage,
+        }),
+      );
+      await dispatch(getLeaveStats(selectedEmployee.employeeId));
+
+      // Close & reset form
+      setIsModalOpen(false);
+      setFormData({ title: "", description: "", startDate: "", endDate: "" });
+      setErrors({
+        title: "",
+        description: "",
+        startDate: "",
+        endDate: "",
+        employee: "",
+      });
+      setSelectedLeaveType("");
+      setSelectedRequestId(null);
+      setIsViewMode(false);
+      dispatch(resetSubmitSuccess());
+    } catch (e: any) {
+      notification.error({
+        message: "Timesheet Update Failed",
+        description:
+          e?.message ||
+          "Could not update attendance/timesheet for the approved request.",
+        placement: "topRight",
+        duration: 4,
+      });
+    } finally {
+      setIsAutoApproving(false);
     }
   };
 
   useEffect(() => {
-    if (submitSuccess) {
-      notification.success({
-        message: "Application Submitted",
-        description: "Notification sent to Manager",
-        placement: "topRight",
-        duration: 3,
-      });
-    }
-  }, [submitSuccess]);
-
-  useEffect(() => {
-    if (employeeId) {
+    if (selectedEmployee?.employeeId) {
       dispatch(
-        getLeaveHistory({ employeeId, page: currentPage, limit: itemsPerPage }),
+        getLeaveHistory({
+          employeeId: selectedEmployee.employeeId,
+          page: currentPage,
+          limit: itemsPerPage,
+        }),
       );
-      dispatch(getLeaveStats(employeeId));
+      dispatch(getLeaveStats(selectedEmployee.employeeId));
     }
-  }, [dispatch, employeeId, currentPage]);
+  }, [dispatch, selectedEmployee, currentPage]);
 
-  useEffect(() => {
-    if (submitSuccess && employeeId) {
-      setIsModalOpen(false);
-      dispatch(getLeaveStats(employeeId));
-      dispatch(resetSubmitSuccess());
-      setFormData({ title: "", description: "", startDate: "", endDate: "" });
-      setErrors({ title: "", description: "", startDate: "", endDate: "" });
-      setSelectedLeaveType("");
-      setSelectedRequestId(null);
-      setIsViewMode(false);
-    }
-  }, [submitSuccess, dispatch, employeeId]);
+  // Note: admin requests are auto-approved in handleSubmit; we don't rely on submitSuccess side-effects here.
 
   const totalPages = totalPagesFromRedux || 0;
 
   const handleOpenModal = (label: string) => {
+    if (!selectedEmployee) {
+      setErrors((prev) => ({
+        ...prev,
+        employee: "Please select an employee first",
+      }));
+      notification.warning({
+        message: "Employee Required",
+        description: "Please select an employee before applying for leave",
+        placement: "topRight",
+      });
+      return;
+    }
     setIsViewMode(false);
     setSelectedRequestId(null);
-    setUploaderKey((prev) => prev + 1); // Increment to reset uploader
+    setUploaderKey((prev) => prev + 1);
     setSelectedLeaveType(
       label === "Leave" || label === "Apply Leave" ? "Apply Leave" : label,
     );
     setIsModalOpen(true);
-    setErrors({ title: "", description: "", startDate: "", endDate: "" });
-    // Clear any previous global errors from the store
+    setErrors({
+      title: "",
+      description: "",
+      startDate: "",
+      endDate: "",
+      employee: "",
+    });
     dispatch(resetSubmitSuccess());
   };
 
@@ -321,7 +444,13 @@ const LeaveManagement = () => {
           endDate: fetchedItem.toDate,
         });
         setIsModalOpen(true);
-        setErrors({ title: "", description: "", startDate: "", endDate: "" });
+        setErrors({
+          title: "",
+          description: "",
+          startDate: "",
+          endDate: "",
+          employee: "",
+        });
       } else {
         notification.error({
           message: "Error",
@@ -336,18 +465,24 @@ const LeaveManagement = () => {
   };
 
   const executeCancel = () => {
-    if (cancelModal.id && employeeId) {
+    if (cancelModal.id && selectedEmployee?.employeeId) {
       setIsCancelling(true);
       dispatch(
         updateLeaveRequestStatus({ id: cancelModal.id, status: "Cancelled" }),
       )
         .then(() => {
-          dispatch(getLeaveStats(employeeId));
-          dispatch(getLeaveHistory(employeeId));
+          dispatch(getLeaveStats(selectedEmployee.employeeId));
+          dispatch(
+            getLeaveHistory({
+              employeeId: selectedEmployee.employeeId,
+              page: currentPage,
+              limit: itemsPerPage,
+            }),
+          );
           setCancelModal({ isOpen: false, id: null });
           notification.success({
             message: "Request Cancelled",
-            description: "Your request has been successfully cancelled.",
+            description: "The request has been successfully cancelled.",
             placement: "topRight",
             duration: 3,
           });
@@ -364,7 +499,13 @@ const LeaveManagement = () => {
     setSelectedRequestId(null);
     setSelectedLeaveType("");
     setFormData({ title: "", description: "", startDate: "", endDate: "" });
-    setErrors({ title: "", description: "", startDate: "", endDate: "" });
+    setErrors({
+      title: "",
+      description: "",
+      startDate: "",
+      endDate: "",
+      employee: "",
+    });
     dispatch(resetSubmitSuccess());
   };
 
@@ -419,17 +560,80 @@ const LeaveManagement = () => {
         <div>
           <h1 className="text-2xl font-bold text-[#2B3674]">Work Management</h1>
           <p className="text-sm text-gray-500 mt-1">
-            View your leave balance and request new leaves
+            Manage employee leave requests and apply on their behalf
           </p>
         </div>
+      </div>
 
-        {/* Apply Button Removed */}
+      {/* Employee Selection Dropdown */}
+      <div className="mb-6">
+        <label className="text-sm font-bold text-[#2B3674] mb-2 block">
+          Select Employee
+        </label>
+        <div className="relative" ref={employeeDropdownRef}>
+          <button
+            onClick={() => setIsEmployeeDropdownOpen(!isEmployeeDropdownOpen)}
+            className={`w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] border ${
+              errors.employee ? "border-red-500" : "border-[#E9EDF7]"
+            } hover:border-[#A3AED0] focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-bold text-[#2B3674] flex items-center justify-between`}
+          >
+            <div className="flex items-center gap-3">
+              <User size={20} className="text-[#4318FF]" />
+              <span>
+                {selectedEmployee
+                  ? `${selectedEmployee.fullName || selectedEmployee.aliasLoginName || "Unknown"} (${selectedEmployee.employeeId})`
+                  : "Select an employee"}
+              </span>
+            </div>
+            <ChevronDown
+              size={20}
+              className={`text-gray-400 transition-transform ${
+                isEmployeeDropdownOpen ? "rotate-180" : ""
+              }`}
+            />
+          </button>
+          {errors.employee && (
+            <p className="text-red-500 text-xs mt-1 ml-2">{errors.employee}</p>
+          )}
+
+          {isEmployeeDropdownOpen && (
+            <div className="absolute z-50 w-full mt-2 bg-white rounded-2xl shadow-xl border border-[#E9EDF7] max-h-60 overflow-y-auto">
+              {employeeList.length === 0 ? (
+                <div className="p-4 text-center text-gray-500 text-sm">
+                  No employees found
+                </div>
+              ) : (
+                employeeList.map((emp: any) => (
+                  <button
+                    key={emp.id || emp.employeeId}
+                    onClick={() => {
+                      setSelectedEmployee(emp);
+                      setIsEmployeeDropdownOpen(false);
+                      setErrors((prev) => ({ ...prev, employee: "" }));
+                      // Reset page when employee changes
+                      setCurrentPage(1);
+                    }}
+                    className={`w-full px-5 py-3 text-left hover:bg-[#F4F7FE] transition-colors flex items-center gap-3 first:rounded-t-2xl last:rounded-b-2xl ${
+                      selectedEmployee?.employeeId === emp.employeeId
+                        ? "bg-[#F4F7FE] font-bold"
+                        : ""
+                    }`}
+                  >
+                    <User size={18} className="text-[#4318FF]" />
+                    <span className="text-sm text-[#2B3674]">
+                      {emp.fullName || emp.aliasLoginName || "Unknown"} (
+                      {emp.employeeId})
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Hero Action Card */}
-      {/* Hero Action Card */}
       <div className="relative z-30 bg-gradient-to-r from-[#4318FF] to-[#868CFF] rounded-[20px] p-4 md:p-6 mb-8 shadow-xl shadow-blue-500/20 group animate-in fade-in slide-in-from-bottom-4 duration-700">
-        {/* Decorative Elements Wrapper for Overflow */}
         <div className="absolute inset-0 overflow-hidden rounded-[20px]">
           <div className="absolute top-[-10%] right-[-5%] w-64 h-64 bg-white/10 rounded-full blur-[60px] group-hover:bg-white/[0.12] transition-all duration-700" />
           <div className="absolute bottom-[-20%] left-[-5%] w-48 h-48 bg-[#4318FF]/20 rounded-full blur-[40px]" />
@@ -441,14 +645,13 @@ const LeaveManagement = () => {
               Request & Manage Attendance
             </h2>
             <p className="text-white/85 text-[15px] font-normal m-0 max-w-sm">
-              Easily submit leaves, log remote work, or record client visits in
-              seconds.
+              Apply leaves, work from home, or client visits on behalf of
+              employees.
             </p>
           </div>
 
           <div className="overflow-hidden w-full md:max-w-md mask-linear-fade">
             <div className="flex gap-4 w-max animate-marquee pause-on-hover py-2">
-              {/* Reduced duplication to 3 sets for a shorter looping distance */}
               {[...Array(3)].map((_, i) => (
                 <div key={i} className="flex gap-4">
                   {applyOptions.map((option, idx) => (
@@ -486,154 +689,159 @@ const LeaveManagement = () => {
         </div>
       </div>
 
-      {/* Leave Balance Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 mt-4">
-        {[
-          {
-            label: "Leave",
-            key: "leave",
-            color: "from-[#4318FF] to-[#868CFF]",
-            icon: Calendar,
-          },
-          {
-            label: "Work From Home",
-            key: "wfh",
-            color: "from-[#38A169] to-[#68D391]",
-            icon: Home,
-          },
-          {
-            label: "Client Visit",
-            key: "clientVisit",
-            color: "from-[#FFB547] to-[#FCCD75]",
-            icon: MapPin,
-          },
-        ].map((config, idx) => {
-          // Normalize data access to be resilient to backend naming (case sensitivity)
-          // We check config.key (lowercase) and also common variations
-          const rawData =
-            (stats as any)?.[config.key] ||
-            (stats as any)?.[config.label] ||
-            {};
-          const applied = rawData.applied ?? rawData.Applied ?? 0;
-          const approved = rawData.approved ?? rawData.Approved ?? 0;
-          const rejected = rawData.rejected ?? rawData.Rejected ?? 0;
+      {/* Leave Balance Cards - Only show if employee is selected */}
+      {selectedEmployee && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 mt-4">
+          {[
+            {
+              label: "Leave",
+              key: "leave",
+              color: "from-[#4318FF] to-[#868CFF]",
+              icon: Calendar,
+            },
+            {
+              label: "Work From Home",
+              key: "wfh",
+              color: "from-[#38A169] to-[#68D391]",
+              icon: Home,
+            },
+            {
+              label: "Client Visit",
+              key: "clientVisit",
+              color: "from-[#FFB547] to-[#FCCD75]",
+              icon: MapPin,
+            },
+          ].map((config, idx) => {
+            const rawData =
+              (stats as any)?.[config.key] ||
+              (stats as any)?.[config.label] ||
+              {};
+            const applied = rawData.applied ?? rawData.Applied ?? 0;
+            const approved = rawData.approved ?? rawData.Approved ?? 0;
+            const rejected = rawData.rejected ?? rawData.Rejected ?? 0;
 
-          return (
-            <div
-              key={idx}
-              className="bg-white rounded-[20px] p-6 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] relative overflow-hidden group hover:shadow-lg transition-all"
-            >
-              <div className="relative z-10">
-                <div className="flex justify-between items-start mb-4">
-                  <div
-                    className={`p-3 rounded-xl bg-linear-to-r ${config.color} text-white shadow-md`}
-                  >
-                    <config.icon size={24} />
+            return (
+              <div
+                key={idx}
+                className="bg-white rounded-[20px] p-6 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] relative overflow-hidden group hover:shadow-lg transition-all"
+              >
+                <div className="relative z-10">
+                  <div className="flex justify-between items-start mb-4">
+                    <div
+                      className={`p-3 rounded-xl bg-linear-to-r ${config.color} text-white shadow-md`}
+                    >
+                      <config.icon size={24} />
+                    </div>
+                    <span className="text-3xl font-black text-[#2B3674]">
+                      {applied}
+                    </span>
                   </div>
-                  <span className="text-3xl font-black text-[#2B3674]">
-                    {applied}
-                  </span>
-                </div>
-                <h3 className="text-lg font-bold text-[#2B3674]">
-                  {config.label}
-                </h3>
-                <div className="mt-2 flex items-center justify-between text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                  <span>Approved: {approved}</span>
-                  <span>Rejected: {rejected}</span>
+                  <h3 className="text-lg font-bold text-[#2B3674]">
+                    {config.label}
+                  </h3>
+                  <div className="mt-2 flex items-center justify-between text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <span>Approved: {approved}</span>
+                    <span>Rejected: {rejected}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
-      {/* Recent Leave History */}
-      <h3 className="text-xl font-bold text-[#2B3674] mb-4 mt-8">
-        Recent Leave History
-      </h3>
-      <div className="bg-white rounded-[20px] shadow-[0px_18px_40px_rgba(112,144,176,0.12)] overflow-hidden border border-gray-100 mb-8">
-        <div className="overflow-x-auto">
-          <table className="w-full border-separate border-spacing-0">
-            <thead>
-              <tr className="bg-[#4318FF] text-white">
-                <th className="text-left py-4 pl-10 pr-4 text-[13px] font-bold uppercase tracking-wider">
-                  Employee Name
-                </th>
-                <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider">
-                  Request Type
-                </th>
-                <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider">
-                  Submitted Date
-                </th>
-                <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider">
-                  Duration
-                </th>
-                <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider">
-                  Status
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {entities.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="py-8 text-center text-gray-400">
-                    <div className="flex flex-col items-center justify-center gap-3">
-                      <div className="bg-gray-50 p-4 rounded-full">
-                        <Calendar size={32} className="text-gray-300" />
-                      </div>
-                      <p className="font-medium text-sm">No Request found</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                entities.map((item, index) => (
-                  <tr
-                    key={index}
-                    className={`group transition-all duration-200 ${
-                      index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"
-                    } hover:bg-[#F1F4FF]`}
-                  >
-                    <td className="py-4 pl-10 pr-4 text-[#2B3674] text-sm font-bold">
-                      {item.fullName || currentUser?.aliasLoginName || "User"} (
-                      {item.employeeId})
-                    </td>
-                    <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
-                      {item.requestType === "Apply Leave"
-                        ? "Leave"
-                        : item.requestType}
-                    </td>
-                    <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
-                      {item.submittedDate
-                        ? dayjs(item.submittedDate).format("DD MMM - YYYY")
-                        : item.created_at
-                          ? dayjs(item.created_at).format("DD MMM - YYYY")
-                          : "-"}
-                    </td>
-                    <td className="py-4 px-4 text-center">
-                      <div className="text-sm font-bold text-[#2B3674]">
-                        {dayjs(item.fromDate).format("DD MMM")} -{" "}
-                        {dayjs(item.toDate).format("DD MMM - YYYY")}
-                      </div>
-                      <p className="text-[10px] text-[#4318FF] font-black mt-1 uppercase tracking-wider">
-                        Total:{" "}
-                        {item.duration ||
-                          dayjs(item.toDate).diff(dayjs(item.fromDate), "day") +
-                            1}{" "}
-                        Day(s)
-                      </p>
-                    </td>
-                    <td className="py-4 px-4 text-center">
-                      <div className="flex items-center justify-center gap-3">
-                        <button
-                          onClick={() => handleViewApplication(item)}
-                          className="p-2 text-blue-600 bg-blue-50/50 hover:bg-blue-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-blue-200 active:scale-90"
-                          title="View Application"
-                        >
-                          <Eye size={18} />
-                        </button>
-                        {item.status === "Pending" && renderCancelButton(item)}
-                        <span
-                          className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all
+      {/* Recent Leave History - Only show if employee is selected */}
+      {selectedEmployee && (
+        <>
+          <h3 className="text-xl font-bold text-[#2B3674] mb-4 mt-8">
+            Recent Leave History
+          </h3>
+          <div className="bg-white rounded-[20px] shadow-[0px_18px_40px_rgba(112,144,176,0.12)] overflow-hidden border border-gray-100 mb-8">
+            <div className="overflow-x-auto">
+              <table className="w-full border-separate border-spacing-0">
+                <thead>
+                  <tr className="bg-[#4318FF] text-white">
+                    <th className="text-left py-4 pl-10 pr-4 text-[13px] font-bold uppercase tracking-wider">
+                      Employee Name
+                    </th>
+                    <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider">
+                      Request Type
+                    </th>
+                    <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider">
+                      Submitted Date
+                    </th>
+                    <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider">
+                      Duration
+                    </th>
+                    <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider">
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {entities.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-gray-400">
+                        <div className="flex flex-col items-center justify-center gap-3">
+                          <div className="bg-gray-50 p-4 rounded-full">
+                            <Calendar size={32} className="text-gray-300" />
+                          </div>
+                          <p className="font-medium text-sm">No Request found</p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    entities.map((item, index) => (
+                      <tr
+                        key={index}
+                        className={`group transition-all duration-200 ${
+                          index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"
+                        } hover:bg-[#F1F4FF]`}
+                      >
+                        <td className="py-4 pl-10 pr-4 text-[#2B3674] text-sm font-bold">
+                          {item.fullName || "User"} (
+                          {item.employeeId})
+                        </td>
+                        <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
+                          {item.requestType === "Apply Leave"
+                            ? "Leave"
+                            : item.requestType}
+                        </td>
+                        <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
+                          {item.submittedDate
+                            ? dayjs(item.submittedDate).format("DD MMM - YYYY")
+                            : item.created_at
+                              ? dayjs(item.created_at).format("DD MMM - YYYY")
+                              : "-"}
+                        </td>
+                        <td className="py-4 px-4 text-center">
+                          <div className="text-sm font-bold text-[#2B3674]">
+                            {dayjs(item.fromDate).format("DD MMM")} -{" "}
+                            {dayjs(item.toDate).format("DD MMM - YYYY")}
+                          </div>
+                          <p className="text-[10px] text-[#4318FF] font-black mt-1 uppercase tracking-wider">
+                            Total:{" "}
+                            {item.duration ||
+                              dayjs(item.toDate).diff(
+                                dayjs(item.fromDate),
+                                "day",
+                              ) +
+                                1}{" "}
+                            Day(s)
+                          </p>
+                        </td>
+                        <td className="py-4 px-4 text-center">
+                          <div className="flex items-center justify-center gap-3">
+                            <button
+                              onClick={() => handleViewApplication(item)}
+                              className="p-2 text-blue-600 bg-blue-50/50 hover:bg-blue-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-blue-200 active:scale-90"
+                              title="View Application"
+                            >
+                              <Eye size={18} />
+                            </button>
+                            {item.status === "Pending" && renderCancelButton(item)}
+                            <span
+                              className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all
                           ${
                             item.status === "Approved"
                               ? "bg-green-50 text-green-600 border-green-200"
@@ -644,73 +852,75 @@ const LeaveManagement = () => {
                                   : "bg-red-50 text-red-600 border-red-200"
                           }
                         `}
-                        >
-                          {item.status === "Pending" && (
-                            <RotateCcw
-                              size={12}
-                              className="animate-spin-slow"
-                            />
-                          )}
-                          {item.status}
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                            >
+                              {item.status === "Pending" && (
+                                <RotateCcw
+                                  size={12}
+                                  className="animate-spin-slow"
+                                />
+                              )}
+                              {item.status}
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
 
-        {/* Pagination Controls */}
-        <div className="flex flex-col sm:flex-row justify-between items-center mt-6 p-6 lg:px-10 lg:pb-10 gap-6">
-          <div className="text-sm font-bold text-[#A3AED0] text-center sm:text-left">
-            Showing{" "}
-            <span className="text-[#2B3674]">
-              {totalItems > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}
-            </span>{" "}
-            to{" "}
-            <span className="text-[#2B3674]">
-              {Math.min(currentPage * itemsPerPage, totalItems)}
-            </span>{" "}
-            of <span className="text-[#2B3674]">{totalItems}</span> entries
-          </div>
+            {/* Pagination Controls */}
+            <div className="flex flex-col sm:flex-row justify-between items-center mt-6 p-6 lg:px-10 lg:pb-10 gap-6">
+              <div className="text-sm font-bold text-[#A3AED0] text-center sm:text-left">
+                Showing{" "}
+                <span className="text-[#2B3674]">
+                  {totalItems > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}
+                </span>{" "}
+                to{" "}
+                <span className="text-[#2B3674]">
+                  {Math.min(currentPage * itemsPerPage, totalItems)}
+                </span>{" "}
+                of <span className="text-[#2B3674]">{totalItems}</span> entries
+              </div>
 
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
-              className={`p-2 rounded-xl border border-[#E9EDF7] transition-all flex items-center justify-center
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className={`p-2 rounded-xl border border-[#E9EDF7] transition-all flex items-center justify-center
               ${
                 currentPage === 1
                   ? "bg-gray-50 text-gray-300 cursor-not-allowed"
                   : "bg-white text-[#4318FF] hover:bg-[#4318FF]/5 active:scale-90 shadow-sm"
               }`}
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <div className="bg-[#F4F7FE] px-4 py-1.5 rounded-xl border border-transparent">
-              <span className="text-xs font-black text-[#2B3674] tracking-widest">
-                {currentPage} / {totalPages > 0 ? totalPages : 1}
-              </span>
-            </div>
-            <button
-              onClick={() =>
-                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-              }
-              disabled={currentPage === totalPages || totalPages === 0}
-              className={`p-2 rounded-xl border border-[#E9EDF7] transition-all flex items-center justify-center
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <div className="bg-[#F4F7FE] px-4 py-1.5 rounded-xl border border-transparent">
+                  <span className="text-xs font-black text-[#2B3674] tracking-widest">
+                    {currentPage} / {totalPages > 0 ? totalPages : 1}
+                  </span>
+                </div>
+                <button
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                  }
+                  disabled={currentPage === totalPages || totalPages === 0}
+                  className={`p-2 rounded-xl border border-[#E9EDF7] transition-all flex items-center justify-center
               ${
                 currentPage === totalPages || totalPages === 0
                   ? "bg-gray-50 text-gray-300 cursor-not-allowed"
                   : "bg-white text-[#4318FF] hover:bg-[#4318FF]/5 active:scale-90 shadow-sm"
               }`}
-            >
-              <ChevronRight size={18} />
-            </button>
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </>
+      )}
 
       {/* Application Modal */}
       {isModalOpen && (
@@ -751,6 +961,24 @@ const LeaveManagement = () => {
                   </p>
                 </div>
               )}
+
+              {/* Employee Info (Read-only in modal) */}
+              {selectedEmployee && !isViewMode && (
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-[#2B3674] ml-1">
+                    Employee
+                  </label>
+                  <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none flex items-center gap-3">
+                    <User size={18} className="text-[#4318FF]" />
+                    <span>
+                      {selectedEmployee.fullName ||
+                        selectedEmployee.aliasLoginName}{" "}
+                      ({selectedEmployee.employeeId})
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* Title Field */}
               <div className="space-y-2">
                 <label className="text-sm font-bold text-[#2B3674] ml-1">
@@ -928,7 +1156,7 @@ const LeaveManagement = () => {
                 )}
               </div>
 
-              {/* Document Upload Section - Only show when not in view mode */}
+              {/* Document Upload Section */}
               <div className="space-y-2">
                 <label className="text-sm font-bold text-[#2B3674] ml-1">
                   Supporting Documents {isViewMode ? "" : "(Optional)"}
@@ -943,14 +1171,14 @@ const LeaveManagement = () => {
                     key={isViewMode ? selectedRequestId : uploaderKey}
                     entityType="LEAVE_REQUEST"
                     entityId={
-                      (entity?.id || currentUser?.id) &&
-                      !isNaN(Number(entity?.id || currentUser?.id))
-                        ? Number(entity?.id || currentUser?.id)
+                      selectedEmployee?.id &&
+                      !isNaN(Number(selectedEmployee.id))
+                        ? Number(selectedEmployee.id)
                         : 0
                     }
                     refId={isViewMode ? selectedRequestId || 0 : 0}
                     refType="DOCUMENT"
-                    fetchOnMount={isViewMode} // Don't fetch old refId 0 files in apply mode
+                    fetchOnMount={isViewMode}
                     uploadFile={uploadLeaveRequestFile}
                     downloadFile={downloadLeaveRequestFile}
                     previewFile={previewLeaveRequestFile}
@@ -968,21 +1196,21 @@ const LeaveManagement = () => {
               {/* Actions Footer */}
               {!isViewMode && (
                 <div className="pt-2 flex gap-4">
-                  <>
-                    <button
-                      onClick={handleCloseModal}
-                      className="flex-1 py-3 rounded-2xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-200 hover:text-gray-900 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleSubmit}
-                      disabled={loading}
-                      className="flex-1 py-4 rounded-2xl font-bold text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95 transform disabled:opacity-50"
-                    >
-                      {loading ? "Submitting..." : "Submit Application"}
-                    </button>
-                  </>
+                  <button
+                    onClick={handleCloseModal}
+                    className="flex-1 py-3 rounded-2xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSubmit}
+                    disabled={loading || isAutoApproving}
+                    className="flex-1 py-4 rounded-2xl font-bold text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95 transform disabled:opacity-50"
+                  >
+                    {loading || isAutoApproving
+                      ? "Submitting..."
+                      : "Submit Application"}
+                  </button>
                 </div>
               )}
             </div>
@@ -1048,4 +1276,5 @@ const LeaveManagement = () => {
   );
 };
 
-export default LeaveManagement;
+export default AdminLeaveManagement;
+

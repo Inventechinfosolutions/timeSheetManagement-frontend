@@ -16,6 +16,7 @@ import {
   fetchMonthlyAttendance,
   createAttendanceRecord,
 } from "../reducers/employeeAttendance.reducer";
+import { getLeaveHistory } from "../reducers/leaveRequest.reducer";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import {
   generateMonthlyEntries,
@@ -48,6 +49,9 @@ const MyTimesheet = ({
   const { records, loading } = useAppSelector((state) => state.attendance);
   const { entity } = useAppSelector((state) => state.employeeDetails);
   const { currentUser } = useAppSelector((state) => state.user);
+  const { entities: leaveEntities = [] } = useAppSelector(
+    (state) => (state as any).leaveRequest || {},
+  );
   // @ts-ignore
   const { holidays } = useAppSelector(
     (state) => (state as any).masterHolidays || { holidays: [] },
@@ -277,12 +281,80 @@ const MyTimesheet = ({
         year: now.getFullYear().toString(),
       }),
     );
+
+    // Also fetch leave requests so we can reflect approved Leave/WFH/Client Visit
+    // even if attendance records are not present (backend delay/lock rules).
+    dispatch(
+      getLeaveHistory({
+        employeeId: currentEmployeeId,
+        page: 1,
+        limit: 500,
+      }),
+    );
   }, [dispatch, currentEmployeeId, now, isAdmin]);
 
   // Transform records to local state
   const baseEntries = useMemo(() => {
-    return generateMonthlyEntries(now, today, records);
-  }, [now, today, records]);
+    const entries = generateMonthlyEntries(now, today, records);
+
+    // Overlay Approved leave/WFH/Client Visit from leave-requests onto timesheet entries.
+    // This ensures the UI reflects applied requests even if attendance records are missing.
+    if (!currentEmployeeId || !Array.isArray(leaveEntities) || leaveEntities.length === 0) {
+      return entries;
+    }
+
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const toYmd = (d: Date) =>
+      `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, "0")}-${d
+        .getDate()
+        .toString()
+        .padStart(2, "0")}`;
+
+    const overlayByDate = new Map<
+      string,
+      { status?: TimesheetEntry["status"]; workLocation?: string }
+    >();
+
+    leaveEntities
+      .filter((r: any) => r && r.employeeId === currentEmployeeId && r.status === "Approved")
+      .forEach((r: any) => {
+        const from = new Date(r.fromDate);
+        const to = new Date(r.toDate);
+        // Clamp to current month view
+        const start = from < monthStart ? monthStart : from;
+        const end = to > monthEnd ? monthEnd : to;
+        const cur = new Date(start);
+        cur.setHours(0, 0, 0, 0);
+        const endNorm = new Date(end);
+        endNorm.setHours(0, 0, 0, 0);
+
+        while (cur <= endNorm) {
+          const key = toYmd(cur);
+          if (r.requestType === "Apply Leave" || r.requestType === "Leave") {
+            overlayByDate.set(key, { status: "Leave" });
+          } else if (r.requestType === "Work From Home") {
+            overlayByDate.set(key, { workLocation: "WFH" });
+          } else if (r.requestType === "Client Visit") {
+            overlayByDate.set(key, { workLocation: "Client Visit" });
+          }
+          cur.setDate(cur.getDate() + 1);
+        }
+      });
+
+    if (overlayByDate.size === 0) return entries;
+
+    return entries.map((e) => {
+      const key = toYmd(e.fullDate as Date);
+      const overlay = overlayByDate.get(key);
+      if (!overlay) return e;
+      return {
+        ...e,
+        status: overlay.status ?? e.status,
+        workLocation: overlay.workLocation ?? e.workLocation,
+      };
+    });
+  }, [now, today, records, leaveEntities, currentEmployeeId]);
 
   useEffect(() => {
     setLocalEntries(baseEntries);
@@ -857,14 +929,21 @@ const MyTimesheet = ({
               ? getBlockedReason(day.fullDate)
               : "";
 
-            // Disable editing for future approved requests
-            const isFutureApproved = (day.status === "Leave" || day.status === "WFH" || day.status === "Client Visit") && day.isFuture;
+            // Disable editing for approved Leave days (any date) and for future WFH/Client Visit (cannot fill future)
+            const isLeaveDay = day.status === "Leave";
+            const isFutureApproved =
+              (day.status === "WFH" ||
+                day.status === "Client Visit" ||
+                day.workLocation === "WFH" ||
+                day.workLocation === "Client Visit") &&
+              day.isFuture;
 
             // Logic for "isEditable" matches old code + new styling check
             const isEditable =
               !readOnly &&
               (isAdmin || isEditableMonth(day.fullDate)) &&
               !isBlocked &&
+              !isLeaveDay &&
               !isFutureApproved;
 
             // Updated Styling Logic

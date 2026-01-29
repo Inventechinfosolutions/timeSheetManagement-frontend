@@ -48,6 +48,7 @@ import AdminEmployeeCalenderWrapper from "./AdminDashboard/AdminEmployeeCalender
 import DailyStatus from "./AdminDashboard/DailyStatus";
 import Requests from "./AdminDashboard/Requests";
 import AdminViewEmployeeDashboard from "./AdminDashboard/AdminViewEmployeeDashboard";
+import AdminLeaveManagement from "./AdminDashboard/AdminLeaveManagement";
 
 const EmployeeTabWrapper = () => {
   const { tab } = useParams<{ tab: string }>();
@@ -88,6 +89,8 @@ const AdminTabWrapper = () => {
       return <DailyStatus />;
     case "requests":
       return <Requests />;
+    case "work-management":
+      return <AdminLeaveManagement />;
     default:
       return <Navigate to="/admin-dashboard" replace />;
   }

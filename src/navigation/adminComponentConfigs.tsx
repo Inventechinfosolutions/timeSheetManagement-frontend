@@ -19,6 +19,9 @@ const EmployeeListView = lazy(
 const EmployeeDetailsView = lazy(
   () => import("../AdminDashboard/EmployeeDetailsView")
 );
+const AdminLeaveManagement = lazy(
+  () => import("../AdminDashboard/AdminLeaveManagement")
+);
 // const EmpWorkingDetails = lazy(
 //   () => import("../AdminDashboard/EmpWorkingDetails")
 // );
@@ -71,5 +74,9 @@ export const adminComponentConfigs = [
   {
     path: "/admin-dashboard/timesheet-list",
     Component: AdminEmployeeTimesheetList,
+  },
+  {
+    path: "/admin-dashboard/work-management",
+    Component: AdminLeaveManagement,
   },
 ];

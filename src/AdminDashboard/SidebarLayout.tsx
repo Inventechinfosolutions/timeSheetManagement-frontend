@@ -7,6 +7,7 @@ import {
   Unlock,
   Menu,
   Bell,
+  Calendar,
 } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
@@ -72,6 +73,7 @@ const SidebarLayout = ({
     { name: "Employee Details", icon: Users },
     { name: "Timesheet", icon: AlarmClock },
     // { name: "Working Details", icon: ClipboardList },
+    { name: "Work Management", icon: Calendar },
     { name: "Notification", icon: Bell }, // Notification item with Bell icon
   ];
 
