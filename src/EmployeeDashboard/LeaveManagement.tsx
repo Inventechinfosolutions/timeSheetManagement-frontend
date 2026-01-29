@@ -30,17 +30,6 @@ import {
 import { notification } from "antd";
 import CommonMultipleUploader from "./CommonMultipleUploader";
 
-const isCancellationAllowed = (submittedDate: string) => {
-  if (!submittedDate) return true;
-  const submission = dayjs(submittedDate).startOf("day");
-  const deadline = submission
-    .add(1, "day")
-    .set("hour", 10)
-    .set("minute", 0)
-    .set("second", 0);
-  return dayjs().isBefore(deadline);
-};
-
 const datePickerTheme = {
   token: {
     borderRadius: 16,
@@ -384,34 +373,6 @@ const LeaveManagement = () => {
       : "0, 0, 0";
   };
 
-  const renderCancelButton = (item: any) => {
-    const canCancel = isCancellationAllowed(
-      item.submittedDate || item.created_at,
-    );
-
-    if (canCancel) {
-      return (
-        <button
-          onClick={() => handleCancel(item.id)}
-          className="p-2 text-red-500 bg-red-50/50 hover:bg-red-500 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
-          title="Cancel Request"
-        >
-          <XCircle size={18} />
-        </button>
-      );
-    }
-
-    return (
-      <button
-        disabled
-        className="p-2 text-gray-300 bg-gray-50 rounded-xl cursor-not-allowed"
-        title="Cancellation unavailable (Deadline: 10 AM next day)"
-      >
-        <XCircle size={18} />
-      </button>
-    );
-  };
-
   return (
     <div className="p-4 md:px-8 md:pb-8 md:pt-0 bg-[#F4F7FE] min-h-screen font-sans text-[#2B3674]">
       {/* Header */}
@@ -569,7 +530,7 @@ const LeaveManagement = () => {
                   Duration
                 </th>
                 <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider">
-                  Status
+                  Actions
                 </th>
               </tr>
             </thead>
@@ -622,37 +583,51 @@ const LeaveManagement = () => {
                         Day(s)
                       </p>
                     </td>
-                    <td className="py-4 px-4 text-center">
-                      <div className="flex items-center justify-center gap-3">
-                        <button
-                          onClick={() => handleViewApplication(item)}
-                          className="p-2 text-blue-600 bg-blue-50/50 hover:bg-blue-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-blue-200 active:scale-90"
-                          title="View Application"
-                        >
-                          <Eye size={18} />
-                        </button>
-                        {item.status === "Pending" && renderCancelButton(item)}
-                        <span
-                          className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all
-                          ${
-                            item.status === "Approved"
-                              ? "bg-green-50 text-green-600 border-green-200"
-                              : item.status === "Pending"
-                                ? "bg-yellow-50 text-yellow-600 border-yellow-200"
-                                : item.status === "Cancelled"
-                                  ? "bg-yellow-50 text-yellow-600 border-yellow-200"
-                                  : "bg-red-50 text-red-600 border-red-200"
-                          }
-                        `}
-                        >
-                          {item.status === "Pending" && (
-                            <RotateCcw
-                              size={12}
-                              className="animate-spin-slow"
-                            />
+                    <td className="py-4 pr-16">
+                      <div className="flex items-center justify-end gap-5">
+                        <div className="flex items-center gap-3 shrink-0">
+                          <button
+                            onClick={() => handleViewApplication(item)}
+                            className="text-blue-600 hover:text-blue-700 transition-all active:scale-90"
+                            title="View Application"
+                          >
+                            <Eye size={18} />
+                          </button>
+                          {item.status === "Pending" ? (
+                            <button
+                              onClick={() => handleCancel(item.id)}
+                              className="text-red-500 hover:text-red-600 transition-all active:scale-90"
+                              title="Cancel Request"
+                            >
+                              <XCircle size={18} />
+                            </button>
+                          ) : (
+                            <div className="w-[18px]" />
                           )}
-                          {item.status}
-                        </span>
+                        </div>
+                        <div className="w-28 shrink-0">
+                          <span
+                            className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all w-full justify-center
+                            ${
+                              item.status === "Approved"
+                                ? "bg-green-50 text-green-600 border-green-200"
+                                : item.status === "Pending"
+                                  ? "bg-yellow-50 text-yellow-600 border-yellow-200"
+                                  : item.status === "Cancelled"
+                                    ? "bg-yellow-50 text-yellow-600 border-yellow-200"
+                                    : "bg-red-50 text-red-600 border-red-200"
+                            }
+                          `}
+                          >
+                            {item.status === "Pending" && (
+                              <RotateCcw
+                                size={12}
+                                className="animate-spin-slow"
+                              />
+                            )}
+                            {item.status}
+                          </span>
+                        </div>
                       </div>
                     </td>
                   </tr>

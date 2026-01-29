@@ -603,7 +603,7 @@ const MyTimesheet = ({
       );
       setToast({
         show: true,
-        message: "Data Saved Successfully",
+        message: "Attendance Submitted Successfully",
         type: "success",
       });
     } catch (error: any) {
@@ -804,7 +804,7 @@ const MyTimesheet = ({
                 className="flex items-center justify-center gap-1.5 px-4 py-2 bg-[#4318FF] text-white rounded-xl font-bold text-[10px] shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all active:scale-95 tracking-wide uppercase"
               >
                 <Save size={14} />
-                <span>Save</span>
+                <span>Submit</span>
               </button>
             )}
           </div>

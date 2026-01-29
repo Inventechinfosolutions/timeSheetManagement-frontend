@@ -48,18 +48,23 @@ const Header = ({
   // Check if user is admin
   const isAdmin = currentUser?.userType === "ADMIN";
 
-  const { notifications, unreadCount: attendanceUnreadCount, selectedNotification, loading } = useAppSelector(
-    (state) => state.notifications
-  );
+  const {
+    notifications,
+    unreadCount: attendanceUnreadCount,
+    selectedNotification,
+    loading,
+  } = useAppSelector((state) => state.notifications);
   const { unread: rawLeaveNotifications, employeeUpdates } = useAppSelector(
-    (state) => state.leaveNotification
+    (state) => state.leaveNotification,
   );
-  
-  // Filter out Cancelled requests from Admin notifications
-  const leaveNotifications = rawLeaveNotifications.filter(n => n.status !== 'Cancelled');
 
-  const unreadCount = isAdmin 
-    ? leaveNotifications.length 
+  // Filter out Cancelled requests from Admin notifications
+  const leaveNotifications = rawLeaveNotifications.filter(
+    (n) => n.status !== "Cancelled",
+  );
+
+  const unreadCount = isAdmin
+    ? leaveNotifications.length
     : attendanceUnreadCount + employeeUpdates.length;
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -192,7 +197,8 @@ const Header = ({
     <header
       className="header"
       style={{
-        background: "linear-gradient(37deg, #3B82F6 4.06%, #2563EB 62.76%, #1E3A8A 121.45%)",
+        background:
+          "linear-gradient(37deg, #3B82F6 4.06%, #2563EB 62.76%, #1E3A8A 121.45%)",
         borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
       }}
     >
@@ -202,10 +208,11 @@ const Header = ({
             src={InventLogo}
             alt="InvenTech Logo"
             className="h-8 w-auto object-contain brightness-0 invert"
-            onClick={() => navigate(isAdmin ? "/admin-dashboard" : "/employee-dashboard")}
+            onClick={() =>
+              navigate(isAdmin ? "/admin-dashboard" : "/employee-dashboard")
+            }
           />
         </div>
-
 
         <div className="flex items-center gap-1.5 md:gap-3 ml-auto">
           <Link
@@ -238,9 +245,7 @@ const Header = ({
                   }`}
                 />
                 {unreadCount > 0 && (
-                  <span
-                    className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold shadow-sm border border-white/20 px-1"
-                  >
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold shadow-sm border border-white/20 px-1">
                     {unreadCount > 99 ? "99+" : unreadCount}
                   </span>
                 )}
@@ -352,6 +357,12 @@ const Header = ({
                                 {employeeUpdates.map((update) => (
                                   <div
                                     key={`update-${update.id}`}
+                                    onClick={() => {
+                                      navigate(
+                                        "/employee-dashboard/leave-management",
+                                      );
+                                      setIsNotificationOpen(false);
+                                    }}
                                     className="flex gap-4 p-5 hover:bg-gray-50/80 transition-colors border-b border-gray-50 last:border-0 group cursor-pointer relative bg-green-50/30"
                                   >
                                     <div className="relative shrink-0">
