@@ -12,7 +12,6 @@ import {
   Briefcase,
   Filter,
   ChevronDown,
-
   X,
   Loader2,
   ChevronLeft,
@@ -25,6 +24,7 @@ import {
   getLeaveRequestFiles,
   previewLeaveRequestFile,
   downloadLeaveRequestFile,
+  getMonthlyLeaveRequests,
 } from "../reducers/leaveRequest.reducer";
 import { getEntity } from "../reducers/employeeDetails.reducer";
 // } from "../reducers/leaveRequest.reducer";
@@ -35,12 +35,13 @@ import {
 import { fetchUnreadNotifications } from "../reducers/leaveNotification.reducer";
 import CommonMultipleUploader from "../EmployeeDashboard/CommonMultipleUploader";
 import dayjs from "dayjs";
-import { notification } from "antd";
+import { notification, Select } from "antd";
 
 const Requests = () => {
   const dispatch = useAppDispatch();
   const { entities, loading } = useAppSelector((state) => state.leaveRequest);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
   const [selectedDept, setSelectedDept] = useState("All");
   const [isDeptOpen, setIsDeptOpen] = useState(false);
@@ -59,6 +60,32 @@ const Requests = () => {
     status: "Approved" | "Rejected" | null;
     employeeName: string;
   }>({ isOpen: false, id: null, status: null, employeeName: "" });
+
+  const [selectedMonth, setSelectedMonth] = useState<string>("All");
+  const [selectedYear, setSelectedYear] = useState<string>(
+    dayjs().format("YYYY"),
+  );
+
+  const months = [
+    { label: "January", value: "1" },
+    { label: "February", value: "2" },
+    { label: "March", value: "3" },
+    { label: "April", value: "4" },
+    { label: "May", value: "5" },
+    { label: "June", value: "6" },
+    { label: "July", value: "7" },
+    { label: "August", value: "8" },
+    { label: "September", value: "9" },
+    { label: "October", value: "10" },
+    { label: "November", value: "11" },
+    { label: "December", value: "12" },
+  ];
+
+  const currentYear = dayjs().year();
+  const years = Array.from({ length: 11 }, (_, i) =>
+    (currentYear + 5 - i).toString(),
+  );
+
   const departments = [
     "All",
     "HR",
@@ -70,27 +97,58 @@ const Requests = () => {
   ];
 
   useEffect(() => {
-    // Debounce search to avoid excessive API calls
     const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      setCurrentPage(1);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    if (selectedMonth !== "All") {
       dispatch(
-        getAllLeaveRequests({
-          department: selectedDept,
-          status: filterStatus,
-          search: searchTerm,
+        getMonthlyLeaveRequests({
+          month: selectedMonth,
+          year: selectedYear,
           page: currentPage,
           limit: itemsPerPage,
         }),
       );
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [dispatch, selectedDept, filterStatus, searchTerm, currentPage]);
+    } else {
+      dispatch(
+        getAllLeaveRequests({
+          department: selectedDept,
+          status: filterStatus,
+          search: debouncedSearchTerm,
+          page: currentPage,
+          limit: itemsPerPage,
+        }),
+      );
+    }
+  }, [
+    dispatch,
+    selectedDept,
+    filterStatus,
+    debouncedSearchTerm,
+    currentPage,
+    selectedMonth,
+    selectedYear,
+  ]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedDept, filterStatus, searchTerm]);
+  }, [selectedDept, filterStatus, selectedMonth, selectedYear]);
 
-  const filteredRequests = entities || [];
+  const filteredRequests = (entities || []).filter((req) => {
+    if (!debouncedSearchTerm) return true;
+    const s = debouncedSearchTerm.toLowerCase();
+    return (
+      (req.fullName && req.fullName.toLowerCase().includes(s)) ||
+      (req.employeeId && req.employeeId.toLowerCase().includes(s)) ||
+      (req.title && req.title.toLowerCase().includes(s)) ||
+      (req.requestType && req.requestType.toLowerCase().includes(s))
+    );
+  });
 
   const handleUpdateStatus = (
     id: number,
@@ -288,15 +346,44 @@ const Requests = () => {
           )}
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <Select
+            value={selectedMonth}
+            onChange={(val) => setSelectedMonth(val)}
+            className="w-32 h-12"
+            placeholder="Select Month"
+            dropdownStyle={{ borderRadius: "12px" }}
+          >
+            <Select.Option value="All">All Months</Select.Option>
+            {months.map((m) => (
+              <Select.Option key={m.value} value={m.value}>
+                {m.label}
+              </Select.Option>
+            ))}
+          </Select>
+
+          <Select
+            value={selectedYear}
+            onChange={(val) => setSelectedYear(val)}
+            className="w-28 h-12"
+            placeholder="Select Year"
+            dropdownStyle={{ borderRadius: "12px" }}
+          >
+            {years.map((y) => (
+              <Select.Option key={y} value={y}>
+                {y}
+              </Select.Option>
+            ))}
+          </Select>
+
           {["All", "Pending", "Approved", "Rejected"].map((status) => (
             <button
               key={status}
               onClick={() => setFilterStatus(status)}
-              className={`px-6 py-3 rounded-xl font-bold text-sm transition-all ${
+              className={`px-6 py-3 rounded-xl font-bold text-sm transition-all h-12 flex items-center ${
                 filterStatus === status
                   ? "bg-[#4318FF] text-white shadow-lg shadow-blue-500/30"
-                  : "bg-white text-gray-500 hover:bg-gray-50"
+                  : "bg-white text-gray-500 hover:bg-gray-50 border border-transparent"
               }`}
             >
               {status}

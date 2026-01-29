@@ -180,6 +180,26 @@ export const getLeaveRequestById = createAsyncThunk(
   }
 );
 
+// Async Thunk for Getting Monthly Leave Requests (Admin)
+export const getMonthlyLeaveRequests = createAsyncThunk(
+  "leaveRequest/getMonthly",
+  async (
+    { month, year, page, limit }: { month: string; year: string; page?: number; limit?: number },
+    { rejectWithValue }
+  ) => {
+    try {
+      const params = new URLSearchParams();
+      if (page) params.append("page", page.toString());
+      if (limit) params.append("limit", limit.toString());
+
+      const response = await axios.get(`${apiUrl}/monthly-details/${month}/${year}?${params.toString()}`);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to fetch monthly requests");
+    }
+  }
+);
+
 // File Upload Actions
 export const uploadLeaveRequestFile = createAsyncThunk(
   "leaveRequest/uploadFile",
@@ -342,6 +362,32 @@ const leaveRequestSlice = createSlice({
       }
     });
     builder.addCase(getAllLeaveRequests.rejected, (state, action) => {
+      state.loading = false;
+      state.error = action.payload as string;
+    });
+
+    // Get Monthly Requests (Admin)
+    builder.addCase(getMonthlyLeaveRequests.pending, (state) => {
+      state.loading = true;
+      state.error = null;
+    });
+    builder.addCase(getMonthlyLeaveRequests.fulfilled, (state, action) => {
+      state.loading = false;
+      const payload = action.payload;
+      if (payload && payload.data && Array.isArray(payload.data)) {
+        state.entities = payload.data;
+        state.totalItems = payload.total || payload.data.length;
+        state.totalPages = payload.totalPages || 1;
+        state.currentPage = payload.page || 1;
+        state.limit = payload.limit || 10;
+      } else {
+        state.entities = [];
+        state.totalItems = 0;
+        state.totalPages = 1;
+        state.currentPage = 1;
+      }
+    });
+    builder.addCase(getMonthlyLeaveRequests.rejected, (state, action) => {
       state.loading = false;
       state.error = action.payload as string;
     });
