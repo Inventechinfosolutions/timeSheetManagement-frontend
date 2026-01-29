@@ -4,6 +4,7 @@ interface Employee {
   id: string;
   name: string;
   department: string;
+  status: string;
 }
 
 interface EmployeeTimeSheetMobileCardProps {
@@ -33,6 +34,15 @@ const EmployeeTimeSheetMobileCard = ({
                 ID: <span className="text-[#475569]">{emp.id}</span>
               </p>
             </div>
+            <span
+              className={`inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${
+                emp.status === "Completed"
+                  ? "bg-green-50 text-green-500 border-green-100"
+                  : "bg-amber-50 text-amber-500 border-amber-100"
+              }`}
+            >
+              {emp.status === "Completed" ? "Submitted" : "Pending"}
+            </span>
           </div>
 
           <div className="h-px bg-gray-50 -mx-5" />
