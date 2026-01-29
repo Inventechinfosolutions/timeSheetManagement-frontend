@@ -91,23 +91,6 @@ const LeaveManagement = () => {
     const currentDate = current.startOf("day");
     const today = dayjs().startOf("day");
 
-    // If no leave type is selected, use default behavior (block past dates and overlapping requests)
-    if (!selectedLeaveType) {
-      if (currentDate.isBefore(today)) {
-        return true;
-      }
-      return (entities || []).some((req: any) => {
-        if (!req || req.status === "Rejected" || req.status === "Cancelled")
-          return false;
-        const startDate = dayjs(req.fromDate).startOf("day");
-        const endDate = dayjs(req.toDate).startOf("day");
-        return (
-          (currentDate.isSame(startDate) || currentDate.isAfter(startDate)) &&
-          (currentDate.isSame(endDate) || currentDate.isBefore(endDate))
-        );
-      });
-    }
-
     // For Client Visit, allow past dates - don't disable them
     const isClientVisit = selectedLeaveType === "Client Visit";
     if (!isClientVisit && currentDate.isBefore(today)) {
@@ -133,50 +116,49 @@ const LeaveManagement = () => {
 
       const existingRequestType = req.requestType || "";
 
-      // If applying for Leave: allow during Client Visit, block during Leave or Work From Home
+      // CRITICAL RULE: Always disable dates that have Leave or WFH applied
+      // This applies regardless of what new request type is being applied
+      const isExistingLeaveOrWFH =
+        existingRequestType === "Apply Leave" ||
+        existingRequestType === "Leave" ||
+        existingRequestType === "Work From Home";
+
+      if (isExistingLeaveOrWFH) {
+        return true; // Always block dates with Leave or WFH
+      }
+
+      // If no leave type is selected, block all other overlapping requests
+      if (!selectedLeaveType) {
+        return true;
+      }
+
+      // If applying for Leave: allow during Client Visit only
       if (selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave") {
-        // Allow if existing request is Client Visit (regardless of status)
+        // Allow if existing request is Client Visit
         if (existingRequestType === "Client Visit") {
           return false; // Date is NOT disabled, allow selection
         }
-        // Block if existing request is Leave or Work From Home
-        return (
-          existingRequestType === "Apply Leave" ||
-          existingRequestType === "Leave" ||
-          existingRequestType === "Work From Home"
-        );
+        // All other cases already handled above (Leave/WFH blocked)
+        return true;
       }
 
-      // If applying for Work From Home: allow during Client Visit, block during Leave or Work From Home
+      // If applying for Work From Home: allow during Client Visit only
       if (selectedLeaveType === "Work From Home") {
         // Allow if existing request is Client Visit
         if (existingRequestType === "Client Visit") {
           return false; // Date is NOT disabled, allow selection
         }
-        // Block if existing request is Leave or Work From Home
-        return (
-          existingRequestType === "Apply Leave" ||
-          existingRequestType === "Leave" ||
-          existingRequestType === "Work From Home"
-        );
+        // All other cases already handled above (Leave/WFH blocked)
+        return true;
       }
 
-      // If applying for Client Visit: block if existing request is Leave or WFH
-      // CRITICAL: If Leave or WFH already exists, Client Visit should be BLOCKED
+      // If applying for Client Visit: block if existing request is Client Visit (prevent duplicate)
       if (selectedLeaveType === "Client Visit") {
-        // Block if existing request is Leave or WFH
-        if (
-          existingRequestType === "Apply Leave" ||
-          existingRequestType === "Leave" ||
-          existingRequestType === "Work From Home"
-        ) {
-          return true; // Date IS disabled, block selection
-        }
-        // Block if existing request is Client Visit (prevent duplicate)
+        // Block duplicate Client Visit
         if (existingRequestType === "Client Visit") {
           return true; // Block duplicate Client Visit
         }
-        // If no existing request matches, allow
+        // All other cases already handled above (Leave/WFH blocked)
         return false;
       }
 
@@ -186,9 +168,18 @@ const LeaveManagement = () => {
   };
 
   const disabledEndDate = (current: any) => {
-    // For Client Visit, allow past dates
+    // Always check if date has Leave or WFH applied (regardless of request type)
+    if (disabledDate(current)) return true;
+    
+    // For Client Visit, allow past dates - but still respect Leave/WFH blocking above
     const isClientVisit = selectedLeaveType === "Client Visit";
-    if (!isClientVisit && disabledDate(current)) return true;
+    if (!isClientVisit) {
+      const today = dayjs().startOf("day");
+      const currentDate = current.startOf("day");
+      if (currentDate.isBefore(today)) return true;
+    }
+    
+    // Don't allow end date before start date
     if (formData.startDate) {
       return (
         current && current.isBefore(dayjs(formData.startDate).startOf("day"))

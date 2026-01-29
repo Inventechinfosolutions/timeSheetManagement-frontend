@@ -347,11 +347,26 @@ const MyTimesheet = ({
     return entries.map((e) => {
       const key = toYmd(e.fullDate as Date);
       const overlay = overlayByDate.get(key);
+      
+      // Sunday should always be Weekend, regardless of any overlay data
+      const dayOfWeek = (e.fullDate as Date).getDay();
+      if (dayOfWeek === 0) {
+        return {
+          ...e,
+          status: "Weekend" as TimesheetEntry["status"],
+          workLocation: undefined, // Clear workLocation for Sunday
+        };
+      }
+      
       if (!overlay) return e;
+      
+      // Priority: Attendance record's workLocation takes precedence over leave request overlay
+      // Only apply overlay workLocation if the entry doesn't already have one from attendance records
       return {
         ...e,
         status: overlay.status ?? e.status,
-        workLocation: overlay.workLocation ?? e.workLocation,
+        // Only use overlay workLocation if entry doesn't already have workLocation from attendance
+        workLocation: e.workLocation ?? overlay.workLocation,
       };
     });
   }, [now, today, records, leaveEntities, currentEmployeeId]);
@@ -553,8 +568,9 @@ const MyTimesheet = ({
         if (dayOfWeek === 0) {
           derivedStatus = "Weekend";
         } 
-        // For Saturday: If hours is 0, set status to "Weekend"
-        else if (dayOfWeek === 6 && currentTotal === 0) {
+        // For Saturday: Only set to "Weekend" if there's NO data (no hours AND no workLocation)
+        // If Saturday has data (Client Visit, WFH, etc.), keep that data
+        else if (dayOfWeek === 6 && currentTotal === 0 && !entry.workLocation) {
           derivedStatus = "Weekend";
         }
         // For other days: Calculate status based on hours
@@ -572,13 +588,17 @@ const MyTimesheet = ({
           return rDate === workingDate;
         });
 
+        // Preserve workLocation if it exists (Client Visit or WFH)
+        const workLocation = entry.workLocation || (existingRecord as any)?.workLocation;
+
         payload.push({
           id: existingRecord?.id,
           employeeId: currentEmployeeId,
           workingDate,
           totalHours: currentTotal,
           status: derivedStatus,
-        });
+          workLocation: workLocation, // Preserve Client Visit or WFH (backend accepts this field)
+        } as any);
       }
     });
 
@@ -588,19 +608,31 @@ const MyTimesheet = ({
     }
 
     // Set status based on hours and day of week
+    // BUT preserve workLocation (Client Visit or WFH) - don't override to Absent if workLocation exists
     payload.forEach((item) => {
       const itemDate = new Date(item.workingDate);
       const dayOfWeek = itemDate.getDay(); // 0 = Sunday, 6 = Saturday
       
-      // Sunday: Always set status to "Weekend" (even if hours entered)
+      // Sunday: Always set status to "Weekend" (even if hours entered or workLocation exists)
       if (dayOfWeek === 0) {
         item.status = "Weekend";
+        item.workLocation = undefined; // Clear workLocation for Sunday
+        return;
       }
-      // Saturday: If hours is 0, set status to "Weekend"
-      else if (dayOfWeek === 6 && (!item.totalHours || Number(item.totalHours) === 0)) {
+      
+      // If workLocation exists (Client Visit or WFH), don't override status to Absent/Weekend
+      // These are present statuses, not leave/absent
+      // Saturday with data should show the data, not Weekend
+      if (item.workLocation) {
+        // Don't override status for Client Visit/WFH days (including Saturday)
+        return;
+      }
+      
+      // Saturday: Only set to "Weekend" if there's NO data (no hours, no workLocation)
+      if (dayOfWeek === 6 && (!item.totalHours || Number(item.totalHours) === 0)) {
         item.status = "Weekend";
       }
-      // Other days: If hours is 0, set status to "Absent"
+      // Other days: If hours is 0, set status to "Absent" (only if no workLocation)
       else if (!item.totalHours || Number(item.totalHours) === 0) {
         item.status = "Absent";
       }
@@ -947,8 +979,8 @@ const MyTimesheet = ({
               ? getBlockedReason(day.fullDate)
               : "";
 
-            // Disable editing for approved Leave days (any date)
-            // Client Visit and WFH days are editable (even if future)
+            // Disable editing for approved Leave days only
+            // WFH and Client Visit days are editable (they are present, not leave)
             const isLeaveDay = day.status === "Leave";
 
             // Check if date is in current month or next month
@@ -967,7 +999,7 @@ const MyTimesheet = ({
             // Logic for "isEditable"
             // - Admins can edit any date (except blocked/leave days)
             // - Employees can edit current month and next month
-            // - Client Visit and WFH days are always editable (even if future)
+            // - WFH and Client Visit days are editable (they are present, not leave)
             // - Leave days are never editable
             const isEditable =
               (isAdmin ? !isAdminView : !readOnly) &&
@@ -981,10 +1013,24 @@ const MyTimesheet = ({
             let border = "border-transparent";
             let shadow = "shadow-[0px_2px_15px_rgba(0,0,0,0.02)]";
 
+            // Sunday should always show as Weekend, regardless of any data
+            const dayOfWeek = day.fullDate.getDay();
+            const isSunday = dayOfWeek === 0;
+            const isSaturday = dayOfWeek === 6;
+            
+            // Saturday: Only show as Weekend if there's NO data (no workLocation, no meaningful status)
+            const isSaturdayWithNoData = isSaturday && !day.workLocation && 
+              (day.status === "Weekend" || day.status === "Pending" || day.status === "Not Updated" || !day.status);
+
             if (isBlocked) {
               // Administrative Block
               bg = "bg-gray-200 opacity-90 grayscale";
               badge = "bg-gray-600 text-white";
+            } else if (isSunday || (isSaturdayWithNoData && !day.workLocation)) {
+              // Sunday: Always Weekend. Saturday: Only Weekend if no data
+              bg = "bg-[#FEE2E2]";
+              badge = "bg-[#EE5D50]/70 text-white font-bold";
+              border = "border-[#EE5D50]/10";
             } else if (
               (day.status === "Full Day" ||
                 day.status === "Half Day") &&
@@ -993,8 +1039,13 @@ const MyTimesheet = ({
               bg = "bg-[#E6FFFA]";
               badge = "bg-[#01B574] text-white font-bold";
               border = "border-[#01B574]/20";
+            } else if (day.status === "Leave") {
+              // Leave status takes priority over workLocation (even if workLocation is Client Visit)
+              bg = "bg-[#FEE2E2]";
+              badge = "bg-[#EE5D50]/70 text-white font-bold";
+              border = "border-[#EE5D50]/10";
             } else if (day.workLocation === "Client Visit" || day.status === "Client Visit") {
-               // Client Visit - Blue Style (Same as WFH ideally if requested, currently Distinct Blue)
+               // Client Visit - Blue Style (only if status is NOT Leave)
                // User said "same color apply" (as WFH?). WFH in screenshot looked Greyish/Blue.
                // Let's use the explicit Client Visit blue we have, which is definitely NOT Red.
               bg = "bg-[#DBEAFE]";
@@ -1013,15 +1064,6 @@ const MyTimesheet = ({
               bg = "bg-[#FECACA]";
               badge = "bg-[#DC2626]/70 text-white font-bold";
               border = "border-[#DC2626]/20";
-            } else if (
-              day.status === "Leave" ||
-              (day.status as any) === "Weekend" ||
-              (day.status as any) === "WEEKEND" ||
-              day.isWeekend
-            ) {
-              bg = "bg-[#FEE2E2]";
-              badge = "bg-[#EE5D50]/70 text-white font-bold";
-              border = "border-[#EE5D50]/10";
             } else if (day.status === "Not Updated") {
               bg = "bg-[#FEF3C7]";
               badge = "bg-[#FFB020]/80 text-white font-bold";
@@ -1145,21 +1187,21 @@ const MyTimesheet = ({
                 >
                   {isBlocked
                     ? "BLOCKED"
-                    : day.workLocation
-                      ? day.workLocation
-                      : day.status === "Full Day" ||
-                        day.status === "Half Day" ||
-                        day.status === "WFH" ||
-                        day.status === "Client Visit"
-                      ? day.status
-                      : day.status === "Holiday" || holiday
-                        ? holiday?.holidayName || holiday?.name || "HOLIDAY"
-                        : day.status === "Weekend" || day.isWeekend
-                          ? "WEEKEND"
-                          : day.status === "Absent"
-                            ? "ABSENT"
-                            : day.status === "Leave"
-                              ? "LEAVE"
+                    : isSunday || (isSaturdayWithNoData && !day.workLocation)
+                      ? "WEEKEND"
+                      : day.status === "Leave"
+                        ? "LEAVE"
+                        : day.workLocation && (day.status as string) !== "Leave"
+                          ? day.workLocation
+                          : day.status === "Full Day" ||
+                            day.status === "Half Day" ||
+                            day.status === "WFH" ||
+                            day.status === "Client Visit"
+                          ? day.status
+                          : day.status === "Holiday" || holiday
+                            ? holiday?.holidayName || holiday?.name || "HOLIDAY"
+                            : day.status === "Absent"
+                              ? "ABSENT"
                               : day.status === "Not Updated"
                                 ? "Not Updated"
                                 : day.status || "UPCOMING"}

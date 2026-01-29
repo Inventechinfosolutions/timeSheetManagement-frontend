@@ -528,6 +528,16 @@ const Calendar = ({
               const isBlocked = isDateBlocked(cellDate);
               const blockedReason = isBlocked ? getBlockedReason(cellDate) : "";
 
+              // Sunday should always show as Weekend, regardless of any data
+              const dayOfWeek = cellDate.getDay();
+              const isSunday = dayOfWeek === 0;
+              const isSaturday = dayOfWeek === 6;
+              
+              // Saturday: Only show as Weekend if there's NO data (no workLocation, no meaningful status)
+              const isSaturdayWithNoData = isSaturday && entry && 
+                !entry.workLocation && 
+                (entry.status === "Weekend" || entry.status === "Pending" || entry.status === "Not Updated" || !entry.status);
+
               // Determine if the day is incomplete (has data but marked as Not Updated)
               const isIncomplete =
                 entry &&
@@ -555,6 +565,11 @@ const Calendar = ({
                   "bg-gray-200 opacity-90 grayscale border border-gray-200 shadow-inner cursor-not-allowed";
                 // textClass = "text-gray-500";
                 statusLabel = "Blocked";
+              } else if (isSunday || (isSaturdayWithNoData && entry && !entry.workLocation)) {
+                // Sunday: Always Weekend. Saturday: Only Weekend if no data
+                cellClass = `bg-red-50 border-transparent text-red-600 hover:bg-red-100 ${baseHover}`;
+                // textClass = "text-red-600 font-bold";
+                statusLabel = "WEEKEND";
               } else if (
                 entry?.status === "Full Day" ||
                 entry?.status === "Half Day"
@@ -564,16 +579,24 @@ const Calendar = ({
                 if (!entry?.totalHours || Number(entry.totalHours) === 0) {
                   statusLabel = "";
                 }
+              } else if (entry?.status === "Leave") {
+                // Leave status takes priority over workLocation (even if workLocation is Client Visit)
+                cellClass = `bg-red-50 border-transparent hover:bg-red-100 ${baseHover}`;
+                // textClass = "text-red-700 font-bold";
+                statusLabel = "Leave";
               } else if (
                 entry?.workLocation === "Client Visit" ||
                 entry?.status === "Client Visit"
               ) {
+                // Client Visit (only if status is NOT Leave)
                 cellClass = `bg-blue-50 border-transparent hover:bg-blue-100 ${baseHover}`;
+                statusLabel = entry?.workLocation || entry?.status || "Client Visit";
               } else if (
                 entry?.workLocation === "WFH" ||
                 entry?.status === "WFH"
               ) {
                 cellClass = `bg-blue-50 border-transparent hover:bg-blue-100 ${baseHover}`;
+                statusLabel = entry?.workLocation || entry?.status || "WFH";
               } else if (
                 isIncomplete // Only Not Updated remains Amber
               ) {
@@ -585,17 +608,10 @@ const Calendar = ({
               } else if (entry?.status === "Absent") {
                 cellClass = `bg-red-50 border-transparent hover:bg-red-100 ${baseHover}`;
                 // textClass = "text-red-700 font-bold";
-              } else if (entry?.status === "Leave") {
-                cellClass = `bg-red-50 border-transparent hover:bg-red-100 ${baseHover}`;
-                // textClass = "text-red-700 font-bold";
               } else if (holiday) {
                 cellClass = `bg-blue-50 border-transparent hover:bg-blue-100 ${baseHover}`;
                 // textClass = "text-blue-700 font-bold";
                 statusLabel = holiday.name;
-              } else if (entry?.isWeekend) {
-                cellClass = `bg-red-50 border-transparent text-red-600 hover:bg-red-100 ${baseHover}`;
-                // textClass = "text-red-600 font-bold";
-                statusLabel = "WEEKEND";
               } else if (entry?.isFuture) {
                 cellClass = `bg-white border-transparent hover:bg-gray-50 ${baseHover}`;
                 // textClass = "text-gray-300 font-bold";

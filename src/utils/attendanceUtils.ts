@@ -178,6 +178,10 @@ export const generateRangeEntries = (start: Date, end: Date, now: Date, records:
     while (current <= endNorm) {
         const currentLoopDate = new Date(current);
         
+        // Sunday should always be Weekend, regardless of any data
+        const dayOfWeek = currentLoopDate.getDay();
+        const isSunday = dayOfWeek === 0;
+        
         // Find record for this specific day using YYYY-MM-DD comparison
         const loopDateStr = `${currentLoopDate.getFullYear()}-${(currentLoopDate.getMonth() + 1).toString().padStart(2, '0')}-${currentLoopDate.getDate().toString().padStart(2, '0')}`;
         
@@ -209,7 +213,25 @@ export const generateRangeEntries = (start: Date, end: Date, now: Date, records:
             return rDateStr === loopDateStr;
         });
 
-        entries.push(mapAttendanceToEntry(currentLoopDate, now, actualRecord));
+        const entry = mapAttendanceToEntry(currentLoopDate, now, actualRecord);
+        
+        // Sunday should always be Weekend, regardless of any data (Client Visit, WFH, etc.)
+        if (isSunday) {
+            entry.status = 'Weekend';
+            entry.workLocation = undefined; // Clear workLocation for Sunday
+        }
+        // Saturday: Only show as Weekend if there's NO data (no record, no workLocation, no status)
+        // If Saturday has data (Client Visit, WFH, etc.), show that data instead
+        else if (dayOfWeek === 6) {
+            // If there's no record OR no meaningful data, show as Weekend
+            if (!actualRecord || (!actualRecord.workLocation && !actualRecord.status && (!actualRecord.totalHours || actualRecord.totalHours === 0))) {
+                entry.status = 'Weekend';
+                entry.workLocation = undefined;
+            }
+            // Otherwise, keep the actual data (Client Visit, WFH, etc.)
+        }
+        
+        entries.push(entry);
         current.setDate(current.getDate() + 1);
     }
     return entries;
