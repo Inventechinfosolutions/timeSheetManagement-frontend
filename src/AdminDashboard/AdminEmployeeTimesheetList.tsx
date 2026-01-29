@@ -5,6 +5,7 @@ import { getEntities } from "../reducers/employeeDetails.reducer";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import {
   Edit,
+  Eye,
   Search,
   ChevronLeft,
   ChevronRight,
@@ -121,6 +122,10 @@ const AdminEmployeeTimesheetList = () => {
     navigate(`/admin-dashboard/timesheet/${empId}`);
   };
 
+  const handleViewWorkingDetails = (empId: string) => {
+    navigate(`/admin-dashboard/working-details/${empId}`);
+  };
+
   return (
     <div className="p-5 bg-[#F4F7FE] min-h-screen font-sans">
       <div className="max-w-[1600px] mx-auto">
@@ -231,12 +236,22 @@ const AdminEmployeeTimesheetList = () => {
                       {emp.department || "General"}
                     </td>
                     <td className="py-4 pl-4 pr-10 text-center">
-                      <button
-                        onClick={() => handleViewTimesheet(emp.id)}
-                        className="inline-flex items-center gap-2 bg-transparent border-none cursor-pointer text-[#4318FF] text-sm font-bold hover:underline transition-all hover:scale-105 active:scale-95"
-                      >
-                        <Edit size={16} />
-                      </button>
+                      <div className="flex items-center justify-center gap-4">
+                        <button
+                          onClick={() => handleViewWorkingDetails(emp.id)}
+                          className="inline-flex items-center gap-2 bg-transparent border-none cursor-pointer text-[#4318FF] text-sm font-bold hover:underline transition-all hover:scale-105 active:scale-95"
+                          title="View Working Details"
+                        >
+                          <Eye size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleViewTimesheet(emp.id)}
+                          className="inline-flex items-center gap-2 bg-transparent border-none cursor-pointer text-[#4318FF] text-sm font-bold hover:underline transition-all hover:scale-105 active:scale-95"
+                          title="Edit Timesheet"
+                        >
+                          <Edit size={16} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -250,6 +265,7 @@ const AdminEmployeeTimesheetList = () => {
               <EmployeeTimeSheetMobileCard
                 employees={currentItems}
                 onViewTimesheet={handleViewTimesheet}
+                onViewWorkingDetails={handleViewWorkingDetails}
               />
             ) : null}
           </div>

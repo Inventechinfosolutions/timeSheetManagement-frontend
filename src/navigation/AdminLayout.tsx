@@ -19,7 +19,8 @@ const AdminLayout = () => {
     }
     if (
       path.includes("/admin-dashboard/timesheet/") ||
-      path.includes("/admin-dashboard/timesheet-view/")
+      path.includes("/admin-dashboard/timesheet-view/") ||
+      path.includes("/admin-dashboard/working-details/")
     ) {
       return "Timesheet";
     }
@@ -36,12 +37,11 @@ const AdminLayout = () => {
       case "employees":
       case "employee-details":
         return "Employee Details";
-      case "working-details":
-        return "Working Details";
       case "requests":
         return "Notification";
       case "timesheet-list":
       case "timesheet-view":
+      case "working-details":
         return "Timesheet";
       case "work-management":
         return "Work Management";
