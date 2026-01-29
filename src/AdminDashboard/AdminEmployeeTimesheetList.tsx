@@ -16,7 +16,10 @@ import {
   Loader2,
 } from "lucide-react";
 import { saveAs } from "file-saver";
-import { downloadAttendanceReport } from "../reducers/employeeAttendance.reducer";
+import {
+  downloadAttendanceReport,
+  fetchAllDashboardStats,
+} from "../reducers/employeeAttendance.reducer";
 import EmployeeTimeSheetMobileCard from "./EmployeeTimeSheetMobileCard";
 
 const AdminEmployeeTimesheetList = () => {
@@ -34,6 +37,10 @@ const AdminEmployeeTimesheetList = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Period State
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   // Export State
   const [showDownloadModal, setShowDownloadModal] = useState(false);
@@ -92,6 +99,10 @@ const AdminEmployeeTimesheetList = () => {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
+  const { employeeMonthlyStats } = useAppSelector(
+    (state: RootState) => state.attendance,
+  );
+
   useEffect(() => {
     dispatch(
       getEntities({
@@ -112,6 +123,16 @@ const AdminEmployeeTimesheetList = () => {
     selectedDepartment,
   ]);
 
+  // Fetch status for all employees in bulk
+  useEffect(() => {
+    dispatch(
+      fetchAllDashboardStats({
+        month: selectedMonth.toString(),
+        year: selectedYear.toString(),
+      }),
+    );
+  }, [dispatch, selectedMonth, selectedYear]);
+
   const handleSort = (key: string) => {
     setSortConfig((current) => {
       if (current.key === key) {
@@ -124,11 +145,15 @@ const AdminEmployeeTimesheetList = () => {
     });
   };
 
-  const employees = entities.map((emp: any) => ({
-    id: emp.employeeId || emp.id,
-    name: emp.fullName || emp.name,
-    department: emp.department,
-  }));
+  const employees = entities.map((emp: any) => {
+    const empId = emp.employeeId || emp.id;
+    return {
+      id: empId,
+      name: emp.fullName || emp.name,
+      department: emp.department,
+      status: employeeMonthlyStats[empId]?.monthStatus || "Pending",
+    };
+  });
 
   const currentItems = employees.filter((emp) => {
     if (!debouncedSearchTerm) return true;
@@ -177,6 +202,37 @@ const AdminEmployeeTimesheetList = () => {
               <Download size={18} />
               <span className="whitespace-nowrap">Export Excel</span>
             </button>
+            {/* Period Filters */}
+            <div className="flex items-center gap-2">
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                className="px-4 py-2 bg-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] text-[#2B3674] font-bold text-sm border border-transparent focus:border-[#4318FF]/20 outline-none cursor-pointer"
+              >
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                  <option key={m} value={m}>
+                    {new Date(2000, m - 1, 1).toLocaleString("default", {
+                      month: "short",
+                    })}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                className="px-4 py-2 bg-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] text-[#2B3674] font-bold text-sm border border-transparent focus:border-[#4318FF]/20 outline-none cursor-pointer"
+              >
+                {Array.from(
+                  { length: 5 },
+                  (_, i) => new Date().getFullYear() - 2 + i,
+                ).map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             {/* Modern Custom Dropdown */}
             <div className="relative" ref={dropdownRef}>
               <button
@@ -257,6 +313,9 @@ const AdminEmployeeTimesheetList = () => {
                   <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider">
                     Department
                   </th>
+                  <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider">
+                    Status
+                  </th>
                   <th className="py-4 pl-4 pr-10 text-[13px] font-bold uppercase tracking-wider text-center w-48">
                     Action
                   </th>
@@ -276,6 +335,17 @@ const AdminEmployeeTimesheetList = () => {
                     </td>
                     <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
                       {emp.department || "General"}
+                    </td>
+                    <td className="py-4 px-4 text-center">
+                      <span
+                        className={`inline-flex px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider border ${
+                          emp.status === "Completed"
+                            ? "bg-green-50 text-green-500 border-green-100"
+                            : "bg-amber-50 text-amber-500 border-amber-100"
+                        }`}
+                      >
+                        {emp.status === "Completed" ? "Submitted" : "Pending"}
+                      </span>
                     </td>
                     <td className="py-4 pl-4 pr-10 text-center">
                       <div className="flex items-center justify-center gap-4">

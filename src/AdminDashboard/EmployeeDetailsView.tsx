@@ -277,7 +277,7 @@ const EmployeeDetailsView = () => {
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-1.5 text-[9px] sm:text-xs md:text-sm text-white/80">
               <div className="flex items-center gap-1.5 px-2 py-1 bg-white/10 backdrop-blur-sm rounded-full border border-white/10">
                 <Building size={12} className="md:w-3.5 md:h-3.5" />
-                <span className="font-medium">InvenTech INFO SOLUTIONS</span>
+                <span className="font-medium">InvenTech Info Solutions</span>
               </div>
               <div className="flex items-center gap-1.5 px-2 py-1 bg-white/10 backdrop-blur-sm rounded-full border border-white/10">
                 <CreditCard size={12} className="md:w-3.5 md:h-3.5" />
