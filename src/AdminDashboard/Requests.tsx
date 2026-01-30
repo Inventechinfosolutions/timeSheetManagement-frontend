@@ -685,7 +685,7 @@ const Requests = () => {
                       : "text-red-600"
                   }`}
                 >
-                  {confirmModal.status?.toLowerCase()}
+                  {confirmModal.status === "Approved" ? "Approve" : "Reject"}
                 </span>{" "}
                 this request for{" "}
                 <span className="text-[#2B3674] font-bold">
@@ -725,7 +725,7 @@ const Requests = () => {
                       Processing...
                     </>
                   ) : (
-                    `Confirm ${confirmModal.status}`
+                    `Confirm ${confirmModal.status === "Approved" ? "Approve" : "Reject"}`
                   )}
                 </button>
               </div>
