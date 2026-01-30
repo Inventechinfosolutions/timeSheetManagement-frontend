@@ -948,20 +948,20 @@ const Calendar = ({
                                     entry?.status === "Half Day") &&
                                   statusLabel
                                   ? "text-white bg-[#01B574]"
-                                  : (entry?.workLocation === "Client Visit" ||
-                                      entry?.status === "Client Visit" ||
-                                      entry?.workLocation === "WFH" ||
-                                      entry?.status === "WFH")
-                                    ? "text-white bg-[#4318FF]/70"
-                                    : isIncomplete && statusLabel
-                                      ? "text-white bg-[#FFB020]/80"
-                                   : entry?.status === "Absent"
-                                     ? "text-white bg-[#EE5D50]/70"
-                                   : entry?.status === "Leave"
-                                     ? "text-white bg-red-400/70"
-                                     : entry?.isWeekend
-                                       ? "text-white bg-red-400/70"
-                                       : "text-white bg-[#64748B]/90"
+                                  : entry?.status === "Leave"
+                                    ? "text-white bg-red-400/70"
+                                    : (entry?.workLocation === "Client Visit" ||
+                                        entry?.status === "Client Visit" ||
+                                        entry?.workLocation === "WFH" ||
+                                        entry?.status === "WFH")
+                                      ? "text-white bg-[#4318FF]/70"
+                                      : isIncomplete && statusLabel
+                                        ? "text-white bg-[#FFB020]/80"
+                                     : entry?.status === "Absent"
+                                       ? "text-white bg-[#EE5D50]/70"
+                                       : entry?.isWeekend
+                                         ? "text-white bg-red-400/70"
+                                         : "text-white bg-[#64748B]/90"
                          }
                     `}
                   >
@@ -969,11 +969,13 @@ const Calendar = ({
                       ? "BLOCKED"
                       : holiday
                         ? holiday.name
-                        : entry?.workLocation
-                          ? entry.workLocation
-                          : isIncomplete && !statusLabel
-                            ? "Not Updated"
-                            : statusLabel}
+                        : (entry?.status as string) === "Leave"
+                          ? "LEAVE"
+                          : entry?.workLocation && (entry?.status as string) !== "Leave"
+                            ? entry.workLocation
+                            : isIncomplete && !statusLabel
+                              ? "Not Updated"
+                              : statusLabel}
                   </div>
 
                   {isIncomplete && (

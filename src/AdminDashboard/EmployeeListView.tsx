@@ -7,7 +7,6 @@ import {
   bulkUploadEmployees,
   clearUploadResult,
   createEntity,
-  reset,
   resendActivationLink,
   updateEmployeeStatus,
 } from "../reducers/employeeDetails.reducer";
@@ -324,7 +323,8 @@ const EmployeeListView = () => {
 
   const handleCloseCreateModal = () => {
     setIsCreateModalOpen(false);
-    dispatch(reset());
+    // Don't reset the entire Redux state - it clears the employee list
+    // Only reset local form state
     setFormData({
       fullName: "",
       employeeId: "",

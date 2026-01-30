@@ -93,6 +93,8 @@ const MyTimesheet = ({
   const [localInputValues, setLocalInputValues] = useState<
     Record<number, string>
   >({});
+  // Track manually edited entries to prevent baseEntries from overwriting user edits
+  const [manuallyEditedIndices, setManuallyEditedIndices] = useState<Set<number>>(new Set());
   const [toast, setToast] = useState<{
     show: boolean;
     message: string;
@@ -331,13 +333,14 @@ const MyTimesheet = ({
 
         while (cur <= endNorm) {
           const key = toYmd(cur);
-          if (r.requestType === "Apply Leave" || r.requestType === "Leave") {
-            overlayByDate.set(key, { status: "Leave" });
-          } else if (r.requestType === "Work From Home") {
+          // Don't overlay Leave status - Leave should only come from attendance records
+          // Only overlay WFH and Client Visit workLocation
+          if (r.requestType === "Work From Home") {
             overlayByDate.set(key, { workLocation: "WFH" });
           } else if (r.requestType === "Client Visit") {
             overlayByDate.set(key, { workLocation: "Client Visit" });
           }
+          // Skip Leave requests - they should only appear if attendance record has Leave status
           cur.setDate(cur.getDate() + 1);
         }
       });
@@ -380,20 +383,54 @@ const MyTimesheet = ({
       
       if (!overlay) return e;
       
-      // Priority: Attendance record's workLocation takes precedence over leave request overlay
-      // Only apply overlay workLocation if the entry doesn't already have one from attendance records
+      // Only apply workLocation overlay (WFH/Client Visit) - never overlay Leave status
+      // Leave status should only come from attendance records, not from leave request overlays
       return {
         ...e,
-        status: overlay.status ?? e.status,
+        // Don't change status from overlay - status comes from attendance records only
         // Only use overlay workLocation if entry doesn't already have workLocation from attendance
         workLocation: e.workLocation ?? overlay.workLocation,
       };
     });
   }, [now, today, records, leaveEntities, currentEmployeeId]);
 
+  // Clear manually edited indices when month/year changes
+  const monthYearKey = `${now.getMonth()}-${now.getFullYear()}`;
+  const lastMonthYearKeyRef = useRef<string>("");
   useEffect(() => {
-    setLocalEntries(baseEntries);
-  }, [baseEntries]);
+    if (lastMonthYearKeyRef.current !== monthYearKey) {
+      lastMonthYearKeyRef.current = monthYearKey;
+      setManuallyEditedIndices(new Set());
+    }
+  }, [monthYearKey]);
+
+  useEffect(() => {
+    // Preserve manually edited entries when baseEntries updates
+    // Always respect backend status - don't override it
+    setLocalEntries((prevEntries) => {
+      // If no previous entries, just use baseEntries as-is from backend
+      if (prevEntries.length === 0) {
+        return baseEntries;
+      }
+      
+      // If baseEntries length changed (month changed), reset manually edited indices
+      if (baseEntries.length !== prevEntries.length) {
+        setManuallyEditedIndices(new Set());
+        return baseEntries;
+      }
+      
+      // Preserve manually edited entries
+      const editedIndices = manuallyEditedIndices;
+      return baseEntries.map((baseEntry, index) => {
+        if (editedIndices.has(index)) {
+          // Keep the manually edited entry
+          return prevEntries[index];
+        }
+        // For non-edited entries, use backend status as-is
+        return baseEntry;
+      });
+    });
+  }, [baseEntries, manuallyEditedIndices]);
 
   // Highlight Timer
   useEffect(() => {
@@ -466,12 +503,16 @@ const MyTimesheet = ({
     // Create new date with day 1 to avoid month rollover issues
     const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     setNow(prev);
+    // Clear manually edited indices when month changes
+    setManuallyEditedIndices(new Set());
   };
 
   const handleNextMonth = () => {
     // Create new date with day 1 to avoid month rollover issues
     const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
     setNow(next);
+    // Clear manually edited indices when month changes
+    setManuallyEditedIndices(new Set());
   };
 
   const handleHoursInput = (entryIndex: number, val: string) => {
@@ -504,11 +545,13 @@ const MyTimesheet = ({
 
     const hours = isNaN(num) ? 0 : num;
 
-    let newStatus: string = localEntries[entryIndex].status || "Not Updated";
+    let newStatus: string;
 
     if (hours > 0) {
+      // When hours > 0, calculate based on hours
       newStatus = hours >= 6 ? "Full Day" : "Half Day";
     } else {
+      // When hours are 0, ALWAYS recalculate status - never preserve previous status (especially Leave)
       const entryDate = new Date(localEntries[entryIndex].fullDate);
       const dateStrLocal = `${entryDate.getFullYear()}-${String(
         entryDate.getMonth() + 1,
@@ -553,6 +596,9 @@ const MyTimesheet = ({
       status: newStatus as any,
     };
     setLocalEntries(updated);
+    
+    // Mark this entry as manually edited to prevent baseEntries from overwriting it
+    setManuallyEditedIndices((prev) => new Set(prev).add(entryIndex));
   };
 
   const handleInputBlur = (entryIndex: number) => {
@@ -582,22 +628,51 @@ const MyTimesheet = ({
         const workingDate = `${d.getFullYear()}-${(d.getMonth() + 1)
           .toString()
           .padStart(2, "0")}-${d.getDate().toString().padStart(2, "0")}`;
-        let derivedStatus = entry.status || "Pending";
+        
+        // Check if it's a holiday
+        const dateStrLocal = `${d.getFullYear()}-${String(
+          d.getMonth() + 1,
+        ).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        const isHoliday = holidays?.find((h: any) => {
+          const hDate = h.holidayDate || h.date;
+          if (!hDate) return false;
+          const normalizedHDate =
+            typeof hDate === "string"
+              ? hDate.split("T")[0]
+              : new Date(hDate).toISOString().split("T")[0];
+          return normalizedHDate === dateStrLocal;
+        });
+
+        let derivedStatus: string;
 
         // For Sunday: Always set status to "Weekend" regardless of hours
         if (dayOfWeek === 0) {
           derivedStatus = "Weekend";
-        } 
+        }
+        // For holidays: Always set status to "Holiday" regardless of hours
+        else if (isHoliday) {
+          derivedStatus = "Holiday";
+        }
         // For Saturday: Only set to "Weekend" if there's NO data (no hours AND no workLocation)
         // If Saturday has data (Client Visit, WFH, etc.), keep that data
         else if (dayOfWeek === 6 && currentTotal === 0 && !entry.workLocation) {
           derivedStatus = "Weekend";
         }
         // For other days: Calculate status based on hours
-        else if (derivedStatus === "Pending" || derivedStatus === "Not Updated") {
-          if (currentTotal >= 6) derivedStatus = "Full Day";
-          else if (currentTotal > 0) derivedStatus = "Half Day";
-          else if (currentTotal === 0) derivedStatus = "Absent";
+        // NEVER preserve Leave status - always calculate based on hours
+        else {
+          if (currentTotal >= 6) {
+            derivedStatus = "Full Day";
+          } else if (currentTotal > 0) {
+            derivedStatus = "Half Day";
+          } else {
+            // 0 hours on a weekday: Determine if Absent or Upcoming
+            const todayZero = new Date();
+            todayZero.setHours(0, 0, 0, 0);
+            const entryDateZero = new Date(d);
+            entryDateZero.setHours(0, 0, 0, 0);
+            derivedStatus = entryDateZero <= todayZero ? "Absent" : "UPCOMING";
+          }
         }
 
         const existingRecord = records.find((r) => {
@@ -628,7 +703,7 @@ const MyTimesheet = ({
     }
 
     // Set status based on hours and day of week
-    // BUT preserve workLocation (Client Visit or WFH) - don't override to Absent if workLocation exists
+    // NEVER allow Leave status when hours are 0 - always set to Absent/Weekend/Holiday
     payload.forEach((item) => {
       const itemDate = new Date(item.workingDate);
       const dayOfWeek = itemDate.getDay(); // 0 = Sunday, 6 = Saturday
@@ -645,6 +720,13 @@ const MyTimesheet = ({
       // Saturday with data should show the data, not Weekend
       if (item.workLocation) {
         // Don't override status for Client Visit/WFH days (including Saturday)
+        // But ensure it's never "Leave"
+        if (item.status === "Leave") {
+          // If hours are 0, set to Absent; otherwise keep calculated status
+          if (!item.totalHours || Number(item.totalHours) === 0) {
+            item.status = "Absent";
+          }
+        }
         return;
       }
       
@@ -652,9 +734,17 @@ const MyTimesheet = ({
       if (dayOfWeek === 6 && (!item.totalHours || Number(item.totalHours) === 0)) {
         item.status = "Weekend";
       }
-      // Other days: If hours is 0, set status to "Absent" (only if no workLocation)
+      // Other days: If hours is 0, ALWAYS set status to "Absent" (never Leave)
       else if (!item.totalHours || Number(item.totalHours) === 0) {
         item.status = "Absent";
+      }
+      // If status is "Leave" but hours > 0, recalculate based on hours
+      else if (item.status === "Leave") {
+        if (item.totalHours >= 6) {
+          item.status = "Full Day";
+        } else if (item.totalHours > 0) {
+          item.status = "Half Day";
+        }
       }
     });
 
@@ -667,6 +757,8 @@ const MyTimesheet = ({
           year: now.getFullYear().toString(),
         }),
       );
+      // Clear manually edited indices after successful save
+      setManuallyEditedIndices(new Set());
       setToast({
         show: true,
         message: "Attendance Submitted Successfully",
@@ -707,6 +799,8 @@ const MyTimesheet = ({
             year: now.getFullYear().toString(),
           }),
         );
+        // Clear manually edited indices after successful save
+        setManuallyEditedIndices(new Set());
         setToast({ show: true, message: "Data Saved", type: "success" });
       } else {
         setToast({
