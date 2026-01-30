@@ -33,6 +33,7 @@ import {
   ChevronRight,
   ChevronDown,
   User,
+  Search,
 } from "lucide-react";
 import { notification } from "antd";
 import CommonMultipleUploader from "../EmployeeDashboard/CommonMultipleUploader";
@@ -66,12 +67,14 @@ const AdminLeaveManagement = () => {
     totalItems,
     totalPages: totalPagesFromRedux,
     stats = null,
-    loading,
+    loading: loadingRequests,
     error,
   } = useAppSelector((state) => state.leaveRequest || {});
-  const { entities: employeeList = [] } = useAppSelector(
-    (state) => state.employeeDetails || {},
-  );
+  const {
+    entities: employeeList = [],
+    loading: loadingEmployees,
+    totalItems: totalEmployees,
+  } = useAppSelector((state) => state.employeeDetails || {});
 
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [isEmployeeDropdownOpen, setIsEmployeeDropdownOpen] = useState(false);
@@ -96,7 +99,13 @@ const AdminLeaveManagement = () => {
   const [isCancelling, setIsCancelling] = useState(false);
   const [isAutoApproving, setIsAutoApproving] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+
   const itemsPerPage = 10;
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const [displayedEmployees, setDisplayedEmployees] = useState<any[]>([]);
+  const [empPage, setEmpPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
 
   const [errors, setErrors] = useState({
     title: "",
@@ -177,7 +186,10 @@ const AdminLeaveManagement = () => {
   const disabledEndDate = (current: any) => {
     // Disable if end date is before start date
     if (formData.startDate) {
-      if (current && current.isBefore(dayjs(formData.startDate).startOf("day"))) {
+      if (
+        current &&
+        current.isBefore(dayjs(formData.startDate).startOf("day"))
+      ) {
         return true;
       }
     }
@@ -185,10 +197,64 @@ const AdminLeaveManagement = () => {
     return disabledDate(current);
   };
 
-  // Fetch employees on mount
+  // Debounce search term
   useEffect(() => {
-    dispatch(getEntities({ search: "" }));
-  }, [dispatch]);
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Reset state when search term changes
+  useEffect(() => {
+    setEmpPage(1);
+    setHasMore(true);
+    setDisplayedEmployees([]);
+  }, [debouncedSearchTerm]);
+
+  // Fetch employees and update local state
+  useEffect(() => {
+    // Prevent fetching if no more data (unless it's the first page/search)
+    if (!hasMore && empPage > 1) return;
+
+    dispatch(
+      getEntities({ search: debouncedSearchTerm, page: empPage, limit: 20 }),
+    ).then((action: any) => {
+      if (action.payload && action.payload.data) {
+        const newDetails = action.payload.data;
+        const totalServerItems =
+          action.payload.totalItems || action.payload.total || 0;
+
+        setDisplayedEmployees((prev) => {
+          // If searching or first page, replace list
+          if (empPage === 1) return newDetails;
+
+          // Otherwise append
+          const existingIds = new Set(prev.map((p) => p.id || p.employeeId));
+          const uniqueNew = newDetails.filter(
+            (n: any) => !existingIds.has(n.id || n.employeeId),
+          );
+          return [...prev, ...uniqueNew];
+        });
+
+        // Update hasMore based on server total
+        if (empPage * 20 >= totalServerItems || newDetails.length === 0) {
+          setHasMore(false);
+        } else {
+          setHasMore(true);
+        }
+      }
+    });
+  }, [dispatch, debouncedSearchTerm, empPage]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, clientHeight, scrollHeight } = e.currentTarget;
+    const isNearBottom = scrollHeight - scrollTop <= clientHeight + 50;
+
+    if (isNearBottom && !loadingEmployees && hasMore) {
+      setEmpPage((prev) => prev + 1);
+    }
+  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -198,6 +264,7 @@ const AdminLeaveManagement = () => {
         !employeeDropdownRef.current.contains(event.target as Node)
       ) {
         setIsEmployeeDropdownOpen(false);
+        setSearchTerm(""); // Clear search when closing via click outside
       }
     };
 
@@ -597,13 +664,37 @@ const AdminLeaveManagement = () => {
           )}
 
           {isEmployeeDropdownOpen && (
-            <div className="absolute z-50 w-full mt-2 bg-white rounded-2xl shadow-xl border border-[#E9EDF7] max-h-60 overflow-y-auto">
-              {employeeList.length === 0 ? (
+            <div
+              className="absolute z-50 w-full mt-2 bg-white rounded-2xl shadow-xl border border-[#E9EDF7] max-h-60 overflow-y-auto"
+              onScroll={handleScroll}
+            >
+              <div className="sticky top-0 bg-white p-2 border-b border-gray-100 z-10">
+                <div className="relative">
+                  <Search
+                    size={16}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Search by name or ID..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2 bg-[#F4F7FE] rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#4318FF]/20 text-[#2B3674]"
+                    onClick={(e) => e.stopPropagation()}
+                    autoFocus
+                  />
+                </div>
+              </div>
+              {loadingEmployees && empPage === 1 ? (
+                <div className="p-4 flex justify-center items-center text-[#4318FF]">
+                  <Loader2 size={20} className="animate-spin" />
+                </div>
+              ) : displayedEmployees.length === 0 ? (
                 <div className="p-4 text-center text-gray-500 text-sm">
                   No employees found
                 </div>
               ) : (
-                employeeList.map((emp: any) => (
+                displayedEmployees.map((emp: any) => (
                   <button
                     key={emp.id || emp.employeeId}
                     onClick={() => {
@@ -612,6 +703,7 @@ const AdminLeaveManagement = () => {
                       setErrors((prev) => ({ ...prev, employee: "" }));
                       // Reset page when employee changes
                       setCurrentPage(1);
+                      setSearchTerm("");
                     }}
                     className={`w-full px-5 py-3 text-left hover:bg-[#F4F7FE] transition-colors flex items-center gap-3 first:rounded-t-2xl last:rounded-b-2xl ${
                       selectedEmployee?.employeeId === emp.employeeId
@@ -626,6 +718,11 @@ const AdminLeaveManagement = () => {
                     </span>
                   </button>
                 ))
+              )}
+              {loadingEmployees && empPage > 1 && (
+                <div className="p-2 flex justify-center items-center text-[#4318FF]">
+                  <Loader2 size={16} className="animate-spin" />
+                </div>
               )}
             </div>
           )}
@@ -781,12 +878,17 @@ const AdminLeaveManagement = () => {
                 <tbody className="divide-y divide-gray-50">
                   {entities.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-8 text-center text-gray-400">
+                      <td
+                        colSpan={5}
+                        className="py-8 text-center text-gray-400"
+                      >
                         <div className="flex flex-col items-center justify-center gap-3">
                           <div className="bg-gray-50 p-4 rounded-full">
                             <Calendar size={32} className="text-gray-300" />
                           </div>
-                          <p className="font-medium text-sm">No Request found</p>
+                          <p className="font-medium text-sm">
+                            No Request found
+                          </p>
                         </div>
                       </td>
                     </tr>
@@ -799,8 +901,7 @@ const AdminLeaveManagement = () => {
                         } hover:bg-[#F1F4FF]`}
                       >
                         <td className="py-4 pl-10 pr-4 text-[#2B3674] text-sm font-bold">
-                          {item.fullName || "User"} (
-                          {item.employeeId})
+                          {item.fullName || "User"} ({item.employeeId})
                         </td>
                         <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
                           {item.requestType === "Apply Leave"
@@ -825,8 +926,7 @@ const AdminLeaveManagement = () => {
                               dayjs(item.toDate).diff(
                                 dayjs(item.fromDate),
                                 "day",
-                              ) +
-                                1}{" "}
+                              ) + 1}{" "}
                             Day(s)
                           </p>
                         </td>
@@ -839,7 +939,8 @@ const AdminLeaveManagement = () => {
                             >
                               <Eye size={18} />
                             </button>
-                            {item.status === "Pending" && renderCancelButton(item)}
+                            {item.status === "Pending" &&
+                              renderCancelButton(item)}
                             <span
                               className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all
                           ${
@@ -886,7 +987,9 @@ const AdminLeaveManagement = () => {
 
               <div className="flex items-center gap-3">
                 <button
-                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(prev - 1, 1))
+                  }
                   disabled={currentPage === 1}
                   className={`p-2 rounded-xl border border-[#E9EDF7] transition-all flex items-center justify-center
               ${
@@ -1204,10 +1307,10 @@ const AdminLeaveManagement = () => {
                   </button>
                   <button
                     onClick={handleSubmit}
-                    disabled={loading || isAutoApproving}
+                    disabled={loadingRequests || isAutoApproving}
                     className="flex-1 py-4 rounded-2xl font-bold text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95 transform disabled:opacity-50"
                   >
-                    {loading || isAutoApproving
+                    {loadingRequests || isAutoApproving
                       ? "Submitting..."
                       : "Submit Application"}
                   </button>
@@ -1277,4 +1380,3 @@ const AdminLeaveManagement = () => {
 };
 
 export default AdminLeaveManagement;
-

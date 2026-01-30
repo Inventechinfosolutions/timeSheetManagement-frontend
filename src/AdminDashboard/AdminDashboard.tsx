@@ -399,7 +399,8 @@ const AdminDashboard = () => {
       },
       donut: {
         series: departmentsList.map(
-          (dept) => globalEntities.filter((e: any) => e.department === dept).length,
+          (dept) =>
+            globalEntities.filter((e: any) => e.department === dept).length,
         ),
         options: {
           labels: departmentsList,
@@ -467,7 +468,9 @@ const AdminDashboard = () => {
   };
 
   return (
-    <div className={`${styles.container} h-full overflow-y-auto custom-scrollbar`}>
+    <div
+      className={`${styles.container} h-full overflow-y-auto custom-scrollbar`}
+    >
       {/* Stats Section */}
       <div className={styles.cardGrid}>
         <div
@@ -557,24 +560,15 @@ const AdminDashboard = () => {
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate("/admin-dashboard/daily-attendance")}
-            className="flex items-center gap-2 px-6 py-2.5 bg-white text-[#4318FF] border border-[#4318FF]/10 rounded-xl text-xs font-black shadow-lg shadow-blue-500/5 hover:shadow-blue-500/10 transition-all duration-300 transform hover:-translate-y-0.5"
+            className="flex items-center gap-2 px-6 py-2.5 bg-linear-to-r from-[#4318FF] to-[#868CFF] text-white rounded-xl text-xs font-black shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all duration-300 transform hover:-translate-y-0.5"
           >
             <TrendingUp size={16} />
             <span>View Daily Status</span>
-          </button>
-          <button
-            onClick={() => setIsExportModalOpen(true)}
-            className="flex items-center gap-2 px-6 py-2.5 bg-linear-to-r from-[#4318FF] to-[#868CFF] text-white rounded-xl text-xs font-black shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all duration-300 transform hover:-translate-y-0.5"
-          >
-            <Download size={16} />
-            <span>Bulk Export PDF</span>
           </button>
         </div>
       </div>
 
       <div className="flex justify-center mb-20">
-       
-
         {/* Donut Chart: Distribution */}
         <div className="bg-white p-6 rounded-[24px] shadow-[0px_18px_40px_rgba(112,144,176,0.08)] max-w-[700px] w-full">
           <div className="flex justify-between items-center mb-6">
