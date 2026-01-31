@@ -31,15 +31,19 @@ import { getEntity } from "../reducers/employeeDetails.reducer";
 import {
   submitBulkAttendance,
   AttendanceStatus,
+  fetchAttendanceByDateRange,
 } from "../reducers/employeeAttendance.reducer";
 import { fetchUnreadNotifications } from "../reducers/leaveNotification.reducer";
 import CommonMultipleUploader from "../EmployeeDashboard/CommonMultipleUploader";
+import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import dayjs from "dayjs";
 import { notification, Select } from "antd";
 
 const Requests = () => {
   const dispatch = useAppDispatch();
   const { entities, loading } = useAppSelector((state) => state.leaveRequest);
+  const { holidays = [] } = useAppSelector((state: any) => state.masterHolidays || {});
+  const [dateRangeAttendanceRecords, setDateRangeAttendanceRecords] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
@@ -96,6 +100,28 @@ const Requests = () => {
     "Admin",
   ];
 
+  // Fetch master holidays on mount
+  useEffect(() => {
+    dispatch(fetchHolidays());
+  }, [dispatch]);
+
+  // Fetch attendance records when a request is selected for viewing
+  useEffect(() => {
+    if (selectedRequest?.employeeId && selectedRequest?.fromDate && selectedRequest?.toDate) {
+      dispatch(fetchAttendanceByDateRange({
+        employeeId: selectedRequest.employeeId,
+        startDate: selectedRequest.fromDate,
+        endDate: selectedRequest.toDate,
+      })).then((action: any) => {
+        if (fetchAttendanceByDateRange.fulfilled.match(action)) {
+          setDateRangeAttendanceRecords(action.payload.data || action.payload || []);
+        }
+      });
+    } else {
+      setDateRangeAttendanceRecords([]);
+    }
+  }, [dispatch, selectedRequest?.employeeId, selectedRequest?.fromDate, selectedRequest?.toDate]);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
@@ -150,6 +176,63 @@ const Requests = () => {
     );
   });
 
+  // Helper function to check if a date is a weekend
+  const isWeekend = (date: dayjs.Dayjs): boolean => {
+    const day = date.day(); // 0 = Sunday, 6 = Saturday
+    return day === 0 || day === 6;
+  };
+
+  // Helper function to check if a date is a master holiday
+  const isHoliday = (date: dayjs.Dayjs): boolean => {
+    const dateStr = date.format("YYYY-MM-DD");
+    return holidays.some((h: any) => {
+      const hDate = h.date || h.holidayDate;
+      if (!hDate) return false;
+      const normalizedHDate =
+        typeof hDate === "string"
+          ? hDate.split("T")[0]
+          : new Date(hDate).toISOString().split("T")[0];
+      return normalizedHDate === dateStr;
+    });
+  };
+
+  // Helper function to check if a date has an existing leave record
+  const hasExistingLeave = (date: dayjs.Dayjs): boolean => {
+    const dateStr = date.format("YYYY-MM-DD");
+    return dateRangeAttendanceRecords.some((record: any) => {
+      const recordDate = record.workingDate || record.working_date;
+      if (!recordDate) return false;
+      const normalizedRecordDate =
+        typeof recordDate === "string"
+          ? recordDate.split("T")[0]
+          : new Date(recordDate).toISOString().split("T")[0];
+      // Check if the record has Leave status
+      const status = record.status || record.attendance_status;
+      return normalizedRecordDate === dateStr && 
+             (status === AttendanceStatus.LEAVE || status === "Leave" || status === "LEAVE");
+    });
+  };
+
+  // Helper function to calculate duration excluding weekends, holidays, and existing leaves
+  const calculateDurationExcludingWeekends = (startDate: string, endDate: string): number => {
+    if (!startDate || !endDate) return 0;
+    
+    const start = dayjs(startDate);
+    const end = dayjs(endDate);
+    let count = 0;
+    let current = start;
+    
+    while (current.isBefore(end) || current.isSame(end, 'day')) {
+      // Exclude weekends, holidays, and existing leave records
+      if (!isWeekend(current) && !isHoliday(current) && !hasExistingLeave(current)) {
+        count++;
+      }
+      current = current.add(1, 'day');
+    }
+    
+    return count;
+  };
+
   const handleUpdateStatus = (
     id: number,
     status: "Approved" | "Rejected",
@@ -174,9 +257,19 @@ const Requests = () => {
 
           const attendancePayload: any[] = [];
 
+
           // Loop through dates
           for (let i = 0; i <= diffDays; i++) {
-            const currentDate = startDate.add(i, "day").format("YYYY-MM-DD"); // Ensuring string format YYYY-MM-DD
+            const currentDateObj = startDate.clone().add(i, "day"); // Clone first to avoid mutation
+            const currentDate = currentDateObj.format("YYYY-MM-DD"); // Ensuring string format YYYY-MM-DD
+
+            // For Client Visit, WFH, and Leave, skip weekend dates and holidays (don't send to backend)
+            if (
+              (request.requestType === "Client Visit" || request.requestType === "Work From Home" || request.requestType === "Apply Leave" || request.requestType === "Leave") &&
+              (isWeekend(currentDateObj) || isHoliday(currentDateObj))
+            ) {
+              continue; // Skip weekends and holidays for Client Visit, WFH, and Leave
+            }
 
             let attendanceData: any = {
               employeeId: request.employeeId,
@@ -508,8 +601,9 @@ const Requests = () => {
                       <p className="text-[10px] text-[#4318FF] font-black mt-1 uppercase tracking-wider">
                         Total:{" "}
                         {req.duration ||
-                          dayjs(req.toDate).diff(dayjs(req.fromDate), "day") +
-                            1}{" "}
+                          (req.requestType === "Client Visit" || req.requestType === "Work From Home" || req.requestType === "Apply Leave" || req.requestType === "Leave"
+                            ? calculateDurationExcludingWeekends(req.fromDate, req.toDate)
+                            : dayjs(req.toDate).diff(dayjs(req.fromDate), "day") + 1)}{" "}
                         Day(s)
                       </p>
                     </td>
@@ -803,11 +897,16 @@ const Requests = () => {
                 <div className="w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] font-bold text-[#4318FF] flex items-center justify-between">
                   <span>Total Days:</span>
                   <span className="bg-white px-4 py-1 rounded-lg shadow-sm border border-blue-100">
-                    {selectedRequest.duration ||
-                      dayjs(selectedRequest.toDate).diff(
-                        dayjs(selectedRequest.fromDate),
-                        "day",
-                      ) + 1}{" "}
+                    {(() => {
+                      // For Client Visit, WFH, and Leave, recalculate duration excluding weekends and holidays
+                      if (selectedRequest.requestType === "Client Visit" || selectedRequest.requestType === "Work From Home" || selectedRequest.requestType === "Apply Leave" || selectedRequest.requestType === "Leave") {
+                        return calculateDurationExcludingWeekends(selectedRequest.fromDate, selectedRequest.toDate);
+                      } else {
+                        // For other types, use stored duration or calculate including all days
+                        return selectedRequest.duration ||
+                          dayjs(selectedRequest.toDate).diff(dayjs(selectedRequest.fromDate), "day") + 1;
+                      }
+                    })()}{" "}
                     Day(s)
                   </span>
                 </div>
