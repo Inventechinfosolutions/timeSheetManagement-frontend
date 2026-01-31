@@ -163,6 +163,15 @@ export const fetchAttendanceByDate = createAsyncThunk(
   }
 );
 
+// 4.5. Fetch Attendance By Date Range: GET /date-range/:employeeId/:startDate/:endDate
+export const fetchAttendanceByDateRange = createAsyncThunk(
+  'attendance/fetchByDateRange',
+  async ({ employeeId, startDate, endDate }: { employeeId: string; startDate: string; endDate: string }) => {
+    const response = await axios.get(`${apiUrl}/date-range/${employeeId}/${startDate}/${endDate}`);
+    return response.data;
+  }
+);
+
 // 5. Fetch Worked Days: GET /worked-days/:employeeId/:startDate/:endDate
 export const fetchWorkedDays = createAsyncThunk(
   'attendance/fetchWorkedDays',
@@ -267,6 +276,11 @@ const attendanceSlice = createSlice({
           grouped[record.employeeId].push(record);
         });
         state.employeeRecords = grouped;
+      })
+      .addCase(fetchAttendanceByDateRange.fulfilled, (state: AttendanceState, action: PayloadAction<EmployeeAttendance[]>) => {
+        state.loading = false;
+        // Store date range records for leave management
+        // We'll access these records directly from the action payload when needed
       })
       .addCase(fetchAttendanceByDate.fulfilled, (state: AttendanceState, action: PayloadAction<EmployeeAttendance[]>) => {
         state.loading = false;
