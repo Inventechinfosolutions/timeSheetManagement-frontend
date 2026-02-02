@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { RootState } from "../store";
-import { getEntities } from "../reducers/employeeDetails.reducer";
+import { getTimesheetList } from "../reducers/employeeDetails.reducer";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import {
   Edit,
@@ -33,10 +33,14 @@ const AdminEmployeeTimesheetList = () => {
     direction: "asc" | "desc";
   }>({ key: null, direction: "asc" });
 
-  const [selectedDepartment, setSelectedDepartment] = useState("All");
+  const [selectedDepartment, setSelectedDepartment] =
+    useState("All Departments");
+  const [selectedStatus, setSelectedStatus] = useState("All Status");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const statusDropdownRef = useRef<HTMLDivElement>(null);
 
   // Period State
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -63,7 +67,7 @@ const AdminEmployeeTimesheetList = () => {
   };
 
   const departments = [
-    "All",
+    "All Departments",
     "HR",
     "IT",
     "Sales",
@@ -71,6 +75,8 @@ const AdminEmployeeTimesheetList = () => {
     "Finance",
     "Admin",
   ];
+
+  const statuses = ["All Status", "Submitted", "Pending"];
 
   const dispatch = useAppDispatch();
   const { entities, totalItems } = useAppSelector(
@@ -85,6 +91,12 @@ const AdminEmployeeTimesheetList = () => {
         !dropdownRef.current.contains(event.target as Node)
       ) {
         setIsDropdownOpen(false);
+      }
+      if (
+        statusDropdownRef.current &&
+        !statusDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsStatusDropdownOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -105,14 +117,19 @@ const AdminEmployeeTimesheetList = () => {
 
   useEffect(() => {
     dispatch(
-      getEntities({
+      getTimesheetList({
         page: currentPage,
         limit: itemsPerPage,
         search: debouncedSearchTerm,
         sort: sortConfig.key || undefined,
         order: sortConfig.key ? sortConfig.direction.toUpperCase() : undefined,
         department:
-          selectedDepartment === "All" ? undefined : selectedDepartment,
+          selectedDepartment === "All Departments"
+            ? undefined
+            : selectedDepartment,
+        status: selectedStatus === "All Status" ? undefined : selectedStatus,
+        month: selectedMonth,
+        year: selectedYear,
       }),
     );
   }, [
@@ -121,6 +138,9 @@ const AdminEmployeeTimesheetList = () => {
     debouncedSearchTerm,
     sortConfig,
     selectedDepartment,
+    selectedStatus,
+    selectedMonth,
+    selectedYear,
   ]);
 
   // Fetch status for all employees in bulk
@@ -151,19 +171,14 @@ const AdminEmployeeTimesheetList = () => {
       id: empId,
       name: emp.fullName || emp.name,
       department: emp.department,
-      status: employeeMonthlyStats[empId]?.monthStatus || "Pending",
+      status:
+        emp.monthStatus ||
+        employeeMonthlyStats[empId]?.monthStatus ||
+        "Pending",
     };
   });
 
-  const currentItems = employees.filter((emp) => {
-    if (!debouncedSearchTerm) return true;
-    const s = debouncedSearchTerm.toLowerCase();
-    return (
-      emp.name.toLowerCase().includes(s) ||
-      emp.id.toString().toLowerCase().includes(s) ||
-      (emp.department && emp.department.toLowerCase().includes(s))
-    );
-  });
+  const currentItems = employees;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
   const handleNextPage = () => {
@@ -241,6 +256,51 @@ const AdminEmployeeTimesheetList = () => {
                       }`}
                     >
                       {dept}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Status Dropdown */}
+            <div className="relative" ref={statusDropdownRef}>
+              <button
+                onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
+                className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-2 px-5 py-2.5 bg-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] text-[#2B3674] font-bold text-sm hover:bg-gray-50 transition-all border border-transparent focus:border-[#4318FF]/20"
+              >
+                <div className="flex items-center gap-2">
+                  <Filter size={16} className="text-[#4318FF]" />
+                  <span>{selectedStatus}</span>
+                </div>
+                <ChevronDown
+                  size={16}
+                  className={`text-[#A3AED0] transition-transform duration-300 ${isStatusDropdownOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+
+              {isStatusDropdownOpen && (
+                <div className="absolute top-full left-0 mt-2 w-full sm:w-48 bg-white/80 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-white/20 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="px-3 py-1 mb-1">
+                    <span className="text-[10px] font-black text-[#A3AED0] uppercase tracking-widest pl-2">
+                      Status
+                    </span>
+                  </div>
+                  {statuses.map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => {
+                        setSelectedStatus(status);
+                        setIsStatusDropdownOpen(false);
+                        setCurrentPage(1);
+                      }}
+                      className={`w-full text-left px-5 py-2 text-sm font-semibold transition-colors
+                      ${
+                        selectedStatus === status
+                          ? "text-[#4318FF] bg-[#4318FF]/5"
+                          : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
+                      }`}
+                    >
+                      {status}
                     </button>
                   ))}
                 </div>
