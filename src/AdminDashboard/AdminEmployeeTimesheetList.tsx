@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { RootState } from "../store";
 import { getEntities } from "../reducers/employeeDetails.reducer";
 import { useAppDispatch, useAppSelector } from "../hooks";
@@ -24,6 +24,7 @@ import EmployeeTimeSheetMobileCard from "./EmployeeTimeSheetMobileCard";
 
 const AdminEmployeeTimesheetList = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -38,15 +39,26 @@ const AdminEmployeeTimesheetList = () => {
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Period State
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  // Period State - Initialize from navigation state if available
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    return (location.state as any)?.selectedMonth || new Date().getMonth() + 1;
+  });
+  const [selectedYear, setSelectedYear] = useState(() => {
+    return (location.state as any)?.selectedYear || new Date().getFullYear();
+  });
 
-  // Export State
+  // Export State - Initialize with selected month/year
   const [showDownloadModal, setShowDownloadModal] = useState(false);
-  const [downloadMonth, setDownloadMonth] = useState(new Date().getMonth() + 1);
-  const [downloadYear, setDownloadYear] = useState(new Date().getFullYear());
+  const [downloadMonth, setDownloadMonth] = useState(selectedMonth);
+  const [downloadYear, setDownloadYear] = useState(selectedYear);
   const [isDownloading, setIsDownloading] = useState(false);
+
+  // Handler to open download modal with current selected month/year
+  const handleOpenDownloadModal = () => {
+    setDownloadMonth(selectedMonth);
+    setDownloadYear(selectedYear);
+    setShowDownloadModal(true);
+  };
 
   const handleExportExcel = async () => {
     try {
@@ -179,16 +191,79 @@ const AdminEmployeeTimesheetList = () => {
   };
 
   const handleViewTimesheet = (empId: string) => {
-    navigate(`/admin-dashboard/timesheet/${empId}`);
+    navigate(
+      `/admin-dashboard/timesheet/${empId}?month=${selectedMonth}&year=${selectedYear}`,
+    );
   };
 
   const handleViewWorkingDetails = (empId: string) => {
-    navigate(`/admin-dashboard/working-details/${empId}`);
+    navigate(
+      `/admin-dashboard/working-details/${empId}?month=${selectedMonth}&year=${selectedYear}`,
+    );
+  };
+
+  const handlePreviousMonth = () => {
+    if (selectedMonth === 1) {
+      setSelectedMonth(12);
+      setSelectedYear(selectedYear - 1);
+    } else {
+      setSelectedMonth(selectedMonth - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (selectedMonth === 12) {
+      setSelectedMonth(1);
+      setSelectedYear(selectedYear + 1);
+    } else {
+      setSelectedMonth(selectedMonth + 1);
+    }
+  };
+
+  const getMonthYearDisplay = () => {
+    const monthNames = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
+    return `${monthNames[selectedMonth - 1]} ${selectedYear}`;
   };
 
   return (
     <div className="p-5 bg-[#F4F7FE] min-h-screen font-sans">
       <div className="max-w-[1600px] mx-auto">
+        {/* Month/Year Selector */}
+        <div className="flex items-center justify-center gap-4 mb-6">
+          <button
+            onClick={handlePreviousMonth}
+            className="p-2 rounded-lg bg-white shadow-md hover:bg-gray-50 transition-all active:scale-95 border border-gray-200"
+            title="Previous Month"
+          >
+            <ChevronLeft size={20} className="text-[#2B3674]" />
+          </button>
+          <div className="bg-white px-6 py-2 rounded-lg shadow-md border border-gray-200">
+            <span className="text-base font-bold text-[#2B3674]">
+              {getMonthYearDisplay()}
+            </span>
+          </div>
+          <button
+            onClick={handleNextMonth}
+            className="p-2 rounded-lg bg-white shadow-md hover:bg-gray-50 transition-all active:scale-95 border border-gray-200"
+            title="Next Month"
+          >
+            <ChevronRight size={20} className="text-[#2B3674]" />
+          </button>
+        </div>
+
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
           <h1 className="text-xl md:text-2xl font-bold text-[#2B3674] m-0">
             Employee Timesheet
@@ -196,7 +271,7 @@ const AdminEmployeeTimesheetList = () => {
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
             <button
-              onClick={() => setShowDownloadModal(true)}
+              onClick={handleOpenDownloadModal}
               className="flex items-center justify-center gap-2 px-5 py-2.5 bg-[#01B574] text-white rounded-full shadow-lg shadow-green-500/20 hover:shadow-green-500/40 hover:-translate-y-0.5 active:scale-95 transition-all text-sm font-bold"
             >
               <Download size={18} />

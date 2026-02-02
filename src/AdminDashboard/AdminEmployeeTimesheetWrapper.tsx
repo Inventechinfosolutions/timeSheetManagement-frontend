@@ -1,5 +1,5 @@
-import { useNavigate, useParams } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { useEffect, useState, useMemo } from "react";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { getEntity } from "../reducers/employeeDetails.reducer";
 import {
@@ -21,6 +21,7 @@ const AdminEmployeeTimesheetWrapper = () => {
   const { employeeId } = useParams<{ employeeId: string }>();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+  const location = useLocation();
   const { entities, entity, loading } = useAppSelector(
     (state) => state.employeeDetails,
   );
@@ -32,6 +33,23 @@ const AdminEmployeeTimesheetWrapper = () => {
   const [toDate, setToDate] = useState("");
   const [reason, setReason] = useState("");
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  // Read month and year from URL query parameters
+  const queryParams = new URLSearchParams(location.search);
+  const monthParam = queryParams.get("month");
+  const yearParam = queryParams.get("year");
+
+  // Initialize date based on query params or default to current date
+  const initialDate = useMemo(() => {
+    if (monthParam && yearParam) {
+      const month = parseInt(monthParam, 10);
+      const year = parseInt(yearParam, 10);
+      if (!isNaN(month) && !isNaN(year) && month >= 1 && month <= 12) {
+        return new Date(year, month - 1, 1);
+      }
+    }
+    return new Date();
+  }, [monthParam, yearParam]);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -53,7 +71,12 @@ const AdminEmployeeTimesheetWrapper = () => {
       : entities.find((e: any) => (e.employeeId || e.id) === employeeId);
 
   const handleBack = () => {
-    navigate("/admin-dashboard/timesheet-list");
+    // Extract month and year to pass back to the list
+    const month = initialDate.getMonth() + 1;
+    const year = initialDate.getFullYear();
+    navigate(`/admin-dashboard/timesheet-list`, {
+      state: { selectedMonth: month, selectedYear: year },
+    });
   };
 
   const handleApplyBlock = async () => {
@@ -164,6 +187,7 @@ const AdminEmployeeTimesheetWrapper = () => {
         <MyTimesheet
           employeeId={employeeId!}
           readOnly={false}
+          now={initialDate}
           onBlockedClick={() => setIsModalOpen(true)}
           containerClassName="h-full overflow-hidden shadow-none border-none bg-transparent"
         />
