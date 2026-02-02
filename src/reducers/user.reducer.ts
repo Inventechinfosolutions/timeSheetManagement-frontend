@@ -294,6 +294,7 @@ const userSlice = createSlice({
         
         // Clear stored token on auth failure
         Storage.session.remove('TimeSheet-authenticationToken');
+        localStorage.removeItem('userLoginId');
       })
 
       // LOGOUT USER
@@ -312,6 +313,7 @@ const userSlice = createSlice({
         
         // Clear stored token
         Storage.session.remove('TimeSheet-authenticationToken');
+        localStorage.removeItem('userLoginId');
       })
       .addCase(logoutUser.rejected, (state, action) => {
         state.loading = false;
@@ -323,6 +325,7 @@ const userSlice = createSlice({
         state.currentUser = null;
 
         Storage.session.remove('TimeSheet-authenticationToken');
+        localStorage.removeItem('userLoginId');
       })
 
       // CHANGE PASSWORD
