@@ -332,6 +332,16 @@ const MyTimesheet = ({
         endNorm.setHours(0, 0, 0, 0);
 
         while (cur <= endNorm) {
+          const dayOfWeek = cur.getDay(); // 0 = Sunday, 6 = Saturday
+          const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+          
+          // For Client Visit and WFH, skip weekends (matching backend behavior)
+          // Weekends are excluded from the attendance payload for these request types
+          if ((r.requestType === "Work From Home" || r.requestType === "Client Visit") && isWeekend) {
+            cur.setDate(cur.getDate() + 1);
+            continue;
+          }
+          
           const key = toYmd(cur);
           // Don't overlay Leave status - Leave should only come from attendance records
           // Only overlay WFH and Client Visit workLocation
@@ -1111,15 +1121,15 @@ const MyTimesheet = ({
               (dayMonth === nextMonth && dayYear === nextMonthYear);
 
             // Logic for "isEditable"
-            // - Admins can edit any date (except blocked/leave days)
-            // - Employees can edit current month and next month
+            // - Admins can edit any date (including leave days, except blocked dates)
+            // - Employees can edit current month and next month (but not leave days)
             // - WFH and Client Visit days are editable (they are present, not leave)
-            // - Leave days are never editable
+            // - Leave days are editable only for admins
             const isEditable =
               (isAdmin ? !isAdminView : !readOnly) &&
               (isAdmin || isCurrentOrNextMonth || isEditableMonth(day.fullDate)) &&
               !isBlocked &&
-              !isLeaveDay;
+              (isAdmin || !isLeaveDay); // Admins can edit leave days, employees cannot
 
             // Updated Styling Logic
             let bg = "bg-white hover:border-[#4318FF]/20";

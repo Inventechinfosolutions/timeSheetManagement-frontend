@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useState, useEffect, useMemo } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { RootState } from "../store";
 import {
@@ -26,9 +26,28 @@ import {
 const AdminEmployeeCalenderWrapper = () => {
   const { employeeId } = useParams<{ employeeId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useAppDispatch();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
-  const [displayDate] = useState(new Date());
+
+  // Read month and year from URL query parameters
+  const queryParams = new URLSearchParams(location.search);
+  const monthParam = queryParams.get("month");
+  const yearParam = queryParams.get("year");
+
+  // Initialize date based on query params or default to current date
+  const initialDate = useMemo(() => {
+    if (monthParam && yearParam) {
+      const month = parseInt(monthParam, 10);
+      const year = parseInt(yearParam, 10);
+      if (!isNaN(month) && !isNaN(year) && month >= 1 && month <= 12) {
+        return new Date(year, month - 1, 1);
+      }
+    }
+    return new Date();
+  }, [monthParam, yearParam]);
+
+  const [displayDate] = useState(initialDate);
 
   const { records } = useAppSelector((state: RootState) => state.attendance);
   const { entities } = useAppSelector(
@@ -81,7 +100,12 @@ const AdminEmployeeCalenderWrapper = () => {
   const avgHours = totalHours.toFixed(1);
 
   const handleBack = () => {
-    navigate(-1);
+    // Extract month and year to pass back to the list
+    const month = initialDate.getMonth() + 1;
+    const year = initialDate.getFullYear();
+    navigate(`/admin-dashboard/timesheet-list`, {
+      state: { selectedMonth: month, selectedYear: year },
+    });
   };
 
   const handleApplyBlock = async () => {

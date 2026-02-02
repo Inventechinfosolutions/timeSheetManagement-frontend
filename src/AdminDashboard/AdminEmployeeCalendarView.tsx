@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useState, useEffect, useMemo } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { RootState } from "../store";
 import {
@@ -12,6 +12,7 @@ import { ArrowLeft, ClipboardList } from "lucide-react";
 const AdminEmployeeCalendarView = () => {
   const { employeeId } = useParams<{ employeeId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useAppDispatch();
   const { records, loading } = useAppSelector(
     (state: RootState) => state.attendance,
@@ -19,7 +20,25 @@ const AdminEmployeeCalendarView = () => {
   const { entities } = useAppSelector(
     (state: RootState) => state.employeeDetails,
   );
-  const [displayDate, setDisplayDate] = useState(new Date());
+
+  // Read month and year from URL query parameters
+  const queryParams = new URLSearchParams(location.search);
+  const monthParam = queryParams.get("month");
+  const yearParam = queryParams.get("year");
+
+  // Initialize date based on query params or default to current date
+  const initialDate = useMemo(() => {
+    if (monthParam && yearParam) {
+      const month = parseInt(monthParam, 10);
+      const year = parseInt(yearParam, 10);
+      if (!isNaN(month) && !isNaN(year) && month >= 1 && month <= 12) {
+        return new Date(year, month - 1, 1);
+      }
+    }
+    return new Date();
+  }, [monthParam, yearParam]);
+
+  const [displayDate, setDisplayDate] = useState(initialDate);
 
   const employee = entities.find(
     (e: any) => (e.employeeId || e.id) === employeeId,
@@ -42,7 +61,12 @@ const AdminEmployeeCalendarView = () => {
   };
 
   const handleBack = () => {
-    navigate(-1);
+    // Extract month and year to pass back to the list
+    const month = initialDate.getMonth() + 1;
+    const year = initialDate.getFullYear();
+    navigate(`/admin-dashboard/timesheet-list`, {
+      state: { selectedMonth: month, selectedYear: year },
+    });
   };
 
   if (!employee) {

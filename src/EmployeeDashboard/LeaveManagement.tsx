@@ -15,6 +15,8 @@ import {
   getLeaveRequestFiles,
   getLeaveRequestById,
 } from "../reducers/leaveRequest.reducer";
+import { fetchHolidays } from "../reducers/masterHoliday.reducer";
+import { fetchAttendanceByDateRange, AttendanceStatus } from "../reducers/employeeAttendance.reducer";
 import {
   Home,
   MapPin,
@@ -54,7 +56,9 @@ const LeaveManagement = () => {
   } = useAppSelector((state) => state.leaveRequest || {});
   const { entity } = useAppSelector((state) => state.employeeDetails);
   const currentUser = useAppSelector((state) => state.user.currentUser);
+  const { holidays = [] } = useAppSelector((state: any) => state.masterHolidays || {});
   const employeeId = entity?.employeeId || currentUser?.employeeId;
+  const [dateRangeAttendanceRecords, setDateRangeAttendanceRecords] = useState<any[]>([]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewMode, setIsViewMode] = useState(false);
@@ -220,12 +224,88 @@ const LeaveManagement = () => {
     setErrors(newErrors);
     return isValid;
   };
-  const handleSubmit = () => {
+  // Helper function to check if a date is a weekend
+  const isWeekend = (date: dayjs.Dayjs): boolean => {
+    const day = date.day(); // 0 = Sunday, 6 = Saturday
+    return day === 0 || day === 6;
+  };
+
+  // Helper function to check if a date is a master holiday
+  const isHoliday = (date: dayjs.Dayjs): boolean => {
+    const dateStr = date.format("YYYY-MM-DD");
+    return holidays.some((h: any) => {
+      const hDate = h.date || h.holidayDate;
+      if (!hDate) return false;
+      const normalizedHDate =
+        typeof hDate === "string"
+          ? hDate.split("T")[0]
+          : new Date(hDate).toISOString().split("T")[0];
+      return normalizedHDate === dateStr;
+    });
+  };
+
+  // Helper function to check if a date has an existing leave record
+  const hasExistingLeave = (date: dayjs.Dayjs, records: any[] = dateRangeAttendanceRecords): boolean => {
+    const dateStr = date.format("YYYY-MM-DD");
+    return records.some((record: any) => {
+      const recordDate = record.workingDate || record.working_date;
+      if (!recordDate) return false;
+      const normalizedRecordDate =
+        typeof recordDate === "string"
+          ? recordDate.split("T")[0]
+          : new Date(recordDate).toISOString().split("T")[0];
+      // Check if the record has Leave status
+      const status = record.status || record.attendance_status;
+      return normalizedRecordDate === dateStr && 
+             (status === AttendanceStatus.LEAVE || status === "Leave" || status === "LEAVE");
+    });
+  };
+
+  // Helper function to calculate duration excluding weekends, holidays, and existing leaves
+  const calculateDurationExcludingWeekends = (startDate: string, endDate: string, records?: any[]): number => {
+    if (!startDate || !endDate) return 0;
+    
+    const start = dayjs(startDate);
+    const end = dayjs(endDate);
+    let count = 0;
+    let current = start;
+    const recordsToUse = records || dateRangeAttendanceRecords;
+    
+    while (current.isBefore(end) || current.isSame(end, 'day')) {
+      // Exclude weekends, holidays, and existing leave records
+      if (!isWeekend(current) && !isHoliday(current) && !hasExistingLeave(current, recordsToUse)) {
+        count++;
+      }
+      current = current.add(1, 'day');
+    }
+    
+    return count;
+  };
+
+  const handleSubmit = async () => {
     if (validateForm()) {
-      const duration =
-        formData.startDate && formData.endDate
+      // For Client Visit, WFH, and Leave, fetch attendance records first to check for existing leaves
+      let duration: number;
+      if (selectedLeaveType === "Client Visit" || selectedLeaveType === "Work From Home" || selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave") {
+        // Fetch attendance records synchronously before calculating duration
+        const attendanceAction = await dispatch(fetchAttendanceByDateRange({
+          employeeId: employeeId!,
+          startDate: formData.startDate,
+          endDate: formData.endDate,
+        }));
+        
+        let records: any[] = [];
+        if (fetchAttendanceByDateRange.fulfilled.match(attendanceAction)) {
+          records = attendanceAction.payload.data || attendanceAction.payload || [];
+          setDateRangeAttendanceRecords(records);
+        }
+        // Calculate duration with the fetched records (pass records directly to avoid state timing issues)
+        duration = calculateDurationExcludingWeekends(formData.startDate, formData.endDate, records);
+      } else {
+        duration = formData.startDate && formData.endDate
           ? dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1
           : 0;
+      }
 
       dispatch(
         submitLeaveRequest({
@@ -252,6 +332,28 @@ const LeaveManagement = () => {
       });
     }
   }, [submitSuccess]);
+
+  // Fetch master holidays on mount
+  useEffect(() => {
+    dispatch(fetchHolidays());
+  }, [dispatch]);
+
+  // Fetch attendance records for the selected date range to check for existing leaves
+  useEffect(() => {
+    if (employeeId && formData.startDate && formData.endDate) {
+      dispatch(fetchAttendanceByDateRange({
+        employeeId,
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+      })).then((action: any) => {
+        if (fetchAttendanceByDateRange.fulfilled.match(action)) {
+          setDateRangeAttendanceRecords(action.payload.data || action.payload || []);
+        }
+      });
+    } else {
+      setDateRangeAttendanceRecords([]);
+    }
+  }, [dispatch, employeeId, formData.startDate, formData.endDate]);
 
   useEffect(() => {
     if (employeeId) {
@@ -290,28 +392,41 @@ const LeaveManagement = () => {
     dispatch(resetSubmitSuccess());
   };
 
-  const handleViewApplication = (item: any) => {
-    dispatch(getLeaveRequestById(item.id)).then((action) => {
-      if (getLeaveRequestById.fulfilled.match(action)) {
-        const fetchedItem = action.payload;
-        setIsViewMode(true);
-        setSelectedRequestId(fetchedItem.id);
-        setSelectedLeaveType(fetchedItem.requestType);
-        setFormData({
-          title: fetchedItem.title,
-          description: fetchedItem.description,
+  const handleViewApplication = async (item: any) => {
+    const action = await dispatch(getLeaveRequestById(item.id));
+    if (getLeaveRequestById.fulfilled.match(action)) {
+      const fetchedItem = action.payload;
+      setIsViewMode(true);
+      setSelectedRequestId(fetchedItem.id);
+      setSelectedLeaveType(fetchedItem.requestType);
+      setFormData({
+        title: fetchedItem.title,
+        description: fetchedItem.description,
+        startDate: fetchedItem.fromDate,
+        endDate: fetchedItem.toDate,
+      });
+      
+      // Fetch attendance records for this item's date range
+      if (employeeId && fetchedItem.fromDate && fetchedItem.toDate) {
+        const attendanceAction = await dispatch(fetchAttendanceByDateRange({
+          employeeId,
           startDate: fetchedItem.fromDate,
           endDate: fetchedItem.toDate,
-        });
-        setIsModalOpen(true);
-        setErrors({ title: "", description: "", startDate: "", endDate: "" });
-      } else {
-        notification.error({
-          message: "Error",
-          description: "Failed to fetch request details",
-        });
+        }));
+        if (fetchAttendanceByDateRange.fulfilled.match(attendanceAction)) {
+          const records = attendanceAction.payload.data || attendanceAction.payload || [];
+          setDateRangeAttendanceRecords(records);
+        }
       }
-    });
+      
+      setIsModalOpen(true);
+      setErrors({ title: "", description: "", startDate: "", endDate: "" });
+    } else {
+      notification.error({
+        message: "Error",
+        description: "Failed to fetch request details",
+      });
+    }
   };
 
   const handleCancel = (id: number) => {
@@ -572,8 +687,9 @@ const LeaveManagement = () => {
                       <p className="text-[10px] text-[#4318FF] font-black mt-1 uppercase tracking-wider">
                         Total:{" "}
                         {item.duration ||
-                          dayjs(item.toDate).diff(dayjs(item.fromDate), "day") +
-                            1}{" "}
+                          (item.requestType === "Client Visit" || item.requestType === "Work From Home" || item.requestType === "Apply Leave" || item.requestType === "Leave"
+                            ? calculateDurationExcludingWeekends(item.fromDate, item.toDate)
+                            : dayjs(item.toDate).diff(dayjs(item.fromDate), "day") + 1)}{" "}
                         Day(s)
                       </p>
                     </td>
@@ -855,7 +971,14 @@ const LeaveManagement = () => {
                   <span>Total Days:</span>
                   <span className="bg-white px-4 py-1 rounded-lg shadow-sm border border-blue-100">
                     {formData.startDate && formData.endDate
-                      ? `${dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1} Day(s)`
+                      ? (() => {
+                          // For Client Visit, WFH, and Leave, exclude weekends and holidays from duration display
+                          if (selectedLeaveType === "Client Visit" || selectedLeaveType === "Work From Home" || selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave") {
+                            return `${calculateDurationExcludingWeekends(formData.startDate, formData.endDate)} Day(s)`;
+                          } else {
+                            return `${dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1} Day(s)`;
+                          }
+                        })()
                       : "0 Days"}
                   </span>
                 </div>
