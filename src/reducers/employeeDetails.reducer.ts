@@ -84,6 +84,52 @@ export const getEntities = createAsyncThunk<
   }
 );
 
+export const getTimesheetList = createAsyncThunk<
+  any,
+  {
+    search?: string;
+    department?: string;
+    status?: string;
+    month?: number;
+    year?: number;
+    page?: number;
+    limit?: number;
+    sort?: string;
+    order?: string;
+  },
+  ThunkConfig
+>(
+  'employeeDetails/fetch_timesheet_list',
+  async ({ search, department, status, month, year, page, limit, sort, order }, { rejectWithValue }) => {
+    try {
+      const params: any = {
+        search: search || '',
+      };
+
+      if (department && department !== 'All') {
+        params.department = department;
+      }
+
+      if (status && status !== 'All') {
+        params.status = status;
+        params.month = month;
+        params.year = year;
+      }
+
+      if (page) params.page = page;
+      if (limit) params.limit = limit;
+      if (sort) params.sort = sort;
+      if (order) params.order = order;
+
+      const queryParams = new URLSearchParams(params);
+      const response = await axios.get(`${apiUrl}/timesheet-list?${queryParams.toString()}`);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || error.message || 'Request failed');
+    }
+  }
+);
+
 export const getEntity = createAsyncThunk<any, string, ThunkConfig>(
   'employeeDetails/fetch_entity',
   async (employeeId, { rejectWithValue }) => {
@@ -293,7 +339,7 @@ export const EmployeeDetailsSlice = createSlice({
         state.uploadLoading = false;
         state.updateSuccess = true;
       })
-      .addMatcher(isFulfilled(getEntities), (state: EmployeeDetailsState, action: PayloadAction<any>) => {
+      .addMatcher(isFulfilled(getEntities, getTimesheetList), (state: EmployeeDetailsState, action: PayloadAction<any>) => {
         const response = action.payload;
         state.loading = false;
         state.entities = Array.isArray(response) ? response : (response.data || []);
@@ -309,7 +355,7 @@ export const EmployeeDetailsSlice = createSlice({
         }
       )
       .addMatcher(
-        isPending(getEntities, getEntity, createEntity, updateEntity, deleteEntity, partialUpdateEntity, resetPassword, resendActivationLink, updateEmployeeStatus),
+        isPending(getEntities, getTimesheetList, getEntity, createEntity, updateEntity, deleteEntity, partialUpdateEntity, resetPassword, resendActivationLink, updateEmployeeStatus),
         (state: EmployeeDetailsState) => {
           state.errorMessage = null;
           state.updateSuccess = false;

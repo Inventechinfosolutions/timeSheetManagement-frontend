@@ -40,7 +40,7 @@ const EmployeeDashboard = () => {
   const fetchAttendance = useCallback(
     (date: Date) => {
       // Prevent Admin from triggering employee attendance fetches
-      if (!currentEmployeeId || currentEmployeeId === 'Admin') return;
+      if (!currentEmployeeId || currentEmployeeId === "Admin") return;
 
       dispatch(
         fetchMonthlyAttendance({
@@ -85,14 +85,6 @@ const EmployeeDashboard = () => {
             onMonthChange={(date) => {
               setFullTimesheetDate(date);
               fetchAttendance(date);
-            }}
-            onNavigateToDate={(day) => {
-              const targetDate = new Date(
-                fullTimesheetDate.getFullYear(),
-                fullTimesheetDate.getMonth(),
-                day,
-              );
-              handleDateNavigator(targetDate.getTime());
             }}
             variant="large"
           />

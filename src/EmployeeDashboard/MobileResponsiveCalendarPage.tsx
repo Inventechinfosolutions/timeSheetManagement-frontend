@@ -1,5 +1,4 @@
 import { useState, useMemo, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   ChevronLeft,
   ChevronRight,
@@ -22,15 +21,14 @@ import { downloadPdf } from "../utils/downloadPdf";
 
 interface MobileResponsiveCalendarPageProps {
   employeeId?: string;
-  navigationPath?: string;
+  onNavigateToDate?: (day: number) => void;
 }
 
 const MobileResponsiveCalendarPage = ({
   employeeId: propEmployeeId,
-  navigationPath = "/employee-dashboard/my-timesheet",
+  onNavigateToDate,
 }: MobileResponsiveCalendarPageProps) => {
   const dispatch = useAppDispatch();
-  const navigate = useNavigate();
 
   // Redux Data
   const { records } = useAppSelector((state: RootState) => state.attendance);
@@ -127,27 +125,6 @@ const MobileResponsiveCalendarPage = ({
     setCurrentDate(
       new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1),
     );
-  };
-
-  const handleNavigateToDay = (day: number) => {
-    const targetDate = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth(),
-      day,
-    );
-
-    // Construct dynamic path (e.g., replace :employeeId if present)
-    const finalPath = navigationPath.replace(
-      ":employeeId",
-      currentEmployeeId || "",
-    );
-
-    navigate(finalPath, {
-      state: {
-        selectedDate: targetDate.toISOString(),
-        timestamp: Date.now(), // Use current time to ensure state change triggers highlight
-      },
-    });
   };
 
   const handleDownload = () => {
@@ -257,7 +234,7 @@ const MobileResponsiveCalendarPage = ({
               Monthly Attendance Snapshot
             </h1>
             <p className="text-xs text-gray-500 font-medium">
-              Tap to view details
+              Monthly overview
             </p>
           </div>
           <button
@@ -375,13 +352,13 @@ const MobileResponsiveCalendarPage = ({
             return (
               <div
                 key={day}
-                onClick={() => handleNavigateToDay(day)}
+                onClick={() => onNavigateToDate?.(day)}
                 className={`
                     aspect-[4/5] sm:aspect-square
-                    rounded-xl cursor-pointer relative
+                    rounded-xl relative
                     flex flex-col items-center justify-center
-                    transition-all active:scale-95
                     shadow-sm
+                    ${onNavigateToDate ? "cursor-pointer transition-all active:scale-95" : ""}
                     ${colorClass}
                  `}
               >

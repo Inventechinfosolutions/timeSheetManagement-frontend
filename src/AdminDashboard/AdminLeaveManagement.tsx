@@ -1381,7 +1381,8 @@ const AdminLeaveManagement = () => {
                 </label>
                 {!isViewMode && (
                   <p className="text-xs text-gray-500 ml-1 mb-1">
-                    Accepted formats: PDF, JPG, PNG, JPEG (Max 5 files)
+                    Accepted formats: PDF, JPG, PNG, JPEG (Max 5 files, 5MB per
+                    file)
                   </p>
                 )}
                 <div className="bg-[#F4F7FE] rounded-2xl p-2">

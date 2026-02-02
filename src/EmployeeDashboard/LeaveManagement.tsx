@@ -137,7 +137,10 @@ const LeaveManagement = () => {
       }
 
       // If applying for Leave: allow during Client Visit only
-      if (selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave") {
+      if (
+        selectedLeaveType === "Apply Leave" ||
+        selectedLeaveType === "Leave"
+      ) {
         // Allow if existing request is Client Visit
         if (existingRequestType === "Client Visit") {
           return false; // Date is NOT disabled, allow selection
@@ -174,7 +177,7 @@ const LeaveManagement = () => {
   const disabledEndDate = (current: any) => {
     // Always check if date has Leave or WFH applied (regardless of request type)
     if (disabledDate(current)) return true;
-    
+
     // For Client Visit, allow past dates - but still respect Leave/WFH blocking above
     const isClientVisit = selectedLeaveType === "Client Visit";
     if (!isClientVisit) {
@@ -182,7 +185,7 @@ const LeaveManagement = () => {
       const currentDate = current.startOf("day");
       if (currentDate.isBefore(today)) return true;
     }
-    
+
     // Don't allow end date before start date
     if (formData.startDate) {
       return (
@@ -1024,7 +1027,8 @@ const LeaveManagement = () => {
                 </label>
                 {!isViewMode && (
                   <p className="text-xs text-gray-500 ml-1 mb-1">
-                    Accepted formats: PDF, JPG, PNG, JPEG (Max 5 files)
+                    Accepted formats: PDF, JPG, PNG, JPEG (Max 5 files, 5MB per
+                    file)
                   </p>
                 )}
                 <div className="bg-[#F4F7FE] rounded-2xl p-2">
