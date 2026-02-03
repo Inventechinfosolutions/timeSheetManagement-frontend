@@ -8,12 +8,14 @@ export interface LeaveNotification {
   employeeId: string;
   employeeName: string;
   requestType: string;
+  title?: string; // Added title property (optional)
   fromDate: string;
   toDate: string;
   status: string;
   isRead: boolean;
   isReadEmployee?: boolean;
   createdAt: string;
+  requestModifiedFrom?: string;
 }
 
 interface NotificationState {

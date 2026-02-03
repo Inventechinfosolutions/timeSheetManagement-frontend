@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { RootState } from "../store";
-import { getEntities } from "../reducers/employeeDetails.reducer";
+import { getTimesheetList } from "../reducers/employeeDetails.reducer";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import {
   Edit,
@@ -14,6 +14,7 @@ import {
   Download,
   X,
   Loader2,
+  RotateCcw,
 } from "lucide-react";
 import { saveAs } from "file-saver";
 import {
@@ -34,10 +35,14 @@ const AdminEmployeeTimesheetList = () => {
     direction: "asc" | "desc";
   }>({ key: null, direction: "asc" });
 
-  const [selectedDepartment, setSelectedDepartment] = useState("All");
+  const [selectedDepartment, setSelectedDepartment] =
+    useState("All Departments");
+  const [selectedStatus, setSelectedStatus] = useState("All Status");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const statusDropdownRef = useRef<HTMLDivElement>(null);
 
   // Period State - Initialize from navigation state if available
   const [selectedMonth, setSelectedMonth] = useState(() => {
@@ -75,7 +80,7 @@ const AdminEmployeeTimesheetList = () => {
   };
 
   const departments = [
-    "All",
+    "All Departments",
     "HR",
     "IT",
     "Sales",
@@ -83,6 +88,8 @@ const AdminEmployeeTimesheetList = () => {
     "Finance",
     "Admin",
   ];
+
+  const statuses = ["All Status", "Submitted", "Pending"];
 
   const dispatch = useAppDispatch();
   const { entities, totalItems } = useAppSelector(
@@ -97,6 +104,12 @@ const AdminEmployeeTimesheetList = () => {
         !dropdownRef.current.contains(event.target as Node)
       ) {
         setIsDropdownOpen(false);
+      }
+      if (
+        statusDropdownRef.current &&
+        !statusDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsStatusDropdownOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -117,14 +130,19 @@ const AdminEmployeeTimesheetList = () => {
 
   useEffect(() => {
     dispatch(
-      getEntities({
+      getTimesheetList({
         page: currentPage,
         limit: itemsPerPage,
         search: debouncedSearchTerm,
         sort: sortConfig.key || undefined,
         order: sortConfig.key ? sortConfig.direction.toUpperCase() : undefined,
         department:
-          selectedDepartment === "All" ? undefined : selectedDepartment,
+          selectedDepartment === "All Departments"
+            ? undefined
+            : selectedDepartment,
+        status: selectedStatus === "All Status" ? undefined : selectedStatus,
+        month: selectedMonth,
+        year: selectedYear,
       }),
     );
   }, [
@@ -133,6 +151,9 @@ const AdminEmployeeTimesheetList = () => {
     debouncedSearchTerm,
     sortConfig,
     selectedDepartment,
+    selectedStatus,
+    selectedMonth,
+    selectedYear,
   ]);
 
   // Fetch status for all employees in bulk
@@ -163,19 +184,14 @@ const AdminEmployeeTimesheetList = () => {
       id: empId,
       name: emp.fullName || emp.name,
       department: emp.department,
-      status: employeeMonthlyStats[empId]?.monthStatus || "Pending",
+      status:
+        emp.monthStatus ||
+        employeeMonthlyStats[empId]?.monthStatus ||
+        "Pending",
     };
   });
 
-  const currentItems = employees.filter((emp) => {
-    if (!debouncedSearchTerm) return true;
-    const s = debouncedSearchTerm.toLowerCase();
-    return (
-      emp.name.toLowerCase().includes(s) ||
-      emp.id.toString().toLowerCase().includes(s) ||
-      (emp.department && emp.department.toLowerCase().includes(s))
-    );
-  });
+  const currentItems = employees;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
   const handleNextPage = () => {
@@ -238,38 +254,46 @@ const AdminEmployeeTimesheetList = () => {
     return `${monthNames[selectedMonth - 1]} ${selectedYear}`;
   };
 
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setDebouncedSearchTerm("");
+    setSelectedDepartment("All Departments");
+    setSelectedStatus("All Status");
+    setCurrentPage(1);
+  };
+
   return (
     <div className="p-5 bg-[#F4F7FE] min-h-screen font-sans">
       <div className="max-w-[1600px] mx-auto">
-        {/* Month/Year Selector */}
-        <div className="flex items-center justify-center gap-4 mb-6">
-          <button
-            onClick={handlePreviousMonth}
-            className="p-2 rounded-lg bg-white shadow-md hover:bg-gray-50 transition-all active:scale-95 border border-gray-200"
-            title="Previous Month"
-          >
-            <ChevronLeft size={20} className="text-[#2B3674]" />
-          </button>
-          <div className="bg-white px-6 py-2 rounded-lg shadow-md border border-gray-200">
-            <span className="text-base font-bold text-[#2B3674]">
-              {getMonthYearDisplay()}
-            </span>
-          </div>
-          <button
-            onClick={handleNextMonth}
-            className="p-2 rounded-lg bg-white shadow-md hover:bg-gray-50 transition-all active:scale-95 border border-gray-200"
-            title="Next Month"
-          >
-            <ChevronRight size={20} className="text-[#2B3674]" />
-          </button>
-        </div>
-
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
           <h1 className="text-xl md:text-2xl font-bold text-[#2B3674] m-0">
             Employee Timesheet
           </h1>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+            {/* Month/Year Selector */}
+            <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] border border-transparent">
+              <button
+                onClick={handlePreviousMonth}
+                className="p-1.5 rounded-lg hover:bg-gray-50 transition-all active:scale-95"
+                title="Previous Month"
+              >
+                <ChevronLeft size={18} className="text-[#2B3674]" />
+              </button>
+              <div className="min-w-[120px] text-center">
+                <span className="text-sm font-bold text-[#2B3674]">
+                  {getMonthYearDisplay()}
+                </span>
+              </div>
+              <button
+                onClick={handleNextMonth}
+                className="p-1.5 rounded-lg hover:bg-gray-50 transition-all active:scale-95"
+                title="Next Month"
+              >
+                <ChevronRight size={18} className="text-[#2B3674]" />
+              </button>
+            </div>
+
             <button
               onClick={handleOpenDownloadModal}
               className="flex items-center justify-center gap-2 px-5 py-2.5 bg-[#01B574] text-white rounded-full shadow-lg shadow-green-500/20 hover:shadow-green-500/40 hover:-translate-y-0.5 active:scale-95 transition-all text-sm font-bold"
@@ -322,6 +346,51 @@ const AdminEmployeeTimesheetList = () => {
               )}
             </div>
 
+            {/* Status Dropdown */}
+            <div className="relative" ref={statusDropdownRef}>
+              <button
+                onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
+                className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-2 px-5 py-2.5 bg-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] text-[#2B3674] font-bold text-sm hover:bg-gray-50 transition-all border border-transparent focus:border-[#4318FF]/20"
+              >
+                <div className="flex items-center gap-2">
+                  <Filter size={16} className="text-[#4318FF]" />
+                  <span>{selectedStatus}</span>
+                </div>
+                <ChevronDown
+                  size={16}
+                  className={`text-[#A3AED0] transition-transform duration-300 ${isStatusDropdownOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+
+              {isStatusDropdownOpen && (
+                <div className="absolute top-full left-0 mt-2 w-full sm:w-48 bg-white/80 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-white/20 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="px-3 py-1 mb-1">
+                    <span className="text-[10px] font-black text-[#A3AED0] uppercase tracking-widest pl-2">
+                      Status
+                    </span>
+                  </div>
+                  {statuses.map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => {
+                        setSelectedStatus(status);
+                        setIsStatusDropdownOpen(false);
+                        setCurrentPage(1);
+                      }}
+                      className={`w-full text-left px-5 py-2 text-sm font-semibold transition-colors
+                      ${
+                        selectedStatus === status
+                          ? "text-[#4318FF] bg-[#4318FF]/5"
+                          : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
+                      }`}
+                    >
+                      {status}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* Search Box */}
             <div className="flex items-center bg-white rounded-full px-5 py-2.5 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] min-w-0 sm:min-w-[250px] flex-1 border border-transparent focus-within:border-[#4318FF]/20 transition-all">
               <Search size={18} className="text-[#A3AED0] mr-2" />
@@ -333,6 +402,15 @@ const AdminEmployeeTimesheetList = () => {
                 className="border-none outline-none bg-transparent text-[#2B3674] w-full text-sm font-semibold placeholder:text-[#A3AED0]/60"
               />
             </div>
+
+            <button
+              onClick={handleClearFilters}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#E9EDF7]/50 text-[#2B3674] rounded-full hover:bg-[#E9EDF7] active:scale-95 transition-all text-sm font-bold border border-transparent whitespace-nowrap"
+              title="Clear all filters"
+            >
+              <RotateCcw size={16} className="text-[#4318FF]" />
+              <span>Clear All</span>
+            </button>
           </div>
         </div>
 

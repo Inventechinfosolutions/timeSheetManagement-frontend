@@ -30,7 +30,12 @@ const AttendanceViewWrapper = (props: AttendanceViewWrapperProps) => {
   const isLargeView = !props.variant || props.variant === "large";
 
   if (isMobile && isLargeView) {
-    return <MobileResponsiveCalendarPage />;
+    return (
+      <MobileResponsiveCalendarPage
+        employeeId={props.employeeId}
+        onNavigateToDate={props.onNavigateToDate}
+      />
+    );
   }
 
   return <CalendarView {...props} />;
