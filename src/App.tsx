@@ -49,6 +49,9 @@ import DailyStatus from "./AdminDashboard/DailyStatus";
 import Requests from "./AdminDashboard/Requests";
 import AdminViewEmployeeDashboard from "./AdminDashboard/AdminViewEmployeeDashboard";
 import AdminLeaveManagement from "./AdminDashboard/AdminLeaveManagement";
+import ProjectsPage from "./Projects/ProjectsPage";
+import CreateProjectPage from "./Projects/CreateProjectPage";
+import ProjectDetailsPage from "./Projects/ProjectDetailsPage";
 
 const EmployeeTabWrapper = () => {
   const { tab } = useParams<{ tab: string }>();
@@ -268,6 +271,9 @@ function App() {
                     path="working-details/:employeeId"
                     element={<AdminEmployeeCalenderWrapper />}
                   />
+                  <Route path="projects" element={<ProjectsPage />} />
+                  <Route path="projects/create" element={<CreateProjectPage />} />
+                  <Route path="projects/:id" element={<ProjectDetailsPage />} />
                   <Route path=":tab/:date?" element={<AdminTabWrapper />} />
                 </Route>
 
@@ -280,6 +286,9 @@ function App() {
                   }
                 >
                   <Route index element={<TodayAttendance />} />
+                  <Route path="projects" element={<ProjectsPage />} />
+                  <Route path="projects/create" element={<CreateProjectPage />} />
+                  <Route path="projects/:id" element={<ProjectDetailsPage />} />
                   <Route path=":tab/:date?" element={<EmployeeTabWrapper />} />
                 </Route>
 

@@ -30,6 +30,15 @@ const AdminLayout = () => {
     if (path.includes("/admin-dashboard/work-management")) {
       return "Work Management";
     }
+    if (path.includes("/admin-dashboard/projects/create")) {
+      return "Projects";
+    }
+    if (path.includes("/admin-dashboard/projects/")) {
+      return "Projects";
+    }
+    if (path.includes("/admin-dashboard/projects")) {
+      return "Projects";
+    }
 
     switch (tab) {
       case "registration":
@@ -63,6 +72,8 @@ const AdminLayout = () => {
       navigate("/admin-dashboard/requests");
     } else if (tabName === "Work Management") {
       navigate("/admin-dashboard/work-management");
+    } else if (tabName === "Projects") {
+      navigate("/admin-dashboard/projects");
     } else if (tabName === "System Dashboard") {
       navigate("/admin-dashboard");
     }
