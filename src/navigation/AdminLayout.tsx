@@ -30,6 +30,12 @@ const AdminLayout = () => {
     if (path.includes("/admin-dashboard/work-management")) {
       return "Work Management";
     }
+    if (
+      path.includes("/admin-dashboard/manager-mapping") ||
+      path.includes("/admin-dashboard/manager-employees/")
+    ) {
+      return "Manager Mapping";
+    }
 
     switch (tab) {
       case "registration":
@@ -45,6 +51,8 @@ const AdminLayout = () => {
         return "Timesheet";
       case "work-management":
         return "Work Management";
+      case "manager-mapping":
+        return "Manager Mapping";
       default:
         return "System Dashboard";
     }
@@ -63,13 +71,19 @@ const AdminLayout = () => {
       navigate("/admin-dashboard/requests");
     } else if (tabName === "Work Management") {
       navigate("/admin-dashboard/work-management");
+    } else if (tabName === "Manager Mapping") {
+      navigate("/admin-dashboard/manager-mapping");
     } else if (tabName === "System Dashboard") {
       navigate("/admin-dashboard");
     }
   };
 
   return (
-    <SidebarLayout activeTab={getActiveTab()} onTabChange={handleTabChange}>
+    <SidebarLayout
+      activeTab={getActiveTab()}
+      onTabChange={handleTabChange}
+      title="Admin"
+    >
       <Outlet />
     </SidebarLayout>
   );
