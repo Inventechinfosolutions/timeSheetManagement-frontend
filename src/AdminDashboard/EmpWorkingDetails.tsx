@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { RootState } from "../store";
 import { getEntities } from "../reducers/employeeDetails.reducer";
 import { useAppDispatch, useAppSelector } from "../hooks";
@@ -16,6 +16,11 @@ import EmpWorkingDetailsMobileCard from "./EmpWorkingDetailsMobileCard";
 
 const EmpWorkingDetails = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const basePath = location.pathname.startsWith("/manager-dashboard")
+    ? "/manager-dashboard"
+    : "/admin-dashboard";
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -129,11 +134,11 @@ const EmpWorkingDetails = () => {
   };
 
   const handleViewDetails = (empId: string) => {
-    navigate(`/admin-dashboard/working-details/${empId}`);
+    navigate(`${basePath}/working-details/${empId}`);
   };
 
   const handleViewTimesheet = (empId: string) => {
-    navigate(`/admin-dashboard/timesheet/${empId}`);
+    navigate(`${basePath}/timesheet/${empId}`);
   };
 
   return (

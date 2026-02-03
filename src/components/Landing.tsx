@@ -28,10 +28,15 @@ const Landing = () => {
     if (isAuthenticated && currentUser) {
       if (Number(currentUser.resetRequired) === 1) {
         navigate("/timesheet/reset-password");
-      } else if (currentUser.userType?.toUpperCase() === UserType.EMPLOYEE) {
-        navigate("/employee-dashboard");
+      } else if (
+        currentUser.userType?.toUpperCase() === UserType.MANAGER ||
+        (currentUser.role && currentUser.role.toUpperCase().includes("MANAGER"))
+      ) {
+        navigate("/manager-dashboard");
       } else if (currentUser.userType?.toUpperCase() === UserType.ADMIN) {
         navigate("/admin-dashboard");
+      } else if (currentUser.userType?.toUpperCase() === UserType.EMPLOYEE) {
+        navigate("/employee-dashboard");
       }
     }
   }, [isAuthenticated, currentUser, navigate]);

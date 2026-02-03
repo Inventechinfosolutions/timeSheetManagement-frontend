@@ -9,6 +9,7 @@ import timesheetBlockerReducer from './reducers/timesheetBlocker.reducer';
 import notificationReducer from './reducers/notification.reducer';
 import leaveRequestReducer from './reducers/leaveRequest.reducer';
 import leaveNotificationReducer from './reducers/leaveNotification.reducer';
+import managerMappingReducer from './reducers/managerMapping.reducer';
 
 export const store = configureStore({
   reducer: {
@@ -22,6 +23,7 @@ export const store = configureStore({
     notifications: notificationReducer,
     leaveRequest: leaveRequestReducer,
     leaveNotification: leaveNotificationReducer,
+    managerMapping: managerMappingReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
