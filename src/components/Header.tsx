@@ -6,6 +6,7 @@ import {
   ChevronDown,
   ArrowLeft,
   Check,
+  RotateCcw,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { logoutUser } from "../reducers/user.reducer";
@@ -25,6 +26,7 @@ import {
   markEmployeeUpdateRead,
   markAllAsRead as markAllLeaveRequestsRead,
   markAllEmployeeUpdatesRead,
+  LeaveNotification,
 } from "../reducers/leaveNotification.reducer";
 import "./Header.css";
 import InventLogo from "../assets/invent-logo.svg";
@@ -285,53 +287,114 @@ const Header = ({
                       <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
                         {isAdmin ? (
                           leaveNotifications.length > 0 ? (
-                            leaveNotifications.map((notif) => (
-                              <div
-                                key={notif.id}
-                                onClick={() => {
-                                  navigate("/admin-dashboard/requests");
-                                  setIsNotificationOpen(false);
-                                }}
-                                className="flex gap-4 p-5 hover:bg-gray-50/80 transition-colors border-b border-gray-50 last:border-0 group cursor-pointer relative bg-blue-50/30"
-                              >
-                                {/* Avatar */}
-                                <div className="relative shrink-0">
-                                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-[#4318FF]">
-                                    <Bell size={18} />
-                                  </div>
-                                </div>
-
-                                {/* Content */}
-                                <div className="flex-1 space-y-1">
-                                  <div className="flex justify-between items-start">
-                                    <p className="text-sm text-[#1B2559] leading-snug font-bold">
-                                      {notif.requestType} Request
-                                    </p>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleMarkAsRead(notif.id);
-                                      }}
-                                      className="text-[10px] text-[#4318FF] hover:underline font-bold"
-                                    >
-                                      Dismiss
-                                    </button>
-                                  </div>
-
-                                  <div className="flex flex-col gap-1">
-                                    <span className="text-xs text-gray-500 font-medium">
+                              leaveNotifications.map((notif) => {
+                                const getNotificationContent = (
+                                  notif: LeaveNotification,
+                                ) => {
+                                  let title = `${notif.requestType} Request`;
+                                  let message = (
+                                    <>
                                       <span className="font-bold text-[#2B3674]">
                                         {notif.employeeName}
                                       </span>{" "}
                                       applied for {notif.requestType}.
-                                    </span>
-                                    <span className="text-[10px] text-gray-400">
-                                      {notif.fromDate} to {notif.toDate}
-                                    </span>
+                                    </>
+                                  );
+                                  let iconColorClass =
+                                    "bg-blue-100 text-[#4318FF]"; // Default
+
+                                  // Logic for Cancellations
+                                  if (
+                                    notif.status ===
+                                    "Requesting for Cancellation"
+                                  ) {
+                                    title = `Cancellation Request`;
+                                    message = (
+                                      <>
+                                        <span className="font-bold text-[#2B3674]">
+                                          {notif.employeeName}
+                                        </span>{" "}
+                                        requested to cancel an approved{" "}
+                                        <span className="font-bold">
+                                          {notif.requestType}
+                                        </span>
+                                        .
+                                      </>
+                                    );
+                                    iconColorClass =
+                                      "bg-orange-100 text-orange-600";
+                                  } else if (notif.status === "Cancelled") {
+                                    title = `Request Cancelled`;
+                                    message = (
+                                      <>
+                                        <span className="font-bold text-[#2B3674]">
+                                          {notif.employeeName}
+                                        </span>{" "}
+                                        cancelled their pending{" "}
+                                        <span className="font-bold">
+                                          {notif.requestType}
+                                        </span>{" "}
+                                        request.
+                                      </>
+                                    );
+                                    iconColorClass = "bg-red-50 text-red-500";
+                                  }
+
+                                  return { title, message, iconColorClass };
+                                };
+
+                                const { title, message, iconColorClass } =
+                                  getNotificationContent(notif);
+
+                                return (
+                                  <div
+                                    key={notif.id}
+                                    onClick={() => {
+                                      navigate("/admin-dashboard/requests");
+                                      setIsNotificationOpen(false);
+                                    }}
+                                    className={`flex gap-4 p-5 hover:bg-gray-50/80 transition-colors border-b border-gray-50 last:border-0 group cursor-pointer relative bg-blue-50/30`}
+                                  >
+                                    {/* Avatar */}
+                                    <div className="relative shrink-0">
+                                      <div
+                                        className={`w-10 h-10 rounded-full flex items-center justify-center ${iconColorClass}`}
+                                      >
+                                        <Bell size={18} />
+                                      </div>
+                                    </div>
+
+                                    {/* Content */}
+                                    <div className="flex-1 space-y-1">
+                                      <div className="flex justify-between items-start">
+                                        <p className="text-sm text-[#1B2559] leading-snug font-bold">
+                                          {title}
+                                        </p>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleMarkAsRead(notif.id);
+                                          }}
+                                          className="text-[10px] text-[#4318FF] hover:underline font-bold"
+                                        >
+                                          Dismiss
+                                        </button>
+                                      </div>
+
+                                      <div className="flex flex-col gap-1">
+                                        <span className="text-xs text-gray-500 font-medium">
+                                          {message}
+                                        </span>
+                                        <span className="text-[10px] text-gray-400">
+                                          {String(notif.fromDate).split("T")[0]}{" "}
+                                          to{" "}
+                                          {String(notif.toDate).split("T")[0]}
+                                        </span>
+                                      </div>
+                                    </div>
                                   </div>
-                                </div>
-                              </div>
-                            ))
+                                );
+                              })
                           ) : (
                             <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
                               <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-3">
@@ -354,74 +417,192 @@ const Header = ({
                                 <h4 className="px-5 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
                                   Updates
                                 </h4>
-                                {employeeUpdates.map((update) => (
-                                  <div
-                                    key={`update-${update.id}`}
-                                    onClick={() => {
-                                      navigate(
-                                        "/employee-dashboard/leave-management",
-                                      );
-                                      setIsNotificationOpen(false);
-                                    }}
-                                    className="flex gap-4 p-5 hover:bg-gray-50/80 transition-colors border-b border-gray-50 last:border-0 group cursor-pointer relative bg-green-50/30"
-                                  >
-                                    <div className="relative shrink-0">
-                                      <div
-                                        className={`w-10 h-10 rounded-full flex items-center justify-center text-white ${
-                                          update.status === "Approved"
-                                            ? "bg-green-500"
-                                            : "bg-red-500"
-                                        }`}
-                                      >
-                                        {update.status === "Approved" ? (
-                                          <Check size={18} />
-                                        ) : (
-                                          <LogOut
-                                            size={18}
-                                            className="rotate-45"
-                                          />
-                                        )}
-                                      </div>
-                                    </div>
-                                    <div className="flex-1 space-y-1">
-                                      <div className="flex justify-between items-start">
-                                        <p className="text-sm text-[#1B2559] leading-snug font-bold">
-                                          Request {update.status}
-                                        </p>
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleMarkAsRead(
-                                              update.id,
-                                              "status_update",
-                                            );
-                                          }}
-                                          className="text-[10px] text-[#4318FF] hover:underline font-bold"
+                                {employeeUpdates.map((update) => {
+                                  const getEmployeeNotificationContent = (
+                                    update: LeaveNotification,
+                                  ) => {
+                                    let title = `Request ${update.status}`;
+                                    let message = (
+                                      <>
+                                        Your{" "}
+                                        <span className="font-bold text-[#2B3674]">
+                                          {update.requestType}
+                                        </span>{" "}
+                                        request has been{" "}
+                                        <span
+                                          className={`font-bold ${update.status === "Approved" ? "text-green-600" : "text-red-600"}`}
                                         >
-                                          Dismiss
-                                        </button>
-                                      </div>
-                                      <div className="flex flex-col gap-1">
-                                        <span className="text-xs text-gray-500 font-medium">
+                                          {update.status}
+                                        </span>
+                                        .
+                                      </>
+                                    );
+                                    let icon = (
+                                      <LogOut size={18} className="rotate-45" />
+                                    ); // Default icon
+                                    let iconBg = "bg-gray-500";
+
+                                    // Case 1: Cancellation Approved
+                                    if (
+                                      update.status ===
+                                      "Cancellation Approved"
+                                    ) {
+                                      title = "Cancellation Approved";
+                                      message = (
+                                        <>
+                                          Your request to cancel{" "}
+                                          <span className="font-bold text-[#2B3674]">
+                                            {update.requestType}
+                                          </span>{" "}
+                                          has been{" "}
+                                          <span className="font-bold text-green-600">
+                                            Approved
+                                          </span>
+                                          .
+                                        </>
+                                      );
+                                      icon = <Check size={18} />;
+                                      iconBg = "bg-green-500";
+                                    }
+                                    // Case 2: Cancellation Rejected (Marked by Backend) - CHECK FIRST
+                                    else if (
+                                      update.title === "Cancellation Rejected"
+                                    ) {
+                                      title = "Cancellation Rejected";
+                                      message = (
+                                        <>
+                                          Your request to cancel{" "}
+                                          <span className="font-bold text-[#2B3674]">
+                                            {update.requestType}
+                                          </span>{" "}
+                                          has been{" "}
+                                          <span className="font-bold text-red-600">
+                                            Rejected
+                                          </span>
+                                          .
+                                        </>
+                                      );
+                                      icon = (
+                                        <LogOut
+                                          size={18}
+                                          className="rotate-45"
+                                        />
+                                      );
+                                      iconBg = "bg-red-500";
+                                    }
+                                    // Case 3: Standard Approval
+                                    else if (update.status === "Approved") {
+                                      title = "Request Approved";
+                                      icon = <Check size={18} />;
+                                      iconBg = "bg-green-500";
+                                    }
+                                    // Case 4: Standard Rejection
+                                    else if (update.status === "Rejected") {
+                                      title = "Cancellation Rejected"; // User requested this for rejected items too
+                                      message = (
+                                        <>
+                                          Your request to cancel{" "}
+                                          <span className="font-bold text-[#2B3674]">
+                                            {update.requestType}
+                                          </span>{" "}
+                                          has been{" "}
+                                          <span className="font-bold text-red-600">
+                                            Rejected
+                                          </span>
+                                          .
+                                        </>
+                                      );
+                                      icon = (
+                                        <LogOut
+                                          size={18}
+                                          className="rotate-45"
+                                        />
+                                      );
+                                      iconBg = "bg-red-500";
+                                    }
+                                    // Case 5: Request Modified
+                                    else if (update.status === "Request Modified") {
+                                      const source = update.requestModifiedFrom === "Apply Leave" ? "Leave" : update.requestModifiedFrom;
+                                      title = "Request Modified";
+                                      message = (
+                                        <>
                                           Your{" "}
                                           <span className="font-bold text-[#2B3674]">
                                             {update.requestType}
                                           </span>{" "}
                                           request has been{" "}
-                                          <span
-                                            className={`font-bold ${update.status === "Approved" ? "text-green-600" : "text-red-600"}`}
+                                          <span className="font-bold text-orange-600">
+                                            Modified
+                                          </span>{" "}
+                                          due to overlap with {source}.
+                                        </>
+                                      );
+                                      icon = <RotateCcw size={18} />;
+                                      iconBg = "bg-orange-500";
+                                    }
+                                    // Case 4: Cancellation Rejected (If we can detect it, usually status is just Rejected)
+                                    // If we rely on title or just generic rejection, generic is fine for now.
+
+                                    return { title, message, icon, iconBg };
+                                  };
+
+                                  const { title, message, icon, iconBg } =
+                                    getEmployeeNotificationContent(update);
+
+                                  return (
+                                    <div
+                                      key={`update-${update.id}`}
+                                      onClick={() => {
+                                        navigate(
+                                          "/employee-dashboard/leave-management",
+                                        );
+                                        setIsNotificationOpen(false);
+                                      }}
+                                      className="flex gap-4 p-5 hover:bg-gray-50/80 transition-colors border-b border-gray-50 last:border-0 group cursor-pointer relative bg-green-50/30"
+                                    >
+                                      <div className="relative shrink-0">
+                                        <div
+                                          className={`w-10 h-10 rounded-full flex items-center justify-center text-white ${iconBg}`}
+                                        >
+                                          {icon}
+                                        </div>
+                                      </div>
+                                      <div className="flex-1 space-y-1">
+                                        <div className="flex justify-between items-start">
+                                          <p className="text-sm text-[#1B2559] leading-snug font-bold">
+                                            {title}
+                                          </p>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleMarkAsRead(
+                                                update.id,
+                                                "status_update",
+                                              );
+                                            }}
+                                            className="text-[10px] text-[#4318FF] hover:underline font-bold"
                                           >
-                                            {update.status}
+                                            Dismiss
+                                          </button>
+                                        </div>
+                                        <div className="flex flex-col gap-1">
+                                          <span className="text-xs text-gray-500 font-medium">
+                                            {message}
                                           </span>
-                                          .
-                                        </span>
-                                        <span className="text-[10px] text-gray-400">
-                                          {update.fromDate} to {update.toDate}
-                                        </span>
+                                          <span className="text-[10px] text-gray-400">
+                                            {String(update.fromDate).split(
+                                              "T",
+                                            )[0]}{" "}
+                                            to{" "}
+                                            {String(update.toDate).split(
+                                              "T",
+                                            )[0]}
+                                          </span>
+                                        </div>
                                       </div>
                                     </div>
-                                  </div>
-                                ))}
+                                  );
+                                })}
                               </div>
                             )}
 

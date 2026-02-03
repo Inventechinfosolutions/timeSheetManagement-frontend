@@ -229,8 +229,8 @@ export const submitBulkAttendance = createAsyncThunk(
     const employeeId = data[0]?.employeeId;
     if (!employeeId) throw new Error("Employee ID missing in bulk data");
     
-    // Endpoint path matches backend typo 'attendence-data'
-    const response = await axios.post(`${apiUrl}/attendence-data/${employeeId}`, data);
+    // Endpoint path matches backend route
+    const response = await axios.post(`${apiUrl}/attendance-data/${employeeId}`, data);
     return response.data;
   }
 );
