@@ -12,12 +12,13 @@ export interface LeaveRequest {
   toDate: string;
   title: string;
   description: string;
-  status: "Pending" | "Approved" | "Rejected" | "Cancelled";
+  status: "Pending" | "Approved" | "Rejected" | "Cancelled" | "Requesting for Cancellation" | "Cancellation Approved" | "Request Modified";
   created_at?: string;
   submittedDate?: string;
   duration?: number;
   department?: string;
   fullName?: string;
+  requestModifiedFrom?: string;
 }
 
 interface LeaveRequestState {
@@ -157,12 +158,77 @@ export const deleteLeaveRequest = createAsyncThunk(
 // Async Thunk for Updating Request Status (Admin)
 export const updateLeaveRequestStatus = createAsyncThunk(
   "leaveRequest/updateStatus",
-  async ({ id, status }: { id: number; status: "Approved" | "Rejected" | "Cancelled" }, { rejectWithValue }) => {
+  async ({ id, status }: { id: number; status: "Approved" | "Rejected" | "Cancelled" | "Cancellation Approved" }, { rejectWithValue }) => {
     try {
       const response = await axios.post(`${apiUrl}/${id}/update-status`, { status });
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data || `Failed to ${status.toLowerCase()} request`);
+    }
+  }
+);
+
+// Async Thunk for Cancelling Approved Request (Legacy/Full)
+export const cancelApprovedLeaveRequest = createAsyncThunk(
+  "leaveRequest/cancelApproved",
+  async ({ id, employeeId }: { id: number; employeeId: string }, { rejectWithValue }) => {
+    try {
+      const response = await axios.patch(`${apiUrl}/${id}/cancel-approved`, { employeeId });
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to cancel approved request");
+    }
+  }
+);
+
+// Async Thunk for Getting Cancellable Dates
+export const getLeaveCancellableDates = createAsyncThunk(
+  "leaveRequest/getCancellableDates",
+  async ({ id, employeeId }: { id: number; employeeId: string }, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`${apiUrl}/${id}/cancellable-dates?employeeId=${employeeId}`);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to fetch cancellable dates");
+    }
+  }
+);
+
+// Async Thunk for Cancelling Specific Dates
+export const cancelRequestDates = createAsyncThunk(
+  "leaveRequest/cancelDates",
+  async ({ id, employeeId, dates }: { id: number; employeeId: string; dates: string[] }, { rejectWithValue }) => {
+    try {
+      const response = await axios.patch(`${apiUrl}/${id}/cancel-dates`, { employeeId, dates });
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to submit cancellation request");
+    }
+  }
+);
+
+// Async Thunk for Undoing Cancellation
+export const undoCancellationRequest = createAsyncThunk(
+  "leaveRequest/undoCancellation",
+  async ({ id, employeeId }: { id: number; employeeId: string }, { rejectWithValue }) => {
+    try {
+      const response = await axios.patch(`${apiUrl}/${id}/undo-cancellation`, { employeeId });
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to undo cancellation");
+    }
+  }
+);
+
+// Async Thunk for Rejecting Cancellation (Admin)
+export const rejectCancellationRequest = createAsyncThunk(
+  "leaveRequest/rejectCancellation",
+  async ({ id, employeeId }: { id: number; employeeId: string }, { rejectWithValue }) => {
+    try {
+      const response = await axios.patch(`${apiUrl}/${id}/reject-cancellation`, { employeeId });
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to reject cancellation");
     }
   }
 );
@@ -176,6 +242,32 @@ export const getLeaveRequestById = createAsyncThunk(
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data || "Failed to fetch request details");
+    }
+  }
+);
+
+// Async Thunk for Updating Parent Request explicitly
+export const updateParentRequest = createAsyncThunk(
+  "leaveRequest/updateParent",
+  async ({ parentId, duration, fromDate, toDate }: { parentId: number; duration: number; fromDate: string; toDate: string }, { rejectWithValue }) => {
+    try {
+      const response = await axios.patch(`${apiUrl}/parent-update`, { parentId, duration, fromDate, toDate });
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to update parent request");
+    }
+  }
+);
+
+// Async Thunk for Submitting a Request Modification
+export const submitRequestModification = createAsyncThunk(
+  "leaveRequest/modify",
+  async ({ id, payload }: { id: number; payload: any }, { rejectWithValue }) => {
+    try {
+      const response = await axios.post(`${apiUrl}/${id}/request-modified`, payload);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to modify request");
     }
   }
 );
@@ -424,6 +516,15 @@ const leaveRequestSlice = createSlice({
 
     // Update Status
     builder.addCase(updateLeaveRequestStatus.fulfilled, (state, action) => {
+      const updatedItem = action.payload;
+      const index = state.entities.findIndex((item) => item.id === updatedItem.id);
+      if (index !== -1) {
+        state.entities[index].status = updatedItem.status;
+      }
+    });
+    
+    // Cancel Approved Request
+    builder.addCase(cancelApprovedLeaveRequest.fulfilled, (state, action) => {
       const updatedItem = action.payload;
       const index = state.entities.findIndex((item) => item.id === updatedItem.id);
       if (index !== -1) {
