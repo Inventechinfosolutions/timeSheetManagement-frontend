@@ -26,6 +26,10 @@ import EmployeeTimeSheetMobileCard from "./EmployeeTimeSheetMobileCard";
 const AdminEmployeeTimesheetList = () => {
   const navigate = useNavigate();
   const location = useLocation();
+
+  const basePath = location.pathname.startsWith("/manager-dashboard")
+    ? "/manager-dashboard"
+    : "/admin-dashboard";
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -208,13 +212,13 @@ const AdminEmployeeTimesheetList = () => {
 
   const handleViewTimesheet = (empId: string) => {
     navigate(
-      `/admin-dashboard/timesheet/${empId}?month=${selectedMonth}&year=${selectedYear}`,
+      `${basePath}/timesheet/${empId}?month=${selectedMonth}&year=${selectedYear}`,
     );
   };
 
   const handleViewWorkingDetails = (empId: string) => {
     navigate(
-      `/admin-dashboard/working-details/${empId}?month=${selectedMonth}&year=${selectedYear}`,
+      `${basePath}/working-details/${empId}?month=${selectedMonth}&year=${selectedYear}`,
     );
   };
 
@@ -259,6 +263,8 @@ const AdminEmployeeTimesheetList = () => {
     setDebouncedSearchTerm("");
     setSelectedDepartment("All Departments");
     setSelectedStatus("All Status");
+    setSelectedMonth(new Date().getMonth() + 1);
+    setSelectedYear(new Date().getFullYear());
     setCurrentPage(1);
   };
 

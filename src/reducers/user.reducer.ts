@@ -11,6 +11,8 @@ export enum UserStatus {
 export enum UserType {
   ADMIN = 'ADMIN',
   EMPLOYEE = 'EMPLOYEE',
+  MANAGER = 'MANAGER',
+  TEAM_LEAD = 'TEAM_LEAD',
 }
 
 // INTERFACES
@@ -24,6 +26,7 @@ export interface User {
   updatedAt?: string;
   resetRequired?: number;
   employeeId?: string;
+  role?: string;
 }
 
 export interface CreateUserDto {
@@ -51,6 +54,7 @@ export interface LoginResponse {
   resetRequired?: number;
   refreshToken?: string; // Not exposed in response, stored in httpOnly cookie
   employeeId?: string;
+  role?: string;
 }
 
 export interface AuthMeResponse {
@@ -61,6 +65,7 @@ export interface AuthMeResponse {
   userType?: UserType;
   resetRequired?: number;
   employeeId?: string;
+  role?: string;
 }
 
 interface UserState {
@@ -245,6 +250,7 @@ const userSlice = createSlice({
           userType: action.payload.userType,
           resetRequired: action.payload.resetRequired,
           employeeId: action.payload.employeeId,
+          role: action.payload.role,
         };
         state.error = null;
         
@@ -277,6 +283,7 @@ const userSlice = createSlice({
           userType: action.payload.userType,
           resetRequired: action.payload.resetRequired,
           employeeId: action.payload.employeeId,
+          role: action.payload.role,
         };
         state.error = null;
         

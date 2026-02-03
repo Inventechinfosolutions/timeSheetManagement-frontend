@@ -10,28 +10,36 @@ import {
   CheckCircle,
   ArrowLeft,
 } from "lucide-react";
-import { createEntity, reset } from "../reducers/employeeDetails.reducer";
+import {
+  createEntity,
+  reset,
+  fetchDepartments,
+  fetchRoles,
+} from "../reducers/employeeDetails.reducer";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { RootState } from "../store";
 
 const Registration = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const { loading, updateSuccess, errorMessage, entity } = useAppSelector(
-    (state: RootState) => state.employeeDetails,
-  );
+  const { loading, updateSuccess, errorMessage, entity, departments, roles } =
+    useAppSelector((state: RootState) => state.employeeDetails);
 
   const [formData, setFormData] = useState({
     fullName: "",
     employeeId: "",
     department: "",
+    role: "",
     designation: "",
     email: "",
-    // password: "",
-    // confirmPassword: "",
   });
   const [error, setError] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
+
+  useEffect(() => {
+    dispatch(fetchDepartments());
+    dispatch(fetchRoles());
+  }, [dispatch]);
 
   useEffect(() => {
     if (updateSuccess) {
@@ -40,18 +48,17 @@ const Registration = () => {
         const navigationState = {
           email: formData.email,
           loginId: entity?.employeeId || formData.employeeId,
-          employeeId: entity?.id, // Pass internal ID for credential generation
-          // Password and link will be generated on the next screen
+          employeeId: entity?.id,
           password: "",
           activationLink: "",
         };
         dispatch(reset());
         setShowSuccess(false);
-        // Reset form data to allow creating another employee
         setFormData({
           fullName: "",
           employeeId: "",
           department: "",
+          role: "",
           designation: "",
           email: "",
         });
@@ -80,16 +87,10 @@ const Registration = () => {
     e.preventDefault();
     setError("");
 
-    // Basic Validation
     if (Object.values(formData).some((val) => !val)) {
       setError("Please fill in all fields");
       return;
     }
-
-    // if (formData.password !== formData.confirmPassword) {
-    //   setError("Passwords do not match");
-    //   return;
-    // }
 
     const submissionData = {
       ...formData,
@@ -115,9 +116,7 @@ const Registration = () => {
         </button>
       </div>
 
-      {/* Main Card - Full Width Registration */}
       <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-visible mb-8">
-        {/* Form Container */}
         <div className="w-full bg-white px-5 py-8 sm:px-8 sm:py-10 lg:px-12 lg:py-12 flex flex-col justify-center">
           <div className="mb-6">
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
@@ -156,10 +155,8 @@ const Registration = () => {
             className="space-y-6"
             autoComplete="off"
           >
-            {/* Inner Card wrapping inputs */}
             <div className="border border-gray-100 rounded-2xl p-5 sm:p-8 shadow-sm bg-gray-50/30">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                {/* Full Name */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-0.5">
                     Full Name
@@ -179,7 +176,6 @@ const Registration = () => {
                   </div>
                 </div>
 
-                {/* Employee ID */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-0.5">
                     Employee ID
@@ -205,7 +201,6 @@ const Registration = () => {
                   </div>
                 </div>
 
-                {/* Department */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-0.5">
                     Department
@@ -213,25 +208,75 @@ const Registration = () => {
                   <div className="relative group">
                     <select
                       name="department"
-                      className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#4318FF]/20 focus:border-[#4318FF] outline-none transition-all text-gray-700 text-sm font-semibold appearance-none bg-white"
+                      className="w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#4318FF]/20 focus:border-[#4318FF] outline-none transition-all text-gray-700 text-sm font-medium appearance-none bg-white"
                       value={formData.department}
                       onChange={handleChange}
                       required
                     >
-                      <option value="" disabled>
-                        Select Department
-                      </option>
-                      <option value="HR">HR</option>
-                      <option value="IT">IT</option>
-                      <option value="Sales">Sales</option>
-                      <option value="Marketing">Marketing</option>
-                      <option value="Finance">Finance</option>
+                      <option value="">Select Department</option>
+                      {departments.map((dept) => (
+                        <option key={dept} value={dept}>
+                          {dept}
+                        </option>
+                      ))}
                     </select>
-                    <Building className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+                    <Building className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <svg
+                        className="w-4 h-4 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </div>
                   </div>
                 </div>
 
-                {/* Designation */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-0.5">
+                    Role
+                  </label>
+                  <div className="relative group">
+                    <select
+                      name="role"
+                      className="w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#4318FF]/20 focus:border-[#4318FF] outline-none transition-all text-gray-700 text-sm font-medium appearance-none bg-white"
+                      value={formData.role}
+                      onChange={handleChange}
+                      required
+                    >
+                      <option value="">Select Role</option>
+                      {roles.map((role) => (
+                        <option key={role} value={role}>
+                          {role}
+                        </option>
+                      ))}
+                    </select>
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <svg
+                        className="w-4 h-4 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-0.5">
                     Designation
