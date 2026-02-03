@@ -99,6 +99,7 @@ const AdminLeaveManagement = () => {
     description: "",
     startDate: "",
     endDate: "",
+    duration: 0,
   });
   const [isCancelling, setIsCancelling] = useState(false);
   const [isAutoApproving, setIsAutoApproving] = useState(false);
@@ -149,40 +150,30 @@ const AdminLeaveManagement = () => {
 
       const existingRequestType = (req.requestType || "").trim();
 
-      // CRITICAL RULE: If existing request is Leave or WFH, ALWAYS block ALL new requests (including Client Visit)
-      // This check happens FIRST and doesn't depend on selectedLeaveType
-      const isExistingLeaveOrWFH =
-        existingRequestType === "Apply Leave" ||
-        existingRequestType === "Leave" ||
-        existingRequestType === "Work From Home";
-
-      if (isExistingLeaveOrWFH) {
-        // Block ANY new request (Leave, WFH, or Client Visit) if there's already a Leave or WFH
-        // This prevents applying Client Visit when Leave already exists
-        return true;
+      // 1. RULE: If LEAVE already exists, block EVERYTHING (No exceptions)
+      if (existingRequestType === "Apply Leave" || existingRequestType === "Leave") {
+        return true; 
       }
 
-      // If existing is Client Visit, apply rules based on what we're trying to apply
+      // 2. RULE: If WORK FROM HOME already exists
+      if (existingRequestType === "Work From Home") {
+          // Allow if applying for Leave or Client Visit
+          if (selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave" || selectedLeaveType === "Client Visit") {
+              return false; // Valid dates, don't disable
+          }
+          return true; // Otherwise block (prevents dual WFH)
+      }
+
+      // 3. RULE: If CLIENT VISIT already exists
       if (existingRequestType === "Client Visit") {
-        // If applying for Leave or WFH: allow (per earlier requirement - can apply Leave/WFH during Client Visit)
-        if (
-          selectedLeaveType === "Apply Leave" ||
-          selectedLeaveType === "Leave" ||
-          selectedLeaveType === "Work From Home"
-        ) {
-          return false; // Allow Leave/WFH on top of Client Visit
-        }
-        // If applying for Client Visit: block duplicate Client Visit
-        if (selectedLeaveType === "Client Visit") {
-          return true; // Block duplicate Client Visit
-        }
-        // If selectedLeaveType is not set yet, block to be safe
-        if (!selectedLeaveType) {
-          return true;
-        }
+          // Allow if applying for Leave or Work From Home
+          if (selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave" || selectedLeaveType === "Work From Home") {
+              return false; // Valid dates, don't disable
+          }
+          return true; // Otherwise block (prevents dual CV)
       }
 
-      // Default: if no specific rule matches and we reach here, block it for safety
+      // Default: block all overlapping requests
       return true;
     });
   };
@@ -511,7 +502,7 @@ const AdminLeaveManagement = () => {
 
       // Close & reset form
       setIsModalOpen(false);
-      setFormData({ title: "", description: "", startDate: "", endDate: "" });
+      setFormData({ title: "", description: "", startDate: "", endDate: "", duration: 0 });
       setErrors({
         title: "",
         description: "",
@@ -544,7 +535,7 @@ const AdminLeaveManagement = () => {
 
   // Fetch attendance records for the selected date range to check for existing leaves
   useEffect(() => {
-    if (selectedEmployee?.employeeId && formData.startDate && formData.endDate) {
+    if (!isViewMode && selectedEmployee?.employeeId && formData.startDate && formData.endDate) {
       dispatch(fetchAttendanceByDateRange({
         employeeId: selectedEmployee.employeeId,
         startDate: formData.startDate,
@@ -554,10 +545,10 @@ const AdminLeaveManagement = () => {
           setDateRangeAttendanceRecords(action.payload.data || action.payload || []);
         }
       });
-    } else {
+    } else if (!isViewMode) {
       setDateRangeAttendanceRecords([]);
     }
-  }, [dispatch, selectedEmployee?.employeeId, formData.startDate, formData.endDate]);
+  }, [dispatch, selectedEmployee?.employeeId, formData.startDate, formData.endDate, isViewMode]);
 
   useEffect(() => {
     if (selectedEmployee?.employeeId) {
@@ -618,6 +609,7 @@ const AdminLeaveManagement = () => {
           description: fetchedItem.description,
           startDate: fetchedItem.fromDate,
           endDate: fetchedItem.toDate,
+          duration: fetchedItem.duration,
         });
         setIsModalOpen(true);
         setErrors({
@@ -674,7 +666,7 @@ const AdminLeaveManagement = () => {
     setIsViewMode(false);
     setSelectedRequestId(null);
     setSelectedLeaveType("");
-    setFormData({ title: "", description: "", startDate: "", endDate: "" });
+    setFormData({ title: "", description: "", startDate: "", endDate: "", duration: 0 });
     setErrors({
       title: "",
       description: "",
@@ -967,20 +959,26 @@ const AdminLeaveManagement = () => {
               <table className="w-full border-separate border-spacing-0">
                 <thead>
                   <tr className="bg-[#4318FF] text-white">
-                    <th className="text-left py-4 pl-10 pr-4 text-[13px] font-bold uppercase tracking-wider">
-                      Employee Name
+                    <th className="py-4 pl-10 pr-4 text-[13px] font-bold uppercase tracking-wider text-left">
+                      Employee
                     </th>
-                    <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider">
+                    <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center">
                       Request Type
                     </th>
-                    <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider">
-                      Submitted Date
+                    <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center">
+                      Department
                     </th>
-                    <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider">
+                    <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center">
                       Duration
                     </th>
-                    <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider">
+                    <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center">
+                      Submitted Date
+                    </th>
+                    <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center">
                       Status
+                    </th>
+                    <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center">
+                      Actions
                     </th>
                   </tr>
                 </thead>
@@ -988,7 +986,7 @@ const AdminLeaveManagement = () => {
                   {entities.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={5}
+                        colSpan={7}
                         className="py-8 text-center text-gray-400"
                       >
                         <div className="flex flex-col items-center justify-center gap-3">
@@ -1017,12 +1015,10 @@ const AdminLeaveManagement = () => {
                             ? "Leave"
                             : item.requestType}
                         </td>
-                        <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
-                          {item.submittedDate
-                            ? dayjs(item.submittedDate).format("DD MMM - YYYY")
-                            : item.created_at
-                              ? dayjs(item.created_at).format("DD MMM - YYYY")
-                              : "-"}
+                        <td className="py-4 px-4 text-center">
+                          <span className="text-xs font-bold text-gray-500 bg-gray-100/50 px-2 py-1 rounded-md">
+                            {item.department || "N/A"}
+                          </span>
                         </td>
                         <td className="py-4 px-4 text-center">
                           <div className="text-sm font-bold text-[#2B3674]">
@@ -1038,7 +1034,49 @@ const AdminLeaveManagement = () => {
                             Day(s)
                           </p>
                         </td>
+                        <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
+                          {item.submittedDate
+                            ? dayjs(item.submittedDate).format("DD MMM - YYYY")
+            : item.created_at
+                              ? dayjs(item.created_at).format("DD MMM - YYYY")
+                              : "-"}
+                        </td>
                         <td className="py-4 px-4 text-center">
+                          <span
+                            className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all whitespace-nowrap
+                            ${
+                              item.status === "Approved" || item.status === "Cancellation Approved"
+                                ? "bg-green-50 text-green-600 border-green-200"
+                                : item.status === "Pending"
+                                  ? "bg-yellow-50 text-yellow-600 border-yellow-200"
+                                  : item.status === "Cancelled"
+                                    ? "bg-yellow-50 text-yellow-600 border-yellow-200"
+                                    : item.status === "Requesting for Cancellation"
+                                      ? "bg-yellow-100 text-yellow-700 border-yellow-300"
+                                      : item.status === "Request Modified"
+                                        ? "bg-orange-50 text-orange-600 border-orange-200"
+                                        : "bg-red-50 text-red-600 border-red-200"
+                            }
+                          `}
+                          >
+                            {item.status === "Pending" && (
+                              <RotateCcw
+                                size={12}
+                                className="animate-spin-slow"
+                              />
+                            )}
+                            {item.status}
+                            {item.status === "Request Modified" && item.requestModifiedFrom && (
+                              <span className="opacity-70 border-l border-orange-300 pl-1.5 ml-1 text-[9px] font-bold">
+                                (TO {
+                                  item.requestModifiedFrom === "Apply Leave" ? "LEAVE" : 
+                                  item.requestModifiedFrom.toUpperCase()
+                                })
+                              </span>
+                            )}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4">
                           <div className="flex items-center justify-center gap-3">
                             <button
                               onClick={() => handleViewApplication(item)}
@@ -1049,27 +1087,6 @@ const AdminLeaveManagement = () => {
                             </button>
                             {item.status === "Pending" &&
                               renderCancelButton(item)}
-                            <span
-                              className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all
-                          ${
-                            item.status === "Approved"
-                              ? "bg-green-50 text-green-600 border-green-200"
-                              : item.status === "Pending"
-                                ? "bg-yellow-50 text-yellow-600 border-yellow-200"
-                                : item.status === "Cancelled"
-                                  ? "bg-yellow-50 text-yellow-600 border-yellow-200"
-                                  : "bg-red-50 text-red-600 border-red-200"
-                          }
-                        `}
-                            >
-                              {item.status === "Pending" && (
-                                <RotateCcw
-                                  size={12}
-                                  className="animate-spin-slow"
-                                />
-                              )}
-                              {item.status}
-                            </span>
                           </div>
                         </td>
                       </tr>
@@ -1326,6 +1343,8 @@ const AdminLeaveManagement = () => {
                   <span className="bg-white px-4 py-1 rounded-lg shadow-sm border border-blue-100">
                     {formData.startDate && formData.endDate
                       ? (() => {
+                          if (isViewMode) return `${formData.duration} Day(s)`;
+                          
                           // For Client Visit, WFH, and Leave, exclude weekends and holidays from duration display
                           if (selectedLeaveType === "Client Visit" || selectedLeaveType === "Work From Home" || selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave") {
                             return `${calculateDurationExcludingWeekends(formData.startDate, formData.endDate)} Day(s)`;
