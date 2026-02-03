@@ -60,6 +60,7 @@ const SidebarLayout = ({
     { name: "My Timesheet", icon: Calendar },
     { name: "Timesheet View", icon: Eye },
     { name: "Work Management", icon: Calendar },
+    { name: "Projects", icon: LayoutGrid },
     { name: "My Profile", icon: User },
     //{ name: 'Change Password', icon: Lock },
   ];
