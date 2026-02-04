@@ -14,6 +14,7 @@ import {
   Download,
   X,
   Loader2,
+  RotateCcw,
 } from "lucide-react";
 import { saveAs } from "file-saver";
 import {
@@ -25,6 +26,10 @@ import EmployeeTimeSheetMobileCard from "./EmployeeTimeSheetMobileCard";
 const AdminEmployeeTimesheetList = () => {
   const navigate = useNavigate();
   const location = useLocation();
+
+  const basePath = location.pathname.startsWith("/manager-dashboard")
+    ? "/manager-dashboard"
+    : "/admin-dashboard";
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -207,13 +212,13 @@ const AdminEmployeeTimesheetList = () => {
 
   const handleViewTimesheet = (empId: string) => {
     navigate(
-      `/admin-dashboard/timesheet/${empId}?month=${selectedMonth}&year=${selectedYear}`,
+      `${basePath}/timesheet/${empId}?month=${selectedMonth}&year=${selectedYear}`,
     );
   };
 
   const handleViewWorkingDetails = (empId: string) => {
     navigate(
-      `/admin-dashboard/working-details/${empId}?month=${selectedMonth}&year=${selectedYear}`,
+      `${basePath}/working-details/${empId}?month=${selectedMonth}&year=${selectedYear}`,
     );
   };
 
@@ -253,38 +258,48 @@ const AdminEmployeeTimesheetList = () => {
     return `${monthNames[selectedMonth - 1]} ${selectedYear}`;
   };
 
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setDebouncedSearchTerm("");
+    setSelectedDepartment("All Departments");
+    setSelectedStatus("All Status");
+    setSelectedMonth(new Date().getMonth() + 1);
+    setSelectedYear(new Date().getFullYear());
+    setCurrentPage(1);
+  };
+
   return (
     <div className="p-5 bg-[#F4F7FE] min-h-screen font-sans">
       <div className="max-w-[1600px] mx-auto">
-        {/* Month/Year Selector */}
-        <div className="flex items-center justify-center gap-4 mb-6">
-          <button
-            onClick={handlePreviousMonth}
-            className="p-2 rounded-lg bg-white shadow-md hover:bg-gray-50 transition-all active:scale-95 border border-gray-200"
-            title="Previous Month"
-          >
-            <ChevronLeft size={20} className="text-[#2B3674]" />
-          </button>
-          <div className="bg-white px-6 py-2 rounded-lg shadow-md border border-gray-200">
-            <span className="text-base font-bold text-[#2B3674]">
-              {getMonthYearDisplay()}
-            </span>
-          </div>
-          <button
-            onClick={handleNextMonth}
-            className="p-2 rounded-lg bg-white shadow-md hover:bg-gray-50 transition-all active:scale-95 border border-gray-200"
-            title="Next Month"
-          >
-            <ChevronRight size={20} className="text-[#2B3674]" />
-          </button>
-        </div>
-
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
           <h1 className="text-xl md:text-2xl font-bold text-[#2B3674] m-0">
             Employee Timesheet
           </h1>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+            {/* Month/Year Selector */}
+            <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] border border-transparent">
+              <button
+                onClick={handlePreviousMonth}
+                className="p-1.5 rounded-lg hover:bg-gray-50 transition-all active:scale-95"
+                title="Previous Month"
+              >
+                <ChevronLeft size={18} className="text-[#2B3674]" />
+              </button>
+              <div className="min-w-[120px] text-center">
+                <span className="text-sm font-bold text-[#2B3674]">
+                  {getMonthYearDisplay()}
+                </span>
+              </div>
+              <button
+                onClick={handleNextMonth}
+                className="p-1.5 rounded-lg hover:bg-gray-50 transition-all active:scale-95"
+                title="Next Month"
+              >
+                <ChevronRight size={18} className="text-[#2B3674]" />
+              </button>
+            </div>
+
             <button
               onClick={handleOpenDownloadModal}
               className="flex items-center justify-center gap-2 px-5 py-2.5 bg-[#01B574] text-white rounded-full shadow-lg shadow-green-500/20 hover:shadow-green-500/40 hover:-translate-y-0.5 active:scale-95 transition-all text-sm font-bold"
@@ -393,6 +408,15 @@ const AdminEmployeeTimesheetList = () => {
                 className="border-none outline-none bg-transparent text-[#2B3674] w-full text-sm font-semibold placeholder:text-[#A3AED0]/60"
               />
             </div>
+
+            <button
+              onClick={handleClearFilters}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#E9EDF7]/50 text-[#2B3674] rounded-full hover:bg-[#E9EDF7] active:scale-95 transition-all text-sm font-bold border border-transparent whitespace-nowrap"
+              title="Clear all filters"
+            >
+              <RotateCcw size={16} className="text-[#4318FF]" />
+              <span>Clear All</span>
+            </button>
           </div>
         </div>
 

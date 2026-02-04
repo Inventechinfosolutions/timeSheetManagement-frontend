@@ -8,6 +8,8 @@ import {
   Menu,
   Bell,
   Calendar,
+  Eye,
+  LayoutGrid,
 } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
@@ -18,12 +20,14 @@ interface SidebarLayoutProps {
   children: React.ReactNode;
   activeTab?: string;
   onTabChange?: (tab: string) => void;
+  title?: string;
 }
 
 const SidebarLayout = ({
   children,
   activeTab = "Dashboard",
   onTabChange,
+  title = "Admin",
 }: SidebarLayoutProps) => {
   // State management
   const [isHovered, setIsHovered] = useState(false);
@@ -49,6 +53,8 @@ const SidebarLayout = ({
         return "Timesheet";
       case "requests":
         return "Notification";
+      case "manager-mapping":
+        return "Manager Mapping";
       default:
         return "System Dashboard";
     }
@@ -68,14 +74,34 @@ const SidebarLayout = ({
   // Sidebar opens if it's either hovered OR locked
   const isOpen = isHovered || isLocked;
 
-  const sidebarItems = [
-    { name: "System Dashboard", icon: Settings },
-    { name: "Employee Details", icon: Users },
-    { name: "Timesheet", icon: AlarmClock },
-    // { name: "Working Details", icon: ClipboardList },
-    { name: "Work Management", icon: Calendar },
-    { name: "Notification", icon: Bell }, // Notification item with Bell icon
-  ];
+  const sidebarItems = (
+    title === "Manager"
+      ? [
+          { name: "My Dashboard", icon: LayoutGrid },
+          { name: "My Timesheet", icon: Calendar },
+          { name: "My Timesheet View", icon: Eye },
+          { name: "Divider", isDivider: true },
+          { name: "Employee Dashboard", icon: Settings },
+          { name: "Employee Details", icon: Users },
+          { name: "Employee Timesheet", icon: AlarmClock },
+          { name: "Work Management", icon: Calendar },
+          { name: "Notification", icon: Bell },
+        ]
+      : [
+          { name: "System Dashboard", icon: Settings },
+          { name: "Employee Details", icon: Users },
+          { name: "Timesheet", icon: AlarmClock },
+          { name: "Work Management", icon: Calendar },
+          { name: "Manager Mapping", icon: Users },
+          { name: "Notification", icon: Bell },
+        ]
+  ).filter((item) => {
+    // Hide "Manager Mapping" if the title is "Manager"
+    if (title === "Manager" && item.name === "Manager Mapping") {
+      return false;
+    }
+    return true;
+  });
 
   return (
     <div className="flex w-full h-screen bg-[#f8f9fa] font-sans text-[#2B3674] overflow-hidden relative">
@@ -142,7 +168,7 @@ const SidebarLayout = ({
             <AlarmClock className="w-6 h-6 text-white" />
           </div>
           <span className="text-xl font-bold text-white tracking-tight">
-            Admin
+            {title}
           </span>
         </div>
 
@@ -171,7 +197,7 @@ const SidebarLayout = ({
                         `}
             >
               <span className="text-lg font-bold text-white tracking-tight whitespace-nowrap">
-                Admin
+                {title}
               </span>
               <span className="text-[10px] font-medium text-blue-100 uppercase tracking-widest whitespace-nowrap">
                 Management
@@ -210,7 +236,20 @@ const SidebarLayout = ({
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
           {sidebarItems.map((item) => {
+            if ("isDivider" in item && item.isDivider) {
+              return (
+                <div key={item.name} className="px-2 my-4">
+                  <div
+                    className={`h-px bg-white/20 transition-all duration-500 ${
+                      isOpen ? "w-full" : "w-8 mx-auto"
+                    }`}
+                  ></div>
+                </div>
+              );
+            }
+
             const isActive = derivedActiveTab === item.name;
+            const Icon = item.icon!;
             return (
               <div key={item.name} className="relative group">
                 <button
@@ -232,7 +271,7 @@ const SidebarLayout = ({
                                     `}
                 >
                   <div className="shrink-0 relative z-10 transition-transform duration-300">
-                    <item.icon
+                    <Icon
                       className={`w-5 h-5 transition-colors duration-300 ${
                         isActive ? "text-[#4318FF]" : "group-hover:scale-110"
                       }`}

@@ -25,6 +25,9 @@ interface EmployeeDetailsState {
   profileImageUrl: string | null;
   uploadLoading: boolean;
   uploadResult: any | null;
+  departments: string[];
+  roles: string[];
+  managers: any[];
 }
 
 const initialState: EmployeeDetailsState = {
@@ -38,6 +41,9 @@ const initialState: EmployeeDetailsState = {
   profileImageUrl: null,
   uploadLoading: false,
   uploadResult: null,
+  departments: [],
+  roles: [],
+  managers: [],
 };
 
 
@@ -84,6 +90,59 @@ export const getEntities = createAsyncThunk<
   }
 );
 
+export const getEntitiesSelect = createAsyncThunk<
+  any,
+  {
+    department?: string;
+    role?: string;
+  },
+  ThunkConfig
+>(
+  'employeeDetails/fetch_entity_list_select',
+  async ({ department, role }, { rejectWithValue }) => {
+    try {
+      const params: any = {};
+      if (department && department !== 'All') {
+        params.department = department;
+      }
+      if (role) {
+        params.role = role;
+      }
+
+      const queryParams = new URLSearchParams(params);
+      const response = await axios.get(`${apiUrl}/list-select?${queryParams.toString()}`);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || error.message || 'Request failed');
+    }
+  }
+);
+
+export const fetchManagers = createAsyncThunk<
+  any,
+  {
+    department?: string;
+  },
+  ThunkConfig
+>(
+  'employeeDetails/fetch_managers',
+  async ({ department }, { rejectWithValue }) => {
+    try {
+      const params: any = {
+        role: 'MANAGER,TEAM LEAD'
+      };
+      if (department && department !== 'All') {
+        params.department = department;
+      }
+      const queryParams = new URLSearchParams(params);
+      const response = await axios.get(`${apiUrl}/list-select?${queryParams.toString()}`);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || error.message || 'Request failed');
+    }
+  }
+);
+
 export const getTimesheetList = createAsyncThunk<
   any,
   {
@@ -112,9 +171,10 @@ export const getTimesheetList = createAsyncThunk<
 
       if (status && status !== 'All') {
         params.status = status;
-        params.month = month;
-        params.year = year;
       }
+      
+      if (month) params.month = month;
+      if (year) params.year = year;
 
       if (page) params.page = page;
       if (limit) params.limit = limit;
@@ -291,6 +351,30 @@ export const resendActivationLink = createAsyncThunk<any, string, ThunkConfig>(
   }
 );
 
+export const fetchDepartments = createAsyncThunk<any, void, ThunkConfig>(
+  'employeeDetails/fetch_departments',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`${apiUrl}/departments`);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || error.message || 'Request failed');
+    }
+  }
+);
+
+export const fetchRoles = createAsyncThunk<any, void, ThunkConfig>(
+  'employeeDetails/fetch_roles',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`${apiUrl}/roles`);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || error.message || 'Request failed');
+    }
+  }
+);
+
 export const EmployeeDetailsSlice = createSlice({
   name: 'employeeDetails',
   initialState,
@@ -339,7 +423,17 @@ export const EmployeeDetailsSlice = createSlice({
         state.uploadLoading = false;
         state.updateSuccess = true;
       })
-      .addMatcher(isFulfilled(getEntities, getTimesheetList), (state: EmployeeDetailsState, action: PayloadAction<any>) => {
+      .addCase(fetchDepartments.fulfilled, (state, action) => {
+        state.departments = action.payload;
+      })
+      .addCase(fetchRoles.fulfilled, (state, action) => {
+        state.roles = action.payload;
+      })
+      .addCase(fetchManagers.fulfilled, (state, action) => {
+        state.loading = false;
+        state.managers = action.payload;
+      })
+      .addMatcher(isFulfilled(getEntities, getTimesheetList, getEntitiesSelect), (state: EmployeeDetailsState, action: PayloadAction<any>) => {
         const response = action.payload;
         state.loading = false;
         state.entities = Array.isArray(response) ? response : (response.data || []);
@@ -355,7 +449,7 @@ export const EmployeeDetailsSlice = createSlice({
         }
       )
       .addMatcher(
-        isPending(getEntities, getTimesheetList, getEntity, createEntity, updateEntity, deleteEntity, partialUpdateEntity, resetPassword, resendActivationLink, updateEmployeeStatus),
+        isPending(getEntities, getTimesheetList, getEntitiesSelect, fetchManagers, getEntity, createEntity, updateEntity, deleteEntity, partialUpdateEntity, resetPassword, resendActivationLink, updateEmployeeStatus),
         (state: EmployeeDetailsState) => {
           state.errorMessage = null;
           state.updateSuccess = false;
@@ -366,11 +460,10 @@ export const EmployeeDetailsSlice = createSlice({
       .addMatcher(
         (action: any) => action.type.endsWith('/rejected'),
         (state: EmployeeDetailsState, action: any) => {
-          state.loading = false;
           state.updating = false;
+          state.loading = false;
           state.errorMessage = action.payload?.message || action.error?.message || 'Operation failed';
-        }
-      );
+        });
   },
 });
 
