@@ -45,6 +45,9 @@ const ManagerLayout = () => {
     if (path.includes("/manager-dashboard/manager-employees/")) {
       return "Employee Dashboard";
     }
+    if (path.includes("/manager-dashboard/my-profile")) {
+      return "My Profile";
+    }
 
     switch (tab) {
       case "employees":
@@ -66,6 +69,8 @@ const ManagerLayout = () => {
         return "My Timesheet";
       case "my-timesheet-view":
         return "My Timesheet View";
+      case "my-profile":
+        return "My Profile";
       default:
         return "Employee Dashboard";
     }
@@ -92,6 +97,8 @@ const ManagerLayout = () => {
       navigate("/manager-dashboard/my-timesheet");
     } else if (tabName === "My Timesheet View") {
       navigate("/manager-dashboard/my-timesheet-view");
+    } else if (tabName === "My Profile") {
+      navigate("/manager-dashboard/my-profile");
     }
   };
 

@@ -104,6 +104,8 @@ const AdminTabWrapper = () => {
       return <MyTimesheet />;
     case "my-timesheet-view":
       return <AttendanceViewWrapper />;
+    case "my-profile":
+      return <MyProfile />;
     default:
       return <Navigate to="/admin-dashboard" replace />;
   }

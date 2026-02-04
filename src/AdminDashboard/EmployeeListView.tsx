@@ -44,6 +44,8 @@ const EmployeeListView = () => {
     ? "/manager-dashboard"
     : "/admin-dashboard";
 
+  const isAdmin = basePath === "/admin-dashboard";
+
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -585,20 +587,24 @@ const EmployeeListView = () => {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (emp.isActive) {
+                          if (emp.isActive && isAdmin) {
                             handleToggleStatus(emp.rawId);
                           }
                         }}
-                        disabled={!emp.isActive}
+                        disabled={!emp.isActive || !isAdmin}
                         className={`relative w-20 h-7 rounded-full transition-all duration-300 flex items-center mx-auto ${
                           emp.isActive
-                            ? "bg-[#0095FF] cursor-pointer"
+                            ? isAdmin
+                              ? "bg-[#0095FF] cursor-pointer"
+                              : "bg-[#0095FF]/60 cursor-not-allowed"
                             : "bg-red-300 cursor-not-allowed"
                         }`}
                         title={
-                          !emp.isActive
-                            ? "Status cannot be changed once Inactive"
-                            : "Toggle Status"
+                          !isAdmin
+                            ? "Only admins can change employee status"
+                            : !emp.isActive
+                              ? "Status cannot be changed once Inactive"
+                              : "Toggle Status"
                         }
                       >
                         <span
@@ -681,6 +687,7 @@ const EmployeeListView = () => {
                 onViewDashboard={handleViewDashboard}
                 onResendActivation={handleResendActivation}
                 onToggleStatus={handleToggleStatus}
+                isAdmin={isAdmin}
               />
             ) : null}
           </div>

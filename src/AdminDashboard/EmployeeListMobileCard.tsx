@@ -9,6 +9,7 @@ interface Employee {
   isActive: boolean;
   createdAt: string;
   lastLoggedIn?: string | null;
+  isAdmin: boolean;
 }
 
 interface EmployeeListMobileCardProps {
@@ -17,6 +18,7 @@ interface EmployeeListMobileCardProps {
   onViewDashboard: (empId: string) => void;
   onResendActivation: (empId: string) => void;
   onToggleStatus: (empId: string) => void;
+  isAdmin: boolean;
 }
 
 const EmployeeListMobileCard = ({
@@ -25,9 +27,10 @@ const EmployeeListMobileCard = ({
   onViewDashboard,
   onResendActivation,
   onToggleStatus,
+  isAdmin,
 }: EmployeeListMobileCardProps) => {
-// ... existing body ...
-// ... around line 113 inside the actions div ...
+  // ... existing body ...
+  // ... around line 113 inside the actions div ...
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -73,20 +76,24 @@ const EmployeeListMobileCard = ({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (emp.isActive) {
+                    if (emp.isActive && isAdmin) {
                       onToggleStatus(emp.rawId);
                     }
                   }}
-                  disabled={!emp.isActive}
+                  disabled={!emp.isActive || !isAdmin}
                   className={`relative w-20 h-7 rounded-full transition-all duration-300 flex items-center ${
                     emp.isActive
-                      ? "bg-[#0095FF] cursor-pointer"
+                      ? isAdmin
+                        ? "bg-[#0095FF] cursor-pointer"
+                        : "bg-[#0095FF]/60 cursor-not-allowed"
                       : "bg-red-300 cursor-not-allowed"
                   }`}
                   title={
-                    !emp.isActive
-                      ? "Status cannot be changed once Inactive"
-                      : "Toggle Status"
+                    !isAdmin
+                      ? "Only admins can change employee status"
+                      : !emp.isActive
+                        ? "Status cannot be changed once Inactive"
+                        : "Toggle Status"
                   }
                 >
                   <span
