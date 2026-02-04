@@ -53,75 +53,56 @@ const initialState: LeaveRequestState = {
   fileLoading: false,
 };
 
-// Async Thunk for Getting Leave History
-export const getLeaveHistory = createAsyncThunk(
-  "leaveRequest/getHistory",
-  async (
-    { employeeId, page, limit }: { employeeId: string; page?: number; limit?: number },
-    { rejectWithValue }
-  ) => {
-    try {
-      const params = new URLSearchParams();
-      if (page) params.append("page", page.toString());
-      if (limit) params.append("limit", limit.toString());
-
-      const queryString = params.toString();
-      const url = queryString
-        ? `${apiUrl}/employee/${employeeId}?${queryString}`
-        : `${apiUrl}/employee/${employeeId}`;
-
-      const response = await axios.get(url);
-      return response.data;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data || "Failed to fetch history");
-    }
-  }
-);
-
-// Async Thunk for Getting All Leave Requests (Admin)
+// Async Thunk for Getting All Leave Requests (Unified)
 export const getAllLeaveRequests = createAsyncThunk(
   "leaveRequest/getAll",
   async (
-    filters: { department?: string; status?: string; search?: string; page?: number; limit?: number } = {},
+    filters: { 
+      employeeId?: string;
+      department?: string; 
+      status?: string; 
+      search?: string; 
+      month?: string;
+      year?: string;
+      page?: number; 
+      limit?: number 
+    } = {},
     { rejectWithValue }
   ) => {
     try {
       const params = new URLSearchParams();
-      if (filters.department && filters.department !== "All") {
-        params.append("department", filters.department);
-      }
-      if (filters.status && filters.status !== "All") {
-        params.append("status", filters.status);
-      }
-      if (filters.search) {
-        params.append("search", filters.search);
-      }
-      if (filters.page) {
-        params.append("page", filters.page.toString());
-      }
-      if (filters.limit) {
-        params.append("limit", filters.limit.toString());
-      }
+      if (filters.employeeId) params.append("employeeId", filters.employeeId);
+      if (filters.department && filters.department !== "All") params.append("department", filters.department);
+      if (filters.status && filters.status !== "All") params.append("status", filters.status);
+      if (filters.search) params.append("search", filters.search);
+      if (filters.month) params.append("month", filters.month);
+      if (filters.year) params.append("year", filters.year);
+      if (filters.page) params.append("page", filters.page.toString());
+      if (filters.limit) params.append("limit", filters.limit.toString());
 
-      const queryString = params.toString();
-      const url = queryString ? `${apiUrl}?${queryString}` : apiUrl;
-      
-      const response = await axios.get(url);
+      const response = await axios.get(`${apiUrl}?${params.toString()}`);
       return response.data;
     } catch (error: any) {
-      return rejectWithValue(
-        error.response?.data || "Failed to fetch all requests"
-      );
+      return rejectWithValue(error.response?.data || "Failed to fetch requests");
     }
   }
 );
+
+// Keep these as aliases for backward compatibility, pointing to the unified method or its logic
+export const getLeaveHistory = getAllLeaveRequests;
+export const getMonthlyLeaveRequests = getAllLeaveRequests;
 
 // Async Thunk for Getting Leave Statistics
 export const getLeaveStats = createAsyncThunk(
   "leaveRequest/getStats",
-  async (employeeId: string, { rejectWithValue }) => {
+  async (params: { employeeId: string; month?: string; year?: string }, { rejectWithValue }) => {
     try {
-      const response = await axios.get(`${apiUrl}/stats/${employeeId}`);
+      const { employeeId, month, year } = params;
+      const queryParams = new URLSearchParams();
+      if (month) queryParams.append("month", month);
+      if (year) queryParams.append("year", year);
+
+      const response = await axios.get(`${apiUrl}/stats/${employeeId}?${queryParams.toString()}`);
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data || "Failed to fetch stats");
@@ -272,25 +253,7 @@ export const submitRequestModification = createAsyncThunk(
   }
 );
 
-// Async Thunk for Getting Monthly Leave Requests (Admin)
-export const getMonthlyLeaveRequests = createAsyncThunk(
-  "leaveRequest/getMonthly",
-  async (
-    { month, year, page, limit }: { month: string; year: string; page?: number; limit?: number },
-    { rejectWithValue }
-  ) => {
-    try {
-      const params = new URLSearchParams();
-      if (page) params.append("page", page.toString());
-      if (limit) params.append("limit", limit.toString());
-
-      const response = await axios.get(`${apiUrl}/monthly-details/${month}/${year}?${params.toString()}`);
-      return response.data;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data || "Failed to fetch monthly requests");
-    }
-  }
-);
+// getMonthlyLeaveRequests is now an alias for getAllLeaveRequests above
 
 // File Upload Actions
 export const uploadLeaveRequestFile = createAsyncThunk(
@@ -394,39 +357,7 @@ const leaveRequestSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    // Get History
-    builder.addCase(getLeaveHistory.pending, (state) => {
-      state.loading = true;
-      state.error = null;
-    });
-    builder.addCase(getLeaveHistory.fulfilled, (state, action) => {
-      state.loading = false;
-      const payload = action.payload;
-      if (payload && payload.data && Array.isArray(payload.data)) {
-        state.entities = payload.data;
-        state.totalItems = payload.total || payload.data.length;
-        state.totalPages = payload.totalPages || 1;
-        state.currentPage = payload.page || 1;
-        state.limit = payload.limit || 10;
-      } else if (Array.isArray(payload)) {
-        state.entities = payload;
-        state.totalItems = payload.length;
-        state.totalPages = 1;
-        state.currentPage = 1;
-        state.limit = 10;
-      } else {
-        state.entities = [];
-        state.totalItems = 0;
-        state.totalPages = 1;
-        state.currentPage = 1;
-      }
-    });
-    builder.addCase(getLeaveHistory.rejected, (state, action) => {
-      state.loading = false;
-      state.error = action.payload as string;
-    });
-
-    // Get All Requests (Admin)
+    // Unified Request Fetching (History, All, Monthly)
     builder.addCase(getAllLeaveRequests.pending, (state) => {
       state.loading = true;
       state.error = null;
@@ -454,32 +385,6 @@ const leaveRequestSlice = createSlice({
       }
     });
     builder.addCase(getAllLeaveRequests.rejected, (state, action) => {
-      state.loading = false;
-      state.error = action.payload as string;
-    });
-
-    // Get Monthly Requests (Admin)
-    builder.addCase(getMonthlyLeaveRequests.pending, (state) => {
-      state.loading = true;
-      state.error = null;
-    });
-    builder.addCase(getMonthlyLeaveRequests.fulfilled, (state, action) => {
-      state.loading = false;
-      const payload = action.payload;
-      if (payload && payload.data && Array.isArray(payload.data)) {
-        state.entities = payload.data;
-        state.totalItems = payload.total || payload.data.length;
-        state.totalPages = payload.totalPages || 1;
-        state.currentPage = payload.page || 1;
-        state.limit = payload.limit || 10;
-      } else {
-        state.entities = [];
-        state.totalItems = 0;
-        state.totalPages = 1;
-        state.currentPage = 1;
-      }
-    });
-    builder.addCase(getMonthlyLeaveRequests.rejected, (state, action) => {
       state.loading = false;
       state.error = action.payload as string;
     });

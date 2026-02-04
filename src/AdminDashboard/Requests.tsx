@@ -99,9 +99,9 @@ const Requests = () => {
   ];
 
   const currentYear = dayjs().year();
-  const years = Array.from({ length: 11 }, (_, i) =>
+  const years = ["All", ...Array.from({ length: 11 }, (_, i) =>
     (currentYear + 5 - i).toString(),
-  );
+  )];
 
   const departments = [
     "All",
@@ -144,26 +144,17 @@ const Requests = () => {
   }, [searchTerm]);
 
   useEffect(() => {
-    if (selectedMonth !== "All") {
-      dispatch(
-        getMonthlyLeaveRequests({
-          month: selectedMonth,
-          year: selectedYear,
-          page: currentPage,
-          limit: itemsPerPage,
-        }),
-      );
-    } else {
-      dispatch(
-        getAllLeaveRequests({
-          department: selectedDept,
-          status: filterStatus,
-          search: debouncedSearchTerm,
-          page: currentPage,
-          limit: itemsPerPage,
-        }),
-      );
-    }
+    dispatch(
+      getAllLeaveRequests({
+        department: selectedDept,
+        status: filterStatus,
+        search: debouncedSearchTerm,
+        month: selectedMonth,
+        year: selectedYear,
+        page: currentPage,
+        limit: itemsPerPage,
+      }),
+    );
   }, [
     dispatch,
     selectedDept,
@@ -581,6 +572,7 @@ const Requests = () => {
       case "Cancellation Approved":
         return "bg-green-50 text-green-600 border-green-200";
       case "Rejected":
+      case "Cancellation Rejected":
         return "bg-red-50 text-red-600 border-red-200";
       case "Requesting for Cancellation":
         return "bg-yellow-100 text-yellow-700 border-yellow-300";
@@ -718,14 +710,21 @@ const Requests = () => {
             <Select
               value={selectedYear}
               onChange={(val) => setSelectedYear(val)}
-              className="w-28 h-12 font-bold text-sm text-[#2B3674]"
+              className={`w-28 h-12 font-bold text-sm ${selectedYear !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
               variant="borderless"
               dropdownStyle={{ borderRadius: "16px" }}
-              suffixIcon={<ChevronDown size={18} className="text-gray-400" />}
+              suffixIcon={
+                <ChevronDown
+                  size={18}
+                  className={
+                    selectedYear !== "All" ? "text-[#4318FF]" : "text-gray-400"
+                  }
+                />
+              }
             >
               {years.map((y) => (
                 <Select.Option key={y} value={y}>
-                  {y}
+                  {y === "All" ? "All Years" : y}
                 </Select.Option>
               ))}
             </Select>
