@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   Check,
   RotateCcw,
+  X,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { logoutUser } from "../reducers/user.reducer";
@@ -464,9 +465,9 @@ const Header = ({
                                       icon = <Check size={18} />;
                                       iconBg = "bg-green-500";
                                     }
-                                    // Case 2: Cancellation Rejected (Marked by Backend) - CHECK FIRST
+                                    // Case 2: Cancellation Rejected
                                     else if (
-                                      update.title === "Cancellation Rejected"
+                                      update.status === "Cancellation Rejected"
                                     ) {
                                       title = "Cancellation Rejected";
                                       message = (
@@ -498,10 +499,10 @@ const Header = ({
                                     }
                                     // Case 4: Standard Rejection
                                     else if (update.status === "Rejected") {
-                                      title = "Cancellation Rejected"; // User requested this for rejected items too
+                                      title = "Request Rejected";
                                       message = (
                                         <>
-                                          Your request to cancel{" "}
+                                          Your request for{" "}
                                           <span className="font-bold text-[#2B3674]">
                                             {update.requestType}
                                           </span>{" "}
@@ -513,9 +514,8 @@ const Header = ({
                                         </>
                                       );
                                       icon = (
-                                        <LogOut
+                                        <X
                                           size={18}
-                                          className="rotate-45"
                                         />
                                       );
                                       iconBg = "bg-red-500";
@@ -534,7 +534,7 @@ const Header = ({
                                           <span className="font-bold text-orange-600">
                                             Modified
                                           </span>{" "}
-                                          due to overlap with {source}.
+                                          due to new request on same date {source}.
                                         </>
                                       );
                                       icon = <RotateCcw size={18} />;
