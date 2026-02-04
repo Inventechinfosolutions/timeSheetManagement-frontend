@@ -25,6 +25,9 @@ import {
   previewLeaveRequestFile,
   downloadLeaveRequestFile,
   getMonthlyLeaveRequests,
+  rejectCancellationRequest,
+  updateParentRequest,
+  submitRequestModification
 } from "../reducers/leaveRequest.reducer";
 import { getEntity } from "../reducers/employeeDetails.reducer";
 // } from "../reducers/leaveRequest.reducer";
@@ -61,9 +64,19 @@ const Requests = () => {
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
     id: number | null;
-    status: "Approved" | "Rejected" | null;
+    status: "Approved" | "Rejected" | "Cancellation Approved" | "Reject Cancellation" | null;
     employeeName: string;
   }>({ isOpen: false, id: null, status: null, employeeName: "" });
+
+// ... (skipping unchanged code) ...
+
+  const handleUpdateStatus = (
+    id: number,
+    status: "Approved" | "Rejected" | "Cancellation Approved" | "Reject Cancellation",
+    employeeName: string,
+  ) => {
+    setConfirmModal({ isOpen: true, id, status, employeeName });
+  };
 
   const [selectedMonth, setSelectedMonth] = useState<string>("All");
   const [selectedYear, setSelectedYear] = useState<string>(
@@ -212,7 +225,6 @@ const Requests = () => {
              (status === AttendanceStatus.LEAVE || status === "Leave" || status === "LEAVE");
     });
   };
-
   // Helper function to calculate duration excluding weekends, holidays, and existing leaves
   const calculateDurationExcludingWeekends = (startDate: string, endDate: string): number => {
     if (!startDate || !endDate) return 0;
@@ -233,13 +245,23 @@ const Requests = () => {
     return count;
   };
 
-  const handleUpdateStatus = (
-    id: number,
-    status: "Approved" | "Rejected",
-    employeeName: string,
-  ) => {
-    setConfirmModal({ isOpen: true, id, status, employeeName });
+  // Helper to get all working dates in a range
+  const getWorkingDatesInRange = (startDate: string, endDate: string): string[] => {
+    if (!startDate || !endDate) return [];
+    const start = dayjs(startDate);
+    const end = dayjs(endDate);
+    const dates: string[] = [];
+    let current = start;
+    while (current.isBefore(end) || current.isSame(end, "day")) {
+      if (!isWeekend(current) && !isHoliday(current)) {
+        dates.push(current.format("YYYY-MM-DD"));
+      }
+      current = current.add(1, "day");
+    }
+    return dates;
   };
+
+
 
   const executeStatusUpdate = async () => {
     if (!confirmModal.id || !confirmModal.status) return;
@@ -247,28 +269,244 @@ const Requests = () => {
 
     setIsProcessing(true);
     try {
+      const request = (entities || []).find((r) => r.id === id);
+      if (!request) return;
+
+      // HANDLE REJECTION
+      if (status === "Reject Cancellation") {
+          if (request.employeeId) {
+             await dispatch(rejectCancellationRequest({ id, employeeId: request.employeeId })).unwrap();
+             
+             notification.success({
+                message: "Cancellation Rejected",
+                description: `Cancellation request was rejected for ${employeeName}`,
+                placement: "topRight",
+                duration: 3,
+              });
+          }
+          setConfirmModal({ isOpen: false, id: null, status: null, employeeName: "" });
+          return; // Exit early
+      }
+
+      // --- NEW: Handle Overlaps for Approval ---
       if (status === "Approved") {
-        // Find the request details locally since we don't return them from update call immediately
-        const request = (entities || []).find((r) => r.id === id);
-        if (request) {
+        const startDate = dayjs(request.fromDate);
+        const endDate = dayjs(request.toDate);
+
+        // Define which request types this approval should victimize (modify) if overlapping
+        let victimTypes: string[] = [];
+        const reqType = (request.requestType || "").toLowerCase();
+
+        if (reqType === "apply leave" || reqType === "leave") {
+          // Leave blocks/modifies everything
+          victimTypes = ["work from home", "client visit", "apply leave", "leave", "wfh", "cv"];
+        } else if (reqType === "work from home" || reqType === "wfh") {
+          // WFH modifies CV and other potential WFH
+          victimTypes = ["client visit", "work from home", "cv", "wfh"];
+        } else if (reqType === "client visit" || reqType === "cv") {
+          // CV modifies WFH and other potential CV
+          victimTypes = ["work from home", "client visit", "wfh", "cv"];
+        }
+
+        const overlaps = (entities || []).filter(
+          (e) =>
+            e.employeeId?.toLowerCase() === request.employeeId?.toLowerCase() &&
+            (e.status === "Approved" || e.status === "Request Modified") &&
+            victimTypes.includes((e.requestType || "").toLowerCase()) &&
+            e.id !== request.id,
+        );
+
+        for (const victim of overlaps) {
+          const vStart = dayjs(victim.fromDate);
+          const vEnd = dayjs(victim.toDate);
+
+          // Check for physical overlap
+          if (
+            (startDate.isBefore(vEnd) || startDate.isSame(vEnd, "day")) &&
+            (endDate.isAfter(vStart) || endDate.isSame(vStart, "day"))
+          ) {
+            let iStart = startDate.isBefore(vStart) ? vStart : startDate;
+            let iEnd = endDate.isAfter(vEnd) ? vEnd : endDate;
+
+            // Clamp to victim boundaries
+            if (iStart.isBefore(vStart)) iStart = vStart;
+            if (iEnd.isAfter(vEnd)) iEnd = vEnd;
+
+            // 1. Create the Modification Entry
+            const modificationPayload = {
+              fromDate: iStart.format("YYYY-MM-DD"),
+              toDate: iEnd.format("YYYY-MM-DD"),
+              sourceRequestId: request.id,
+              sourceRequestType: request.requestType,
+            };
+
+            await dispatch(
+              submitRequestModification({
+                id: victim.id,
+                payload: modificationPayload,
+              }),
+            ).unwrap();
+            console.log(
+              `Explicitly triggered modification for Request ID: ${victim.id} (Overlap with ID: ${request.id})`,
+            );
+
+            // 2. Synchronize Parent Boundaries
+            const victimWorkingDates = getWorkingDatesInRange(
+              victim.fromDate,
+              victim.toDate,
+            );
+            const intersectionDates = getWorkingDatesInRange(
+              iStart.format("YYYY-MM-DD"),
+              iEnd.format("YYYY-MM-DD"),
+            );
+
+            // Filter out the modified dates
+            const remainingDates = victimWorkingDates.filter(
+              (d) => !intersectionDates.includes(d),
+            );
+
+            if (remainingDates.length === 0) {
+              // CASE: Parent completely consumed -> Cancel it
+              await dispatch(
+                updateLeaveRequestStatus({ id: victim.id, status: "Cancelled" }),
+              ).unwrap();
+              console.log(
+                `Parent request ID: ${victim.id} fully consumed and set to Cancelled`,
+              );
+            } else {
+              // CASE: Partial overlap -> Update boundaries and duration
+              const newFrom = remainingDates[0];
+              const newTo = remainingDates[remainingDates.length - 1];
+              const newDuration = remainingDates.length;
+
+              await dispatch(
+                updateParentRequest({
+                  parentId: victim.id,
+                  duration: newDuration,
+                  fromDate: newFrom,
+                  toDate: newTo,
+                }),
+              ).unwrap();
+              console.log(
+                `Synchronized parent request ID: ${victim.id} to new range: ${newFrom} to ${newTo} (Duration: ${newDuration})`,
+              );
+            }
+          }
+        }
+      }
+
+      // 1. Update Status first
+      await dispatch(updateLeaveRequestStatus({ id, status })).unwrap();
+
+      // 2. Smart Cancellation Logic (Only if Cancellation Approved)
+      if (status === "Cancellation Approved" && request) {
+            // Find the parent request (Approved, matching employee, covering dates)
+            const childRequest = request;
+            const childStart = dayjs(childRequest.fromDate);
+            const childEnd = dayjs(childRequest.toDate);
+            
+            const masterRequest = entities.find(e => 
+                e.employeeId === childRequest.employeeId && 
+                e.status === 'Approved' && 
+                e.id !== childRequest.id &&
+                (dayjs(e.fromDate).isSame(childStart, 'day') || dayjs(e.fromDate).isBefore(childStart, 'day')) &&
+                (dayjs(e.toDate).isSame(childEnd, 'day') || dayjs(e.toDate).isAfter(childEnd, 'day'))
+            );
+
+            if (masterRequest) {
+                // --- SMART CANCELLATION LOGIC ---
+                // 1. Gather all 'Cancellation Approved' requests (including current one) related to this master
+                const allCancelledRequests = entities.filter(e => 
+                    e.employeeId === masterRequest.employeeId && 
+                    (e.status === 'Cancellation Approved' || e.id === id) &&
+                    (dayjs(e.fromDate).isAfter(dayjs(masterRequest.fromDate)) || dayjs(e.fromDate).isSame(dayjs(masterRequest.fromDate), 'day')) &&
+                    (dayjs(e.toDate).isBefore(dayjs(masterRequest.toDate)) || dayjs(e.toDate).isSame(dayjs(masterRequest.toDate), 'day'))
+                );
+
+                // 2. Build Set of Cancelled Dates
+                const cancelledSet = new Set<string>();
+                allCancelledRequests.forEach(req => {
+                    let curr = dayjs(req.fromDate);
+                    const end = dayjs(req.toDate);
+                    while (curr.isBefore(end) || curr.isSame(end, 'day')) {
+                        cancelledSet.add(curr.format('YYYY-MM-DD'));
+                        curr = curr.add(1, 'day');
+                    }
+                });
+
+                // 3. Scan Master Range for Valid Dates
+                const validDates: string[] = [];
+                let currM = dayjs(masterRequest.fromDate);
+                const endM = dayjs(masterRequest.toDate);
+
+                while (currM.isBefore(endM) || currM.isSame(endM, 'day')) {
+                    const dateStr = currM.format('YYYY-MM-DD');
+                    if (!cancelledSet.has(dateStr)) {
+                        validDates.push(dateStr);
+                    }
+                    currM = currM.add(1, 'day');
+                }
+
+                // 4. Update Parent Request
+                
+                // Filter validDates to exclude weekends/holidays for boundary calculation
+                const validWorkingDates = validDates.filter(d => {
+                     const dObj = dayjs(d);
+                     if (masterRequest.requestType === 'Apply Leave' || masterRequest.requestType === 'Leave' || masterRequest.requestType === 'Work From Home' || masterRequest.requestType === 'Client Visit') {
+                         return !isWeekend(dObj) && !isHoliday(dObj);
+                     }
+                     return true;
+                });
+
+                if (validWorkingDates.length === 0) {
+                    // CASE: All working dates cancelled -> Set Parent to 'Cancelled'
+                     await dispatch(updateLeaveRequestStatus({ 
+                        id: masterRequest.id, 
+                        status: 'Cancelled' 
+                    })).unwrap();
+
+                     await dispatch(updateParentRequest({ 
+                        parentId: masterRequest.id, 
+                        duration: 0, 
+                        fromDate: masterRequest.fromDate, 
+                        toDate: masterRequest.toDate 
+                     })).unwrap();
+                } else {
+                    // CASE: Partial -> Update Range and Duration based on WORKING DAYS
+                    const newFromDate = validWorkingDates[0];
+                    const newToDate = validWorkingDates[validWorkingDates.length - 1];
+                    const newDuration = validWorkingDates.length;
+
+                     await dispatch(updateParentRequest({ 
+                        parentId: masterRequest.id, 
+                        duration: newDuration, 
+                        fromDate: newFromDate, 
+                        toDate: newToDate 
+                     })).unwrap();
+                }
+                // --- END SMART CANCELLATION ---
+            }
+      }
+
+      // 3. Attendance Update Logic
+      if (request) {
           const startDate = dayjs(request.fromDate);
           const endDate = dayjs(request.toDate);
           const diffDays = endDate.diff(startDate, "day");
 
           const attendancePayload: any[] = [];
 
-
           // Loop through dates
           for (let i = 0; i <= diffDays; i++) {
-            const currentDateObj = startDate.clone().add(i, "day"); // Clone first to avoid mutation
-            const currentDate = currentDateObj.format("YYYY-MM-DD"); // Ensuring string format YYYY-MM-DD
+            const currentDateObj = startDate.clone().add(i, "day"); 
+            const currentDate = currentDateObj.format("YYYY-MM-DD"); 
 
-            // For Client Visit, WFH, and Leave, skip weekend dates and holidays (don't send to backend)
+            // For Client Visit, WFH, and Leave, skip weekend dates and holidays
             if (
               (request.requestType === "Client Visit" || request.requestType === "Work From Home" || request.requestType === "Apply Leave" || request.requestType === "Leave") &&
               (isWeekend(currentDateObj) || isHoliday(currentDateObj))
             ) {
-              continue; // Skip weekends and holidays for Client Visit, WFH, and Leave
+              continue; 
             }
 
             let attendanceData: any = {
@@ -277,40 +515,46 @@ const Requests = () => {
               totalHours: 0,
             };
 
-            if (
-              request.requestType === "Apply Leave" ||
-              request.requestType === "Leave"
-            ) {
-              attendanceData.status = AttendanceStatus.LEAVE;
-              // location is optional/null
-            } else if (request.requestType === "Work From Home") {
-              // attendanceData.status = undefined; // Let backend default or set null
-              attendanceData.workLocation = "WFH"; // Passing string directly if enum doesn't match perfectly, or OfficeLocation.WORK_FROM_HOME if matched
-            } else if (request.requestType === "Client Visit") {
-              // attendanceData.status = undefined;
-              attendanceData.workLocation = "Client Visit";
+            if (status === "Cancellation Approved") {
+                // RESET Logic: Explicitly set fields to null to revert attendance
+                attendanceData.status = null;
+                attendanceData.workLocation = null;
+                attendanceData.totalHours = null;
+            } else if (status === "Approved") {
+                // APPROVAL Logic
+                if (
+                  request.requestType === "Apply Leave" ||
+                  request.requestType === "Leave"
+                ) {
+                  attendanceData.status = AttendanceStatus.LEAVE;
+                  attendanceData.workLocation = null; // Ensure workLocation is cleared for Leave
+                } else if (request.requestType === "Work From Home") {
+                  attendanceData.workLocation = "WFH"; 
+                } else if (request.requestType === "Client Visit") {
+                  attendanceData.workLocation = "Client Visit";
+                }
+            } else {
+                continue; // Skip if Rejected or other
             }
 
             attendancePayload.push(attendanceData);
           }
 
-          // Fire ONE Bulk API Call from Frontend
+          // Fire Bulk API Call
           if (attendancePayload.length > 0) {
             await dispatch(submitBulkAttendance(attendancePayload)).unwrap();
             console.log(
-              `Frontend: Created bulk attendance for ${attendancePayload.length} days`,
+              `Frontend: ${status === "Approved" ? "Created" : "Reverted"} bulk attendance for ${attendancePayload.length} days`,
             );
           }
-        }
       }
-
-      await dispatch(updateLeaveRequestStatus({ id, status })).unwrap();
+      
       notification.success({
-        message: "Status Updated",
-        description: `Notification sent to ${employeeName}`,
-        placement: "topRight",
-        duration: 3,
-      });
+          message: "Status Updated",
+          description: `Notification sent to ${employeeName}`,
+          placement: "topRight",
+          duration: 3,
+        });
 
       // Refresh admin notifications
       dispatch(fetchUnreadNotifications());
@@ -334,9 +578,14 @@ const Requests = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "Approved":
+      case "Cancellation Approved":
         return "bg-green-50 text-green-600 border-green-200";
       case "Rejected":
         return "bg-red-50 text-red-600 border-red-200";
+      case "Requesting for Cancellation":
+        return "bg-yellow-100 text-yellow-700 border-yellow-300";
+      case "Request Modified":
+        return "bg-orange-50 text-orange-600 border-orange-200";
       default:
         return "bg-yellow-50 text-yellow-600 border-yellow-200";
     }
@@ -482,20 +731,28 @@ const Requests = () => {
             </Select>
           </div>
 
-          <div className="flex gap-2 bg-white/50 p-1 rounded-2xl shadow-inner border border-gray-100/50">
-            {["All", "Pending", "Approved", "Rejected"].map((status) => (
-              <button
-                key={status}
-                onClick={() => setFilterStatus(status)}
-                className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all h-10 flex items-center ${
-                  filterStatus === status
-                    ? "bg-[#4318FF] text-white shadow-lg shadow-blue-500/30"
-                    : "text-[#2B3674] hover:bg-white hover:text-[#4318FF] hover:shadow-sm"
-                }`}
-              >
-                {status}
-              </button>
-            ))}
+          <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
+            <Select
+              value={filterStatus}
+              onChange={(val) => setFilterStatus(val)}
+              className={`w-60 h-12 font-bold text-sm ${filterStatus !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+              variant="borderless"
+              dropdownStyle={{ borderRadius: "16px" }}
+              suffixIcon={
+                <ChevronDown
+                  size={18}
+                  className={
+                    filterStatus !== "All" ? "text-[#4318FF]" : "text-gray-400"
+                  }
+                />
+              }
+            >
+              {["All", "Pending", "Approved", "Rejected", "Request Modified", "Cancellation Approved", "Cancelled"].map((status) => (
+                <Select.Option key={status} value={status}>
+                  {status === "All" ? "All Status" : status}
+                </Select.Option>
+              ))}
+            </Select>
           </div>
         </div>
       </div>
@@ -616,9 +873,17 @@ const Requests = () => {
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span
-                        className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all ${getStatusColor(req.status)}`}
+                        className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all inline-flex items-center gap-1.5 ${getStatusColor(req.status)}`}
                       >
                         {req.status}
+                        {req.status === "Request Modified" && req.requestModifiedFrom && (
+                          <span className="opacity-70 border-l border-orange-300 pl-1.5 ml-1 text-[9px] font-bold">
+                            (TO {
+                              req.requestModifiedFrom === "Apply Leave" ? "LEAVE" : 
+                              req.requestModifiedFrom.toUpperCase()
+                            })
+                          </span>
+                        )}
                       </span>
                     </td>
                     <td className="px-6 py-4">
@@ -681,6 +946,36 @@ const Requests = () => {
                               <XCircle size={20} />
                             </button>
                           </>
+                        )}
+                        {req.status === "Requesting for Cancellation" && (
+                           <>
+                              <button
+                              onClick={() =>
+                                handleUpdateStatus(
+                                  req.id,
+                                  "Cancellation Approved",
+                                  req.fullName || "Employee",
+                                )
+                              }
+                              className="p-2 text-green-600 bg-green-50/50 hover:bg-green-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-green-200 active:scale-90"
+                              title="Approve Cancellation"
+                            >
+                              <CheckCircle size={20} />
+                            </button>
+                            <button
+                              onClick={() =>
+                                handleUpdateStatus(
+                                  req.id,
+                                  "Reject Cancellation",
+                                  req.fullName || "Employee",
+                                )
+                              }
+                              className="p-2 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
+                              title="Reject Cancellation"
+                            >
+                              <XCircle size={20} />
+                            </button>
+                           </>
                         )}
                       </div>
                     </td>
@@ -752,12 +1047,14 @@ const Requests = () => {
             <div className="p-8 text-center">
               <div
                 className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-6 ${
-                  confirmModal.status === "Approved"
-                    ? "bg-green-50 text-green-500"
-                    : "bg-red-50 text-red-500"
+                  (confirmModal.status === "Approved" && (entities.find((e) => e.id === confirmModal.id)?.status === 'Requesting for Cancellation'))
+                    ? "bg-red-50 text-red-500" // Rejecting Cancellation
+                    : confirmModal.status === "Approved" || confirmModal.status === "Cancellation Approved"
+                      ? "bg-green-50 text-green-500"
+                      : "bg-red-50 text-red-500"
                 }`}
               >
-                {confirmModal.status === "Approved" ? (
+                {confirmModal.status === "Approved" || confirmModal.status === "Cancellation Approved" ? (
                   <CheckCircle size={32} strokeWidth={2.5} />
                 ) : (
                   <XCircle size={32} strokeWidth={2.5} />
@@ -766,20 +1063,32 @@ const Requests = () => {
 
               <h3 className="text-2xl font-black text-[#2B3674] mb-2">
                 {confirmModal.status === "Approved"
-                  ? "Approve Request?"
-                  : "Reject Request?"}
+                  ? (entities.find((e) => e.id === confirmModal.id)?.status === 'Requesting for Cancellation')
+                    ? "Reject Request?"
+                    : "Approve Request?"
+                  : confirmModal.status === "Rejected" || confirmModal.status === "Reject Cancellation"
+                    ? "Reject Request?"
+                    : "Approve Request?"}
               </h3>
 
               <p className="text-gray-500 font-medium leading-relaxed mb-8">
                 Are you sure you want to{" "}
                 <span
                   className={`font-bold ${
-                    confirmModal.status === "Approved"
-                      ? "text-green-600"
-                      : "text-red-600"
+                    (confirmModal.status === "Approved" && (entities.find((e) => e.id === confirmModal.id)?.status === 'Requesting for Cancellation'))
+                      ? "text-red-600"
+                      : confirmModal.status === "Approved" || confirmModal.status === "Cancellation Approved"
+                        ? "text-green-600"
+                        : "text-red-600"
                   }`}
                 >
-                  {confirmModal.status === "Approved" ? "Approve" : "Reject"}
+                  {confirmModal.status === "Approved" 
+                    ? (entities.find((e) => e.id === confirmModal.id)?.status === 'Requesting for Cancellation')
+                      ? "Reject"
+                      : "Approve" 
+                    : confirmModal.status === "Rejected" || confirmModal.status === "Reject Cancellation"
+                      ? "Reject" 
+                      : "Approve"}
                 </span>{" "}
                 this request for{" "}
                 <span className="text-[#2B3674] font-bold">
@@ -788,6 +1097,11 @@ const Requests = () => {
                 ?
                 {confirmModal.status === "Approved" &&
                   " This will automatically update attendance records."}
+                {confirmModal.status === "Cancellation Approved" &&
+                  " This will revert any associated attendance records."}
+                {confirmModal.status === "Approved" // This handles the case where we are rejecting the cancellation (reverting locally to Approved)
+                  && (entities.find((e) => e.id === confirmModal.id)?.status === 'Requesting for Cancellation') &&
+                  " This will reject the cancellation request and keep the request as Approved."}
               </p>
 
               <div className="flex gap-4">
@@ -808,18 +1122,28 @@ const Requests = () => {
                       ? "opacity-70 cursor-not-allowed"
                       : "transform active:scale-95"
                   } ${
-                    confirmModal.status === "Approved"
-                      ? "bg-green-500 hover:bg-green-600 shadow-green-200"
-                      : "bg-red-500 hover:bg-red-600 shadow-red-200"
+                    (confirmModal.status === "Approved" && (entities.find((e) => e.id === confirmModal.id)?.status === 'Requesting for Cancellation'))
+                      ? "bg-red-500 hover:bg-red-600 shadow-red-200 active:scale-95"
+                      : confirmModal.status === "Approved" || confirmModal.status === "Cancellation Approved"
+                        ? "bg-green-500 hover:bg-green-600 shadow-green-200 active:scale-95"
+                        : "bg-red-500 hover:bg-red-600 shadow-red-200 active:scale-95"
                   }`}
                 >
                   {isProcessing ? (
                     <>
-                      <Loader2 className="animate-spin" size={20} />
+                      <Loader2 className="animate-spin" size={18} />
                       Processing...
                     </>
                   ) : (
-                    `Confirm ${confirmModal.status === "Approved" ? "Approve" : "Reject"}`
+                    <>
+                      {confirmModal.status === "Approved" 
+                        ? (entities.find((e) => e.id === confirmModal.id)?.status === 'Requesting for Cancellation')
+                          ? "Confirm Reject" // Special text for this specific case
+                          : "Confirm Approve"
+                        : confirmModal.status === "Rejected" || confirmModal.status === "Reject Cancellation"
+                          ? "Confirm Reject"
+                          : "Confirm Approve"}
+                    </>
                   )}
                 </button>
               </div>

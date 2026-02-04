@@ -11,6 +11,7 @@ import { lazy } from "react";
 import Layout from "./components/Layout";
 import AdminLayout from "./navigation/AdminLayout";
 import { adminComponentConfigs } from "./navigation/adminComponentConfigs";
+import ManagerLayout from "./navigation/ManagerLayout";
 import { mainComponentConfigs } from "./mainComponentConfigs";
 import EmployeeLayout from "./navigation/EmployeeLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -49,6 +50,8 @@ import DailyStatus from "./AdminDashboard/DailyStatus";
 import Requests from "./AdminDashboard/Requests";
 import AdminViewEmployeeDashboard from "./AdminDashboard/AdminViewEmployeeDashboard";
 import AdminLeaveManagement from "./AdminDashboard/AdminLeaveManagement";
+import ManagerMapping from "./ManagerMapping/ManagerMapping";
+import ManagerEmployeesView from "./AdminDashboard/ManagerEmployeesView";
 
 const EmployeeTabWrapper = () => {
   const { tab } = useParams<{ tab: string }>();
@@ -91,6 +94,16 @@ const AdminTabWrapper = () => {
       return <Requests />;
     case "work-management":
       return <AdminLeaveManagement />;
+    case "manager-mapping":
+      return <ManagerMapping />;
+    case "manager-employees":
+      return <ManagerEmployeesView />;
+    case "my-dashboard":
+      return <TodayAttendance />;
+    case "my-timesheet":
+      return <MyTimesheet />;
+    case "my-timesheet-view":
+      return <AttendanceViewWrapper />;
     default:
       return <Navigate to="/admin-dashboard" replace />;
   }
@@ -256,7 +269,7 @@ function App() {
                       </Suspense>
                     }
                   />
-                  <Route 
+                  <Route
                     path="view-attendance/:employeeId"
                     element={<AdminViewEmployeeDashboard />}
                   />
@@ -267,6 +280,56 @@ function App() {
                   <Route
                     path="working-details/:employeeId"
                     element={<AdminEmployeeCalenderWrapper />}
+                  />
+                  <Route
+                    path="manager-employees/:managerId"
+                    element={<ManagerEmployeesView />}
+                  />
+                  <Route path=":tab/:date?" element={<AdminTabWrapper />} />
+                </Route>
+
+                <Route
+                  path="/manager-dashboard"
+                  element={
+                    <ProtectedRoute allowedRole={UserType.MANAGER}>
+                      <ManagerLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<AdminDashboard />} />
+                  <Route
+                    path="timesheet/:employeeId/:date?"
+                    element={
+                      <Suspense fallback={<Spin />}>
+                        <div className="flex flex-col h-full overflow-hidden">
+                          <AdminEmployeeTimesheetWrapper />
+                        </div>
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="timesheet-view/:employeeId/:date?"
+                    element={
+                      <Suspense fallback={<Spin />}>
+                        <AdminEmployeeTimesheetWrapper />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="view-attendance/:employeeId"
+                    element={<AdminViewEmployeeDashboard />}
+                  />
+                  <Route
+                    path="employee-details/:employeeId"
+                    element={<EmployeeDetailsView />}
+                  />
+                  <Route
+                    path="working-details/:employeeId"
+                    element={<AdminEmployeeCalenderWrapper />}
+                  />
+                  <Route
+                    path="manager-employees/:managerId"
+                    element={<ManagerEmployeesView />}
                   />
                   <Route path=":tab/:date?" element={<AdminTabWrapper />} />
                 </Route>

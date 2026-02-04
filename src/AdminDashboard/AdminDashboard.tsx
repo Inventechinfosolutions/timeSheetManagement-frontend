@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import Chart from "react-apexcharts";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { RootState } from "../store";
 import { getEntities } from "../reducers/employeeDetails.reducer";
 import { useAppDispatch, useAppSelector } from "../hooks";
@@ -31,6 +31,11 @@ import { fetchUnreadNotifications } from "../reducers/leaveNotification.reducer"
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const basePath = location.pathname.startsWith("/manager-dashboard")
+    ? "/manager-dashboard"
+    : "/admin-dashboard";
   const dispatch = useAppDispatch();
 
   // Root States
@@ -559,7 +564,7 @@ const AdminDashboard = () => {
         </h3>
         <div className="flex items-center gap-4">
           <button
-            onClick={() => navigate("/admin-dashboard/daily-attendance")}
+            onClick={() => navigate(`${basePath}/daily-attendance`)}
             className="flex items-center gap-2 px-6 py-2.5 bg-linear-to-r from-[#4318FF] to-[#868CFF] text-white rounded-xl text-xs font-black shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all duration-300 transform hover:-translate-y-0.5"
           >
             <TrendingUp size={16} />
