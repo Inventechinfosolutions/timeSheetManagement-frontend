@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { User, Lock, Eye, EyeOff } from "lucide-react";
-import { loginUser, clearError } from "../reducers/user.reducer";
+import { loginUser, clearError, UserType } from "../reducers/user.reducer";
 import type { AppDispatch, RootState } from "../store";
 
 const AdminLogin = () => {
@@ -10,8 +10,8 @@ const AdminLogin = () => {
   const dispatch = useDispatch<AppDispatch>();
 
   // Redux state
-  const { loading, error, isAuthenticated } = useSelector(
-    (state: RootState) => state.user
+  const { loading, error, isAuthenticated, currentUser } = useSelector(
+    (state: RootState) => state.user,
   );
 
   // Local form state
@@ -21,10 +21,17 @@ const AdminLogin = () => {
 
   // Navigate to dashboard on successful login
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate("/admin-dashboard");
+    if (isAuthenticated && currentUser) {
+      if (
+        currentUser.userType === UserType.MANAGER ||
+        (currentUser.role && currentUser.role.toUpperCase().includes("MANAGER"))
+      ) {
+        navigate("/manager-dashboard");
+      } else {
+        navigate("/admin-dashboard");
+      }
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, currentUser, navigate]);
 
   // Clear errors when component unmounts
   useEffect(() => {
@@ -153,7 +160,7 @@ const AdminLogin = () => {
               >
                 Sign Up
               </button> */}
-            </div>                   
+            </div>
           </form>
         </div>
       </div>

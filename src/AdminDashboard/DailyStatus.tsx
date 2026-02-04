@@ -1,4 +1,3 @@
-import { useNavigate } from "react-router-dom";
 import { RootState } from "../store";
 import { getEntities } from "../reducers/employeeDetails.reducer";
 import { useAppDispatch, useAppSelector } from "../hooks";
@@ -22,10 +21,16 @@ import {
 import { downloadPdf } from "../utils/downloadPdf";
 import { generateMonthlyEntries } from "../utils/attendanceUtils";
 import { useState, useRef, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import DailyStatusMobileCard from "./DailyStatusMobileCard";
 
 const DailyStatus = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const basePath = location.pathname.startsWith("/manager-dashboard")
+    ? "/manager-dashboard"
+    : "/admin-dashboard";
   const dispatch = useAppDispatch();
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -255,7 +260,7 @@ const DailyStatus = () => {
         <div className="flex flex-col md:flex-row gap-4 md:items-center flex-1">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => navigate("/admin-dashboard")}
+              onClick={() => navigate(basePath)}
               className="p-2 hover:bg-gray-100 rounded-full text-gray-500 hover:text-[#4318FF] transition-all flex-shrink-0"
             >
               <ArrowLeft size={24} />
