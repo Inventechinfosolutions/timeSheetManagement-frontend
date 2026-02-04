@@ -6,6 +6,7 @@ import {
   User,
   Building,
   CreditCard,
+  ShieldCheck,
 } from "lucide-react";
 import { useAppSelector, useAppDispatch } from "../hooks";
 import {
@@ -308,6 +309,24 @@ const MyProfile = () => {
               />
               <div className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl bg-red-50 flex items-center justify-center">
                 <Mail className="text-[#EE5D50] w-4 h-4" />
+              </div>
+            </div>
+          </div>
+
+          {/* Role */}
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold text-[#A3AED0] uppercase tracking-widest pl-1">
+              User Role
+            </label>
+            <div className="relative group">
+              <input
+                type="text"
+                disabled
+                value={entity?.role || ""}
+                className="w-full pl-12 pr-4 py-3.5 border-2 border-gray-100 rounded-2xl bg-gray-50/40 text-[#1B2559] text-sm md:text-base font-bold transition-all"
+              />
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl bg-indigo-50 flex items-center justify-center">
+                <ShieldCheck className="text-[#4318FF] w-4 h-4" />
               </div>
             </div>
           </div>

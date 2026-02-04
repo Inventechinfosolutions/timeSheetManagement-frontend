@@ -12,6 +12,7 @@ interface ManagerMappingState {
   entity: any;
   updating: boolean;
   totalItems: number;
+  historyTotalItems: number;
   updateSuccess: boolean;
 }
 
@@ -24,6 +25,7 @@ const initialState: ManagerMappingState = {
   entity: {},
   updating: false,
   totalItems: 0,
+  historyTotalItems: 0,
   updateSuccess: false,
 };
 
@@ -137,11 +139,34 @@ export const getManagerMappingByEmployeeId = createAsyncThunk<any, string, Thunk
   }
 );
 
-export const getManagerMappingHistory = createAsyncThunk<any, void, ThunkConfig>(
+export const getManagerMappingHistory = createAsyncThunk<
+  any,
+  {
+    page?: number;
+    limit?: number;
+    search?: string;
+    sortBy?: string;
+    sortOrder?: string;
+    department?: string;
+    status?: string;
+  } | void,
+  ThunkConfig
+>(
   'managerMapping/fetch_history',
-  async (_, { rejectWithValue }) => {
+  async (params, { rejectWithValue }) => {
     try {
-      const response = await axios.get(`${apiUrl}/history`);
+      const queryParams = new URLSearchParams();
+      if (params) {
+        if (params.page) queryParams.append('page', params.page.toString());
+        if (params.limit) queryParams.append('limit', params.limit.toString());
+        if (params.search) queryParams.append('search', params.search);
+        if (params.sortBy) queryParams.append('sortBy', params.sortBy);
+        if (params.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+        if (params.department) queryParams.append('department', params.department);
+        if (params.status) queryParams.append('status', params.status);
+      }
+
+      const response = await axios.get(`${apiUrl}/history?${queryParams.toString()}`);
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || error.message || 'Request failed');
@@ -184,7 +209,8 @@ export const ManagerMappingSlice = createSlice({
       })
       .addCase(getManagerMappingHistory.fulfilled, (state, action) => {
         state.loading = false;
-        state.historyEntities = action.payload;
+        state.historyEntities = action.payload.items || action.payload;
+        state.historyTotalItems = action.payload.meta?.totalItems || action.payload.length || 0;
       })
       .addCase(getMappedEmployeeIds.fulfilled, (state, action) => {
         state.loading = false;
