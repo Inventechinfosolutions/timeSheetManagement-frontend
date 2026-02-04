@@ -4,6 +4,8 @@ import {
   X,
   Check,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Filter,
   Users,
   ArrowRight,
@@ -30,10 +32,11 @@ interface Employee {
   id: string;
   employeeId: string;
   fullName: string;
-  email: string;
+  email?: string;
   department: string;
-  designation: string;
+  designation?: string;
   role: string;
+  userStatus: "ACTIVE" | "INACTIVE";
 }
 
 interface ManagerMapping {
@@ -56,6 +59,7 @@ const ManagerMapping: React.FC = () => {
   } = useAppSelector((state: RootState) => state.employeeDetails);
   const {
     historyEntities: groupedMappings,
+    historyTotalItems,
     mappedEmployeeIds,
     loading: mappingLoading,
   } = useAppSelector((state: RootState) => state.managerMapping);
@@ -70,12 +74,57 @@ const ManagerMapping: React.FC = () => {
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [isDeptDropdownOpen, setIsDeptDropdownOpen] = useState(false);
 
-  // Fetch data on mount
+  // History Pagination/Search state
+  const [historySearch, setHistorySearch] = useState("");
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyDepartment, setHistoryDepartment] = useState("All");
+  const [historyStatus, setHistoryStatus] = useState("All");
+  const [historySort, setHistorySort] = useState<{
+    key: string;
+    order: "ASC" | "DESC";
+  }>({ key: "createdAt", order: "DESC" });
+  const [isHistoryDeptOpen, setIsHistoryDeptOpen] = useState(false);
+  const [isHistoryStatusOpen, setIsHistoryStatusOpen] = useState(false);
+  const historyItemsPerPage = 10;
+  const [debouncedHistorySearch, setDebouncedHistorySearch] = useState("");
+
+  // Fetch initial data
   useEffect(() => {
     dispatch(fetchDepartments());
-    dispatch(getManagerMappingHistory());
     dispatch(getMappedEmployeeIds());
   }, [dispatch]);
+
+  // Debounce history search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedHistorySearch(historySearch);
+      setHistoryPage(1);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [historySearch]);
+
+  // Fetch history when params change
+  useEffect(() => {
+    dispatch(
+      getManagerMappingHistory({
+        page: historyPage,
+        limit: historyItemsPerPage,
+        search: debouncedHistorySearch,
+        sortBy: historySort.key,
+        sortOrder: historySort.order,
+        department: historyDepartment === "All" ? undefined : historyDepartment,
+        status:
+          historyStatus === "All" ? undefined : historyStatus.toUpperCase(),
+      }),
+    );
+  }, [
+    dispatch,
+    historyPage,
+    debouncedHistorySearch,
+    historySort,
+    historyDepartment,
+    historyStatus,
+  ]);
 
   // Filter managers by department and role
   const availableManagers = useMemo(() => {
@@ -110,7 +159,8 @@ const ManagerMapping: React.FC = () => {
         matchesDept &&
         matchesSearch &&
         notAssigned &&
-        !isAlreadyMapped
+        !isAlreadyMapped &&
+        emp.userStatus === "ACTIVE"
       );
     });
   }, [
@@ -390,7 +440,10 @@ const ManagerMapping: React.FC = () => {
           {/* Assigned Employees */}
           <div className="flex flex-col gap-4 bg-gradient-to-br from-[#4318FF] to-[#868CFF] rounded-[24px] shadow-[0px_18px_40px_rgba(67,24,255,0.3)] p-6 text-white">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold">Assigned Employees</h3>
+              <h3 className="text-lg font-bold">
+                Assigned Employees To{" "}
+                {selectedManager && ` ${selectedManager.fullName}`}
+              </h3>
               <div className="flex items-center gap-4">
                 {assignedEmployees.length > 0 && (
                   <button
@@ -463,6 +516,99 @@ const ManagerMapping: React.FC = () => {
         <h3 className="text-lg font-bold text-[#2B3674] mb-4">
           Mapping History
         </h3>
+        <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+          <div className="flex items-center gap-3 w-full md:w-auto">
+            <div className="relative">
+              <button
+                onClick={() => setIsHistoryDeptOpen(!isHistoryDeptOpen)}
+                className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl shadow-sm border border-gray-100 text-[#2B3674] font-bold text-sm hover:bg-gray-50 transition-all min-w-[160px]"
+              >
+                <Filter size={16} className="text-[#4318FF]" />
+                <span>{historyDepartment}</span>
+                <ChevronDown
+                  size={16}
+                  className={`ml-auto text-[#A3AED0] transition-transform ${isHistoryDeptOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+              {isHistoryDeptOpen && (
+                <div className="absolute top-full left-0 mt-2 w-full bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-20 min-w-[200px]">
+                  <button
+                    onClick={() => {
+                      setHistoryDepartment("All");
+                      setIsHistoryDeptOpen(false);
+                      setHistoryPage(1);
+                    }}
+                    className={`w-full text-left px-4 py-2 text-sm font-semibold hover:bg-gray-50 ${historyDepartment === "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+                  >
+                    All Departments
+                  </button>
+                  {departments.map((dept) => (
+                    <button
+                      key={dept}
+                      onClick={() => {
+                        setHistoryDepartment(dept);
+                        setIsHistoryDeptOpen(false);
+                        setHistoryPage(1);
+                      }}
+                      className={`w-full text-left px-4 py-2 text-sm font-semibold hover:bg-gray-50 ${historyDepartment === dept ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+                    >
+                      {dept}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="relative">
+              <button
+                onClick={() => setIsHistoryStatusOpen(!isHistoryStatusOpen)}
+                className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl shadow-sm border border-gray-100 text-[#2B3674] font-bold text-sm hover:bg-gray-50 transition-all min-w-[140px]"
+              >
+                <Filter size={16} className="text-[#4318FF]" />
+                <span>
+                  {historyStatus === "All" ? "All Status" : historyStatus}
+                </span>
+                <ChevronDown
+                  size={16}
+                  className={`ml-auto text-[#A3AED0] transition-transform ${isHistoryStatusOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+              {isHistoryStatusOpen && (
+                <div className="absolute top-full left-0 mt-2 w-full bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-20 min-w-[160px]">
+                  {["All", "ACTIVE", "INACTIVE"].map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => {
+                        setHistoryStatus(status);
+                        setIsHistoryStatusOpen(false);
+                        setHistoryPage(1);
+                      }}
+                      className={`w-full text-left px-4 py-2 text-sm font-bold transition-colors ${
+                        historyStatus === status
+                          ? "bg-[#F4F7FE] text-[#4318FF]"
+                          : "text-[#2B3674] hover:bg-gray-50"
+                      }`}
+                    >
+                      {status === "All" ? "All Status" : status}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center bg-[#F4F7FE] rounded-xl px-4 py-2 flex-1 md:w-64 border border-transparent focus-within:border-[#4318FF]/20 transition-all">
+            <Search size={18} className="text-[#A3AED0] mr-2" />
+            <input
+              type="text"
+              placeholder="Search history..."
+              value={historySearch}
+              onChange={(e) => setHistorySearch(e.target.value)}
+              className="border-none outline-none bg-transparent text-[#2B3674] w-full text-sm font-semibold placeholder:text-[#A3AED0]/60"
+            />
+          </div>
+        </div>
+
         {mappingLoading ? (
           <div className="flex justify-center items-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4318FF]"></div>
@@ -472,19 +618,59 @@ const ManagerMapping: React.FC = () => {
             <table className="w-full border-separate border-spacing-0">
               <thead>
                 <tr className="bg-[#4318FF] text-white">
-                  <th className="text-left py-4 pl-10 pr-4 text-[13px] font-bold uppercase tracking-wider">
+                  <th
+                    className="text-left py-4 pl-10 pr-4 text-[13px] font-bold uppercase tracking-wider cursor-pointer hover:bg-[#3311DD] transition-colors"
+                    onClick={() =>
+                      setHistorySort({
+                        key: "managerName",
+                        order: historySort.order === "ASC" ? "DESC" : "ASC",
+                      })
+                    }
+                  >
                     Manager
                   </th>
-                  <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider">
+                  <th
+                    className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider cursor-pointer hover:bg-[#3311DD] transition-colors"
+                    onClick={() =>
+                      setHistorySort({
+                        key: "managerId",
+                        order: historySort.order === "ASC" ? "DESC" : "ASC",
+                      })
+                    }
+                  >
                     Manager ID
                   </th>
-                  <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider">
+                  <th
+                    className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider cursor-pointer hover:bg-[#3311DD] transition-colors"
+                    onClick={() =>
+                      setHistorySort({
+                        key: "employeeCount",
+                        order: historySort.order === "ASC" ? "DESC" : "ASC",
+                      })
+                    }
+                  >
                     Total Employees Count
                   </th>
-                  <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider">
+                  <th
+                    className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider cursor-pointer hover:bg-[#3311DD] transition-colors"
+                    onClick={() =>
+                      setHistorySort({
+                        key: "department",
+                        order: historySort.order === "ASC" ? "DESC" : "ASC",
+                      })
+                    }
+                  >
                     Department
                   </th>
-                  <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider">
+                  <th
+                    className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider cursor-pointer hover:bg-[#3311DD] transition-colors"
+                    onClick={() =>
+                      setHistorySort({
+                        key: "managerStatus",
+                        order: historySort.order === "ASC" ? "DESC" : "ASC",
+                      })
+                    }
+                  >
                     Status
                   </th>
                   <th className="py-4 pl-4 pr-10 text-[13px] font-bold uppercase tracking-wider text-center">
@@ -538,8 +724,17 @@ const ManagerMapping: React.FC = () => {
                               `/admin-dashboard/manager-employees/${mapping.managerId}`,
                             )
                           }
-                          className="inline-flex items-center gap-2 bg-transparent border-none cursor-pointer text-[#4318FF] text-sm font-bold hover:underline transition-all hover:scale-105 active:scale-95"
-                          title="View mapped employees"
+                          disabled={mapping.status === "INACTIVE"}
+                          className={`inline-flex items-center gap-2 bg-transparent border-none cursor-pointer text-[#4318FF] text-sm font-bold transition-all ${
+                            mapping.status === "INACTIVE"
+                              ? "opacity-30 cursor-not-allowed"
+                              : "hover:underline hover:scale-105 active:scale-95"
+                          }`}
+                          title={
+                            mapping.status === "INACTIVE"
+                              ? "Cannot view inactive manager team"
+                              : "View mapped employees"
+                          }
                         >
                           <Eye size={16} />
                         </button>
@@ -549,6 +744,60 @@ const ManagerMapping: React.FC = () => {
                 )}
               </tbody>
             </table>
+
+            {/* Pagination Controls */}
+            {historyTotalItems > 0 && (
+              <div className="flex flex-col sm:flex-row justify-between items-center mt-6 p-4 gap-4">
+                <div className="text-sm font-bold text-[#A3AED0]">
+                  Showing{" "}
+                  <span className="text-[#2B3674]">
+                    {(historyPage - 1) * historyItemsPerPage + 1}
+                  </span>{" "}
+                  to{" "}
+                  <span className="text-[#2B3674]">
+                    {Math.min(
+                      historyPage * historyItemsPerPage,
+                      historyTotalItems,
+                    )}
+                  </span>{" "}
+                  of <span className="text-[#2B3674]">{historyTotalItems}</span>{" "}
+                  entries
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
+                    disabled={historyPage === 1}
+                    className="p-2 rounded-xl border border-gray-100 bg-white text-[#4318FF] hover:bg-gray-50 disabled:opacity-30 transition-all shadow-sm"
+                  >
+                    <ChevronLeft size={18} />
+                  </button>
+                  <div className="bg-[#F4F7FE] px-4 py-1.5 rounded-xl border border-transparent">
+                    <span className="text-xs font-black text-[#2B3674] tracking-widest">
+                      {historyPage} /{" "}
+                      {Math.ceil(historyTotalItems / historyItemsPerPage) || 1}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() =>
+                      setHistoryPage((p) =>
+                        Math.min(
+                          Math.ceil(historyTotalItems / historyItemsPerPage),
+                          p + 1,
+                        ),
+                      )
+                    }
+                    disabled={
+                      historyPage ===
+                      Math.ceil(historyTotalItems / historyItemsPerPage)
+                    }
+                    className="p-2 rounded-xl border border-gray-100 bg-white text-[#4318FF] hover:bg-gray-50 disabled:opacity-30 transition-all shadow-sm"
+                  >
+                    <ChevronRight size={18} />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

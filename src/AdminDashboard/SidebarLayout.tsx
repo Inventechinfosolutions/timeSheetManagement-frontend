@@ -10,6 +10,7 @@ import {
   Calendar,
   Eye,
   LayoutGrid,
+  User,
 } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
@@ -80,6 +81,7 @@ const SidebarLayout = ({
           { name: "My Dashboard", icon: LayoutGrid },
           { name: "My Timesheet", icon: Calendar },
           { name: "My Timesheet View", icon: Eye },
+          { name: "My Profile", icon: User },
           { name: "Divider", isDivider: true },
           { name: "Employee Dashboard", icon: Settings },
           { name: "Employee Details", icon: Users },
