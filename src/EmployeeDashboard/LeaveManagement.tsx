@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "../hooks";
-import { DatePicker, ConfigProvider, Checkbox, Modal } from "antd";
+import { DatePicker, ConfigProvider, Checkbox, Modal, Select } from "antd";
 import dayjs from "dayjs";
 import {
   getLeaveHistory,
@@ -16,7 +16,8 @@ import {
   getLeaveRequestById,
   getLeaveCancellableDates,
   cancelRequestDates,
-  undoCancellationRequest
+  undoCancellationRequest,
+  getMonthlyLeaveRequests
 } from "../reducers/leaveRequest.reducer";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import { fetchAttendanceByDateRange, AttendanceStatus } from "../reducers/employeeAttendance.reducer";
@@ -31,6 +32,8 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
+  Filter,
+  ChevronDown,
 } from "lucide-react";
 import { notification } from "antd";
 import CommonMultipleUploader from "./CommonMultipleUploader";
@@ -83,6 +86,11 @@ const LeaveManagement = () => {
     isOpen: boolean;
     id: number | null;
   }>({ isOpen: false, id: null });
+  const [undoModal, setUndoModal] = useState<{
+    isOpen: boolean;
+    request: any | null;
+  }>({ isOpen: false, request: null });
+  const [isUndoing, setIsUndoing] = useState(false);
   const [selectedLeaveType, setSelectedLeaveType] = useState("");
   const [formData, setFormData] = useState({
     title: "",
@@ -93,7 +101,30 @@ const LeaveManagement = () => {
   });
   const [isCancelling, setIsCancelling] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [filterStatus, setFilterStatus] = useState("All");
+  const [selectedMonth, setSelectedMonth] = useState<string>("All");
+  const [selectedYear, setSelectedYear] = useState<string>(dayjs().format("YYYY"));
   const itemsPerPage = 10;
+
+  const months = [
+    { label: "January", value: "1" },
+    { label: "February", value: "2" },
+    { label: "March", value: "3" },
+    { label: "April", value: "4" },
+    { label: "May", value: "5" },
+    { label: "June", value: "6" },
+    { label: "July", value: "7" },
+    { label: "August", value: "8" },
+    { label: "September", value: "9" },
+    { label: "October", value: "10" },
+    { label: "November", value: "11" },
+    { label: "December", value: "12" },
+  ];
+
+  const currentYear = dayjs().year();
+  const years = ["All", ...Array.from({ length: 11 }, (_, i) =>
+    (currentYear + 5 - i).toString(),
+  )];
 
   const [errors, setErrors] = useState({
     title: "",
@@ -360,16 +391,27 @@ const LeaveManagement = () => {
   useEffect(() => {
     if (employeeId) {
       dispatch(
-        getLeaveHistory({ employeeId, page: currentPage, limit: itemsPerPage }),
+        getLeaveHistory({
+          employeeId,
+          status: filterStatus,
+          month: selectedMonth,
+          year: selectedYear,
+          page: currentPage,
+          limit: itemsPerPage,
+        }),
       );
-      dispatch(getLeaveStats(employeeId));
+      dispatch(getLeaveStats({ employeeId, month: selectedMonth, year: selectedYear }));
     }
-  }, [dispatch, employeeId, currentPage]);
+  }, [dispatch, employeeId, currentPage, filterStatus, selectedMonth, selectedYear]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterStatus, selectedMonth, selectedYear]);
 
   useEffect(() => {
     if (submitSuccess && employeeId) {
       setIsModalOpen(false);
-      dispatch(getLeaveStats(employeeId));
+      dispatch(getLeaveStats({ employeeId, month: selectedMonth, year: selectedYear }));
       dispatch(resetSubmitSuccess());
       setFormData({ title: "", description: "", startDate: "", endDate: "", duration: 0 });
       setErrors({ title: "", description: "", startDate: "", endDate: "" });
@@ -472,8 +514,8 @@ const LeaveManagement = () => {
        if (cancelRequestDates.fulfilled.match(action)) {
            api.success({ title: "Cancellation request submitted successfully" });
            setIsCancelDateModalVisible(false);
-           dispatch(getLeaveHistory({ employeeId: employeeId, page: 1, limit: 10 }));
-           dispatch(getLeaveStats(employeeId)); 
+            dispatch(getLeaveHistory({ employeeId: employeeId, status: filterStatus, month: selectedMonth, year: selectedYear, page: 1, limit: 10 }));
+            dispatch(getLeaveStats({ employeeId, month: selectedMonth, year: selectedYear })); 
        } else {
            throw new Error(action.payload as string || "Cancellation failed");
        }
@@ -524,17 +566,26 @@ const LeaveManagement = () => {
   };
 
   // Logic to undo (revoke) a pending cancellation request
-  const handleUndoCancellation = async (req: any) => {
+  const handleUndoCancellation = (req: any) => {
+    setUndoModal({ isOpen: true, request: req });
+  };
+
+  const executeUndo = async () => {
+    if (!undoModal.request || !employeeId) return;
+
+    setIsUndoing(true);
     try {
-        const action = await dispatch(undoCancellationRequest({ id: req.id, employeeId: employeeId! }));
+        const action = await dispatch(undoCancellationRequest({ id: undoModal.request.id, employeeId: employeeId! }));
 
         if (undoCancellationRequest.fulfilled.match(action)) {
-            dispatch(getLeaveHistory({ employeeId }));
+            dispatch(getLeaveHistory({ employeeId, status: filterStatus, month: selectedMonth, year: selectedYear, page: currentPage, limit: itemsPerPage }));
+            dispatch(getLeaveStats({ employeeId, month: selectedMonth, year: selectedYear }));
             api.success({
                 title: "Cancellation Revoked",
                 description: "Your cancellation request has been undone.",
                 placement: "topRight"
             });
+            setUndoModal({ isOpen: false, request: null });
         } else {
             throw new Error(action.payload as string || "Could not undo cancellation");
         }
@@ -544,6 +595,8 @@ const LeaveManagement = () => {
             description: err.message || "Could not undo cancellation.",
             placement: "topRight"
         });
+    } finally {
+        setIsUndoing(false);
     }
   };
 
@@ -569,8 +622,8 @@ const LeaveManagement = () => {
       action
         .then((result: any) => {
            if (updateLeaveRequestStatus.fulfilled.match(result)) {
-              dispatch(getLeaveStats(employeeId));
-              dispatch(getLeaveHistory({ employeeId }));
+               dispatch(getLeaveStats({ employeeId, month: selectedMonth, year: selectedYear }));
+               dispatch(getLeaveHistory({ employeeId, status: filterStatus, month: selectedMonth, year: selectedYear, page: 1, limit: 10 }));
                setCancelModal({ isOpen: false, id: null });
                api.success({
                  title: "Request Cancelled",
@@ -735,9 +788,21 @@ const LeaveManagement = () => {
                 <h3 className="text-lg font-bold text-[#2B3674]">
                   {config.label}
                 </h3>
-                <div className="mt-2 flex items-center justify-between text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                  <span>Approved: {approved}</span>
-                  <span>Rejected: {rejected}</span>
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-[10px] sm:text-[11px] font-bold uppercase tracking-tight">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[#28a745]">Approved:</span>
+                    <span className="text-[#2B3674]">{approved}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[#dc3545]">Rejected:</span>
+                    <span className="text-[#2B3674]">{rejected}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-gray-400">Cancellation Approved:</span>
+                    <span className="text-[#2B3674]">
+                      {(rawData as any).cancelled ?? 0}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -745,10 +810,85 @@ const LeaveManagement = () => {
         })}
       </div>
 
-      {/* Recent Leave History */}
-      <h3 className="text-xl font-bold text-[#2B3674] mb-4 mt-8">
-        Recent Leave History
-      </h3>
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mt-8 mb-4 gap-4">
+        <h3 className="text-xl font-bold text-[#2B3674]">
+          Recent Leave History
+        </h3>
+        <div className="flex flex-wrap gap-3 items-center">
+          <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
+            <Select
+              value={selectedMonth}
+              onChange={(val) => setSelectedMonth(val)}
+              className={`w-36 h-10 font-bold text-sm ${selectedMonth !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+              variant="borderless"
+              dropdownStyle={{ borderRadius: "16px" }}
+              suffixIcon={
+                <ChevronDown
+                  size={18}
+                  className={
+                    selectedMonth !== "All" ? "text-[#4318FF]" : "text-gray-400"
+                  }
+                />
+              }
+            >
+              <Select.Option value="All">All Months</Select.Option>
+              {months.map((m) => (
+                <Select.Option key={m.value} value={m.value}>
+                  {m.label}
+                </Select.Option>
+              ))}
+            </Select>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
+            <Select
+              value={selectedYear}
+              onChange={(val) => setSelectedYear(val)}
+              className={`w-28 h-10 font-bold text-sm ${selectedYear !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+              variant="borderless"
+              dropdownStyle={{ borderRadius: "16px" }}
+              suffixIcon={
+                <ChevronDown
+                  size={18}
+                  className={
+                    selectedYear !== "All" ? "text-[#4318FF]" : "text-gray-400"
+                  }
+                />
+              }
+            >
+              {years.map((y) => (
+                <Select.Option key={y} value={y}>
+                  {y === "All" ? "All Years" : y}
+                </Select.Option>
+              ))}
+            </Select>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
+            <Select
+              value={filterStatus}
+              onChange={(val) => setFilterStatus(val)}
+              className={`w-60 h-10 font-bold text-sm ${filterStatus !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+              variant="borderless"
+              dropdownStyle={{ borderRadius: "16px" }}
+              suffixIcon={
+                <ChevronDown
+                  size={18}
+                  className={
+                    filterStatus !== "All" ? "text-[#4318FF]" : "text-gray-400"
+                  }
+                />
+              }
+            >
+              {["All", "Pending", "Approved", "Rejected", "Request Modified", "Cancellation Approved", "Cancelled"].map((status) => (
+                <Select.Option key={status} value={status}>
+                  {status === "All" ? "All Status" : status}
+                </Select.Option>
+              ))}
+            </Select>
+          </div>
+        </div>
+      </div>
       <div className="bg-white rounded-[20px] shadow-[0px_18px_40px_rgba(112,144,176,0.12)] overflow-hidden border border-gray-100 mb-8">
         <div className="overflow-x-auto">
           <table className="w-full border-separate border-spacing-0">
@@ -875,7 +1015,9 @@ const LeaveManagement = () => {
 
                                   
                                     ? "bg-orange-50 text-orange-600 border-orange-200"
-                                    : "bg-red-50 text-red-600 border-red-200"
+                                    : item.status === "Rejected" || item.status === "Cancellation Rejected"
+                                      ? "bg-red-50 text-red-600 border-red-200"
+                                      : "bg-red-50 text-red-600 border-red-200"
                         }
                       `}
                       >
@@ -987,348 +1129,410 @@ const LeaveManagement = () => {
       </div>
 
       {/* Application Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-100 flex items-start justify-center p-6 pt-20">
-          <div
-            className="absolute inset-0 bg-[#2B3674]/30 backdrop-blur-sm"
-            onClick={handleCloseModal}
-          />
-          <div className="relative w-full max-w-xl bg-white rounded-[32px] overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-300 flex flex-col max-h-[85vh]">
-            {/* Modal Header */}
-            <div className="pt-1 px-4 pb-0">
-              <div className="flex justify-between items-start mb-0">
+      {/* Application Modal */}
+      <Modal
+        open={isModalOpen}
+        onCancel={handleCloseModal}
+        footer={null}
+        closable={false}
+        centered
+        width={700}
+        className="application-modal"
+      >
+        <div className="relative overflow-hidden bg-white rounded-[16px]">
+          {/* Modal Header */}
+          <div className="pt-2 px-6">
+            <div className="flex justify-between items-start">
+               <span className="text-sm font-black uppercase tracking-widest text-[#A3AED0]">
+                {isViewMode ? "Viewing Application" : "Applying For"}
+              </span>
+              <button
+                onClick={handleCloseModal}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                disabled={loading}
+              >
+                <X size={22} className="text-[#2B3674]" />
+              </button>
+            </div>
+            <div className="flex items-center justify-between w-full mt-1">
+              <h2 className="text-2xl md:text-3xl font-black text-[#2B3674]">
+                {selectedLeaveType}
+              </h2>
+            </div>
+          </div>
+
+          {/* Modal Body */}
+          <div className="p-6 space-y-5 overflow-y-auto custom-scrollbar max-h-[75vh]">
+            {/* Error Message */}
+            {error && (
+              <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+                <XCircle size={20} className="text-red-500 shrink-0" />
+                <p className="text-xs font-bold text-red-600 leading-tight">
+                  {error}
+                </p>
+              </div>
+            )}
+            
+            {/* Title Field */}
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-[#2B3674] ml-1">
+                Title
+              </label>
+              {isViewMode ? (
+                <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none break-words">
+                  {formData.title}
+                </div>
+              ) : (
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="e.g. Annual Vacation"
+                    className={`w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] border ${
+                      errors.title ? "border-red-500" : "border-transparent"
+                    } focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400`}
+                    value={formData.title}
+                    onChange={(e) =>
+                      setFormData({ ...formData, title: e.target.value })
+                    }
+                  />
+                  {errors.title && (
+                    <p className="text-red-500 text-xs mt-1 ml-2">
+                      {errors.title}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Dates Row */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-[#2B3674] ml-1">
+                  Start Date
+                </label>
+                {isViewMode ? (
+                  <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] text-center">
+                    {dayjs(formData.startDate).format("DD-MM-YYYY")}
+                  </div>
+                ) : (
+                  <>
+                    <ConfigProvider theme={datePickerTheme}>
+                      <DatePicker
+                        classNames={{ popup: "hide-other-months show-weekdays" }}
+                        disabledDate={disabledDate}
+                        className={`w-full px-5! py-3! rounded-[20px]! bg-[#F4F7FE]! border-none! focus:bg-white! focus:border-[#4318FF]! transition-all font-bold! text-[#2B3674]! shadow-none`}
+                        value={
+                          formData.startDate
+                            ? dayjs(formData.startDate)
+                            : null
+                        }
+                        onChange={(date) => {
+                          const newStartDate = date
+                            ? date.format("YYYY-MM-DD")
+                            : "";
+                          setFormData((prev) => {
+                            const newData = {
+                              ...prev,
+                              startDate: newStartDate,
+                            };
+                            if (
+                              newData.endDate &&
+                              newData.startDate &&
+                              dayjs(newData.endDate).isBefore(
+                                dayjs(newData.startDate),
+                              )
+                            ) {
+                              newData.endDate = "";
+                            }
+                            return newData;
+                          });
+                        }}
+                        format="DD-MM-YYYY"
+                        placeholder="dd-mm-yyyy"
+                        suffixIcon={null}
+                        getPopupContainer={(trigger: any) => trigger.parentNode}
+                      />
+                    </ConfigProvider>
+                    {errors.startDate && (
+                      <p className="text-red-500 text-xs mt-1 ml-2">
+                        {errors.startDate}
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-[#2B3674] ml-1">
+                  End Date
+                </label>
+                {isViewMode ? (
+                  <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] text-center">
+                    {dayjs(formData.endDate).format("DD-MM-YYYY")}
+                  </div>
+                ) : (
+                  <>
+                    <ConfigProvider theme={datePickerTheme}>
+                      <DatePicker
+                        classNames={{ popup: "hide-other-months show-weekdays" }}
+                        disabledDate={disabledEndDate}
+                        className={`w-full px-5! py-3! rounded-[20px]! bg-[#F4F7FE]! border-none! focus:bg-white! focus:border-[#4318FF]! transition-all font-bold! text-[#2B3674]! shadow-none`}
+                        value={
+                          formData.endDate ? dayjs(formData.endDate) : null
+                        }
+                        onChange={(date) =>
+                          setFormData({
+                            ...formData,
+                            endDate: date ? date.format("YYYY-MM-DD") : "",
+                          })
+                        }
+                        format="DD-MM-YYYY"
+                        placeholder="dd-mm-yyyy"
+                        suffixIcon={null}
+                        getPopupContainer={(trigger: any) => trigger.parentNode}
+                      />
+                    </ConfigProvider>
+                    {errors.endDate && (
+                      <p className="text-red-500 text-xs mt-1 ml-2">
+                        {errors.endDate}
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Duration Field */}
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-[#2B3674] ml-1">
+                Duration
+              </label>
+              <div className="w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] font-bold text-[#4318FF] flex items-center justify-between">
+                <span>Total Days:</span>
+                <span className="bg-white px-4 py-1 rounded-lg shadow-sm border border-blue-100">
+                  {formData.startDate && formData.endDate
+                    ? (() => {
+                        if (isViewMode) return `${formData.duration} Day(s)`;
+                        
+                        if (selectedLeaveType === "Client Visit" || selectedLeaveType === "Work From Home" || selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave") {
+                          return `${calculateDurationExcludingWeekends(formData.startDate, formData.endDate)} Day(s)`;
+                        } else {
+                          return `${dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1} Day(s)`;
+                        }
+                      })()
+                    : "0 Days"}
+                </span>
+              </div>
+            </div>
+
+            {/* Description Field */}
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-[#2B3674] ml-1">
+                Description
+              </label>
+              {isViewMode ? (
+                <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-medium text-[#2B3674] min-h-[60px] whitespace-pre-wrap break-words leading-relaxed">
+                  {formData.description || "No description provided."}
+                </div>
+              ) : (
+                <div className="relative">
+                  <textarea
+                    rows={3}
+                    placeholder="Please provide details about your request..."
+                    className={`w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] border ${
+                      errors.description
+                        ? "border-red-500"
+                        : "border-transparent"
+                    } focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium text-[#2B3674] placeholder:font-medium placeholder:text-gray-400 resize-none`}
+                    value={formData.description}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        description: e.target.value,
+                      })
+                    }
+                  />
+                  {errors.description && (
+                    <p className="text-red-500 text-xs mt-1 ml-2">
+                      {errors.description}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Document Upload Section */}
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-[#2B3674] ml-1">
+                Supporting Documents {isViewMode ? "" : "(Optional)"}
+              </label>
+              {!isViewMode && (
+                <p className="text-xs text-gray-500 ml-1 mb-1">
+                  Accepted formats: PDF, JPG, PNG, JPEG (Max 5 files)
+                </p>
+              )}
+              <div className="bg-[#F4F7FE] rounded-2xl p-2 border border-blue-50">
+                <CommonMultipleUploader
+                  key={isViewMode ? selectedRequestId : uploaderKey}
+                  entityType="LEAVE_REQUEST"
+                  entityId={
+                    (entity?.id || currentUser?.id) &&
+                    !isNaN(Number(entity?.id || currentUser?.id))
+                      ? Number(entity?.id || currentUser?.id)
+                      : 0
+                  }
+                  refId={isViewMode ? selectedRequestId || 0 : 0}
+                  refType="DOCUMENT"
+                  fetchOnMount={isViewMode}
+                  uploadFile={uploadLeaveRequestFile}
+                  downloadFile={downloadLeaveRequestFile}
+                  previewFile={previewLeaveRequestFile}
+                  deleteFile={deleteLeaveRequestFile}
+                  getFiles={getLeaveRequestFiles}
+                  maxFiles={5}
+                  allowedTypes={["images", "pdf"]}
+                  successMessage="Document uploaded successfully"
+                  deleteMessage="Document deleted successfully"
+                  disabled={isViewMode}
+                />
+              </div>
+            </div>
+
+            {/* Actions Footer */}
+            {!isViewMode && (
+              <div className="pt-2 flex gap-4">
                 <button
                   onClick={handleCloseModal}
-                  className="p-1 hover:bg-gray-100 rounded-full transition-colors ml-auto"
+                  className="flex-1 py-3.5 rounded-2xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 transition-colors"
                 >
-                  <X size={20} className="text-gray-700" />
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={loading}
+                  className="flex-1 py-4 rounded-2xl font-bold text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95 transform disabled:opacity-80"
+                >
+                  {loading ? (
+                     <div className="flex items-center justify-center gap-2">
+                        <Loader2 className="animate-spin" size={20} />
+                        <span>Submitting...</span>
+                     </div>
+                  ) : "Submit Application"}
                 </button>
               </div>
-              <div className="flex items-center justify-between w-full">
-                <span className="text-lg font-black uppercase tracking-widest text-gray-400">
-                  {isViewMode ? "Viewing Application" : "Applying For"}
-                </span>
-                <h2 className="text-2xl md:text-3xl font-black text-[#2B3674] text-right">
-                  {selectedLeaveType}
-                </h2>
-              </div>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-6 space-y-2 overflow-y-auto custom-scrollbar flex-1">
-              {/* Error Message */}
-              {error && (
-                <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
-                  <XCircle size={20} className="text-red-500 shrink-0" />
-                  <p className="text-xs font-bold text-red-600 leading-tight">
-                    {error}
-                  </p>
-                </div>
-              )}
-              {/* Title Field */}
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-[#2B3674] ml-1">
-                  Title
-                </label>
-                {isViewMode ? (
-                  <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none break-words">
-                    {formData.title}
-                  </div>
-                ) : (
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="e.g. Annual Vacation"
-                      className={`w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] border ${
-                        errors.title ? "border-red-500" : "border-transparent"
-                      } focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400`}
-                      value={formData.title}
-                      onChange={(e) =>
-                        setFormData({ ...formData, title: e.target.value })
-                      }
-                    />
-                    {errors.title && (
-                      <p className="text-red-500 text-xs mt-1 ml-2">
-                        {errors.title}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Dates Row */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-[#2B3674] ml-1">
-                    Start Date
-                  </label>
-                  {isViewMode ? (
-                    <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] text-center">
-                      {dayjs(formData.startDate).format("DD-MM-YYYY")}
-                    </div>
-                  ) : (
-                    <>
-                      <ConfigProvider theme={datePickerTheme}>
-                        <DatePicker
-                          classNames={{ popup: "hide-other-months show-weekdays" }}
-                          disabledDate={disabledDate}
-                          className={`w-full px-5! py-3! rounded-[20px]! bg-[#F4F7FE]! border-none! focus:bg-white! focus:border-[#4318FF]! transition-all font-bold! text-[#2B3674]! shadow-none`}
-                          value={
-                            formData.startDate
-                              ? dayjs(formData.startDate)
-                              : null
-                          }
-                          onChange={(date) => {
-                            const newStartDate = date
-                              ? date.format("YYYY-MM-DD")
-                              : "";
-                            setFormData((prev) => {
-                              const newData = {
-                                ...prev,
-                                startDate: newStartDate,
-                              };
-                              if (
-                                newData.endDate &&
-                                newData.startDate &&
-                                dayjs(newData.endDate).isBefore(
-                                  dayjs(newData.startDate),
-                                )
-                              ) {
-                                newData.endDate = "";
-                              }
-                              return newData;
-                            });
-                          }}
-                          format="DD-MM-YYYY"
-                          placeholder="dd-mm-yyyy"
-                          suffixIcon={null}
-                        />
-                      </ConfigProvider>
-                      {errors.startDate && (
-                        <p className="text-red-500 text-xs mt-1 ml-2">
-                          {errors.startDate}
-                        </p>
-                      )}
-                    </>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-[#2B3674] ml-1">
-                    End Date
-                  </label>
-                  {isViewMode ? (
-                    <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] text-center">
-                      {dayjs(formData.endDate).format("DD-MM-YYYY")}
-                    </div>
-                  ) : (
-                    <>
-                      <ConfigProvider theme={datePickerTheme}>
-                        <DatePicker
-                          classNames={{ popup: "hide-other-months show-weekdays" }}
-                          disabledDate={disabledEndDate}
-                          className={`w-full px-5! py-3! rounded-[20px]! bg-[#F4F7FE]! border-none! focus:bg-white! focus:border-[#4318FF]! transition-all font-bold! text-[#2B3674]! shadow-none`}
-                          value={
-                            formData.endDate ? dayjs(formData.endDate) : null
-                          }
-                          onChange={(date) =>
-                            setFormData({
-                              ...formData,
-                              endDate: date ? date.format("YYYY-MM-DD") : "",
-                            })
-                          }
-                          format="DD-MM-YYYY"
-                          placeholder="dd-mm-yyyy"
-                          suffixIcon={null}
-                        />
-                      </ConfigProvider>
-                      {errors.endDate && (
-                        <p className="text-red-500 text-xs mt-1 ml-2">
-                          {errors.endDate}
-                        </p>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Duration Field */}
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-[#2B3674] ml-1">
-                  Duration
-                </label>
-                <div className="w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] font-bold text-[#4318FF] flex items-center justify-between">
-                  <span>Total Days:</span>
-                  <span className="bg-white px-4 py-1 rounded-lg shadow-sm border border-blue-100">
-                    {formData.startDate && formData.endDate
-                      ? (() => {
-                          if (isViewMode) return `${formData.duration} Day(s)`;
-                          
-                          // For Client Visit, WFH, and Leave, exclude weekends and holidays from duration display
-                          if (selectedLeaveType === "Client Visit" || selectedLeaveType === "Work From Home" || selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave") {
-                            return `${calculateDurationExcludingWeekends(formData.startDate, formData.endDate)} Day(s)`;
-                          } else {
-                            return `${dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1} Day(s)`;
-                          }
-                        })()
-                      : "0 Days"}
-                  </span>
-                </div>
-              </div>
-
-              {/* Description Field */}
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-[#2B3674] ml-1">
-                  Description
-                </label>
-                {isViewMode ? (
-                  <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-medium text-[#2B3674] min-h-[60px] whitespace-pre-wrap break-words leading-relaxed">
-                    {formData.description || "No description provided."}
-                  </div>
-                ) : (
-                  <div className="relative">
-                    <textarea
-                      rows={3}
-                      placeholder="Please provide details about your request..."
-                      className={`w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] border ${
-                        errors.description
-                          ? "border-red-500"
-                          : "border-transparent"
-                      } focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium text-[#2B3674] placeholder:font-medium placeholder:text-gray-400 resize-none`}
-                      value={formData.description}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          description: e.target.value,
-                        })
-                      }
-                    />
-                    {errors.description && (
-                      <p className="text-red-500 text-xs mt-1 ml-2">
-                        {errors.description}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Document Upload Section - Only show when not in view mode */}
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-[#2B3674] ml-1">
-                  Supporting Documents {isViewMode ? "" : "(Optional)"}
-                </label>
-                {!isViewMode && (
-                  <p className="text-xs text-gray-500 ml-1 mb-1">
-                    Accepted formats: PDF, JPG, PNG, JPEG (Max 5 files, 5MB per
-                    file)
-                  </p>
-                )}
-                <div className="bg-[#F4F7FE] rounded-2xl p-2">
-                  <CommonMultipleUploader
-                    key={isViewMode ? selectedRequestId : uploaderKey}
-                    entityType="LEAVE_REQUEST"
-                    entityId={
-                      (entity?.id || currentUser?.id) &&
-                      !isNaN(Number(entity?.id || currentUser?.id))
-                        ? Number(entity?.id || currentUser?.id)
-                        : 0
-                    }
-                    refId={isViewMode ? selectedRequestId || 0 : 0}
-                    refType="DOCUMENT"
-                    fetchOnMount={isViewMode} // Don't fetch old refId 0 files in apply mode
-                    uploadFile={uploadLeaveRequestFile}
-                    downloadFile={downloadLeaveRequestFile}
-                    previewFile={previewLeaveRequestFile}
-                    deleteFile={deleteLeaveRequestFile}
-                    getFiles={getLeaveRequestFiles}
-                    maxFiles={5}
-                    allowedTypes={["images", "pdf"]}
-                    successMessage="Document uploaded successfully"
-                    deleteMessage="Document deleted successfully"
-                    disabled={isViewMode}
-                  />
-                </div>
-              </div>
-
-              {/* Actions Footer */}
-              {!isViewMode && (
-                <div className="pt-2 flex gap-4">
-                  <>
-                    <button
-                      onClick={handleCloseModal}
-                      className="flex-1 py-3 rounded-2xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-200 hover:text-gray-900 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleSubmit}
-                      disabled={loading}
-                      className="flex-1 py-4 rounded-2xl font-bold text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95 transform disabled:opacity-50"
-                    >
-                      {loading ? "Submitting..." : "Submit Application"}
-                    </button>
-                  </>
-                </div>
-              )}
-            </div>
+            )}
           </div>
         </div>
-      )}
+      </Modal>
 
       {/* Cancel Confirmation Modal */}
-      {cancelModal.isOpen && (
-        <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-[#2B3674]/40 backdrop-blur-sm transition-opacity"
-            onClick={() => setCancelModal({ ...cancelModal, isOpen: false })}
-          />
-          <div className="relative w-full max-w-md bg-white rounded-[24px] overflow-hidden shadow-[0px_20px_40px_rgba(0,0,0,0.1)] animate-in fade-in zoom-in duration-200 transform">
-            <div className="p-8 text-center">
-              <div className="mx-auto w-16 h-16 rounded-full bg-red-50 text-red-500 flex items-center justify-center mb-6">
-                <XCircle size={32} strokeWidth={2.5} />
-              </div>
-
-              <h3 className="text-2xl font-black text-[#2B3674] mb-2">
-                Cancel Request?
-              </h3>
-
-              <p className="text-gray-500 font-medium leading-relaxed mb-8">
-                {(entities.find((e: any) => e.id === cancelModal.id)?.status === 'Approved') 
-                  ? "This request is currently Approved. Cancelling it will submit a request to the Admin for approval. Are you sure?"
-                  : "Are you sure you want to cancel this request? This action cannot be undone."}
-              </p>
-
-              <div className="flex gap-4">
-                <button
-                  onClick={() =>
-                    setCancelModal({ ...cancelModal, isOpen: false })
-                  }
-                  className="flex-1 py-3.5 rounded-xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 transition-colors"
-                >
-                  No, Keep It
-                </button>
-                <button
-                  onClick={executeCancel}
-                  disabled={isCancelling}
-                  className={`flex-1 py-3.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${
-                    isCancelling
-                      ? "bg-red-400 cursor-not-allowed opacity-80"
-                      : "bg-red-500 hover:bg-red-600 shadow-red-200 transform active:scale-95"
-                  }`}
-                >
-                  {isCancelling ? (
-                    <>
-                      <Loader2 className="animate-spin" size={18} />
-                      Processing...
-                    </>
-                  ) : (
-                    "Yes, Cancel Request"
-                  )}
-                </button>
-              </div>
-            </div>
+      <Modal
+        open={cancelModal.isOpen}
+        onCancel={() => setCancelModal({ isOpen: false, id: null })}
+        footer={[
+          <button
+            key="back"
+            onClick={() => setCancelModal({ isOpen: false, id: null })}
+            className="px-6 py-2.5 rounded-xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 transition-colors mr-3"
+          >
+            No, Keep It
+          </button>,
+          <button
+            key="submit"
+            onClick={executeCancel}
+            disabled={isCancelling}
+            className={`px-8 py-2.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 inline-flex ${
+              isCancelling
+                ? "bg-red-400 cursor-not-allowed opacity-80"
+                : "bg-red-500 hover:bg-red-600 shadow-red-200 transform active:scale-95"
+            }`}
+          >
+            {isCancelling ? (
+              <>
+                <Loader2 className="animate-spin" size={18} />
+                Processing...
+              </>
+            ) : (
+              "Yes, Cancel Request"
+            )}
+          </button>
+        ]}
+        centered
+        closable={!isCancelling}
+      >
+        <div className="text-center py-4">
+          <div className="mx-auto w-16 h-16 rounded-full bg-red-50 text-red-500 flex items-center justify-center mb-6">
+            <XCircle size={32} strokeWidth={2.5} />
           </div>
+
+          <h3 className="text-2xl font-black text-[#2B3674] mb-2">
+            Cancel Request?
+          </h3>
+
+          <p className="text-gray-500 font-medium leading-relaxed">
+            {(entities.find((e: any) => e.id === cancelModal.id)?.status === 'Approved') 
+              ? "This request is currently Approved. Cancelling it will submit a request to the Admin for approval. Are you sure?"
+              : "Are you sure you want to cancel this request? This action cannot be undone."}
+          </p>
         </div>
-      )}
+      </Modal>
+
+      {/* Undo Confirmation Modal */}
+      <Modal
+        open={undoModal.isOpen}
+        onCancel={() => !isUndoing && setUndoModal({ isOpen: true, request: null })}
+        footer={[
+          <button
+            key="back"
+            disabled={isUndoing}
+            className="px-6 py-2.5 rounded-xl font-bold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 transition-colors mr-3"
+            onClick={() => setUndoModal({ isOpen: false, request: null })}
+          >
+            Keep as is
+          </button>,
+          <button
+            key="submit"
+            disabled={isUndoing}
+            className={`px-8 py-2.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 inline-flex ${
+              isUndoing
+                ? "bg-indigo-400 cursor-not-allowed"
+                : "bg-[#4318FF] hover:bg-indigo-700 shadow-indigo-200 transform active:scale-95"
+            }`}
+            onClick={executeUndo}
+          >
+            {isUndoing ? (
+              <>
+                <Loader2 className="animate-spin" size={18} />
+                Reverting...
+              </>
+            ) : (
+              "Yes, Revert it"
+            )}
+          </button>
+        ]}
+        centered
+        closable={!isUndoing}
+      >
+        <div className="py-2 text-center sm:text-left">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-2xl bg-indigo-50 border border-indigo-100">
+              <RotateCcw className="h-6 w-6 text-[#4318FF]" />
+            </div>
+            <h3 className="text-xl leading-8 font-extrabold text-[#1B2559]">
+              Revert Cancellation
+            </h3>
+          </div>
+          <p className="text-sm text-gray-500 leading-relaxed font-medium">
+            Are you sure you want to revert the cancellation for{" "}
+            <span className="text-[#1B2559] font-bold">
+              "{undoModal.request?.title}"
+            </span>
+            ? This will restore your original request status to{" "}
+            <span className="text-green-600 font-bold uppercase tracking-wider">
+              Approved
+            </span>.
+          </p>
+        </div>
+      </Modal>
 
       {/* Partial Cancellation Modal */}
       <Modal

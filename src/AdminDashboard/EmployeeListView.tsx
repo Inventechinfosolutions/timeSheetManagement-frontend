@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { RootState } from "../store";
 import {
   getEntities,
@@ -9,6 +9,8 @@ import {
   createEntity,
   resendActivationLink,
   updateEmployeeStatus,
+  fetchDepartments,
+  fetchRoles,
 } from "../reducers/employeeDetails.reducer";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import {
@@ -36,6 +38,14 @@ import EmployeeListMobileCard from "./EmployeeListMobileCard";
 
 const EmployeeListView = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const basePath = location.pathname.startsWith("/manager-dashboard")
+    ? "/manager-dashboard"
+    : "/admin-dashboard";
+
+  const isAdmin = basePath === "/admin-dashboard";
+
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -58,6 +68,7 @@ const EmployeeListView = () => {
     department: "",
     designation: "",
     email: "",
+    role: "",
   });
   const [fieldErrors, setFieldErrors] = useState({
     fullName: "",
@@ -65,6 +76,7 @@ const EmployeeListView = () => {
     department: "",
     designation: "",
     email: "",
+    role: "",
   });
   const [generalError, setGeneralError] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
@@ -81,21 +93,23 @@ const EmployeeListView = () => {
   } | null>(null);
   // const [copySuccess, setCopySuccess] = useState<string>("");
 
-  const departments = [
-    "All",
-    "HR",
-    "IT",
-    // "Sales",
-    // "Marketing",
-    "Finance",
-    "Admin",
-    "Designer",
-    "Business Analyst",
-  ];
+  // const [copySuccess, setCopySuccess] = useState<string>("");
 
   const dispatch = useAppDispatch();
-  const { entities, totalItems, uploadLoading, uploadResult, loading } =
-    useAppSelector((state: RootState) => state.employeeDetails);
+  const {
+    entities,
+    totalItems,
+    uploadLoading,
+    uploadResult,
+    loading,
+    departments,
+    roles,
+  } = useAppSelector((state: RootState) => state.employeeDetails);
+
+  useEffect(() => {
+    dispatch(fetchDepartments());
+    dispatch(fetchRoles());
+  }, [dispatch]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -187,12 +201,12 @@ const EmployeeListView = () => {
   };
 
   const handleViewDashboard = (empId: string) => {
-    navigate(`/admin-dashboard/view-attendance/${empId}`);
+    navigate(`${basePath}/view-attendance/${empId}`);
   };
 
   const handleViewDetails = (empId: string) => {
     dispatch(getEntity(empId));
-    navigate(`/admin-dashboard/employee-details/${empId}`);
+    navigate(`${basePath}/employee-details/${empId}`);
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -453,6 +467,22 @@ const EmployeeListView = () => {
                       Departments
                     </span>
                   </div>
+                  <button
+                    key="All"
+                    onClick={() => {
+                      setSelectedDepartment("All");
+                      setIsDropdownOpen(false);
+                      setCurrentPage(1);
+                    }}
+                    className={`w-full text-left px-5 py-2 text-sm font-semibold transition-colors
+                    ${
+                      selectedDepartment === "All"
+                        ? "text-[#4318FF] bg-[#4318FF]/5"
+                        : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
+                    }`}
+                  >
+                    All
+                  </button>
                   {departments.map((dept) => (
                     <button
                       key={dept}
@@ -487,21 +517,25 @@ const EmployeeListView = () => {
               />
             </div>
 
-            <button
-              onClick={() => setIsUploadModalOpen(true)}
-              className="flex items-center justify-center gap-2 px-6 py-2.5 bg-white text-[#4318FF] border-2 border-[#4318FF] rounded-xl font-black text-xs transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 active:scale-95 tracking-widest uppercase"
-            >
-              <Upload size={18} />
-              <span className="hidden sm:inline">Upload</span>
-            </button>
+            {basePath === "/admin-dashboard" && (
+              <>
+                <button
+                  onClick={() => setIsUploadModalOpen(true)}
+                  className="flex items-center justify-center gap-2 px-6 py-2.5 bg-white text-[#4318FF] border-2 border-[#4318FF] rounded-xl font-black text-xs transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 active:scale-95 tracking-widest uppercase"
+                >
+                  <Upload size={18} />
+                  <span className="hidden sm:inline">Upload</span>
+                </button>
 
-            <button
-              onClick={() => setIsCreateModalOpen(true)}
-              className="flex items-center justify-center gap-2 px-6 py-2.5 bg-linear-to-r from-[#4318FF] to-[#868CFF] text-white rounded-xl font-black text-xs transition-all shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transform hover:-translate-y-0.5 active:scale-95 tracking-widest uppercase"
-            >
-              <UserPlus size={18} />
-              <span className="hidden sm:inline">Create Employee</span>
-            </button>
+                <button
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="flex items-center justify-center gap-2 px-6 py-2.5 bg-linear-to-r from-[#4318FF] to-[#868CFF] text-white rounded-xl font-black text-xs transition-all shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transform hover:-translate-y-0.5 active:scale-95 tracking-widest uppercase"
+                >
+                  <UserPlus size={18} />
+                  <span className="hidden sm:inline">Create Employee</span>
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -553,20 +587,24 @@ const EmployeeListView = () => {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (emp.isActive) {
+                          if (emp.isActive && isAdmin) {
                             handleToggleStatus(emp.rawId);
                           }
                         }}
-                        disabled={!emp.isActive}
+                        disabled={!emp.isActive || !isAdmin}
                         className={`relative w-20 h-7 rounded-full transition-all duration-300 flex items-center mx-auto ${
                           emp.isActive
-                            ? "bg-[#0095FF] cursor-pointer"
+                            ? isAdmin
+                              ? "bg-[#0095FF] cursor-pointer"
+                              : "bg-[#0095FF]/60 cursor-not-allowed"
                             : "bg-red-300 cursor-not-allowed"
                         }`}
                         title={
-                          !emp.isActive
-                            ? "Status cannot be changed once Inactive"
-                            : "Toggle Status"
+                          !isAdmin
+                            ? "Only admins can change employee status"
+                            : !emp.isActive
+                              ? "Status cannot be changed once Inactive"
+                              : "Toggle Status"
                         }
                       >
                         <span
@@ -649,6 +687,7 @@ const EmployeeListView = () => {
                 onViewDashboard={handleViewDashboard}
                 onResendActivation={handleResendActivation}
                 onToggleStatus={handleToggleStatus}
+                isAdmin={isAdmin}
               />
             ) : null}
           </div>
@@ -1043,25 +1082,73 @@ const EmployeeListView = () => {
                       <div className="relative">
                         <select
                           name="department"
-                          className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none transition-all text-sm appearance-none bg-white"
+                          className="w-full pl-10 pr-10 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none transition-all text-sm bg-white appearance-none"
                           value={formData.department}
                           onChange={handleFormChange}
                           required
                         >
-                          <option value="" disabled>
-                            Select Department
-                          </option>
-                          <option value="HR">HR</option>
-                          <option value="IT">IT</option>
-                          {/* <option value="Sales">Sales</option> */}
-                          {/* <option value="Marketing">Marketing</option> */}
-                          <option value="Finance">Finance</option>
-                          <option value="Designer">Designer</option>
-                          <option value="Business Analyst">
-                            Business Analyst
-                          </option>
+                          <option value="">Select Department</option>
+                          {departments.map((dept) => (
+                            <option key={dept} value={dept}>
+                              {dept}
+                            </option>
+                          ))}
                         </select>
-                        <Building className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+                        <Building className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                          <svg
+                            className="w-4 h-4 text-gray-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M19 9l-7 7-7-7"
+                            />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Role */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">
+                        Role
+                      </label>
+                      <div className="relative">
+                        <select
+                          name="role"
+                          className="w-full pl-10 pr-10 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none transition-all text-sm bg-white appearance-none"
+                          value={formData.role}
+                          onChange={handleFormChange}
+                          required
+                        >
+                          <option value="">Select Role</option>
+                          {roles.map((r) => (
+                            <option key={r} value={r}>
+                              {r}
+                            </option>
+                          ))}
+                        </select>
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                          <svg
+                            className="w-4 h-4 text-gray-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M19 9l-7 7-7-7"
+                            />
+                          </svg>
+                        </div>
                       </div>
                     </div>
 
