@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
   BarChart,
   Bar,
@@ -8,6 +8,7 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  LabelList,
 } from "recharts";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../hooks";
@@ -28,7 +29,6 @@ const WorkTrendsGraph = ({ employeeId, currentMonth }: Props) => {
   const { trends, trendsLoading } = useAppSelector(
     (state: RootState) => state.attendance,
   );
-  const [hoveredData, setHoveredData] = useState<{ name: string; value: number } | null>(null);
 
   useEffect(() => {
     if (employeeId && employeeId !== "Admin") {
@@ -117,74 +117,62 @@ const WorkTrendsGraph = ({ employeeId, currentMonth }: Props) => {
                 }}
               />
 
-              {/* Fixed Center Pill Label like Donut Chart */}
-              {hoveredData && (
-                <g>
-                  <rect
-                    x="40%"
-                    y="45%"
-                    width="120"
-                    height="40"
-                    rx="20"
-                    fill="white"
-                    stroke="#f1f5f9"
-                    strokeWidth="1"
-                    style={{ filter: "drop-shadow(0px 8px 16px rgba(0,0,0,0.1))" }}
-                  />
-                  <text
-                    x="40%"
-                    y="45%"
-                    dx="60"
-                    dy="25"
-                    textAnchor="middle"
-                    fill="#1B2559"
-                    style={{
-                      fontSize: "13px",
-                      fontWeight: "700",
-                      fontFamily: "inherit",
-                    }}
-                  >
-                    {hoveredData.name} : {hoveredData.value}
-                  </text>
-                </g>
-              )}
+              <Tooltip
+                shared={false}
+                cursor={{ fill: 'rgba(0, 0, 0, 0.04)', radius: 10 }}
+                contentStyle={{
+                  backgroundColor: "#fff",
+                  borderRadius: "10px",
+                  border: "1px solid #f1f5f9",
+                  boxShadow: "0px 10px 20px -5px rgba(0,0,0,0.1)",
+                  padding: "4px 10px",
+                }}
+                itemStyle={{
+                  fontSize: "12px",
+                  fontWeight: 700,
+                  color: "#1B2559",
+                }}
+                labelStyle={{ display: 'none' }}
+                separator=": "
+                formatter={(value, name) => [value, name]}
+              />
 
               <Bar
                 dataKey="totalLeaves"
                 name="Taken Leaves"
                 fill="#F43F5E"
-                radius={[8, 8, 0, 0]}
+                radius={[6, 6, 0, 0]}
                 activeBar={{ fill: '#FB7185' }}
-                onMouseEnter={(data: any) => setHoveredData({ name: "Taken Leaves", value: data.totalLeaves })}
-                onMouseLeave={() => setHoveredData(null)}
-              />
+              >
+                <LabelList dataKey="totalLeaves" position="top" style={{ fill: '#A3AED0', fontSize: 10, fontWeight: 700 }} offset={8} />
+              </Bar>
               <Bar
                 dataKey="halfDays"
                 name="Half Day"
                 fill="#F59E0B"
-                radius={[8, 8, 0, 0]}
+                radius={[6, 6, 0, 0]}
                 activeBar={{ fill: '#FBBF24' }}
-                onMouseEnter={(data: any) => setHoveredData({ name: "Half Day", value: data.halfDays })}
-                onMouseLeave={() => setHoveredData(null)}
-              />
+              >
+                <LabelList dataKey="halfDays" position="top" style={{ fill: '#A3AED0', fontSize: 10, fontWeight: 700 }} offset={8} />
+              </Bar>
               <Bar
                 dataKey="workFromHome"
                 name="Work From Home"
                 fill="#06B6D4"
-                radius={[8, 8, 0, 0]}
+                radius={[6, 6, 0, 0]}
                 activeBar={{ fill: '#22D3EE' }}
-                onMouseEnter={(data: any) => setHoveredData({ name: "Work From Home", value: data.workFromHome })}
-                onMouseLeave={() => setHoveredData(null)}
-              />
+              >
+                <LabelList dataKey="workFromHome" position="top" style={{ fill: '#A3AED0', fontSize: 10, fontWeight: 700 }} offset={8} />
+              </Bar>
               <Bar
                 dataKey="clientVisits"
                 name="Client Visit"
                 fill="#8B5CF6"
-                radius={[8, 8, 0, 0]}
+                radius={[6, 6, 0, 0]}
                 activeBar={{ fill: '#A78BFA' }}
-                onMouseEnter={(data: any) => setHoveredData({ name: "Client Visit", value: data.clientVisits })}
-                onMouseLeave={() => setHoveredData(null)}
-              />
+              >
+                <LabelList dataKey="clientVisits" position="top" style={{ fill: '#A3AED0', fontSize: 10, fontWeight: 700 }} offset={8} />
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         ) : (
