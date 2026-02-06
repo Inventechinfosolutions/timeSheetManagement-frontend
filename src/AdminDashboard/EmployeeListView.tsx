@@ -33,6 +33,7 @@ import {
   CheckCircle,
   CreditCard,
   Eye,
+  Calendar,
 } from "lucide-react";
 import EmployeeListMobileCard from "./EmployeeListMobileCard";
 
@@ -70,6 +71,7 @@ const EmployeeListView = () => {
     email: "",
     role: "",
     employmentType: "" as "" | "FULL_TIMER" | "INTERN",
+    joiningDate: "",
   });
   const [fieldErrors, setFieldErrors] = useState({
     fullName: "",
@@ -79,6 +81,7 @@ const EmployeeListView = () => {
     email: "",
     role: "",
     employmentType: "",
+    joiningDate: "",
   });
   const [generalError, setGeneralError] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
@@ -298,7 +301,15 @@ const EmployeeListView = () => {
     if (hasErrors) {
       return;
     }
-    const requiredKeys = ["fullName", "employeeId", "department", "role", "designation", "email"];
+    const requiredKeys = [
+      "fullName",
+      "employeeId",
+      "department",
+      "role",
+      "designation",
+      "email",
+      "joiningDate",
+    ];
     if (requiredKeys.some((k) => !(formData as Record<string, unknown>)[k])) {
       setGeneralError("Please fill in all required fields");
       return;
@@ -308,7 +319,8 @@ const EmployeeListView = () => {
     setShowSuccess(false);
 
     const submitData = { ...formData };
-    if (!submitData.employmentType) delete (submitData as Record<string, unknown>).employmentType;
+    if (!submitData.employmentType)
+      delete (submitData as Record<string, unknown>).employmentType;
 
     try {
       const resultAction = await dispatch(createEntity(submitData));
@@ -352,7 +364,9 @@ const EmployeeListView = () => {
       designation: "",
       email: "",
       role: "",
+      role: "",
       employmentType: "",
+      joiningDate: "",
     });
     setFieldErrors({
       fullName: "",
@@ -362,6 +376,7 @@ const EmployeeListView = () => {
       email: "",
       role: "",
       employmentType: "",
+      joiningDate: "",
     });
     setGeneralError("");
     setShowSuccess(false);
@@ -1199,13 +1214,25 @@ const EmployeeListView = () => {
                           className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none transition-all text-sm appearance-none bg-white"
                         >
                           <option value="">Select Employment Type</option>
-                          <option value="FULL_TIMER">Full-time employee </option>
+                          <option value="FULL_TIMER">
+                            Full-time employee{" "}
+                          </option>
                           <option value="INTERN">Intern </option>
                         </select>
                         <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
                         <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                          <svg
+                            className="w-4 h-4 text-gray-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M19 9l-7 7-7-7"
+                            />
                           </svg>
                         </div>
                       </div>
@@ -1213,6 +1240,29 @@ const EmployeeListView = () => {
                         {/* Used for leave balance: Full timer = 18, Intern = 12 leaves/year */}
                       </p>
                     </div>
+                  </div>
+
+                  {/* Date of Joining */}
+                  <div className="space-y-2 mt-4">
+                    <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">
+                      Date of Joining <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="date"
+                        name="joiningDate"
+                        className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none transition-all text-sm appearance-none bg-white"
+                        value={formData.joiningDate}
+                        onChange={handleFormChange}
+                        required
+                      />
+                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+                    </div>
+                    {fieldErrors.joiningDate && (
+                      <p className="text-red-500 text-xs mt-1">
+                        {fieldErrors.joiningDate}
+                      </p>
+                    )}
                   </div>
 
                   {/* Email - Full Width */}

@@ -14,6 +14,7 @@ import {
   CheckCircle,
   X,
   AlertCircle,
+  Calendar,
 } from "lucide-react";
 import { resetPassword } from "../reducers/employeeDetails.reducer";
 
@@ -41,6 +42,7 @@ const EmployeeDetailsView = () => {
     department: "",
     designation: "",
     employmentType: "" as "" | "FULL_TIMER" | "INTERN",
+    joiningDate: "",
     email: "",
   });
   const [showConfirm, setShowConfirm] = useState(false);
@@ -92,7 +94,11 @@ const EmployeeDetailsView = () => {
         employeeId: employee.employeeId || employee.id || "",
         department: employee.department || "",
         designation: employee.designation || "",
-        employmentType: (employee.employmentType as "" | "FULL_TIMER" | "INTERN") || "",
+        employmentType:
+          (employee.employmentType as "" | "FULL_TIMER" | "INTERN") || "",
+        joiningDate: employee.joiningDate
+          ? new Date(employee.joiningDate).toISOString().split("T")[0]
+          : "",
         email: employee.email || "",
       });
     }
@@ -131,26 +137,25 @@ const EmployeeDetailsView = () => {
   const confirmSave = async () => {
     try {
       const oldEmployeeId = employee.employeeId || employee.id;
-      await axios.put(
-        `/api/employee-details/${oldEmployeeId}`,
-        editedData,
-      );
+      await axios.put(`/api/employee-details/${oldEmployeeId}`, editedData);
       setIsEditing(false);
       setShowConfirm(false);
       setUpdateSuccess(true);
-      
+
       // If employee ID changed, navigate to new employee ID and fetch with new ID
       const newEmployeeId = editedData.employeeId;
       if (newEmployeeId && newEmployeeId !== oldEmployeeId) {
         // Navigate to new employee ID URL
-        navigate(`/admin-dashboard/employees/${newEmployeeId}`, { replace: true });
+        navigate(`/admin-dashboard/employees/${newEmployeeId}`, {
+          replace: true,
+        });
         // Fetch entity with new employee ID
         dispatch(getEntity(newEmployeeId));
       } else {
         // Refresh the entity with current employee ID
         dispatch(getEntity(employeeId!));
       }
-      
+
       // Hide success message after 3 seconds
       setTimeout(() => {
         setUpdateSuccess(false);
@@ -167,7 +172,11 @@ const EmployeeDetailsView = () => {
       employeeId: employee.employeeId || employee.id || "",
       department: employee.department || "",
       designation: employee.designation || "",
-      employmentType: (employee.employmentType as "" | "FULL_TIMER" | "INTERN") || "",
+      employmentType:
+        (employee.employmentType as "" | "FULL_TIMER" | "INTERN") || "",
+      joiningDate: employee.joiningDate
+        ? new Date(employee.joiningDate).toISOString().split("T")[0]
+        : "",
       email: employee.email || "",
     });
     setIsEditing(false);
@@ -465,9 +474,9 @@ const EmployeeDetailsView = () => {
           </div>
 
           {/* Employment type (leave balance) */}
-          <div className="space-y-1.5">
+          {/* <div className="space-y-1.5">
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
-              Employment type (leave balance)
+              Employment type
             </label>
             <select
               disabled={!isEditing}
@@ -479,7 +488,10 @@ const EmployeeDetailsView = () => {
               onChange={(e) =>
                 setEditedData({
                   ...editedData,
-                  employmentType: e.target.value as "" | "FULL_TIMER" | "INTERN",
+                  employmentType: e.target.value as
+                    | ""
+                    | "FULL_TIMER"
+                    | "INTERN",
                 })
               }
               className={`w-full pl-11 pr-4 py-2.5 border-2 rounded-xl text-[#1B2559] text-sm font-semibold transition-all appearance-none ${
@@ -488,11 +500,44 @@ const EmployeeDetailsView = () => {
                   : "border-gray-100 bg-gray-50/50"
               }`}
             >
-              <option value="">Not set (infer from designation)</option>
-              <option value="FULL_TIMER">Full timer (18 leaves/year)</option>
-              <option value="INTERN">Intern (12 leaves/year)</option>
+              <option value="">Select Employment Type</option>
+              <option value="FULL_TIMER">Full time Employee</option>
+              <option value="INTERN">Intern</option>
             </select>
-          </div>
+          </div> */}
+
+          {/* Joining Date */}
+          {/* <div className="space-y-1.5">
+            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
+              Date of Joining
+            </label>
+            <div className="relative group">
+              <input
+                type="date"
+                disabled={!isEditing}
+                value={
+                  isEditing
+                    ? editedData.joiningDate
+                    : employee.joiningDate
+                      ? new Date(employee.joiningDate)
+                          .toISOString()
+                          .split("T")[0]
+                      : ""
+                }
+                onChange={(e) =>
+                  setEditedData({ ...editedData, joiningDate: e.target.value })
+                }
+                className={`w-full pl-11 pr-4 py-2.5 border-2 rounded-xl text-[#1B2559] text-sm font-semibold transition-all ${
+                  isEditing
+                    ? "border-gray-200 focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white"
+                    : "border-gray-100 bg-gray-50/50"
+                }`}
+              />
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
+                <Calendar className="text-blue-500 w-4 h-4" />
+              </div>
+            </div>
+          </div> */}
 
           {/* Email */}
           <div className="space-y-1.5 md:col-span-2">

@@ -1,25 +1,17 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import {
-  Clock,
-  AlertTriangle,
-  Edit,
-  Calendar as CalendarIcon,
-  TrendingUp,
-  CheckCircle,
-  Ban,
-  Calendar,
-  ClipboardList,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { AlertTriangle, Edit, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import {
   fetchMonthlyAttendance,
   fetchDashboardStats,
+  fetchAttendanceByDateRange,
 } from "../reducers/employeeAttendance.reducer";
 import { getEntity, setCurrentUser } from "../reducers/employeeDetails.reducer";
-import { fetchEmployeeUpdates, fetchUnreadNotifications } from "../reducers/leaveNotification.reducer";
+import {
+  fetchEmployeeUpdates,
+  fetchUnreadNotifications,
+} from "../reducers/leaveNotification.reducer";
 import { fetchNotifications } from "../reducers/notification.reducer";
 import {
   getAllLeaveRequests,
@@ -30,6 +22,7 @@ import { generateMonthlyEntries } from "../utils/attendanceUtils";
 import AttendanceViewWrapper from "./CalenderViewWrapper";
 import AttendancePieChart from "./AttendancePieChart";
 import WorkTrendsGraph from "./WorkTrendsGraph";
+import AttendanceStatsCards from "./AttendanceStatsCards";
 import { RootState } from "../store";
 
 interface Props {
@@ -38,11 +31,6 @@ interface Props {
   onNavigate?: (timestamp: number) => void;
   viewOnly?: boolean;
 }
-
-const ENTITLEMENT = {
-  FULL_TIMER: 18,
-  INTERN: 12,
-} as const;
 
 const TodayAttendance = ({
   setActiveTab,
@@ -53,7 +41,7 @@ const TodayAttendance = ({
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const location = useLocation();
-  const { records, loading, stats } = useAppSelector(
+  const { records, loading, yearlyRecords } = useAppSelector(
     (state: RootState) => state.attendance,
   );
   const { entity } = useAppSelector(
@@ -65,11 +53,10 @@ const TodayAttendance = ({
   );
 
   // Leave Balance State
-  const {
-    entities: leaveEntities,
-    leaveBalance,
-    loading: leaveLoading,
-  } = useAppSelector((state: RootState) => state.leaveRequest);
+  // Leave Balance State
+  const { leaveBalance, loading: leaveLoading } = useAppSelector(
+    (state: RootState) => state.leaveRequest,
+  );
 
   const currentEmployeeId = entity?.employeeId;
   const detailsFetched = useRef(false);
@@ -135,8 +122,19 @@ const TodayAttendance = ({
           limit: 500,
         }),
       );
+
+      // Fetch Annual Attendance for Stats
+      const startOfYear = `${selectedYear}-01-01`;
+      const endOfYear = `${selectedYear}-12-31`;
+      dispatch(
+        fetchAttendanceByDateRange({
+          employeeId: currentEmployeeId,
+          startDate: startOfYear,
+          endDate: endOfYear,
+        }),
+      );
     }
-  }, [dispatch, currentEmployeeId, calendarDate]);
+  }, [dispatch, currentEmployeeId, calendarDate, selectedYear]);
 
   // Leave Balance Logic
   const isIntern = useMemo(() => {
@@ -145,152 +143,6 @@ const TodayAttendance = ({
       .toLowerCase();
     return designation.includes("intern");
   }, [entity?.designation, entity?.designation_name]);
-
-  const {
-    paidUsed,
-    lopUsed,
-    approvedUsed,
-    paidUsedYTD,
-    lopUsedYTD,
-    paidUsedBefore,
-  } = useMemo(() => {
-    if (!Array.isArray(leaveEntities))
-      return {
-        paidUsed: 0,
-        lopUsed: 0,
-        approvedUsed: 0,
-        paidUsedYTD: 0,
-        lopUsedYTD: 0,
-        paidUsedBefore: 0,
-      };
-
-    const selYear = calendarDate.getFullYear();
-    const selMonth = calendarDate.getMonth() + 1;
-    const currentYearMonth = `${selYear}-${selMonth.toString().padStart(2, "0")}`;
-
-    const approvedLeavesAll = leaveEntities.filter(
-      (e: any) =>
-        (e.requestType === "Apply Leave" || e.requestType === "Leave") &&
-        e.status === "Approved",
-    );
-
-    // Leaves in the selected YEAR but in months BEFORE the selected month
-    const approvedLeavesBefore = approvedLeavesAll.filter((e: any) => {
-      if (!e.fromDate) return false;
-      const [y, m] = e.fromDate.split("-").map(Number);
-      return y === selYear && m < selMonth;
-    });
-
-    const approvedLeavesMonthly = approvedLeavesAll.filter(
-      (e: any) => e.fromDate && e.fromDate.substring(0, 7) === currentYearMonth,
-    );
-
-    if (!isIntern) {
-      return {
-        paidUsed: approvedLeavesMonthly.length,
-        lopUsed: 0,
-        approvedUsed: approvedLeavesMonthly.length,
-        paidUsedYTD: approvedLeavesAll.length,
-        lopUsedYTD: 0,
-        paidUsedBefore: approvedLeavesBefore.length,
-      };
-    }
-
-    // Intern Monthly
-    const monthlyLeaves: Record<string, number> = {};
-    approvedLeavesMonthly.forEach((e: any) => {
-      if (e.fromDate) {
-        const m = e.fromDate.substring(0, 7);
-        monthlyLeaves[m] = (monthlyLeaves[m] || 0) + 1;
-      }
-    });
-
-    let paidM = 0;
-    let lopM = 0;
-    Object.values(monthlyLeaves).forEach((count) => {
-      paidM += 1;
-      lopM += count - 1;
-    });
-
-    // Intern YTD
-    const monthlyLeavesYTD: Record<string, number> = {};
-    approvedLeavesAll.forEach((e: any) => {
-      if (e.fromDate) {
-        const m = e.fromDate.substring(0, 7);
-        monthlyLeavesYTD[m] = (monthlyLeavesYTD[m] || 0) + 1;
-      }
-    });
-
-    let paidYTD = 0;
-    let lopYTD = 0;
-    Object.values(monthlyLeavesYTD).forEach((count) => {
-      paidYTD += 1;
-      lopYTD += count - 1;
-    });
-
-    // Intern Before Selected Month
-    const monthlyLeavesBefore: Record<string, number> = {};
-    approvedLeavesBefore.forEach((e: any) => {
-      if (e.fromDate) {
-        const m = e.fromDate.substring(0, 7);
-        monthlyLeavesBefore[m] = (monthlyLeavesBefore[m] || 0) + 1;
-      }
-    });
-
-    let paidB = 0;
-    Object.values(monthlyLeavesBefore).forEach(() => {
-      paidB += 1;
-    });
-
-    return {
-      paidUsed: paidM,
-      lopUsed: lopM,
-      approvedUsed: approvedLeavesMonthly.length,
-      paidUsedYTD: paidYTD,
-      lopUsedYTD: lopYTD,
-      paidUsedBefore: paidB,
-    };
-  }, [leaveEntities, isIntern, calendarDate]);
-
-  const entitlement = useMemo(() => {
-    if (leaveBalance && String(leaveBalance.year) === String(selectedYear)) {
-      return leaveBalance.entitlement;
-    }
-    return isIntern ? ENTITLEMENT.INTERN : ENTITLEMENT.FULL_TIMER;
-  }, [leaveBalance, selectedYear, isIntern]);
-
-  const dynamicCarryOver = useMemo(() => {
-    const backendCarryOver = !isIntern ? leaveBalance?.carryOver || 0 : 0;
-    const selMonth = calendarDate.getMonth() + 1;
-    const monthlyAccrual = isIntern ? 1 : 1.5;
-    const totalAccruedSoFar = (selMonth - 1) * monthlyAccrual;
-    return Math.max(0, backendCarryOver + totalAccruedSoFar - paidUsedBefore);
-  }, [leaveBalance, isIntern, calendarDate, paidUsedBefore]);
-
-  const pendingCount = useMemo(() => {
-    if (!Array.isArray(leaveEntities)) return 0;
-    const currentYearMonth = `${calendarDate.getFullYear()}-${(calendarDate.getMonth() + 1).toString().padStart(2, "0")}`;
-    return leaveEntities.filter(
-      (e: any) =>
-        (e.requestType === "Apply Leave" || e.requestType === "Leave") &&
-        (e.status === "Pending" || e.status === "pending") &&
-        e.fromDate &&
-        e.fromDate.substring(0, 7) === currentYearMonth,
-    ).length;
-  }, [calendarDate, leaveEntities]);
-
-  const balance = useMemo(() => {
-    const carryOver = !isIntern ? leaveBalance?.carryOver || 0 : 0;
-    if (leaveBalance && String(leaveBalance.year) === String(selectedYear)) {
-      return leaveBalance.balance + carryOver;
-    }
-    return Math.max(0, entitlement + carryOver - paidUsedYTD);
-  }, [leaveBalance, selectedYear, entitlement, paidUsedYTD, isIntern]);
-
-  const balanceMonthly = useMemo(() => {
-    const monthlyEntitlement = isIntern ? 1 : 1.5;
-    return Math.max(0, monthlyEntitlement - paidUsed);
-  }, [isIntern, paidUsed]);
 
   // 1. Separate "Today's" Data - ALWAYS based on current real-time Month
   const todayStatsEntry = useMemo(() => {
@@ -372,7 +224,7 @@ const TodayAttendance = ({
       if (setScrollToDate) setScrollToDate(timestamp);
 
       const targetDate = new Date(timestamp);
-      
+
       // Dynamic base path detection
       let basePath = "/employee-dashboard";
       if (location.pathname.startsWith("/manager-dashboard")) {
@@ -380,7 +232,7 @@ const TodayAttendance = ({
       } else if (location.pathname.startsWith("/admin-dashboard")) {
         basePath = "/admin-dashboard";
       }
-      
+
       const navTarget = `${basePath}/my-timesheet`;
       const state = {
         selectedDate: targetDate.toISOString(),
@@ -469,12 +321,21 @@ const TodayAttendance = ({
             </span>
 
             <button
+              disabled={
+                calendarDate.getMonth() === now.getMonth() &&
+                calendarDate.getFullYear() === now.getFullYear()
+              }
               onClick={() => {
                 const next = new Date(calendarDate);
                 next.setMonth(next.getMonth() + 1);
                 setCalendarDate(next);
               }}
-              className="p-1.5 hover:bg-gray-50 rounded-full transition-colors text-[#4318FF] hover:scale-110 active:scale-95"
+              className={`p-1.5 rounded-full transition-colors ${
+                calendarDate.getMonth() === now.getMonth() &&
+                calendarDate.getFullYear() === now.getFullYear()
+                  ? "text-gray-300 cursor-not-allowed"
+                  : "text-[#4318FF] hover:bg-gray-50 hover:scale-110 active:scale-95"
+              }`}
             >
               <ChevronRight size={20} strokeWidth={2.5} />
             </button>
@@ -482,161 +343,14 @@ const TodayAttendance = ({
         </div>
 
         {/* Top Section: Dashboard Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-          {/* Card 1 - Total Monthly Hours */}
-          <div className="bg-linear-to-br from-[#36B9CC] to-[#258391] rounded-[20px] p-4 shadow-lg shadow-cyan-500/20 flex flex-col items-start gap-3 relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 min-h-[140px]">
-            <div className="absolute -right-4 -top-4 w-20 h-20 bg-white/20 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500"></div>
-            <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-white/30 backdrop-blur-md border border-white/20 text-white shadow-inner z-10">
-              <CalendarIcon size={20} strokeWidth={2.5} />
-            </div>
-            <div className="w-full z-10">
-              <div className="text-white/90 font-bold text-[10px] uppercase tracking-wider mb-1">
-                Monthly Hours
-              </div>
-              <div className="flex flex-col">
-                <span className="text-2xl font-extrabold text-white tracking-tight">
-                  {stats?.totalMonthlyHours?.toFixed(1) || "0.0"}
-                </span>
-                <span className="text-[9px] font-bold text-white/70 uppercase mt-1">
-                  In {now.toLocaleDateString("en-US", { month: "short" })}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 2 - Entitlement */}
-          <div className="bg-white rounded-[20px] p-4 shadow-lg shadow-gray-200/50 border border-gray-100 flex flex-col items-start gap-3 relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 min-h-[140px]">
-            <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-blue-50 text-[#4318FF] transition-colors group-hover:bg-blue-100">
-              <TrendingUp size={20} strokeWidth={2.5} />
-            </div>
-            <div className="w-full">
-              <div className="text-[#A3AED0] font-bold text-[10px] uppercase tracking-wider mb-1">
-                Entitlement
-              </div>
-              <div className="flex flex-col">
-                <span className="text-2xl font-extrabold text-[#1B2559] tracking-tight">
-                  {entitlement}
-                </span>
-                <span className="text-[9px] font-bold text-[#A3AED0] uppercase mt-1">
-                  Annual Pack
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 3 - Carry Over (Full-timers only) */}
-          {!isIntern && (
-            <div className="bg-white rounded-[20px] p-4 shadow-lg shadow-gray-200/50 border border-gray-100 flex flex-col items-start gap-3 relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 min-h-[140px]">
-              <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-indigo-50 text-[#7551FF] transition-colors group-hover:bg-indigo-100">
-                <TrendingUp size={20} strokeWidth={2.5} />
-              </div>
-              <div className="w-full">
-                <div className="text-[#A3AED0] font-bold text-[10px] uppercase tracking-wider mb-1">
-                  Carry Over
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-2xl font-extrabold text-[#1B2559] tracking-tight">
-                    {dynamicCarryOver.toFixed(1)}
-                  </span>
-                  <span className="text-[9px] font-bold text-[#A3AED0] uppercase mt-1">
-                    Rolled Over
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Card 4 - Leaves Taken */}
-          <div className="bg-white rounded-[20px] p-4 shadow-lg shadow-gray-200/50 border border-gray-100 flex flex-col items-start gap-3 relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 min-h-[140px]">
-            <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-green-50 text-[#05CD99] transition-colors group-hover:bg-green-100">
-              <CheckCircle size={20} strokeWidth={2.5} />
-            </div>
-            <div className="w-full">
-              <div className="text-[#A3AED0] font-bold text-[10px] uppercase tracking-wider mb-1">
-                Leaves Taken
-              </div>
-              <div className="flex flex-col">
-                <span className="text-2xl font-extrabold text-[#1B2559] tracking-tight">
-                  {isIntern ? paidUsed : approvedUsed}
-                </span>
-                <span className="text-[9px] font-bold text-[#A3AED0] uppercase mt-1">
-                  Approved
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 4 - LOP */}
-          <div className="bg-white rounded-[20px] p-4 shadow-lg shadow-gray-200/50 border border-gray-100 flex flex-col items-start gap-3 relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 min-h-[140px]">
-            <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-red-50 text-[#EE5D50] transition-colors group-hover:bg-red-100">
-              <Ban size={20} strokeWidth={2.5} />
-            </div>
-            <div className="w-full">
-              <div className="text-[#A3AED0] font-bold text-[10px] uppercase tracking-wider mb-1">
-                LOP
-              </div>
-              <div className="flex flex-col">
-                <span className="text-2xl font-extrabold text-[#1B2559] tracking-tight">
-                  {lopUsed}
-                </span>
-                <span className="text-[9px] font-bold text-[#A3AED0] uppercase mt-1">
-                  Loss of Pay
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 5 - Pending */}
-          <div className="bg-white rounded-[20px] p-4 shadow-lg shadow-gray-200/50 border border-gray-100 flex flex-col items-start gap-3 relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 min-h-[140px]">
-            <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-amber-50 text-[#FFB547] transition-colors group-hover:bg-amber-100">
-              <Clock size={20} strokeWidth={2.5} />
-            </div>
-            <div className="w-full">
-              <div className="text-[#A3AED0] font-bold text-[10px] uppercase tracking-wider mb-1">
-                Pending
-              </div>
-              <div className="flex flex-col">
-                <span className="text-2xl font-extrabold text-[#1B2559] tracking-tight">
-                  {pendingCount}
-                </span>
-                <span className="text-[9px] font-bold text-[#A3AED0] uppercase mt-1">
-                  Awaiting Approval
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 6 - Balance */}
-          <div className="bg-linear-to-br from-[#4318FF] to-[#3B15E0] rounded-[20px] p-4 shadow-lg shadow-blue-500/30 flex flex-col items-start gap-3 relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 min-h-[140px]">
-            <div className="absolute -right-4 -top-4 w-20 h-20 bg-white/20 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500"></div>
-            <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-white/30 backdrop-blur-md border border-white/20 text-white shadow-inner z-10">
-              <ClipboardList size={20} strokeWidth={2.5} />
-            </div>
-            <div className="w-full z-10">
-              <div className="text-white/90 font-bold text-[10px] uppercase tracking-wider mb-1">
-                Balance
-              </div>
-              <div className="flex flex-col">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-extrabold text-white tracking-tight">
-                    {balance}
-                  </span>
-                  <span className="text-[10px] font-bold text-white/60 uppercase">
-                    Annual
-                  </span>
-                </div>
-                <div className="flex items-baseline gap-2 mt-0.5">
-                  <span className="text-lg font-bold text-white/90">
-                    {balanceMonthly.toFixed(1)}
-                  </span>
-                  <span className="text-[10px] font-medium text-white/60">
-                    This Month
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <AttendanceStatsCards
+          year={selectedYear}
+          month={calendarDate.getMonth() + 1}
+          leaveBalance={leaveBalance}
+          attendanceRecords={yearlyRecords}
+          isIntern={isIntern}
+          joiningDate={entity?.joiningDate || currentUser?.joiningDate}
+        />
 
         {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
