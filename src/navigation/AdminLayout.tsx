@@ -68,6 +68,8 @@ const AdminLayout = () => {
       navigate("/admin-dashboard/registration");
     } else if (tabName === "Employee Details") {
       navigate("/admin-dashboard/employees");
+    } else if (tabName === "Employee Timesheet") {
+      navigate("/admin-dashboard/timesheet-list");
     } else if (tabName === "Timesheet") {
       navigate("/admin-dashboard/timesheet-list");
     } else if (tabName === "Working Details") {
