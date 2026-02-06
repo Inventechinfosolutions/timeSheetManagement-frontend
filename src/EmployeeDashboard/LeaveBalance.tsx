@@ -279,10 +279,10 @@ const LeaveBalance = () => {
         <h3 className="text-lg font-bold text-[#2B3674] mb-2">Policy</h3>
         <ul className="text-sm text-[#2B3674] space-y-1.5">
           <li>
-            <strong>Full timer:</strong> 18 leaves per year (1.5 per month)
+            <strong>Full time Employee:</strong> 
           </li>
           <li>
-            <strong>Intern:</strong> 12 leaves per year (1 per month)
+            <strong>Intern:</strong> 
           </li>
         </ul>
       </div>

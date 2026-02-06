@@ -58,6 +58,7 @@ interface AttendanceState {
   trendsLoading: boolean;             // Specific loading state for Trends Graph
   error: string | null;               // Global error message
   currentDayRecord: EmployeeAttendance | null; // Data for today's specific entry
+  yearlyRecords: EmployeeAttendance[]; // Records for the full year stats
   workedDaysSummary: {                // Summary data for worked days calculation
     employeeId: string;
     startDate: string;
@@ -76,6 +77,7 @@ const initialState: AttendanceState = {
   trendsLoading: false,
   error: null,
   currentDayRecord: null,
+  yearlyRecords: [],
   workedDaysSummary: null,
   employeeMonthlyStats: {},
 };
@@ -279,8 +281,7 @@ const attendanceSlice = createSlice({
       })
       .addCase(fetchAttendanceByDateRange.fulfilled, (state: AttendanceState, action: PayloadAction<EmployeeAttendance[]>) => {
         state.loading = false;
-        // Store date range records for leave management
-        // We'll access these records directly from the action payload when needed
+        state.yearlyRecords = action.payload;
       })
       .addCase(fetchAttendanceByDate.fulfilled, (state: AttendanceState, action: PayloadAction<EmployeeAttendance[]>) => {
         state.loading = false;
