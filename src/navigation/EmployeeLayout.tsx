@@ -16,6 +16,7 @@ const EmployeeLayout = () => {
       case "my-profile": return "My Profile";
       case "change-password": return "Change Password";
       case "leave-management": return "Work Management";
+      case "leave-balance": return "Leave Balance";
       default: return "Dashboard";
     }
   };
@@ -36,6 +37,9 @@ const EmployeeLayout = () => {
         break;
       case "Work Management":
         navigate("/employee-dashboard/leave-management");
+        break;
+      case "Leave Balance":
+        navigate("/employee-dashboard/leave-balance");
         break;
       default:
         navigate("/employee-dashboard");

@@ -40,6 +40,7 @@ const EmployeeDetailsView = () => {
     employeeId: "",
     department: "",
     designation: "",
+    employmentType: "" as "" | "FULL_TIMER" | "INTERN",
     email: "",
   });
   const [showConfirm, setShowConfirm] = useState(false);
@@ -91,6 +92,7 @@ const EmployeeDetailsView = () => {
         employeeId: employee.employeeId || employee.id || "",
         department: employee.department || "",
         designation: employee.designation || "",
+        employmentType: (employee.employmentType as "" | "FULL_TIMER" | "INTERN") || "",
         email: employee.email || "",
       });
     }
@@ -165,6 +167,7 @@ const EmployeeDetailsView = () => {
       employeeId: employee.employeeId || employee.id || "",
       department: employee.department || "",
       designation: employee.designation || "",
+      employmentType: (employee.employmentType as "" | "FULL_TIMER" | "INTERN") || "",
       email: employee.email || "",
     });
     setIsEditing(false);
@@ -459,6 +462,36 @@ const EmployeeDetailsView = () => {
                 <Briefcase className="text-[#FFB020] w-4 h-4" />
               </div>
             </div>
+          </div>
+
+          {/* Employment type (leave balance) */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
+              Employment type (leave balance)
+            </label>
+            <select
+              disabled={!isEditing}
+              value={
+                isEditing
+                  ? editedData.employmentType
+                  : (employee.employmentType as string) || ""
+              }
+              onChange={(e) =>
+                setEditedData({
+                  ...editedData,
+                  employmentType: e.target.value as "" | "FULL_TIMER" | "INTERN",
+                })
+              }
+              className={`w-full pl-11 pr-4 py-2.5 border-2 rounded-xl text-[#1B2559] text-sm font-semibold transition-all appearance-none ${
+                isEditing
+                  ? "border-gray-200 focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white"
+                  : "border-gray-100 bg-gray-50/50"
+              }`}
+            >
+              <option value="">Not set (infer from designation)</option>
+              <option value="FULL_TIMER">Full timer (18 leaves/year)</option>
+              <option value="INTERN">Intern (12 leaves/year)</option>
+            </select>
           </div>
 
           {/* Email */}

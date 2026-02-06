@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import {
   AreaChart,
@@ -18,7 +17,6 @@ import { RootState } from "../store";
 // Interface for the data structure
 // (Ideally imported from reducer, but can keep here or import)
 
-
 interface Props {
   employeeId?: string;
 }
@@ -26,28 +24,36 @@ interface Props {
 const WorkTrendsGraph = ({ employeeId }: Props) => {
   const dispatch = useAppDispatch();
   // Using selector to get data from Redux store, using separate loading state!
-  const { trends, trendsLoading } = useAppSelector((state: RootState) => state.attendance); 
+  const { trends, trendsLoading } = useAppSelector(
+    (state: RootState) => state.attendance,
+  );
   const [endDate, setEndDate] = useState(new Date());
 
   useEffect(() => {
-    if (employeeId && employeeId !== 'Admin') {
+    if (employeeId && employeeId !== "Admin") {
       // Format endDate as YYYY-MM-DD
-      const dateStr = endDate.toISOString().split('T')[0];
-      
+      const dateStr = endDate.toISOString().split("T")[0];
+
       // Calculate start date (5 months prior)
       const start = new Date(endDate);
       start.setMonth(start.getMonth() - 5);
-      const startDateStr = start.toISOString().split('T')[0];
+      const startDateStr = start.toISOString().split("T")[0];
 
       // Dispatch the thunk to fetch data via Redux
-      dispatch(fetchWorkTrends({ employeeId, endDate: dateStr, startDate: startDateStr }));
+      dispatch(
+        fetchWorkTrends({
+          employeeId,
+          endDate: dateStr,
+          startDate: startDateStr,
+        }),
+      );
     }
   }, [dispatch, employeeId, endDate]);
 
-  // Use local variable for data to avoid refactoring render code too much, 
+  // Use local variable for data to avoid refactoring render code too much,
   // or just use 'trends' directly in JSX.
-  const data = trends || []; 
-  // Note: 'loading' here is global. If that's an issue, we could handle it differently, 
+  const data = trends || [];
+  // Note: 'loading' here is global. If that's an issue, we could handle it differently,
   // but for now this standardizes it.
 
   const handlePrev = () => {
@@ -60,24 +66,32 @@ const WorkTrendsGraph = ({ employeeId }: Props) => {
     const newDate = new Date(endDate);
     const today = new Date();
     // Don't go past today + epsilon
-    if (newDate.getMonth() === today.getMonth() && newDate.getFullYear() === today.getFullYear()) return;
-    
+    if (
+      newDate.getMonth() === today.getMonth() &&
+      newDate.getFullYear() === today.getFullYear()
+    )
+      return;
+
     newDate.setMonth(newDate.getMonth() + 5);
     // Cap at today
     if (newDate > today) {
-        setEndDate(today);
+      setEndDate(today);
     } else {
-        setEndDate(newDate);
+      setEndDate(newDate);
     }
   };
 
-  const isCurrentTime = endDate.getMonth() === new Date().getMonth() && endDate.getFullYear() === new Date().getFullYear();
+  const isCurrentTime =
+    endDate.getMonth() === new Date().getMonth() &&
+    endDate.getFullYear() === new Date().getFullYear();
 
   if (trendsLoading) {
     return (
       <div className="bg-white rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-col h-full min-h-[400px] items-center justify-center">
         <div className="w-8 h-8 border-4 border-[#4318FF]/20 border-t-[#4318FF] rounded-full animate-spin"></div>
-        <div className="text-gray-400 text-sm mt-3 font-medium">Loading trends...</div>
+        <div className="text-gray-400 text-sm mt-3 font-medium">
+          Loading trends...
+        </div>
       </div>
     );
   }
@@ -86,33 +100,33 @@ const WorkTrendsGraph = ({ employeeId }: Props) => {
     <div className="bg-white rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-col h-full min-h-[400px]">
       <div className="flex items-center justify-between mb-6">
         <h4 className="text-lg font-bold text-[#1B2559]">Work Trend</h4>
-        
+
         <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-gray-400">
-              {(() => {
-                const start = new Date(endDate);
-                start.setMonth(start.getMonth() - 5);
-                return `${start.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`;
-              })()}
-            </span>
-            <div className="flex items-center bg-gray-50 rounded-lg p-0.5 border border-gray-100">
-                <button 
-                  onClick={handlePrev}
-                  className="p-1 hover:bg-white hover:shadow-2xs rounded-md transition-all text-gray-500 hover:text-[#4318FF]"
-                >
-                    <ChevronLeft size={14} strokeWidth={2.5} />
-                </button>
-                <button 
-                  onClick={handleNext}
-                  disabled={isCurrentTime}
-                  className={`p-1 rounded-md transition-all ${isCurrentTime ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-white hover:shadow-2xs text-gray-500 hover:text-[#4318FF]'}`}
-                >
-                    <ChevronRight size={14} strokeWidth={2.5} />
-                </button>
-            </div>
+          <span className="text-xs font-medium text-gray-400">
+            {(() => {
+              const start = new Date(endDate);
+              start.setMonth(start.getMonth() - 5);
+              return `${start.toISOString().split("T")[0]} to ${endDate.toISOString().split("T")[0]}`;
+            })()}
+          </span>
+          <div className="flex items-center bg-gray-50 rounded-lg p-0.5 border border-gray-100">
+            <button
+              onClick={handlePrev}
+              className="p-1 hover:bg-white hover:shadow-2xs rounded-md transition-all text-gray-500 hover:text-[#4318FF]"
+            >
+              <ChevronLeft size={14} strokeWidth={2.5} />
+            </button>
+            <button
+              onClick={handleNext}
+              disabled={isCurrentTime}
+              className={`p-1 rounded-md transition-all ${isCurrentTime ? "text-gray-300 cursor-not-allowed" : "hover:bg-white hover:shadow-2xs text-gray-500 hover:text-[#4318FF]"}`}
+            >
+              <ChevronRight size={14} strokeWidth={2.5} />
+            </button>
+          </div>
         </div>
       </div>
-      
+
       <div className="flex-1 w-full min-h-[300px]">
         {data.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
@@ -122,23 +136,23 @@ const WorkTrendsGraph = ({ employeeId }: Props) => {
             >
               <defs>
                 <linearGradient id="colorLeaves" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#E11D48" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#E11D48" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="#E11D48" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#E11D48" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="colorWFH" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#00A3C4" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#00A3C4" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="#00A3C4" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#00A3C4" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="colorClient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#4318FF" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#4318FF" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="#4318FF" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#4318FF" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid 
-                strokeDasharray="3 3" 
-                vertical={false} 
+              <CartesianGrid
+                strokeDasharray="3 3"
+                vertical={false}
                 horizontal={true}
-                stroke="#E0E5F2" 
+                stroke="#E0E5F2"
               />
               <XAxis
                 dataKey="month"
@@ -197,7 +211,7 @@ const WorkTrendsGraph = ({ employeeId }: Props) => {
                 name="Taken Leaves"
                 stroke="#E11D48"
                 strokeWidth={3}
-                fillOpacity={1} 
+                fillOpacity={1}
                 fill="url(#colorLeaves)"
                 activeDot={{ r: 6, strokeWidth: 0, fill: "#E11D48" }}
               />
@@ -207,7 +221,7 @@ const WorkTrendsGraph = ({ employeeId }: Props) => {
                 name="Work From Home"
                 stroke="#00A3C4"
                 strokeWidth={3}
-                fillOpacity={1} 
+                fillOpacity={1}
                 fill="url(#colorWFH)"
                 activeDot={{ r: 6, strokeWidth: 0, fill: "#00A3C4" }}
               />
@@ -217,7 +231,7 @@ const WorkTrendsGraph = ({ employeeId }: Props) => {
                 name="Client Visit"
                 stroke="#4318FF"
                 strokeWidth={3}
-                fillOpacity={1} 
+                fillOpacity={1}
                 fill="url(#colorClient)"
                 activeDot={{ r: 6, strokeWidth: 0, fill: "#4318FF" }}
               />
