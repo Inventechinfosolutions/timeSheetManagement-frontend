@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { useAppSelector, useAppDispatch } from "../hooks";
 import {
-  getEntities,
+  getEntity,
   setCurrentUser,
   uploadProfileImage,
   fetchProfileImage,
@@ -39,6 +39,13 @@ const MyProfile = () => {
   const currentDbId = entity?.id;
   const displayEmployeeId = entity?.employeeId || String(currentSearchId || "");
 
+  // Support both camelCase and snake_case from API
+  const fullName = entity?.fullName ?? entity?.full_name ?? entity?.name ?? "";
+  const department = entity?.department ?? entity?.department_name ?? "";
+  const designation = entity?.designation ?? entity?.designation_name ?? "";
+  const email = entity?.email ?? entity?.email_address ?? "";
+  const role = entity?.role ?? entity?.user_role ?? entity?.userRole ?? "";
+
   // Use entity values or fallbacks
   // Default to a local asset if no image found in entity
   const defaultImage = defaultAvatar;
@@ -46,34 +53,18 @@ const MyProfile = () => {
   const detailsFetched = useRef(false);
   const imageFetchedForId = useRef<string | null>(null);
 
-  // Debug logs
-  useEffect(() => {
-    console.log(
-      "MyProfile: Component mounted or searchId changed:",
-      currentSearchId,
-    );
-  }, [currentSearchId]);
-
-  // Effect: Fetch Full Employee Details & Profile Image
+  // Effect: Fetch full employee details (single entity) & profile image
   useEffect(() => {
     if (currentSearchId && !detailsFetched.current) {
-      console.log(
-        "MyProfile: Initial fetch via direct API for:",
-        currentSearchId,
-      );
       detailsFetched.current = true;
 
-      dispatch(getEntities({ search: String(currentSearchId) }))
+      dispatch(getEntity(String(currentSearchId)))
         .unwrap()
-        .then((response: any) => {
-          const list = Array.isArray(response) ? response : response.data || [];
-          const foundUser = list.length > 0 ? list[0] : null;
-
+        .then((foundUser: any) => {
           if (foundUser) {
             dispatch(setCurrentUser(foundUser));
 
-            // Immediately fetch the profile image if we have an ID
-            const empId = foundUser.employeeId || foundUser.id;
+            const empId = foundUser.employeeId ?? foundUser.id;
             if (empId && imageFetchedForId.current !== String(empId)) {
               imageFetchedForId.current = String(empId);
               dispatch(fetchProfileImage(String(empId)))
@@ -191,10 +182,10 @@ const MyProfile = () => {
           <div className="text-center md:text-left flex-1 space-y-2">
             <div className="space-y-0">
               <h1 className="text-xl md:text-2xl font-black text-white leading-tight">
-                {entity?.fullName || entity?.name || ""}
+                {fullName}
               </h1>
               <p className="text-white/80 font-bold text-sm md:text-base">
-                {entity?.designation || ""}
+                {designation}
               </p>
             </div>
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
@@ -204,7 +195,7 @@ const MyProfile = () => {
               </div>
               <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 backdrop-blur-md rounded-xl border border-white/10 text-white text-[11px] font-bold">
                 <CreditCard size={14} />
-                <span>{entity?.employeeId || entity?.id || ""}</span>
+                <span>{displayEmployeeId}</span>
               </div>
             </div>
           </div>
@@ -232,7 +223,7 @@ const MyProfile = () => {
               <input
                 type="text"
                 disabled
-                value={entity?.fullName || entity?.name || ""}
+                value={fullName}
                 className="w-full pl-12 pr-4 py-3.5 border-2 border-gray-50 rounded-2xl bg-gray-50/40 text-[#1B2559] text-sm md:text-base font-bold transition-all"
               />
               <div className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center">
@@ -250,7 +241,7 @@ const MyProfile = () => {
               <input
                 type="text"
                 disabled
-                value={entity?.employeeId || entity?.id || ""}
+                value={displayEmployeeId}
                 className="w-full pl-12 pr-4 py-3.5 border-2 border-gray-50 rounded-2xl bg-gray-50/40 text-[#1B2559] text-sm md:text-base font-bold transition-all"
               />
               <div className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl bg-purple-50 flex items-center justify-center">
@@ -268,7 +259,7 @@ const MyProfile = () => {
               <input
                 type="text"
                 disabled
-                value={entity?.department || ""}
+                value={department}
                 className="w-full pl-12 pr-4 py-3.5 border-2 border-gray-100 rounded-2xl bg-gray-50/40 text-[#1B2559] text-sm md:text-base font-bold transition-all"
               />
               <div className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl bg-green-50 flex items-center justify-center">
@@ -286,7 +277,7 @@ const MyProfile = () => {
               <input
                 type="text"
                 disabled
-                value={entity?.designation || ""}
+                value={designation}
                 className="w-full pl-12 pr-4 py-3.5 border-2 border-gray-100 rounded-2xl bg-gray-50/40 text-[#1B2559] text-sm md:text-base font-bold transition-all"
               />
               <div className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl bg-orange-50 flex items-center justify-center">
@@ -304,7 +295,7 @@ const MyProfile = () => {
               <input
                 type="email"
                 disabled
-                value={entity?.email || ""}
+                value={email}
                 className="w-full pl-12 pr-4 py-3.5 border-2 border-gray-100 rounded-2xl bg-gray-50/40 text-[#1B2559] text-sm md:text-base font-bold transition-all"
               />
               <div className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl bg-red-50 flex items-center justify-center">
@@ -322,7 +313,7 @@ const MyProfile = () => {
               <input
                 type="text"
                 disabled
-                value={entity?.role || ""}
+                value={role}
                 className="w-full pl-12 pr-4 py-3.5 border-2 border-gray-100 rounded-2xl bg-gray-50/40 text-[#1B2559] text-sm md:text-base font-bold transition-all"
               />
               <div className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl bg-indigo-50 flex items-center justify-center">

@@ -149,7 +149,13 @@ const Header = ({
   };
 
   const handleProfileClick = () => {
-    navigate("/employee-dashboard/my-profile");
+    if (currentUser?.userType === "MANAGER") {
+      navigate("/manager-dashboard/my-profile");
+    } else if (currentUser?.userType === "ADMIN") {
+      navigate("/admin-dashboard/my-profile");
+    } else {
+      navigate("/employee-dashboard/my-profile");
+    }
     setIsDropdownOpen(false);
   };
 
