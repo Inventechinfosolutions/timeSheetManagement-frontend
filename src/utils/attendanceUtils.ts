@@ -162,6 +162,7 @@ export const mapAttendanceToEntry = (
         isEditing: false,
         isSaved: !!attendance?.id,
         workLocation, // Map workLocation
+        sourceRequestId: attendance?.sourceRequestId, // Track auto-generated records
         isSavedLogout: !!attendance?.logoutTime && attendance.logoutTime !== "00:00:00" && !attendance.logoutTime.includes("NaN"),
     } as TimesheetEntry;
 };

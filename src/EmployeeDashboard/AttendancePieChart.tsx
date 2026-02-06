@@ -290,6 +290,8 @@ const AttendancePieChart = ({ data, currentMonth, onMonthChange }: Props) => {
               outerRadius="90%"
               paddingAngle={5}
               dataKey="value"
+              onMouseEnter={(_: any, index: number) => setActiveIndex(index)}
+              onMouseLeave={() => setActiveIndex(null)}
               onClick={onPieClick}
               stroke="none"
               style={{ cursor: "pointer", outline: "none" }}
@@ -309,11 +311,12 @@ const AttendancePieChart = ({ data, currentMonth, onMonthChange }: Props) => {
                 );
               })}
             </Pie>
+
             <Legend
               verticalAlign="bottom"
               height={60}
               iconType="circle"
-              wrapperStyle={{ fontSize: "12px" }}
+              wrapperStyle={{ fontSize: "12px", paddingTop: "20px" }}
             />
           </PieChart>
         </ResponsiveContainer>

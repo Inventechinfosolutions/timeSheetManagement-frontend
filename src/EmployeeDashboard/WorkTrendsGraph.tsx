@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
-  AreaChart,
-  Area,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -19,25 +19,25 @@ import { RootState } from "../store";
 
 interface Props {
   employeeId?: string;
+  currentMonth: Date;
 }
 
-const WorkTrendsGraph = ({ employeeId }: Props) => {
+const WorkTrendsGraph = ({ employeeId, currentMonth }: Props) => {
   const dispatch = useAppDispatch();
   // Using selector to get data from Redux store, using separate loading state!
   const { trends, trendsLoading } = useAppSelector(
     (state: RootState) => state.attendance,
   );
-  const [endDate, setEndDate] = useState(new Date());
+  const [hoveredData, setHoveredData] = useState<{ name: string; value: number } | null>(null);
 
   useEffect(() => {
     if (employeeId && employeeId !== "Admin") {
-      // Format endDate as YYYY-MM-DD
-      const dateStr = endDate.toISOString().split("T")[0];
-
-      // Calculate start date (5 months prior)
-      const start = new Date(endDate);
-      start.setMonth(start.getMonth() - 5);
+      // Calculate first and last day of the selected month
+      const start = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+      const end = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+      
       const startDateStr = start.toISOString().split("T")[0];
+      const dateStr = end.toISOString().split("T")[0];
 
       // Dispatch the thunk to fetch data via Redux
       dispatch(
@@ -48,42 +48,11 @@ const WorkTrendsGraph = ({ employeeId }: Props) => {
         }),
       );
     }
-  }, [dispatch, employeeId, endDate]);
+  }, [dispatch, employeeId, currentMonth]);
 
   // Use local variable for data to avoid refactoring render code too much,
   // or just use 'trends' directly in JSX.
   const data = trends || [];
-  // Note: 'loading' here is global. If that's an issue, we could handle it differently,
-  // but for now this standardizes it.
-
-  const handlePrev = () => {
-    const newDate = new Date(endDate);
-    newDate.setMonth(newDate.getMonth() - 5);
-    setEndDate(newDate);
-  };
-
-  const handleNext = () => {
-    const newDate = new Date(endDate);
-    const today = new Date();
-    // Don't go past today + epsilon
-    if (
-      newDate.getMonth() === today.getMonth() &&
-      newDate.getFullYear() === today.getFullYear()
-    )
-      return;
-
-    newDate.setMonth(newDate.getMonth() + 5);
-    // Cap at today
-    if (newDate > today) {
-      setEndDate(today);
-    } else {
-      setEndDate(newDate);
-    }
-  };
-
-  const isCurrentTime =
-    endDate.getMonth() === new Date().getMonth() &&
-    endDate.getFullYear() === new Date().getFullYear();
 
   if (trendsLoading) {
     return (
@@ -103,51 +72,20 @@ const WorkTrendsGraph = ({ employeeId }: Props) => {
 
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-gray-400">
-            {(() => {
-              const start = new Date(endDate);
-              start.setMonth(start.getMonth() - 5);
-              return `${start.toISOString().split("T")[0]} to ${endDate.toISOString().split("T")[0]}`;
-            })()}
+            {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
           </span>
-          <div className="flex items-center bg-gray-50 rounded-lg p-0.5 border border-gray-100">
-            <button
-              onClick={handlePrev}
-              className="p-1 hover:bg-white hover:shadow-2xs rounded-md transition-all text-gray-500 hover:text-[#4318FF]"
-            >
-              <ChevronLeft size={14} strokeWidth={2.5} />
-            </button>
-            <button
-              onClick={handleNext}
-              disabled={isCurrentTime}
-              className={`p-1 rounded-md transition-all ${isCurrentTime ? "text-gray-300 cursor-not-allowed" : "hover:bg-white hover:shadow-2xs text-gray-500 hover:text-[#4318FF]"}`}
-            >
-              <ChevronRight size={14} strokeWidth={2.5} />
-            </button>
-          </div>
         </div>
       </div>
 
       <div className="flex-1 w-full min-h-[300px]">
         {data.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart
+            <BarChart
               data={data}
-              margin={{ top: 20, right: 30, left: -10, bottom: 0 }}
+              margin={{ top: 20, right: 30, left: -10, bottom: 20 }}
+              barSize={60}
+              barGap={12}
             >
-              <defs>
-                <linearGradient id="colorLeaves" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#E11D48" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#E11D48" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="colorWFH" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#00A3C4" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#00A3C4" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="colorClient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#4318FF" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#4318FF" stopOpacity={0} />
-                </linearGradient>
-              </defs>
               <CartesianGrid
                 strokeDasharray="3 3"
                 vertical={false}
@@ -158,7 +96,7 @@ const WorkTrendsGraph = ({ employeeId }: Props) => {
                 dataKey="month"
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: "#A3AED0", fontSize: 12, fontWeight: 500 }}
+                tick={{ fill: "#A3AED0", fontSize: 11, fontWeight: 500 }}
                 dy={10}
               />
               <YAxis
@@ -167,75 +105,87 @@ const WorkTrendsGraph = ({ employeeId }: Props) => {
                 tick={{ fill: "#A3AED0", fontSize: 12, fontWeight: 500 }}
               />
 
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "#fff",
-                  borderRadius: "14px",
-                  border: "none",
-                  boxShadow: "0px 15px 30px -5px rgba(0,0,0,0.1)",
-                  padding: "16px",
-                }}
-                cursor={{
-                  stroke: "#B0BBD5",
-                  strokeWidth: 1,
-                  strokeDasharray: "4 4",
-                }}
-                itemStyle={{
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  padding: "4px 0",
-                }}
-                labelStyle={{
-                  color: "#1B2559",
-                  fontWeight: "800",
-                  marginBottom: "8px",
-                  fontSize: "14px",
-                }}
-              />
-
               <Legend
                 verticalAlign="top"
-                height={36}
+                height={40}
                 iconType="circle"
                 wrapperStyle={{
                   fontSize: "13px",
                   fontWeight: 600,
                   color: "#2B3674",
-                  paddingBottom: "10px",
+                  paddingBottom: "16px",
                 }}
               />
 
-              <Area
-                type="monotone"
+              {/* Fixed Center Pill Label like Donut Chart */}
+              {hoveredData && (
+                <g>
+                  <rect
+                    x="40%"
+                    y="45%"
+                    width="120"
+                    height="40"
+                    rx="20"
+                    fill="white"
+                    stroke="#f1f5f9"
+                    strokeWidth="1"
+                    style={{ filter: "drop-shadow(0px 8px 16px rgba(0,0,0,0.1))" }}
+                  />
+                  <text
+                    x="40%"
+                    y="45%"
+                    dx="60"
+                    dy="25"
+                    textAnchor="middle"
+                    fill="#1B2559"
+                    style={{
+                      fontSize: "13px",
+                      fontWeight: "700",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    {hoveredData.name} : {hoveredData.value}
+                  </text>
+                </g>
+              )}
+
+              <Bar
                 dataKey="totalLeaves"
                 name="Taken Leaves"
-                stroke="#E11D48"
-                strokeWidth={3}
-                fillOpacity={1}
-                fill="url(#colorLeaves)"
-                activeDot={{ r: 6, strokeWidth: 0, fill: "#E11D48" }}
+                fill="#F43F5E"
+                radius={[8, 8, 0, 0]}
+                activeBar={{ fill: '#FB7185' }}
+                onMouseEnter={(data: any) => setHoveredData({ name: "Taken Leaves", value: data.totalLeaves })}
+                onMouseLeave={() => setHoveredData(null)}
               />
-              <Area
-                type="monotone"
+              <Bar
+                dataKey="halfDays"
+                name="Half Day"
+                fill="#F59E0B"
+                radius={[8, 8, 0, 0]}
+                activeBar={{ fill: '#FBBF24' }}
+                onMouseEnter={(data: any) => setHoveredData({ name: "Half Day", value: data.halfDays })}
+                onMouseLeave={() => setHoveredData(null)}
+              />
+              <Bar
                 dataKey="workFromHome"
                 name="Work From Home"
-                stroke="#00A3C4"
-                strokeWidth={3}
-                fillOpacity={1}
-                fill="url(#colorWFH)"
-                activeDot={{ r: 6, strokeWidth: 0, fill: "#00A3C4" }}
+                fill="#06B6D4"
+                radius={[8, 8, 0, 0]}
+                activeBar={{ fill: '#22D3EE' }}
+                onMouseEnter={(data: any) => setHoveredData({ name: "Work From Home", value: data.workFromHome })}
+                onMouseLeave={() => setHoveredData(null)}
               />
-              <Area
-                type="monotone"
+              <Bar
                 dataKey="clientVisits"
                 name="Client Visit"
-                stroke="#4318FF"
-                strokeWidth={3}
-                fillOpacity={1}
-                fill="url(#colorClient)"
-                activeDot={{ r: 6, strokeWidth: 0, fill: "#4318FF" }}
+                fill="#8B5CF6"
+                radius={[8, 8, 0, 0]}
+                activeBar={{ fill: '#A78BFA' }}
+                onMouseEnter={(data: any) => setHoveredData({ name: "Client Visit", value: data.clientVisits })}
+                onMouseLeave={() => setHoveredData(null)}
               />
-            </AreaChart>
+            </BarChart>
           </ResponsiveContainer>
         ) : (
           <div className="flex bg-gray-50 flex-col items-center justify-center h-full rounded-xl border-dashed border-2 border-gray-200">

@@ -2,18 +2,17 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Clock,
-  AlertTriangle,
   Edit,
   Calendar as CalendarIcon,
   TrendingUp,
   CheckCircle,
   Ban,
-  Calendar,
   ClipboardList,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../hooks";
+import { UserType } from "../reducers/user.reducer";
 import {
   fetchMonthlyAttendance,
   fetchDashboardStats,
@@ -368,12 +367,34 @@ const TodayAttendance = ({
 
   const handleDateNavigator = useCallback(
     (timestamp: number) => {
-      if (viewOnly) return;
       if (setScrollToDate) setScrollToDate(timestamp);
 
       const targetDate = new Date(timestamp);
+      const isPrivilegedUser = 
+        currentUser?.userType === UserType.ADMIN || 
+        currentUser?.userType === UserType.MANAGER || 
+        currentUser?.userType === UserType.TEAM_LEAD;
+
+      // Handle Privileged User viewing someone else (ONLY when explicitly in view-only mode)
+      if (viewOnly && isPrivilegedUser && currentEmployeeId && currentEmployeeId !== currentUser?.employeeId) {
+        const dateStr = targetDate.toISOString().split("T")[0];
+        const basePath = location.pathname.startsWith("/manager-dashboard") 
+          ? "/manager-dashboard" 
+          : "/admin-dashboard";
+          
+        navigate(`${basePath}/timesheet/${currentEmployeeId}/${dateStr}`, {
+          state: {
+            selectedDate: targetDate.toISOString(),
+            timestamp: targetDate.getTime(),
+          }
+        });
+        return;
+      }
+
+      // If viewOnly is true and not a privileged user viewing someone else, we stop here
+      if (viewOnly) return;
       
-      // Dynamic base path detection
+      // Dynamic base path detection for self-view
       let basePath = "/employee-dashboard";
       if (location.pathname.startsWith("/manager-dashboard")) {
         basePath = "/manager-dashboard";
@@ -393,7 +414,7 @@ const TodayAttendance = ({
         navigate(navTarget, { state });
       }
     },
-    [viewOnly, setScrollToDate, setActiveTab, navigate, location.pathname],
+    [viewOnly, setScrollToDate, setActiveTab, navigate, location.pathname, currentUser, currentEmployeeId],
   );
 
   const handleNavigate = (timestamp: number) => {
@@ -651,7 +672,10 @@ const TodayAttendance = ({
             />
           </div>
           <div className="w-full">
-            <WorkTrendsGraph employeeId={currentEmployeeId} />
+            <WorkTrendsGraph 
+              employeeId={currentEmployeeId} 
+              currentMonth={calendarDate}
+            />
           </div>
         </div>
 
