@@ -36,6 +36,7 @@ import {
   ChevronDown,
   User,
   Search,
+  Clock,
 } from "lucide-react";
 import { notification } from "antd";
 import CommonMultipleUploader from "../EmployeeDashboard/CommonMultipleUploader";
@@ -169,28 +170,20 @@ const AdminLeaveManagement = () => {
 
       // 2. RULE: If WORK FROM HOME already exists
       if (existingRequestType === "Work From Home") {
-        // Allow if applying for Leave or Client Visit
-        if (
-          selectedLeaveType === "Apply Leave" ||
-          selectedLeaveType === "Leave" ||
-          selectedLeaveType === "Client Visit"
-        ) {
-          return false; // Valid dates, don't disable
-        }
-        return true; // Otherwise block (prevents dual WFH)
+          // Allow if applying for Leave or Client Visit or Half Day
+          if (selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave" || selectedLeaveType === "Client Visit" || selectedLeaveType === "Half Day") {
+              return false; // Valid dates, don't disable
+          }
+          return true; // Otherwise block (prevents dual WFH)
       }
 
       // 3. RULE: If CLIENT VISIT already exists
       if (existingRequestType === "Client Visit") {
-        // Allow if applying for Leave or Work From Home
-        if (
-          selectedLeaveType === "Apply Leave" ||
-          selectedLeaveType === "Leave" ||
-          selectedLeaveType === "Work From Home"
-        ) {
-          return false; // Valid dates, don't disable
-        }
-        return true; // Otherwise block (prevents dual CV)
+          // Allow if applying for Leave or Work From Home or Half Day
+          if (selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave" || selectedLeaveType === "Work From Home" || selectedLeaveType === "Half Day") {
+              return false; // Valid dates, don't disable
+          }
+          return true; // Otherwise block (prevents dual CV)
       }
 
       // Default: block all overlapping requests
@@ -504,6 +497,21 @@ const AdminLeaveManagement = () => {
           attendanceData.workLocation = "WFH";
         } else if (selectedLeaveType === "Client Visit") {
           attendanceData.workLocation = "Client Visit";
+        } else if (selectedLeaveType === "Half Day") {
+          attendanceData.status = "Half Day";
+          // Preserve existing workLocation (WFH/CV) if it exists
+          const existingRecord = dateRangeAttendanceRecords.find((r: any) => {
+            const rDate = r.workingDate || r.working_date;
+            const normDate =
+              typeof rDate === "string"
+                ? rDate.split("T")[0]
+                : dayjs(rDate).format("YYYY-MM-DD");
+            return normDate === currentDate;
+          });
+          if (existingRecord?.workLocation || existingRecord?.work_location) {
+            attendanceData.workLocation =
+              existingRecord.workLocation || existingRecord.work_location;
+          }
         }
 
         attendancePayload.push(attendanceData);
@@ -783,6 +791,7 @@ const AdminLeaveManagement = () => {
     { label: "Leave", icon: Calendar, color: "#4318FF" },
     { label: "Work From Home", icon: Home, color: "#38A169" },
     { label: "Client Visit", icon: MapPin, color: "#FFB547" },
+    { label: "Half Day", icon: Clock, color: "#F97316" },
   ];
 
   const hexToRgb = (hex: string) => {
@@ -992,7 +1001,7 @@ const AdminLeaveManagement = () => {
 
       {/* Leave Balance Cards - Only show if employee is selected */}
       {selectedEmployee && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 mt-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 mt-4">
           {[
             {
               label: "Leave",
@@ -1011,6 +1020,12 @@ const AdminLeaveManagement = () => {
               key: "clientVisit",
               color: "from-[#FFB547] to-[#FCCD75]",
               icon: MapPin,
+            },
+            {
+              label: "Half Day",
+              key: "halfDay",
+              color: "from-[#FF9F43] to-[#FFC078]", // Orange color for Half Day
+              icon: Clock,
             },
           ].map((config, idx) => {
             const rawData =

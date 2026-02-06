@@ -50,8 +50,10 @@ const Header = ({
   const { entity, profileImageUrl, loggedInUserProfileImageUrl } =
     useAppSelector((state) => state.employeeDetails);
   const { currentUser } = useAppSelector((state) => state.user);
-  // Check if user is admin
+  // Permissions
   const isAdmin = currentUser?.userType === "ADMIN";
+  const isManager = currentUser?.userType === "MANAGER";
+  const isApprover = isAdmin || isManager;
 
   const {
     notifications,
@@ -63,12 +65,13 @@ const Header = ({
     (state) => state.leaveNotification,
   );
 
-  // Filter out Cancelled requests from Admin notifications
+  // Filter out Cancelled requests from Approver notifications
   const leaveNotifications = rawLeaveNotifications.filter(
     (n) => n.status !== "Cancelled",
   );
 
-  const unreadCount = isAdmin
+  // Total count for the bell bubble
+  const unreadCount = isApprover
     ? leaveNotifications.length
     : attendanceUnreadCount + employeeUpdates.length;
 
@@ -81,13 +84,18 @@ const Header = ({
 
   // Fetch notifications on mount
   useEffect(() => {
-    if (isAdmin) {
+    if (isApprover) {
       dispatch(fetchUnreadNotifications());
-    } else if (entity?.employeeId) {
-      dispatch(fetchNotifications(entity?.employeeId));
-      dispatch(fetchEmployeeUpdates(entity?.employeeId));
     }
-  }, [dispatch, isAdmin, entity?.employeeId]);
+    
+    // Employee updates apply to anyone with an employee record (including Managers viewing their own)
+    if (entity?.employeeId) {
+      if (!isAdmin) {
+        dispatch(fetchNotifications(entity?.employeeId));
+        dispatch(fetchEmployeeUpdates(entity?.employeeId));
+      }
+    }
+  }, [dispatch, isApprover, isAdmin, entity?.employeeId]);
 
   const handleNotificationClick = (id: number) => {
     dispatch(fetchNotificationDetails(id));
@@ -103,7 +111,7 @@ const Header = ({
     id: number,
     type?: "leave" | "attendance" | "status_update",
   ) => {
-    if (isAdmin) {
+    if (isApprover && type !== "status_update" && type !== "attendance") {
       dispatch(markLeaveNotifRead(id));
       setViewMode("list");
     } else {
@@ -116,19 +124,14 @@ const Header = ({
   };
 
   const handleMarkAllAsRead = () => {
-    const notificationId = isAdmin
-      ? currentUser?.employeeId
-      : entity?.employeeId;
-    if (notificationId) {
-      // 1. Mark Generic Notifications as Read
-      dispatch(markAllNotificationsRead(notificationId));
-
-      // 2. Mark Leave Notifications as Read
-      if (isAdmin) {
-        dispatch(markAllLeaveRequestsRead());
-      } else {
-        dispatch(markAllEmployeeUpdatesRead(notificationId));
-      }
+    if (isApprover) {
+      dispatch(markAllLeaveRequestsRead());
+    }
+    
+    // Also mark own notifications as read if not only an admin
+    if (!isAdmin && entity?.employeeId) {
+       dispatch(markAllNotificationsRead(entity.employeeId));
+       dispatch(markAllEmployeeUpdatesRead(entity.employeeId));
     }
   };
 
@@ -272,14 +275,13 @@ const Header = ({
                         <h3 className="text-lg font-bold text-[#1B2559]">
                           Notifications
                         </h3>
-                        {!isAdmin && (
-                          <button
-                            onClick={handleMarkAllAsRead}
-                            className="text-xs font-bold text-[#4318FF] hover:bg-blue-50 px-3 py-1 rounded-lg transition-all active:scale-95"
-                          >
-                            Mark all as read
-                          </button>
-                        )}
+                        {/* Show "Mark all as read" for everyone, but handle scoped marks */}
+                        <button
+                          onClick={handleMarkAllAsRead}
+                          className="text-xs font-bold text-[#4318FF] hover:bg-blue-50 px-3 py-1 rounded-lg transition-all active:scale-95"
+                        >
+                          Mark all as read
+                        </button>
                       </div>
 
                       {/* Tabs */}
@@ -294,7 +296,7 @@ const Header = ({
 
                       {/* Notification List */}
                       <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
-                        {isAdmin ? (
+                        {isApprover ? (
                           leaveNotifications.length > 0 ? (
                             leaveNotifications.map((notif) => {
                               const getNotificationContent = (
@@ -352,55 +354,56 @@ const Header = ({
                               };
 
                               const { title, message, iconColorClass } =
-                                getNotificationContent(notif);
+                                  getNotificationContent(notif);
 
-                              return (
-                                <div
-                                  key={notif.id}
-                                  onClick={() => {
-                                    navigate("/admin-dashboard/requests");
-                                    setIsNotificationOpen(false);
-                                  }}
-                                  className={`flex gap-4 p-5 hover:bg-gray-50/80 transition-colors border-b border-gray-50 last:border-0 group cursor-pointer relative bg-blue-50/30`}
-                                >
-                                  {/* Avatar */}
-                                  <div className="relative shrink-0">
-                                    <div
-                                      className={`w-10 h-10 rounded-full flex items-center justify-center ${iconColorClass}`}
-                                    >
-                                      <Bell size={18} />
-                                    </div>
-                                  </div>
-
-                                  {/* Content */}
-                                  <div className="flex-1 space-y-1">
-                                    <div className="flex justify-between items-start">
-                                      <p className="text-sm text-[#1B2559] leading-snug font-bold">
-                                        {title}
-                                      </p>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleMarkAsRead(notif.id);
-                                        }}
-                                        className="text-[10px] text-[#4318FF] hover:underline font-bold"
+                                return (
+                                  <div
+                                    key={notif.id}
+                                    onClick={() => {
+                                      navigate(isAdmin ? "/admin-dashboard/requests" : "/manager-dashboard/requests");
+                                      setIsNotificationOpen(false);
+                                    }}
+                                    className={`flex gap-4 p-5 hover:bg-gray-50/80 transition-colors border-b border-gray-50 last:border-0 group cursor-pointer relative bg-blue-50/30`}
+                                  >
+                                    {/* Avatar */}
+                                    <div className="relative shrink-0">
+                                      <div
+                                        className={`w-10 h-10 rounded-full flex items-center justify-center ${iconColorClass}`}
                                       >
-                                        Dismiss
-                                      </button>
+                                        <Bell size={18} />
+                                      </div>
                                     </div>
 
-                                    <div className="flex flex-col gap-1">
-                                      <span className="text-xs text-gray-500 font-medium">
-                                        {message}
-                                      </span>
-                                      <span className="text-[10px] text-gray-400">
-                                        {String(notif.fromDate).split("T")[0]}{" "}
-                                        to {String(notif.toDate).split("T")[0]}
-                                      </span>
+                                    {/* Content */}
+                                    <div className="flex-1 space-y-1">
+                                      <div className="flex justify-between items-start">
+                                        <p className="text-sm text-[#1B2559] leading-snug font-bold">
+                                          {title}
+                                        </p>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleMarkAsRead(notif.id);
+                                          }}
+                                          className="text-[10px] text-[#4318FF] hover:underline font-bold"
+                                        >
+                                          Dismiss
+                                        </button>
+                                      </div>
+
+                                      <div className="flex flex-col gap-1">
+                                        <span className="text-xs text-gray-500 font-medium">
+                                          {message}
+                                        </span>
+                                        <span className="text-[10px] text-gray-400">
+                                          {String(notif.fromDate).split("T")[0]}{" "}
+                                          to{" "}
+                                          {String(notif.toDate).split("T")[0]}
+                                        </span>
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
-                              );
+                                );
                             })
                           ) : (
                             <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
