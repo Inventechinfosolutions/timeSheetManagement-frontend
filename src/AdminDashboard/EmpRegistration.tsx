@@ -31,6 +31,7 @@ const Registration = () => {
     department: "",
     role: "",
     designation: "",
+    employmentType: "" as "" | "FULL_TIMER" | "INTERN",
     email: "",
   });
   const [error, setError] = useState("");
@@ -60,6 +61,7 @@ const Registration = () => {
           department: "",
           role: "",
           designation: "",
+          employmentType: "",
           email: "",
         });
         navigate("/admin-dashboard/activation-success", {
@@ -79,7 +81,12 @@ const Registration = () => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
-      [name]: name === "employeeId" ? value.toUpperCase() : value,
+      [name]:
+        name === "employeeId"
+          ? value.toUpperCase()
+          : name === "employmentType"
+            ? (value as "" | "FULL_TIMER" | "INTERN")
+            : value,
     });
   };
 
@@ -87,14 +94,16 @@ const Registration = () => {
     e.preventDefault();
     setError("");
 
-    if (Object.values(formData).some((val) => !val)) {
-      setError("Please fill in all fields");
+    const requiredKeys = ["fullName", "employeeId", "department", "role", "designation", "email"];
+    if (requiredKeys.some((k) => !(formData as Record<string, unknown>)[k])) {
+      setError("Please fill in all required fields");
       return;
     }
 
-    const submissionData = {
+    const submissionData: Record<string, unknown> = {
       ...formData,
     };
+    if (!formData.employmentType) delete submissionData.employmentType;
     console.log("Submitting Registration Data:", submissionData);
     dispatch(createEntity(submissionData));
   };
@@ -293,6 +302,22 @@ const Registration = () => {
                     />
                     <Briefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                   </div>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-0.5">
+                    Employment type (leave balance)
+                  </label>
+                  <select
+                    name="employmentType"
+                    value={formData.employmentType}
+                    onChange={handleChange}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#4318FF]/20 focus:border-[#4318FF] outline-none transition-all text-gray-700 text-sm font-medium bg-white"
+                  >
+                    <option value="">Not set (infer from designation)</option>
+                    <option value="FULL_TIMER">Full timer (18 leaves/year)</option>
+                    <option value="INTERN">Intern (12 leaves/year)</option>
+                  </select>
                 </div>
               </div>
 

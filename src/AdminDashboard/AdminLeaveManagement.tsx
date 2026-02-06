@@ -65,6 +65,7 @@ const datePickerTheme = {
 
 const AdminLeaveManagement = () => {
   const dispatch = useAppDispatch();
+  const { currentUser } = useAppSelector((state) => state.user);
   const {
     entities = [],
     totalItems,
@@ -78,8 +79,12 @@ const AdminLeaveManagement = () => {
     loading: loadingEmployees,
     totalItems: totalEmployees,
   } = useAppSelector((state) => state.employeeDetails || {});
-  const { holidays = [] } = useAppSelector((state: any) => state.masterHolidays || {});
-  const [dateRangeAttendanceRecords, setDateRangeAttendanceRecords] = useState<any[]>([]);
+  const { holidays = [] } = useAppSelector(
+    (state: any) => state.masterHolidays || {},
+  );
+  const [dateRangeAttendanceRecords, setDateRangeAttendanceRecords] = useState<
+    any[]
+  >([]);
 
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [isEmployeeDropdownOpen, setIsEmployeeDropdownOpen] = useState(false);
@@ -123,14 +128,18 @@ const AdminLeaveManagement = () => {
 
   // Disable dates that already have approved/pending leave requests for the selected employee
   const disabledDate = (current: any) => {
-    if (!current || !selectedEmployee?.employeeId) return false;
+    if (!current || !(selectedEmployee?.employeeId || selectedEmployee?.id))
+      return false;
 
     const currentDate = current.startOf("day");
 
     // Check if this date falls within any existing approved/pending request for the selected employee
     return (entities || []).some((req: any) => {
       // Only check requests for the selected employee
-      if (req.employeeId !== selectedEmployee.employeeId) return false;
+      if (
+        req.employeeId !== (selectedEmployee.employeeId || selectedEmployee.id)
+      )
+        return false;
 
       // Exclude rejected and cancelled requests
       if (req.status === "Rejected" || req.status === "Cancelled") return false;
@@ -152,8 +161,11 @@ const AdminLeaveManagement = () => {
       const existingRequestType = (req.requestType || "").trim();
 
       // 1. RULE: If LEAVE already exists, block EVERYTHING (No exceptions)
-      if (existingRequestType === "Apply Leave" || existingRequestType === "Leave") {
-        return true; 
+      if (
+        existingRequestType === "Apply Leave" ||
+        existingRequestType === "Leave"
+      ) {
+        return true;
       }
 
       // 2. RULE: If WORK FROM HOME already exists
@@ -214,7 +226,12 @@ const AdminLeaveManagement = () => {
     if (!hasMore && empPage > 1) return;
 
     dispatch(
-      getEntities({ search: debouncedSearchTerm, page: empPage, limit: 20 }),
+      getEntities({
+        search: debouncedSearchTerm,
+        page: empPage,
+        limit: 20,
+        includeSelf: true,
+      }),
     ).then((action: any) => {
       if (action.payload && action.payload.data) {
         const newDetails = action.payload.data;
@@ -222,10 +239,10 @@ const AdminLeaveManagement = () => {
           action.payload.totalItems || action.payload.total || 0;
 
         setDisplayedEmployees((prev) => {
-          // If searching or first page, replace list
-          if (empPage === 1) return newDetails;
+          // If searching or first page, start with a fresh list
+          if (empPage === 1) return [...newDetails];
 
-          // Otherwise append
+          // Append only unique new records for subsequent pages
           const existingIds = new Set(prev.map((p) => p.id || p.employeeId));
           const uniqueNew = newDetails.filter(
             (n: any) => !existingIds.has(n.id || n.employeeId),
@@ -326,7 +343,10 @@ const AdminLeaveManagement = () => {
   };
 
   // Helper function to check if a date has an existing leave record
-  const hasExistingLeave = (date: dayjs.Dayjs, records: any[] = dateRangeAttendanceRecords): boolean => {
+  const hasExistingLeave = (
+    date: dayjs.Dayjs,
+    records: any[] = dateRangeAttendanceRecords,
+  ): boolean => {
     const dateStr = date.format("YYYY-MM-DD");
     return records.some((record: any) => {
       const recordDate = record.workingDate || record.working_date;
@@ -337,29 +357,41 @@ const AdminLeaveManagement = () => {
           : new Date(recordDate).toISOString().split("T")[0];
       // Check if the record has Leave status
       const status = record.status || record.attendance_status;
-      return normalizedRecordDate === dateStr && 
-             (status === AttendanceStatus.LEAVE || status === "Leave" || status === "LEAVE");
+      return (
+        normalizedRecordDate === dateStr &&
+        (status === AttendanceStatus.LEAVE ||
+          status === "Leave" ||
+          status === "LEAVE")
+      );
     });
   };
 
   // Helper function to calculate duration excluding weekends, holidays, and existing leaves
-  const calculateDurationExcludingWeekends = (startDate: string, endDate: string, records?: any[]): number => {
+  const calculateDurationExcludingWeekends = (
+    startDate: string,
+    endDate: string,
+    records?: any[],
+  ): number => {
     if (!startDate || !endDate) return 0;
-    
+
     const start = dayjs(startDate);
     const end = dayjs(endDate);
     let count = 0;
     let current = start;
     const recordsToUse = records || dateRangeAttendanceRecords;
-    
-    while (current.isBefore(end) || current.isSame(end, 'day')) {
+
+    while (current.isBefore(end) || current.isSame(end, "day")) {
       // Exclude weekends, holidays, and existing leave records
-      if (!isWeekend(current) && !isHoliday(current) && !hasExistingLeave(current, recordsToUse)) {
+      if (
+        !isWeekend(current) &&
+        !isHoliday(current) &&
+        !hasExistingLeave(current, recordsToUse)
+      ) {
         count++;
       }
-      current = current.add(1, 'day');
+      current = current.add(1, "day");
     }
-    
+
     return count;
   };
 
@@ -370,30 +402,43 @@ const AdminLeaveManagement = () => {
     try {
       // For Client Visit, WFH, and Leave, fetch attendance records first to check for existing leaves
       let duration: number;
-      if (selectedLeaveType === "Client Visit" || selectedLeaveType === "Work From Home" || selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave") {
+      if (
+        selectedLeaveType === "Client Visit" ||
+        selectedLeaveType === "Work From Home" ||
+        selectedLeaveType === "Apply Leave" ||
+        selectedLeaveType === "Leave"
+      ) {
         // Fetch attendance records synchronously before calculating duration
-        const attendanceAction = await dispatch(fetchAttendanceByDateRange({
-          employeeId: selectedEmployee.employeeId,
-          startDate: formData.startDate,
-          endDate: formData.endDate,
-        }));
-        
+        const attendanceAction = await dispatch(
+          fetchAttendanceByDateRange({
+            employeeId: selectedEmployee.employeeId || selectedEmployee.id,
+            startDate: formData.startDate,
+            endDate: formData.endDate,
+          }),
+        );
+
         let records: any[] = [];
         if (fetchAttendanceByDateRange.fulfilled.match(attendanceAction)) {
-          records = attendanceAction.payload.data || attendanceAction.payload || [];
+          records =
+            attendanceAction.payload.data || attendanceAction.payload || [];
           setDateRangeAttendanceRecords(records);
         }
         // Calculate duration with the fetched records (pass records directly to avoid state timing issues)
-        duration = calculateDurationExcludingWeekends(formData.startDate, formData.endDate, records);
+        duration = calculateDurationExcludingWeekends(
+          formData.startDate,
+          formData.endDate,
+          records,
+        );
       } else {
-        duration = formData.startDate && formData.endDate
-          ? dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1
-          : 0;
+        duration =
+          formData.startDate && formData.endDate
+            ? dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1
+            : 0;
       }
 
       const submitAction = await dispatch(
         submitLeaveRequest({
-          employeeId: selectedEmployee.employeeId,
+          employeeId: selectedEmployee.employeeId || selectedEmployee.id,
           requestType: selectedLeaveType,
           title: formData.title,
           description: formData.description,
@@ -424,14 +469,20 @@ const AdminLeaveManagement = () => {
       for (let i = 0; i <= diffDays; i++) {
         const currentDateObj = startDate.clone().add(i, "day"); // Clone first to avoid mutation
         const currentDate = currentDateObj.format("YYYY-MM-DD");
-        
+
         // For Client Visit, WFH, and Leave, skip weekend dates and holidays (don't send to backend)
-        if ((selectedLeaveType === "Client Visit" || selectedLeaveType === "Work From Home" || selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave") && (isWeekend(currentDateObj) || isHoliday(currentDateObj))) {
+        if (
+          (selectedLeaveType === "Client Visit" ||
+            selectedLeaveType === "Work From Home" ||
+            selectedLeaveType === "Apply Leave" ||
+            selectedLeaveType === "Leave") &&
+          (isWeekend(currentDateObj) || isHoliday(currentDateObj))
+        ) {
           continue; // Skip weekends and holidays for Client Visit, WFH, and Leave
         }
 
         const attendanceData: any = {
-          employeeId: selectedEmployee.employeeId,
+          employeeId: selectedEmployee.employeeId || selectedEmployee.id,
           workingDate: currentDate,
           totalHours: 0,
         };
@@ -509,16 +560,26 @@ const AdminLeaveManagement = () => {
       // Refresh data for selected employee
       await dispatch(
         getLeaveHistory({
-          employeeId: selectedEmployee.employeeId,
+          employeeId: selectedEmployee.employeeId || selectedEmployee.id,
           page: currentPage,
           limit: itemsPerPage,
         }),
       );
-      await dispatch(getLeaveStats(selectedEmployee.employeeId));
+      await dispatch(
+        getLeaveStats({
+          employeeId: selectedEmployee.employeeId || selectedEmployee.id,
+        }),
+      );
 
       // Close & reset form
       setIsModalOpen(false);
-      setFormData({ title: "", description: "", startDate: "", endDate: "", duration: 0 });
+      setFormData({
+        title: "",
+        description: "",
+        startDate: "",
+        endDate: "",
+        duration: 0,
+      });
       setErrors({
         title: "",
         description: "",
@@ -551,31 +612,51 @@ const AdminLeaveManagement = () => {
 
   // Fetch attendance records for the selected date range to check for existing leaves
   useEffect(() => {
-    if (!isViewMode && selectedEmployee?.employeeId && formData.startDate && formData.endDate) {
-      dispatch(fetchAttendanceByDateRange({
-        employeeId: selectedEmployee.employeeId,
-        startDate: formData.startDate,
-        endDate: formData.endDate,
-      })).then((action: any) => {
+    if (
+      !isViewMode &&
+      (selectedEmployee?.employeeId || selectedEmployee?.id) &&
+      formData.startDate &&
+      formData.endDate
+    ) {
+      dispatch(
+        fetchAttendanceByDateRange({
+          employeeId: selectedEmployee.employeeId || selectedEmployee.id,
+          startDate: formData.startDate,
+          endDate: formData.endDate,
+        }),
+      ).then((action: any) => {
         if (fetchAttendanceByDateRange.fulfilled.match(action)) {
-          setDateRangeAttendanceRecords(action.payload.data || action.payload || []);
+          setDateRangeAttendanceRecords(
+            action.payload.data || action.payload || [],
+          );
         }
       });
     } else if (!isViewMode) {
       setDateRangeAttendanceRecords([]);
     }
-  }, [dispatch, selectedEmployee?.employeeId, formData.startDate, formData.endDate, isViewMode]);
+  }, [
+    dispatch,
+    selectedEmployee?.employeeId,
+    selectedEmployee?.id,
+    formData.startDate,
+    formData.endDate,
+    isViewMode,
+  ]);
 
   useEffect(() => {
-    if (selectedEmployee?.employeeId) {
+    if (selectedEmployee?.employeeId || selectedEmployee?.id) {
       dispatch(
         getLeaveHistory({
-          employeeId: selectedEmployee.employeeId,
+          employeeId: selectedEmployee.employeeId || selectedEmployee.id,
           page: currentPage,
           limit: itemsPerPage,
         }),
       );
-      dispatch(getLeaveStats(selectedEmployee.employeeId));
+      dispatch(
+        getLeaveStats({
+          employeeId: selectedEmployee.employeeId || selectedEmployee.id,
+        }),
+      );
     }
   }, [dispatch, selectedEmployee, currentPage]);
 
@@ -649,16 +730,23 @@ const AdminLeaveManagement = () => {
   };
 
   const executeCancel = () => {
-    if (cancelModal.id && selectedEmployee?.employeeId) {
+    if (
+      cancelModal.id &&
+      (selectedEmployee?.employeeId || selectedEmployee?.id)
+    ) {
       setIsCancelling(true);
       dispatch(
         updateLeaveRequestStatus({ id: cancelModal.id, status: "Cancelled" }),
       )
         .then(() => {
-          dispatch(getLeaveStats(selectedEmployee.employeeId));
+          dispatch(
+            getLeaveStats({
+              employeeId: selectedEmployee.employeeId || selectedEmployee.id,
+            }),
+          );
           dispatch(
             getLeaveHistory({
-              employeeId: selectedEmployee.employeeId,
+              employeeId: selectedEmployee.employeeId || selectedEmployee.id,
               page: currentPage,
               limit: itemsPerPage,
             }),
@@ -682,7 +770,13 @@ const AdminLeaveManagement = () => {
     setIsViewMode(false);
     setSelectedRequestId(null);
     setSelectedLeaveType("");
-    setFormData({ title: "", description: "", startDate: "", endDate: "", duration: 0 });
+    setFormData({
+      title: "",
+      description: "",
+      startDate: "",
+      endDate: "",
+      duration: 0,
+    });
     setErrors({
       title: "",
       description: "",
@@ -766,7 +860,7 @@ const AdminLeaveManagement = () => {
               <User size={20} className="text-[#4318FF]" />
               <span>
                 {selectedEmployee
-                  ? `${selectedEmployee.fullName || selectedEmployee.aliasLoginName || "Unknown"} (${selectedEmployee.employeeId})`
+                  ? `${selectedEmployee.fullName || selectedEmployee.aliasLoginName || "Unknown"} (${selectedEmployee.employeeId || selectedEmployee.id})`
                   : "Select an employee"}
               </span>
             </div>
@@ -824,7 +918,8 @@ const AdminLeaveManagement = () => {
                       setSearchTerm("");
                     }}
                     className={`w-full px-5 py-3 text-left hover:bg-[#F4F7FE] transition-colors flex items-center gap-3 first:rounded-t-2xl last:rounded-b-2xl ${
-                      selectedEmployee?.employeeId === emp.employeeId
+                      (selectedEmployee?.employeeId || selectedEmployee?.id) ===
+                      (emp.employeeId || emp.id)
                         ? "bg-[#F4F7FE] font-bold"
                         : ""
                     }`}
@@ -832,7 +927,7 @@ const AdminLeaveManagement = () => {
                     <User size={18} className="text-[#4318FF]" />
                     <span className="text-sm text-[#2B3674]">
                       {emp.fullName || emp.aliasLoginName || "Unknown"} (
-                      {emp.employeeId})
+                      {emp.employeeId || emp.id})
                     </span>
                   </button>
                 ))
@@ -1051,16 +1146,25 @@ const AdminLeaveManagement = () => {
                           <p className="text-[10px] text-[#4318FF] font-black mt-1 uppercase tracking-wider">
                             Total:{" "}
                             {item.duration ||
-                              (item.requestType === "Client Visit" || item.requestType === "Work From Home" || item.requestType === "Apply Leave" || item.requestType === "Leave"
-                                ? calculateDurationExcludingWeekends(item.fromDate, item.toDate)
-                                : dayjs(item.toDate).diff(dayjs(item.fromDate), "day") + 1)}{" "}
+                              (item.requestType === "Client Visit" ||
+                              item.requestType === "Work From Home" ||
+                              item.requestType === "Apply Leave" ||
+                              item.requestType === "Leave"
+                                ? calculateDurationExcludingWeekends(
+                                    item.fromDate,
+                                    item.toDate,
+                                  )
+                                : dayjs(item.toDate).diff(
+                                    dayjs(item.fromDate),
+                                    "day",
+                                  ) + 1)}{" "}
                             Day(s)
                           </p>
                         </td>
                         <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
                           {item.submittedDate
                             ? dayjs(item.submittedDate).format("DD MMM - YYYY")
-            : item.created_at
+                            : item.created_at
                               ? dayjs(item.created_at).format("DD MMM - YYYY")
                               : "-"}
                         </td>
@@ -1068,13 +1172,15 @@ const AdminLeaveManagement = () => {
                           <span
                             className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all whitespace-nowrap
                             ${
-                              item.status === "Approved" || item.status === "Cancellation Approved"
+                              item.status === "Approved" ||
+                              item.status === "Cancellation Approved"
                                 ? "bg-green-50 text-green-600 border-green-200"
                                 : item.status === "Pending"
                                   ? "bg-yellow-50 text-yellow-600 border-yellow-200"
                                   : item.status === "Cancelled"
                                     ? "bg-yellow-50 text-yellow-600 border-yellow-200"
-                                    : item.status === "Requesting for Cancellation"
+                                    : item.status ===
+                                        "Requesting for Cancellation"
                                       ? "bg-yellow-100 text-yellow-700 border-yellow-300"
                                       : item.status === "Request Modified"
                                         ? "bg-orange-50 text-orange-600 border-orange-200"
@@ -1089,14 +1195,16 @@ const AdminLeaveManagement = () => {
                               />
                             )}
                             {item.status}
-                            {item.status === "Request Modified" && item.requestModifiedFrom && (
-                              <span className="opacity-70 border-l border-orange-300 pl-1.5 ml-1 text-[9px] font-bold">
-                                (TO {
-                                  item.requestModifiedFrom === "Apply Leave" ? "LEAVE" : 
-                                  item.requestModifiedFrom.toUpperCase()
-                                })
-                              </span>
-                            )}
+                            {item.status === "Request Modified" &&
+                              item.requestModifiedFrom && (
+                                <span className="opacity-70 border-l border-orange-300 pl-1.5 ml-1 text-[9px] font-bold">
+                                  (TO{" "}
+                                  {item.requestModifiedFrom === "Apply Leave"
+                                    ? "LEAVE"
+                                    : item.requestModifiedFrom.toUpperCase()}
+                                  )
+                                </span>
+                              )}
                           </span>
                         </td>
                         <td className="py-4 px-4">
@@ -1367,9 +1475,14 @@ const AdminLeaveManagement = () => {
                     {formData.startDate && formData.endDate
                       ? (() => {
                           if (isViewMode) return `${formData.duration} Day(s)`;
-                          
+
                           // For Client Visit, WFH, and Leave, exclude weekends and holidays from duration display
-                          if (selectedLeaveType === "Client Visit" || selectedLeaveType === "Work From Home" || selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave") {
+                          if (
+                            selectedLeaveType === "Client Visit" ||
+                            selectedLeaveType === "Work From Home" ||
+                            selectedLeaveType === "Apply Leave" ||
+                            selectedLeaveType === "Leave"
+                          ) {
                             return `${calculateDurationExcludingWeekends(formData.startDate, formData.endDate)} Day(s)`;
                           } else {
                             return `${dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1} Day(s)`;

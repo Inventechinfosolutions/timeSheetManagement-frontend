@@ -47,6 +47,8 @@ const SidebarLayout = ({
         return "Change Password";
       case "leave-management":
         return "Work Management";
+      case "leave-balance":
+        return "Leave Balance";
       default:
         return "Dashboard";
     }

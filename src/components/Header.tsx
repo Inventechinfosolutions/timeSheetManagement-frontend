@@ -11,7 +11,10 @@ import {
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { logoutUser } from "../reducers/user.reducer";
-import { fetchProfileImage } from "../reducers/employeeDetails.reducer";
+import {
+  fetchProfileImage,
+  fetchLoggedInUserProfileImage,
+} from "../reducers/employeeDetails.reducer";
 import {
   fetchNotifications,
   markNotificationRead,
@@ -44,9 +47,8 @@ const Header = ({
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useAppDispatch();
-  const { entity, profileImageUrl } = useAppSelector(
-    (state) => state.employeeDetails,
-  );
+  const { entity, profileImageUrl, loggedInUserProfileImageUrl } =
+    useAppSelector((state) => state.employeeDetails);
   const { currentUser } = useAppSelector((state) => state.user);
   // Permissions
   const isAdmin = currentUser?.userType === "ADMIN";
@@ -152,25 +154,31 @@ const Header = ({
   };
 
   const handleProfileClick = () => {
-    navigate("/employee-dashboard/my-profile");
+    if (currentUser?.userType === "MANAGER") {
+      navigate("/manager-dashboard/my-profile");
+    } else if (currentUser?.userType === "ADMIN") {
+      navigate("/admin-dashboard/my-profile");
+    } else {
+      navigate("/employee-dashboard/my-profile");
+    }
     setIsDropdownOpen(false);
   };
 
   // Get first letter of name for avatar fallback
   const avatarLetter = isAdmin
     ? "A"
-    : entity?.fullName?.charAt(0)?.toUpperCase() ||
-      entity?.name?.charAt(0)?.toUpperCase() ||
+    : currentUser?.aliasLoginName?.charAt(0)?.toUpperCase() ||
+      currentUser?.loginId?.charAt(0)?.toUpperCase() ||
       "U";
 
   // Fetch profile image - ONLY for the logged-in user, not the viewed entity (if Admin)
   useEffect(() => {
     if (isAdmin) return;
-    const profileId = entity?.employeeId || entity?.id;
+    const profileId = currentUser?.employeeId || currentUser?.id;
     if (profileId) {
-      dispatch(fetchProfileImage(String(profileId)));
+      dispatch(fetchLoggedInUserProfileImage(String(profileId)));
     }
-  }, [dispatch, entity?.employeeId, entity?.id, isAdmin]);
+  }, [dispatch, currentUser?.employeeId, currentUser?.id, isAdmin]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -290,63 +298,62 @@ const Header = ({
                       <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
                         {isApprover ? (
                           leaveNotifications.length > 0 ? (
-                              leaveNotifications.map((notif) => {
-                                const getNotificationContent = (
-                                  notif: LeaveNotification,
-                                ) => {
-                                  let title = `${notif.requestType} Request`;
-                                  let message = (
+                            leaveNotifications.map((notif) => {
+                              const getNotificationContent = (
+                                notif: LeaveNotification,
+                              ) => {
+                                let title = `${notif.requestType} Request`;
+                                let message = (
+                                  <>
+                                    <span className="font-bold text-[#2B3674]">
+                                      {notif.employeeName}
+                                    </span>{" "}
+                                    applied for {notif.requestType}.
+                                  </>
+                                );
+                                let iconColorClass =
+                                  "bg-blue-100 text-[#4318FF]"; // Default
+
+                                // Logic for Cancellations
+                                if (
+                                  notif.status === "Requesting for Cancellation"
+                                ) {
+                                  title = `Cancellation Request`;
+                                  message = (
                                     <>
                                       <span className="font-bold text-[#2B3674]">
                                         {notif.employeeName}
                                       </span>{" "}
-                                      applied for {notif.requestType}.
+                                      requested to cancel an approved{" "}
+                                      <span className="font-bold">
+                                        {notif.requestType}
+                                      </span>
+                                      .
                                     </>
                                   );
-                                  let iconColorClass =
-                                    "bg-blue-100 text-[#4318FF]"; // Default
+                                  iconColorClass =
+                                    "bg-orange-100 text-orange-600";
+                                } else if (notif.status === "Cancelled") {
+                                  title = `Request Cancelled`;
+                                  message = (
+                                    <>
+                                      <span className="font-bold text-[#2B3674]">
+                                        {notif.employeeName}
+                                      </span>{" "}
+                                      cancelled their pending{" "}
+                                      <span className="font-bold">
+                                        {notif.requestType}
+                                      </span>{" "}
+                                      request.
+                                    </>
+                                  );
+                                  iconColorClass = "bg-red-50 text-red-500";
+                                }
 
-                                  // Logic for Cancellations
-                                  if (
-                                    notif.status ===
-                                    "Requesting for Cancellation"
-                                  ) {
-                                    title = `Cancellation Request`;
-                                    message = (
-                                      <>
-                                        <span className="font-bold text-[#2B3674]">
-                                          {notif.employeeName}
-                                        </span>{" "}
-                                        requested to cancel an approved{" "}
-                                        <span className="font-bold">
-                                          {notif.requestType}
-                                        </span>
-                                        .
-                                      </>
-                                    );
-                                    iconColorClass =
-                                      "bg-orange-100 text-orange-600";
-                                  } else if (notif.status === "Cancelled") {
-                                    title = `Request Cancelled`;
-                                    message = (
-                                      <>
-                                        <span className="font-bold text-[#2B3674]">
-                                          {notif.employeeName}
-                                        </span>{" "}
-                                        cancelled their pending{" "}
-                                        <span className="font-bold">
-                                          {notif.requestType}
-                                        </span>{" "}
-                                        request.
-                                      </>
-                                    );
-                                    iconColorClass = "bg-red-50 text-red-500";
-                                  }
+                                return { title, message, iconColorClass };
+                              };
 
-                                  return { title, message, iconColorClass };
-                                };
-
-                                const { title, message, iconColorClass } =
+                              const { title, message, iconColorClass } =
                                   getNotificationContent(notif);
 
                                 return (
@@ -397,7 +404,7 @@ const Header = ({
                                     </div>
                                   </div>
                                 );
-                              })
+                            })
                           ) : (
                             <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
                               <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-3">
@@ -447,8 +454,7 @@ const Header = ({
 
                                     // Case 1: Cancellation Approved
                                     if (
-                                      update.status ===
-                                      "Cancellation Approved"
+                                      update.status === "Cancellation Approved"
                                     ) {
                                       title = "Cancellation Approved";
                                       message = (
@@ -515,16 +521,18 @@ const Header = ({
                                           .
                                         </>
                                       );
-                                      icon = (
-                                        <X
-                                          size={18}
-                                        />
-                                      );
+                                      icon = <X size={18} />;
                                       iconBg = "bg-red-500";
                                     }
                                     // Case 5: Request Modified
-                                    else if (update.status === "Request Modified") {
-                                      const source = update.requestModifiedFrom === "Apply Leave" ? "Leave" : update.requestModifiedFrom;
+                                    else if (
+                                      update.status === "Request Modified"
+                                    ) {
+                                      const source =
+                                        update.requestModifiedFrom ===
+                                        "Apply Leave"
+                                          ? "Leave"
+                                          : update.requestModifiedFrom;
                                       title = "Request Modified";
                                       message = (
                                         <>
@@ -536,7 +544,8 @@ const Header = ({
                                           <span className="font-bold text-orange-600">
                                             Modified
                                           </span>{" "}
-                                          due to new request on same date {source}.
+                                          due to new request on same date{" "}
+                                          {source}.
                                         </>
                                       );
                                       icon = <RotateCcw size={18} />;
@@ -592,13 +601,17 @@ const Header = ({
                                             {message}
                                           </span>
                                           <span className="text-[10px] text-gray-400">
-                                            {String(update.fromDate).split(
-                                              "T",
-                                            )[0]}{" "}
+                                            {
+                                              String(update.fromDate).split(
+                                                "T",
+                                              )[0]
+                                            }{" "}
                                             to{" "}
-                                            {String(update.toDate).split(
-                                              "T",
-                                            )[0]}
+                                            {
+                                              String(update.toDate).split(
+                                                "T",
+                                              )[0]
+                                            }
                                           </span>
                                         </div>
                                       </div>
@@ -769,9 +782,9 @@ const Header = ({
               >
                 <div className="flex items-center gap-1.5 md:gap-2">
                   <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white font-bold text-sm shadow-inner ring-1 ring-white/30 overflow-hidden">
-                    {profileImageUrl ? (
+                    {loggedInUserProfileImageUrl ? (
                       <img
-                        src={profileImageUrl}
+                        src={loggedInUserProfileImageUrl}
                         alt="Avatar"
                         className="w-full h-full object-cover"
                       />
@@ -783,14 +796,12 @@ const Header = ({
                     <span className="text-[12px] md:text-sm font-bold text-white transition-colors leading-none">
                       {isAdmin
                         ? "Admin"
-                        : entity?.firstName ||
-                          entity?.fullName?.split(" ")[0] ||
-                          "User"}
+                        : currentUser?.aliasLoginName?.split(" ")[0] || "User"}
                     </span>
                     <span className="text-[9.5px] md:text-[11px] text-blue-100/80 leading-none mt-1">
                       {isAdmin
                         ? "Administrator"
-                        : entity?.employeeId || "Employee"}
+                        : currentUser?.employeeId || "Employee"}
                     </span>
                   </div>
                   <ChevronDown
