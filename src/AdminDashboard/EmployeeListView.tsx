@@ -1198,9 +1198,9 @@ const EmployeeListView = () => {
                           onChange={handleFormChange}
                           className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none transition-all text-sm appearance-none bg-white"
                         >
-                          <option value="">Not set (infer from designation)</option>
-                          <option value="FULL_TIMER">Full timer (18 leaves/year)</option>
-                          <option value="INTERN">Intern (12 leaves/year)</option>
+                          <option value="">Select Employment Type</option>
+                          <option value="FULL_TIMER">Full-time employee </option>
+                          <option value="INTERN">Intern </option>
                         </select>
                         <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
                         <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -1210,7 +1210,7 @@ const EmployeeListView = () => {
                         </div>
                       </div>
                       <p className="text-gray-400 text-xs mt-0.5">
-                        Used for leave balance: Full timer = 18, Intern = 12 leaves/year
+                        {/* Used for leave balance: Full timer = 18, Intern = 12 leaves/year */}
                       </p>
                     </div>
                   </div>
