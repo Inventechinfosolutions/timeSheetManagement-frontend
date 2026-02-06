@@ -364,7 +364,6 @@ const EmployeeListView = () => {
       designation: "",
       email: "",
       role: "",
-      role: "",
       employmentType: "",
       joiningDate: "",
     });
