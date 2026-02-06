@@ -665,10 +665,6 @@ const TodayAttendance = ({
             <AttendancePieChart
               data={currentMonthEntries}
               currentMonth={calendarDate}
-              onMonthChange={(date) => {
-                setCalendarDate(date);
-                fetchAttendanceData(date);
-              }}
             />
           </div>
           <div className="w-full">
