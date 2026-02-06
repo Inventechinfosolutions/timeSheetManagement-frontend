@@ -11,6 +11,7 @@ import {
   Eye,
   LayoutGrid,
   User,
+  FolderOpen,
 } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
@@ -96,6 +97,7 @@ const SidebarLayout = ({
           { name: "Work Management", icon: Calendar },
           { name: "Manager Mapping", icon: Users },
           { name: "Notification", icon: Bell },
+          { name: "Projects", icon: FolderOpen },
         ]
   ).filter((item) => {
     // Hide "Manager Mapping" if the title is "Manager"

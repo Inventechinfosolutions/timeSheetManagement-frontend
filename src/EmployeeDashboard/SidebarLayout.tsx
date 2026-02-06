@@ -8,6 +8,7 @@ import {
   Unlock,
   Eye,
   Menu,
+  FolderOpen,
 } from "lucide-react";
 import { useAppSelector } from "../hooks";
 import { useParams } from "react-router-dom";
@@ -61,6 +62,7 @@ const SidebarLayout = ({
     { name: "Timesheet View", icon: Eye },
     { name: "Work Management", icon: Calendar },
     { name: "My Profile", icon: User },
+    { name: "Projects", icon: FolderOpen },
     //{ name: 'Change Password', icon: Lock },
   ];
 

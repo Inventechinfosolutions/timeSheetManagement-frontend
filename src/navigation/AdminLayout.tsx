@@ -36,6 +36,9 @@ const AdminLayout = () => {
     ) {
       return "Manager Mapping";
     }
+    if (path.includes("/admin-dashboard/projects")) {
+      return "Projects";
+    }
 
     switch (tab) {
       case "registration":
@@ -53,6 +56,8 @@ const AdminLayout = () => {
         return "Work Management";
       case "manager-mapping":
         return "Manager Mapping";
+      case "projects":
+        return "Projects";
       default:
         return "System Dashboard";
     }
@@ -73,6 +78,8 @@ const AdminLayout = () => {
       navigate("/admin-dashboard/work-management");
     } else if (tabName === "Manager Mapping") {
       navigate("/admin-dashboard/manager-mapping");
+    } else if (tabName === "Projects") {
+      navigate("/admin-dashboard/projects");
     } else if (tabName === "System Dashboard") {
       navigate("/admin-dashboard");
     }

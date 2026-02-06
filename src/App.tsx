@@ -52,6 +52,10 @@ import AdminViewEmployeeDashboard from "./AdminDashboard/AdminViewEmployeeDashbo
 import AdminLeaveManagement from "./AdminDashboard/AdminLeaveManagement";
 import ManagerMapping from "./ManagerMapping/ManagerMapping";
 import ManagerEmployeesView from "./AdminDashboard/ManagerEmployeesView";
+const ProjectsList = lazy(() => import("./pages/projects/ProjectsList"));
+const CreateProject = lazy(() => import("./pages/projects/CreateProject"));
+
+const ProjectDetails = lazy(() => import("./pages/projects/ProjectDetails"));
 
 const EmployeeTabWrapper = () => {
   const { tab } = useParams<{ tab: string }>();
@@ -287,6 +291,30 @@ function App() {
                     path="manager-employees/:managerId"
                     element={<ManagerEmployeesView />}
                   />
+                  <Route
+                    path="projects"
+                    element={
+                      <Suspense fallback={<Spin size="large" />}>
+                        <ProjectsList />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="projects/create"
+                    element={
+                      <Suspense fallback={<Spin size="large" />}>
+                        <CreateProject />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="projects/:id"
+                    element={
+                      <Suspense fallback={<Spin size="large" />}>
+                        <ProjectDetails />
+                      </Suspense>
+                    }
+                  />
                   <Route path=":tab/:date?" element={<AdminTabWrapper />} />
                 </Route>
 
@@ -345,6 +373,30 @@ function App() {
                   }
                 >
                   <Route index element={<TodayAttendance />} />
+                  <Route
+                    path="projects"
+                    element={
+                      <Suspense fallback={<Spin size="large" />}>
+                        <ProjectsList />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="projects/create"
+                    element={
+                      <Suspense fallback={<Spin size="large" />}>
+                        <CreateProject />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="projects/:id"
+                    element={
+                      <Suspense fallback={<Spin size="large" />}>
+                        <ProjectDetails />
+                      </Suspense>
+                    }
+                  />
                   <Route path=":tab/:date?" element={<EmployeeTabWrapper />} />
                 </Route>
 
