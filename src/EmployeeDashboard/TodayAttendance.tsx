@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Clock,
   AlertTriangle,
@@ -12,7 +12,8 @@ import {
   fetchDashboardStats,
 } from "../reducers/employeeAttendance.reducer";
 import { getEntity, setCurrentUser } from "../reducers/employeeDetails.reducer";
-import { fetchEmployeeUpdates } from "../reducers/leaveNotification.reducer";
+import { fetchEmployeeUpdates, fetchUnreadNotifications } from "../reducers/leaveNotification.reducer";
+import { fetchNotifications } from "../reducers/notification.reducer";
 import { generateMonthlyEntries } from "../utils/attendanceUtils";
 import AttendanceViewWrapper from "./CalenderViewWrapper";
 import AttendancePieChart from "./AttendancePieChart";
@@ -34,6 +35,7 @@ const TodayAttendance = ({
 }: Props) => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const { records, loading, stats } = useAppSelector(
     (state: RootState) => state.attendance,
   );
@@ -79,6 +81,8 @@ const TodayAttendance = ({
   useEffect(() => {
     if (currentEmployeeId && currentEmployeeId !== "Admin") {
       dispatch(fetchEmployeeUpdates(currentEmployeeId));
+      dispatch(fetchNotifications(currentEmployeeId));
+      dispatch(fetchUnreadNotifications());
       dispatch(fetchDashboardStats({ employeeId: currentEmployeeId }));
     }
   }, [dispatch, currentEmployeeId]);
@@ -163,7 +167,16 @@ const TodayAttendance = ({
       if (setScrollToDate) setScrollToDate(timestamp);
 
       const targetDate = new Date(timestamp);
-      const navTarget = "/employee-dashboard/my-timesheet";
+      
+      // Dynamic base path detection
+      let basePath = "/employee-dashboard";
+      if (location.pathname.startsWith("/manager-dashboard")) {
+        basePath = "/manager-dashboard";
+      } else if (location.pathname.startsWith("/admin-dashboard")) {
+        basePath = "/admin-dashboard";
+      }
+      
+      const navTarget = `${basePath}/my-timesheet`;
       const state = {
         selectedDate: targetDate.toISOString(),
         timestamp: targetDate.getTime(),
@@ -175,7 +188,7 @@ const TodayAttendance = ({
         navigate(navTarget, { state });
       }
     },
-    [setScrollToDate, setActiveTab, navigate],
+    [viewOnly, setScrollToDate, setActiveTab, navigate, location.pathname],
   );
 
   const handleNavigate = (timestamp: number) => {

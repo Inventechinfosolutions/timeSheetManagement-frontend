@@ -1,5 +1,7 @@
 import { Outlet, useParams, useNavigate, useLocation } from "react-router-dom";
 import SidebarLayout from "../AdminDashboard/SidebarLayout";
+import { useAppDispatch } from "../hooks";
+import { fetchUnreadNotifications } from "../reducers/leaveNotification.reducer";
 
 const AdminLayout = () => {
   const { tab } = useParams<{ tab: string }>();
@@ -58,8 +60,12 @@ const AdminLayout = () => {
     }
   };
 
+  const dispatch = useAppDispatch();
   const handleTabChange = (tabName: string) => {
-    if (tabName === "User & Role Management") {
+    if (tabName === "System Dashboard") {
+      dispatch(fetchUnreadNotifications());
+      navigate("/admin-dashboard");
+    } else if (tabName === "User & Role Management") {
       navigate("/admin-dashboard/registration");
     } else if (tabName === "Employee Details") {
       navigate("/admin-dashboard/employees");
@@ -73,8 +79,6 @@ const AdminLayout = () => {
       navigate("/admin-dashboard/work-management");
     } else if (tabName === "Manager Mapping") {
       navigate("/admin-dashboard/manager-mapping");
-    } else if (tabName === "System Dashboard") {
-      navigate("/admin-dashboard");
     }
   };
 

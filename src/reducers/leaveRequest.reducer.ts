@@ -31,6 +31,7 @@ interface LeaveRequestState {
     leave: { applied: number; approved: number; rejected: number; total: number };
     wfh: { applied: number; approved: number; rejected: number; total: number };
     clientVisit: { applied: number; approved: number; rejected: number; total: number };
+    halfDay: { applied: number; approved: number; rejected: number; total: number };
   } | null;
   loading: boolean;
   error: string | null;

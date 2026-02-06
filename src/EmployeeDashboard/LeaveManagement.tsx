@@ -34,6 +34,7 @@ import {
   ChevronRight,
   Filter,
   ChevronDown,
+  Clock,
 } from "lucide-react";
 import { notification } from "antd";
 import CommonMultipleUploader from "./CommonMultipleUploader";
@@ -103,7 +104,7 @@ const LeaveManagement = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [filterStatus, setFilterStatus] = useState("All");
   const [selectedMonth, setSelectedMonth] = useState<string>("All");
-  const [selectedYear, setSelectedYear] = useState<string>(dayjs().format("YYYY"));
+  const [selectedYear, setSelectedYear] = useState<string>("All");
   const itemsPerPage = 10;
 
   const months = [
@@ -140,9 +141,7 @@ const LeaveManagement = () => {
     const currentDate = current.startOf("day");
     const today = dayjs().startOf("day");
 
-    // For Client Visit, allow past dates - don't disable them
-    const isClientVisit = selectedLeaveType === "Client Visit";
-    if (!isClientVisit && currentDate.isBefore(today)) {
+    if (currentDate.isBefore(today)) {
       return true;
     }
 
@@ -186,8 +185,8 @@ const LeaveManagement = () => {
 
       // 2. RULE: If WORK FROM HOME already exists
       if (existingRequestType === "Work From Home") {
-          // Allow if applying for Leave or Client Visit
-          if (selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave" || selectedLeaveType === "Client Visit") {
+          // Allow if applying for Leave or Client Visit or Half Day
+          if (selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave" || selectedLeaveType === "Client Visit" || selectedLeaveType === "Half Day") {
               return false; // Valid dates, don't disable
           }
           return true; // Otherwise block (prevents dual WFH)
@@ -195,8 +194,8 @@ const LeaveManagement = () => {
 
       // 3. RULE: If CLIENT VISIT already exists
       if (existingRequestType === "Client Visit") {
-          // Allow if applying for Leave or Work From Home
-          if (selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave" || selectedLeaveType === "Work From Home") {
+          // Allow if applying for Leave or Work From Home or Half Day
+          if (selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave" || selectedLeaveType === "Work From Home" || selectedLeaveType === "Half Day") {
               return false; // Valid dates, don't disable
           }
           return true; // Otherwise block (prevents dual CV)
@@ -211,13 +210,9 @@ const LeaveManagement = () => {
     // Always check if date has Leave or WFH applied (regardless of request type)
     if (disabledDate(current)) return true;
 
-    // For Client Visit, allow past dates - but still respect Leave/WFH blocking above
-    const isClientVisit = selectedLeaveType === "Client Visit";
-    if (!isClientVisit) {
-      const today = dayjs().startOf("day");
-      const currentDate = current.startOf("day");
-      if (currentDate.isBefore(today)) return true;
-    }
+    const today = dayjs().startOf("day");
+    const currentDate = current.startOf("day");
+    if (currentDate.isBefore(today)) return true;
 
     // Don't allow end date before start date
     if (formData.startDate) {
@@ -650,6 +645,7 @@ const LeaveManagement = () => {
     { label: "Leave", icon: Calendar, color: "#4318FF" },
     { label: "Work From Home", icon: Home, color: "#38A169" },
     { label: "Client Visit", icon: MapPin, color: "#FFB547" },
+    { label: "Half Day", icon: Clock, color: "#F97316" },
   ];
 
   const hexToRgb = (hex: string) => {
@@ -706,18 +702,18 @@ const LeaveManagement = () => {
                     <button
                       key={`${i}-${idx}`}
                       onClick={() => handleOpenModal(option.label)}
-                      className="group relative bg-white/10 backdrop-blur-md border border-white/20 p-2 rounded-2xl hover:bg-white transition-all duration-300 flex flex-col items-center justify-center gap-2 w-28 h-28 hover:shadow-lg hover:-translate-y-0.5 cursor-pointer"
+                      className="group relative bg-white/10 backdrop-blur-md border border-white/20 p-2 rounded-2xl hover:bg-white transition-all duration-300 flex flex-col items-center justify-center gap-2 w-28 h-28 hover:shadow-2xl hover:-translate-y-1 cursor-pointer"
                     >
                       <div
-                        className="p-3 rounded-xl transition-all duration-300"
+                        className="h-12 w-12 md:h-14 md:w-14 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-300 transform group-hover:scale-110 group-hover:rotate-3"
                         style={{
-                          backgroundColor: `rgba(${hexToRgb(option.color)}, 0.2)`,
+                          backgroundColor: `rgba(${hexToRgb(option.color)}, 0.25)`,
                           color: "#ffffff",
                         }}
                       >
                         <option.icon
                           size={28}
-                          className="transition-colors duration-300 group-hover:text-[var(--hover-color)] text-white"
+                          className="transition-colors duration-300 group-hover:text-[var(--hover-color)] text-white drop-shadow-md"
                           style={
                             {
                               "--hover-color": option.color,
@@ -738,7 +734,7 @@ const LeaveManagement = () => {
       </div>
 
       {/* Leave Balance Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 mt-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 mt-4">
         {[
           {
             label: "Leave",
@@ -757,6 +753,12 @@ const LeaveManagement = () => {
             key: "clientVisit",
             color: "from-[#FFB547] to-[#FCCD75]",
             icon: MapPin,
+          },
+          {
+            label: "Half Day",
+            key: "halfDay",
+            color: "from-[#F97316] to-[#FDBA74]",
+            icon: Clock,
           },
         ].map((config, idx) => {
           // Normalize data access to be resilient to backend naming (case sensitivity)
