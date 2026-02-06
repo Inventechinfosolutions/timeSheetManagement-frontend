@@ -41,7 +41,7 @@ const TodayAttendance = ({
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const location = useLocation();
-  const { records, loading, stats, yearlyRecords } = useAppSelector(
+  const { records, loading, yearlyRecords } = useAppSelector(
     (state: RootState) => state.attendance,
   );
   const { entity } = useAppSelector(
@@ -321,12 +321,21 @@ const TodayAttendance = ({
             </span>
 
             <button
+              disabled={
+                calendarDate.getMonth() === now.getMonth() &&
+                calendarDate.getFullYear() === now.getFullYear()
+              }
               onClick={() => {
                 const next = new Date(calendarDate);
                 next.setMonth(next.getMonth() + 1);
                 setCalendarDate(next);
               }}
-              className="p-1.5 hover:bg-gray-50 rounded-full transition-colors text-[#4318FF] hover:scale-110 active:scale-95"
+              className={`p-1.5 rounded-full transition-colors ${
+                calendarDate.getMonth() === now.getMonth() &&
+                calendarDate.getFullYear() === now.getFullYear()
+                  ? "text-gray-300 cursor-not-allowed"
+                  : "text-[#4318FF] hover:bg-gray-50 hover:scale-110 active:scale-95"
+              }`}
             >
               <ChevronRight size={20} strokeWidth={2.5} />
             </button>
@@ -338,10 +347,9 @@ const TodayAttendance = ({
           year={selectedYear}
           month={calendarDate.getMonth() + 1}
           leaveBalance={leaveBalance}
-          stats={stats}
           attendanceRecords={yearlyRecords}
           isIntern={isIntern}
-          now={now}
+          joiningDate={entity?.joiningDate || currentUser?.joiningDate}
         />
 
         {/* Charts Section */}
