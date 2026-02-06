@@ -11,6 +11,9 @@ import {
   Eye,
   LayoutGrid,
   User,
+  ClipboardList,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
@@ -40,6 +43,44 @@ const SidebarLayout = ({
   // Ref for the main scrollable content area
   const mainContentRef = useRef<HTMLDivElement>(null);
 
+  // Grouped Sidebar Items for Manager
+  const managerSidebarGroups = useMemo(
+    () => [
+      {
+        title: "My Workspace",
+        items: [
+          { name: "My Dashboard", icon: LayoutGrid },
+          { name: "My Timesheet", icon: Calendar },
+          { name: "My Timesheet View", icon: Eye },
+          { name: "My Profile", icon: User },
+        ],
+      },
+      {
+        title: "Team Management",
+        items: [
+          { name: "Employee Dashboard", icon: Settings },
+          { name: "Employee Details", icon: Users },
+          { name: "Employee Timesheet", icon: AlarmClock },
+          { name: "Work Management", icon: Calendar },
+          { name: "Notification", icon: Bell },
+        ],
+      },
+    ],
+    [],
+  );
+
+  const adminSidebarItems = useMemo(
+    () => [
+      { name: "System Dashboard", icon: Settings },
+      { name: "Employee Details", icon: Users },
+      { name: "Employee Timesheet", icon: AlarmClock },
+      { name: "Work Management", icon: Calendar },
+      { name: "Manager Mapping", icon: Users },
+      { name: "Notification", icon: Bell },
+    ],
+    [],
+  );
+
   // Determine active tab from URL if not explicitly provided
   const derivedActiveTab = useMemo(() => {
     if (activeTab && activeTab !== "Dashboard") return activeTab;
@@ -49,17 +90,57 @@ const SidebarLayout = ({
       case "employees":
         return "Employee Details";
       case "timesheet-list":
-        return "Timesheet";
       case "working-details":
-        return "Timesheet";
+        return "Employee Timesheet";
       case "requests":
         return "Notification";
       case "manager-mapping":
         return "Manager Mapping";
+      case "leave-balance":
+        return "Leave Balance";
+      case "work-management":
+        return "Work Management";
+      case "my-dashboard":
+        return "My Dashboard";
+      case "my-timesheet":
+        return "My Timesheet";
+      case "my-timesheet-view":
+        return "My Timesheet View";
+      case "my-profile":
+        return "My Profile";
       default:
-        return "System Dashboard";
+        return title === "Manager" ? "My Dashboard" : "System Dashboard";
     }
-  }, [tab, activeTab]);
+  }, [tab, activeTab, title]);
+
+  // Track expanded groups (independent collapsible sections)
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
+    () => {
+      if (title !== "Manager") return {};
+      // Expand groups that contain the active tab by default
+      const initial: Record<string, boolean> = {};
+      managerSidebarGroups.forEach((group) => {
+        if (group.items.some((item) => item.name === derivedActiveTab)) {
+          initial[group.title] = true;
+        }
+      });
+      // Always expand first group if none match
+      if (
+        Object.keys(initial).length === 0 &&
+        managerSidebarGroups.length > 0
+      ) {
+        initial[managerSidebarGroups[0].title] = true;
+      }
+      return initial;
+    },
+  );
+
+  const toggleGroup = (groupTitle: string) => {
+    setExpandedGroups((prev) => ({
+      ...prev,
+      [groupTitle]: !prev[groupTitle],
+    }));
+  };
 
   useEffect(() => {
     dispatch(getEntities({ search: "" }));
@@ -74,36 +155,6 @@ const SidebarLayout = ({
 
   // Sidebar opens if it's either hovered OR locked
   const isOpen = isHovered || isLocked;
-
-  const sidebarItems = (
-    title === "Manager"
-      ? [
-          { name: "My Dashboard", icon: LayoutGrid },
-          { name: "My Timesheet", icon: Calendar },
-          { name: "My Timesheet View", icon: Eye },
-          { name: "My Profile", icon: User },
-          { name: "Divider", isDivider: true },
-          { name: "Employee Dashboard", icon: Settings },
-          { name: "Employee Details", icon: Users },
-          { name: "Employee Timesheet", icon: AlarmClock },
-          { name: "Work Management", icon: Calendar },
-          { name: "Notification", icon: Bell },
-        ]
-      : [
-          { name: "System Dashboard", icon: Settings },
-          { name: "Employee Details", icon: Users },
-          { name: "Timesheet", icon: AlarmClock },
-          { name: "Work Management", icon: Calendar },
-          { name: "Manager Mapping", icon: Users },
-          { name: "Notification", icon: Bell },
-        ]
-  ).filter((item) => {
-    // Hide "Manager Mapping" if the title is "Manager"
-    if (title === "Manager" && item.name === "Manager Mapping") {
-      return false;
-    }
-    return true;
-  });
 
   return (
     <div className="flex w-full h-screen bg-[#f8f9fa] font-sans text-[#2B3674] overflow-hidden relative">
@@ -234,74 +285,167 @@ const SidebarLayout = ({
 
         {/* Navigation Items */}
         <nav
-          className="flex-1 px-4 space-y-2 mt-0.5 overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [&::-webkit-scrollbar]:w-0 [&::-webkit-scrollbar]:h-0"
+          className="flex-1 px-4 mt-0.5 overflow-y-auto no-scrollbar"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
-          {sidebarItems.map((item) => {
-            if ("isDivider" in item && item.isDivider) {
-              return (
-                <div key={item.name} className="px-2 my-4">
-                  <div
-                    className={`h-px bg-white/20 transition-all duration-500 ${
-                      isOpen ? "w-full" : "w-8 mx-auto"
-                    }`}
-                  ></div>
-                </div>
-              );
-            }
+          {title === "Manager"
+            ? managerSidebarGroups.map((group) => {
+                const isExpanded = expandedGroups[group.title];
+                const hasActiveItem = group.items.some(
+                  (item) => item.name === derivedActiveTab,
+                );
 
-            const isActive = derivedActiveTab === item.name;
-            const Icon = item.icon!;
-            return (
-              <div key={item.name} className="relative group">
-                <button
-                  onClick={() => {
-                    onTabChange?.(item.name);
-                    setIsMobileOpen(false);
-                  }}
-                  className={`w-full flex items-center p-3 rounded-2xl cursor-pointer transition-all duration-300 relative overflow-hidden group
-                                        ${
-                                          isActive
-                                            ? "bg-white shadow-lg text-[#4318FF] font-bold"
-                                            : "text-blue-100 hover:bg-white/10 hover:text-white"
-                                        }
-                                        ${
-                                          isOpen
-                                            ? "gap-4 px-4"
-                                            : "md:justify-center md:px-0 gap-0"
-                                        }
-                                    `}
-                >
-                  <div className="shrink-0 relative z-10 transition-transform duration-300">
-                    <Icon
-                      className={`w-5 h-5 transition-colors duration-300 ${
-                        isActive ? "text-[#4318FF]" : "group-hover:scale-110"
-                      }`}
-                    />
-                  </div>
-                  <span
-                    className={`text-sm whitespace-nowrap transition-all duration-300 relative z-10
-                                        ${
-                                          isOpen
-                                            ? "opacity-100 translate-x-0 w-auto"
-                                            : "opacity-0 -translate-x-4 w-0 overflow-hidden absolute"
-                                        }
-                                    `}
-                  >
-                    {item.name}
-                  </span>
-                </button>
+                return (
+                  <div key={group.title} className="mb-2">
+                    {/* Group Header */}
+                    {isOpen && (
+                      <button
+                        onClick={() => toggleGroup(group.title)}
+                        className={`w-full flex items-center justify-between px-4 py-2 text-[11px] font-bold uppercase tracking-widest transition-all duration-200 rounded-xl mb-1 border
+                                              ${
+                                                isExpanded
+                                                  ? "text-white bg-white/25 border-white/40 shadow-sm"
+                                                  : "text-blue-100 hover:text-white hover:bg-white/10 border-white/10"
+                                              }
+                                              ${
+                                                hasActiveItem && !isExpanded
+                                                  ? "text-white bg-white/15"
+                                                  : ""
+                                              }
+                                            `}
+                      >
+                        <span>{group.title}</span>
+                        {isExpanded ? (
+                          <ChevronDown size={14} />
+                        ) : (
+                          <ChevronRight size={14} />
+                        )}
+                      </button>
+                    )}
 
-                {/* Tooltip */}
-                {!isOpen && (
-                  <div className="hidden md:block absolute left-[calc(100%+10px)] top-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#111c44] text-white text-xs font-bold rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 whitespace-nowrap z-50">
-                    {item.name}
-                    <div className="absolute top-1/2 -left-1 -translate-y-1/2 border-4 border-r-[#111c44] border-l-transparent border-t-transparent border-b-transparent"></div>
+                    {/* Group Items */}
+                    <div
+                      className={`space-y-1 overflow-hidden transition-all duration-300 ease-in-out
+                                            ${
+                                              isExpanded || !isOpen
+                                                ? "max-h-[500px] opacity-100"
+                                                : "max-h-0 opacity-0"
+                                            }
+                                        `}
+                    >
+                      {group.items.map((item) => {
+                        const isActive = derivedActiveTab === item.name;
+                        const Icon = item.icon;
+                        return (
+                          <div key={item.name} className="relative group">
+                            <button
+                              onClick={() => {
+                                onTabChange?.(item.name);
+                                setIsMobileOpen(false);
+                              }}
+                              className={`w-full flex items-center p-2.5 rounded-xl cursor-pointer transition-all duration-300 relative overflow-hidden group
+                                                            ${
+                                                              isActive
+                                                                ? "bg-white shadow-lg text-[#4318FF] font-bold"
+                                                                : "text-blue-100 hover:bg-white/10 hover:text-white"
+                                                            }
+                                                            ${
+                                                              isOpen
+                                                                ? "gap-4 px-4"
+                                                                : "md:justify-center md:px-0 gap-0"
+                                                            }
+                                                        `}
+                            >
+                              <div className="shrink-0 relative z-10 transition-transform duration-300">
+                                <Icon
+                                  className={`w-5 h-5 transition-colors duration-300 ${
+                                    isActive
+                                      ? "text-[#4318FF]"
+                                      : "group-hover:scale-110"
+                                  }`}
+                                />
+                              </div>
+                              <span
+                                className={`text-sm whitespace-nowrap transition-all duration-300 relative z-10
+                                                            ${
+                                                              isOpen
+                                                                ? "opacity-100 translate-x-0 w-auto"
+                                                                : "opacity-0 -translate-x-4 w-0 overflow-hidden absolute"
+                                                            }
+                                                        `}
+                              >
+                                {item.name}
+                              </span>
+                            </button>
+
+                            {/* Tooltip for collapsed mode */}
+                            {!isOpen && (
+                              <div className="hidden md:block absolute left-[calc(100%+10px)] top-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#111c44] text-white text-xs font-bold rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 whitespace-nowrap z-50">
+                                {item.name}
+                                <div className="absolute top-1/2 -left-1 -translate-y-1/2 border-4 border-r-[#111c44] border-l-transparent border-t-transparent border-b-transparent"></div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                )}
-              </div>
-            );
-          })}
+                );
+              })
+            : adminSidebarItems.map((item) => {
+                const isActive = derivedActiveTab === item.name;
+                const Icon = item.icon!;
+                return (
+                  <div key={item.name} className="relative group mb-1">
+                    <button
+                      onClick={() => {
+                        onTabChange?.(item.name);
+                        setIsMobileOpen(false);
+                      }}
+                      className={`w-full flex items-center p-3 rounded-2xl cursor-pointer transition-all duration-300 relative overflow-hidden group
+                                            ${
+                                              isActive
+                                                ? "bg-white shadow-lg text-[#4318FF] font-bold"
+                                                : "text-blue-100 hover:bg-white/10 hover:text-white"
+                                            }
+                                            ${
+                                              isOpen
+                                                ? "gap-4 px-4"
+                                                : "md:justify-center md:px-0 gap-0"
+                                            }
+                                        `}
+                    >
+                      <div className="shrink-0 relative z-10 transition-transform duration-300">
+                        <Icon
+                          className={`w-5 h-5 transition-colors duration-300 ${
+                            isActive
+                              ? "text-[#4318FF]"
+                              : "group-hover:scale-110"
+                          }`}
+                        />
+                      </div>
+                      <span
+                        className={`text-sm whitespace-nowrap transition-all duration-300 relative z-10
+                                            ${
+                                              isOpen
+                                                ? "opacity-100 translate-x-0 w-auto"
+                                                : "opacity-0 -translate-x-4 w-0 overflow-hidden absolute"
+                                            }
+                                        `}
+                      >
+                        {item.name}
+                      </span>
+                    </button>
+
+                    {!isOpen && (
+                      <div className="hidden md:block absolute left-[calc(100%+10px)] top-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#111c44] text-white text-xs font-bold rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 whitespace-nowrap z-50">
+                        {item.name}
+                        <div className="absolute top-1/2 -left-1 -translate-y-1/2 border-4 border-r-[#111c44] border-l-transparent border-t-transparent border-b-transparent"></div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
         </nav>
       </aside>
 

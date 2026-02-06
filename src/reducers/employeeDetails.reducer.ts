@@ -28,6 +28,7 @@ interface EmployeeDetailsState {
   departments: string[];
   roles: string[];
   managers: any[];
+  loggedInUserProfileImageUrl: string | null;
 }
 
 const initialState: EmployeeDetailsState = {
@@ -44,6 +45,7 @@ const initialState: EmployeeDetailsState = {
   departments: [],
   roles: [],
   managers: [],
+  loggedInUserProfileImageUrl: null,
 };
 
 
@@ -62,11 +64,12 @@ export const getEntities = createAsyncThunk<
     limit?: number;
     sort?: string;
     order?: string;
+    includeSelf?: boolean;
   },
   ThunkConfig
 >(
   'employeeDetails/fetch_entity_list',
-  async ({ search, department, page, limit, sort, order }, { rejectWithValue }) => {
+  async ({ search, department, page, limit, sort, order, includeSelf }, { rejectWithValue }) => {
     try {
       const params: any = {
         search: search || '',
@@ -80,6 +83,7 @@ export const getEntities = createAsyncThunk<
       if (limit) params.limit = limit;
       if (sort) params.sort = sort;
       if (order) params.order = order;
+      if (includeSelf) params.includeSelf = includeSelf;
 
       const queryParams = new URLSearchParams(params);
       const response = await axios.get(`${apiUrl}?${queryParams.toString()}`);
@@ -313,6 +317,20 @@ export const fetchProfileImage = createAsyncThunk<string, string, ThunkConfig>(
   }
 );
 
+export const fetchLoggedInUserProfileImage = createAsyncThunk<string, string, ThunkConfig>(
+  'employeeDetails/fetch_logged_in_profile_image',
+  async (employeeId, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`${apiUrl}/profile-image/${employeeId}/view`, {
+        responseType: 'blob',
+      });
+      return URL.createObjectURL(response.data);
+    } catch (error: any) {
+      return rejectWithValue('No image found');
+    }
+  }
+);
+
 export const bulkUploadEmployees = createAsyncThunk<any, File, ThunkConfig>(
   'employeeDetails/bulk_upload',
   async (file, { dispatch, rejectWithValue }) => {
@@ -404,6 +422,10 @@ export const EmployeeDetailsSlice = createSlice({
       })
       .addCase(uploadProfileImage.fulfilled, (state: EmployeeDetailsState) => {
         state.profileImageUrl = null; // Trigger re-fetch or state update
+        state.loggedInUserProfileImageUrl = null;
+      })
+      .addCase(fetchLoggedInUserProfileImage.fulfilled, (state: EmployeeDetailsState, action: PayloadAction<string>) => {
+        state.loggedInUserProfileImageUrl = action.payload;
       })
       .addCase(bulkUploadEmployees.pending, (state) => {
         state.uploadLoading = true;

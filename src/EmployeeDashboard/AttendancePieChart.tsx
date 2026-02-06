@@ -5,9 +5,13 @@ import {
   Cell,
   ResponsiveContainer,
   Legend,
-  Sector
+  Sector,
 } from "recharts";
-import { ChevronLeft, ChevronRight, PieChart as PieChartIcon } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  PieChart as PieChartIcon,
+} from "lucide-react";
 
 interface Props {
   data: any[];
@@ -15,11 +19,7 @@ interface Props {
   onMonthChange: (date: Date) => void;
 }
 
-const AttendancePieChart = ({ 
-  data, 
-  currentMonth,
-  onMonthChange 
-}: Props) => {
+const AttendancePieChart = ({ data, currentMonth, onMonthChange }: Props) => {
   const chartData = useMemo(() => {
     // Group records by broad status categories for cleaner chart
     const counts = {
@@ -36,9 +36,13 @@ const AttendancePieChart = ({
     data.forEach((record) => {
       // Basic normalization of status
       const status = record.status ? String(record.status).toUpperCase() : "";
-      
+
       // Determine effective date (handle both raw record and TimesheetEntry structure)
-      const recordDate = record.fullDate ? new Date(record.fullDate) : (record.workingDate ? new Date(record.workingDate) : null);
+      const recordDate = record.fullDate
+        ? new Date(record.fullDate)
+        : record.workingDate
+          ? new Date(record.workingDate)
+          : null;
       const isFuture = recordDate ? recordDate > new Date() : false;
 
       // Skip future dates to keep the chart focused on historical attendance
@@ -82,16 +86,29 @@ const AttendancePieChart = ({
   };
 
   const renderActiveShape = (props: any) => {
-    const { 
-      cx, cy, innerRadius, outerRadius, startAngle, endAngle, 
-      fill, payload, value 
+    const {
+      cx,
+      cy,
+      innerRadius,
+      outerRadius,
+      startAngle,
+      endAngle,
+      fill,
+      payload,
+      value,
     } = props;
 
     return (
       <g>
         {/* Shadow filter for the label box */}
         <defs>
-          <filter id="activeShapeShadow" x="-20%" y="-20%" width="140%" height="140%">
+          <filter
+            id="activeShapeShadow"
+            x="-20%"
+            y="-20%"
+            width="140%"
+            height="140%"
+          >
             <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
             <feOffset dx="0" dy="2" result="offsetblur" />
             <feComponentTransfer>
@@ -113,9 +130,9 @@ const AttendancePieChart = ({
           startAngle={startAngle}
           endAngle={endAngle}
           fill={fill}
-          style={{ filter: 'drop-shadow(0px 4px 6px rgba(0,0,0,0.1))' }}
+          style={{ filter: "drop-shadow(0px 4px 6px rgba(0,0,0,0.1))" }}
         />
-        
+
         {/* Label background box */}
         <rect
           x={cx - 55}
@@ -126,7 +143,7 @@ const AttendancePieChart = ({
           fill="white"
           stroke="#f1f5f9"
           strokeWidth={1}
-          style={{ filter: 'url(#activeShapeShadow)' }}
+          style={{ filter: "url(#activeShapeShadow)" }}
         />
 
         {/* Label text */}
@@ -136,10 +153,10 @@ const AttendancePieChart = ({
           dy={5}
           textAnchor="middle"
           fill="#1B2559"
-          style={{ 
-            fontSize: '13px', 
-            fontWeight: '700',
-            fontFamily: 'inherit'
+          style={{
+            fontSize: "13px",
+            fontWeight: "700",
+            fontFamily: "inherit",
           }}
         >
           {payload.name} : {value}
@@ -171,47 +188,52 @@ const AttendancePieChart = ({
     setActiveIndex(null); // Reset selection on month change
   };
 
-  const formattedMonth = currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' });
+  const formattedMonth = currentMonth.toLocaleString("default", {
+    month: "long",
+    year: "numeric",
+  });
 
   const renderHeader = () => (
     <div className="w-full flex items-center justify-between mb-4">
-      <h4 className="text-lg font-bold text-[#1B2559]">Attendance Distribution</h4>
-      
+      <h4 className="text-lg font-bold text-[#1B2559]">
+        Attendance Distribution
+      </h4>
+
       <div className="flex items-center gap-2 bg-[#F4F7FE] px-2 py-1 rounded-lg">
-         <button 
-           onClick={handlePrevMonth}
-           className="text-[#A3AED0] hover:text-[#4318FF] transition-colors p-0.5"
-         >
-           <ChevronLeft size={16} strokeWidth={2.5} />
-         </button>
-         <h3 className="text-sm font-bold text-[#1B2559] min-w-[100px] text-center select-none">
-           {formattedMonth}
-         </h3>
-         <button 
-           onClick={handleNextMonth}
-           disabled={isCurrentMonth}
-           className={`transition-colors p-0.5 ${
-             isCurrentMonth 
-               ? "text-gray-300 cursor-not-allowed" 
-               : "text-[#A3AED0] hover:text-[#4318FF]"
-           }`}
-         >
-           <ChevronRight size={16} strokeWidth={2.5} />
-         </button>
-       </div>
+        <button
+          onClick={handlePrevMonth}
+          className="text-[#A3AED0] hover:text-[#4318FF] transition-colors p-0.5"
+        >
+          <ChevronLeft size={16} strokeWidth={2.5} />
+        </button>
+        <h3 className="text-sm font-bold text-[#1B2559] min-w-[100px] text-center select-none">
+          {formattedMonth}
+        </h3>
+        <button
+          onClick={handleNextMonth}
+          disabled={isCurrentMonth}
+          className={`transition-colors p-0.5 ${
+            isCurrentMonth
+              ? "text-gray-300 cursor-not-allowed"
+              : "text-[#A3AED0] hover:text-[#4318FF]"
+          }`}
+        >
+          <ChevronRight size={16} strokeWidth={2.5} />
+        </button>
+      </div>
     </div>
   );
 
   if (chartData.length === 0) {
     return (
       <div className="bg-white rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-col h-full min-h-[400px]">
-         {renderHeader()}
-         <div className="flex-1 flex flex-col items-center justify-center text-gray-400 gap-2">
-             <div className="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center mb-2">
-                <PieChartIcon size={24} className="text-gray-300" />
-             </div>
-             <span className="text-sm font-medium">No data available</span>
-         </div>
+        {renderHeader()}
+        <div className="flex-1 flex flex-col items-center justify-center text-gray-400 gap-2">
+          <div className="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center mb-2">
+            <PieChartIcon size={24} className="text-gray-300" />
+          </div>
+          <span className="text-sm font-medium">No data available</span>
+        </div>
       </div>
     );
   }
@@ -270,26 +292,28 @@ const AttendancePieChart = ({
               dataKey="value"
               onClick={onPieClick}
               stroke="none"
-              style={{ cursor: 'pointer', outline: 'none' }}
+              style={{ cursor: "pointer", outline: "none" }}
             >
               {chartData.map((entry, index) => {
                 let fillUrl = "url(#gradWeekend)";
                 if (entry.name === "Present") fillUrl = "url(#gradPresent)";
                 else if (entry.name === "Absent") fillUrl = "url(#gradAbsent)";
                 else if (entry.name === "Leave") fillUrl = "url(#gradLeave)";
-                else if (entry.name === "Holiday") fillUrl = "url(#gradHoliday)";
-                else if (entry.name === "Not Updated") fillUrl = "url(#gradNotUpdated)";
-                
+                else if (entry.name === "Holiday")
+                  fillUrl = "url(#gradHoliday)";
+                else if (entry.name === "Not Updated")
+                  fillUrl = "url(#gradNotUpdated)";
+
                 return (
                   <Cell key={`cell-${index}`} fill={fillUrl} stroke="none" />
                 );
               })}
             </Pie>
-            <Legend 
-              verticalAlign="bottom" 
-              height={60} 
-              iconType="circle" 
-              wrapperStyle={{ fontSize: '12px' }}
+            <Legend
+              verticalAlign="bottom"
+              height={60}
+              iconType="circle"
+              wrapperStyle={{ fontSize: "12px" }}
             />
           </PieChart>
         </ResponsiveContainer>
