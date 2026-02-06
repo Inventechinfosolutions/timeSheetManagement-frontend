@@ -1,5 +1,8 @@
 import { Outlet, useParams, useNavigate, useLocation } from "react-router-dom";
 import SidebarLayout from "../AdminDashboard/SidebarLayout";
+import { useAppDispatch, useAppSelector } from "../hooks";
+import { fetchNotifications } from "../reducers/notification.reducer";
+import { fetchEmployeeUpdates, fetchUnreadNotifications } from "../reducers/leaveNotification.reducer";
 
 const ManagerLayout = () => {
   const { tab } = useParams<{ tab: string }>();
@@ -81,7 +84,24 @@ const ManagerLayout = () => {
     }
   };
 
+  const dispatch = useAppDispatch();
+  const { entity } = useAppSelector((state) => state.employeeDetails);
+  const { currentUser } = useAppSelector((state) => state.user);
+  const isAdmin = currentUser?.userType === "ADMIN";
+
   const handleTabChange = (tabName: string) => {
+    // Refresh notifications when switching to primary dashboards
+    if (tabName === "My Dashboard" || tabName === "Employee Dashboard") {
+      if (isAdmin) {
+        dispatch(fetchUnreadNotifications());
+      } else if (entity?.employeeId) {
+        dispatch(fetchNotifications(entity.employeeId));
+        dispatch(fetchEmployeeUpdates(entity.employeeId));
+        // Also fetch unread requests if it's a manager acting as admin
+        dispatch(fetchUnreadNotifications());
+      }
+    }
+
     if (tabName === "Employee Details") {
       navigate("/manager-dashboard/employees");
     } else if (tabName === "Employee Timesheet") {

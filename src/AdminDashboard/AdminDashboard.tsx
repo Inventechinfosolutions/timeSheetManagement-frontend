@@ -28,7 +28,8 @@ import {
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import { downloadPdf } from "../utils/downloadPdf";
 import { generateRangeEntries } from "../utils/attendanceUtils";
-import { fetchUnreadNotifications } from "../reducers/leaveNotification.reducer";
+import { fetchUnreadNotifications, fetchEmployeeUpdates } from "../reducers/leaveNotification.reducer";
+import { fetchNotifications } from "../reducers/notification.reducer";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -43,6 +44,7 @@ const AdminDashboard = () => {
   const { entities, totalItems } = useAppSelector(
     (state: RootState) => state.employeeDetails,
   );
+  const { currentUser } = useAppSelector((state: RootState) => state.user);
   const { employeeRecords } = useAppSelector(
     (state: RootState) => state.attendance,
   );
@@ -125,7 +127,13 @@ const AdminDashboard = () => {
   // Refresh admin notifications on load
   useEffect(() => {
     dispatch(fetchUnreadNotifications());
-  }, [dispatch]);
+
+    const employeeId = currentUser?.employeeId || (entities.length > 0 ? entities[0].employeeId : null);
+    if (employeeId && employeeId !== "Admin") {
+      dispatch(fetchNotifications(employeeId));
+      dispatch(fetchEmployeeUpdates(employeeId));
+    }
+  }, [dispatch, currentUser, entities]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {

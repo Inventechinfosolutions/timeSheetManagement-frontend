@@ -21,7 +21,7 @@ import { downloadPdf } from "../utils/downloadPdf";
 
 interface MobileResponsiveCalendarPageProps {
   employeeId?: string;
-  onNavigateToDate?: (day: number) => void;
+  onNavigateToDate?: (timestamp: number) => void;
 }
 
 const MobileResponsiveCalendarPage = ({
@@ -333,11 +333,19 @@ const MobileResponsiveCalendarPage = ({
               colorClass =
                 "bg-gray-200 border border-gray-400 text-gray-500 font-bold";
             } else if (
-              entry?.status === "Full Day" ||
-              entry?.status === "Half Day"
+              entry?.status === "Full Day"
             ) {
               colorClass =
                 "bg-green-100 border border-green-600 text-black font-bold";
+            } else if (entry?.status === "Half Day" || isPendingUpdate) {
+               // Both Half Day and Pending Update (visual only) can be Orange
+               // BUT User wants Not Updated white/grey and Half Day Orange.
+               // Re-read: "make hald day color orange same as not updated and nake not updated color same as upcong"
+               // So Half Day = bg-orange-100 (matching old not updated)
+               // And Not Updated = bg-white (matching current/upcoming)
+               colorClass = entry?.status === "Half Day" 
+                 ? "bg-orange-100 border border-orange-600 text-black font-bold" 
+                 : "bg-white text-gray-600 border border-gray-200";
             } else if (entry?.status === "Leave") {
               colorClass =
                 "bg-red-200 border border-red-600 text-black font-bold";
@@ -385,7 +393,7 @@ const MobileResponsiveCalendarPage = ({
               },
               {
                 label: "Half Day",
-                className: "bg-green-100 border border-green-600",
+                className: "bg-orange-100 border border-orange-600",
               },
               { label: "Leave", className: "bg-red-200 border border-red-600" },
               {
@@ -402,7 +410,7 @@ const MobileResponsiveCalendarPage = ({
               },
               {
                 label: "Pending Update",
-                className: "bg-white border border-slate-300",
+                className: "bg-white border border-gray-300",
                 icon: true,
               },
             ].map((item) => (

@@ -884,6 +884,11 @@ const MyTimesheet = ({
               border: "border-[#01B574]",
             },
             {
+              label: "Half Day",
+              color: "bg-[#FEF3C7]",
+              border: "border-[#FFB020]",
+            },
+            {
               label: "Absent",
               color: "bg-[#FECACA]",
               border: "border-[#DC2626]",
@@ -895,8 +900,8 @@ const MyTimesheet = ({
             },
             {
               label: "Not Updated",
-              color: "bg-[#FEF3C7]",
-              border: "border-[#FFB020]",
+              color: "bg-[#F8FAFC]",
+              border: "border-[#64748B]",
             },
             {
               label: "Today",
@@ -1001,6 +1006,7 @@ const MyTimesheet = ({
 
             // Disable editing for approved Leave days only
             // WFH and Client Visit days are editable (they are present, not leave)
+            // Half Day is also editable (employees can update hours)
             const isLeaveDay = day.status === "Leave";
 
             // Check if date is in current month or next month
@@ -1019,7 +1025,7 @@ const MyTimesheet = ({
             // Logic for "isEditable"
             // - Admins can edit any date (including leave days, except blocked dates)
             // - Employees can edit current month and next month (but not leave days)
-            // - WFH and Client Visit days are editable (they are present, not leave)
+            // - WFH, Client Visit, and Half Day are editable (they are present, not leave)
             // - Leave days are editable only for admins
             const isEditable =
               (isAdmin ? !isAdminView : !readOnly) &&
@@ -1057,13 +1063,19 @@ const MyTimesheet = ({
               badge = "bg-[#1890FF]/70 text-white font-bold";
               border = "border-[#1890FF]/20";
             } else if (
-              (day.status === "Full Day" ||
-                day.status === "Half Day") &&
+              day.status === "Full Day" &&
               displayVal !== 0
             ) {
               bg = "bg-[#E6FFFA]";
               badge = "bg-[#01B574] text-white font-bold";
               border = "border-[#01B574]/20";
+            } else if (
+              day.status === "Half Day" &&
+              displayVal !== 0
+            ) {
+              bg = "bg-[#FEF3C7]";
+              badge = "bg-[#FFB020]/80 text-white font-bold";
+              border = "border-[#FFB020]/20";
             } else if (day.status === "Leave") {
               // Leave status takes priority over workLocation (even if workLocation is Client Visit)
               bg = "bg-[#FEE2E2]";
@@ -1085,15 +1097,11 @@ const MyTimesheet = ({
               bg = "bg-[#FECACA]";
               badge = "bg-[#DC2626]/70 text-white font-bold";
               border = "border-[#DC2626]/20";
-            } else if (day.status === "Not Updated") {
-              bg = "bg-[#FEF3C7]";
-              badge = "bg-[#FFB020]/80 text-white font-bold";
-              border = "border-[#FFB020]/20";
-            } else if (day.status === "Pending" || !day.status) {
-              // Pending or Upcoming (no status)
+            } else if (day.status === "Not Updated" || day.status === "Pending" || !day.status) {
+              // Not Updated, Pending, or Upcoming
               bg = "bg-[#F8FAFC]";
               badge = "bg-[#64748B]/90 text-white font-bold";
-              border = "border-[#E2E8F0]";
+              border = "border-gray-300";
             }
             if (day.isToday) {
               bg =
