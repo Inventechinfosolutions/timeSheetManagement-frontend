@@ -36,6 +36,7 @@ import {
   Calendar,
 } from "lucide-react";
 import EmployeeListMobileCard from "./EmployeeListMobileCard";
+import Toast from "../components/Toast";
 
 const EmployeeListView = () => {
   const navigate = useNavigate();
@@ -96,6 +97,7 @@ const EmployeeListView = () => {
     loginId?: string;
     password?: string;
   } | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   // const [copySuccess, setCopySuccess] = useState<string>("");
 
   // const [copySuccess, setCopySuccess] = useState<string>("");
@@ -222,7 +224,7 @@ const EmployeeListView = () => {
         "application/vnd.ms-excel",
       ];
       if (!validTypes.includes(file.type)) {
-        alert("Please upload a valid Excel file (.xlsx or .xls)");
+        setToast({ message: "Please upload a valid Excel file (.xlsx or .xls)", type: "error" });
         return;
       }
       setSelectedFile(file);
@@ -418,7 +420,7 @@ const EmployeeListView = () => {
       );
     } catch (error: any) {
       console.error("Failed to toggle status:", error);
-      alert("Failed to update status: " + (error.message || error));
+      setToast({ message: "Failed to update status: " + (error.message || error), type: "error" });
       setShowToggleConfirm(false);
       setSelectedEmployeeForToggle(null);
     }
@@ -445,10 +447,10 @@ const EmployeeListView = () => {
           }),
         );
       } else {
-        alert(
-          "Failed to send activation link: " +
-            (result.payload || "Unknown error"),
-        );
+        setToast({
+          message: "Failed to send activation link: " + (result.payload || "Unknown error"),
+          type: "error"
+        });
       }
     });
   };
@@ -1394,6 +1396,15 @@ const EmployeeListView = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
       )}
     </div>
   );

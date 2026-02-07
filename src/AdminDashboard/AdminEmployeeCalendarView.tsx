@@ -9,7 +9,11 @@ import {
 import Calendar from "../EmployeeDashboard/CalendarView";
 import { ArrowLeft, ClipboardList } from "lucide-react";
 
-const AdminEmployeeCalendarView = () => {
+interface AdminEmployeeCalendarViewProps {
+  onBlockedClick?: () => void;
+}
+
+const AdminEmployeeCalendarView = ({ onBlockedClick }: AdminEmployeeCalendarViewProps) => {
   const { employeeId } = useParams<{ employeeId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -97,6 +101,7 @@ const AdminEmployeeCalendarView = () => {
           onMonthChange={handleMonthChange}
           employeeId={employeeId}
           viewOnly={true}
+          onBlockedClick={onBlockedClick}
         />
       </div>
 

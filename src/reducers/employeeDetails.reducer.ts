@@ -99,11 +99,12 @@ export const getEntitiesSelect = createAsyncThunk<
   {
     department?: string;
     role?: string;
+    search?: string;
   },
   ThunkConfig
 >(
   'employeeDetails/fetch_entity_list_select',
-  async ({ department, role }, { rejectWithValue }) => {
+  async ({ department, role, search }, { rejectWithValue }) => {
     try {
       const params: any = {};
       if (department && department !== 'All') {
@@ -111,6 +112,9 @@ export const getEntitiesSelect = createAsyncThunk<
       }
       if (role) {
         params.role = role;
+      }
+      if (search) {
+        params.search = search;
       }
 
       const queryParams = new URLSearchParams(params);
