@@ -28,7 +28,10 @@ import {
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import { downloadPdf } from "../utils/downloadPdf";
 import { generateRangeEntries } from "../utils/attendanceUtils";
-import { fetchUnreadNotifications, fetchEmployeeUpdates } from "../reducers/leaveNotification.reducer";
+import {
+  fetchUnreadNotifications,
+  fetchEmployeeUpdates,
+} from "../reducers/leaveNotification.reducer";
 import { fetchNotifications } from "../reducers/notification.reducer";
 
 const AdminDashboard = () => {
@@ -109,17 +112,20 @@ const AdminDashboard = () => {
       }),
     );
     // Initial fetch for global statistics cache
-    dispatch(getEntities({ page: 1, limit: 1000 })).then((action: any) => {
-      if (action.payload) {
-        const data = action.payload;
-        const entitiesList = Array.isArray(data) ? data : data.data || [];
-        const totalCount = data.totalItems || data.total || entitiesList.length;
-        setGlobalStatsCache({
-          entities: entitiesList,
-          totalItems: totalCount,
-        });
-      }
-    });
+    dispatch(getEntities({ page: 1, limit: 1000, userStatus: "ACTIVE" })).then(
+      (action: any) => {
+        if (action.payload) {
+          const data = action.payload;
+          const entitiesList = Array.isArray(data) ? data : data.data || [];
+          const totalCount =
+            data.totalItems || data.total || entitiesList.length;
+          setGlobalStatsCache({
+            entities: entitiesList,
+            totalItems: totalCount,
+          });
+        }
+      },
+    );
     // Fetch holidays for PDF export
     dispatch(fetchHolidays());
   }, [dispatch, currentMonth, currentYear]);
@@ -128,7 +134,9 @@ const AdminDashboard = () => {
   useEffect(() => {
     dispatch(fetchUnreadNotifications());
 
-    const employeeId = currentUser?.employeeId || (entities.length > 0 ? entities[0].employeeId : null);
+    const employeeId =
+      currentUser?.employeeId ||
+      (entities.length > 0 ? entities[0].employeeId : null);
     if (employeeId && employeeId !== "Admin") {
       dispatch(fetchNotifications(employeeId));
       dispatch(fetchEmployeeUpdates(employeeId));

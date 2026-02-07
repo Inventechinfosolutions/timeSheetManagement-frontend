@@ -99,6 +99,11 @@ const AttendanceStatsCards = ({
         continue;
       }
 
+      // For interns: Reset balance at start of each month (no carry forward)
+      if (isIntern) {
+        currentBalance = 0;
+      }
+
       // If this is the selected month, capture opening balance BEFORE accrual
       if (m === month) {
         finalOpening = currentBalance;
@@ -299,25 +304,6 @@ const AttendanceStatsCards = ({
         </div>
       </div>
 
-      {/* Card 6 - Pending */}
-      <div className="bg-white rounded-[20px] p-4 shadow-lg shadow-gray-200/50 border border-gray-100 flex flex-col items-start gap-3 relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 min-h-[140px]">
-        <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-amber-50 text-[#FFB547] transition-colors group-hover:bg-amber-100">
-          <Clock size={20} strokeWidth={2.5} />
-        </div>
-        <div className="w-full">
-          <div className="text-[#A3AED0] font-bold text-[10px] uppercase tracking-wider mb-1">
-            Pending
-          </div>
-          <div className="flex flex-col">
-            <span className="text-2xl font-extrabold text-[#1B2559] tracking-tight">
-              {pendingCount}
-            </span>
-            <span className="text-[9px] font-bold text-[#A3AED0] uppercase mt-1">
-              Awaiting Approval
-            </span>
-          </div>
-        </div>
-      </div>
 
       {/* Card 7 - Balance */}
       <div className="bg-linear-to-br from-[#4318FF] to-[#3B15E0] rounded-[20px] p-4 shadow-lg shadow-blue-500/30 flex flex-col items-start gap-3 relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 min-h-[140px]">

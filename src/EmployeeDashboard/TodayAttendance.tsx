@@ -141,8 +141,11 @@ const TodayAttendance = ({
     const designation = (entity?.designation ?? entity?.designation_name ?? "")
       .toString()
       .toLowerCase();
-    return designation.includes("intern");
-  }, [entity?.designation, entity?.designation_name]);
+    const employmentType = (entity?.employmentType ?? "")
+      .toString()
+      .toUpperCase();
+    return designation.includes("intern") || employmentType === "INTERN";
+  }, [entity?.designation, entity?.designation_name, entity?.employmentType]);
 
   // 1. Separate "Today's" Data - ALWAYS based on current real-time Month
   const todayStatsEntry = useMemo(() => {
@@ -349,7 +352,7 @@ const TodayAttendance = ({
           leaveBalance={leaveBalance}
           attendanceRecords={yearlyRecords}
           isIntern={isIntern}
-          joiningDate={entity?.joiningDate || currentUser?.joiningDate}
+          joiningDate={entity?.joiningDate || (currentUser as any)?.joiningDate}
         />
 
         {/* Charts Section */}
