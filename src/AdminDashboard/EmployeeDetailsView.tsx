@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "../store";
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { getEntity } from "../reducers/employeeDetails.reducer";
+import { getEntity, updateEntity } from "../reducers/employeeDetails.reducer";
 import {
   User,
   Mail,
@@ -17,6 +17,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { resetPassword } from "../reducers/employeeDetails.reducer";
+import { EmploymentType } from "../types";
 
 const EmployeeDetailsView = () => {
   const { employeeId } = useParams<{ employeeId: string }>();
@@ -41,7 +42,7 @@ const EmployeeDetailsView = () => {
     employeeId: "",
     department: "",
     designation: "",
-    employmentType: "" as "" | "FULL_TIMER" | "INTERN",
+    employmentType: "" as "" | EmploymentType,
     joiningDate: "",
     email: "",
   });
@@ -94,8 +95,7 @@ const EmployeeDetailsView = () => {
         employeeId: employee.employeeId || employee.id || "",
         department: employee.department || "",
         designation: employee.designation || "",
-        employmentType:
-          (employee.employmentType as "" | "FULL_TIMER" | "INTERN") || "",
+        employmentType: (employee.employmentType as "" | EmploymentType) || "",
         joiningDate: employee.joiningDate
           ? new Date(employee.joiningDate).toISOString().split("T")[0]
           : "",
@@ -137,7 +137,9 @@ const EmployeeDetailsView = () => {
   const confirmSave = async () => {
     try {
       const oldEmployeeId = employee.employeeId || employee.id;
-      await axios.put(`/api/employee-details/${oldEmployeeId}`, editedData);
+      await dispatch(
+        updateEntity({ employeeId: oldEmployeeId, entity: editedData }),
+      ).unwrap();
       setIsEditing(false);
       setShowConfirm(false);
       setUpdateSuccess(true);
@@ -172,8 +174,7 @@ const EmployeeDetailsView = () => {
       employeeId: employee.employeeId || employee.id || "",
       department: employee.department || "",
       designation: employee.designation || "",
-      employmentType:
-        (employee.employmentType as "" | "FULL_TIMER" | "INTERN") || "",
+      employmentType: (employee.employmentType as "" | EmploymentType) || "",
       joiningDate: employee.joiningDate
         ? new Date(employee.joiningDate).toISOString().split("T")[0]
         : "",
