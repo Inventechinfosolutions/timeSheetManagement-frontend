@@ -8,18 +8,15 @@ import {
   Sector,
 } from "recharts";
 import {
-  ChevronLeft,
-  ChevronRight,
   PieChart as PieChartIcon,
 } from "lucide-react";
 
 interface Props {
   data: any[];
   currentMonth: Date;
-  onMonthChange: (date: Date) => void;
 }
 
-const AttendancePieChart = ({ data, currentMonth, onMonthChange }: Props) => {
+const AttendancePieChart = ({ data, currentMonth }: Props) => {
   const chartData = useMemo(() => {
     // Group records by broad status categories for cleaner chart
     const counts = {
@@ -165,61 +162,19 @@ const AttendancePieChart = ({ data, currentMonth, onMonthChange }: Props) => {
     );
   };
 
-  const handlePrevMonth = () => {
-    const prev = new Date(currentMonth);
-    prev.setMonth(prev.getMonth() - 1);
-    onMonthChange(prev);
-    setActiveIndex(null); // Reset selection on month change
-  };
-
-  const isCurrentMonth = useMemo(() => {
-    const today = new Date();
-    return (
-      currentMonth.getMonth() === today.getMonth() &&
-      currentMonth.getFullYear() === today.getFullYear()
-    );
-  }, [currentMonth]);
-
-  const handleNextMonth = () => {
-    if (isCurrentMonth) return;
-    const next = new Date(currentMonth);
-    next.setMonth(next.getMonth() + 1);
-    onMonthChange(next);
-    setActiveIndex(null); // Reset selection on month change
-  };
-
-  const formattedMonth = currentMonth.toLocaleString("default", {
-    month: "long",
-    year: "numeric",
-  });
-
   const renderHeader = () => (
-    <div className="w-full flex items-center justify-between mb-4">
+    <div className="w-full flex items-center justify-between mb-6">
       <h4 className="text-lg font-bold text-[#1B2559]">
         Attendance Distribution
       </h4>
 
-      <div className="flex items-center gap-2 bg-[#F4F7FE] px-2 py-1 rounded-lg">
-        <button
-          onClick={handlePrevMonth}
-          className="text-[#A3AED0] hover:text-[#4318FF] transition-colors p-0.5"
-        >
-          <ChevronLeft size={16} strokeWidth={2.5} />
-        </button>
-        <h3 className="text-sm font-bold text-[#1B2559] min-w-[100px] text-center select-none">
-          {formattedMonth}
-        </h3>
-        <button
-          onClick={handleNextMonth}
-          disabled={isCurrentMonth}
-          className={`transition-colors p-0.5 ${
-            isCurrentMonth
-              ? "text-gray-300 cursor-not-allowed"
-              : "text-[#A3AED0] hover:text-[#4318FF]"
-          }`}
-        >
-          <ChevronRight size={16} strokeWidth={2.5} />
-        </button>
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-medium text-gray-400">
+          {currentMonth.toLocaleDateString("en-US", {
+            month: "long",
+            year: "numeric",
+          })}
+        </span>
       </div>
     </div>
   );
@@ -290,6 +245,8 @@ const AttendancePieChart = ({ data, currentMonth, onMonthChange }: Props) => {
               outerRadius="90%"
               paddingAngle={5}
               dataKey="value"
+              onMouseEnter={(_: any, index: number) => setActiveIndex(index)}
+              onMouseLeave={() => setActiveIndex(null)}
               onClick={onPieClick}
               stroke="none"
               style={{ cursor: "pointer", outline: "none" }}
@@ -309,11 +266,12 @@ const AttendancePieChart = ({ data, currentMonth, onMonthChange }: Props) => {
                 );
               })}
             </Pie>
+
             <Legend
               verticalAlign="bottom"
               height={60}
               iconType="circle"
-              wrapperStyle={{ fontSize: "12px" }}
+              wrapperStyle={{ fontSize: "12px", paddingTop: "20px" }}
             />
           </PieChart>
         </ResponsiveContainer>
