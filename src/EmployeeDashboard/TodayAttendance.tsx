@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { AlertTriangle} from "lucide-react";
 import {
   Clock,
   Edit,
@@ -10,7 +11,6 @@ import {
   ClipboardList,
   ChevronLeft,
   ChevronRight,
-  AlertTriangle,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { UserType } from "../reducers/user.reducer";
@@ -153,8 +153,11 @@ const TodayAttendance = ({
     const designation = (entity?.designation ?? entity?.designation_name ?? "")
       .toString()
       .toLowerCase();
-    return designation.includes("intern");
-  }, [entity?.designation, entity?.designation_name]);
+    const employmentType = (entity?.employmentType ?? "")
+      .toString()
+      .toUpperCase();
+    return designation.includes("intern") || employmentType === "INTERN";
+  }, [entity?.designation, entity?.designation_name, entity?.employmentType]);
 
   // 1. Separate "Today's" Data - ALWAYS based on current real-time Month
   const todayStatsEntry = useMemo(() => {
@@ -235,6 +238,8 @@ const TodayAttendance = ({
       if (setScrollToDate) setScrollToDate(timestamp);
 
       const targetDate = new Date(timestamp);
+
+      // Dynamic base path detection
       const isPrivilegedUser = 
         currentUser?.userType === UserType.ADMIN || 
         currentUser?.userType === UserType.MANAGER || 
@@ -385,7 +390,7 @@ const TodayAttendance = ({
           leaveBalance={leaveBalance}
           attendanceRecords={yearlyRecords}
           isIntern={isIntern}
-          joiningDate={entity?.joiningDate || currentUser?.joiningDate}
+          joiningDate={entity?.joiningDate || (currentUser as any)?.joiningDate}
         />
 
         {/* Charts Section */}

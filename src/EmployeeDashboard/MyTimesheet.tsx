@@ -6,6 +6,7 @@ import {
   Save,
   AlertCircle,
   Lock,
+  Sparkles,
 } from "lucide-react";
 import { TimesheetEntry } from "../types";
 import { useAppDispatch, useAppSelector } from "../hooks";
@@ -96,7 +97,9 @@ const MyTimesheet = ({
     Record<number, string>
   >({});
   // Track manually edited entries to prevent baseEntries from overwriting user edits
-  const [manuallyEditedIndices, setManuallyEditedIndices] = useState<Set<number>>(new Set());
+  const [manuallyEditedIndices, setManuallyEditedIndices] = useState<
+    Set<number>
+  >(new Set());
   const [toast, setToast] = useState<{
     show: boolean;
     message: string;
@@ -264,10 +267,7 @@ const MyTimesheet = ({
 
   // Fetch attendance and blockers when month/employee changes
   useEffect(() => {
-    if (
-      !currentEmployeeId ||
-      (isAdmin && currentEmployeeId === "Admin")
-    )
+    if (!currentEmployeeId || (isAdmin && currentEmployeeId === "Admin"))
       return;
 
     const fetchKey = `${currentEmployeeId}-${
@@ -320,13 +320,13 @@ const MyTimesheet = ({
       if (prevEntries.length === 0) {
         return baseEntries;
       }
-      
+
       // If baseEntries length changed (month changed), reset manually edited indices
       if (baseEntries.length !== prevEntries.length) {
         setManuallyEditedIndices(new Set());
         return baseEntries;
       }
-      
+
       // Preserve manually edited entries
       const editedIndices = manuallyEditedIndices;
       return baseEntries.map((baseEntry, index) => {
@@ -504,7 +504,7 @@ const MyTimesheet = ({
       status: newStatus as any,
     };
     setLocalEntries(updated);
-    
+
     // Mark this entry as manually edited to prevent baseEntries from overwriting it
     setManuallyEditedIndices((prev) => new Set(prev).add(entryIndex));
   };
@@ -515,6 +515,66 @@ const MyTimesheet = ({
       delete next[entryIndex];
       return next;
     });
+  };
+
+  const handleAutoUpdate = () => {
+    if (effectiveReadOnly) return;
+
+    let changed = false;
+    const updatedEntries = [...localEntries];
+    const newEditedIndices = new Set(manuallyEditedIndices);
+
+    // We also need to clear local inputs for updated fields so they show the new value
+    let newLocalInputValues = { ...localInputValues };
+
+    updatedEntries.forEach((entry, idx) => {
+      // 1. Check blocked
+      if (isDateBlocked(entry.fullDate)) return;
+
+      // 2. Skip exclusions: Leave, Half Day
+      if (entry.status === "Leave" || entry.status === "Half Day") return;
+
+      // 3. Skip Holidays
+      if (isHoliday(entry.fullDate)) return;
+
+      // 4. Skip Weekends (Sat/Sun)
+      const day = entry.fullDate.getDay();
+      if (day === 0 || day === 6) return; // 0=Sun, 6=Sat
+
+      // 5. Update to 9 hours
+      if (entry.totalHours !== 9) {
+        updatedEntries[idx] = {
+          ...entry,
+          totalHours: 9,
+          status: "Full Day",
+        };
+        newEditedIndices.add(idx);
+
+        // Remove from localInputValues so it uses the new totalHours
+        if (newLocalInputValues[idx] !== undefined) {
+          delete newLocalInputValues[idx];
+        }
+
+        changed = true;
+      }
+    });
+
+    if (changed) {
+      setLocalEntries(updatedEntries);
+      setManuallyEditedIndices(newEditedIndices);
+      setLocalInputValues(newLocalInputValues);
+      setToast({
+        show: true,
+        message: "Auto-filled working days to 9 hours",
+        type: "success",
+      });
+    } else {
+      setToast({
+        show: true,
+        message: "No eligible days to auto-fill",
+        type: "info",
+      });
+    }
   };
 
   const onSaveAll = async () => {
@@ -536,7 +596,7 @@ const MyTimesheet = ({
         const workingDate = `${d.getFullYear()}-${(d.getMonth() + 1)
           .toString()
           .padStart(2, "0")}-${d.getDate().toString().padStart(2, "0")}`;
-        
+
         // Check if it's a holiday
         const dateStrLocal = `${d.getFullYear()}-${String(
           d.getMonth() + 1,
@@ -592,7 +652,8 @@ const MyTimesheet = ({
         });
 
         // Preserve workLocation if it exists (Client Visit or WFH)
-        const workLocation = entry.workLocation || (existingRecord as any)?.workLocation;
+        const workLocation =
+          entry.workLocation || (existingRecord as any)?.workLocation;
 
         payload.push({
           id: existingRecord?.id,
@@ -615,14 +676,14 @@ const MyTimesheet = ({
     payload.forEach((item) => {
       const itemDate = new Date(item.workingDate);
       const dayOfWeek = itemDate.getDay(); // 0 = Sunday, 6 = Saturday
-      
+
       // Sunday: Always set status to "Weekend" (even if hours entered or workLocation exists)
       if (dayOfWeek === 0) {
         item.status = "Weekend";
         item.workLocation = undefined; // Clear workLocation for Sunday
         return;
       }
-      
+
       // If workLocation exists (Client Visit or WFH), don't override status to Absent/Weekend
       // These are present statuses, not leave/absent
       // Saturday with data should show the data, not Weekend
@@ -637,9 +698,12 @@ const MyTimesheet = ({
         }
         return;
       }
-      
+
       // Saturday: Only set to "Weekend" if there's NO data (no hours, no workLocation)
-      if (dayOfWeek === 6 && (!item.totalHours || Number(item.totalHours) === 0)) {
+      if (
+        dayOfWeek === 6 &&
+        (!item.totalHours || Number(item.totalHours) === 0)
+      ) {
         item.status = "Weekend";
       }
       // Other days: If hours is 0, ALWAYS set status to "Absent" (never Leave)
@@ -854,6 +918,16 @@ const MyTimesheet = ({
           </div>
 
           <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+            {!effectiveReadOnly && (
+              <button
+                onClick={handleAutoUpdate}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg font-bold text-[10px] hover:bg-indigo-100 transition-all active:scale-95 border border-indigo-100 uppercase tracking-wide"
+                title="Auto-fill working days to 9 hours"
+              >
+                <Sparkles size={14} className="animate-pulse" />
+                <span>Auto Fill</span>
+              </button>
+            )}
             <div className="flex flex-col sm:flex-row items-end sm:items-baseline gap-1 sm:gap-2">
               <p className="text-xs sm:text-sm uppercase font-bold text-gray-700 tracking-wider leading-none">
                 TOTAL HOURS :
@@ -956,7 +1030,7 @@ const MyTimesheet = ({
         </div>
 
         {/* Calendar Grid */}
-        <div 
+        <div
           ref={scrollContainerRef}
           className="grid grid-cols-7 gap-2 md:gap-3 overflow-y-auto max-h-full pr-1 pb-2 px-2 scroll-smooth flex-1 custom-scrollbar"
         >
@@ -1016,11 +1090,12 @@ const MyTimesheet = ({
             const currentMonth = today.getMonth();
             const currentYear = today.getFullYear();
             const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
-            const nextMonthYear = currentMonth === 11 ? currentYear + 1 : currentYear;
-            
+            const nextMonthYear =
+              currentMonth === 11 ? currentYear + 1 : currentYear;
+
             const dayMonth = day.fullDate.getMonth();
             const dayYear = day.fullDate.getFullYear();
-            const isCurrentOrNextMonth = 
+            const isCurrentOrNextMonth =
               (dayMonth === currentMonth && dayYear === currentYear) ||
               (dayMonth === nextMonth && dayYear === nextMonthYear);
 
@@ -1035,7 +1110,9 @@ const MyTimesheet = ({
             // - Leave days are editable only for admins
             const isEditable =
               (isAdmin ? !isAdminView : !readOnly) &&
-              (isAdmin || isCurrentOrNextMonth || isEditableMonth(day.fullDate)) &&
+              (isAdmin ||
+                isCurrentOrNextMonth ||
+                isEditableMonth(day.fullDate)) &&
               !isBlocked &&
               (isAdmin || isManager || !isBlockedByRequest) && // Allow Admin/Manager to override auto-generated locks
               (isAdmin || !isLeaveDay); // Admins can edit leave days, employees cannot
@@ -1050,16 +1127,24 @@ const MyTimesheet = ({
             const dayOfWeek = day.fullDate.getDay();
             const isSunday = dayOfWeek === 0;
             const isSaturday = dayOfWeek === 6;
-            
+
             // Saturday: Only show as Weekend if there's NO data (no workLocation, no meaningful status)
-            const isSaturdayWithNoData = isSaturday && !day.workLocation && 
-              (day.status === "Weekend" || day.status === "Pending" || day.status === "Not Updated" || !day.status);
+            const isSaturdayWithNoData =
+              isSaturday &&
+              !day.workLocation &&
+              (day.status === "Weekend" ||
+                day.status === "Pending" ||
+                day.status === "Not Updated" ||
+                !day.status);
 
             if (isBlocked) {
               // Administrative Block
               bg = "bg-gray-200 opacity-90 grayscale";
               badge = "bg-gray-600 text-white";
-            } else if (isSunday || (isSaturdayWithNoData && !day.workLocation)) {
+            } else if (
+              isSunday ||
+              (isSaturdayWithNoData && !day.workLocation)
+            ) {
               // Sunday: Always Weekend. Saturday: Only Weekend if no data
               bg = "bg-[#FEE2E2]";
               badge = "bg-[#EE5D50]/70 text-white font-bold";
@@ -1069,17 +1154,11 @@ const MyTimesheet = ({
               bg = "bg-[#DBEAFE]";
               badge = "bg-[#1890FF]/70 text-white font-bold";
               border = "border-[#1890FF]/20";
-            } else if (
-              day.status === "Full Day" &&
-              displayVal !== 0
-            ) {
+            } else if (day.status === "Full Day" && displayVal !== 0) {
               bg = "bg-[#E6FFFA]";
               badge = "bg-[#01B574] text-white font-bold";
               border = "border-[#01B574]/20";
-            } else if (
-              day.status === "Half Day" &&
-              displayVal !== 0
-            ) {
+            } else if (day.status === "Half Day" && displayVal !== 0) {
               bg = "bg-[#FEF3C7]";
               badge = "bg-[#FFB020]/80 text-white font-bold";
               border = "border-[#FFB020]/20";
@@ -1088,23 +1167,30 @@ const MyTimesheet = ({
               bg = "bg-[#FEE2E2]";
               badge = "bg-[#EE5D50]/70 text-white font-bold";
               border = "border-[#EE5D50]/10";
-            } else if (day.workLocation === "Client Visit" || day.status === "Client Visit") {
-               // Client Visit - Blue Style (only if status is NOT Leave)
-               // User said "same color apply" (as WFH?). WFH in screenshot looked Greyish/Blue.
-               // Let's use the explicit Client Visit blue we have, which is definitely NOT Red.
+            } else if (
+              day.workLocation === "Client Visit" ||
+              day.status === "Client Visit"
+            ) {
+              // Client Visit - Blue Style (only if status is NOT Leave)
+              // User said "same color apply" (as WFH?). WFH in screenshot looked Greyish/Blue.
+              // Let's use the explicit Client Visit blue we have, which is definitely NOT Red.
               bg = "bg-[#DBEAFE]";
               badge = "bg-[#4318FF]/70 text-white font-bold";
               border = "border-[#4318FF]/20";
             } else if (day.workLocation === "WFH" || day.status === "WFH") {
-               // WFH Style - Match Client Visit (Blue) as requested
-               bg = "bg-[#DBEAFE]";
-               badge = "bg-[#4318FF]/70 text-white font-bold";
-               border = "border-[#4318FF]/20"; 
+              // WFH Style - Match Client Visit (Blue) as requested
+              bg = "bg-[#DBEAFE]";
+              badge = "bg-[#4318FF]/70 text-white font-bold";
+              border = "border-[#4318FF]/20";
             } else if (day.status === "Absent") {
               bg = "bg-[#FECACA]";
               badge = "bg-[#DC2626]/70 text-white font-bold";
               border = "border-[#DC2626]/20";
-            } else if (day.status === "Not Updated" || day.status === "Pending" || !day.status) {
+            } else if (
+              day.status === "Not Updated" ||
+              day.status === "Pending" ||
+              !day.status
+            ) {
               // Not Updated, Pending, or Upcoming
               bg = "bg-[#F8FAFC]";
               badge = "bg-[#64748B]/90 text-white font-bold";
@@ -1230,18 +1316,19 @@ const MyTimesheet = ({
                         ? "WEEKEND"
                         : day.status === "Leave"
                           ? "LEAVE"
-                          : day.workLocation && (day.status as string) !== "Leave"
+                          : day.workLocation &&
+                              (day.status as string) !== "Leave"
                             ? day.workLocation
                             : day.status === "Full Day" ||
-                              day.status === "Half Day" ||
-                              day.status === "WFH" ||
-                              day.status === "Client Visit"
-                            ? day.status
-                            : day.status === "Absent"
-                              ? "ABSENT"
-                              : day.status === "Not Updated"
-                                ? "Not Updated"
-                                : day.status || "UPCOMING"}
+                                day.status === "Half Day" ||
+                                day.status === "WFH" ||
+                                day.status === "Client Visit"
+                              ? day.status
+                              : day.status === "Absent"
+                                ? "ABSENT"
+                                : day.status === "Not Updated"
+                                  ? "Not Updated"
+                                  : day.status || "UPCOMING"}
                 </div>
               </div>
             );
