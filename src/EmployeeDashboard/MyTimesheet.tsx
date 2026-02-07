@@ -6,6 +6,7 @@ import {
   Save,
   AlertCircle,
   Lock,
+  Rocket
 } from "lucide-react";
 import { TimesheetEntry } from "../types";
 import { useAppDispatch, useAppSelector } from "../hooks";
@@ -15,6 +16,7 @@ import {
   submitBulkAttendance,
   fetchMonthlyAttendance,
   createAttendanceRecord,
+  autoUpdateTimesheet,
 } from "../reducers/employeeAttendance.reducer";
 import { getLeaveHistory } from "../reducers/leaveRequest.reducer";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
@@ -24,6 +26,8 @@ import {
 } from "../utils/attendanceUtils";
 import { fetchBlockers } from "../reducers/timesheetBlocker.reducer";
 import MobileMyTimesheet from "./MobileMyTimesheet";
+import AutoUpdateModal from "./AutoUpdateModal";
+import AutoUpdateSuccessModal from "./AutoUpdateSuccessModal";
 
 interface TimesheetProps {
   now?: Date;
@@ -67,6 +71,7 @@ const MyTimesheet = ({
     (!isAdmin ? currentUser?.employeeId : undefined);
 
   const isAdminView = isAdmin && currentEmployeeId === "Admin";
+  const isManagerView = !!(isManager && currentEmployeeId && currentEmployeeId === currentUser?.employeeId);
   const effectiveReadOnly = readOnly || isAdminView;
 
   // 1. viewMonth/now state
@@ -107,6 +112,12 @@ const MyTimesheet = ({
     index: number;
     message: string;
   } | null>(null);
+  
+  
+  const [showAutoUpdateModal, setShowAutoUpdateModal] = useState(false);
+  const [isAutoUpdating, setIsAutoUpdating] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [updateResult, setUpdateResult] = useState<{ count: number } | null>(null);
 
   const today = useMemo(() => new Date(), []);
 
@@ -375,16 +386,20 @@ const MyTimesheet = ({
     });
   };
 
-  const getBlockedReason = (date: Date) => {
+  const getBlocker = (date: Date) => {
     const d = new Date(date);
     d.setHours(0, 0, 0, 0);
-    const blocker = blockers.find((b) => {
+    return blockers.find((b) => {
       const start = new Date(b.blockedFrom);
       start.setHours(0, 0, 0, 0);
       const end = new Date(b.blockedTo);
       end.setHours(0, 0, 0, 0);
       return d >= start && d <= end;
     });
+  };
+
+  const getBlockedReason = (date: Date) => {
+    const blocker = getBlocker(date);
     return blocker?.reason || "Admin Blocked";
   };
 
@@ -733,6 +748,49 @@ const MyTimesheet = ({
   ).getDay();
   const paddingDays = firstDayOfMonth;
 
+  const handleAutoUpdateClick = () => {
+    // Only allow for current month
+    if (now.getMonth() !== today.getMonth() || now.getFullYear() !== today.getFullYear()) {
+      setToast({ show: true, message: "Auto-update is only available for the current month.", type: "error" });
+      return;
+    }
+    setShowAutoUpdateModal(true);
+  };
+
+  const confirmAutoUpdate = async () => {
+    setIsAutoUpdating(true);
+    try {
+      const result = await dispatch(autoUpdateTimesheet({
+        employeeId: currentEmployeeId!,
+        month: (now.getMonth() + 1).toString().padStart(2, "0"),
+        year: now.getFullYear().toString(),
+      })).unwrap();
+
+      // Close confirmation modal
+      setShowAutoUpdateModal(false);
+      
+      // Store result and show success modal
+      setUpdateResult(result);
+      setShowSuccessModal(true);
+      
+      // Refresh data if updates were made
+      if (result.count > 0) {
+        dispatch(
+          fetchMonthlyAttendance({
+            employeeId: currentEmployeeId!,
+            month: (now.getMonth() + 1).toString().padStart(2, "0"),
+            year: now.getFullYear().toString(),
+          }),
+        );
+      }
+    } catch (err: any) {
+      setShowAutoUpdateModal(false);
+      setToast({ show: true, message: err?.message || "Failed to auto-update timesheet.", type: "error" });
+    } finally {
+      setIsAutoUpdating(false);
+    }
+  };
+
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Scroll to selected date
@@ -763,6 +821,8 @@ const MyTimesheet = ({
         })}
         loading={loading}
         isAdmin={isAdmin}
+        isManager={isManager}
+        isManagerView={isManagerView}
         readOnly={effectiveReadOnly}
         isDateBlocked={isDateBlocked}
         isEditableMonth={isEditableMonth}
@@ -773,6 +833,13 @@ const MyTimesheet = ({
         selectedDateId={selectedDateId}
         isHighlighted={isHighlighted}
         containerClassName={containerClassName}
+        onAutoUpdate={
+          now.getMonth() === today.getMonth() && 
+          now.getFullYear() === today.getFullYear() 
+             ? handleAutoUpdateClick 
+             : undefined
+        }
+        blockers={blockers}
       />
     );
   }
@@ -781,6 +848,21 @@ const MyTimesheet = ({
     <div
       className={`flex flex-col ${containerClassName || "h-full max-h-full overflow-hidden bg-[#F4F7FE] py-2 px-1 md:px-6 md:pt-4 md:pb-0 relative"}`}
     >
+      <AutoUpdateModal 
+        isOpen={showAutoUpdateModal}
+        onClose={() => setShowAutoUpdateModal(false)}
+        onConfirm={confirmAutoUpdate}
+        monthName={now.toLocaleDateString("en-US", { month: "long" })}
+        year={now.getFullYear()}
+        loading={isAutoUpdating}
+      />
+      <AutoUpdateSuccessModal 
+        isOpen={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        count={updateResult?.count || 0}
+        monthName={now.toLocaleDateString("en-US", { month: "long" })}
+        year={now.getFullYear()}
+      />
       {loading && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/30 backdrop-blur-[2px]">
           <div className="animate-spin rounded-full h-10 w-10 border-b-4 border-[#4318FF]"></div>
@@ -865,6 +947,21 @@ const MyTimesheet = ({
                 <span className="text-[10px] font-bold text-gray-700">hrs</span>
               </div>
             </div>
+            
+            {/* Auto Update Button */}
+            {(!effectiveReadOnly || (isAdmin && !isAdminView) || (isManager && !isManagerView)) && 
+             now.getMonth() === today.getMonth() && 
+             now.getFullYear() === today.getFullYear() && (
+              <button
+                onClick={handleAutoUpdateClick}
+                className="flex items-center justify-center gap-1.5 px-3 py-2 bg-gradient-to-r from-[#4318FF] to-[#868CFF] text-white rounded-xl font-bold text-[10px] shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:to-[#4318FF] transition-all active:scale-95 tracking-wide uppercase hover:-translate-y-0.5"
+                title="Auto-fill 9 hours for working days"
+              >
+                <Rocket size={14} className="animate-pulse" />
+                <span className="hidden sm:inline">Auto Update</span>
+              </button>
+            )}
+
             {(!effectiveReadOnly || (isAdmin && !isAdminView)) && (
               <button
                 onClick={onSaveAll}
@@ -1028,17 +1125,17 @@ const MyTimesheet = ({
             const isBlockedByRequest = !!day.sourceRequestId;
 
             // Logic for "isEditable"
-            // - Admins can edit any date (including leave days, except blocked dates)
+            // - Admins and Managers can edit any date (including leave days, except blocked dates)
             // - Managers can override auto-generated Half Day locks
             // - Employees can edit current month and next month (but not leave days or locked Half Days)
             // - WFH, Client Visit, and Half Day are editable (they are present, not leave)
-            // - Leave days are editable only for admins
+            // - Leave days are editable only for admins and managers
             const isEditable =
               (isAdmin ? !isAdminView : !readOnly) &&
               (isAdmin || isCurrentOrNextMonth || isEditableMonth(day.fullDate)) &&
               !isBlocked &&
               (isAdmin || isManager || !isBlockedByRequest) && // Allow Admin/Manager to override auto-generated locks
-              (isAdmin || !isLeaveDay); // Admins can edit leave days, employees cannot
+              (isAdmin || isManager || !isLeaveDay); // Admins and Managers can edit leave days, employees cannot
 
             // Updated Styling Logic
             let bg = "bg-white hover:border-[#4318FF]/20";
@@ -1124,13 +1221,13 @@ const MyTimesheet = ({
                 className={`relative flex flex-col justify-between p-1 md:p-1.5 rounded-xl md:rounded-2xl border transition-all duration-300 min-h-[100px] md:min-h-[120px] group 
                             ${border} ${shadow} ${highlightClass} ${bg} ${
                               isBlocked
-                                ? isAdmin
+                                ? (isAdmin || isManager)
                                   ? "cursor-pointer"
                                   : "cursor-not-allowed"
                                 : "hover:-translate-y-1 hover:shadow-lg"
                             }`}
                 onClick={() => {
-                  if (isBlocked && isAdmin && onBlockedClick) {
+                  if (isBlocked && (isAdmin || isManager) && onBlockedClick) {
                     onBlockedClick();
                   }
                 }}
@@ -1147,7 +1244,7 @@ const MyTimesheet = ({
                           Timesheet Blocked
                         </p>
                         <p className="text-[10px] font-extrabold text-[#4318FF]">
-                          {isAdmin ? "Unblock" : "Contact Admin"}
+                          {(isAdmin || isManager) ? "Unblock" : `Contact ${getBlocker(day.fullDate)?.blockedBy || "Admin"}`}
                         </p>
                       </div>
                       {blockedReason && (

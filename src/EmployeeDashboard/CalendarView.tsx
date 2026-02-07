@@ -34,6 +34,7 @@ interface CalendarProps {
   employeeId?: string;
   scrollable?: boolean;
   viewOnly?: boolean;
+  onBlockedClick?: () => void;
 }
 
 const Calendar = ({
@@ -46,6 +47,7 @@ const Calendar = ({
   employeeId: propEmployeeId,
   scrollable = true,
   viewOnly = false,
+  onBlockedClick,
 }: CalendarProps) => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -67,6 +69,8 @@ const Calendar = ({
   );
 
   const isAdmin = currentUser?.userType === UserType.ADMIN;
+  const isManager = currentUser?.userType === UserType.MANAGER || 
+                    (currentUser?.role && currentUser.role.toUpperCase().includes('MANAGER'));
   const currentEmployeeId =
     propEmployeeId ||
     entity?.employeeId ||
@@ -266,16 +270,20 @@ const Calendar = ({
     });
   };
 
-  const getBlockedReason = (date: Date) => {
+  const getBlocker = (date: Date) => {
     const d = new Date(date);
     d.setHours(0, 0, 0, 0);
-    const blocker = blockers.find((b) => {
+    return blockers.find((b) => {
       const start = new Date(b.blockedFrom);
       start.setHours(0, 0, 0, 0);
       const end = new Date(b.blockedTo);
       end.setHours(0, 0, 0, 0);
       return d >= start && d <= end;
     });
+  };
+
+  const getBlockedReason = (date: Date) => {
+    const blocker = getBlocker(date);
     return blocker?.reason || "Admin Blocked";
   };
 
@@ -656,6 +664,10 @@ const Calendar = ({
                 <div
                   key={day}
                   onClick={() => {
+                    if (isBlocked && (isAdmin || isManager) && onBlockedClick) {
+                      onBlockedClick();
+                      return;
+                    }
                     const targetDate = new Date(
                       displayDate.getFullYear(),
                       displayDate.getMonth(),
@@ -716,7 +728,7 @@ const Calendar = ({
                             Timesheet Blocked
                           </p>
                           <p className="text-[10px] font-extrabold text-[#4318FF]">
-                            {isAdmin ? "Unblock" : "Contact Admin"}
+                            {(isAdmin || isManager) ? "Unblock" : `Contact ${getBlocker(cellDate)?.blockedBy || "Admin"}`}
                           </p>
                         </div>
                         {blockedReason && (

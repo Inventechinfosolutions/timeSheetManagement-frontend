@@ -1,7 +1,8 @@
 import React from "react";
-import { ChevronLeft, ChevronRight, Save, Lock } from "lucide-react";
+import { ChevronLeft, ChevronRight, Save, Lock, Rocket } from "lucide-react";
 
 import { TimesheetEntry } from "../types";
+import { TimesheetBlocker } from "../reducers/timesheetBlocker.reducer";
 
 interface MobileMyTimesheetProps {
   currentWeekEntries: { entry: TimesheetEntry; originalIndex: number }[];
@@ -9,11 +10,15 @@ interface MobileMyTimesheetProps {
   onNextWeek: () => void;
   onHoursInput: (index: number, value: string) => void;
   onSave: () => void;
+  onAutoUpdate?: () => void;
   monthTotalHours: number;
   currentMonthName: string;
   loading: boolean;
   isAdmin: boolean;
+  isManager: boolean;
+  isManagerView: boolean;
   readOnly: boolean;
+  blockers: TimesheetBlocker[];
   isDateBlocked: (date: Date) => boolean;
   isEditableMonth: (date: Date) => boolean;
   isHoliday: (date: Date) => boolean;
@@ -32,11 +37,15 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
   onNextWeek,
   onHoursInput,
   onSave,
+  onAutoUpdate,
   monthTotalHours,
   currentMonthName,
   loading,
   isAdmin,
+  isManager,
+  isManagerView,
   readOnly,
+  blockers,
   isDateBlocked,
   isEditableMonth,
   isHoliday,
@@ -82,16 +91,27 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
             </span>
           </div>
         </div>
-        {(!readOnly || isAdmin) && (
-          <button
-            onClick={onSave}
-            className="flex items-center gap-2 px-4 py-3 bg-linear-to-br from-[#4318FF] to-[#5D38FF] text-white rounded-2xl shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
-          >
-            <Save size={18} strokeWidth={2.5} />
-            <span className="text-xs font-bold uppercase tracking-wider">
-              Save
-            </span>
-          </button>
+      {(!readOnly || isAdmin || (isManager && !isManagerView)) && (
+          <div className="flex gap-2">
+             {onAutoUpdate && (
+              <button
+                onClick={onAutoUpdate}
+                className="flex items-center justify-center p-3 bg-white text-[#4318FF] border border-[#4318FF]/20 rounded-2xl shadow-sm active:scale-95 transition-all"
+                title="Auto Update"
+              >
+                <Rocket size={18} strokeWidth={2.5} className="animate-pulse" />
+              </button>
+            )}
+            <button
+              onClick={onSave}
+              className="flex items-center gap-2 px-4 py-3 bg-linear-to-br from-[#4318FF] to-[#5D38FF] text-white rounded-2xl shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
+            >
+              <Save size={18} strokeWidth={2.5} />
+              <span className="text-xs font-bold uppercase tracking-wider">
+                Save
+              </span>
+            </button>
+          </div>
         )}
       </div>
 
@@ -118,7 +138,17 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
                     ? ""
                     : displayVal.toString();
 
-              const isBlocked = isDateBlocked(entry.fullDate);
+              const blocker = blockers.find((b) => {
+                const d = new Date(entry.fullDate);
+                d.setHours(0, 0, 0, 0);
+                const start = new Date(b.blockedFrom);
+                start.setHours(0, 0, 0, 0);
+                const end = new Date(b.blockedTo);
+                end.setHours(0, 0, 0, 0);
+                return d >= start && d <= end;
+              });
+
+              const isBlocked = !!blocker;
               const isEditable =
                 !readOnly &&
                 (isAdmin || isEditableMonth(entry.fullDate)) &&
@@ -218,8 +248,11 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
                       placeholder="0"
                     />
                     {isBlocked && (
-                      <div className="absolute bottom-1 right-1">
-                        <Lock size={8} className="text-gray-500" />
+                      <div className="absolute inset-0 z-20 bg-black/40 backdrop-blur-[2px] rounded-xl flex flex-col items-center justify-center p-1 text-center pointer-events-none">
+                         <Lock size={12} className="text-white mb-0.5" />
+                         <span className="text-[7px] font-black text-white leading-none uppercase tracking-tighter">
+                           Contact {blocker?.blockedBy || "Admin"}
+                         </span>
                       </div>
                     )}
                   </div>

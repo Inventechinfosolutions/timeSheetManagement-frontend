@@ -87,6 +87,7 @@ const ManagerMapping: React.FC = () => {
   const [isHistoryStatusOpen, setIsHistoryStatusOpen] = useState(false);
   const historyItemsPerPage = 10;
   const [debouncedHistorySearch, setDebouncedHistorySearch] = useState("");
+  const [debouncedSearchText, setDebouncedSearchText] = useState("");
 
   // Fetch initial data
   useEffect(() => {
@@ -102,6 +103,26 @@ const ManagerMapping: React.FC = () => {
     }, 500);
     return () => clearTimeout(timer);
   }, [historySearch]);
+
+  // Debounce employee search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchText(searchText);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchText]);
+
+  // Fetch employees when search changes
+  useEffect(() => {
+    if (selectedManager && selectedDepartment) {
+      const dept = selectedDepartment === "All Departments" ? undefined : selectedDepartment;
+      dispatch(getEntitiesSelect({ 
+        department: dept, 
+        role: "EMPLOYEE",
+        search: debouncedSearchText || undefined
+      }));
+    }
+  }, [debouncedSearchText, selectedManager, selectedDepartment, dispatch]);
 
   // Fetch history when params change
   useEffect(() => {
@@ -137,38 +158,19 @@ const ManagerMapping: React.FC = () => {
     });
   }, [managers, selectedDepartment]);
 
-  // Filter available employees
+  // Filter available employees (server handles search, we just filter assigned)
   const availableEmployees = useMemo(() => {
     return employees.filter((emp: Employee) => {
-      // If we are strictly fetching employees now, this check confirms it
-      const isEmployee = emp.role === "EMPLOYEE";
-      const matchesDept =
-        selectedDepartment === "All Departments" ||
-        emp.department === selectedDepartment;
-      const matchesSearch =
-        emp.fullName?.toLowerCase().includes(searchText.toLowerCase()) ||
-        emp.employeeId?.toLowerCase().includes(searchText.toLowerCase());
+      // Server already filters by: role=EMPLOYEE, department, search, ACTIVE status, not mapped
+      // We only need to filter out currently assigned employees (UI state)
       const notAssigned = !assignedEmployees.some(
         (assigned) => assigned.id === emp.id,
       );
-      // Check if employee is already mapped in the database
-      const isAlreadyMapped = mappedEmployeeIds.includes(emp.employeeId);
-
-      return (
-        isEmployee &&
-        matchesDept &&
-        matchesSearch &&
-        notAssigned &&
-        !isAlreadyMapped &&
-        emp.userStatus === "ACTIVE"
-      );
+      return notAssigned;
     });
   }, [
     employees,
-    selectedDepartment,
-    searchText,
     assignedEmployees,
-    mappedEmployeeIds,
   ]);
 
   // Handlers
