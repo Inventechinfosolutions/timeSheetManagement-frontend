@@ -60,6 +60,8 @@ const MyTimesheet = ({
   const { blockers } = useAppSelector((state) => state.timesheetBlocker);
 
   const isAdmin = currentUser?.userType === UserType.ADMIN;
+  const isManager = currentUser?.userType === UserType.MANAGER || 
+                    (currentUser?.role && currentUser.role.toUpperCase().includes('MANAGER'));
   const currentEmployeeId =
     propEmployeeId ||
     entity?.employeeId ||
@@ -953,7 +955,7 @@ const MyTimesheet = ({
         <div className="flex items-center gap-x-6 gap-y-2 flex-nowrap overflow-x-auto pb-4 scrollbar-none px-2 mb-2">
           {[
             {
-              label: "Present",
+              label: "Full Day",
               color: "bg-[#E6FFFA]",
               border: "border-[#01B574]",
             },
@@ -973,7 +975,7 @@ const MyTimesheet = ({
               border: "border-[#EE5D50]",
             },
             {
-              label: "Not Updated",
+              label: "Pending Update",
               color: "bg-[#F8FAFC]",
               border: "border-[#64748B]",
             },
@@ -1097,9 +1099,13 @@ const MyTimesheet = ({
               (dayMonth === currentMonth && dayYear === currentYear) ||
               (dayMonth === nextMonth && dayYear === nextMonthYear);
 
+            // Check if this record is blocked due to being auto-generated
+            const isBlockedByRequest = !!day.sourceRequestId;
+
             // Logic for "isEditable"
             // - Admins can edit any date (including leave days, except blocked dates)
-            // - Employees can edit current month and next month (but not leave days)
+            // - Managers can override auto-generated Half Day locks
+            // - Employees can edit current month and next month (but not leave days or locked Half Days)
             // - WFH, Client Visit, and Half Day are editable (they are present, not leave)
             // - Leave days are editable only for admins
             const isEditable =
@@ -1108,6 +1114,7 @@ const MyTimesheet = ({
                 isCurrentOrNextMonth ||
                 isEditableMonth(day.fullDate)) &&
               !isBlocked &&
+              (isAdmin || isManager || !isBlockedByRequest) && // Allow Admin/Manager to override auto-generated locks
               (isAdmin || !isLeaveDay); // Admins can edit leave days, employees cannot
 
             // Updated Styling Logic
@@ -1255,7 +1262,8 @@ const MyTimesheet = ({
                   >
                     {day.date}
                   </div>
-                  {isBlocked && !isAdmin && (
+                  {/* Show lock if blocked by admin OR blocked by auto-generated request OR Leave day (for non-admin/non-manager) */}
+                  {(isBlocked || (isBlockedByRequest && !isAdmin && !isManager) || (isLeaveDay && !isAdmin && !isManager)) && (
                     <div className="p-1 rounded-full bg-red-50 text-red-500 border border-red-100">
                       <Lock size={8} strokeWidth={3} />
                     </div>

@@ -9,8 +9,13 @@ import {
   X,
   Calendar as CalendarIcon,
   ShieldAlert,
+  Clock,
 } from "lucide-react";
 import MyTimesheet from "../EmployeeDashboard/MyTimesheet";
+import {
+  fetchMonthlyAttendance,
+  AttendanceStatus,
+} from "../reducers/employeeAttendance.reducer";
 import {
   applyBlocker,
   fetchBlockers,
@@ -25,6 +30,7 @@ const AdminEmployeeTimesheetWrapper = () => {
   const { entities, entity, loading } = useAppSelector(
     (state) => state.employeeDetails,
   );
+  const { records } = useAppSelector((state) => state.attendance);
   const { blockers } = useAppSelector((state) => state.timesheetBlocker);
   const { currentUser } = useAppSelector((state) => state.user);
 
@@ -62,8 +68,15 @@ const AdminEmployeeTimesheetWrapper = () => {
       if (!entity || (entity.employeeId || entity.id) !== employeeId) {
         dispatch(getEntity(employeeId));
       }
+      dispatch(
+        fetchMonthlyAttendance({
+          employeeId,
+          month: (initialDate.getMonth() + 1).toString().padStart(2, "0"),
+          year: initialDate.getFullYear().toString(),
+        }),
+      );
     }
-  }, [dispatch, employeeId]);
+  }, [dispatch, employeeId, initialDate]);
 
   const employee =
     entity && (entity.employeeId || entity.id) === employeeId
@@ -74,10 +87,27 @@ const AdminEmployeeTimesheetWrapper = () => {
     // Extract month and year to pass back to the list
     const month = initialDate.getMonth() + 1;
     const year = initialDate.getFullYear();
-    navigate(`/admin-dashboard/timesheet-list`, {
+    const basePath = location.pathname.startsWith("/manager-dashboard") 
+      ? "/manager-dashboard" 
+      : "/admin-dashboard";
+
+    navigate(`${basePath}/timesheet-list`, {
       state: { selectedMonth: month, selectedYear: year },
     });
   };
+
+  // Calculate metrics for stats cards
+  const presentDays = records.filter(
+    (r) =>
+      r.status === AttendanceStatus.FULL_DAY ||
+      r.status === AttendanceStatus.HALF_DAY,
+  ).length;
+
+  const totalHours = records.reduce(
+    (acc, curr) => acc + (curr.totalHours || 0),
+    0,
+  );
+  const avgHours = totalHours.toFixed(1);
 
   const handleApplyBlock = async () => {
     if (!fromDate || !toDate) {
@@ -183,13 +213,56 @@ const AdminEmployeeTimesheetWrapper = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden min-h-0">
+      <div className="flex-1 overflow-y-auto no-scrollbar min-h-0">
+        {/* Summary Stats Section - Matching img 1 */}
+        <div className="px-1 pt-2 pb-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 md:p-5 shadow-sm border border-white/50 flex items-center gap-4 hover:shadow-md transition-all">
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-[#01B574] shrink-0 border border-emerald-100/50">
+                <ShieldAlert size={20} className="text-[#01B574]" />
+              </div>
+              <div>
+                <p className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-0.5">
+                  Total Present Days
+                </p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-xl md:text-2xl font-black text-[#2B3674]">
+                    {presentDays}
+                  </h3>
+                  <span className="text-[10px] font-bold text-[#01B574] bg-[#E6FFFA] px-2 py-0.5 rounded-full uppercase">
+                    Days
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 md:p-5 shadow-sm border border-white/50 flex items-center gap-4 hover:shadow-md transition-all">
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-[#F4F7FE] flex items-center justify-center text-[#4318FF] shrink-0 border border-gray-100/50">
+                <Clock size={20} />
+              </div>
+              <div>
+                <p className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-0.5">
+                  Total Working Hours
+                </p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-xl md:text-2xl font-black text-[#2B3674]">
+                    {avgHours}
+                  </h3>
+                  <span className="text-[10px] font-bold text-[#4318FF] bg-[#F4F7FE] px-2 py-0.5 rounded-full uppercase">
+                    Hours
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <MyTimesheet
           employeeId={employeeId!}
           readOnly={false}
           now={initialDate}
           onBlockedClick={() => setIsModalOpen(true)}
-          containerClassName="h-full overflow-hidden shadow-none border-none bg-transparent"
+          containerClassName="h-full overflow-visible shadow-none border-none bg-transparent"
         />
       </div>
 

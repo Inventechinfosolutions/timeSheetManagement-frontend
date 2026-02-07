@@ -23,5 +23,6 @@ export interface TimesheetEntry {
     isSaved: boolean;
     totalHours?: number;
     workLocation?: string;
+    sourceRequestId?: number; // Track auto-generated records
 }
    

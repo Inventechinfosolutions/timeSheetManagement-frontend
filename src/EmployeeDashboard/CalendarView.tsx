@@ -33,6 +33,7 @@ interface CalendarProps {
   entries?: TimesheetEntry[];
   employeeId?: string;
   scrollable?: boolean;
+  viewOnly?: boolean;
 }
 
 const Calendar = ({
@@ -44,6 +45,7 @@ const Calendar = ({
   entries: propEntries,
   employeeId: propEmployeeId,
   scrollable = true,
+  viewOnly = false,
 }: CalendarProps) => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -663,30 +665,40 @@ const Calendar = ({
 
                     if (onNavigateToDate) {
                       onNavigateToDate(timestamp);
-                    } else if (isAdmin && currentEmployeeId) {
-                      // Admin navigation logic (viewing someone else's timesheet)
+                    } else {
                       const dateStr = targetDate.toISOString().split("T")[0];
-                      navigate(
-                        `/admin-dashboard/timesheet/${currentEmployeeId}/${dateStr}`,
-                        {
+                      const isPrivilegedUser = 
+                        currentUser?.userType === UserType.ADMIN || 
+                        currentUser?.userType === UserType.MANAGER || 
+                        currentUser?.userType === UserType.TEAM_LEAD;
+
+                      // Privileged user viewing someone else's calendar (View Mode)
+                      if (viewOnly && isPrivilegedUser && currentEmployeeId && currentEmployeeId !== currentUser?.employeeId) {
+                        const basePath = location.pathname.startsWith("/manager-dashboard") 
+                          ? "/manager-dashboard" 
+                          : "/admin-dashboard";
+                        
+                        navigate(`${basePath}/timesheet/${currentEmployeeId}/${dateStr}`, {
                           state: {
                             selectedDate: targetDate.toISOString(),
                             timestamp: Date.now(),
                           },
-                        },
-                      );
-                    } else {
-                      // Default Employee / Manager self-view navigation
-                      const basePath = location.pathname.startsWith("/manager-dashboard") 
-                        ? "/manager-dashboard" 
-                        : "/employee-dashboard";
-                        
-                      navigate(`${basePath}/my-timesheet`, {
-                        state: {
-                          selectedDate: targetDate.toISOString(),
-                          timestamp: Date.now(),
-                        }
-                      });
+                        });
+                      } else {
+                        // Default: User viewing their own timesheet (Employee or Manager self-view)
+                        const basePath = location.pathname.startsWith("/manager-dashboard") 
+                          ? "/manager-dashboard" 
+                          : location.pathname.startsWith("/admin-dashboard")
+                            ? "/admin-dashboard"
+                            : "/employee-dashboard";
+                            
+                        navigate(`${basePath}/my-timesheet`, {
+                          state: {
+                            selectedDate: targetDate.toISOString(),
+                            timestamp: Date.now(),
+                          }
+                        });
+                      }
                     }
                   }}
                   className={`relative flex flex-col items-start justify-between p-2 rounded-2xl border transition-all duration-300 cursor-pointer min-h-[72px] group ${cellClass}`}

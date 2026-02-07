@@ -30,6 +30,7 @@ export interface EmployeeAttendance {
   location?: OfficeLocation;
   totalHours?: number;
   status?: AttendanceStatus;
+  sourceRequestId?: number; // Track auto-generated records
 }
 
 // Interface for Trends
