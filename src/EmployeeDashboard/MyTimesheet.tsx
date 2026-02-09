@@ -26,14 +26,8 @@ import {
 import { fetchBlockers } from "../reducers/timesheetBlocker.reducer";
 import MobileMyTimesheet from "./MobileMyTimesheet";
 
-interface TimesheetProps {
-  now?: Date;
-  employeeId?: string;
-  readOnly?: boolean;
-  selectedDateId?: number | null;
-  onBlockedClick?: () => void;
-  containerClassName?: string;
-}
+import { MyTimesheetProps } from "./types";
+import { AttendanceStatus, UserRole } from "./enums";
 
 const MyTimesheet = ({
   now: propNow,
@@ -42,7 +36,7 @@ const MyTimesheet = ({
   selectedDateId: propSelectedDateId,
   onBlockedClick,
   containerClassName,
-}: TimesheetProps) => {
+}: MyTimesheetProps) => {
   const { date } = useParams<{ date?: string }>();
   const location = useLocation();
   const dispatch = useAppDispatch();
@@ -60,8 +54,9 @@ const MyTimesheet = ({
   const { blockers } = useAppSelector((state) => state.timesheetBlocker);
 
   const isAdmin = currentUser?.userType === UserType.ADMIN;
-  const isManager = currentUser?.userType === UserType.MANAGER || 
-                    (currentUser?.role && currentUser.role.toUpperCase().includes('MANAGER'));
+  const isManager =
+    currentUser?.userType === UserType.MANAGER ||
+    (currentUser?.role && currentUser.role.toUpperCase().includes("MANAGER"));
   const currentEmployeeId =
     propEmployeeId ||
     entity?.employeeId ||
@@ -267,7 +262,7 @@ const MyTimesheet = ({
 
   // Fetch attendance and blockers when month/employee changes
   useEffect(() => {
-    if (!currentEmployeeId || (isAdmin && currentEmployeeId === "Admin"))
+    if (!currentEmployeeId || (isAdmin && currentEmployeeId === UserRole.ADMIN))
       return;
 
     const fetchKey = `${currentEmployeeId}-${
@@ -457,7 +452,8 @@ const MyTimesheet = ({
 
     if (hours > 0) {
       // When hours > 0, calculate based on hours
-      newStatus = hours >= 6 ? "Full Day" : "Half Day";
+      newStatus =
+        hours >= 6 ? AttendanceStatus.FULL_DAY : AttendanceStatus.HALF_DAY;
     } else {
       // When hours are 0, ALWAYS recalculate status - never preserve previous status (especially Leave)
       const entryDate = new Date(localEntries[entryIndex].fullDate);
@@ -478,9 +474,9 @@ const MyTimesheet = ({
       const dayNum = entryDate.getDay();
 
       if (isHoliday) {
-        newStatus = "Holiday";
+        newStatus = AttendanceStatus.HOLIDAY;
       } else if (dayNum === 0 || dayNum === 6) {
-        newStatus = "Weekend";
+        newStatus = AttendanceStatus.WEEKEND;
       } else {
         // 0 hours on a weekday: Determine if Absent or Upcoming
         const todayZero = new Date();
@@ -490,9 +486,9 @@ const MyTimesheet = ({
         entryDateZero.setHours(0, 0, 0, 0);
 
         if (entryDateZero <= todayZero) {
-          newStatus = "Absent";
+          newStatus = AttendanceStatus.ABSENT;
         } else {
-          newStatus = "UPCOMING";
+          newStatus = AttendanceStatus.UPCOMING;
         }
       }
     }
@@ -532,7 +528,11 @@ const MyTimesheet = ({
       if (isDateBlocked(entry.fullDate)) return;
 
       // 2. Skip exclusions: Leave, Half Day
-      if (entry.status === "Leave" || entry.status === "Half Day") return;
+      if (
+        entry.status === AttendanceStatus.LEAVE ||
+        entry.status === AttendanceStatus.HALF_DAY
+      )
+        return;
 
       // 3. Skip Holidays
       if (isHoliday(entry.fullDate)) return;
@@ -546,7 +546,7 @@ const MyTimesheet = ({
         updatedEntries[idx] = {
           ...entry,
           totalHours: 9,
-          status: "Full Day",
+          status: AttendanceStatus.FULL_DAY,
         };
         newEditedIndices.add(idx);
 
@@ -615,31 +615,34 @@ const MyTimesheet = ({
 
         // For Sunday: Always set status to "Weekend" regardless of hours
         if (dayOfWeek === 0) {
-          derivedStatus = "Weekend";
+          derivedStatus = AttendanceStatus.WEEKEND;
         }
         // For holidays: Always set status to "Holiday" regardless of hours
         else if (isHoliday) {
-          derivedStatus = "Holiday";
+          derivedStatus = AttendanceStatus.HOLIDAY;
         }
         // For Saturday: Only set to "Weekend" if there's NO data (no hours AND no workLocation)
         // If Saturday has data (Client Visit, WFH, etc.), keep that data
         else if (dayOfWeek === 6 && currentTotal === 0 && !entry.workLocation) {
-          derivedStatus = "Weekend";
+          derivedStatus = AttendanceStatus.WEEKEND;
         }
         // For other days: Calculate status based on hours
         // NEVER preserve Leave status - always calculate based on hours
         else {
           if (currentTotal >= 6) {
-            derivedStatus = "Full Day";
+            derivedStatus = AttendanceStatus.FULL_DAY;
           } else if (currentTotal > 0) {
-            derivedStatus = "Half Day";
+            derivedStatus = AttendanceStatus.HALF_DAY;
           } else {
             // 0 hours on a weekday: Determine if Absent or Upcoming
             const todayZero = new Date();
             todayZero.setHours(0, 0, 0, 0);
             const entryDateZero = new Date(d);
             entryDateZero.setHours(0, 0, 0, 0);
-            derivedStatus = entryDateZero <= todayZero ? "Absent" : "UPCOMING";
+            derivedStatus =
+              entryDateZero <= todayZero
+                ? AttendanceStatus.ABSENT
+                : AttendanceStatus.UPCOMING;
           }
         }
 
@@ -1083,7 +1086,7 @@ const MyTimesheet = ({
             // Disable editing for approved Leave days only
             // WFH and Client Visit days are editable (they are present, not leave)
             // Half Day is also editable (employees can update hours)
-            const isLeaveDay = day.status === "Leave";
+            const isLeaveDay = day.status === AttendanceStatus.LEAVE;
 
             // Check if date is in current month or next month
             const today = new Date();
@@ -1132,9 +1135,9 @@ const MyTimesheet = ({
             const isSaturdayWithNoData =
               isSaturday &&
               !day.workLocation &&
-              (day.status === "Weekend" ||
-                day.status === "Pending" ||
-                day.status === "Not Updated" ||
+              (day.status === AttendanceStatus.WEEKEND ||
+                day.status === AttendanceStatus.PENDING ||
+                day.status === AttendanceStatus.NOT_UPDATED ||
                 !day.status);
 
             if (isBlocked) {
@@ -1149,27 +1152,36 @@ const MyTimesheet = ({
               bg = "bg-[#FEE2E2]";
               badge = "bg-[#EE5D50]/70 text-white font-bold";
               border = "border-[#EE5D50]/10";
-            } else if (holiday || (day.status as any) === "Holiday") {
+            } else if (
+              holiday ||
+              (day.status as any) === AttendanceStatus.HOLIDAY
+            ) {
               // Master holidays take priority over everything (Leave, WFH, Client Visit, etc.)
               bg = "bg-[#DBEAFE]";
               badge = "bg-[#1890FF]/70 text-white font-bold";
               border = "border-[#1890FF]/20";
-            } else if (day.status === "Full Day" && displayVal !== 0) {
+            } else if (
+              day.status === AttendanceStatus.FULL_DAY &&
+              displayVal !== 0
+            ) {
               bg = "bg-[#E6FFFA]";
               badge = "bg-[#01B574] text-white font-bold";
               border = "border-[#01B574]/20";
-            } else if (day.status === "Half Day" && displayVal !== 0) {
+            } else if (
+              day.status === AttendanceStatus.HALF_DAY &&
+              displayVal !== 0
+            ) {
               bg = "bg-[#FEF3C7]";
               badge = "bg-[#FFB020]/80 text-white font-bold";
               border = "border-[#FFB020]/20";
-            } else if (day.status === "Leave") {
+            } else if (day.status === AttendanceStatus.LEAVE) {
               // Leave status takes priority over workLocation (even if workLocation is Client Visit)
               bg = "bg-[#FEE2E2]";
               badge = "bg-[#EE5D50]/70 text-white font-bold";
               border = "border-[#EE5D50]/10";
             } else if (
-              day.workLocation === "Client Visit" ||
-              day.status === "Client Visit"
+              day.workLocation === AttendanceStatus.CLIENT_VISIT ||
+              day.status === AttendanceStatus.CLIENT_VISIT
             ) {
               // Client Visit - Blue Style (only if status is NOT Leave)
               // User said "same color apply" (as WFH?). WFH in screenshot looked Greyish/Blue.
@@ -1177,18 +1189,21 @@ const MyTimesheet = ({
               bg = "bg-[#DBEAFE]";
               badge = "bg-[#4318FF]/70 text-white font-bold";
               border = "border-[#4318FF]/20";
-            } else if (day.workLocation === "WFH" || day.status === "WFH") {
+            } else if (
+              day.workLocation === AttendanceStatus.WFH ||
+              day.status === AttendanceStatus.WFH
+            ) {
               // WFH Style - Match Client Visit (Blue) as requested
               bg = "bg-[#DBEAFE]";
               badge = "bg-[#4318FF]/70 text-white font-bold";
               border = "border-[#4318FF]/20";
-            } else if (day.status === "Absent") {
+            } else if (day.status === AttendanceStatus.ABSENT) {
               bg = "bg-[#FECACA]";
               badge = "bg-[#DC2626]/70 text-white font-bold";
               border = "border-[#DC2626]/20";
             } else if (
-              day.status === "Not Updated" ||
-              day.status === "Pending" ||
+              day.status === AttendanceStatus.NOT_UPDATED ||
+              day.status === AttendanceStatus.PENDING ||
               !day.status
             ) {
               // Not Updated, Pending, or Upcoming
@@ -1263,7 +1278,9 @@ const MyTimesheet = ({
                     {day.date}
                   </div>
                   {/* Show lock if blocked by admin OR blocked by auto-generated request OR Leave day (for non-admin/non-manager) */}
-                  {(isBlocked || (isBlockedByRequest && !isAdmin && !isManager) || (isLeaveDay && !isAdmin && !isManager)) && (
+                  {(isBlocked ||
+                    (isBlockedByRequest && !isAdmin && !isManager) ||
+                    (isLeaveDay && !isAdmin && !isManager)) && (
                     <div className="p-1 rounded-full bg-red-50 text-red-500 border border-red-100">
                       <Lock size={8} strokeWidth={3} />
                     </div>
@@ -1285,8 +1302,8 @@ const MyTimesheet = ({
                               : "text-gray-800 text-3xl group-hover:scale-105 focus:scale-105"
                         }`}
                       placeholder={
-                        day.status === "Weekend" ||
-                        (day.status as any) === "WEEKEND" ||
+                        day.status === AttendanceStatus.WEEKEND ||
+                        day.status?.toUpperCase() === "WEEKEND" ||
                         holiday
                           ? "-"
                           : "0"
@@ -1310,23 +1327,23 @@ const MyTimesheet = ({
                 >
                   {isBlocked
                     ? "BLOCKED"
-                    : holiday || day.status === "Holiday"
+                    : holiday || day.status === AttendanceStatus.HOLIDAY
                       ? holiday?.holidayName || holiday?.name || "HOLIDAY"
                       : isSunday || (isSaturdayWithNoData && !day.workLocation)
                         ? "WEEKEND"
-                        : day.status === "Leave"
+                        : day.status === AttendanceStatus.LEAVE
                           ? "LEAVE"
                           : day.workLocation &&
-                              (day.status as string) !== "Leave"
+                              (day.status as string) !== AttendanceStatus.LEAVE
                             ? day.workLocation
-                            : day.status === "Full Day" ||
-                                day.status === "Half Day" ||
-                                day.status === "WFH" ||
-                                day.status === "Client Visit"
+                            : day.status === AttendanceStatus.FULL_DAY ||
+                                day.status === AttendanceStatus.HALF_DAY ||
+                                day.status === AttendanceStatus.WFH ||
+                                day.status === AttendanceStatus.CLIENT_VISIT
                               ? day.status
-                              : day.status === "Absent"
+                              : day.status === AttendanceStatus.ABSENT
                                 ? "ABSENT"
-                                : day.status === "Not Updated"
+                                : day.status === AttendanceStatus.NOT_UPDATED
                                   ? "Not Updated"
                                   : day.status || "UPCOMING"}
                 </div>

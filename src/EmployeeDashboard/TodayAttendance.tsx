@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { AlertTriangle} from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import {
   Clock,
   Edit,
@@ -37,19 +37,20 @@ import WorkTrendsGraph from "./WorkTrendsGraph";
 import AttendanceStatsCards from "./AttendanceStatsCards";
 import { RootState } from "../store";
 
-interface Props {
-  setActiveTab?: (tab: string) => void;
-  setScrollToDate?: (date: number | null) => void;
-  onNavigate?: (timestamp: number) => void;
-  viewOnly?: boolean;
-}
+import { TodayAttendanceProps } from "./types";
+import {
+  AttendanceStatus,
+  DashboardTab,
+  UserRole,
+  EmploymentType,
+} from "./enums";
 
 const TodayAttendance = ({
   setActiveTab,
   setScrollToDate,
   onNavigate,
   viewOnly = false,
-}: Props) => {
+}: TodayAttendanceProps) => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const location = useLocation();
@@ -104,7 +105,7 @@ const TodayAttendance = ({
 
   // Refresh updates whenever dashboard is accessed
   useEffect(() => {
-    if (currentEmployeeId && currentEmployeeId !== "Admin") {
+    if (currentEmployeeId && currentEmployeeId !== UserRole.ADMIN) {
       dispatch(fetchEmployeeUpdates(currentEmployeeId));
       dispatch(fetchNotifications(currentEmployeeId));
       dispatch(fetchUnreadNotifications());
@@ -156,7 +157,9 @@ const TodayAttendance = ({
     const employmentType = (entity?.employmentType ?? "")
       .toString()
       .toUpperCase();
-    return designation.includes("intern") || employmentType === "INTERN";
+    return (
+      designation.includes("intern") || employmentType === EmploymentType.INTERN
+    );
   }, [entity?.designation, entity?.designation_name, entity?.employmentType]);
 
   // 1. Separate "Today's" Data - ALWAYS based on current real-time Month
@@ -187,12 +190,12 @@ const TodayAttendance = ({
 
       if (isMasterHoliday) {
         if (
-          day.status !== "Full Day" &&
-          day.status !== "Half Day" &&
-          day.status !== "WFH" &&
-          day.status !== "Client Visit"
+          day.status !== AttendanceStatus.FULL_DAY &&
+          day.status !== AttendanceStatus.HALF_DAY &&
+          day.status !== AttendanceStatus.WFH &&
+          day.status !== AttendanceStatus.CLIENT_VISIT
         ) {
-          return { ...day, status: "Holiday" };
+          return { ...day, status: AttendanceStatus.HOLIDAY };
         }
       }
       return day;
@@ -203,14 +206,14 @@ const TodayAttendance = ({
     todayStatsEntry ||
     ({
       fullDate: now,
-      status: "Pending",
+      status: AttendanceStatus.PENDING,
       isSaved: false,
       isToday: true,
     } as any);
 
   const fetchAttendanceData = useCallback(
     (date: Date) => {
-      if (!currentEmployeeId || currentEmployeeId === "Admin") return;
+      if (!currentEmployeeId || currentEmployeeId === UserRole.ADMIN) return;
 
       const fetchKey = `${currentEmployeeId}-${
         date.getMonth() + 1
@@ -240,30 +243,35 @@ const TodayAttendance = ({
       const targetDate = new Date(timestamp);
 
       // Dynamic base path detection
-      const isPrivilegedUser = 
-        currentUser?.userType === UserType.ADMIN || 
-        currentUser?.userType === UserType.MANAGER || 
+      const isPrivilegedUser =
+        currentUser?.userType === UserType.ADMIN ||
+        currentUser?.userType === UserType.MANAGER ||
         currentUser?.userType === UserType.TEAM_LEAD;
 
       // Handle Privileged User viewing someone else (ONLY when explicitly in view-only mode)
-      if (viewOnly && isPrivilegedUser && currentEmployeeId && currentEmployeeId !== currentUser?.employeeId) {
+      if (
+        viewOnly &&
+        isPrivilegedUser &&
+        currentEmployeeId &&
+        currentEmployeeId !== currentUser?.employeeId
+      ) {
         const dateStr = targetDate.toISOString().split("T")[0];
-        const basePath = location.pathname.startsWith("/manager-dashboard") 
-          ? "/manager-dashboard" 
+        const basePath = location.pathname.startsWith("/manager-dashboard")
+          ? "/manager-dashboard"
           : "/admin-dashboard";
-          
+
         navigate(`${basePath}/timesheet/${currentEmployeeId}/${dateStr}`, {
           state: {
             selectedDate: targetDate.toISOString(),
             timestamp: targetDate.getTime(),
-          }
+          },
         });
         return;
       }
 
       // If viewOnly is true and not a privileged user viewing someone else, we stop here
       if (viewOnly) return;
-      
+
       // Dynamic base path detection for self-view
       let basePath = "/employee-dashboard";
       if (location.pathname.startsWith("/manager-dashboard")) {
@@ -279,12 +287,20 @@ const TodayAttendance = ({
       };
 
       if (setActiveTab) {
-        setActiveTab("My Timesheet");
+        setActiveTab(DashboardTab.MY_TIMESHEET);
       } else {
         navigate(navTarget, { state });
       }
     },
-    [viewOnly, setScrollToDate, setActiveTab, navigate, location.pathname, currentUser, currentEmployeeId],
+    [
+      viewOnly,
+      setScrollToDate,
+      setActiveTab,
+      navigate,
+      location.pathname,
+      currentUser,
+      currentEmployeeId,
+    ],
   );
 
   const handleNavigate = (timestamp: number) => {
@@ -400,8 +416,8 @@ const TodayAttendance = ({
             />
           </div>
           <div className="w-full">
-            <WorkTrendsGraph 
-              employeeId={currentEmployeeId} 
+            <WorkTrendsGraph
+              employeeId={currentEmployeeId}
               currentMonth={calendarDate}
             />
           </div>

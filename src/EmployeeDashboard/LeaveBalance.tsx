@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAppSelector, useAppDispatch } from "../hooks";
 import {
   getLeaveBalance,
@@ -9,11 +9,13 @@ import { Calendar, CheckCircle, Clock, TrendingUp, Ban } from "lucide-react";
 import { Select } from "antd";
 import { ChevronDown } from "lucide-react";
 
-// Fallback entitlement when backend balance API is not used
-const ENTITLEMENT = {
-  FULL_TIMER: 18,
-  INTERN: 12,
-} as const;
+import {
+  ENTITLEMENT,
+  LeaveRequestType,
+  LeaveRequestStatus,
+  EmploymentType,
+} from "./enums";
+import { LeaveRequest } from "./types";
 
 const LeaveBalance = () => {
   const dispatch = useAppDispatch();
@@ -69,7 +71,9 @@ const LeaveBalance = () => {
     const employmentType = (entity?.employmentType ?? "")
       .toString()
       .toUpperCase();
-    return designation.includes("intern") || employmentType === "INTERN";
+    return (
+      designation.includes("intern") || employmentType === EmploymentType.INTERN
+    );
   }, [entity?.designation, entity?.designation_name, entity?.employmentType]);
   const entitlementLabel = isIntern
     ? "Intern (1 per month)"
@@ -92,9 +96,10 @@ const LeaveBalance = () => {
       return { paidUsed: 0, lopUsed: 0, approvedUsed: 0 };
 
     const approvedLeaves = entities.filter(
-      (e: any) =>
-        (e.requestType === "Apply Leave" || e.requestType === "Leave") &&
-        e.status === "Approved",
+      (e: LeaveRequest) =>
+        (e.requestType === LeaveRequestType.APPLY_LEAVE ||
+          e.requestType === LeaveRequestType.LEAVE) &&
+        e.status === LeaveRequestStatus.APPROVED,
     );
 
     if (!isIntern) {
@@ -128,13 +133,15 @@ const LeaveBalance = () => {
     };
   }, [entities, isIntern]);
 
-  const used = fromBackend ? leaveBalance.used : approvedUsed;
+  // const used = fromBackend ? leaveBalance.used : approvedUsed;
   const pendingFromEntities = useMemo(() => {
     if (!Array.isArray(entities)) return 0;
     return entities.filter(
-      (e: any) =>
-        (e.requestType === "Apply Leave" || e.requestType === "Leave") &&
-        (e.status === "Pending" || e.status === "pending"),
+      (e: LeaveRequest) =>
+        (e.requestType === LeaveRequestType.APPLY_LEAVE ||
+          e.requestType === LeaveRequestType.LEAVE) &&
+        (e.status === LeaveRequestStatus.PENDING ||
+          e.status.toLowerCase() === LeaveRequestStatus.PENDING.toLowerCase()),
     ).length;
   }, [entities]);
   const pendingCount = fromBackend ? leaveBalance.pending : pendingFromEntities;

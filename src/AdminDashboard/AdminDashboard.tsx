@@ -33,6 +33,15 @@ import {
   fetchEmployeeUpdates,
 } from "../reducers/leaveNotification.reducer";
 import { fetchNotifications } from "../reducers/notification.reducer";
+import {
+  ExportStep,
+  Department,
+  SortOption,
+  FilterConstants,
+  UserRole,
+  UserStatus,
+} from "./enums";
+import { GlobalStatsCache } from "./types";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -65,14 +74,12 @@ const AdminDashboard = () => {
   const now = new Date();
 
   // Dashboard Stats & Cache State
-  const [globalStatsCache, setGlobalStatsCache] = useState<{
-    entities: any[];
-    totalItems: number;
-  } | null>(null);
+  const [globalStatsCache, setGlobalStatsCache] =
+    useState<GlobalStatsCache | null>(null);
 
   // Chart Logic States
   // Chart Logic States
-  const [sortOption] = useState("hours_desc");
+  const [sortOption] = useState<SortOption>(SortOption.HOURS_DESC);
   // const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
   // const sortDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -84,10 +91,12 @@ const AdminDashboard = () => {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [selectedEmps, setSelectedEmps] = useState<Set<string>>(new Set());
   const [modalSearch, setModalSearch] = useState("");
-  const [modalDept, setModalDept] = useState("All");
+  const [modalDept, setModalDept] = useState<Department | FilterConstants.ALL>(
+    FilterConstants.ALL,
+  );
   const [isModalDeptOpen, setIsModalDeptOpen] = useState(false);
-  const [exportStep, setExportStep] = useState<"employees" | "range">(
-    "employees",
+  const [exportStep, setExportStep] = useState<ExportStep>(
+    ExportStep.EMPLOYEES,
   );
   const modalDeptRef = useRef<HTMLDivElement>(null);
 
@@ -112,20 +121,19 @@ const AdminDashboard = () => {
       }),
     );
     // Initial fetch for global statistics cache
-    dispatch(getEntities({ page: 1, limit: 1000, userStatus: "ACTIVE" })).then(
-      (action: any) => {
-        if (action.payload) {
-          const data = action.payload;
-          const entitiesList = Array.isArray(data) ? data : data.data || [];
-          const totalCount =
-            data.totalItems || data.total || entitiesList.length;
-          setGlobalStatsCache({
-            entities: entitiesList,
-            totalItems: totalCount,
-          });
-        }
-      },
-    );
+    dispatch(
+      getEntities({ page: 1, limit: 1000, userStatus: UserStatus.ACTIVE }),
+    ).then((action: any) => {
+      if (action.payload) {
+        const data = action.payload;
+        const entitiesList = Array.isArray(data) ? data : data.data || [];
+        const totalCount = data.totalItems || data.total || entitiesList.length;
+        setGlobalStatsCache({
+          entities: entitiesList,
+          totalItems: totalCount,
+        });
+      }
+    });
     // Fetch holidays for PDF export
     dispatch(fetchHolidays());
   }, [dispatch, currentMonth, currentYear]);
@@ -137,7 +145,7 @@ const AdminDashboard = () => {
     const employeeId =
       currentUser?.employeeId ||
       (entities.length > 0 ? entities[0].employeeId : null);
-    if (employeeId && employeeId !== "Admin") {
+    if (employeeId && employeeId !== UserRole.ADMIN) {
       dispatch(fetchNotifications(employeeId));
       dispatch(fetchEmployeeUpdates(employeeId));
     }
@@ -174,7 +182,8 @@ const AdminDashboard = () => {
     const matchesSearch = (emp.fullName || emp.name || "")
       .toLowerCase()
       .includes(modalSearch.toLowerCase());
-    const matchesDept = modalDept === "All" || emp.department === modalDept;
+    const matchesDept =
+      modalDept === FilterConstants.ALL || emp.department === modalDept;
     return matchesSearch && matchesDept;
   });
 
@@ -252,7 +261,7 @@ const AdminDashboard = () => {
       }
 
       setIsExportModalOpen(false);
-      setExportStep("employees");
+      setExportStep(ExportStep.EMPLOYEES);
       setSelectedEmps(new Set());
     } catch (error) {
       console.error("Bulk export failed", error);
@@ -340,21 +349,21 @@ const AdminDashboard = () => {
         return { name: emp.fullName || emp.name || "Unknown", hours: total };
       })
       .sort((a, b) => {
-        if (sortOption === "hours_desc") return b.hours - a.hours;
-        if (sortOption === "hours_asc") return a.hours - b.hours;
+        if (sortOption === SortOption.HOURS_DESC) return b.hours - a.hours;
+        if (sortOption === SortOption.HOURS_ASC) return a.hours - b.hours;
         return 0;
       });
 
     // 3. Donut (Global Distribution)
     const departmentsList = [
-      "HR",
-      "IT",
-      "Sales",
-      "Marketing",
-      "Finance",
-      "Engineering",
-      "Design",
-      "Admin",
+      Department.HR,
+      Department.IT,
+      Department.SALES,
+      Department.MARKETING,
+      Department.FINANCE,
+      Department.ENGINEERING,
+      Department.DESIGN,
+      Department.ADMIN,
     ];
 
     return {
@@ -657,18 +666,18 @@ const AdminDashboard = () => {
             className="absolute inset-0 bg-[#2B3674]/20 backdrop-blur-md"
             onClick={() => {
               setIsExportModalOpen(false);
-              setExportStep("employees");
+              setExportStep(ExportStep.EMPLOYEES);
             }}
           />
           <div
-            className={`relative bg-white w-full transition-all duration-500 rounded-[32px] shadow-2xl overflow-hidden flex flex-col ${exportStep === "employees" ? "max-w-3xl h-[720px]" : "max-w-md h-[480px]"}`}
+            className={`relative bg-white w-full transition-all duration-500 rounded-[32px] shadow-2xl overflow-hidden flex flex-col ${exportStep === ExportStep.EMPLOYEES ? "max-width-3xl h-[720px]" : "max-w-md h-[480px]"}`}
           >
             {/* Modal Header */}
             <div className="px-8 py-4 border-b border-gray-100 flex justify-between items-center shrink-0">
               <div className="flex items-center gap-4">
-                {exportStep === "range" && (
+                {exportStep === ExportStep.RANGE && (
                   <button
-                    onClick={() => setExportStep("employees")}
+                    onClick={() => setExportStep(ExportStep.EMPLOYEES)}
                     className="p-2 hover:bg-gray-100 rounded-full text-[#4318FF]"
                   >
                     <ArrowLeft size={24} />
@@ -676,12 +685,12 @@ const AdminDashboard = () => {
                 )}
                 <div>
                   <h2 className="text-2xl font-black text-[#2B3674]">
-                    {exportStep === "employees"
+                    {exportStep === ExportStep.EMPLOYEES
                       ? "Select Employees"
                       : "Select Date Range"}
                   </h2>
                   <p className="text-sm font-bold text-[#A3AED0]">
-                    {exportStep === "employees"
+                    {exportStep === ExportStep.EMPLOYEES
                       ? "Choose employees to export"
                       : "Select report period"}
                   </p>
@@ -690,7 +699,7 @@ const AdminDashboard = () => {
               <button
                 onClick={() => {
                   setIsExportModalOpen(false);
-                  setExportStep("employees");
+                  setExportStep(ExportStep.EMPLOYEES);
                 }}
                 className="p-2 hover:bg-gray-100 rounded-full text-gray-400"
               >
@@ -698,7 +707,7 @@ const AdminDashboard = () => {
               </button>
             </div>
 
-            {exportStep === "employees" ? (
+            {exportStep === ExportStep.EMPLOYEES ? (
               <div className="flex-1 flex flex-col min-h-0 px-8 py-4">
                 <div className="flex gap-4 items-center mb-4 shrink-0">
                   <div className="relative" ref={modalDeptRef}>
@@ -708,7 +717,9 @@ const AdminDashboard = () => {
                     >
                       <Filter size={16} className="text-[#4318FF]" />
                       <span>
-                        {modalDept === "All" ? "All Departments" : modalDept}
+                        {modalDept === FilterConstants.ALL
+                          ? "All Departments"
+                          : modalDept}
                       </span>
                       <ChevronDown
                         size={16}
@@ -718,15 +729,15 @@ const AdminDashboard = () => {
                     {isModalDeptOpen && (
                       <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 z-110 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                         {[
-                          "All",
-                          "HR",
-                          "IT",
-                          "Sales",
-                          "Marketing",
-                          "Finance",
-                          "Engineering",
-                          "Design",
-                          "Admin",
+                          FilterConstants.ALL,
+                          Department.HR,
+                          Department.IT,
+                          Department.SALES,
+                          Department.MARKETING,
+                          Department.FINANCE,
+                          Department.ENGINEERING,
+                          Department.DESIGN,
+                          Department.ADMIN,
                         ].map((d) => (
                           <button
                             key={d}
@@ -736,7 +747,7 @@ const AdminDashboard = () => {
                             }}
                             className={`w-full text-left px-5 py-2 text-sm font-semibold hover:bg-gray-50 ${modalDept === d ? "text-[#4318FF] bg-[#4318FF]/5" : "text-[#2B3674]"}`}
                           >
-                            {d === "All" ? "All" : d}
+                            {d === FilterConstants.ALL ? "All" : d}
                           </button>
                         ))}
                       </div>
@@ -821,7 +832,7 @@ const AdminDashboard = () => {
                     {selectedEmps.size} selected
                   </span>
                   <button
-                    onClick={() => setExportStep("range")}
+                    onClick={() => setExportStep(ExportStep.RANGE)}
                     disabled={selectedEmps.size === 0}
                     className={`flex items-center gap-2 px-6 py-2.5 rounded-2xl font-black text-sm transition-all ${selectedEmps.size === 0 ? "bg-gray-200 text-gray-400" : "bg-[#4318FF] text-white shadow-lg"}`}
                   >
@@ -872,7 +883,7 @@ const AdminDashboard = () => {
                     </span>
                     <div className="flex gap-12">
                       <button
-                        onClick={() => setExportStep("employees")}
+                        onClick={() => setExportStep(ExportStep.EMPLOYEES)}
                         className="text-xs font-bold text-[#A3AED0] hover:text-[#2B3674] uppercase tracking-widest"
                       >
                         Cancel

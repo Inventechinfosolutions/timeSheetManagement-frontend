@@ -13,6 +13,7 @@ import {
   fetchRoles,
 } from "../reducers/employeeDetails.reducer";
 import { useAppDispatch, useAppSelector } from "../hooks";
+import { EmploymentType } from "../types";
 import {
   Pencil,
   Search,
@@ -35,45 +36,60 @@ import {
   Eye,
   Calendar,
 } from "lucide-react";
+import {
+  SortDirection,
+  Department,
+  FilterConstants,
+  DashboardPath,
+  UserStatus,
+} from "./enums";
+import {
+  SortConfig,
+  ActivationData,
+  EmployeeFormData,
+  FieldErrors,
+} from "./types";
 import EmployeeListMobileCard from "./EmployeeListMobileCard";
 
 const EmployeeListView = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const basePath = location.pathname.startsWith("/manager-dashboard")
-    ? "/manager-dashboard"
-    : "/admin-dashboard";
+  const basePath = location.pathname.startsWith(DashboardPath.MANAGER)
+    ? DashboardPath.MANAGER
+    : DashboardPath.ADMIN;
 
-  const isAdmin = basePath === "/admin-dashboard";
+  const isAdmin = basePath === DashboardPath.ADMIN;
 
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  const [sortConfig, setSortConfig] = useState<{
-    key: string | null;
-    direction: "asc" | "desc";
-  }>({ key: null, direction: "asc" });
+  const [sortConfig, setSortConfig] = useState<SortConfig>({
+    key: null,
+    direction: SortDirection.ASC,
+  });
 
-  const [selectedDepartment, setSelectedDepartment] = useState("All");
+  const [selectedDepartment, setSelectedDepartment] = useState<
+    Department | FilterConstants.ALL
+  >(FilterConstants.ALL);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<EmployeeFormData>({
     fullName: "",
     employeeId: "",
     department: "",
     designation: "",
     email: "",
     role: "",
-    employmentType: "" as "" | "FULL_TIMER" | "INTERN",
+    employmentType: "",
     joiningDate: "",
   });
-  const [fieldErrors, setFieldErrors] = useState({
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({
     fullName: "",
     employeeId: "",
     department: "",
@@ -90,12 +106,9 @@ const EmployeeListView = () => {
   const [showToggleConfirm, setShowToggleConfirm] = useState(false);
   const [selectedEmployeeForToggle, setSelectedEmployeeForToggle] =
     useState<any>(null);
-  const [activationData, setActivationData] = useState<{
-    link: string;
-    message: string;
-    loginId?: string;
-    password?: string;
-  } | null>(null);
+  const [activationData, setActivationData] = useState<ActivationData | null>(
+    null,
+  );
   // const [copySuccess, setCopySuccess] = useState<string>("");
 
   // const [copySuccess, setCopySuccess] = useState<string>("");
@@ -147,7 +160,9 @@ const EmployeeListView = () => {
         sort: sortConfig.key || undefined,
         order: sortConfig.key ? sortConfig.direction.toUpperCase() : undefined,
         department:
-          selectedDepartment === "All" ? undefined : selectedDepartment,
+          selectedDepartment === FilterConstants.ALL
+            ? undefined
+            : selectedDepartment,
       }),
     );
   }, [
@@ -163,10 +178,13 @@ const EmployeeListView = () => {
       if (current.key === key) {
         return {
           key,
-          direction: current.direction === "asc" ? "desc" : "asc",
+          direction:
+            current.direction === SortDirection.ASC
+              ? SortDirection.DESC
+              : SortDirection.ASC,
         };
       }
-      return { key, direction: "asc" };
+      return { key, direction: SortDirection.ASC };
     });
   };
 
@@ -179,7 +197,7 @@ const EmployeeListView = () => {
     rawId: emp.employeeId, // Store employeeId string for API calls
     createdAt: emp.createdAt,
     lastLoggedIn: emp.lastLoggedIn,
-    isActive: emp.userStatus !== "INACTIVE",
+    isActive: emp.userStatus !== UserStatus.INACTIVE,
   }));
 
   const currentItems = employees.filter((emp) => {
@@ -258,9 +276,7 @@ const EmployeeListView = () => {
     setFormData({
       ...formData,
       [name]:
-        name === "employmentType"
-          ? (value as "" | "FULL_TIMER" | "INTERN")
-          : value,
+        name === "employmentType" ? (value as EmploymentType | "") : value,
     });
     // Validation
     let error = "";
@@ -301,7 +317,7 @@ const EmployeeListView = () => {
     if (hasErrors) {
       return;
     }
-    const requiredKeys = [
+    const requiredKeys: (keyof EmployeeFormData)[] = [
       "fullName",
       "employeeId",
       "department",
@@ -310,7 +326,7 @@ const EmployeeListView = () => {
       "email",
       "joiningDate",
     ];
-    if (requiredKeys.some((k) => !(formData as Record<string, unknown>)[k])) {
+    if (requiredKeys.some((k) => !formData[k])) {
       setGeneralError("Please fill in all required fields");
       return;
     }
@@ -337,7 +353,9 @@ const EmployeeListView = () => {
               limit: itemsPerPage,
               search: debouncedSearchTerm,
               department:
-                selectedDepartment === "All" ? undefined : selectedDepartment,
+                selectedDepartment === FilterConstants.ALL
+                  ? undefined
+                  : selectedDepartment,
             }),
           );
         }, 2000);
@@ -392,10 +410,9 @@ const EmployeeListView = () => {
   const confirmToggleStatus = async () => {
     if (!selectedEmployeeForToggle) return;
     try {
-      const newStatus =
-        selectedEmployeeForToggle.userStatus !== "INACTIVE"
-          ? "INACTIVE"
-          : "ACTIVE";
+      selectedEmployeeForToggle.userStatus !== UserStatus.INACTIVE
+        ? UserStatus.INACTIVE
+        : UserStatus.ACTIVE;
 
       await dispatch(
         updateEmployeeStatus({
@@ -412,7 +429,9 @@ const EmployeeListView = () => {
           limit: itemsPerPage,
           search: debouncedSearchTerm,
           department:
-            selectedDepartment === "All" ? undefined : selectedDepartment,
+            selectedDepartment === FilterConstants.ALL
+              ? undefined
+              : selectedDepartment,
         }),
       );
     } catch (error: any) {
@@ -440,7 +459,9 @@ const EmployeeListView = () => {
             limit: itemsPerPage,
             search: debouncedSearchTerm,
             department:
-              selectedDepartment === "All" ? undefined : selectedDepartment,
+              selectedDepartment === FilterConstants.ALL
+                ? undefined
+                : selectedDepartment,
           }),
         );
       } else {
@@ -492,15 +513,15 @@ const EmployeeListView = () => {
                     </span>
                   </div>
                   <button
-                    key="All"
+                    key={FilterConstants.ALL}
                     onClick={() => {
-                      setSelectedDepartment("All");
+                      setSelectedDepartment(FilterConstants.ALL);
                       setIsDropdownOpen(false);
                       setCurrentPage(1);
                     }}
                     className={`w-full text-left px-5 py-2 text-sm font-semibold transition-colors
                     ${
-                      selectedDepartment === "All"
+                      selectedDepartment === FilterConstants.ALL
                         ? "text-[#4318FF] bg-[#4318FF]/5"
                         : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
                     }`}
@@ -541,7 +562,7 @@ const EmployeeListView = () => {
               />
             </div>
 
-            {basePath === "/admin-dashboard" && (
+            {basePath === DashboardPath.ADMIN && (
               <>
                 <button
                   onClick={() => setIsUploadModalOpen(true)}
