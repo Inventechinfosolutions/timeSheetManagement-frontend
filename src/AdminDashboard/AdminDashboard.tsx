@@ -546,7 +546,7 @@ const AdminDashboard = () => {
           />
         </div>
 
-        <div
+        {/* <div
           className={styles.statCard(
             "bg-linear-to-br from-[#868CFF] to-[#4318FF]",
           )}
@@ -564,7 +564,7 @@ const AdminDashboard = () => {
             className="absolute bottom-4 right-4 text-white/20"
             size={48}
           />
-        </div>
+        </div> */}
 
         <div
           className={styles.statCard(
