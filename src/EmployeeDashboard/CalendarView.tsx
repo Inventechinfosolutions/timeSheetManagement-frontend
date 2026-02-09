@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   ChevronLeft,
   ChevronRight,
@@ -33,6 +33,7 @@ interface CalendarProps {
   entries?: TimesheetEntry[];
   employeeId?: string;
   scrollable?: boolean;
+  viewOnly?: boolean;
 }
 
 const Calendar = ({
@@ -44,9 +45,11 @@ const Calendar = ({
   entries: propEntries,
   employeeId: propEmployeeId,
   scrollable = true,
+  viewOnly = false,
 }: CalendarProps) => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const { records } = useAppSelector((state: RootState) => state.attendance);
   const { entity, entities } = useAppSelector(
     (state: RootState) => state.employeeDetails,
@@ -431,9 +434,9 @@ const Calendar = ({
               },
               {
                 label: "Half Day",
-                color: "bg-emerald-50",
-                border: "border-emerald-200",
-                text: "text-emerald-700",
+                color: "bg-amber-50",
+                border: "border-amber-200",
+                text: "text-amber-700",
               },
               {
                 label: "Absent",
@@ -458,6 +461,12 @@ const Calendar = ({
                 color: "bg-blue-50",
                 border: "border-blue-200",
                 text: "text-blue-700",
+              },
+              {
+                label: "Pending Update",
+                color: "bg-white",
+                border: "border-gray-200",
+                text: "text-gray-500",
               },
               {
                 label: "Blocked",
@@ -593,11 +602,18 @@ const Calendar = ({
                 // textClass = "text-red-600 font-bold";
                 statusLabel = "WEEKEND";
               } else if (
-                entry?.status === "Full Day" ||
-                entry?.status === "Half Day"
+                entry?.status === "Full Day"
               ) {
                 cellClass = `bg-emerald-50 border-transparent hover:bg-emerald-100 ${baseHover}`;
                 // textClass = "text-emerald-700 font-bold";
+                if (!entry?.totalHours || Number(entry.totalHours) === 0) {
+                  statusLabel = "";
+                }
+              } else if (
+                entry?.status === "Half Day"
+              ) {
+                cellClass = `bg-amber-100 border-amber-300 hover:bg-amber-200 ${baseHover}`;
+                // textClass = "text-amber-700 font-bold";
                 if (!entry?.totalHours || Number(entry.totalHours) === 0) {
                   statusLabel = "";
                 }
@@ -621,10 +637,9 @@ const Calendar = ({
                 cellClass = `bg-blue-50 border-transparent hover:bg-blue-100 ${baseHover}`;
                 statusLabel = entry?.workLocation || entry?.status || "WFH";
               } else if (
-                isIncomplete // Only Not Updated remains Amber
+                isIncomplete
               ) {
-                cellClass = `bg-amber-50 border-transparent hover:bg-amber-100 ${baseHover}`;
-                // textClass = "text-amber-700 font-bold";
+                cellClass = `bg-white border-gray-300 hover:bg-gray-50 ${baseHover}`;
                 if (!entry?.totalHours || Number(entry.totalHours) === 0) {
                   statusLabel = "Not Updated";
                 }
@@ -632,7 +647,7 @@ const Calendar = ({
                 cellClass = `bg-red-50 border-transparent hover:bg-red-100 ${baseHover}`;
                 // textClass = "text-red-700 font-bold";
               } else if (entry?.isFuture) {
-                cellClass = `bg-white border-transparent hover:bg-gray-50 ${baseHover}`;
+                cellClass = `bg-white border-gray-300 hover:bg-gray-50 ${baseHover}`;
                 // textClass = "text-gray-300 font-bold";
                 statusLabel = "UPCOMING";
               }
@@ -641,20 +656,49 @@ const Calendar = ({
                 <div
                   key={day}
                   onClick={() => {
+                    const targetDate = new Date(
+                      displayDate.getFullYear(),
+                      displayDate.getMonth(),
+                      day,
+                    );
+                    const timestamp = targetDate.getTime();
+
                     if (onNavigateToDate) {
-                      onNavigateToDate(day);
-                    } else if (isAdmin && currentEmployeeId) {
-                      // Admin navigation logic if needed
-                      const dateStr = cellDate.toISOString().split("T")[0];
-                      navigate(
-                        `/admin-dashboard/timesheet/${currentEmployeeId}/${dateStr}`,
-                        {
+                      onNavigateToDate(timestamp);
+                    } else {
+                      const dateStr = targetDate.toISOString().split("T")[0];
+                      const isPrivilegedUser = 
+                        currentUser?.userType === UserType.ADMIN || 
+                        currentUser?.userType === UserType.MANAGER || 
+                        currentUser?.userType === UserType.TEAM_LEAD;
+
+                      // Privileged user viewing someone else's calendar (View Mode)
+                      if (viewOnly && isPrivilegedUser && currentEmployeeId && currentEmployeeId !== currentUser?.employeeId) {
+                        const basePath = location.pathname.startsWith("/manager-dashboard") 
+                          ? "/manager-dashboard" 
+                          : "/admin-dashboard";
+                        
+                        navigate(`${basePath}/timesheet/${currentEmployeeId}/${dateStr}`, {
                           state: {
-                            selectedDate: cellDate.toISOString(),
+                            selectedDate: targetDate.toISOString(),
                             timestamp: Date.now(),
                           },
-                        },
-                      );
+                        });
+                      } else {
+                        // Default: User viewing their own timesheet (Employee or Manager self-view)
+                        const basePath = location.pathname.startsWith("/manager-dashboard") 
+                          ? "/manager-dashboard" 
+                          : location.pathname.startsWith("/admin-dashboard")
+                            ? "/admin-dashboard"
+                            : "/employee-dashboard";
+                            
+                        navigate(`${basePath}/my-timesheet`, {
+                          state: {
+                            selectedDate: targetDate.toISOString(),
+                            timestamp: Date.now(),
+                          }
+                        });
+                      }
                     }
                   }}
                   className={`relative flex flex-col items-start justify-between p-2 rounded-2xl border transition-all duration-300 cursor-pointer min-h-[72px] group ${cellClass}`}
@@ -734,24 +778,24 @@ const Calendar = ({
                              ? "text-white bg-gray-600"
                              : holiday
                                ? "text-white bg-[#1890FF]/70"
-                               : (entry?.status === "Full Day" ||
-                                     entry?.status === "Half Day") &&
-                                   statusLabel
+                               : entry?.status === "Full Day" && statusLabel
                                  ? "text-white bg-[#01B574]"
-                                 : entry?.status === "Leave"
-                                   ? "text-white bg-red-400/70"
-                                   : entry?.workLocation === "Client Visit" ||
-                                       entry?.status === "Client Visit" ||
-                                       entry?.workLocation === "WFH" ||
-                                       entry?.status === "WFH"
-                                     ? "text-white bg-[#4318FF]/70"
-                                     : isIncomplete && statusLabel
-                                       ? "text-white bg-[#FFB020]/80"
-                                       : entry?.status === "Absent"
-                                         ? "text-white bg-[#EE5D50]/70"
-                                         : entry?.isWeekend
-                                           ? "text-white bg-red-400/70"
-                                           : "text-white bg-[#64748B]/90"
+                                 : entry?.status === "Half Day" && statusLabel
+                                   ? "text-white bg-[#FFB020]/80"
+                                   : entry?.status === "Leave"
+                                     ? "text-white bg-red-400/70"
+                                     : entry?.workLocation === "Client Visit" ||
+                                         entry?.status === "Client Visit" ||
+                                         entry?.workLocation === "WFH" ||
+                                         entry?.status === "WFH"
+                                       ? "text-white bg-[#4318FF]/70"
+                                       : isIncomplete && statusLabel
+                                         ? "text-white bg-[#64748B]/90"
+                                         : entry?.status === "Absent"
+                                           ? "text-white bg-[#EE5D50]/70"
+                                           : entry?.isWeekend
+                                             ? "text-white bg-red-400/70"
+                                             : "text-white bg-[#64748B]/90"
                          }
                     `}
                   >
@@ -770,7 +814,7 @@ const Calendar = ({
                   </div>
 
                   {isIncomplete && (
-                    <div className="absolute top-2 right-2 w-4 h-4 bg-orange-500 rounded-full flex items-center justify-center shadow-sm animate-pulse">
+                    <div className="absolute top-2 right-2 w-4 h-4 bg-slate-400 rounded-full flex items-center justify-center shadow-sm animate-pulse">
                       <span className="text-white text-[10px] font-bold">
                         !
                       </span>

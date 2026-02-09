@@ -69,6 +69,7 @@ const EmployeeListView = () => {
     designation: "",
     email: "",
     role: "",
+    employmentType: "" as "" | "FULL_TIMER" | "INTERN",
   });
   const [fieldErrors, setFieldErrors] = useState({
     fullName: "",
@@ -77,6 +78,7 @@ const EmployeeListView = () => {
     designation: "",
     email: "",
     role: "",
+    employmentType: "",
   });
   const [generalError, setGeneralError] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
@@ -252,7 +254,10 @@ const EmployeeListView = () => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
-      [name]: value,
+      [name]:
+        name === "employmentType"
+          ? (value as "" | "FULL_TIMER" | "INTERN")
+          : value,
     });
     // Validation
     let error = "";
@@ -293,17 +298,20 @@ const EmployeeListView = () => {
     if (hasErrors) {
       return;
     }
-    // Check if all fields filled
-    if (Object.values(formData).some((val) => !val)) {
-      setGeneralError("Please fill in all fields");
+    const requiredKeys = ["fullName", "employeeId", "department", "role", "designation", "email"];
+    if (requiredKeys.some((k) => !(formData as Record<string, unknown>)[k])) {
+      setGeneralError("Please fill in all required fields");
       return;
     }
 
     setGeneralError("");
     setShowSuccess(false);
 
+    const submitData = { ...formData };
+    if (!submitData.employmentType) delete (submitData as Record<string, unknown>).employmentType;
+
     try {
-      const resultAction = await dispatch(createEntity(formData));
+      const resultAction = await dispatch(createEntity(submitData));
 
       if (createEntity.fulfilled.match(resultAction)) {
         setShowSuccess(true);
@@ -337,14 +345,14 @@ const EmployeeListView = () => {
 
   const handleCloseCreateModal = () => {
     setIsCreateModalOpen(false);
-    // Don't reset the entire Redux state - it clears the employee list
-    // Only reset local form state
     setFormData({
       fullName: "",
       employeeId: "",
       department: "",
       designation: "",
       email: "",
+      role: "",
+      employmentType: "",
     });
     setFieldErrors({
       fullName: "",
@@ -352,6 +360,8 @@ const EmployeeListView = () => {
       department: "",
       designation: "",
       email: "",
+      role: "",
+      employmentType: "",
     });
     setGeneralError("");
     setShowSuccess(false);
@@ -1174,6 +1184,34 @@ const EmployeeListView = () => {
                           {fieldErrors.designation}
                         </p>
                       )}
+                    </div>
+
+                    {/* Employment Type (leave balance) */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">
+                        Employment Type
+                      </label>
+                      <div className="relative">
+                        <select
+                          name="employmentType"
+                          value={formData.employmentType}
+                          onChange={handleFormChange}
+                          className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none transition-all text-sm appearance-none bg-white"
+                        >
+                          <option value="">Select Employment Type</option>
+                          <option value="FULL_TIMER">Full-time employee </option>
+                          <option value="INTERN">Intern </option>
+                        </select>
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                      </div>
+                      <p className="text-gray-400 text-xs mt-0.5">
+                        {/* Used for leave balance: Full timer = 18, Intern = 12 leaves/year */}
+                      </p>
                     </div>
                   </div>
 

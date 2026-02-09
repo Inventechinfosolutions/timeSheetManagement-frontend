@@ -96,6 +96,7 @@ const AdminEmployeeCalendarView = () => {
           currentDate={displayDate}
           onMonthChange={handleMonthChange}
           employeeId={employeeId}
+          viewOnly={true}
         />
       </div>
 

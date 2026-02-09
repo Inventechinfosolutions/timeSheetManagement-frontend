@@ -138,6 +138,17 @@ export const mapAttendanceToEntry = (
     // Handle potential snake_case from backend
     const totalHours = attendance?.totalHours ?? (attendance as any)?.total_hours;
 
+    // Determine Status
+    const status = mapStatus(attendance?.status, isFuture, isToday, isWeekend, totalHours);
+
+    // Determine Work Location
+    let workLocation = attendance?.location || (attendance as any)?.workLocation || (attendance as any)?.work_location;
+    
+    // Append (Half Day) if applicable
+    if (status === 'Half Day' && workLocation && !workLocation.includes('(Half Day)') && workLocation !== 'Half Day') {
+        workLocation = `${workLocation} (Half Day)`;
+    }
+
     return {
         date: i,
         fullDate: date,
@@ -147,10 +158,11 @@ export const mapAttendanceToEntry = (
         isWeekend,
         isFuture,
         totalHours, // Ensure this is passed to the UI
-        status: mapStatus(attendance?.status, isFuture, isToday, isWeekend, totalHours),
+        status,
         isEditing: false,
         isSaved: !!attendance?.id,
-        workLocation: attendance?.location || (attendance as any)?.workLocation || (attendance as any)?.work_location, // Map workLocation
+        workLocation, // Map workLocation
+        sourceRequestId: attendance?.sourceRequestId, // Track auto-generated records
         isSavedLogout: !!attendance?.logoutTime && attendance.logoutTime !== "00:00:00" && !attendance.logoutTime.includes("NaN"),
     } as TimesheetEntry;
 };
@@ -224,7 +236,7 @@ export const generateRangeEntries = (start: Date, end: Date, now: Date, records:
         // If Saturday has data (Client Visit, WFH, etc.), show that data instead
         else if (dayOfWeek === 6) {
             // If there's no record OR no meaningful data, show as Weekend
-            if (!actualRecord || (!actualRecord.workLocation && !actualRecord.status && (!actualRecord.totalHours || actualRecord.totalHours === 0))) {
+            if (!actualRecord || (!actualRecord.location && !(actualRecord as any).workLocation && !actualRecord.status && (!actualRecord.totalHours || actualRecord.totalHours === 0))) {
                 entry.status = 'Weekend';
                 entry.workLocation = undefined;
             }

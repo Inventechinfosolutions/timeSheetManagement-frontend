@@ -1,5 +1,8 @@
 import { Outlet, useParams, useNavigate, useLocation } from "react-router-dom";
 import SidebarLayout from "../AdminDashboard/SidebarLayout";
+import { useAppDispatch, useAppSelector } from "../hooks";
+import { fetchNotifications } from "../reducers/notification.reducer";
+import { fetchEmployeeUpdates, fetchUnreadNotifications } from "../reducers/leaveNotification.reducer";
 
 const ManagerLayout = () => {
   const { tab } = useParams<{ tab: string }>();
@@ -39,6 +42,9 @@ const ManagerLayout = () => {
     if (path.includes("/manager-dashboard/work-management")) {
       return "Work Management";
     }
+    if (path.includes("/manager-dashboard/leave-balance")) {
+      return "Leave Balance";
+    }
     if (path.includes("/manager-dashboard/manager-mapping")) {
       return "Manager Mapping";
     }
@@ -61,6 +67,8 @@ const ManagerLayout = () => {
         return "Employee Timesheet";
       case "work-management":
         return "Work Management";
+      case "leave-balance":
+        return "Leave Balance";
       case "manager-mapping":
         return "Manager Mapping";
       case "my-dashboard":
@@ -76,7 +84,24 @@ const ManagerLayout = () => {
     }
   };
 
+  const dispatch = useAppDispatch();
+  const { entity } = useAppSelector((state) => state.employeeDetails);
+  const { currentUser } = useAppSelector((state) => state.user);
+  const isAdmin = currentUser?.userType === "ADMIN";
+
   const handleTabChange = (tabName: string) => {
+    // Refresh notifications when switching to primary dashboards
+    if (tabName === "My Dashboard" || tabName === "Employee Dashboard") {
+      if (isAdmin) {
+        dispatch(fetchUnreadNotifications());
+      } else if (entity?.employeeId) {
+        dispatch(fetchNotifications(entity.employeeId));
+        dispatch(fetchEmployeeUpdates(entity.employeeId));
+        // Also fetch unread requests if it's a manager acting as admin
+        dispatch(fetchUnreadNotifications());
+      }
+    }
+
     if (tabName === "Employee Details") {
       navigate("/manager-dashboard/employees");
     } else if (tabName === "Employee Timesheet") {
@@ -87,6 +112,8 @@ const ManagerLayout = () => {
       navigate("/manager-dashboard/requests");
     } else if (tabName === "Work Management") {
       navigate("/manager-dashboard/work-management");
+    } else if (tabName === "Leave Balance") {
+      navigate("/manager-dashboard/leave-balance");
     } else if (tabName === "Manager Mapping") {
       navigate("/manager-dashboard/manager-mapping");
     } else if (tabName === "Employee Dashboard") {

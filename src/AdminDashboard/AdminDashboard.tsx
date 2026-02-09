@@ -18,6 +18,7 @@ import {
   ChevronRight,
   Calendar,
   ArrowLeft,
+  ChevronLeft,
 } from "lucide-react";
 import {
   fetchAllEmployeesMonthlyAttendance,
@@ -27,7 +28,8 @@ import {
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import { downloadPdf } from "../utils/downloadPdf";
 import { generateRangeEntries } from "../utils/attendanceUtils";
-import { fetchUnreadNotifications } from "../reducers/leaveNotification.reducer";
+import { fetchUnreadNotifications, fetchEmployeeUpdates } from "../reducers/leaveNotification.reducer";
+import { fetchNotifications } from "../reducers/notification.reducer";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -42,6 +44,7 @@ const AdminDashboard = () => {
   const { entities, totalItems } = useAppSelector(
     (state: RootState) => state.employeeDetails,
   );
+  const { currentUser } = useAppSelector((state: RootState) => state.user);
   const { employeeRecords } = useAppSelector(
     (state: RootState) => state.attendance,
   );
@@ -51,9 +54,12 @@ const AdminDashboard = () => {
   );
 
   // Time-related constants
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const currentMonth = (selectedDate.getMonth() + 1)
+    .toString()
+    .padStart(2, "0");
+  const currentYear = selectedDate.getFullYear().toString();
   const now = new Date();
-  const currentMonth = (now.getMonth() + 1).toString().padStart(2, "0");
-  const currentYear = now.getFullYear().toString();
 
   // Dashboard Stats & Cache State
   const [globalStatsCache, setGlobalStatsCache] = useState<{
@@ -121,7 +127,13 @@ const AdminDashboard = () => {
   // Refresh admin notifications on load
   useEffect(() => {
     dispatch(fetchUnreadNotifications());
-  }, [dispatch]);
+
+    const employeeId = currentUser?.employeeId || (entities.length > 0 ? entities[0].employeeId : null);
+    if (employeeId && employeeId !== "Admin") {
+      dispatch(fetchNotifications(employeeId));
+      dispatch(fetchEmployeeUpdates(employeeId));
+    }
+  }, [dispatch, currentUser, entities]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -476,6 +488,40 @@ const AdminDashboard = () => {
     <div
       className={`${styles.container} h-full overflow-y-auto custom-scrollbar`}
     >
+      {/* Month Selector Section */}
+      <div className="flex justify-center md:justify-end mb-6">
+        <div className="inline-flex items-center bg-white rounded-full px-6 py-2 shadow-sm border border-gray-100/50 gap-6">
+          <button
+            onClick={() => {
+              const prev = new Date(selectedDate);
+              prev.setMonth(prev.getMonth() - 1);
+              setSelectedDate(prev);
+            }}
+            className="p-1.5 hover:bg-gray-50 rounded-full transition-colors text-[#4318FF] hover:scale-110 active:scale-95"
+          >
+            <ChevronLeft size={20} strokeWidth={2.5} />
+          </button>
+
+          <span className="text-[#1B2559] font-bold min-w-[140px] text-center text-sm md:text-base selection:bg-none tracking-tight">
+            {selectedDate.toLocaleString("default", {
+              month: "long",
+              year: "numeric",
+            })}
+          </span>
+
+          <button
+            onClick={() => {
+              const next = new Date(selectedDate);
+              next.setMonth(next.getMonth() + 1);
+              setSelectedDate(next);
+            }}
+            className="p-1.5 hover:bg-gray-50 rounded-full transition-colors text-[#4318FF] hover:scale-110 active:scale-95"
+          >
+            <ChevronRight size={20} strokeWidth={2.5} />
+          </button>
+        </div>
+      </div>
+
       {/* Stats Section */}
       <div className={styles.cardGrid}>
         <div

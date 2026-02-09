@@ -21,6 +21,16 @@ export interface LeaveRequest {
   requestModifiedFrom?: string;
 }
 
+export interface LeaveBalanceResponse {
+  employeeId: string;
+  year: number;
+  entitlement: number;
+  used: number;
+  pending: number;
+  balance: number;
+  carryOver?: number;
+}
+
 interface LeaveRequestState {
   entities: LeaveRequest[];
   totalItems: number;
@@ -31,7 +41,9 @@ interface LeaveRequestState {
     leave: { applied: number; approved: number; rejected: number; total: number };
     wfh: { applied: number; approved: number; rejected: number; total: number };
     clientVisit: { applied: number; approved: number; rejected: number; total: number };
+    halfDay: { applied: number; approved: number; rejected: number; total: number };
   } | null;
+  leaveBalance: LeaveBalanceResponse | null;
   loading: boolean;
   error: string | null;
   submitSuccess: boolean;
@@ -46,6 +58,7 @@ const initialState: LeaveRequestState = {
   currentPage: 1,
   limit: 10,
   stats: null,
+  leaveBalance: null,
   loading: false,
   error: null,
   submitSuccess: false,
@@ -91,6 +104,25 @@ export const getAllLeaveRequests = createAsyncThunk(
 // Keep these as aliases for backward compatibility, pointing to the unified method or its logic
 export const getLeaveHistory = getAllLeaveRequests;
 export const getMonthlyLeaveRequests = getAllLeaveRequests;
+
+// Async Thunk for Getting Leave Balance (entitlement, used, pending, balance)
+export const getLeaveBalance = createAsyncThunk(
+  "leaveRequest/getBalance",
+  async (
+    params: { employeeId: string; year: string | number },
+    { rejectWithValue }
+  ) => {
+    try {
+      const year = String(params.year || new Date().getFullYear());
+      const response = await axios.get(
+        `${apiUrl}/balance/${params.employeeId}?year=${year}`
+      );
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to fetch leave balance");
+    }
+  }
+);
 
 // Async Thunk for Getting Leave Statistics
 export const getLeaveStats = createAsyncThunk(
@@ -392,6 +424,14 @@ const leaveRequestSlice = createSlice({
     // Get Stats
     builder.addCase(getLeaveStats.fulfilled, (state, action) => {
       state.stats = action.payload.data || action.payload;
+    });
+
+    // Get Leave Balance
+    builder.addCase(getLeaveBalance.fulfilled, (state, action) => {
+      state.leaveBalance = action.payload;
+    });
+    builder.addCase(getLeaveBalance.rejected, (state) => {
+      state.leaveBalance = null;
     });
 
     // Submit Request

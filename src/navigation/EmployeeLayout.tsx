@@ -47,6 +47,8 @@ const EmployeeLayout = () => {
         break;
       case "Projects":
         navigate("/employee-dashboard/projects");
+      case "Leave Balance":
+        navigate("/employee-dashboard/leave-balance");
         break;
       default:
         navigate("/employee-dashboard");

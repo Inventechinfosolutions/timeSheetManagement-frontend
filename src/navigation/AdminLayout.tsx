@@ -1,5 +1,7 @@
 import { Outlet, useParams, useNavigate, useLocation } from "react-router-dom";
 import SidebarLayout from "../AdminDashboard/SidebarLayout";
+import { useAppDispatch } from "../hooks";
+import { fetchUnreadNotifications } from "../reducers/leaveNotification.reducer";
 
 const AdminLayout = () => {
   const { tab } = useParams<{ tab: string }>();
@@ -30,6 +32,9 @@ const AdminLayout = () => {
     if (path.includes("/admin-dashboard/work-management")) {
       return "Work Management";
     }
+    if (path.includes("/admin-dashboard/leave-balance")) {
+      return "Leave Balance";
+    }
     if (
       path.includes("/admin-dashboard/manager-mapping") ||
       path.includes("/admin-dashboard/manager-employees/")
@@ -54,6 +59,8 @@ const AdminLayout = () => {
         return "Timesheet";
       case "work-management":
         return "Work Management";
+      case "leave-balance":
+        return "Leave Balance";
       case "manager-mapping":
         return "Manager Mapping";
       case "projects":
@@ -63,11 +70,17 @@ const AdminLayout = () => {
     }
   };
 
+  const dispatch = useAppDispatch();
   const handleTabChange = (tabName: string) => {
-    if (tabName === "User & Role Management") {
+    if (tabName === "System Dashboard") {
+      dispatch(fetchUnreadNotifications());
+      navigate("/admin-dashboard");
+    } else if (tabName === "User & Role Management") {
       navigate("/admin-dashboard/registration");
     } else if (tabName === "Employee Details") {
       navigate("/admin-dashboard/employees");
+    } else if (tabName === "Employee Timesheet") {
+      navigate("/admin-dashboard/timesheet-list");
     } else if (tabName === "Timesheet") {
       navigate("/admin-dashboard/timesheet-list");
     } else if (tabName === "Working Details") {
@@ -76,6 +89,8 @@ const AdminLayout = () => {
       navigate("/admin-dashboard/requests");
     } else if (tabName === "Work Management") {
       navigate("/admin-dashboard/work-management");
+    } else if (tabName === "Leave Balance") {
+      navigate("/admin-dashboard/leave-balance");
     } else if (tabName === "Manager Mapping") {
       navigate("/admin-dashboard/manager-mapping");
     } else if (tabName === "Projects") {
