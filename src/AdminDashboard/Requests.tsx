@@ -835,7 +835,7 @@ const Requests = () => {
       case "Client Visit":
         return <MapPin size={18} className="text-orange-500" />;
       case "Half Day":
-        return <Clock size={18} className="text-orange-500" />;
+        return <Clock size={18} className="text-[#E31C79]" />;
       default:
         return <Briefcase size={18} className="text-blue-500" />;
     }

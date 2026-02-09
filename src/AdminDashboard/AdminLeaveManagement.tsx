@@ -1067,6 +1067,12 @@ const AdminLeaveManagement = () => {
               color: "from-[#FFB547] to-[#FCCD75]",
               icon: MapPin,
             },
+            {
+              label: "Half Day",
+              key: "halfDay",
+              color: "from-[#E31C79] to-[#F78FAD]",
+              icon: Clock,
+            },
           ].map((config, idx) => {
             const rawData =
               (stats as any)?.[config.key] ||
