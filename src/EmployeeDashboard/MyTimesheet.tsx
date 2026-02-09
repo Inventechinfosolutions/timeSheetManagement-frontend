@@ -918,7 +918,7 @@ const MyTimesheet = ({
           </div>
 
           <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-            {!effectiveReadOnly && (
+            {/* {!effectiveReadOnly && (
               <button
                 onClick={handleAutoUpdate}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg font-bold text-[10px] hover:bg-indigo-100 transition-all active:scale-95 border border-indigo-100 uppercase tracking-wide"
@@ -927,7 +927,7 @@ const MyTimesheet = ({
                 <Sparkles size={14} className="animate-pulse" />
                 <span>Auto Fill</span>
               </button>
-            )}
+            )} */}
             <div className="flex flex-col sm:flex-row items-end sm:items-baseline gap-1 sm:gap-2">
               <p className="text-xs sm:text-sm uppercase font-bold text-gray-700 tracking-wider leading-none">
                 TOTAL HOURS :
