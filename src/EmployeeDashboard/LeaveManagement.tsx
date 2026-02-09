@@ -777,6 +777,12 @@ const LeaveManagement = () => {
             color: "from-[#FFB547] to-[#FCCD75]",
             icon: MapPin,
           },
+          {
+            label: "Half Day",
+            key: "halfDay",
+            color: "from-[#E31C79] to-[#F78FAD]",
+            icon: Clock,
+          },
           
         ].map((config, idx) => {
           // Normalize data access to be resilient to backend naming (case sensitivity)
@@ -969,13 +975,17 @@ const LeaveManagement = () => {
                               ? "bg-blue-50 text-blue-600"
                               : item.requestType === "Work From Home"
                                 ? "bg-green-50 text-green-600"
-                                : "bg-orange-50 text-orange-500"
+                                : item.requestType === "Half Day"
+                                  ? "bg-[#E31C79]/10 text-[#E31C79]"
+                                  : "bg-orange-50 text-orange-500"
                           }`}
                         >
                           {item.requestType === "Apply Leave" || item.requestType === "Leave" ? (
                             <Calendar size={18} />
                           ) : item.requestType === "Work From Home" ? (
                             <Home size={18} />
+                          ) : item.requestType === "Half Day" ? (
+                            <Clock size={18} />
                           ) : (
                             <MapPin size={18} />
                           )}
