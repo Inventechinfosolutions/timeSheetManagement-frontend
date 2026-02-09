@@ -630,7 +630,7 @@ const Calendar = ({
                 cellClass = `bg-red-50 border-transparent hover:bg-red-100 ${baseHover}`;
                 // textClass = "text-red-700 font-bold";
                 statusLabel = "Leave";
-              } else if ( 
+              } else if (
                 entry?.workLocation === "Client Visit" ||
                 entry?.status === "Client Visit"
               ) {
