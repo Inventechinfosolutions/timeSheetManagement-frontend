@@ -100,6 +100,7 @@ const LeaveManagement = () => {
     endDate: "",
     duration: 0,
   });
+  const [leaveDurationType, setLeaveDurationType] = useState("Full Day");
   const [isCancelling, setIsCancelling] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [filterStatus, setFilterStatus] = useState("All");
@@ -312,9 +313,19 @@ const LeaveManagement = () => {
 
   const handleSubmit = async () => {
     if (validateForm()) {
-      // For Client Visit, WFH, and Leave, fetch attendance records first to check for existing leaves
+      // Determine the actual request type based on dropdown selection if "Apply Leave" is selected
+      let finalRequestType = selectedLeaveType;
+      if (selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave") {
+        if (leaveDurationType === "Half Day") {
+          finalRequestType = "Half Day";
+        } else {
+          finalRequestType = "Apply Leave";
+        }
+      }
+
+      // For Client Visit, WFH, and Leave (including Half Day), fetch attendance records first to check for existing leaves
       let duration: number;
-      if (selectedLeaveType === "Client Visit" || selectedLeaveType === "Work From Home" || selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave") {
+      if (finalRequestType === "Client Visit" || finalRequestType === "Work From Home" || finalRequestType === "Apply Leave" || finalRequestType === "Leave" || finalRequestType === "Half Day") {
         // Fetch attendance records synchronously before calculating duration
         const attendanceAction = await dispatch(fetchAttendanceByDateRange({
           employeeId: employeeId!,
@@ -328,7 +339,8 @@ const LeaveManagement = () => {
           setDateRangeAttendanceRecords(records);
         }
         // Calculate duration with the fetched records (pass records directly to avoid state timing issues)
-        duration = calculateDurationExcludingWeekends(formData.startDate, formData.endDate, records);
+        const baseDuration = calculateDurationExcludingWeekends(formData.startDate, formData.endDate, records);
+        duration = leaveDurationType === "Half Day" ? baseDuration * 0.5 : baseDuration;
       } else {
         duration = formData.startDate && formData.endDate
           ? dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1
@@ -338,7 +350,7 @@ const LeaveManagement = () => {
       dispatch(
         submitLeaveRequest({
           employeeId,
-          requestType: selectedLeaveType,
+          requestType: finalRequestType,
           title: formData.title,
           description: formData.description,
           fromDate: formData.startDate,
@@ -406,6 +418,17 @@ const LeaveManagement = () => {
   useEffect(() => {
     if (submitSuccess && employeeId) {
       setIsModalOpen(false);
+      dispatch(
+        getLeaveHistory({
+          employeeId,
+          status: filterStatus,
+          month: selectedMonth,
+          year: selectedYear,
+          page: 1,
+          limit: itemsPerPage,
+        })
+      );
+      if (currentPage !== 1) setCurrentPage(1);
       dispatch(getLeaveStats({ employeeId, month: selectedMonth, year: selectedYear }));
       dispatch(resetSubmitSuccess());
       setFormData({ title: "", description: "", startDate: "", endDate: "", duration: 0 });
@@ -427,6 +450,7 @@ const LeaveManagement = () => {
     );
     setIsModalOpen(true);
     setErrors({ title: "", description: "", startDate: "", endDate: "" });
+    setLeaveDurationType("Full Day");
     // Clear any previous global errors from the store
     dispatch(resetSubmitSuccess());
   };
@@ -645,7 +669,6 @@ const LeaveManagement = () => {
     { label: "Leave", icon: Calendar, color: "#4318FF" },
     { label: "Work From Home", icon: Home, color: "#38A169" },
     { label: "Client Visit", icon: MapPin, color: "#FFB547" },
-    { label: "Half Day", icon: Clock, color: "#F97316" },
   ];
 
   const hexToRgb = (hex: string) => {
@@ -754,12 +777,7 @@ const LeaveManagement = () => {
             color: "from-[#FFB547] to-[#FCCD75]",
             icon: MapPin,
           },
-          {
-            label: "Half Day",
-            key: "halfDay",
-            color: "from-[#F97316] to-[#FDBA74]",
-            icon: Clock,
-          },
+          
         ].map((config, idx) => {
           // Normalize data access to be resilient to backend naming (case sensitivity)
           // We check config.key (lowercase) and also common variations
@@ -982,7 +1000,7 @@ const LeaveManagement = () => {
                       <p className="text-[10px] text-[#4318FF] font-black mt-1 uppercase tracking-wider">
                         Total:{" "}
                         {item.duration ||
-                          (item.requestType === "Client Visit" || item.requestType === "Work From Home" || item.requestType === "Apply Leave" || item.requestType === "Leave"
+                          (item.requestType === "Client Visit" || item.requestType === "Work From Home" || item.requestType === "Apply Leave" || item.requestType === "Leave" || item.requestType === "Half Day"
                             ? calculateDurationExcludingWeekends(item.fromDate, item.toDate)
                             : dayjs(item.toDate).diff(dayjs(item.fromDate), "day") + 1)}{" "}
                         Day(s)
@@ -1175,6 +1193,31 @@ const LeaveManagement = () => {
               </div>
             )}
             
+            {/* Leave Type Dropdown - Only for Apply Leave */}
+            {!isViewMode && (selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave") && (
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-[#2B3674] ml-1">
+                  Leave Type
+                </label>
+                <Select
+                  value={leaveDurationType}
+                  onChange={(val) => setLeaveDurationType(val)}
+                  className="w-full h-[48px] font-bold text-[#2B3674]"
+                  variant="borderless"
+                  dropdownStyle={{ borderRadius: "16px", padding: "8px" }}
+                  style={{ 
+                    backgroundColor: "#F4F7FE", 
+                    borderRadius: "16px",
+                    border: "1px solid transparent"
+                  }}
+                  suffixIcon={<ChevronDown className="text-[#4318FF]" />}
+                >
+                  <Select.Option value="Full Day">Full Day Application</Select.Option>
+                  <Select.Option value="Half Day">Half Day Application</Select.Option>
+                </Select>
+              </div>
+            )}
+
             {/* Title Field */}
             <div className="space-y-2">
               <label className="text-sm font-bold text-[#2B3674] ml-1">
@@ -1315,8 +1358,10 @@ const LeaveManagement = () => {
                     ? (() => {
                         if (isViewMode) return `${formData.duration} Day(s)`;
                         
-                        if (selectedLeaveType === "Client Visit" || selectedLeaveType === "Work From Home" || selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave") {
-                          return `${calculateDurationExcludingWeekends(formData.startDate, formData.endDate)} Day(s)`;
+                        if (selectedLeaveType === "Client Visit" || selectedLeaveType === "Work From Home" || selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave" || selectedLeaveType === "Half Day") {
+                            const baseDur = calculateDurationExcludingWeekends(formData.startDate, formData.endDate);
+                            const finalDur = leaveDurationType === "Half Day" ? baseDur * 0.5 : baseDur;
+                            return `${finalDur} Day(s)`;
                         } else {
                           return `${dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1} Day(s)`;
                         }

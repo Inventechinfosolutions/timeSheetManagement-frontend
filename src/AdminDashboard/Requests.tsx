@@ -625,7 +625,8 @@ const Requests = () => {
             (request.requestType === "Client Visit" ||
               request.requestType === "Work From Home" ||
               request.requestType === "Apply Leave" ||
-              request.requestType === "Leave") &&
+              request.requestType === "Leave" ||
+              request.requestType === "Half Day") &&
             (isWeekend(currentDateObj) || isHoliday(currentDateObj))
           ) {
             continue;
@@ -1114,7 +1115,8 @@ const Requests = () => {
                           (req.requestType === "Client Visit" ||
                           req.requestType === "Work From Home" ||
                           req.requestType === "Apply Leave" ||
-                          req.requestType === "Leave"
+                          req.requestType === "Leave" ||
+                          req.requestType === "Half Day"
                             ? calculateDurationExcludingWeekends(
                                 req.fromDate,
                                 req.toDate,

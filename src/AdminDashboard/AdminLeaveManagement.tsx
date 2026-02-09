@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useAppDispatch, useAppSelector } from "../hooks";
-import { DatePicker, ConfigProvider } from "antd";
+import { DatePicker, ConfigProvider, Select } from "antd";
 import dayjs from "dayjs";
 import {
   getLeaveHistory,
@@ -107,9 +107,31 @@ const AdminLeaveManagement = () => {
     endDate: "",
     duration: 0,
   });
+  const [leaveDurationType, setLeaveDurationType] = useState("Full Day");
   const [isCancelling, setIsCancelling] = useState(false);
   const [isAutoApproving, setIsAutoApproving] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedMonth, setSelectedMonth] = useState<string>("All");
+  const [selectedYear, setSelectedYear] = useState<string>("All");
+  const [filterStatus, setFilterStatus] = useState<string>("All");
+
+  const months = [
+    { label: "January", value: "1" },
+    { label: "February", value: "2" },
+    { label: "March", value: "3" },
+    { label: "April", value: "4" },
+    { label: "May", value: "5" },
+    { label: "June", value: "6" },
+    { label: "July", value: "7" },
+    { label: "August", value: "8" },
+    { label: "September", value: "9" },
+    { label: "October", value: "10" },
+    { label: "November", value: "11" },
+    { label: "December", value: "12" },
+  ];
+
+  const currentYear = new Date().getFullYear();
+  const years = ["All", ...Array.from({ length: 5 }, (_, i) => currentYear - 2 + i)];
 
   const itemsPerPage = 10;
   const [searchTerm, setSearchTerm] = useState("");
@@ -400,13 +422,24 @@ const AdminLeaveManagement = () => {
 
     setIsAutoApproving(true);
     try {
-      // For Client Visit, WFH, and Leave, fetch attendance records first to check for existing leaves
+      // Determine the actual request type based on dropdown selection if "Apply Leave" is selected
+      let finalRequestType = selectedLeaveType;
+      if (selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave") {
+        if (leaveDurationType === "Half Day") {
+          finalRequestType = "Half Day";
+        } else {
+          finalRequestType = "Apply Leave";
+        }
+      }
+
+      // For Client Visit, WFH, and Leave (including Half Day), fetch attendance records first to check for existing leaves
       let duration: number;
       if (
-        selectedLeaveType === "Client Visit" ||
-        selectedLeaveType === "Work From Home" ||
-        selectedLeaveType === "Apply Leave" ||
-        selectedLeaveType === "Leave"
+        finalRequestType === "Client Visit" ||
+        finalRequestType === "Work From Home" ||
+        finalRequestType === "Apply Leave" ||
+        finalRequestType === "Leave" ||
+        finalRequestType === "Half Day"
       ) {
         // Fetch attendance records synchronously before calculating duration
         const attendanceAction = await dispatch(
@@ -424,11 +457,12 @@ const AdminLeaveManagement = () => {
           setDateRangeAttendanceRecords(records);
         }
         // Calculate duration with the fetched records (pass records directly to avoid state timing issues)
-        duration = calculateDurationExcludingWeekends(
+        const baseDuration = calculateDurationExcludingWeekends(
           formData.startDate,
           formData.endDate,
           records,
         );
+        duration = leaveDurationType === "Half Day" ? baseDuration * 0.5 : baseDuration;
       } else {
         duration =
           formData.startDate && formData.endDate
@@ -439,7 +473,7 @@ const AdminLeaveManagement = () => {
       const submitAction = await dispatch(
         submitLeaveRequest({
           employeeId: selectedEmployee.employeeId || selectedEmployee.id,
-          requestType: selectedLeaveType,
+          requestType: finalRequestType,
           title: formData.title,
           description: formData.description,
           fromDate: formData.startDate,
@@ -472,10 +506,11 @@ const AdminLeaveManagement = () => {
 
         // For Client Visit, WFH, and Leave, skip weekend dates and holidays (don't send to backend)
         if (
-          (selectedLeaveType === "Client Visit" ||
-            selectedLeaveType === "Work From Home" ||
-            selectedLeaveType === "Apply Leave" ||
-            selectedLeaveType === "Leave") &&
+          (finalRequestType === "Client Visit" ||
+            finalRequestType === "Work From Home" ||
+            finalRequestType === "Apply Leave" ||
+            finalRequestType === "Leave" ||
+            finalRequestType === "Half Day") &&
           (isWeekend(currentDateObj) || isHoliday(currentDateObj))
         ) {
           continue; // Skip weekends and holidays for Client Visit, WFH, and Leave
@@ -488,16 +523,16 @@ const AdminLeaveManagement = () => {
         };
 
         if (
-          selectedLeaveType === "Apply Leave" ||
-          selectedLeaveType === "Leave"
+          finalRequestType === "Apply Leave" ||
+          finalRequestType === "Leave"
         ) {
           attendanceData.status = AttendanceStatus.LEAVE;
-        } else if (selectedLeaveType === "Work From Home") {
+        } else if (finalRequestType === "Work From Home") {
           // Backend expects workLocation strings (kept consistent with Requests.tsx)
           attendanceData.workLocation = "WFH";
-        } else if (selectedLeaveType === "Client Visit") {
+        } else if (finalRequestType === "Client Visit") {
           attendanceData.workLocation = "Client Visit";
-        } else if (selectedLeaveType === "Half Day") {
+        } else if (finalRequestType === "Half Day") {
           attendanceData.status = "Half Day";
           // Preserve existing workLocation (WFH/CV) if it exists
           const existingRecord = dateRangeAttendanceRecords.find((r: any) => {
@@ -561,10 +596,14 @@ const AdminLeaveManagement = () => {
       await dispatch(
         getLeaveHistory({
           employeeId: selectedEmployee.employeeId || selectedEmployee.id,
-          page: currentPage,
+          page: 1,
           limit: itemsPerPage,
+          month: selectedMonth,
+          year: selectedYear,
+          status: filterStatus,
         }),
       );
+      setCurrentPage(1);
       await dispatch(
         getLeaveStats({
           employeeId: selectedEmployee.employeeId || selectedEmployee.id,
@@ -650,6 +689,9 @@ const AdminLeaveManagement = () => {
           employeeId: selectedEmployee.employeeId || selectedEmployee.id,
           page: currentPage,
           limit: itemsPerPage,
+          month: selectedMonth,
+          year: selectedYear,
+          status: filterStatus,
         }),
       );
       dispatch(
@@ -658,7 +700,7 @@ const AdminLeaveManagement = () => {
         }),
       );
     }
-  }, [dispatch, selectedEmployee, currentPage]);
+  }, [dispatch, selectedEmployee, currentPage, selectedMonth, selectedYear, filterStatus]);
 
   // Note: admin requests are auto-approved in handleSubmit; we don't rely on submitSuccess side-effects here.
 
@@ -691,6 +733,7 @@ const AdminLeaveManagement = () => {
       endDate: "",
       employee: "",
     });
+    setLeaveDurationType("Full Day");
     dispatch(resetSubmitSuccess());
   };
 
@@ -749,6 +792,9 @@ const AdminLeaveManagement = () => {
               employeeId: selectedEmployee.employeeId || selectedEmployee.id,
               page: currentPage,
               limit: itemsPerPage,
+              month: selectedMonth,
+              year: selectedYear,
+              status: filterStatus,
             }),
           );
           setCancelModal({ isOpen: false, id: null });
@@ -784,6 +830,7 @@ const AdminLeaveManagement = () => {
       endDate: "",
       employee: "",
     });
+    setLeaveDurationType("Full Day");
     dispatch(resetSubmitSuccess());
   };
 
@@ -791,7 +838,6 @@ const AdminLeaveManagement = () => {
     { label: "Leave", icon: Calendar, color: "#4318FF" },
     { label: "Work From Home", icon: Home, color: "#38A169" },
     { label: "Client Visit", icon: MapPin, color: "#FFB547" },
-    { label: "Half Day", icon: Clock, color: "#F97316" },
   ];
 
   const hexToRgb = (hex: string) => {
@@ -1021,12 +1067,6 @@ const AdminLeaveManagement = () => {
               color: "from-[#FFB547] to-[#FCCD75]",
               icon: MapPin,
             },
-            {
-              label: "Half Day",
-              key: "halfDay",
-              color: "from-[#FF9F43] to-[#FFC078]", // Orange color for Half Day
-              icon: Clock,
-            },
           ].map((config, idx) => {
             const rawData =
               (stats as any)?.[config.key] ||
@@ -1069,9 +1109,96 @@ const AdminLeaveManagement = () => {
       {/* Recent Leave History - Only show if employee is selected */}
       {selectedEmployee && (
         <>
-          <h3 className="text-xl font-bold text-[#2B3674] mb-4 mt-8">
-            Recent Leave History
-          </h3>
+          
+          <div className="flex flex-col md:flex-row items-center justify-between mt-8 mb-4 gap-4">
+            <h3 className="text-xl font-bold text-[#2B3674]">
+              Recent Leave History
+            </h3>
+            
+            <div className="flex flex-wrap gap-3 items-center w-full md:w-auto">
+              <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden flex-1 md:flex-none">
+                <Select
+                  value={selectedMonth}
+                  onChange={(val) => {
+                    setSelectedMonth(val);
+                    setCurrentPage(1);
+                  }}
+                  className={`w-full md:w-36 h-10 font-bold text-sm ${selectedMonth !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+                  variant="borderless"
+                  dropdownStyle={{ borderRadius: "16px" }}
+                  suffixIcon={
+                    <ChevronDown
+                      size={18}
+                      className={
+                        selectedMonth !== "All" ? "text-[#4318FF]" : "text-gray-400"
+                      }
+                    />
+                  }
+                >
+                  <Select.Option value="All">All Months</Select.Option>
+                  {months.map((m) => (
+                    <Select.Option key={m.value} value={m.value}>
+                      {m.label}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </div>
+
+              <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden flex-1 md:flex-none">
+                <Select
+                  value={selectedYear}
+                  onChange={(val) => {
+                    setSelectedYear(val);
+                    setCurrentPage(1);
+                  }}
+                  className={`w-full md:w-28 h-10 font-bold text-sm ${selectedYear !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+                  variant="borderless"
+                  dropdownStyle={{ borderRadius: "16px" }}
+                  suffixIcon={
+                    <ChevronDown
+                      size={18}
+                      className={
+                        selectedYear !== "All" ? "text-[#4318FF]" : "text-gray-400"
+                      }
+                    />
+                  }
+                >
+                  {years.map((y) => (
+                    <Select.Option key={y} value={y}>
+                      {y === "All" ? "All Years" : y}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </div>
+
+              <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden flex-1 md:flex-none">
+                <Select
+                  value={filterStatus}
+                  onChange={(val) => {
+                    setFilterStatus(val);
+                    setCurrentPage(1);
+                  }}
+                  className={`w-full md:w-40 h-10 font-bold text-sm ${filterStatus !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+                  variant="borderless"
+                  dropdownStyle={{ borderRadius: "16px" }}
+                  suffixIcon={
+                    <ChevronDown
+                      size={18}
+                      className={
+                        filterStatus !== "All" ? "text-[#4318FF]" : "text-gray-400"
+                      }
+                    />
+                  }
+                >
+                  {["All", "Pending", "Approved", "Rejected", "Request Modified", "Cancellation Approved", "Cancelled"].map((status) => (
+                    <Select.Option key={status} value={status}>
+                      {status === "All" ? "All Status" : status}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </div>
+            </div>
+          </div>
           <div className="bg-white rounded-[20px] shadow-[0px_18px_40px_rgba(112,144,176,0.12)] overflow-hidden border border-gray-100 mb-8">
             <div className="overflow-x-auto">
               <table className="w-full border-separate border-spacing-0">
@@ -1304,7 +1431,9 @@ const AdminLeaveManagement = () => {
                   {isViewMode ? "Viewing Application" : "Applying For"}
                 </span>
                 <h2 className="text-2xl md:text-3xl font-black text-[#2B3674] text-right">
-                  {selectedLeaveType}
+                  {selectedLeaveType === "Apply Leave"
+                    ? "Leave Request"
+                    : selectedLeaveType}
                 </h2>
               </div>
             </div>
@@ -1335,6 +1464,31 @@ const AdminLeaveManagement = () => {
                       ({selectedEmployee.employeeId})
                     </span>
                   </div>
+                </div>
+              )}
+
+              {/* Leave Type Dropdown - Only for Apply Leave */}
+              {!isViewMode && (selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave") && (
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-[#2B3674] ml-1">
+                    Leave Type
+                  </label>
+                  <Select
+                    value={leaveDurationType}
+                    onChange={(val) => setLeaveDurationType(val)}
+                    className="w-full h-[48px] font-bold text-[#2B3674]"
+                    variant="borderless"
+                    dropdownStyle={{ borderRadius: "16px", padding: "8px" }}
+                    style={{ 
+                      backgroundColor: "#F4F7FE", 
+                      borderRadius: "16px",
+                      border: "1px solid transparent"
+                    }}
+                    suffixIcon={<ChevronDown className="text-[#4318FF]" />}
+                  >
+                    <Select.Option value="Full Day">Full Day Application</Select.Option>
+                    <Select.Option value="Half Day">Half Day Application</Select.Option>
+                  </Select>
                 </div>
               )}
 
@@ -1481,9 +1635,12 @@ const AdminLeaveManagement = () => {
                             selectedLeaveType === "Client Visit" ||
                             selectedLeaveType === "Work From Home" ||
                             selectedLeaveType === "Apply Leave" ||
-                            selectedLeaveType === "Leave"
+                            selectedLeaveType === "Leave" ||
+                            selectedLeaveType === "Half Day"
                           ) {
-                            return `${calculateDurationExcludingWeekends(formData.startDate, formData.endDate)} Day(s)`;
+                            const baseDur = calculateDurationExcludingWeekends(formData.startDate, formData.endDate);
+                            const finalDur = leaveDurationType === "Half Day" ? baseDur * 0.5 : baseDur;
+                            return `${finalDur} Day(s)`;
                           } else {
                             return `${dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1} Day(s)`;
                           }
