@@ -146,15 +146,7 @@ const WorkTrendsGraph = ({ employeeId, currentMonth }: Props) => {
               >
                 <LabelList dataKey="totalLeaves" position="top" style={{ fill: '#A3AED0', fontSize: 10, fontWeight: 700 }} offset={8} />
               </Bar>
-              <Bar
-                dataKey="halfDays"
-                name="Half Day"
-                fill="#F59E0B"
-                radius={[6, 6, 0, 0]}
-                activeBar={{ fill: '#FBBF24' }}
-              >
-                <LabelList dataKey="halfDays" position="top" style={{ fill: '#A3AED0', fontSize: 10, fontWeight: 700 }} offset={8} />
-              </Bar>
+
               <Bar
                 dataKey="workFromHome"
                 name="Work From Home"
