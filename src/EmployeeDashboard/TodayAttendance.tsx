@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { AlertTriangle} from "lucide-react";
 import {
   Clock,
@@ -53,6 +53,7 @@ const TodayAttendance = ({
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const location = useLocation();
+  const { employeeId: urlEmployeeId } = useParams<{ employeeId: string }>();
   const { records, loading, yearlyRecords } = useAppSelector(
     (state: RootState) => state.attendance,
   );
@@ -78,7 +79,7 @@ const TodayAttendance = ({
 
   const currentEmployeeId = isMyRoute
     ? currentUser?.employeeId || currentUser?.loginId
-    : entity?.employeeId || currentUser?.employeeId || currentUser?.loginId;
+    : urlEmployeeId || entity?.employeeId || currentUser?.employeeId || currentUser?.loginId;
 
   // Debug log for manager dashboard data issue
   useEffect(() => {
@@ -99,12 +100,20 @@ const TodayAttendance = ({
   const [calendarDate, setCalendarDate] = useState(new Date());
   const selectedYear = calendarDate.getFullYear();
 
-  // Fetch entity if missing name but we have an ID to fetch
   useEffect(() => {
     if (viewOnly) return;
-    if (!entity?.fullName && (currentEmployeeId || currentUser?.loginId)) {
+    
+    const needsFetch = !entity?.fullName || 
+      (entity?.employeeId !== currentEmployeeId && String(entity?.id) !== String(currentEmployeeId));
+
+    if (needsFetch && (currentEmployeeId || currentUser?.loginId)) {
       const searchTerm = currentEmployeeId || currentUser?.loginId;
       if (searchTerm) {
+        // If employee changed, reset the fetched flag
+        if (entity?.employeeId && entity?.employeeId !== currentEmployeeId) {
+          detailsFetched.current = false;
+        }
+
         if (detailsFetched.current) return;
         detailsFetched.current = true;
 
@@ -366,7 +375,8 @@ const TodayAttendance = ({
             </h1>
             <p className="text-sm text-gray-500 font-medium mt-1">
               Welcome back,{" "}
-              {entity?.firstName ||
+              {(isMyRoute ? (currentUser?.aliasLoginName || currentUser?.loginId) : null) ||
+                entity?.firstName ||
                 entity?.fullName ||
                 currentUser?.aliasLoginName ||
                 "Employee"}
