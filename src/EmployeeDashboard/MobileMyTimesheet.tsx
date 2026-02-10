@@ -219,7 +219,7 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
                       ${entry.isToday ? "ring-2 ring-[#4318FF] shadow-md" : ""}
                       ${
                         isDateHighlighted
-                          ? "ring-4 ring-[#4318FF] ring-offset-2 scale-110 animate-pulse shadow-xl"
+                          ? "date-highlight ring-4 ring-[#4318FF] ring-offset-2 scale-110 shadow-xl"
                           : ""
                       }
                     `}

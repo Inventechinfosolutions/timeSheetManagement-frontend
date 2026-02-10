@@ -53,42 +53,74 @@ const MyTimesheet = ({
   const { records, loading } = useAppSelector((state) => state.attendance);
   const { entity } = useAppSelector((state) => state.employeeDetails);
   const { currentUser } = useAppSelector((state) => state.user);
-  const { entities: leaveEntities = [] } = useAppSelector(
-    (state) => (state as any).leaveRequest || {},
-  );
+
   // @ts-ignore
   const { holidays } = useAppSelector(
     (state) => (state as any).masterHolidays || { holidays: [] },
   );
+
   const { blockers } = useAppSelector((state) => state.timesheetBlocker);
 
   const isAdmin = currentUser?.userType === UserType.ADMIN;
-  const isManager = currentUser?.userType === UserType.MANAGER || 
-                    (currentUser?.role && currentUser.role.toUpperCase().includes('MANAGER'));
+  const isManager = !!(currentUser?.userType === UserType.MANAGER || 
+                    (currentUser?.role && currentUser.role.toUpperCase().includes('MANAGER')));
+  const isMyRoute = location.pathname.includes("my-dashboard") || 
+                    location.pathname.includes("my-timesheet") || 
+                    location.pathname === "/employee-dashboard" || 
+                    location.pathname === "/employee-dashboard/";
+
   const currentEmployeeId =
     propEmployeeId ||
-    entity?.employeeId ||
-    (!isAdmin ? currentUser?.employeeId : undefined);
+    (isMyRoute 
+      ? (currentUser?.employeeId || currentUser?.loginId) 
+      : (entity?.employeeId || currentUser?.employeeId || currentUser?.loginId));
+
+  // Debug log for manager dashboard data issue
+  useEffect(() => {
+    if (isMyRoute) {
+      console.log("My Route Debug (MyTimesheet):", {
+        pathname: location.pathname,
+        "currentUser.loginId": currentUser?.loginId,
+        "currentUser.employeeId": currentUser?.employeeId,
+        currentEmployeeId
+      });
+    }
+  }, [location.pathname, currentUser, currentEmployeeId, isMyRoute]);
+
 
   const isAdminView = isAdmin && currentEmployeeId === "Admin";
-  const isManagerView = !!(isManager && currentEmployeeId && currentEmployeeId === currentUser?.employeeId);
+  const isManagerView = !!(isManager && currentEmployeeId && currentEmployeeId === (currentUser?.employeeId || currentUser?.loginId));
+
   const effectiveReadOnly = readOnly || isAdminView;
 
-  // 1. viewMonth/now state
+  const parseLocalDate = (dateStr: string) => {
+    const parts = dateStr.split('T')[0].split('-');
+    if (parts.length === 3) {
+      return new Date(
+        parseInt(parts[0]),
+        parseInt(parts[1]) - 1,
+        parseInt(parts[2])
+      );
+    }
+    return new Date(dateStr);
+  };
+
+  // 1. Calendar initial date state
   const [now, setNow] = useState<Date>(() => {
     if (propNow) return propNow;
     if (location.state?.selectedDate)
-      return new Date(location.state.selectedDate);
-    if (date) return new Date(date);
+      return parseLocalDate(location.state.selectedDate);
+    if (date) return parseLocalDate(date);
     return new Date();
   });
 
   // 2. Highlighting state
   const [selectedDateId, setSelectedDateId] = useState<number | null>(() => {
+    if (propSelectedDateId) return propSelectedDateId;
     if (location.state?.selectedDate)
-      return new Date(location.state.selectedDate).getTime();
-    if (date) return new Date(date).getTime();
-    return propSelectedDateId || null;
+      return parseLocalDate(location.state.selectedDate).getTime();
+    if (date) return parseLocalDate(date).getTime();
+    return null;
   });
   const [isHighlighted, setIsHighlighted] = useState(false);
   const [lastHighlightTrigger, setLastHighlightTrigger] = useState<
@@ -1095,7 +1127,7 @@ const MyTimesheet = ({
                 day.fullDate.toDateString();
             const highlightClass =
               isSelected && isHighlighted
-                ? "ring-4 ring-[#4318FF]/20 z-10 scale-[1.02]"
+                ? "date-highlight ring-4 ring-[#4318FF]/20 z-10 scale-[1.02]"
                 : "";
 
             const isBlocked = isDateBlocked(day.fullDate);

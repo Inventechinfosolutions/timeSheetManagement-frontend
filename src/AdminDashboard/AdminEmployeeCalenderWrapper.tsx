@@ -244,9 +244,33 @@ const AdminEmployeeCalenderWrapper = () => {
             <MobileResponsiveCalendarPage
               employeeId={employeeId}
               onBlockedClick={() => setIsModalOpen(true)}
+              onNavigateToDate={(timestamp) => {
+                const targetDate = new Date(timestamp);
+                const y = targetDate.getFullYear();
+                const m = String(targetDate.getMonth() + 1).padStart(2, '0');
+                const d = String(targetDate.getDate()).padStart(2, '0');
+                const dateStr = `${y}-${m}-${d}`;
+                const basePath = location.pathname.startsWith("/manager-dashboard") 
+                  ? "/manager-dashboard" 
+                  : "/admin-dashboard";
+                navigate(`${basePath}/timesheet/${employeeId}/${dateStr}`);
+              }}
             />
           ) : (
-            <AdminEmployeeCalendarView onBlockedClick={() => setIsModalOpen(true)} />
+            <AdminEmployeeCalendarView 
+                onBlockedClick={() => setIsModalOpen(true)} 
+                onNavigateToDate={(timestamp) => {
+                    const targetDate = new Date(timestamp);
+                    const y = targetDate.getFullYear();
+                    const m = String(targetDate.getMonth() + 1).padStart(2, '0');
+                    const d = String(targetDate.getDate()).padStart(2, '0');
+                    const dateStr = `${y}-${m}-${d}`;
+                    const basePath = location.pathname.startsWith("/manager-dashboard") 
+                      ? "/manager-dashboard" 
+                      : "/admin-dashboard";
+                    navigate(`${basePath}/timesheet/${employeeId}/${dateStr}`);
+                }}
+            />
           )}
         </div>
       </div>

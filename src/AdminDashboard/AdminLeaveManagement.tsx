@@ -155,6 +155,12 @@ const AdminLeaveManagement = () => {
 
     const currentDate = current.startOf("day");
 
+    // Disable weekends (Saturday = 6, Sunday = 0)
+    const day = current.day();
+    if (day === 0 || day === 6) {
+      return true;
+    }
+
     // Check if this date falls within any existing approved/pending request for the selected employee
     return (entities || []).some((req: any) => {
       // Only check requests for the selected employee
