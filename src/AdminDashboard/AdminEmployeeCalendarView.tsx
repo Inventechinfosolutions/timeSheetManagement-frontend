@@ -9,12 +9,12 @@ import {
 import Calendar from "../EmployeeDashboard/CalendarView";
 import { ArrowLeft, ClipboardList } from "lucide-react";
 
-interface AdminEmployeeCalendarViewProps {
-  onBlockedClick?: () => void;
-  onNavigateToDate?: (timestamp: number) => void;
-}
+import { AdminEmployeeCalendarViewProps } from "./types";
 
-const AdminEmployeeCalendarView = ({ onBlockedClick, onNavigateToDate }: AdminEmployeeCalendarViewProps) => {
+const AdminEmployeeCalendarView = ({
+  onBlockedClick,
+  onNavigateToDate,
+}: AdminEmployeeCalendarViewProps) => {
   const { employeeId } = useParams<{ employeeId: string }>();
   const navigate = useNavigate();
   const location = useLocation();

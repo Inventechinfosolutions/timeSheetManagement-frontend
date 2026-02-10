@@ -2,22 +2,13 @@ import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios";
 
 // ENUMS
+import { AttendanceStatus } from "../AdminDashboard/enums";
+export { AttendanceStatus };
+
 export enum OfficeLocation {
   OFFICE = "Office",
   WORK_FROM_HOME = "Work from Home",
   CLIENT_PLACE = "Client Place",
-}
-
-export enum AttendanceStatus {
-  FULL_DAY = "Full Day",
-  HALF_DAY = "Half Day",
-  LEAVE = "Leave",
-  ABSENT = "Absent",
-  PENDING = "Pending",
-  NOT_UPDATED = "Not Updated",
-  BLOCKED = "Blocked",
-  HOLIDAY = "Holiday",
-  WEEKEND = "Weekend",
 }
 
 // INTERFACES

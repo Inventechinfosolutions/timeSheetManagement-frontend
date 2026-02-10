@@ -89,22 +89,22 @@ export const mapStatus = (
         const statusStr = typeof status === 'string' ? status : (status as AttendanceStatus);
         
         // Handle Leave with hours
-        if ((statusStr === AttendanceStatus.LEAVE || statusStr === 'Leave') && totalHours && totalHours > 0) {
+        if ((statusStr === AttendanceStatus.Leave || statusStr === 'Leave') && totalHours && totalHours > 0) {
              return totalHours >= 6 ? 'Full Day' : 'Half Day';
         }
         
         // Direct status mappings (handle both enum and string)
-        if (statusStr === AttendanceStatus.LEAVE || statusStr === 'Leave') return 'Leave';
-        if (statusStr === AttendanceStatus.BLOCKED || statusStr === 'Blocked') return 'Blocked';
-        if (statusStr === AttendanceStatus.ABSENT || statusStr === 'Absent') return 'Absent';
-        if (statusStr === AttendanceStatus.FULL_DAY || statusStr === 'Full Day') return 'Full Day';
-        if (statusStr === AttendanceStatus.HALF_DAY || statusStr === 'Half Day') return 'Half Day';
-        if (statusStr === AttendanceStatus.NOT_UPDATED || statusStr === 'Not Updated') return 'Not Updated';
-        if (statusStr === AttendanceStatus.HOLIDAY || statusStr === 'Holiday') return 'Holiday';
-        if (statusStr === AttendanceStatus.WEEKEND || statusStr === 'Weekend') return 'Weekend';
+        if (statusStr === AttendanceStatus.Leave || statusStr === 'Leave') return 'Leave';
+        if (statusStr === AttendanceStatus.Blocked || statusStr === 'Blocked') return 'Blocked';
+        if (statusStr === AttendanceStatus.Absent || statusStr === 'Absent') return 'Absent';
+        if (statusStr === AttendanceStatus.FullDay || statusStr === 'Full Day') return 'Full Day';
+        if (statusStr === AttendanceStatus.HalfDay || statusStr === 'Half Day') return 'Half Day';
+        if (statusStr === AttendanceStatus.NotUpdated || statusStr === 'Not Updated') return 'Not Updated';
+        if (statusStr === AttendanceStatus.Holiday || statusStr === 'Holiday') return 'Holiday';
+        if (statusStr === AttendanceStatus.Weekend || statusStr === 'Weekend') return 'Weekend';
         
         // Handle Pending
-        if (statusStr === AttendanceStatus.PENDING || statusStr === 'Pending') {
+        if (statusStr === AttendanceStatus.Pending || statusStr === 'Pending') {
             if (!isToday) return 'Pending';
         }
     }

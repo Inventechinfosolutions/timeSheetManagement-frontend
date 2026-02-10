@@ -14,15 +14,13 @@ import {
   ChevronRight,
   Calendar,
 } from "lucide-react";
-import {
-  fetchAllEmployeesMonthlyAttendance,
-  AttendanceStatus,
-} from "../reducers/employeeAttendance.reducer";
+import { fetchAllEmployeesMonthlyAttendance } from "../reducers/employeeAttendance.reducer";
 import { downloadPdf } from "../utils/downloadPdf";
 import { generateMonthlyEntries } from "../utils/attendanceUtils";
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import DailyStatusMobileCard from "./DailyStatusMobileCard";
+import { Department, ExportStep, AttendanceStatus } from "./enums";
 
 const DailyStatus = () => {
   const navigate = useNavigate();
@@ -34,7 +32,7 @@ const DailyStatus = () => {
   const dispatch = useAppDispatch();
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedDept, setSelectedDept] = useState("All");
+  const [selectedDept, setSelectedDept] = useState(Department.All);
   const itemsPerPage = 10;
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -44,10 +42,10 @@ const DailyStatus = () => {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [selectedEmps, setSelectedEmps] = useState<Set<string>>(new Set());
   const [modalSearch, setModalSearch] = useState("");
-  const [modalDept, setModalDept] = useState("All");
+  const [modalDept, setModalDept] = useState(Department.All);
   const [isModalDeptOpen, setIsModalDeptOpen] = useState(false);
-  const [exportStep, setExportStep] = useState<"employees" | "range">(
-    "employees",
+  const [exportStep, setExportStep] = useState<ExportStep>(
+    ExportStep.Employees,
   );
   const modalDeptRef = useRef<HTMLDivElement>(null);
 
@@ -64,15 +62,15 @@ const DailyStatus = () => {
   const [isExporting, setIsExporting] = useState(false);
 
   const departments = [
-    "All",
-    "HR",
-    "IT",
-    "Sales",
-    "Marketing",
-    "Finance",
-    "Engineering",
-    "Design",
-    "Admin",
+    Department.All,
+    Department.HR,
+    Department.IT,
+    Department.Sales,
+    Department.Marketing,
+    Department.Finance,
+    Department.Engineering,
+    Department.Design,
+    Department.Admin,
   ];
 
   const { entities, totalItems } = useAppSelector(
@@ -127,7 +125,7 @@ const DailyStatus = () => {
         page: currentPage,
         limit: itemsPerPage,
         search: debouncedSearchTerm,
-        department: selectedDept === "All" ? undefined : selectedDept,
+        department: selectedDept === Department.All ? undefined : selectedDept,
       }),
     );
   }, [dispatch, currentPage, debouncedSearchTerm, selectedDept]);
@@ -147,8 +145,7 @@ const DailyStatus = () => {
     });
     const todayHours = todayRecord?.totalHours || 0;
 
-    // Real status from database, defaulting to "Not Updated" if no record exists for today
-    const status = todayRecord?.status || AttendanceStatus.NOT_UPDATED;
+    const status = todayRecord?.status || AttendanceStatus.NotUpdated;
 
     return {
       ...emp,
@@ -156,9 +153,9 @@ const DailyStatus = () => {
       status,
       avatar: emp.fullName?.charAt(0) || "U",
       deptColor:
-        emp.department === "Engineering"
+        emp.department === Department.Engineering
           ? "#3182CE"
-          : emp.department === "Design"
+          : emp.department === Department.Design
             ? "#805AD5"
             : "#38A169",
     };
@@ -184,7 +181,8 @@ const DailyStatus = () => {
     const matchesSearch = (emp.fullName || emp.name || "")
       .toLowerCase()
       .includes(modalSearch.toLowerCase());
-    const matchesDept = modalDept === "All" || emp.department === modalDept;
+    const matchesDept =
+      modalDept === Department.All || emp.department === modalDept;
     return matchesSearch && matchesDept;
   });
 
@@ -223,7 +221,7 @@ const DailyStatus = () => {
         await new Promise((r) => setTimeout(r, 300));
       }
       setIsExportModalOpen(false);
-      setExportStep("employees");
+      setExportStep(ExportStep.Employees);
       setSelectedEmps(new Set());
     } catch (error) {
       console.error("Export failed", error);
@@ -241,13 +239,13 @@ const DailyStatus = () => {
     td: "py-4 px-4 whitespace-nowrap text-sm text-[#2B3674] font-bold border-none",
     statusBadge: (status: string) => {
       const colors: any = {
-        [AttendanceStatus.FULL_DAY]: "bg-[#D1FAE5] text-[#05CD99]",
-        [AttendanceStatus.HALF_DAY]: "bg-[#FEF3C7] text-[#FFB020]",
-        [AttendanceStatus.LEAVE]: "bg-[#FEE2E2] text-[#EE5D50]",
-        [AttendanceStatus.NOT_UPDATED]: "bg-[#FEF3C7] text-[#FFB020]",
-        [AttendanceStatus.HOLIDAY]: "bg-[#DBEAFE] text-[#1890FF]",
-        [AttendanceStatus.WEEKEND]: "bg-[#FEE2E2] text-[#EE5D50]",
-        [AttendanceStatus.PENDING]: "bg-[#FEF3C7] text-[#FFB020]",
+        [AttendanceStatus.FullDay]: "bg-[#D1FAE5] text-[#05CD99]",
+        [AttendanceStatus.HalfDay]: "bg-[#FEF3C7] text-[#FFB020]",
+        [AttendanceStatus.Leave]: "bg-[#FEE2E2] text-[#EE5D50]",
+        [AttendanceStatus.NotUpdated]: "bg-[#FEF3C7] text-[#FFB020]",
+        [AttendanceStatus.Holiday]: "bg-[#DBEAFE] text-[#1890FF]",
+        [AttendanceStatus.Weekend]: "bg-[#FEE2E2] text-[#EE5D50]",
+        [AttendanceStatus.Pending]: "bg-[#FEF3C7] text-[#FFB020]",
       };
       return `px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider ${colors[status] || "bg-gray-100 text-gray-700"}`;
     },
@@ -280,7 +278,9 @@ const DailyStatus = () => {
                 <div className="flex items-center gap-2">
                   <Filter size={16} className="text-[#4318FF]" />
                   <span>
-                    {selectedDept === "All" ? "All Departments" : selectedDept}
+                    {selectedDept === Department.All
+                      ? "All Departments"
+                      : selectedDept}
                   </span>
                 </div>
                 <ChevronDown
@@ -311,7 +311,7 @@ const DailyStatus = () => {
                             : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
                         }`}
                     >
-                      {dept === "All" ? "All Departments" : dept}
+                      {dept === Department.All ? "All Departments" : dept}
                     </button>
                   ))}
                 </div>
@@ -481,13 +481,13 @@ const DailyStatus = () => {
             className="fixed inset-0 bg-[#2B3674]/20 backdrop-blur-md"
             onClick={() => {
               setIsExportModalOpen(false);
-              setExportStep("employees");
+              setExportStep(ExportStep.Employees);
             }}
           ></div>
 
           <div
             className={`relative bg-white w-full transition-all duration-500 ease-in-out rounded-[24px] md:rounded-[32px] shadow-2xl overflow-hidden animate-in fade-in zoom-in flex flex-col ${
-              exportStep === "employees"
+              exportStep === ExportStep.Employees
                 ? "max-w-3xl h-auto max-h-[90vh]"
                 : "max-w-md h-auto max-h-[90vh]"
             }`}
@@ -495,9 +495,9 @@ const DailyStatus = () => {
             {/* Modal Header */}
             <div className="p-4 md:p-8 border-b border-gray-100 flex justify-between items-center bg-white flex-shrink-0">
               <div className="flex items-center gap-4">
-                {exportStep === "range" && (
+                {exportStep === ExportStep.Range && (
                   <button
-                    onClick={() => setExportStep("employees")}
+                    onClick={() => setExportStep(ExportStep.Employees)}
                     className="p-2 hover:bg-gray-100 rounded-full text-[#4318FF] transition-all active:scale-90"
                   >
                     <ArrowLeft size={24} />
@@ -505,12 +505,12 @@ const DailyStatus = () => {
                 )}
                 <div>
                   <h2 className="text-lg md:text-2xl font-black text-[#2B3674] leading-tight">
-                    {exportStep === "employees"
+                    {exportStep === ExportStep.Employees
                       ? "Select Employees"
                       : "Select Date Range"}
                   </h2>
                   <p className="text-[10px] md:text-sm font-bold text-[#A3AED0]">
-                    {exportStep === "employees"
+                    {exportStep === ExportStep.Employees
                       ? "Choose employees to include in export"
                       : "Choose the period for attendance report"}
                   </p>
@@ -519,7 +519,7 @@ const DailyStatus = () => {
               <button
                 onClick={() => {
                   setIsExportModalOpen(false);
-                  setExportStep("employees");
+                  setExportStep(ExportStep.Employees);
                 }}
                 className="p-2 hover:bg-gray-100 rounded-full text-gray-400 transition-all active:scale-90"
               >
@@ -527,7 +527,7 @@ const DailyStatus = () => {
               </button>
             </div>
 
-            {exportStep === "employees" ? (
+            {exportStep === ExportStep.Employees ? (
               <div className="flex-1 flex flex-col min-h-0 px-4 md:px-10 py-4 md:py-6">
                 {/* Modal Filters */}
                 <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center flex-shrink-0 mb-4 md:mb-8">
@@ -539,7 +539,9 @@ const DailyStatus = () => {
                       <div className="flex items-center gap-2">
                         <Filter size={16} className="text-[#4318FF]" />
                         <span>
-                          {modalDept === "All" ? "All Departments" : modalDept}
+                          {modalDept === Department.All
+                            ? "All Departments"
+                            : modalDept}
                         </span>
                       </div>
                       <ChevronDown
@@ -558,7 +560,7 @@ const DailyStatus = () => {
                             }}
                             className={`w-full text-left px-5 py-2 text-sm font-semibold hover:bg-gray-50 ${modalDept === d ? "text-[#4318FF] bg-[#4318FF]/5" : "text-[#2B3674]"}`}
                           >
-                            {d === "All" ? "All Departments" : d}
+                            {d === Department.All ? "All Departments" : d}
                           </button>
                         ))}
                       </div>
@@ -655,7 +657,7 @@ const DailyStatus = () => {
                     {selectedEmps.size} employees selected
                   </span>
                   <button
-                    onClick={() => setExportStep("range")}
+                    onClick={() => setExportStep(ExportStep.Range)}
                     disabled={selectedEmps.size === 0}
                     className={`flex items-center gap-2 px-8 py-3 rounded-2xl font-black text-sm transition-all active:scale-95 ${selectedEmps.size === 0 ? "bg-gray-200 text-gray-400 cursor-not-allowed" : "bg-[#4318FF] text-white shadow-lg shadow-blue-500/30 hover:-translate-y-1"}`}
                   >
@@ -715,7 +717,7 @@ const DailyStatus = () => {
                     {/* Lower Line: Centered Buttons */}
                     <div className="flex items-center justify-center gap-12 w-full">
                       <button
-                        onClick={() => setExportStep("employees")}
+                        onClick={() => setExportStep(ExportStep.Employees)}
                         className="text-xs font-bold text-[#A3AED0] hover:text-[#2B3674] transition-all uppercase tracking-widest"
                       >
                         Cancel

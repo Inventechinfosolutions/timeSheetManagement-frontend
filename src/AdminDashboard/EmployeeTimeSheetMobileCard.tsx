@@ -1,17 +1,7 @@
 import { Edit, Eye } from "lucide-react";
 
-interface Employee {
-  id: string;
-  name: string;
-  department: string;
-  status: string;
-}
-
-interface EmployeeTimeSheetMobileCardProps {
-  employees: Employee[];
-  onViewTimesheet: (empId: string) => void;
-  onViewWorkingDetails: (empId: string) => void;
-}
+import { EmployeeTimeSheetMobileCardProps } from "./types";
+import { RequestStatus } from "./enums";
 
 const EmployeeTimeSheetMobileCard = ({
   employees,
@@ -36,12 +26,14 @@ const EmployeeTimeSheetMobileCard = ({
             </div>
             <span
               className={`inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${
-                emp.status === "Completed"
+                emp.status === RequestStatus.Completed
                   ? "bg-green-50 text-green-500 border-green-100"
                   : "bg-amber-50 text-amber-500 border-amber-100"
               }`}
             >
-              {emp.status === "Completed" ? "Submitted" : "Pending"}
+              {emp.status === RequestStatus.Completed
+                ? RequestStatus.Submitted
+                : RequestStatus.Pending}
             </span>
           </div>
 

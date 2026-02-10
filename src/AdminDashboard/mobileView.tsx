@@ -1,22 +1,7 @@
 import { UserOutlined } from "@ant-design/icons";
 import { Eye, Clock } from "lucide-react";
 
-interface Employee {
-  id: string;
-  name: string;
-  dept: string;
-  login: string;
-  logout: string;
-  hours: string;
-  status: string;
-  avatar: string;
-}
-
-interface MobileViewProps {
-  employees: Employee[];
-  onViewTimesheet: (empId: string) => void;
-  onSelectEmployee: (empId: string) => void;
-}
+import { MobileViewProps } from "./types";
 
 const MobileView = ({
   employees,
@@ -48,8 +33,8 @@ const MobileView = ({
                   emp.status === "Full Day"
                     ? "bg-[#E6FFFA] text-[#01B574]"
                     : emp.status === "Half Day"
-                    ? "bg-[#FFF9E5] text-[#FFB547]"
-                    : "bg-[#FFF5F5] text-[#EE5D50]"
+                      ? "bg-[#FFF9E5] text-[#FFB547]"
+                      : "bg-[#FFF5F5] text-[#EE5D50]"
                 }
               `}
             >

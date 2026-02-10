@@ -7,7 +7,7 @@ import {
   AlertCircle,
   Lock,
   Sparkles,
-  Rocket
+  Rocket,
 } from "lucide-react";
 import { TimesheetEntry } from "../types";
 import { useAppDispatch, useAppSelector } from "../hooks";
@@ -18,6 +18,7 @@ import {
   fetchMonthlyAttendance,
   createAttendanceRecord,
   autoUpdateTimesheet,
+  AttendanceStatus,
 } from "../reducers/employeeAttendance.reducer";
 import { getLeaveHistory } from "../reducers/leaveRequest.reducer";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
@@ -30,14 +31,7 @@ import MobileMyTimesheet from "./MobileMyTimesheet";
 import AutoUpdateModal from "./AutoUpdateModal";
 import AutoUpdateSuccessModal from "./AutoUpdateSuccessModal";
 
-interface TimesheetProps {
-  now?: Date;
-  employeeId?: string;
-  readOnly?: boolean;
-  selectedDateId?: number | null;
-  onBlockedClick?: () => void;
-  containerClassName?: string;
-}
+import { TimesheetProps } from "./types";
 
 const MyTimesheet = ({
   now: propNow,
@@ -63,18 +57,21 @@ const MyTimesheet = ({
   const { blockers } = useAppSelector((state) => state.timesheetBlocker);
 
   const isAdmin = currentUser?.userType === UserType.ADMIN;
-  const isManager = !!(currentUser?.userType === UserType.MANAGER || 
-                    (currentUser?.role && currentUser.role.toUpperCase().includes('MANAGER')));
-  const isMyRoute = location.pathname.includes("my-dashboard") || 
-                    location.pathname.includes("my-timesheet") || 
-                    location.pathname === "/employee-dashboard" || 
-                    location.pathname === "/employee-dashboard/";
+  const isManager = !!(
+    currentUser?.userType === UserType.MANAGER ||
+    (currentUser?.role && currentUser.role.toUpperCase().includes("MANAGER"))
+  );
+  const isMyRoute =
+    location.pathname.includes("my-dashboard") ||
+    location.pathname.includes("my-timesheet") ||
+    location.pathname === "/employee-dashboard" ||
+    location.pathname === "/employee-dashboard/";
 
   const currentEmployeeId =
     propEmployeeId ||
-    (isMyRoute 
-      ? (currentUser?.employeeId || currentUser?.loginId) 
-      : (entity?.employeeId || currentUser?.employeeId || currentUser?.loginId));
+    (isMyRoute
+      ? currentUser?.employeeId || currentUser?.loginId
+      : entity?.employeeId || currentUser?.employeeId || currentUser?.loginId);
 
   // Debug log for manager dashboard data issue
   useEffect(() => {
@@ -83,24 +80,27 @@ const MyTimesheet = ({
         pathname: location.pathname,
         "currentUser.loginId": currentUser?.loginId,
         "currentUser.employeeId": currentUser?.employeeId,
-        currentEmployeeId
+        currentEmployeeId,
       });
     }
   }, [location.pathname, currentUser, currentEmployeeId, isMyRoute]);
 
-
   const isAdminView = isAdmin && currentEmployeeId === "Admin";
-  const isManagerView = !!(isManager && currentEmployeeId && currentEmployeeId === (currentUser?.employeeId || currentUser?.loginId));
+  const isManagerView = !!(
+    isManager &&
+    currentEmployeeId &&
+    currentEmployeeId === (currentUser?.employeeId || currentUser?.loginId)
+  );
 
   const effectiveReadOnly = readOnly || isAdminView;
 
   const parseLocalDate = (dateStr: string) => {
-    const parts = dateStr.split('T')[0].split('-');
+    const parts = dateStr.split("T")[0].split("-");
     if (parts.length === 3) {
       return new Date(
         parseInt(parts[0]),
         parseInt(parts[1]) - 1,
-        parseInt(parts[2])
+        parseInt(parts[2]),
       );
     }
     return new Date(dateStr);
@@ -147,12 +147,13 @@ const MyTimesheet = ({
     index: number;
     message: string;
   } | null>(null);
-  
-  
+
   const [showAutoUpdateModal, setShowAutoUpdateModal] = useState(false);
   const [isAutoUpdating, setIsAutoUpdating] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [updateResult, setUpdateResult] = useState<{ count: number } | null>(null);
+  const [updateResult, setUpdateResult] = useState<{ count: number } | null>(
+    null,
+  );
 
   const today = useMemo(() => new Date(), []);
 
@@ -504,7 +505,8 @@ const MyTimesheet = ({
 
     if (hours > 0) {
       // When hours > 0, calculate based on hours
-      newStatus = hours >= 6 ? "Full Day" : "Half Day";
+      newStatus =
+        hours >= 6 ? AttendanceStatus.FullDay : AttendanceStatus.HalfDay;
     } else {
       // When hours are 0, ALWAYS recalculate status - never preserve previous status (especially Leave)
       const entryDate = new Date(localEntries[entryIndex].fullDate);
@@ -525,9 +527,9 @@ const MyTimesheet = ({
       const dayNum = entryDate.getDay();
 
       if (isHoliday) {
-        newStatus = "Holiday";
+        newStatus = AttendanceStatus.Holiday;
       } else if (dayNum === 0 || dayNum === 6) {
-        newStatus = "Weekend";
+        newStatus = AttendanceStatus.Weekend;
       } else {
         // 0 hours on a weekday: Determine if Absent or Upcoming
         const todayZero = new Date();
@@ -537,7 +539,7 @@ const MyTimesheet = ({
         entryDateZero.setHours(0, 0, 0, 0);
 
         if (entryDateZero <= todayZero) {
-          newStatus = "Absent";
+          newStatus = AttendanceStatus.Absent;
         } else {
           newStatus = "UPCOMING";
         }
@@ -579,7 +581,11 @@ const MyTimesheet = ({
       if (isDateBlocked(entry.fullDate)) return;
 
       // 2. Skip exclusions: Leave, Half Day
-      if (entry.status === "Leave" || entry.status === "Half Day") return;
+      if (
+        entry.status === AttendanceStatus.Leave ||
+        entry.status === AttendanceStatus.HalfDay
+      )
+        return;
 
       // 3. Skip Holidays
       if (isHoliday(entry.fullDate)) return;
@@ -593,7 +599,7 @@ const MyTimesheet = ({
         updatedEntries[idx] = {
           ...entry,
           totalHours: 9,
-          status: "Full Day",
+          status: AttendanceStatus.FullDay,
         };
         newEditedIndices.add(idx);
 
@@ -662,31 +668,32 @@ const MyTimesheet = ({
 
         // For Sunday: Always set status to "Weekend" regardless of hours
         if (dayOfWeek === 0) {
-          derivedStatus = "Weekend";
+          derivedStatus = AttendanceStatus.Weekend;
         }
         // For holidays: Always set status to "Holiday" regardless of hours
         else if (isHoliday) {
-          derivedStatus = "Holiday";
+          derivedStatus = AttendanceStatus.Holiday;
         }
         // For Saturday: Only set to "Weekend" if there's NO data (no hours AND no workLocation)
         // If Saturday has data (Client Visit, WFH, etc.), keep that data
         else if (dayOfWeek === 6 && currentTotal === 0 && !entry.workLocation) {
-          derivedStatus = "Weekend";
+          derivedStatus = AttendanceStatus.Weekend;
         }
         // For other days: Calculate status based on hours
         // NEVER preserve Leave status - always calculate based on hours
         else {
           if (currentTotal >= 6) {
-            derivedStatus = "Full Day";
+            derivedStatus = AttendanceStatus.FullDay;
           } else if (currentTotal > 0) {
-            derivedStatus = "Half Day";
+            derivedStatus = AttendanceStatus.HalfDay;
           } else {
             // 0 hours on a weekday: Determine if Absent or Upcoming
             const todayZero = new Date();
             todayZero.setHours(0, 0, 0, 0);
             const entryDateZero = new Date(d);
             entryDateZero.setHours(0, 0, 0, 0);
-            derivedStatus = entryDateZero <= todayZero ? "Absent" : "UPCOMING";
+            derivedStatus =
+              entryDateZero <= todayZero ? AttendanceStatus.Absent : "UPCOMING";
           }
         }
 
@@ -726,7 +733,7 @@ const MyTimesheet = ({
 
       // Sunday: Always set status to "Weekend" (even if hours entered or workLocation exists)
       if (dayOfWeek === 0) {
-        item.status = "Weekend";
+        item.status = AttendanceStatus.Weekend;
         item.workLocation = undefined; // Clear workLocation for Sunday
         return;
       }
@@ -737,10 +744,10 @@ const MyTimesheet = ({
       if (item.workLocation) {
         // Don't override status for Client Visit/WFH days (including Saturday)
         // But ensure it's never "Leave"
-        if (item.status === "Leave") {
+        if (item.status === AttendanceStatus.Leave) {
           // If hours are 0, set to Absent; otherwise keep calculated status
           if (!item.totalHours || Number(item.totalHours) === 0) {
-            item.status = "Absent";
+            item.status = AttendanceStatus.Absent;
           }
         }
         return;
@@ -751,18 +758,18 @@ const MyTimesheet = ({
         dayOfWeek === 6 &&
         (!item.totalHours || Number(item.totalHours) === 0)
       ) {
-        item.status = "Weekend";
+        item.status = AttendanceStatus.Weekend;
       }
       // Other days: If hours is 0, ALWAYS set status to "Absent" (never Leave)
       else if (!item.totalHours || Number(item.totalHours) === 0) {
-        item.status = "Absent";
+        item.status = AttendanceStatus.Absent;
       }
       // If status is "Leave" but hours > 0, recalculate based on hours
-      else if (item.status === "Leave") {
+      else if (item.status === AttendanceStatus.Leave) {
         if (item.totalHours >= 6) {
-          item.status = "Full Day";
+          item.status = AttendanceStatus.FullDay;
         } else if (item.totalHours > 0) {
-          item.status = "Half Day";
+          item.status = AttendanceStatus.HalfDay;
         }
       }
     });
@@ -846,8 +853,15 @@ const MyTimesheet = ({
 
   const handleAutoUpdateClick = () => {
     // Only allow for current month
-    if (now.getMonth() !== today.getMonth() || now.getFullYear() !== today.getFullYear()) {
-      setToast({ show: true, message: "Auto-update is only available for the current month.", type: "error" });
+    if (
+      now.getMonth() !== today.getMonth() ||
+      now.getFullYear() !== today.getFullYear()
+    ) {
+      setToast({
+        show: true,
+        message: "Auto-update is only available for the current month.",
+        type: "error",
+      });
       return;
     }
     setShowAutoUpdateModal(true);
@@ -856,19 +870,21 @@ const MyTimesheet = ({
   const confirmAutoUpdate = async () => {
     setIsAutoUpdating(true);
     try {
-      const result = await dispatch(autoUpdateTimesheet({
-        employeeId: currentEmployeeId!,
-        month: (now.getMonth() + 1).toString().padStart(2, "0"),
-        year: now.getFullYear().toString(),
-      })).unwrap();
+      const result = await dispatch(
+        autoUpdateTimesheet({
+          employeeId: currentEmployeeId!,
+          month: (now.getMonth() + 1).toString().padStart(2, "0"),
+          year: now.getFullYear().toString(),
+        }),
+      ).unwrap();
 
       // Close confirmation modal
       setShowAutoUpdateModal(false);
-      
+
       // Store result and show success modal
       setUpdateResult(result);
       setShowSuccessModal(true);
-      
+
       // Refresh data if updates were made
       if (result.count > 0) {
         dispatch(
@@ -881,7 +897,11 @@ const MyTimesheet = ({
       }
     } catch (err: any) {
       setShowAutoUpdateModal(false);
-      setToast({ show: true, message: err?.message || "Failed to auto-update timesheet.", type: "error" });
+      setToast({
+        show: true,
+        message: err?.message || "Failed to auto-update timesheet.",
+        type: "error",
+      });
     } finally {
       setIsAutoUpdating(false);
     }
@@ -930,10 +950,10 @@ const MyTimesheet = ({
         isHighlighted={isHighlighted}
         containerClassName={containerClassName}
         onAutoUpdate={
-          now.getMonth() === today.getMonth() && 
-          now.getFullYear() === today.getFullYear() 
-             ? handleAutoUpdateClick 
-             : undefined
+          now.getMonth() === today.getMonth() &&
+          now.getFullYear() === today.getFullYear()
+            ? handleAutoUpdateClick
+            : undefined
         }
         blockers={blockers}
       />
@@ -944,7 +964,7 @@ const MyTimesheet = ({
     <div
       className={`flex flex-col ${containerClassName || "h-full max-h-full overflow-hidden bg-[#F4F7FE] py-2 px-1 md:px-6 md:pt-4 md:pb-0 relative"}`}
     >
-      <AutoUpdateModal 
+      <AutoUpdateModal
         isOpen={showAutoUpdateModal}
         onClose={() => setShowAutoUpdateModal(false)}
         onConfirm={confirmAutoUpdate}
@@ -952,7 +972,7 @@ const MyTimesheet = ({
         year={now.getFullYear()}
         loading={isAutoUpdating}
       />
-      <AutoUpdateSuccessModal 
+      <AutoUpdateSuccessModal
         isOpen={showSuccessModal}
         onClose={() => setShowSuccessModal(false)}
         count={updateResult?.count || 0}
@@ -1053,20 +1073,22 @@ const MyTimesheet = ({
                 <span className="text-[10px] font-bold text-gray-700">hrs</span>
               </div>
             </div>
-            
+
             {/* Auto Update Button */}
-            {(!effectiveReadOnly || (isAdmin && !isAdminView) || (isManager && !isManagerView)) && 
-             now.getMonth() === today.getMonth() && 
-             now.getFullYear() === today.getFullYear() && (
-              <button
-                onClick={handleAutoUpdateClick}
-                className="flex items-center justify-center gap-1.5 px-3 py-2 bg-gradient-to-r from-[#4318FF] to-[#868CFF] text-white rounded-xl font-bold text-[10px] shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:to-[#4318FF] transition-all active:scale-95 tracking-wide uppercase hover:-translate-y-0.5"
-                title="Auto-fill 9 hours for working days"
-              >
-                <Rocket size={14} className="animate-pulse" />
-                <span className="hidden sm:inline">Auto Update</span>
-              </button>
-            )}
+            {(!effectiveReadOnly ||
+              (isAdmin && !isAdminView) ||
+              (isManager && !isManagerView)) &&
+              now.getMonth() === today.getMonth() &&
+              now.getFullYear() === today.getFullYear() && (
+                <button
+                  onClick={handleAutoUpdateClick}
+                  className="flex items-center justify-center gap-1.5 px-3 py-2 bg-gradient-to-r from-[#4318FF] to-[#868CFF] text-white rounded-xl font-bold text-[10px] shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:to-[#4318FF] transition-all active:scale-95 tracking-wide uppercase hover:-translate-y-0.5"
+                  title="Auto-fill 9 hours for working days"
+                >
+                  <Rocket size={14} className="animate-pulse" />
+                  <span className="hidden sm:inline">Auto Update</span>
+                </button>
+              )}
 
             {(!effectiveReadOnly || (isAdmin && !isAdminView)) && (
               <button
@@ -1339,7 +1361,7 @@ const MyTimesheet = ({
                 className={`relative flex flex-col justify-between p-1 md:p-1.5 rounded-xl md:rounded-2xl border transition-all duration-300 min-h-[100px] md:min-h-[120px] group 
                             ${border} ${shadow} ${highlightClass} ${bg} ${
                               isBlocked
-                                ? (isAdmin || isManager)
+                                ? isAdmin || isManager
                                   ? "cursor-pointer"
                                   : "cursor-not-allowed"
                                 : "hover:-translate-y-1 hover:shadow-lg"
@@ -1362,7 +1384,9 @@ const MyTimesheet = ({
                           Timesheet Blocked
                         </p>
                         <p className="text-[10px] font-extrabold text-[#4318FF]">
-                          {(isAdmin || isManager) ? "Unblock" : `Contact ${getBlocker(day.fullDate)?.blockedBy || "Admin"}`}
+                          {isAdmin || isManager
+                            ? "Unblock"
+                            : `Contact ${getBlocker(day.fullDate)?.blockedBy || "Admin"}`}
                         </p>
                       </div>
                       {blockedReason && (
@@ -1392,7 +1416,9 @@ const MyTimesheet = ({
                     {day.date}
                   </div>
                   {/* Show lock if blocked by admin OR blocked by auto-generated request OR Leave day (for non-admin/non-manager) */}
-                  {(isBlocked || (isBlockedByRequest && !isAdmin && !isManager) || (isLeaveDay && !isAdmin && !isManager)) && (
+                  {(isBlocked ||
+                    (isBlockedByRequest && !isAdmin && !isManager) ||
+                    (isLeaveDay && !isAdmin && !isManager)) && (
                     <div className="p-1 rounded-full bg-red-50 text-red-500 border border-red-100">
                       <Lock size={8} strokeWidth={3} />
                     </div>

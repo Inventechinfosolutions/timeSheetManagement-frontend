@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { AlertTriangle} from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import {
   Clock,
   Edit,
@@ -37,19 +37,14 @@ import WorkTrendsGraph from "./WorkTrendsGraph";
 import AttendanceStatsCards from "./AttendanceStatsCards";
 import { RootState } from "../store";
 
-interface Props {
-  setActiveTab?: (tab: string) => void;
-  setScrollToDate?: (date: number | null) => void;
-  onNavigate?: (timestamp: number) => void;
-  viewOnly?: boolean;
-}
+import { TodayAttendanceProps } from "./types";
 
 const TodayAttendance = ({
   setActiveTab,
   setScrollToDate,
   onNavigate,
   viewOnly = false,
-}: Props) => {
+}: TodayAttendanceProps) => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const location = useLocation();
@@ -264,11 +259,17 @@ const TodayAttendance = ({
         currentUser?.userType === UserType.MANAGER ||
         currentUser?.userType === UserType.TEAM_LEAD;
 
-      const isSelfView = !currentEmployeeId || currentEmployeeId === currentUser?.employeeId;
+      const isSelfView =
+        !currentEmployeeId || currentEmployeeId === currentUser?.employeeId;
       const isViewAttendance = location.pathname.includes("/view-attendance/");
 
       // Disable navigation for Admin and Manager on dashboard or view-attendance pages
-      if (isPrivilegedUser && (isSelfView || isViewAttendance) && (location.pathname.startsWith("/manager-dashboard") || location.pathname.startsWith("/admin-dashboard"))) {
+      if (
+        isPrivilegedUser &&
+        (isSelfView || isViewAttendance) &&
+        (location.pathname.startsWith("/manager-dashboard") ||
+          location.pathname.startsWith("/admin-dashboard"))
+      ) {
         return;
       }
 
@@ -280,8 +281,8 @@ const TodayAttendance = ({
         currentEmployeeId !== currentUser?.employeeId
       ) {
         const y = targetDate.getFullYear();
-        const m = String(targetDate.getMonth() + 1).padStart(2, '0');
-        const d = String(targetDate.getDate()).padStart(2, '0');
+        const m = String(targetDate.getMonth() + 1).padStart(2, "0");
+        const d = String(targetDate.getDate()).padStart(2, "0");
         const dateStr = `${y}-${m}-${d}`;
         const basePath = location.pathname.startsWith("/manager-dashboard")
           ? "/manager-dashboard"
@@ -309,8 +310,8 @@ const TodayAttendance = ({
 
       const navTarget = `${basePath}/my-timesheet`;
       const y = targetDate.getFullYear();
-      const m = String(targetDate.getMonth() + 1).padStart(2, '0');
-      const d = String(targetDate.getDate()).padStart(2, '0');
+      const m = String(targetDate.getMonth() + 1).padStart(2, "0");
+      const d = String(targetDate.getDate()).padStart(2, "0");
       const dateStr = `${y}-${m}-${d}`;
 
       const state = {
@@ -362,7 +363,9 @@ const TodayAttendance = ({
         <div className="px-6 py-5 bg-linear-to-r from-blue-100 via-blue-50 to-white border-b border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-[#1B2559]">
-              {currentUser?.userType === UserType.MANAGER ? "Manager Dashboard" : "Employee Dashboard"}
+              {currentUser?.userType === UserType.MANAGER
+                ? "Manager Dashboard"
+                : "Employee Dashboard"}
             </h1>
             <p className="text-sm text-gray-500 font-medium mt-1">
               Welcome back,{" "}

@@ -7,27 +7,26 @@ import {
   Legend,
   Sector,
 } from "recharts";
-import {
-  PieChart as PieChartIcon,
-} from "lucide-react";
+import { PieChart as PieChartIcon } from "lucide-react";
 
-interface Props {
-  data: any[];
-  currentMonth: Date;
-}
+import { AttendancePieChartProps } from "./types";
+import { AttendanceLabels, AttendanceChartColor } from "./enums";
 
-const AttendancePieChart = ({ data, currentMonth }: Props) => {
+const AttendancePieChart = ({
+  data,
+  currentMonth,
+}: AttendancePieChartProps) => {
   const chartData = useMemo(() => {
     // Group records by broad status categories for cleaner chart
     const counts = {
-      Present: 0,
-      "Half Day": 0,
-      Absent: 0,
-      Leave: 0,
-      Holiday: 0,
-      Weekend: 0,
-      "Not Updated": 0,
-      Pending: 0,
+      [AttendanceLabels.Present]: 0,
+      [AttendanceLabels.HalfDay]: 0,
+      [AttendanceLabels.Absent]: 0,
+      [AttendanceLabels.Leave]: 0,
+      [AttendanceLabels.Holiday]: 0,
+      [AttendanceLabels.Weekend]: 0,
+      [AttendanceLabels.NotUpdated]: 0,
+      [AttendanceLabels.Pending]: 0,
     };
 
     data.forEach((record) => {
@@ -51,28 +50,52 @@ const AttendancePieChart = ({ data, currentMonth }: Props) => {
         status === "WFH" ||
         status === "CLIENT VISIT"
       ) {
-        counts["Present"]++;
+        counts[AttendanceLabels.Present]++;
       } else if (status === "ABSENT") {
-        counts["Absent"]++;
+        counts[AttendanceLabels.Absent]++;
       } else if (status === "LEAVE") {
-        counts["Leave"]++;
+        counts[AttendanceLabels.Leave]++;
       } else if (status === "HOLIDAY") {
-        counts["Holiday"]++;
+        counts[AttendanceLabels.Holiday]++;
       } else if (status === "WEEKEND" || record.isWeekend) {
-        counts["Weekend"]++;
+        counts[AttendanceLabels.Weekend]++;
       } else {
         // Fallback for Not Updated, Pending, or any other past dates
-        counts["Not Updated"]++;
+        counts[AttendanceLabels.NotUpdated]++;
       }
     });
 
     return [
-      { name: "Present", value: counts["Present"], color: "#10B981" },
-      { name: "Absent", value: counts["Absent"], color: "#E11D48" },
-      { name: "Leave", value: counts["Leave"], color: "#EE5D50" },
-      { name: "Holiday", value: counts["Holiday"], color: "#2563EB" },
-      { name: "Weekend", value: counts["Weekend"], color: "#38BDF8" },
-      { name: "Not Updated", value: counts["Not Updated"], color: "#F97316" },
+      {
+        name: AttendanceLabels.Present,
+        value: counts[AttendanceLabels.Present],
+        color: AttendanceChartColor.PresentStart,
+      },
+      {
+        name: AttendanceLabels.Absent,
+        value: counts[AttendanceLabels.Absent],
+        color: AttendanceChartColor.AbsentStart,
+      },
+      {
+        name: AttendanceLabels.Leave,
+        value: counts[AttendanceLabels.Leave],
+        color: AttendanceChartColor.LeaveStart,
+      },
+      {
+        name: AttendanceLabels.Holiday,
+        value: counts[AttendanceLabels.Holiday],
+        color: AttendanceChartColor.HolidayStart,
+      },
+      {
+        name: AttendanceLabels.Weekend,
+        value: counts[AttendanceLabels.Weekend],
+        color: AttendanceChartColor.WeekendStart,
+      },
+      {
+        name: AttendanceLabels.NotUpdated,
+        value: counts[AttendanceLabels.NotUpdated],
+        color: AttendanceChartColor.NotUpdatedStart,
+      },
     ].filter((item) => item.value > 0);
   }, [data]);
 
@@ -201,36 +224,78 @@ const AttendancePieChart = ({ data, currentMonth }: Props) => {
           <PieChart>
             <defs>
               <linearGradient id="gradPresent" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#10B981" />
-                <stop offset="100%" stopColor="#34D399" />
+                <stop
+                  offset="0%"
+                  stopColor={AttendanceChartColor.PresentStart}
+                />
+                <stop
+                  offset="100%"
+                  stopColor={AttendanceChartColor.PresentEnd}
+                />
               </linearGradient>
               <linearGradient id="gradHalfDay" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#F59E0B" />
-                <stop offset="100%" stopColor="#FBBF24" />
+                <stop
+                  offset="0%"
+                  stopColor={AttendanceChartColor.HalfDayStart}
+                />
+                <stop
+                  offset="100%"
+                  stopColor={AttendanceChartColor.HalfDayEnd}
+                />
               </linearGradient>
               <linearGradient id="gradAbsent" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#E11D48" />
-                <stop offset="100%" stopColor="#F43F5E" />
+                <stop
+                  offset="0%"
+                  stopColor={AttendanceChartColor.AbsentStart}
+                />
+                <stop
+                  offset="100%"
+                  stopColor={AttendanceChartColor.AbsentEnd}
+                />
               </linearGradient>
               <linearGradient id="gradLeave" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#EE5D50" />
-                <stop offset="100%" stopColor="#F87171" />
+                <stop offset="0%" stopColor={AttendanceChartColor.LeaveStart} />
+                <stop offset="100%" stopColor={AttendanceChartColor.LeaveEnd} />
               </linearGradient>
               <linearGradient id="gradHoliday" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#2563EB" />
-                <stop offset="100%" stopColor="#3B82F6" />
+                <stop
+                  offset="0%"
+                  stopColor={AttendanceChartColor.HolidayStart}
+                />
+                <stop
+                  offset="100%"
+                  stopColor={AttendanceChartColor.HolidayEnd}
+                />
               </linearGradient>
               <linearGradient id="gradWeekend" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#A5F3FC" />
-                <stop offset="100%" stopColor="#0EA5E9" />
+                <stop
+                  offset="0%"
+                  stopColor={AttendanceChartColor.WeekendStart}
+                />
+                <stop
+                  offset="100%"
+                  stopColor={AttendanceChartColor.WeekendEnd}
+                />
               </linearGradient>
               <linearGradient id="gradNotUpdated" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#FB923C" />
-                <stop offset="100%" stopColor="#F97316" />
+                <stop
+                  offset="0%"
+                  stopColor={AttendanceChartColor.NotUpdatedStart}
+                />
+                <stop
+                  offset="100%"
+                  stopColor={AttendanceChartColor.NotUpdatedEnd}
+                />
               </linearGradient>
               <linearGradient id="gradPending" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#94A3B8" />
-                <stop offset="100%" stopColor="#64748B" />
+                <stop
+                  offset="0%"
+                  stopColor={AttendanceChartColor.PendingStart}
+                />
+                <stop
+                  offset="100%"
+                  stopColor={AttendanceChartColor.PendingEnd}
+                />
               </linearGradient>
             </defs>
             <Pie
@@ -253,12 +318,15 @@ const AttendancePieChart = ({ data, currentMonth }: Props) => {
             >
               {chartData.map((entry, index) => {
                 let fillUrl = "url(#gradWeekend)";
-                if (entry.name === "Present") fillUrl = "url(#gradPresent)";
-                else if (entry.name === "Absent") fillUrl = "url(#gradAbsent)";
-                else if (entry.name === "Leave") fillUrl = "url(#gradLeave)";
-                else if (entry.name === "Holiday")
+                if (entry.name === AttendanceLabels.Present)
+                  fillUrl = "url(#gradPresent)";
+                else if (entry.name === AttendanceLabels.Absent)
+                  fillUrl = "url(#gradAbsent)";
+                else if (entry.name === AttendanceLabels.Leave)
+                  fillUrl = "url(#gradLeave)";
+                else if (entry.name === AttendanceLabels.Holiday)
                   fillUrl = "url(#gradHoliday)";
-                else if (entry.name === "Not Updated")
+                else if (entry.name === AttendanceLabels.NotUpdated)
                   fillUrl = "url(#gradNotUpdated)";
 
                 return (

@@ -17,10 +17,13 @@ import {
   getLeaveCancellableDates,
   cancelRequestDates,
   undoCancellationRequest,
-  getMonthlyLeaveRequests
+  getMonthlyLeaveRequests,
 } from "../reducers/leaveRequest.reducer";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
-import { fetchAttendanceByDateRange, AttendanceStatus } from "../reducers/employeeAttendance.reducer";
+import {
+  fetchAttendanceByDateRange,
+  AttendanceStatus,
+} from "../reducers/employeeAttendance.reducer";
 import {
   Home,
   MapPin,
@@ -38,6 +41,8 @@ import {
 } from "lucide-react";
 import { notification } from "antd";
 import CommonMultipleUploader from "./CommonMultipleUploader";
+import { LeaveType } from "./enums";
+import { RequestStatus } from "../AdminDashboard/enums";
 
 const datePickerTheme = {
   token: {
@@ -63,16 +68,23 @@ const LeaveManagement = () => {
   } = useAppSelector((state) => state.leaveRequest || {});
   const { entity } = useAppSelector((state) => state.employeeDetails);
   const currentUser = useAppSelector((state) => state.user.currentUser);
-  const { holidays = [] } = useAppSelector((state: any) => state.masterHolidays || {});
+  const { holidays = [] } = useAppSelector(
+    (state: any) => state.masterHolidays || {},
+  );
   const employeeId = entity?.employeeId || currentUser?.employeeId;
-  const [dateRangeAttendanceRecords, setDateRangeAttendanceRecords] = useState<any[]>([]);
+  const [dateRangeAttendanceRecords, setDateRangeAttendanceRecords] = useState<
+    any[]
+  >([]);
 
   // AntD Notification Hook
   const [api, contextHolder] = notification.useNotification();
 
   // --- Partial Cancellation State ---
-  const [isCancelDateModalVisible, setIsCancelDateModalVisible] = useState(false);
-  const [cancellableDates, setCancellableDates] = useState<{ date: string; isCancellable: boolean; reason: string }[]>([]);
+  const [isCancelDateModalVisible, setIsCancelDateModalVisible] =
+    useState(false);
+  const [cancellableDates, setCancellableDates] = useState<
+    { date: string; isCancellable: boolean; reason: string }[]
+  >([]);
   const [selectedCancelDates, setSelectedCancelDates] = useState<string[]>([]);
   const [requestToCancel, setRequestToCancel] = useState<any>(null);
   const [isLoadingDates, setIsLoadingDates] = useState(false);
@@ -124,9 +136,10 @@ const LeaveManagement = () => {
   ];
 
   const currentYear = dayjs().year();
-  const years = ["All", ...Array.from({ length: 11 }, (_, i) =>
-    (currentYear + 5 - i).toString(),
-  )];
+  const years = [
+    "All",
+    ...Array.from({ length: 11 }, (_, i) => (currentYear + 5 - i).toString()),
+  ];
 
   const [errors, setErrors] = useState({
     title: "",
@@ -155,20 +168,29 @@ const LeaveManagement = () => {
     // Check if this date is explicitly covered by a Cancellation request (Finalized or Pending)
     // If so, we enable it (return false), overriding any overlapping "Approved" parent request.
     const isCancelledDate = (entities || []).some((req: any) => {
-        const isCancelled = req.status === "Cancellation Approved" ||  req.status === "Rejected";
-        if (!isCancelled) return false;
-        
-        const startDate = dayjs(req.fromDate).startOf("day");
-        const endDate = dayjs(req.toDate).startOf("day");
-        return (currentDate.isSame(startDate) || currentDate.isAfter(startDate)) &&
-               (currentDate.isSame(endDate) || currentDate.isBefore(endDate));
+      const isCancelled =
+        req.status === "Cancellation Approved" ||
+        req.status === RequestStatus.Rejected;
+      if (!isCancelled) return false;
+
+      const startDate = dayjs(req.fromDate).startOf("day");
+      const endDate = dayjs(req.toDate).startOf("day");
+      return (
+        (currentDate.isSame(startDate) || currentDate.isAfter(startDate)) &&
+        (currentDate.isSame(endDate) || currentDate.isBefore(endDate))
+      );
     });
 
     if (isCancelledDate) return false;
 
     return (entities || []).some((req: any) => {
       // Exclude Rejected and Cancelled requests (including Cancellation Approved and Cancellation Pending)
-      if (!req || req.status === "Rejected" || req.status === "Cancelled" || req.status === "Cancellation Approved" )
+      if (
+        !req ||
+        req.status === RequestStatus.Rejected ||
+        req.status === RequestStatus.Cancelled ||
+        req.status === "Cancellation Approved"
+      )
         return false;
 
       // Exclude the current request if we're viewing/editing it
@@ -186,26 +208,39 @@ const LeaveManagement = () => {
       const existingRequestType = req.requestType || "";
 
       // 1. RULE: If LEAVE already exists, block EVERYTHING (No exceptions)
-      if (existingRequestType === "Apply Leave" || existingRequestType === "Leave") {
-        return true; 
+      if (
+        existingRequestType === "Apply Leave" ||
+        existingRequestType === "Leave"
+      ) {
+        return true;
       }
 
       // 2. RULE: If WORK FROM HOME already exists
       if (existingRequestType === "Work From Home") {
-          // Allow if applying for Leave or Client Visit or Half Day
-          if (selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave" || selectedLeaveType === "Client Visit" || selectedLeaveType === "Half Day") {
-              return false; // Valid dates, don't disable
-          }
-          return true; // Otherwise block (prevents dual WFH)
+        // Allow if applying for Leave or Client Visit or Half Day
+        if (
+          selectedLeaveType === "Apply Leave" ||
+          selectedLeaveType === "Leave" ||
+          selectedLeaveType === "Client Visit" ||
+          selectedLeaveType === "Half Day"
+        ) {
+          return false; // Valid dates, don't disable
+        }
+        return true; // Otherwise block (prevents dual WFH)
       }
 
       // 3. RULE: If CLIENT VISIT already exists
       if (existingRequestType === "Client Visit") {
-          // Allow if applying for Leave or Work From Home or Half Day
-          if (selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave" || selectedLeaveType === "Work From Home" || selectedLeaveType === "Half Day") {
-              return false; // Valid dates, don't disable
-          }
-          return true; // Otherwise block (prevents dual CV)
+        // Allow if applying for Leave or Work From Home or Half Day
+        if (
+          selectedLeaveType === "Apply Leave" ||
+          selectedLeaveType === "Leave" ||
+          selectedLeaveType === "Work From Home" ||
+          selectedLeaveType === "Half Day"
+        ) {
+          return false; // Valid dates, don't disable
+        }
+        return true; // Otherwise block (prevents dual CV)
       }
 
       // Default: block all overlapping requests
@@ -280,7 +315,10 @@ const LeaveManagement = () => {
   };
 
   // Helper function to check if a date has an existing leave record
-  const hasExistingLeave = (date: dayjs.Dayjs, records: any[] = dateRangeAttendanceRecords): boolean => {
+  const hasExistingLeave = (
+    date: dayjs.Dayjs,
+    records: any[] = dateRangeAttendanceRecords,
+  ): boolean => {
     const dateStr = date.format("YYYY-MM-DD");
     return records.some((record: any) => {
       const recordDate = record.workingDate || record.working_date;
@@ -291,29 +329,41 @@ const LeaveManagement = () => {
           : new Date(recordDate).toISOString().split("T")[0];
       // Check if the record has Leave status
       const status = record.status || record.attendance_status;
-      return normalizedRecordDate === dateStr && 
-             (status === AttendanceStatus.LEAVE || status === "Leave" || status === "LEAVE");
+      return (
+        normalizedRecordDate === dateStr &&
+        (status === AttendanceStatus.LEAVE ||
+          status === "Leave" ||
+          status === "LEAVE")
+      );
     });
   };
 
   // Helper function to calculate duration excluding weekends, holidays, and existing leaves
-  const calculateDurationExcludingWeekends = (startDate: string, endDate: string, records?: any[]): number => {
+  const calculateDurationExcludingWeekends = (
+    startDate: string,
+    endDate: string,
+    records?: any[],
+  ): number => {
     if (!startDate || !endDate) return 0;
-    
+
     const start = dayjs(startDate);
     const end = dayjs(endDate);
     let count = 0;
     let current = start;
     const recordsToUse = records || dateRangeAttendanceRecords;
-    
-    while (current.isBefore(end) || current.isSame(end, 'day')) {
+
+    while (current.isBefore(end) || current.isSame(end, "day")) {
       // Exclude weekends, holidays, and existing leave records
-      if (!isWeekend(current) && !isHoliday(current) && !hasExistingLeave(current, recordsToUse)) {
+      if (
+        !isWeekend(current) &&
+        !isHoliday(current) &&
+        !hasExistingLeave(current, recordsToUse)
+      ) {
         count++;
       }
-      current = current.add(1, 'day');
+      current = current.add(1, "day");
     }
-    
+
     return count;
   };
 
@@ -321,36 +371,56 @@ const LeaveManagement = () => {
     if (validateForm()) {
       // Determine the actual request type based on dropdown selection if "Apply Leave" is selected
       let finalRequestType = selectedLeaveType;
-      if (selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave") {
-        if (leaveDurationType === "Half Day") {
-          finalRequestType = "Half Day";
+      if (
+        selectedLeaveType === LeaveType.ApplyLeave ||
+        selectedLeaveType === LeaveType.Leave
+      ) {
+        if (leaveDurationType === LeaveType.HalfDay) {
+          finalRequestType = LeaveType.HalfDay;
         } else {
-          finalRequestType = "Apply Leave";
+          finalRequestType = LeaveType.ApplyLeave;
         }
       }
 
       // For Client Visit, WFH, and Leave (including Half Day), fetch attendance records first to check for existing leaves
       let duration: number;
-      if (finalRequestType === "Client Visit" || finalRequestType === "Work From Home" || finalRequestType === "Apply Leave" || finalRequestType === "Leave" || finalRequestType === "Half Day") {
+      if (
+        finalRequestType === LeaveType.ClientVisit ||
+        finalRequestType === LeaveType.WorkFromHome ||
+        finalRequestType === LeaveType.ApplyLeave ||
+        finalRequestType === LeaveType.Leave ||
+        finalRequestType === LeaveType.HalfDay
+      ) {
         // Fetch attendance records synchronously before calculating duration
-        const attendanceAction = await dispatch(fetchAttendanceByDateRange({
-          employeeId: employeeId!,
-          startDate: formData.startDate,
-          endDate: formData.endDate,
-        }));
-        
+        const attendanceAction = await dispatch(
+          fetchAttendanceByDateRange({
+            employeeId: employeeId!,
+            startDate: formData.startDate,
+            endDate: formData.endDate,
+          }),
+        );
+
         let records: any[] = [];
         if (fetchAttendanceByDateRange.fulfilled.match(attendanceAction)) {
-          records = attendanceAction.payload.data || attendanceAction.payload || [];
+          records =
+            attendanceAction.payload.data || attendanceAction.payload || [];
           setDateRangeAttendanceRecords(records);
         }
         // Calculate duration with the fetched records (pass records directly to avoid state timing issues)
-        const baseDuration = calculateDurationExcludingWeekends(formData.startDate, formData.endDate, records);
-        duration = leaveDurationType === "Half Day" ? baseDuration * 0.5 : baseDuration;
+        const baseDuration = calculateDurationExcludingWeekends(
+          formData.startDate,
+          formData.endDate,
+          records,
+        );
+        duration =
+          leaveDurationType === LeaveType.HalfDay
+            ? baseDuration * 0.5
+            : baseDuration;
       } else {
-        duration = formData.startDate && formData.endDate
-          ? dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1
-          : 0;
+        duration =
+          formData.startDate && formData.endDate
+            ? dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1
+            : 0;
       }
 
       dispatch(
@@ -387,13 +457,17 @@ const LeaveManagement = () => {
   // Fetch attendance records for the selected date range to check for existing leaves
   useEffect(() => {
     if (!isViewMode && employeeId && formData.startDate && formData.endDate) {
-      dispatch(fetchAttendanceByDateRange({
-        employeeId,
-        startDate: formData.startDate,
-        endDate: formData.endDate,
-      })).then((action: any) => {
+      dispatch(
+        fetchAttendanceByDateRange({
+          employeeId,
+          startDate: formData.startDate,
+          endDate: formData.endDate,
+        }),
+      ).then((action: any) => {
         if (fetchAttendanceByDateRange.fulfilled.match(action)) {
-          setDateRangeAttendanceRecords(action.payload.data || action.payload || []);
+          setDateRangeAttendanceRecords(
+            action.payload.data || action.payload || [],
+          );
         }
       });
     } else if (!isViewMode) {
@@ -413,9 +487,18 @@ const LeaveManagement = () => {
           limit: itemsPerPage,
         }),
       );
-      dispatch(getLeaveStats({ employeeId, month: selectedMonth, year: selectedYear }));
+      dispatch(
+        getLeaveStats({ employeeId, month: selectedMonth, year: selectedYear }),
+      );
     }
-  }, [dispatch, employeeId, currentPage, filterStatus, selectedMonth, selectedYear]);
+  }, [
+    dispatch,
+    employeeId,
+    currentPage,
+    filterStatus,
+    selectedMonth,
+    selectedYear,
+  ]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -432,12 +515,20 @@ const LeaveManagement = () => {
           year: selectedYear,
           page: 1,
           limit: itemsPerPage,
-        })
+        }),
       );
       if (currentPage !== 1) setCurrentPage(1);
-      dispatch(getLeaveStats({ employeeId, month: selectedMonth, year: selectedYear }));
+      dispatch(
+        getLeaveStats({ employeeId, month: selectedMonth, year: selectedYear }),
+      );
       dispatch(resetSubmitSuccess());
-      setFormData({ title: "", description: "", startDate: "", endDate: "", duration: 0 });
+      setFormData({
+        title: "",
+        description: "",
+        startDate: "",
+        endDate: "",
+        duration: 0,
+      });
       setErrors({ title: "", description: "", startDate: "", endDate: "" });
       setSelectedLeaveType("");
       setSelectedRequestId(null);
@@ -452,7 +543,9 @@ const LeaveManagement = () => {
     setSelectedRequestId(null);
     setUploaderKey((prev) => prev + 1); // Increment to reset uploader
     setSelectedLeaveType(
-      label === "Leave" || label === "Apply Leave" ? "Apply Leave" : label,
+      label === LeaveType.Leave || label === LeaveType.ApplyLeave
+        ? LeaveType.ApplyLeave
+        : label,
     );
     setIsModalOpen(true);
     setErrors({ title: "", description: "", startDate: "", endDate: "" });
@@ -475,9 +568,9 @@ const LeaveManagement = () => {
         endDate: fetchedItem.toDate,
         duration: fetchedItem.duration,
       });
-      
+
       // Removed redundant attendance fetch for View Mode
-      
+
       setIsModalOpen(true);
       setErrors({ title: "", description: "", startDate: "", endDate: "" });
     } else {
@@ -493,7 +586,13 @@ const LeaveManagement = () => {
     setIsViewMode(false);
     setSelectedRequestId(null);
     setSelectedLeaveType("");
-    setFormData({ title: "", description: "", startDate: "", endDate: "", duration: 0 });
+    setFormData({
+      title: "",
+      description: "",
+      startDate: "",
+      endDate: "",
+      duration: 0,
+    });
     setErrors({ title: "", description: "", startDate: "", endDate: "" });
     dispatch(resetSubmitSuccess());
   };
@@ -506,12 +605,17 @@ const LeaveManagement = () => {
     setSelectedCancelDates([]);
 
     try {
-      const action = await dispatch(getLeaveCancellableDates({ id: request.id, employeeId: request.employeeId }));
+      const action = await dispatch(
+        getLeaveCancellableDates({
+          id: request.id,
+          employeeId: request.employeeId,
+        }),
+      );
       if (getLeaveCancellableDates.fulfilled.match(action)) {
-          setCancellableDates(action.payload);
+        setCancellableDates(action.payload);
       } else {
-          // Explicitly throw or handle potential error payload
-          throw new Error(action.payload as string || "Failed to fetch");
+        // Explicitly throw or handle potential error payload
+        throw new Error((action.payload as string) || "Failed to fetch");
       }
     } catch (err) {
       api.error({ title: "Failed to fetch cancellable dates" });
@@ -530,30 +634,47 @@ const LeaveManagement = () => {
 
     setIsCancelling(true);
     try {
-       const action = await dispatch(cancelRequestDates({
-           id: requestToCancel.id,
-           employeeId: requestToCancel.employeeId,
-           dates: selectedCancelDates
-       }));
+      const action = await dispatch(
+        cancelRequestDates({
+          id: requestToCancel.id,
+          employeeId: requestToCancel.employeeId,
+          dates: selectedCancelDates,
+        }),
+      );
 
-       if (cancelRequestDates.fulfilled.match(action)) {
-           api.success({ title: "Cancellation request submitted successfully" });
-           setIsCancelDateModalVisible(false);
-            dispatch(getLeaveHistory({ employeeId: employeeId, status: filterStatus, month: selectedMonth, year: selectedYear, page: 1, limit: 10 }));
-            dispatch(getLeaveStats({ employeeId, month: selectedMonth, year: selectedYear })); 
-       } else {
-           throw new Error(action.payload as string || "Cancellation failed");
-       }
+      if (cancelRequestDates.fulfilled.match(action)) {
+        api.success({ title: "Cancellation request submitted successfully" });
+        setIsCancelDateModalVisible(false);
+        dispatch(
+          getLeaveHistory({
+            employeeId: employeeId,
+            status: filterStatus,
+            month: selectedMonth,
+            year: selectedYear,
+            page: 1,
+            limit: 10,
+          }),
+        );
+        dispatch(
+          getLeaveStats({
+            employeeId,
+            month: selectedMonth,
+            year: selectedYear,
+          }),
+        );
+      } else {
+        throw new Error((action.payload as string) || "Cancellation failed");
+      }
     } catch (err: any) {
-        api.error({ title: err.message || "Cancellation failed" });
+      api.error({ title: err.message || "Cancellation failed" });
     } finally {
-        setIsCancelling(false);
+      setIsCancelling(false);
     }
   };
 
   const toggleDateSelection = (date: string) => {
     if (selectedCancelDates.includes(date)) {
-      setSelectedCancelDates(selectedCancelDates.filter(d => d !== date));
+      setSelectedCancelDates(selectedCancelDates.filter((d) => d !== date));
     } else {
       setSelectedCancelDates([...selectedCancelDates, date]);
     }
@@ -563,11 +684,11 @@ const LeaveManagement = () => {
     const availableDates = cancellableDates
       .filter((d) => d.isCancellable)
       .map((d) => d.date);
-      
+
     if (availableDates.length === 0) return;
 
     const areAllSelected = availableDates.every((date) =>
-      selectedCancelDates.includes(date)
+      selectedCancelDates.includes(date),
     );
 
     if (areAllSelected) {
@@ -577,16 +698,17 @@ const LeaveManagement = () => {
     }
   };
 
-  const formatModalDate = (dateStr: string) => dayjs(dateStr).format('DD MMM YYYY');
+  const formatModalDate = (dateStr: string) =>
+    dayjs(dateStr).format("DD MMM YYYY");
 
   // Modified handleCancel to use the new partial cancellation flow for Approved requests
   const handleCancel = (id: number) => {
     const req = entities.find((e: any) => e.id === id);
-    if (req?.status === 'Approved') {
-        handleCancelClick(req);
+    if (req?.status === RequestStatus.Approved) {
+      handleCancelClick(req);
     } else {
-        // For Pending or other statuses, use the original full cancellation flow
-        setCancelModal({ isOpen: true, id });
+      // For Pending or other statuses, use the original full cancellation flow
+      setCancelModal({ isOpen: true, id });
     }
   };
 
@@ -600,70 +722,115 @@ const LeaveManagement = () => {
 
     setIsUndoing(true);
     try {
-        const action = await dispatch(undoCancellationRequest({ id: undoModal.request.id, employeeId: employeeId! }));
+      const action = await dispatch(
+        undoCancellationRequest({
+          id: undoModal.request.id,
+          employeeId: employeeId!,
+        }),
+      );
 
-        if (undoCancellationRequest.fulfilled.match(action)) {
-            dispatch(getLeaveHistory({ employeeId, status: filterStatus, month: selectedMonth, year: selectedYear, page: currentPage, limit: itemsPerPage }));
-            dispatch(getLeaveStats({ employeeId, month: selectedMonth, year: selectedYear }));
-            api.success({
-                title: "Cancellation Revoked",
-                description: "Your cancellation request has been undone.",
-                placement: "topRight"
-            });
-            setUndoModal({ isOpen: false, request: null });
-        } else {
-            throw new Error(action.payload as string || "Could not undo cancellation");
-        }
-    } catch (err: any) {
-        api.error({
-            title: "Undo Failed",
-            description: err.message || "Could not undo cancellation.",
-            placement: "topRight"
+      if (undoCancellationRequest.fulfilled.match(action)) {
+        dispatch(
+          getLeaveHistory({
+            employeeId,
+            status: filterStatus,
+            month: selectedMonth,
+            year: selectedYear,
+            page: currentPage,
+            limit: itemsPerPage,
+          }),
+        );
+        dispatch(
+          getLeaveStats({
+            employeeId,
+            month: selectedMonth,
+            year: selectedYear,
+          }),
+        );
+        api.success({
+          title: "Cancellation Revoked",
+          description: "Your cancellation request has been undone.",
+          placement: "topRight",
         });
+        setUndoModal({ isOpen: false, request: null });
+      } else {
+        throw new Error(
+          (action.payload as string) || "Could not undo cancellation",
+        );
+      }
+    } catch (err: any) {
+      api.error({
+        title: "Undo Failed",
+        description: err.message || "Could not undo cancellation.",
+        placement: "topRight",
+      });
     } finally {
-        setIsUndoing(false);
+      setIsUndoing(false);
     }
   };
 
   const isUndoable = (req: any) => {
-      // Rule: Next Day 10 AM
-      const submissionTime = dayjs(req.submittedDate || req.created_at);
-      const deadline = submissionTime.add(1, 'day').hour(10).minute(0).second(0);
-      return dayjs().isBefore(deadline);
+    // Rule: Next Day 10 AM
+    const submissionTime = dayjs(req.submittedDate || req.created_at);
+    const deadline = submissionTime.add(1, "day").hour(10).minute(0).second(0);
+    return dayjs().isBefore(deadline);
   };
 
   const executeCancel = () => {
     if (cancelModal.id && employeeId) {
       setIsCancelling(true);
-      
-      const requestToCancel = entities.find((e: any) => e.id === cancelModal.id);
-      const isApproved = requestToCancel?.status === 'Approved'; // This check is now mostly for the message, as Approved requests go through handleCancelClick
+
+      const requestToCancel = entities.find(
+        (e: any) => e.id === cancelModal.id,
+      );
+      const isApproved = requestToCancel?.status === RequestStatus.Approved; // This check is now mostly for the message, as Approved requests go through handleCancelClick
 
       // This part of executeCancel should now primarily handle non-Approved requests (e.g., Pending)
       // If an Approved request somehow reaches here, it means the `handleCancel` logic above needs refinement.
       // For now, assuming this path is for non-Approved requests.
-      const action = dispatch(updateLeaveRequestStatus({ id: cancelModal.id, status: "Cancelled" }));
+      const action = dispatch(
+        updateLeaveRequestStatus({
+          id: cancelModal.id,
+          status: RequestStatus.Cancelled,
+        }),
+      );
 
       action
         .then((result: any) => {
-           if (updateLeaveRequestStatus.fulfilled.match(result)) {
-               dispatch(getLeaveStats({ employeeId, month: selectedMonth, year: selectedYear }));
-               dispatch(getLeaveHistory({ employeeId, status: filterStatus, month: selectedMonth, year: selectedYear, page: 1, limit: 10 }));
-               setCancelModal({ isOpen: false, id: null });
-               api.success({
-                 title: "Request Cancelled",
-                 description: "Your request has been successfully cancelled.",
-                 placement: "topRight",
-                 duration: 3,
-               });
-            } else {
-              // Handle error
-               api.error({
-                 title: "Cancellation Failed",
-                 description: result.payload?.message || "Failed to cancel request.",
-                placement: "topRight",
-             });
-           }
+          if (updateLeaveRequestStatus.fulfilled.match(result)) {
+            dispatch(
+              getLeaveStats({
+                employeeId,
+                month: selectedMonth,
+                year: selectedYear,
+              }),
+            );
+            dispatch(
+              getLeaveHistory({
+                employeeId,
+                status: filterStatus,
+                month: selectedMonth,
+                year: selectedYear,
+                page: 1,
+                limit: 10,
+              }),
+            );
+            setCancelModal({ isOpen: false, id: null });
+            api.success({
+              title: "Request Cancelled",
+              description: "Your request has been successfully cancelled.",
+              placement: "topRight",
+              duration: 3,
+            });
+          } else {
+            // Handle error
+            api.error({
+              title: "Cancellation Failed",
+              description:
+                result.payload?.message || "Failed to cancel request.",
+              placement: "topRight",
+            });
+          }
         })
         .finally(() => {
           setIsCancelling(false);
@@ -672,9 +839,9 @@ const LeaveManagement = () => {
   };
 
   const applyOptions = [
-    { label: "Leave", icon: Calendar, color: "#4318FF" },
-    { label: "Work From Home", icon: Home, color: "#38A169" },
-    { label: "Client Visit", icon: MapPin, color: "#FFB547" },
+    { label: LeaveType.Leave, icon: Calendar, color: "#4318FF" },
+    { label: LeaveType.WorkFromHome, icon: Home, color: "#38A169" },
+    { label: LeaveType.ClientVisit, icon: MapPin, color: "#FFB547" },
   ];
 
   const hexToRgb = (hex: string) => {
@@ -789,7 +956,6 @@ const LeaveManagement = () => {
             color: "from-[#E31C79] to-[#F78FAD]",
             icon: Clock,
           },
-          
         ].map((config, idx) => {
           // Normalize data access to be resilient to backend naming (case sensitivity)
           // We check config.key (lowercase) and also common variations
@@ -830,7 +996,9 @@ const LeaveManagement = () => {
                     <span className="text-[#2B3674]">{rejected}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-gray-400">Cancellation Approved:</span>
+                    <span className="text-gray-400">
+                      Cancellation Approved:
+                    </span>
                     <span className="text-[#2B3674]">
                       {(rawData as any).cancelled ?? 0}
                     </span>
@@ -912,7 +1080,15 @@ const LeaveManagement = () => {
                 />
               }
             >
-              {["All", "Pending", "Approved", "Rejected", "Request Modified", "Cancellation Approved", "Cancelled"].map((status) => (
+              {[
+                "All",
+                "Pending",
+                "Approved",
+                "Rejected",
+                "Request Modified",
+                "Cancellation Approved",
+                "Cancelled",
+              ].map((status) => (
                 <Select.Option key={status} value={status}>
                   {status === "All" ? "All Status" : status}
                 </Select.Option>
@@ -977,7 +1153,8 @@ const LeaveManagement = () => {
                       <div className="flex items-center justify-center gap-3">
                         <div
                           className={`p-2 rounded-full ${
-                            item.requestType === "Apply Leave" || item.requestType === "Leave"
+                            item.requestType === "Apply Leave" ||
+                            item.requestType === "Leave"
                               ? "bg-blue-50 text-blue-600"
                               : item.requestType === "Work From Home"
                                 ? "bg-green-50 text-green-600"
@@ -986,7 +1163,8 @@ const LeaveManagement = () => {
                                   : "bg-orange-50 text-orange-500"
                           }`}
                         >
-                          {item.requestType === "Apply Leave" || item.requestType === "Leave" ? (
+                          {item.requestType === "Apply Leave" ||
+                          item.requestType === "Leave" ? (
                             <Calendar size={18} />
                           ) : item.requestType === "Work From Home" ? (
                             <Home size={18} />
@@ -1016,9 +1194,19 @@ const LeaveManagement = () => {
                       <p className="text-[10px] text-[#4318FF] font-black mt-1 uppercase tracking-wider">
                         Total:{" "}
                         {item.duration ||
-                          (item.requestType === "Client Visit" || item.requestType === "Work From Home" || item.requestType === "Apply Leave" || item.requestType === "Leave" || item.requestType === "Half Day"
-                            ? calculateDurationExcludingWeekends(item.fromDate, item.toDate)
-                            : dayjs(item.toDate).diff(dayjs(item.fromDate), "day") + 1)}{" "}
+                          (item.requestType === "Client Visit" ||
+                          item.requestType === "Work From Home" ||
+                          item.requestType === "Apply Leave" ||
+                          item.requestType === "Leave" ||
+                          item.requestType === "Half Day"
+                            ? calculateDurationExcludingWeekends(
+                                item.fromDate,
+                                item.toDate,
+                              )
+                            : dayjs(item.toDate).diff(
+                                dayjs(item.fromDate),
+                                "day",
+                              ) + 1)}{" "}
                         Day(s)
                       </p>
                     </td>
@@ -1033,7 +1221,8 @@ const LeaveManagement = () => {
                       <span
                         className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all whitespace-nowrap
                         ${
-                          item.status === "Approved" || item.status === "Cancellation Approved"
+                          item.status === "Approved" ||
+                          item.status === "Cancellation Approved"
                             ? "bg-green-50 text-green-600 border-green-200"
                             : item.status === "Pending"
                               ? "bg-yellow-50 text-yellow-600 border-yellow-200"
@@ -1042,36 +1231,28 @@ const LeaveManagement = () => {
                                 : item.status === "Requesting for Cancellation"
                                   ? "bg-yellow-100 text-yellow-700 border-yellow-300"
                                   : item.status === "Request Modified"
-
-
-
-
-
-
-
-                                  
                                     ? "bg-orange-50 text-orange-600 border-orange-200"
-                                    : item.status === "Rejected" || item.status === "Cancellation Rejected"
+                                    : item.status === "Rejected" ||
+                                        item.status === "Cancellation Rejected"
                                       ? "bg-red-50 text-red-600 border-red-200"
                                       : "bg-red-50 text-red-600 border-red-200"
                         }
                       `}
                       >
                         {item.status === "Pending" && (
-                          <RotateCcw
-                            size={12}
-                            className="animate-spin-slow"
-                          />
+                          <RotateCcw size={12} className="animate-spin-slow" />
                         )}
                         {item.status}
-                        {item.status === "Request Modified" && item.requestModifiedFrom && (
-                          <span className="opacity-70 border-l border-orange-300 pl-1.5 ml-1 text-[9px] font-bold">
-                            (TO {
-                              item.requestModifiedFrom === "Apply Leave" ? "LEAVE" : 
-                              item.requestModifiedFrom.toUpperCase()
-                            })
-                          </span>
-                        )}
+                        {item.status === "Request Modified" &&
+                          item.requestModifiedFrom && (
+                            <span className="opacity-70 border-l border-orange-300 pl-1.5 ml-1 text-[9px] font-bold">
+                              (TO{" "}
+                              {item.requestModifiedFrom === "Apply Leave"
+                                ? "LEAVE"
+                                : item.requestModifiedFrom.toUpperCase()}
+                              )
+                            </span>
+                          )}
                       </span>
                     </td>
                     <td className="py-4 px-4">
@@ -1083,7 +1264,8 @@ const LeaveManagement = () => {
                         >
                           <Eye size={20} />
                         </button>
-                        {item.status === "Pending" || item.status === "Approved" ? (
+                        {item.status === "Pending" ||
+                        item.status === "Approved" ? (
                           <button
                             onClick={() => handleCancel(item.id)}
                             className="p-2 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
@@ -1091,7 +1273,8 @@ const LeaveManagement = () => {
                           >
                             <XCircle size={20} />
                           </button>
-                        ) : item.status === "Requesting for Cancellation" && isUndoable(item) ? (
+                        ) : item.status === "Requesting for Cancellation" &&
+                          isUndoable(item) ? (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -1179,7 +1362,7 @@ const LeaveManagement = () => {
           {/* Modal Header */}
           <div className="pt-2 px-6">
             <div className="flex justify-between items-start">
-               <span className="text-sm font-black uppercase tracking-widest text-[#A3AED0]">
+              <span className="text-sm font-black uppercase tracking-widest text-[#A3AED0]">
                 {isViewMode ? "Viewing Application" : "Applying For"}
               </span>
               <button
@@ -1208,31 +1391,37 @@ const LeaveManagement = () => {
                 </p>
               </div>
             )}
-            
+
             {/* Leave Type Dropdown - Only for Apply Leave */}
-            {!isViewMode && (selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave") && (
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-[#2B3674] ml-1">
-                  Leave Type
-                </label>
-                <Select
-                  value={leaveDurationType}
-                  onChange={(val) => setLeaveDurationType(val)}
-                  className="w-full h-[48px] font-bold text-[#2B3674]"
-                  variant="borderless"
-                  dropdownStyle={{ borderRadius: "16px", padding: "8px" }}
-                  style={{ 
-                    backgroundColor: "#F4F7FE", 
-                    borderRadius: "16px",
-                    border: "1px solid transparent"
-                  }}
-                  suffixIcon={<ChevronDown className="text-[#4318FF]" />}
-                >
-                  <Select.Option value="Full Day">Full Day Application</Select.Option>
-                  <Select.Option value="Half Day">Half Day Application</Select.Option>
-                </Select>
-              </div>
-            )}
+            {!isViewMode &&
+              (selectedLeaveType === "Apply Leave" ||
+                selectedLeaveType === "Leave") && (
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-[#2B3674] ml-1">
+                    Leave Type
+                  </label>
+                  <Select
+                    value={leaveDurationType}
+                    onChange={(val) => setLeaveDurationType(val)}
+                    className="w-full h-[48px] font-bold text-[#2B3674]"
+                    variant="borderless"
+                    dropdownStyle={{ borderRadius: "16px", padding: "8px" }}
+                    style={{
+                      backgroundColor: "#F4F7FE",
+                      borderRadius: "16px",
+                      border: "1px solid transparent",
+                    }}
+                    suffixIcon={<ChevronDown className="text-[#4318FF]" />}
+                  >
+                    <Select.Option value="Full Day">
+                      Full Day Application
+                    </Select.Option>
+                    <Select.Option value="Half Day">
+                      Half Day Application
+                    </Select.Option>
+                  </Select>
+                </div>
+              )}
 
             {/* Title Field */}
             <div className="space-y-2">
@@ -1279,13 +1468,13 @@ const LeaveManagement = () => {
                   <>
                     <ConfigProvider theme={datePickerTheme}>
                       <DatePicker
-                        classNames={{ popup: "hide-other-months show-weekdays" }}
+                        classNames={{
+                          popup: "hide-other-months show-weekdays",
+                        }}
                         disabledDate={disabledDate}
                         className={`w-full px-5! py-3! rounded-[20px]! bg-[#F4F7FE]! border-none! focus:bg-white! focus:border-[#4318FF]! transition-all font-bold! text-[#2B3674]! shadow-none`}
                         value={
-                          formData.startDate
-                            ? dayjs(formData.startDate)
-                            : null
+                          formData.startDate ? dayjs(formData.startDate) : null
                         }
                         onChange={(date) => {
                           const newStartDate = date
@@ -1334,7 +1523,9 @@ const LeaveManagement = () => {
                   <>
                     <ConfigProvider theme={datePickerTheme}>
                       <DatePicker
-                        classNames={{ popup: "hide-other-months show-weekdays" }}
+                        classNames={{
+                          popup: "hide-other-months show-weekdays",
+                        }}
                         disabledDate={disabledEndDate}
                         className={`w-full px-5! py-3! rounded-[20px]! bg-[#F4F7FE]! border-none! focus:bg-white! focus:border-[#4318FF]! transition-all font-bold! text-[#2B3674]! shadow-none`}
                         value={
@@ -1373,11 +1564,23 @@ const LeaveManagement = () => {
                   {formData.startDate && formData.endDate
                     ? (() => {
                         if (isViewMode) return `${formData.duration} Day(s)`;
-                        
-                        if (selectedLeaveType === "Client Visit" || selectedLeaveType === "Work From Home" || selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave" || selectedLeaveType === "Half Day") {
-                            const baseDur = calculateDurationExcludingWeekends(formData.startDate, formData.endDate);
-                            const finalDur = leaveDurationType === "Half Day" ? baseDur * 0.5 : baseDur;
-                            return `${finalDur} Day(s)`;
+
+                        if (
+                          selectedLeaveType === "Client Visit" ||
+                          selectedLeaveType === "Work From Home" ||
+                          selectedLeaveType === "Apply Leave" ||
+                          selectedLeaveType === "Leave" ||
+                          selectedLeaveType === "Half Day"
+                        ) {
+                          const baseDur = calculateDurationExcludingWeekends(
+                            formData.startDate,
+                            formData.endDate,
+                          );
+                          const finalDur =
+                            leaveDurationType === "Half Day"
+                              ? baseDur * 0.5
+                              : baseDur;
+                          return `${finalDur} Day(s)`;
                         } else {
                           return `${dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1} Day(s)`;
                         }
@@ -1475,11 +1678,13 @@ const LeaveManagement = () => {
                   className="flex-1 py-4 rounded-2xl font-bold text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95 transform disabled:opacity-80"
                 >
                   {loading ? (
-                     <div className="flex items-center justify-center gap-2">
-                        <Loader2 className="animate-spin" size={20} />
-                        <span>Submitting...</span>
-                     </div>
-                  ) : "Submit Application"}
+                    <div className="flex items-center justify-center gap-2">
+                      <Loader2 className="animate-spin" size={20} />
+                      <span>Submitting...</span>
+                    </div>
+                  ) : (
+                    "Submit Application"
+                  )}
                 </button>
               </div>
             )}
@@ -1517,7 +1722,7 @@ const LeaveManagement = () => {
             ) : (
               "Yes, Cancel Request"
             )}
-          </button>
+          </button>,
         ]}
         centered
         closable={!isCancelling}
@@ -1532,7 +1737,8 @@ const LeaveManagement = () => {
           </h3>
 
           <p className="text-gray-500 font-medium leading-relaxed">
-            {(entities.find((e: any) => e.id === cancelModal.id)?.status === 'Approved') 
+            {entities.find((e: any) => e.id === cancelModal.id)?.status ===
+            "Approved"
               ? "This request is currently Approved. Cancelling it will submit a request to the Admin for approval. Are you sure?"
               : "Are you sure you want to cancel this request? This action cannot be undone."}
           </p>
@@ -1542,7 +1748,9 @@ const LeaveManagement = () => {
       {/* Undo Confirmation Modal */}
       <Modal
         open={undoModal.isOpen}
-        onCancel={() => !isUndoing && setUndoModal({ isOpen: true, request: null })}
+        onCancel={() =>
+          !isUndoing && setUndoModal({ isOpen: true, request: null })
+        }
         footer={[
           <button
             key="back"
@@ -1570,7 +1778,7 @@ const LeaveManagement = () => {
             ) : (
               "Yes, Revert it"
             )}
-          </button>
+          </button>,
         ]}
         centered
         closable={!isUndoing}
@@ -1592,14 +1800,19 @@ const LeaveManagement = () => {
             ? This will restore your original request status to{" "}
             <span className="text-green-600 font-bold uppercase tracking-wider">
               Approved
-            </span>.
+            </span>
+            .
           </p>
         </div>
       </Modal>
 
       {/* Partial Cancellation Modal */}
       <Modal
-        title={<div className="text-lg font-bold text-gray-800">Select Dates to Cancel</div>}
+        title={
+          <div className="text-lg font-bold text-gray-800">
+            Select Dates to Cancel
+          </div>
+        }
         open={isCancelDateModalVisible}
         onCancel={() => setIsCancelDateModalVisible(false)}
         footer={
@@ -1616,94 +1829,114 @@ const LeaveManagement = () => {
               onClick={handleConfirmDateCancel}
               disabled={selectedCancelDates.length === 0 || isCancelling}
               className={`px-8 py-2.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${
-                  selectedCancelDates.length === 0 ? 'bg-gray-400 cursor-not-allowed' : 
-                  isCancelling ? 'bg-red-400 cursor-not-allowed opacity-80' : 'bg-red-500 hover:bg-red-600 shadow-red-200 transform active:scale-95'
+                selectedCancelDates.length === 0
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : isCancelling
+                    ? "bg-red-400 cursor-not-allowed opacity-80"
+                    : "bg-red-500 hover:bg-red-600 shadow-red-200 transform active:scale-95"
               }`}
             >
               {isCancelling ? (
-                  <>
-                      <Loader2 className="animate-spin" size={18} />
-                      Processing...
-                  </>
+                <>
+                  <Loader2 className="animate-spin" size={18} />
+                  Processing...
+                </>
               ) : (
-                  `Confirm Cancel (${selectedCancelDates.length})`
+                `Confirm Cancel (${selectedCancelDates.length})`
               )}
             </button>
           </div>
         }
       >
         <div className="py-4">
-            {isLoadingDates ? (
-                <div className="flex justify-center p-8"><Loader2 className="animate-spin text-blue-600" /></div>
-            ) : cancellableDates.length === 0 ? (
-                <p className="text-gray-500 text-center">No dates found for this request.</p>
-            ) : (
-                <div className="space-y-4">
-                    <p className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-100">
-                        Select the dates you wish to cancel. <br/>
-                        <span className="text-xs text-blue-800 font-semibold">* You can only cancel dates before 12:00 PM of that particular day.</span>
-                    </p>
-                    
-                    {/* Select All Option */}
-                     {cancellableDates.some(d => d.isCancellable) && (
-                        <div className="flex items-center gap-3 px-3 py-2">
-                             <Checkbox
-                                checked={
-                                    cancellableDates.filter(d => d.isCancellable).length > 0 &&
-                                    cancellableDates.filter(d => d.isCancellable).every(d => selectedCancelDates.includes(d.date))
-                                }
-                                onChange={toggleSelectAll}
-                            />
-                            <span 
-                                onClick={toggleSelectAll}
-                                className="text-sm font-bold text-[#2B3674] cursor-pointer hover:text-[#4318FF] select-none"
-                            >
-                                Select All Available
-                            </span>
-                        </div>
-                     )}
+          {isLoadingDates ? (
+            <div className="flex justify-center p-8">
+              <Loader2 className="animate-spin text-blue-600" />
+            </div>
+          ) : cancellableDates.length === 0 ? (
+            <p className="text-gray-500 text-center">
+              No dates found for this request.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-100">
+                Select the dates you wish to cancel. <br />
+                <span className="text-xs text-blue-800 font-semibold">
+                  * You can only cancel dates before 12:00 PM of that particular
+                  day.
+                </span>
+              </p>
 
-                    <div className="max-h-[300px] overflow-y-auto border rounded-xl p-2 space-y-1">
-                        {cancellableDates.map((item) => (
-                            <div 
-                                key={item.date}
-                                className={`flex items-center justify-between p-3 rounded-lg border transition-all ${
-                                    !item.isCancellable ? 'bg-gray-50 border-gray-100 opacity-60' : 
-                                    selectedCancelDates.includes(item.date) ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200 hover:border-blue-300'
-                                }`}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <Checkbox
-                                        disabled={!item.isCancellable}
-                                        checked={selectedCancelDates.includes(item.date)}
-                                        onChange={() => toggleDateSelection(item.date)}
-                                    />
-                                    <div className="flex flex-col">
-                                        <span className={`font-semibold ${!item.isCancellable ? 'text-gray-400' : 'text-gray-800'}`}>
-                                            {formatModalDate(item.date)}
-                                        </span>
-                                        {!item.isCancellable && (
-                                            <span className="text-xs text-red-500 flex items-center gap-1">
-                                                <XCircle size={10} /> {item.reason}
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                                {item.isCancellable && (
-                                    <span className="text-xs text-green-600 font-medium px-2 py-0.5 bg-green-50 rounded">
-                                        Available
-                                    </span>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                    {/* Summary */}
-                    <div className="flex justify-between items-center text-sm font-medium pt-2 border-t">
-                        <span>Selected Days:</span>
-                        <span className="text-red-600">{selectedCancelDates.length}</span>
-                    </div>
+              {/* Select All Option */}
+              {cancellableDates.some((d) => d.isCancellable) && (
+                <div className="flex items-center gap-3 px-3 py-2">
+                  <Checkbox
+                    checked={
+                      cancellableDates.filter((d) => d.isCancellable).length >
+                        0 &&
+                      cancellableDates
+                        .filter((d) => d.isCancellable)
+                        .every((d) => selectedCancelDates.includes(d.date))
+                    }
+                    onChange={toggleSelectAll}
+                  />
+                  <span
+                    onClick={toggleSelectAll}
+                    className="text-sm font-bold text-[#2B3674] cursor-pointer hover:text-[#4318FF] select-none"
+                  >
+                    Select All Available
+                  </span>
                 </div>
-            )}
+              )}
+
+              <div className="max-h-[300px] overflow-y-auto border rounded-xl p-2 space-y-1">
+                {cancellableDates.map((item) => (
+                  <div
+                    key={item.date}
+                    className={`flex items-center justify-between p-3 rounded-lg border transition-all ${
+                      !item.isCancellable
+                        ? "bg-gray-50 border-gray-100 opacity-60"
+                        : selectedCancelDates.includes(item.date)
+                          ? "bg-red-50 border-red-200"
+                          : "bg-white border-gray-200 hover:border-blue-300"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Checkbox
+                        disabled={!item.isCancellable}
+                        checked={selectedCancelDates.includes(item.date)}
+                        onChange={() => toggleDateSelection(item.date)}
+                      />
+                      <div className="flex flex-col">
+                        <span
+                          className={`font-semibold ${!item.isCancellable ? "text-gray-400" : "text-gray-800"}`}
+                        >
+                          {formatModalDate(item.date)}
+                        </span>
+                        {!item.isCancellable && (
+                          <span className="text-xs text-red-500 flex items-center gap-1">
+                            <XCircle size={10} /> {item.reason}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {item.isCancellable && (
+                      <span className="text-xs text-green-600 font-medium px-2 py-0.5 bg-green-50 rounded">
+                        Available
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {/* Summary */}
+              <div className="flex justify-between items-center text-sm font-medium pt-2 border-t">
+                <span>Selected Days:</span>
+                <span className="text-red-600">
+                  {selectedCancelDates.length}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </Modal>
     </div>

@@ -1,32 +1,18 @@
 import { Clock } from "lucide-react";
-import { AttendanceStatus } from "../reducers/employeeAttendance.reducer";
+import { AttendanceStatus } from "./enums";
 
-interface Employee {
-  id: string;
-  fullName?: string;
-  name?: string;
-  employeeId?: string;
-  department: string;
-  todayHours: number;
-  status: string;
-  avatar: string;
-  deptColor: string;
-}
-
-interface DailyStatusMobileCardProps {
-  employees: Employee[];
-}
+import { DailyStatusMobileCardProps } from "./types";
 
 const DailyStatusMobileCard = ({ employees }: DailyStatusMobileCardProps) => {
   const getStatusBadgeClass = (status: string) => {
     const colors: any = {
-      [AttendanceStatus.FULL_DAY]: "bg-[#D1FAE5] text-[#05CD99]",
-      [AttendanceStatus.HALF_DAY]: "bg-[#FEF3C7] text-[#FFB020]",
-      [AttendanceStatus.LEAVE]: "bg-[#FEE2E2] text-[#EE5D50]",
-      [AttendanceStatus.NOT_UPDATED]: "bg-[#FEF3C7] text-[#FFB020]",
-      [AttendanceStatus.HOLIDAY]: "bg-[#DBEAFE] text-[#1890FF]",
-      [AttendanceStatus.WEEKEND]: "bg-[#FEE2E2] text-[#EE5D50]",
-      [AttendanceStatus.PENDING]: "bg-[#FEF3C7] text-[#FFB020]",
+      [AttendanceStatus.FullDay]: "bg-[#D1FAE5] text-[#05CD99]",
+      [AttendanceStatus.HalfDay]: "bg-[#FEF3C7] text-[#FFB020]",
+      [AttendanceStatus.Leave]: "bg-[#FEE2E2] text-[#EE5D50]",
+      [AttendanceStatus.NotUpdated]: "bg-[#FEF3C7] text-[#FFB020]",
+      [AttendanceStatus.Holiday]: "bg-[#DBEAFE] text-[#1890FF]",
+      [AttendanceStatus.Weekend]: "bg-[#FEE2E2] text-[#EE5D50]",
+      [AttendanceStatus.Pending]: "bg-[#FEF3C7] text-[#FFB020]",
     };
     return `px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${colors[status] || "bg-gray-100 text-gray-700"}`;
   };

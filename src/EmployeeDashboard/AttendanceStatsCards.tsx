@@ -4,23 +4,11 @@ import {
   TrendingUp,
   CheckCircle,
   Ban,
-  Clock,
   ClipboardList,
 } from "lucide-react";
 
-interface Props {
-  year: number;
-  month: number;
-  leaveBalance: any;
-  attendanceRecords: any[];
-  isIntern: boolean;
-  joiningDate?: string | Date;
-}
-
-const ENTITLEMENT = {
-  FULL_TIMER: 18,
-  INTERN: 12,
-} as const;
+import { AttendanceStatsCardsProps } from "./types";
+import { ENTITLEMENT, AttendanceLabels } from "./enums";
 
 const AttendanceStatsCards = ({
   year,
@@ -29,9 +17,7 @@ const AttendanceStatsCards = ({
   attendanceRecords,
   isIntern,
   joiningDate,
-}: Props) => {
-  const currentYearMonth = `${year}-${month.toString().padStart(2, "0")}`;
-
+}: AttendanceStatsCardsProps) => {
   // Calculate Recursive Stats based on User Rules
   // Rule 1: Add Accrual (1.5) at start of month
   // Rule 2: Deduct leaves taken
@@ -68,8 +54,15 @@ const AttendanceStatsCards = ({
           return d.getFullYear() === year && d.getMonth() + 1 === m;
         })
         .reduce((acc, r) => {
-          if (r.status === "Leave" || r.status === "Absent") return acc + 1;
-          if (r.status === "Half Day") return acc + 0.5;
+          if (
+            r.status === AttendanceLabels.Leave ||
+            r.status === "Leave" ||
+            r.status === AttendanceLabels.Absent ||
+            r.status === "Absent"
+          )
+            return acc + 1;
+          if (r.status === AttendanceLabels.HalfDay || r.status === "Half Day")
+            return acc + 0.5;
           return acc;
         }, 0);
     };
@@ -144,8 +137,8 @@ const AttendanceStatsCards = ({
   }, [attendanceRecords, year, month, isIntern, leaveBalance, joiningDate]);
 
   // Map new stats to existing variables for UI
+  // Map new stats to existing variables for UI
   const paidUsed = monthlyUsed;
-  const lopUsed = 0; // handled by monthlyLOP
   const approvedUsed = monthlyUsed;
   const finalLOP = monthlyLOP;
 
@@ -167,24 +160,11 @@ const AttendanceStatsCards = ({
 
   const balanceMonthly = closingBalance;
 
-  // We need these for compatibility if used elsewhere, but mainly we use the above
-  const paidUsedYTD = annualUsedYTD;
-  const paidUsedBefore = annualUsedYTD - monthlyUsed;
-
   // Display Static Carry Over as per user request
   // Logical calculation for availability stays in LOP/Balance
   const dynamicCarryOver = useMemo(() => {
     return monthlyOpening;
   }, [monthlyOpening]);
-
-  const pendingCount = useMemo(() => {
-    if (!Array.isArray(attendanceRecords)) return 0;
-    const recordsMonthly = attendanceRecords.filter((r) => {
-      const d = new Date(r.workingDate);
-      return d.getFullYear() === year && d.getMonth() + 1 === month;
-    });
-    return recordsMonthly.filter((r) => r.status === "Pending").length;
-  }, [month, year, attendanceRecords]);
 
   const calculatedMonthlyHours = useMemo(() => {
     if (!Array.isArray(attendanceRecords)) return 0;
@@ -303,7 +283,6 @@ const AttendanceStatsCards = ({
           </div>
         </div>
       </div>
-
 
       {/* Card 7 - Balance */}
       <div className="bg-linear-to-br from-[#4318FF] to-[#3B15E0] rounded-[20px] p-4 shadow-lg shadow-blue-500/30 flex flex-col items-start gap-3 relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 min-h-[140px]">

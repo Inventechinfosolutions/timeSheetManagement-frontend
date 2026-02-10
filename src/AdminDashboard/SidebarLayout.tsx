@@ -11,7 +11,6 @@ import {
   Eye,
   LayoutGrid,
   User,
-  ClipboardList,
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
@@ -20,18 +19,14 @@ import { useDispatch } from "react-redux";
 import { AppDispatch } from "../store";
 import { getEntities } from "../reducers/employeeDetails.reducer";
 
-interface SidebarLayoutProps {
-  children: React.ReactNode;
-  activeTab?: string;
-  onTabChange?: (tab: string) => void;
-  title?: string;
-}
+import { SidebarLayoutProps } from "./types";
+import { UserRole } from "./enums";
 
 const SidebarLayout = ({
   children,
   activeTab = "Dashboard",
   onTabChange,
-  title = "Admin",
+  title = UserRole.Admin,
 }: SidebarLayoutProps) => {
   // State management
   const [isHovered, setIsHovered] = useState(false);
@@ -109,14 +104,14 @@ const SidebarLayout = ({
       case "my-profile":
         return "My Profile";
       default:
-        return title === "Manager" ? "My Dashboard" : "System Dashboard";
+        return title === UserRole.Manager ? "My Dashboard" : "System Dashboard";
     }
   }, [tab, activeTab, title]);
 
   // Track expanded groups (independent collapsible sections)
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
     () => {
-      if (title !== "Manager") return {};
+      if (title !== UserRole.Manager) return {};
       // Expand groups that contain the active tab by default
       const initial: Record<string, boolean> = {};
       managerSidebarGroups.forEach((group) => {
@@ -288,7 +283,7 @@ const SidebarLayout = ({
           className="flex-1 px-4 mt-0.5 overflow-y-auto no-scrollbar"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
-          {title === "Manager"
+          {title === UserRole.Manager
             ? managerSidebarGroups.map((group) => {
                 const isExpanded = expandedGroups[group.title];
                 const hasActiveItem = group.items.some(

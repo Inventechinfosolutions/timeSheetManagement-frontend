@@ -1,16 +1,6 @@
 import { Edit, Eye } from "lucide-react";
 
-interface Employee {
-  id: string;
-  name: string;
-  department: string;
-}
-
-interface EmpWorkingDetailsMobileCardProps {
-  employees: Employee[];
-  onViewDetails: (empId: string) => void;
-  onViewTimesheet: (empId: string) => void;
-}
+import { EmpWorkingDetailsMobileCardProps } from "./types";
 
 const EmpWorkingDetailsMobileCard = ({
   employees,
