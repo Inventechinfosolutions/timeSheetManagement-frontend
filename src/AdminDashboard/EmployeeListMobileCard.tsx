@@ -1,6 +1,25 @@
 import { Pencil, RefreshCw, Eye } from "lucide-react";
 
-import { EmployeeListMobileCardProps } from "./types";
+interface Employee {
+  id: string;
+  name: string;
+  department: string;
+  rawId: string;
+  resetRequired: boolean;
+  isActive: boolean;
+  createdAt: string;
+  lastLoggedIn?: string | null;
+  isAdmin: boolean;
+}
+
+interface EmployeeListMobileCardProps {
+  employees: Employee[];
+  onViewDetails: (empId: string) => void;
+  onViewDashboard: (empId: string) => void;
+  onResendActivation: (empId: string) => void;
+  onToggleStatus: (empId: string) => void;
+  isAdmin: boolean;
+}
 
 const EmployeeListMobileCard = ({
   employees,

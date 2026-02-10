@@ -14,11 +14,10 @@ import {
   CheckCircle,
   X,
   AlertCircle,
+  Calendar,
 } from "lucide-react";
 import { resetPassword } from "../reducers/employeeDetails.reducer";
 import { EmploymentType } from "../types";
-import { EmployeeFormData } from "./types";
-import { Department, DashboardPath } from "./enums";
 
 const EmployeeDetailsView = () => {
   const { employeeId } = useParams<{ employeeId: string }>();
@@ -38,12 +37,12 @@ const EmployeeDetailsView = () => {
   const [resetError, setResetError] = useState("");
   const [resetSuccess, setResetSuccess] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [editedData, setEditedData] = useState<EmployeeFormData>({
+  const [editedData, setEditedData] = useState({
     fullName: "",
     employeeId: "",
     department: "",
     designation: "",
-    employmentType: "",
+    employmentType: "" as "" | EmploymentType,
     joiningDate: "",
     email: "",
   });
@@ -118,7 +117,7 @@ const EmployeeDetailsView = () => {
       <div className="flex flex-col items-center justify-center h-full text-gray-500">
         <p className="mb-4 text-xl font-bold">Employee not found</p>
         <button
-          onClick={() => navigate(`${DashboardPath.ADMIN}/employees`)}
+          onClick={() => navigate("/admin-dashboard/employees")}
           className="px-6 py-2 bg-[#4318FF] text-white rounded-xl shadow-lg hover:bg-[#3311CC] transition-all"
         >
           Back to Employee List
@@ -149,7 +148,7 @@ const EmployeeDetailsView = () => {
       const newEmployeeId = editedData.employeeId;
       if (newEmployeeId && newEmployeeId !== oldEmployeeId) {
         // Navigate to new employee ID URL
-        navigate(`${DashboardPath.ADMIN}/employees/${newEmployeeId}`, {
+        navigate(`/admin-dashboard/employees/${newEmployeeId}`, {
           replace: true,
         });
         // Fetch entity with new employee ID
@@ -425,14 +424,12 @@ const EmployeeDetailsView = () => {
                   }
                   className="w-full pl-11 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white text-[#1B2559] text-sm font-semibold transition-all appearance-none"
                 >
-                  <option value={Department.HR}>HR</option>
-                  <option value={Department.IT}>IT</option>
-                  <option value={Department.FINANCE}>Finance</option>
-                  <option value={Department.ADMIN}>Admin</option>
-                  <option value={Department.DESIGNER}>Designer</option>
-                  <option value={Department.BUSINESS_ANALYST}>
-                    Business Analyst
-                  </option>
+                  <option value="HR">HR</option>
+                  <option value="IT">IT</option>
+                  <option value="Finance">Finance</option>
+                  <option value="Admin">Admin</option>
+                  <option value="Designer">Designer</option>
+                  <option value="Business Analyst">Business Analyst</option>
                 </select>
               ) : (
                 <input

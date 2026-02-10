@@ -18,9 +18,6 @@ import {
 } from "../reducers/employeeDetails.reducer";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { RootState } from "../store";
-import { EmployeeFormData } from "./types";
-import { DashboardPath } from "./enums";
-import { EmploymentType } from "../types";
 
 const Registration = () => {
   const navigate = useNavigate();
@@ -28,13 +25,13 @@ const Registration = () => {
   const { loading, updateSuccess, errorMessage, entity, departments, roles } =
     useAppSelector((state: RootState) => state.employeeDetails);
 
-  const [formData, setFormData] = useState<EmployeeFormData>({
+  const [formData, setFormData] = useState({
     fullName: "",
     employeeId: "",
     department: "",
     role: "",
     designation: "",
-    employmentType: "",
+    employmentType: "" as "" | "FULL_TIMER" | "INTERN",
     email: "",
   });
   const [error, setError] = useState("");
@@ -67,7 +64,7 @@ const Registration = () => {
           employmentType: "",
           email: "",
         });
-        navigate(`${DashboardPath.ADMIN}/activation-success`, {
+        navigate("/admin-dashboard/activation-success", {
           state: navigationState,
         });
       }, 1000);
@@ -84,7 +81,12 @@ const Registration = () => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
-      [name]: name === "employeeId" ? value.toUpperCase() : value,
+      [name]:
+        name === "employeeId"
+          ? value.toUpperCase()
+          : name === "employmentType"
+            ? (value as "" | "FULL_TIMER" | "INTERN")
+            : value,
     });
   };
 
@@ -92,15 +94,8 @@ const Registration = () => {
     e.preventDefault();
     setError("");
 
-    const requiredKeys: (keyof EmployeeFormData)[] = [
-      "fullName",
-      "employeeId",
-      "department",
-      "role",
-      "designation",
-      "email",
-    ];
-    if (requiredKeys.some((k) => !formData[k])) {
+    const requiredKeys = ["fullName", "employeeId", "department", "role", "designation", "email"];
+    if (requiredKeys.some((k) => !(formData as Record<string, unknown>)[k])) {
       setError("Please fill in all required fields");
       return;
     }
@@ -117,7 +112,7 @@ const Registration = () => {
     <div className="w-full min-h-full flex flex-col items-center justify-start p-4 sm:p-6 lg:p-8 font-sans text-gray-800 relative pb-20">
       <div className="w-full max-w-4xl mb-6">
         <button
-          onClick={() => navigate(`${DashboardPath.ADMIN}/timesheet-list`)}
+          onClick={() => navigate("/admin-dashboard/timesheet-list")}
           className="flex items-center gap-2 text-gray-400 hover:text-[#4318FF] transition-colors group"
         >
           <ArrowLeft
@@ -320,10 +315,8 @@ const Registration = () => {
                     className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#4318FF]/20 focus:border-[#4318FF] outline-none transition-all text-gray-700 text-sm font-medium bg-white"
                   >
                     <option value="">Select Employment type</option>
-                    <option value={EmploymentType.FULL_TIMER}>
-                      Full time Employee
-                    </option>
-                    <option value={EmploymentType.INTERN}>Intern</option>
+                    <option value="FULL_TIMER">Full time Employee</option>
+                    <option value="INTERN">Intern</option>
                   </select>
                 </div>
               </div>

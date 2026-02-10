@@ -8,8 +8,19 @@ import {
   ClipboardList,
 } from "lucide-react";
 
-import { ENTITLEMENT, AttendanceStatus } from "./enums";
-import { AttendanceStatsCardsProps } from "./types";
+interface Props {
+  year: number;
+  month: number;
+  leaveBalance: any;
+  attendanceRecords: any[];
+  isIntern: boolean;
+  joiningDate?: string | Date;
+}
+
+const ENTITLEMENT = {
+  FULL_TIMER: 18,
+  INTERN: 12,
+} as const;
 
 const AttendanceStatsCards = ({
   year,
@@ -18,7 +29,7 @@ const AttendanceStatsCards = ({
   attendanceRecords,
   isIntern,
   joiningDate,
-}: AttendanceStatsCardsProps) => {
+}: Props) => {
   const currentYearMonth = `${year}-${month.toString().padStart(2, "0")}`;
 
   // Calculate Recursive Stats based on User Rules
@@ -57,12 +68,8 @@ const AttendanceStatsCards = ({
           return d.getFullYear() === year && d.getMonth() + 1 === m;
         })
         .reduce((acc, r) => {
-          if (
-            r.status === AttendanceStatus.LEAVE ||
-            r.status === AttendanceStatus.ABSENT
-          )
-            return acc + 1;
-          if (r.status === AttendanceStatus.HALF_DAY) return acc + 0.5;
+          if (r.status === "Leave" || r.status === "Absent") return acc + 1;
+          if (r.status === "Half Day") return acc + 0.5;
           return acc;
         }, 0);
     };
@@ -176,8 +183,7 @@ const AttendanceStatsCards = ({
       const d = new Date(r.workingDate);
       return d.getFullYear() === year && d.getMonth() + 1 === month;
     });
-    return recordsMonthly.filter((r) => r.status === AttendanceStatus.PENDING)
-      .length;
+    return recordsMonthly.filter((r) => r.status === "Pending").length;
   }, [month, year, attendanceRecords]);
 
   const calculatedMonthlyHours = useMemo(() => {
@@ -297,6 +303,7 @@ const AttendanceStatsCards = ({
           </div>
         </div>
       </div>
+
 
       {/* Card 7 - Balance */}
       <div className="bg-linear-to-br from-[#4318FF] to-[#3B15E0] rounded-[20px] p-4 shadow-lg shadow-blue-500/30 flex flex-col items-start gap-3 relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 min-h-[140px]">
