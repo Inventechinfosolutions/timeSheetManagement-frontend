@@ -66,8 +66,11 @@ const LeaveBalance = () => {
     const designation = (entity?.designation ?? entity?.designation_name ?? "")
       .toString()
       .toLowerCase();
-    return designation.includes("intern");
-  }, [entity?.designation, entity?.designation_name]);
+    const employmentType = (entity?.employmentType ?? "")
+      .toString()
+      .toUpperCase();
+    return designation.includes("intern") || employmentType === "INTERN";
+  }, [entity?.designation, entity?.designation_name, entity?.employmentType]);
   const entitlementLabel = isIntern
     ? "Intern (1 per month)"
     : "Full timer (1.5 per month)";
@@ -279,10 +282,10 @@ const LeaveBalance = () => {
         <h3 className="text-lg font-bold text-[#2B3674] mb-2">Policy</h3>
         <ul className="text-sm text-[#2B3674] space-y-1.5">
           <li>
-            <strong>Full timer:</strong> 18 leaves per year (1.5 per month)
+            <strong>Full time Employee:</strong>
           </li>
           <li>
-            <strong>Intern:</strong> 12 leaves per year (1 per month)
+            <strong>Intern:</strong>
           </li>
         </ul>
       </div>

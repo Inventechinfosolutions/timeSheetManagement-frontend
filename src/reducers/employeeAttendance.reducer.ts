@@ -59,8 +59,8 @@ interface AttendanceState {
   trendsLoading: boolean; // Specific loading state for Trends Graph
   error: string | null; // Global error message
   currentDayRecord: EmployeeAttendance | null; // Data for today's specific entry
-  workedDaysSummary: {
-    // Summary data for worked days calculation
+  yearlyRecords: EmployeeAttendance[]; // Records for the full year stats
+  workedDaysSummary: {                // Summary data for worked days calculation
     employeeId: string;
     startDate: string;
     endDate: string;
@@ -78,6 +78,7 @@ const initialState: AttendanceState = {
   trendsLoading: false,
   error: null,
   currentDayRecord: null,
+  yearlyRecords: [],
   workedDaysSummary: null,
   employeeMonthlyStats: {},
 };

@@ -65,11 +65,12 @@ export const getEntities = createAsyncThunk<
     sort?: string;
     order?: string;
     includeSelf?: boolean;
+    userStatus?: string;
   },
   ThunkConfig
 >(
   'employeeDetails/fetch_entity_list',
-  async ({ search, department, page, limit, sort, order, includeSelf }, { rejectWithValue }) => {
+  async ({ search, department, page, limit, sort, order, includeSelf, userStatus }, { rejectWithValue }) => {
     try {
       const params: any = {
         search: search || '',
@@ -84,6 +85,7 @@ export const getEntities = createAsyncThunk<
       if (sort) params.sort = sort;
       if (order) params.order = order;
       if (includeSelf) params.includeSelf = includeSelf;
+      if (userStatus) params.userStatus = userStatus;
 
       const queryParams = new URLSearchParams(params);
       const response = await axios.get(`${apiUrl}?${queryParams.toString()}`);

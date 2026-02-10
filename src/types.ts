@@ -1,3 +1,8 @@
+export enum EmploymentType {
+    FULL_TIMER = 'FULL_TIMER',
+    INTERN = 'INTERN',
+}
+
 export interface TimesheetEntry {
     loginTime: any;
     logoutTime: any;

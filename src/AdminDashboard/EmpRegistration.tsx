@@ -306,7 +306,7 @@ const Registration = () => {
 
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-0.5">
-                    Employment type (leave balance)
+                    Employment type
                   </label>
                   <select
                     name="employmentType"
@@ -314,9 +314,9 @@ const Registration = () => {
                     onChange={handleChange}
                     className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#4318FF]/20 focus:border-[#4318FF] outline-none transition-all text-gray-700 text-sm font-medium bg-white"
                   >
-                    <option value="">Not set (infer from designation)</option>
-                    <option value="FULL_TIMER">Full timer (18 leaves/year)</option>
-                    <option value="INTERN">Intern (12 leaves/year)</option>
+                    <option value="">Select Employment type</option>
+                    <option value="FULL_TIMER">Full time Employee</option>
+                    <option value="INTERN">Intern</option>
                   </select>
                 </div>
               </div>

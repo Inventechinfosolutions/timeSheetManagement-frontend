@@ -547,7 +547,7 @@ const EmployeeDetailsView = () => {
           </div>
  
           {/* Employment type (leave balance) */}
-          <div className="space-y-1.5">
+          {/* <div className="space-y-1.5">
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
               Employment type
             </label>
