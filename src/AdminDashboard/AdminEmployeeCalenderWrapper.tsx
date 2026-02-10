@@ -14,6 +14,7 @@ import {
   ShieldAlert,
   X,
   Calendar as CalendarIcon,
+  Loader2,
 } from "lucide-react";
 import AdminEmployeeCalendarView from "./AdminEmployeeCalendarView";
 import MobileResponsiveCalendarPage from "../EmployeeDashboard/MobileResponsiveCalendarPage";
@@ -22,6 +23,7 @@ import {
   fetchBlockers,
   deleteBlocker,
 } from "../reducers/timesheetBlocker.reducer";
+import Toast from "../components/Toast";
 
 const AdminEmployeeCalenderWrapper = () => {
   const { employeeId } = useParams<{ employeeId: string }>();
@@ -62,6 +64,10 @@ const AdminEmployeeCalenderWrapper = () => {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [reason, setReason] = useState("");
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [blockerToDelete, setBlockerToDelete] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 1024);
@@ -110,7 +116,7 @@ const AdminEmployeeCalenderWrapper = () => {
 
   const handleApplyBlock = async () => {
     if (!fromDate || !toDate) {
-      alert("Please select both dates");
+      setToast({ message: "Please select both dates", type: "error" });
       return;
     }
     try {
@@ -129,18 +135,28 @@ const AdminEmployeeCalenderWrapper = () => {
       setReason("");
       dispatch(fetchBlockers(employeeId!));
     } catch (error) {
-      alert("Failed to apply blocker");
+      setToast({ message: "Failed to apply blocker", type: "error" });
     }
   };
 
   const handleDeleteBlock = async (id: number) => {
-    if (window.confirm("Are you sure you want to remove this blocker?")) {
-      try {
-        await dispatch(deleteBlocker(id)).unwrap();
-        dispatch(fetchBlockers(employeeId!));
-      } catch (error) {
-        alert("Failed to remove blocker");
-      }
+    setBlockerToDelete(id);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDeleteBlock = async () => {
+    if (blockerToDelete === null) return;
+    
+    setIsDeleting(true);
+    try {
+      await dispatch(deleteBlocker(blockerToDelete)).unwrap();
+      dispatch(fetchBlockers(employeeId!));
+      setIsDeleteModalOpen(false);
+      setBlockerToDelete(null);
+    } catch (error) {
+      setToast({ message: "Failed to remove blocker", type: "error" });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -227,10 +243,34 @@ const AdminEmployeeCalenderWrapper = () => {
           {isMobile ? (
             <MobileResponsiveCalendarPage
               employeeId={employeeId}
-              navigationPath="/admin-dashboard/timesheet/:employeeId"
+              onBlockedClick={() => setIsModalOpen(true)}
+              onNavigateToDate={(timestamp) => {
+                const targetDate = new Date(timestamp);
+                const y = targetDate.getFullYear();
+                const m = String(targetDate.getMonth() + 1).padStart(2, '0');
+                const d = String(targetDate.getDate()).padStart(2, '0');
+                const dateStr = `${y}-${m}-${d}`;
+                const basePath = location.pathname.startsWith("/manager-dashboard") 
+                  ? "/manager-dashboard" 
+                  : "/admin-dashboard";
+                navigate(`${basePath}/timesheet/${employeeId}/${dateStr}`);
+              }}
             />
           ) : (
-            <AdminEmployeeCalendarView />
+            <AdminEmployeeCalendarView 
+                onBlockedClick={() => setIsModalOpen(true)} 
+                onNavigateToDate={(timestamp) => {
+                    const targetDate = new Date(timestamp);
+                    const y = targetDate.getFullYear();
+                    const m = String(targetDate.getMonth() + 1).padStart(2, '0');
+                    const d = String(targetDate.getDate()).padStart(2, '0');
+                    const dateStr = `${y}-${m}-${d}`;
+                    const basePath = location.pathname.startsWith("/manager-dashboard") 
+                      ? "/manager-dashboard" 
+                      : "/admin-dashboard";
+                    navigate(`${basePath}/timesheet/${employeeId}/${dateStr}`);
+                }}
+            />
           )}
         </div>
       </div>
@@ -349,6 +389,64 @@ const AdminEmployeeCalenderWrapper = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 z-[2001] flex items-center justify-center bg-[#1B254B]/40 backdrop-blur-sm animate-in fade-in duration-300 p-4">
+          <div className="w-full max-w-md bg-white rounded-3xl p-8 shadow-2xl border border-gray-100 animate-in zoom-in-95 duration-300">
+            <div className="flex flex-col items-center gap-4">
+              <div className="p-4 bg-red-50 rounded-2xl">
+                <ShieldAlert className="w-10 h-10 text-red-500" />
+              </div>
+              
+              <div className="text-center">
+                <h3 className="text-xl font-bold text-[#2B3674] mb-2">
+                  Remove Blocker?
+                </h3>
+                <p className="text-sm text-gray-500 font-medium">
+                  Are you sure you want to remove this blocker?
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3 w-full mt-2">
+                <button
+                  onClick={() => {
+                    setIsDeleteModalOpen(false);
+                    setBlockerToDelete(null);
+                  }}
+                  disabled={isDeleting}
+                  className="flex-1 py-3 bg-gray-100 text-[#2B3674] rounded-2xl font-bold hover:bg-gray-200 active:scale-95 transition-all text-sm uppercase tracking-wider disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDeleteBlock}
+                  disabled={isDeleting}
+                  className="flex-1 py-3 bg-red-500 text-white rounded-2xl font-bold shadow-lg shadow-red-500/20 hover:shadow-red-500/40 hover:-translate-y-0.5 active:scale-95 transition-all text-sm uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {isDeleting ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    "Remove"
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
       )}
     </div>
   );

@@ -1,4 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
+
 import {
   ChevronLeft,
   ChevronRight,
@@ -7,7 +9,9 @@ import {
   Loader2,
   Calendar as CalendarIcon,
   AlertCircle,
+  Lock,
 } from "lucide-react";
+
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { RootState } from "../store";
 import { fetchMonthlyAttendance } from "../reducers/employeeAttendance.reducer";
@@ -18,15 +22,18 @@ import {
   generateRangeEntries,
 } from "../utils/attendanceUtils";
 import { downloadPdf } from "../utils/downloadPdf";
+import { UserType } from "../reducers/user.reducer";
 
 interface MobileResponsiveCalendarPageProps {
   employeeId?: string;
   onNavigateToDate?: (timestamp: number) => void;
+  onBlockedClick?: () => void;
 }
 
 const MobileResponsiveCalendarPage = ({
   employeeId: propEmployeeId,
   onNavigateToDate,
+  onBlockedClick,
 }: MobileResponsiveCalendarPageProps) => {
   const dispatch = useAppDispatch();
 
@@ -36,6 +43,13 @@ const MobileResponsiveCalendarPage = ({
     (state: RootState) => state.employeeDetails,
   );
   const { currentUser } = useAppSelector((state: RootState) => state.user);
+
+  const isAdmin = currentUser?.userType === UserType.ADMIN;
+  const isManager =
+    currentUser?.userType === UserType.MANAGER ||
+    (currentUser?.role &&
+      currentUser.role.toUpperCase().includes("MANAGER"));
+
   // @ts-ignore
   const { holidays } = useAppSelector(
     (state: RootState) => state.masterHolidays || { holidays: [] },
@@ -44,8 +58,18 @@ const MobileResponsiveCalendarPage = ({
     (state: RootState) => state.timesheetBlocker || { blockers: [] },
   );
 
+  const location = useLocation();
+  const isMyRoute = location.pathname.includes("my-dashboard") || 
+                    location.pathname.includes("my-timesheet") || 
+                    location.pathname === "/employee-dashboard" || 
+                    location.pathname === "/employee-dashboard/";
+
   const currentEmployeeId =
-    propEmployeeId || entity?.employeeId || currentUser?.employeeId;
+    propEmployeeId ||
+    (isMyRoute 
+      ? (currentUser?.employeeId || currentUser?.loginId) 
+      : (entity?.employeeId || currentUser?.employeeId || currentUser?.loginId));
+
   const attendanceFetchedKey = useRef<string | null>(null);
 
   // Local State
@@ -198,8 +222,8 @@ const MobileResponsiveCalendarPage = ({
   };
 
   // 4. Helper: Check Holiday
-  const checkIsBlocked = (day: number) => {
-    if (!blockers || blockers.length === 0) return false;
+  const getBlocker = (day: number) => {
+    if (!blockers || blockers.length === 0) return null;
     const targetDate = new Date(
       currentDate.getFullYear(),
       currentDate.getMonth(),
@@ -207,13 +231,17 @@ const MobileResponsiveCalendarPage = ({
     );
     targetDate.setHours(0, 0, 0, 0);
 
-    return blockers.some((b: any) => {
+    return blockers.find((b: any) => {
       const start = new Date(b.blockedFrom);
       start.setHours(0, 0, 0, 0);
       const end = new Date(b.blockedTo);
       end.setHours(0, 0, 0, 0);
       return targetDate >= start && targetDate <= end;
     });
+  };
+
+  const checkIsBlocked = (day: number) => {
+    return !!getBlocker(day);
   };
 
   const checkIsHoliday = (day: number) => {
@@ -360,13 +388,26 @@ const MobileResponsiveCalendarPage = ({
             return (
               <div
                 key={day}
-                onClick={() => onNavigateToDate?.(day)}
+                onClick={() => {
+                  if (isBlocked && (isAdmin || isManager) && onBlockedClick) {
+                    onBlockedClick();
+                    return;
+                  }
+                  if (onNavigateToDate) {
+                    const targetDate = new Date(
+                      currentDate.getFullYear(),
+                      currentDate.getMonth(),
+                      day,
+                    );
+                    onNavigateToDate(targetDate.getTime());
+                  }
+                }}
                 className={`
                     aspect-[4/5] sm:aspect-square
                     rounded-xl relative
                     flex flex-col items-center justify-center
                     shadow-sm
-                    ${onNavigateToDate ? "cursor-pointer transition-all active:scale-95" : ""}
+                    ${(onNavigateToDate || (isBlocked && (isAdmin || isManager) && onBlockedClick)) ? "cursor-pointer transition-all active:scale-95" : ""}
                     ${colorClass}
                  `}
               >
@@ -378,6 +419,14 @@ const MobileResponsiveCalendarPage = ({
                   </div>
                 )}
                 <span className="text-sm sm:text-lg">{day}</span>
+                {isBlocked && (
+                  <div className="absolute inset-0 z-20 bg-black/40 backdrop-blur-[2px] rounded-xl flex flex-col items-center justify-center p-1 text-center pointer-events-none">
+                     <Lock size={12} className="text-white mb-0.5" />
+                     <span className="text-[6px] font-black text-white leading-none uppercase tracking-tighter">
+                       {(isAdmin || isManager) ? "Unblock" : `Contact ${getBlocker(day)?.blockedBy || "Admin"}`}
+                     </span>
+                  </div>
+                )}
               </div>
             );
           })}
