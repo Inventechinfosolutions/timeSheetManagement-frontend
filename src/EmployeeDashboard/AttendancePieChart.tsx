@@ -165,7 +165,7 @@ const AttendancePieChart = ({ data, currentMonth }: Props) => {
   const renderHeader = () => (
     <div className="w-full flex items-center justify-between mb-6">
       <h4 className="text-lg font-bold text-[#1B2559]">
-        Attendance Distribution
+        Attendance Distribution (Live Data)
       </h4>
 
       <div className="flex items-center gap-2">
