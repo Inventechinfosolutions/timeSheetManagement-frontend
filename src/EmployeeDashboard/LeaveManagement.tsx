@@ -146,6 +146,12 @@ const LeaveManagement = () => {
       return true;
     }
 
+    // Disable weekends (Saturday = 6, Sunday = 0)
+    const day = current.day();
+    if (day === 0 || day === 6) {
+      return true;
+    }
+
     // Check if this date is explicitly covered by a Cancellation request (Finalized or Pending)
     // If so, we enable it (return false), overriding any overlapping "Approved" parent request.
     const isCancelledDate = (entities || []).some((req: any) => {

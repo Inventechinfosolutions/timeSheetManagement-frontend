@@ -1,4 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
+
 import {
   ChevronLeft,
   ChevronRight,
@@ -7,7 +9,9 @@ import {
   Loader2,
   Calendar as CalendarIcon,
   AlertCircle,
+  Lock,
 } from "lucide-react";
+
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { RootState } from "../store";
 import { fetchMonthlyAttendance } from "../reducers/employeeAttendance.reducer";
@@ -54,8 +58,18 @@ const MobileResponsiveCalendarPage = ({
     (state: RootState) => state.timesheetBlocker || { blockers: [] },
   );
 
+  const location = useLocation();
+  const isMyRoute = location.pathname.includes("my-dashboard") || 
+                    location.pathname.includes("my-timesheet") || 
+                    location.pathname === "/employee-dashboard" || 
+                    location.pathname === "/employee-dashboard/";
+
   const currentEmployeeId =
-    propEmployeeId || entity?.employeeId || currentUser?.employeeId;
+    propEmployeeId ||
+    (isMyRoute 
+      ? (currentUser?.employeeId || currentUser?.loginId) 
+      : (entity?.employeeId || currentUser?.employeeId || currentUser?.loginId));
+
   const attendanceFetchedKey = useRef<string | null>(null);
 
   // Local State
@@ -379,7 +393,14 @@ const MobileResponsiveCalendarPage = ({
                     onBlockedClick();
                     return;
                   }
-                  onNavigateToDate?.(day);
+                  if (onNavigateToDate) {
+                    const targetDate = new Date(
+                      currentDate.getFullYear(),
+                      currentDate.getMonth(),
+                      day,
+                    );
+                    onNavigateToDate(targetDate.getTime());
+                  }
                 }}
                 className={`
                     aspect-[4/5] sm:aspect-square

@@ -64,17 +64,22 @@ const Calendar = ({
   const { blockers } = useAppSelector(
     (state: RootState) => state.timesheetBlocker,
   );
-  const { entities: leaveEntities = [] } = useAppSelector(
-    (state: RootState) => (state as any).leaveRequest || { entities: [] },
-  );
+
 
   const isAdmin = currentUser?.userType === UserType.ADMIN;
   const isManager = currentUser?.userType === UserType.MANAGER || 
                     (currentUser?.role && currentUser.role.toUpperCase().includes('MANAGER'));
+  const isMyRoute = location.pathname.includes("my-dashboard") || 
+                    location.pathname.includes("my-timesheet") || 
+                    location.pathname === "/employee-dashboard" || 
+                    location.pathname === "/employee-dashboard/";
+
   const currentEmployeeId =
     propEmployeeId ||
-    entity?.employeeId ||
-    (!isAdmin ? currentUser?.employeeId : undefined);
+    (isMyRoute 
+      ? (currentUser?.employeeId || currentUser?.loginId) 
+      : (entity?.employeeId || currentUser?.employeeId || currentUser?.loginId));
+
   // const holidaysFetched = useRef(false);
   const attendanceFetchedKey = useRef<string | null>(null);
 
@@ -678,11 +683,22 @@ const Calendar = ({
                     if (onNavigateToDate) {
                       onNavigateToDate(timestamp);
                     } else {
-                      const dateStr = targetDate.toISOString().split("T")[0];
+                      const y = targetDate.getFullYear();
+                      const m = String(targetDate.getMonth() + 1).padStart(2, '0');
+                      const d = String(targetDate.getDate()).padStart(2, '0');
+                      const dateStr = `${y}-${m}-${d}`;
                       const isPrivilegedUser = 
                         currentUser?.userType === UserType.ADMIN || 
                         currentUser?.userType === UserType.MANAGER || 
                         currentUser?.userType === UserType.TEAM_LEAD;
+
+                      const isSelfView = currentEmployeeId === currentUser?.employeeId;
+                      const isViewAttendance = location.pathname.includes("/view-attendance/");
+
+                      // Disable navigation for Admin and Manager on dashboard or view-attendance pages
+                      if (isPrivilegedUser && (isSelfView || isViewAttendance) && (location.pathname.startsWith("/manager-dashboard") || location.pathname.startsWith("/admin-dashboard"))) {
+                        return;
+                      }
 
                       // Privileged user viewing someone else's calendar (View Mode)
                       if (viewOnly && isPrivilegedUser && currentEmployeeId && currentEmployeeId !== currentUser?.employeeId) {
@@ -692,7 +708,7 @@ const Calendar = ({
                         
                         navigate(`${basePath}/timesheet/${currentEmployeeId}/${dateStr}`, {
                           state: {
-                            selectedDate: targetDate.toISOString(),
+                            selectedDate: dateStr,
                             timestamp: Date.now(),
                           },
                         });
@@ -706,13 +722,13 @@ const Calendar = ({
                             
                         navigate(`${basePath}/my-timesheet`, {
                           state: {
-                            selectedDate: targetDate.toISOString(),
+                            selectedDate: dateStr,
                             timestamp: Date.now(),
                           }
                         });
                       }
-                    }
-                  }}
+                      }
+                    }}
                   className={`relative flex flex-col items-start justify-between p-2 rounded-2xl border transition-all duration-300 cursor-pointer min-h-[72px] group ${cellClass}`}
                   title={isBlocked ? `Blocked by Admin: ${blockedReason}` : ""}
                 >

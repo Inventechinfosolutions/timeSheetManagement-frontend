@@ -70,7 +70,28 @@ const TodayAttendance = ({
     (state: RootState) => state.leaveRequest,
   );
 
-  const currentEmployeeId = entity?.employeeId;
+  const isMyRoute =
+    location.pathname.includes("my-dashboard") ||
+    location.pathname.includes("my-timesheet") ||
+    location.pathname === "/employee-dashboard" ||
+    location.pathname === "/employee-dashboard/";
+
+  const currentEmployeeId = isMyRoute
+    ? currentUser?.employeeId || currentUser?.loginId
+    : entity?.employeeId || currentUser?.employeeId || currentUser?.loginId;
+
+  // Debug log for manager dashboard data issue
+  useEffect(() => {
+    if (isMyRoute) {
+      console.log("My Route Debug:", {
+        pathname: location.pathname,
+        "currentUser.loginId": currentUser?.loginId,
+        "currentUser.employeeId": currentUser?.employeeId,
+        currentEmployeeId,
+      });
+    }
+  }, [location.pathname, currentUser, currentEmployeeId, isMyRoute]);
+
   const detailsFetched = useRef(false);
   const attendanceFetchedKey = useRef<string | null>(null);
 
@@ -238,32 +259,46 @@ const TodayAttendance = ({
       if (setScrollToDate) setScrollToDate(timestamp);
 
       const targetDate = new Date(timestamp);
-
-      // Dynamic base path detection
-      const isPrivilegedUser = 
-        currentUser?.userType === UserType.ADMIN || 
-        currentUser?.userType === UserType.MANAGER || 
+      const isPrivilegedUser =
+        currentUser?.userType === UserType.ADMIN ||
+        currentUser?.userType === UserType.MANAGER ||
         currentUser?.userType === UserType.TEAM_LEAD;
 
-      // Handle Privileged User viewing someone else (ONLY when explicitly in view-only mode)
-      if (viewOnly && isPrivilegedUser && currentEmployeeId && currentEmployeeId !== currentUser?.employeeId) {
-        const dateStr = targetDate.toISOString().split("T")[0];
-        const basePath = location.pathname.startsWith("/manager-dashboard") 
-          ? "/manager-dashboard" 
+      const isSelfView = !currentEmployeeId || currentEmployeeId === currentUser?.employeeId;
+      const isViewAttendance = location.pathname.includes("/view-attendance/");
+
+      // Disable navigation for Admin and Manager on dashboard or view-attendance pages
+      if (isPrivilegedUser && (isSelfView || isViewAttendance) && (location.pathname.startsWith("/manager-dashboard") || location.pathname.startsWith("/admin-dashboard"))) {
+        return;
+      }
+
+      // Handle Privileged User viewing someone else (fallback if not blocked above)
+      if (
+        viewOnly &&
+        isPrivilegedUser &&
+        currentEmployeeId &&
+        currentEmployeeId !== currentUser?.employeeId
+      ) {
+        const y = targetDate.getFullYear();
+        const m = String(targetDate.getMonth() + 1).padStart(2, '0');
+        const d = String(targetDate.getDate()).padStart(2, '0');
+        const dateStr = `${y}-${m}-${d}`;
+        const basePath = location.pathname.startsWith("/manager-dashboard")
+          ? "/manager-dashboard"
           : "/admin-dashboard";
-          
+
         navigate(`${basePath}/timesheet/${currentEmployeeId}/${dateStr}`, {
           state: {
-            selectedDate: targetDate.toISOString(),
-            timestamp: targetDate.getTime(),
-          }
+            selectedDate: dateStr,
+            timestamp: Date.now(), // Use unique timestamp for highlight trigger
+          },
         });
         return;
       }
 
       // If viewOnly is true and not a privileged user viewing someone else, we stop here
       if (viewOnly) return;
-      
+
       // Dynamic base path detection for self-view
 
       // Dynamic base path detection
@@ -275,9 +310,14 @@ const TodayAttendance = ({
       }
 
       const navTarget = `${basePath}/my-timesheet`;
+      const y = targetDate.getFullYear();
+      const m = String(targetDate.getMonth() + 1).padStart(2, '0');
+      const d = String(targetDate.getDate()).padStart(2, '0');
+      const dateStr = `${y}-${m}-${d}`;
+
       const state = {
-        selectedDate: targetDate.toISOString(),
-        timestamp: targetDate.getTime(),
+        selectedDate: dateStr,
+        timestamp: Date.now(), // Use unique timestamp for highlight trigger
       };
 
       if (setActiveTab) {
@@ -286,7 +326,15 @@ const TodayAttendance = ({
         navigate(navTarget, { state });
       }
     },
-    [viewOnly, setScrollToDate, setActiveTab, navigate, location.pathname, currentUser, currentEmployeeId],
+    [
+      viewOnly,
+      setScrollToDate,
+      setActiveTab,
+      navigate,
+      location.pathname,
+      currentUser,
+      currentEmployeeId,
+    ],
   );
 
   const handleNavigate = (timestamp: number) => {
@@ -316,7 +364,7 @@ const TodayAttendance = ({
         <div className="px-6 py-5 bg-linear-to-r from-blue-100 via-blue-50 to-white border-b border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-[#1B2559]">
-              Employee Dashboard
+              {currentUser?.userType === UserType.MANAGER ? "Manager Dashboard" : "Employee Dashboard"}
             </h1>
             <p className="text-sm text-gray-500 font-medium mt-1">
               Welcome back,{" "}
@@ -402,8 +450,8 @@ const TodayAttendance = ({
             />
           </div>
           <div className="w-full">
-            <WorkTrendsGraph 
-              employeeId={currentEmployeeId} 
+            <WorkTrendsGraph
+              employeeId={currentEmployeeId}
               currentMonth={calendarDate}
             />
           </div>
@@ -442,13 +490,8 @@ const TodayAttendance = ({
                 setCalendarDate(date);
                 fetchAttendanceData(date);
               }}
-              onNavigateToDate={(day) => {
-                const targetDate = new Date(
-                  calendarDate.getFullYear(),
-                  calendarDate.getMonth(),
-                  day,
-                );
-                handleNavigate(targetDate.getTime());
+              onNavigateToDate={(timestamp) => {
+                handleNavigate(timestamp);
               }}
             />
           </div>

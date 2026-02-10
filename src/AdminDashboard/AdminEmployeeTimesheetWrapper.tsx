@@ -24,7 +24,7 @@ import {
 import Toast from "../components/Toast";
 
 const AdminEmployeeTimesheetWrapper = () => {
-  const { employeeId } = useParams<{ employeeId: string }>();
+  const { employeeId, date: urlDate } = useParams<{ employeeId: string; date?: string }>();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const location = useLocation();
@@ -50,8 +50,19 @@ const AdminEmployeeTimesheetWrapper = () => {
   const monthParam = queryParams.get("month");
   const yearParam = queryParams.get("year");
 
-  // Initialize date based on query params or default to current date
+  // Initialize date based on URL param, query params or default to current date
   const initialDate = useMemo(() => {
+    if (urlDate) {
+      const parts = urlDate.split("-");
+      if (parts.length === 3) {
+        const d = new Date(
+          parseInt(parts[0]),
+          parseInt(parts[1]) - 1,
+          parseInt(parts[2])
+        );
+        if (!isNaN(d.getTime())) return d;
+      }
+    }
     if (monthParam && yearParam) {
       const month = parseInt(monthParam, 10);
       const year = parseInt(yearParam, 10);
@@ -60,7 +71,7 @@ const AdminEmployeeTimesheetWrapper = () => {
       }
     }
     return new Date();
-  }, [monthParam, yearParam]);
+  }, [urlDate, monthParam, yearParam]);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -275,6 +286,7 @@ const AdminEmployeeTimesheetWrapper = () => {
           employeeId={employeeId!}
           readOnly={false}
           now={initialDate}
+          selectedDateId={urlDate ? initialDate.getTime() : (location.state?.timestamp || null)}
           onBlockedClick={() => setIsModalOpen(true)}
           containerClassName="h-full overflow-visible shadow-none border-none bg-transparent"
         />
