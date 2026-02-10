@@ -625,7 +625,8 @@ const Requests = () => {
             (request.requestType === "Client Visit" ||
               request.requestType === "Work From Home" ||
               request.requestType === "Apply Leave" ||
-              request.requestType === "Leave") &&
+              request.requestType === "Leave" ||
+              request.requestType === "Half Day") &&
             (isWeekend(currentDateObj) || isHoliday(currentDateObj))
           ) {
             continue;
@@ -834,7 +835,7 @@ const Requests = () => {
       case "Client Visit":
         return <MapPin size={18} className="text-orange-500" />;
       case "Half Day":
-        return <Clock size={18} className="text-orange-500" />;
+        return <Clock size={18} className="text-[#E31C79]" />;
       default:
         return <Briefcase size={18} className="text-blue-500" />;
     }
@@ -1114,7 +1115,8 @@ const Requests = () => {
                           (req.requestType === "Client Visit" ||
                           req.requestType === "Work From Home" ||
                           req.requestType === "Apply Leave" ||
-                          req.requestType === "Leave"
+                          req.requestType === "Leave" ||
+                          req.requestType === "Half Day"
                             ? calculateDurationExcludingWeekends(
                                 req.fromDate,
                                 req.toDate,

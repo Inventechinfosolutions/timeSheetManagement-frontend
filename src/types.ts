@@ -11,7 +11,6 @@ export interface TimesheetEntry {
     isFuture: boolean;
 
     // Editable Fields
-    // location, loginTime, logoutTime removed as per DB schema changes
     status: 'Full Day' | 'Half Day' | 'WFH' | 'Client Visit' | 'Pending' | 'Leave' | 'Absent' | 'Not Updated' | 'Holiday' | 'Weekend' |'Blocked' | undefined;
     attendanceType?: 'login' | 'logout' | null;
     isEditing: boolean;
@@ -20,4 +19,5 @@ export interface TimesheetEntry {
     workLocation?: string;
     sourceRequestId?: number; // Track auto-generated records
 }
-   
+
+export type EmploymentType = "FULL_TIMER" | "INTERN";

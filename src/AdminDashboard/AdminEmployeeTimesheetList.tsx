@@ -22,6 +22,7 @@ import {
   fetchAllDashboardStats,
 } from "../reducers/employeeAttendance.reducer";
 import EmployeeTimeSheetMobileCard from "./EmployeeTimeSheetMobileCard";
+import Toast from "../components/Toast";
 
 const AdminEmployeeTimesheetList = () => {
   const navigate = useNavigate();
@@ -61,6 +62,7 @@ const AdminEmployeeTimesheetList = () => {
   const [downloadMonth, setDownloadMonth] = useState(selectedMonth);
   const [downloadYear, setDownloadYear] = useState(selectedYear);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
   // Handler to open download modal with current selected month/year
   const handleOpenDownloadModal = () => {
@@ -77,7 +79,7 @@ const AdminEmployeeTimesheetList = () => {
       setShowDownloadModal(false);
     } catch (error) {
       console.error("Download failed", error);
-      alert("Failed to download report");
+      setToast({ message: "Failed to download report", type: "error" });
     } finally {
       setIsDownloading(false);
     }
@@ -644,6 +646,15 @@ const AdminEmployeeTimesheetList = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
       )}
     </div>
   );
