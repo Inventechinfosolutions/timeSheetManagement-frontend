@@ -392,8 +392,7 @@ const attendanceSlice = createSlice({
           action: PayloadAction<EmployeeAttendance[]>,
         ) => {
           state.loading = false;
-          // Store date range records for leave management
-          // We'll access these records directly from the action payload when needed
+          state.yearlyRecords = action.payload;
         },
       )
       .addCase(
