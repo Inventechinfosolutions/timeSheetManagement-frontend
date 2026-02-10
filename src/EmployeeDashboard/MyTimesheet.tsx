@@ -6,8 +6,8 @@ import {
   Save,
   AlertCircle,
   Lock,
-  Rocket,
   Sparkles,
+  Rocket
 } from "lucide-react";
 import { TimesheetEntry } from "../types";
 import { useAppDispatch, useAppSelector } from "../hooks";

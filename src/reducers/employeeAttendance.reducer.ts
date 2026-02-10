@@ -61,7 +61,6 @@ interface AttendanceState {
   currentDayRecord: EmployeeAttendance | null; // Data for today's specific entry
   yearlyRecords: EmployeeAttendance[]; // Records for the full year stats
   workedDaysSummary: {                // Summary data for worked days calculation
-
     employeeId: string;
     startDate: string;
     endDate: string;

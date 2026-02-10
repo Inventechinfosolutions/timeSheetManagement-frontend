@@ -561,10 +561,8 @@ const EmployeeDetailsView = () => {
               onChange={(e) =>
                 setEditedData({
                   ...editedData,
-                  employmentType: e.target.value as
-                    | ""
-                    | "FULL_TIMER"
-                    | "INTERN",
+                  employmentType: e.target.value as "" | EmploymentType,
+
                 })
               }
               className={`w-full pl-11 pr-4 py-2.5 border-2 rounded-xl text-[#1B2559] text-sm font-semibold transition-all appearance-none ${isEditing
