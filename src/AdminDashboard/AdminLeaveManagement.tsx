@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useAppDispatch, useAppSelector } from "../hooks";
-import { DatePicker, ConfigProvider, Select } from "antd";
+import { DatePicker, ConfigProvider, Select, Checkbox, Modal } from "antd";
 import dayjs from "dayjs";
 import {
   getLeaveHistory,
@@ -14,6 +14,10 @@ import {
   deleteLeaveRequestFile,
   getLeaveRequestFiles,
   getLeaveRequestById,
+  getLeaveCancellableDates,
+  cancelRequestDates,
+  updateParentRequest,
+  submitRequestModification,
 } from "../reducers/leaveRequest.reducer";
 import { getEntities } from "../reducers/employeeDetails.reducer";
 import {
@@ -69,7 +73,7 @@ const AdminLeaveManagement = () => {
   const {
     entities = [],
     totalItems,
-    totalPages: totalPagesFromRedux,
+    totalPages = 0,
     stats = null,
     loading: loadingRequests,
     error,
@@ -99,6 +103,11 @@ const AdminLeaveManagement = () => {
     isOpen: boolean;
     id: number | null;
   }>({ isOpen: false, id: null });
+  const [isCancelDateModalVisible, setIsCancelDateModalVisible] = useState(false);
+  const [cancellableDates, setCancellableDates] = useState<any[]>([]);
+  const [selectedCancelDates, setSelectedCancelDates] = useState<string[]>([]);
+  const [isLoadingDates, setIsLoadingDates] = useState(false);
+  const [requestToCancel, setRequestToCancel] = useState<any>(null);
   const [selectedLeaveType, setSelectedLeaveType] = useState("");
   const [formData, setFormData] = useState({
     title: "",
@@ -423,6 +432,25 @@ const AdminLeaveManagement = () => {
     return count;
   };
 
+  // Helper to get all working dates in a range
+  const getWorkingDatesInRange = (
+    startDate: string,
+    endDate: string,
+  ): string[] => {
+    if (!startDate || !endDate) return [];
+    const start = dayjs(startDate);
+    const end = dayjs(endDate);
+    const dates: string[] = [];
+    let current = start;
+    while (current.isBefore(end) || current.isSame(end, "day")) {
+      if (!isWeekend(current) && !isHoliday(current)) {
+        dates.push(current.format("YYYY-MM-DD"));
+      }
+      current = current.add(1, "day");
+    }
+    return dates;
+  };
+
   const handleSubmit = async () => {
     if (!validateForm() || !selectedEmployee) return;
 
@@ -476,6 +504,7 @@ const AdminLeaveManagement = () => {
             : 0;
       }
 
+      // 1. Submit the Request (Pending State)
       const submitAction = await dispatch(
         submitLeaveRequest({
           employeeId: selectedEmployee.employeeId || selectedEmployee.id,
@@ -499,69 +528,6 @@ const AdminLeaveManagement = () => {
         return;
       }
 
-      // Update employee timesheet/attendance immediately (same as manager-approval flow in Requests.tsx)
-      // This ensures the employee calendar shows Leave/WFH/Client Visit for the approved range.
-      const startDate = dayjs(formData.startDate);
-      const endDate = dayjs(formData.endDate);
-      const diffDays = endDate.diff(startDate, "day");
-      const attendancePayload: any[] = [];
-
-      for (let i = 0; i <= diffDays; i++) {
-        const currentDateObj = startDate.clone().add(i, "day"); // Clone first to avoid mutation
-        const currentDate = currentDateObj.format("YYYY-MM-DD");
-
-        // For Client Visit, WFH, and Leave, skip weekend dates and holidays (don't send to backend)
-        if (
-          (finalRequestType === "Client Visit" ||
-            finalRequestType === "Work From Home" ||
-            finalRequestType === "Apply Leave" ||
-            finalRequestType === "Leave" ||
-            finalRequestType === "Half Day") &&
-          (isWeekend(currentDateObj) || isHoliday(currentDateObj))
-        ) {
-          continue; // Skip weekends and holidays for Client Visit, WFH, and Leave
-        }
-
-        const attendanceData: any = {
-          employeeId: selectedEmployee.employeeId || selectedEmployee.id,
-          workingDate: currentDate,
-          totalHours: 0,
-        };
-
-        if (
-          finalRequestType === "Apply Leave" ||
-          finalRequestType === "Leave"
-        ) {
-          attendanceData.status = AttendanceStatus.LEAVE;
-        } else if (finalRequestType === "Work From Home") {
-          // Backend expects workLocation strings (kept consistent with Requests.tsx)
-          attendanceData.workLocation = "WFH";
-        } else if (finalRequestType === "Client Visit") {
-          attendanceData.workLocation = "Client Visit";
-        } else if (finalRequestType === "Half Day") {
-          attendanceData.status = "Half Day";
-          // Preserve existing workLocation (WFH/CV) if it exists
-          const existingRecord = dateRangeAttendanceRecords.find((r: any) => {
-            const rDate = r.workingDate || r.working_date;
-            const normDate =
-              typeof rDate === "string"
-                ? rDate.split("T")[0]
-                : dayjs(rDate).format("YYYY-MM-DD");
-            return normDate === currentDate;
-          });
-          if (existingRecord?.workLocation || existingRecord?.work_location) {
-            attendanceData.workLocation =
-              existingRecord.workLocation || existingRecord.work_location;
-          }
-        }
-
-        attendancePayload.push(attendanceData);
-      }
-
-      if (attendancePayload.length > 0) {
-        await dispatch(submitBulkAttendance(attendancePayload)).unwrap();
-      }
-
       const createdRequest: any = submitAction.payload;
       const createdId = createdRequest?.id;
 
@@ -576,6 +542,154 @@ const AdminLeaveManagement = () => {
         return;
       }
 
+      // 2. SMART OVERLAP HANDLING (Victim Logic)
+      // Mirroring logic from Requests.tsx to clean up overlapping WFH/CV/HalfDay requests
+      if (createdRequest) {
+        let victimTypes: string[] = [];
+        const reqType = (finalRequestType || "").toLowerCase();
+
+        if (reqType === "apply leave" || reqType === "leave") {
+            victimTypes = ["work from home", "client visit", "apply leave", "leave", "wfh", "cv"];
+        } else if (reqType === "work from home" || reqType === "wfh") {
+            victimTypes = ["client visit", "work from home", "cv", "wfh"];
+        } else if (reqType === "client visit" || reqType === "cv") {
+            victimTypes = ["work from home", "client visit", "wfh", "cv"];
+        } else if (reqType === "half day") {
+            victimTypes = ["apply leave", "leave", "half day"];
+        }
+
+        const requestWorkingDates = getWorkingDatesInRange(
+            formData.startDate,
+            formData.endDate
+        );
+        let modificationHandledDates: string[] = [];
+
+        // 1. Get potential victims from the Redux entities (Leave History)
+        // We ensure we are looking at the selected employee's history
+        const overlaps = (entities || [])
+            .filter(
+                (e: any) =>
+                    (e.employeeId || e.id) === (selectedEmployee.employeeId || selectedEmployee.id) &&
+                    e.status === "Approved" &&
+                    victimTypes.includes((e.requestType || "").toLowerCase()) &&
+                    e.id !== createdId
+            )
+            .sort((a: any, b: any) => b.id - a.id);
+
+        for (const victim of overlaps) {
+            const victimWorkingDates = getWorkingDatesInRange(
+                victim.fromDate,
+                victim.toDate
+            );
+
+            // A victim only overlaps if it claims dates that are in the new request's range
+            // AND not already handled by a newer request
+            const intersectionDates = victimWorkingDates.filter(
+                (d) => requestWorkingDates.includes(d) && !modificationHandledDates.includes(d)
+            );
+
+            if (intersectionDates.length > 0) {
+                const datesNeedingModification = intersectionDates;
+
+                if (datesNeedingModification.length > 0) {
+                    const iStart = datesNeedingModification[0];
+                    const iEnd = datesNeedingModification[datesNeedingModification.length - 1];
+
+                    await dispatch(
+                        submitRequestModification({
+                            id: victim.id,
+                            payload: {
+                                fromDate: iStart,
+                                toDate: iEnd,
+                                duration: datesNeedingModification.length,
+                                sourceRequestId: createdId,
+                                sourceRequestType: finalRequestType,
+                            },
+                        })
+                    ).unwrap();
+
+                    modificationHandledDates = [...new Set([...modificationHandledDates, ...datesNeedingModification])];
+                }
+
+                // Handle remaining segments of the victim request
+                const remainingVictimDates = victimWorkingDates.filter(
+                    (d) => !intersectionDates.includes(d)
+                );
+
+                if (remainingVictimDates.length === 0) {
+                     await dispatch(
+                        updateLeaveRequestStatus({
+                             id: victim.id,
+                             status: "Cancelled",
+                        })
+                     ).unwrap();
+                } else {
+                     // Check for gaps
+                     const segments: string[][] = [];
+                     let currentSegment: string[] = [];
+
+                     for (let i = 0; i < remainingVictimDates.length; i++) {
+                         const date = dayjs(remainingVictimDates[i]);
+                         if (currentSegment.length === 0) {
+                             currentSegment.push(remainingVictimDates[i]);
+                         } else {
+                             const prevDate = dayjs(currentSegment[currentSegment.length - 1]);
+                             let nextWorkingDay = prevDate.add(1, "day");
+                             while(isWeekend(nextWorkingDay) || isHoliday(nextWorkingDay)) {
+                                 nextWorkingDay = nextWorkingDay.add(1, "day");
+                             }
+
+                             if (date.isSame(nextWorkingDay, "day")) {
+                                 currentSegment.push(remainingVictimDates[i]);
+                             } else {
+                                 segments.push(currentSegment);
+                                 currentSegment = [remainingVictimDates[i]];
+                             }
+                         }
+                     }
+                     segments.push(currentSegment);
+
+                     if (segments.length === 1) {
+                         // Contiguous -> Just update parent
+                         await dispatch(
+                             updateParentRequest({
+                                 parentId: victim.id,
+                                 duration: remainingVictimDates.length,
+                                 fromDate: remainingVictimDates[0],
+                                 toDate: remainingVictimDates[remainingVictimDates.length - 1],
+                             })
+                         ).unwrap();
+                     } else {
+                         // Split occurred -> Cancel original and create new Approved segments
+                         await dispatch(
+                             updateLeaveRequestStatus({
+                                 id: victim.id,
+                                 status: "Cancelled",
+                             })
+                         ).unwrap();
+
+                         for (const segment of segments) {
+                             await dispatch(
+                                 submitRequestModification({
+                                     id: victim.id,
+                                     payload: {
+                                         fromDate: segment[0],
+                                         toDate: segment[segment.length - 1],
+                                         duration: segment.length,
+                                         sourceRequestId: createdId,
+                                         sourceRequestType: finalRequestType,
+                                         overrideStatus: "Approved",
+                                     }
+                                 })
+                             ).unwrap();
+                         }
+                     }
+                }
+            }
+        }
+      }
+
+      // 3. Approve the New Request
       const approveAction = await dispatch(
         updateLeaveRequestStatus({ id: createdId, status: "Approved" }),
       );
@@ -591,9 +705,116 @@ const AdminLeaveManagement = () => {
         return;
       }
 
+      // 4. Update Attendance (Mirroring Requests.tsx Logic)
+      const startDate = dayjs(formData.startDate);
+      const endDate = dayjs(formData.endDate);
+      const diffDays = endDate.diff(startDate, "day");
+      const attendancePayload: any[] = [];
+
+      for (let i = 0; i <= diffDays; i++) {
+        const currentDateObj = startDate.clone().add(i, "day");
+        const currentDate = currentDateObj.format("YYYY-MM-DD");
+
+        // Skip weekends and holidays for Leaves/WFH/CV
+        if (
+          (finalRequestType === "Client Visit" ||
+            finalRequestType === "Work From Home" ||
+            finalRequestType === "Apply Leave" ||
+            finalRequestType === "Leave" ||
+            finalRequestType === "Half Day") &&
+          (isWeekend(currentDateObj) || isHoliday(currentDateObj))
+        ) {
+          continue;
+        }
+
+        const attendanceData: any = {
+          employeeId: selectedEmployee.employeeId || selectedEmployee.id,
+          workingDate: currentDate,
+        };
+
+        if (
+          finalRequestType === "Apply Leave" ||
+          finalRequestType === "Leave"
+        ) {
+          attendanceData.status = AttendanceStatus.LEAVE;
+          attendanceData.workLocation = null;
+          attendanceData.totalHours = 0;
+        } else if (finalRequestType === "Work From Home") {
+          attendanceData.workLocation = "WFH";
+          // Preserve Half Day status if exists in current state or payload
+          const existingRecord = dateRangeAttendanceRecords.find((r: any) => {
+             const rDate = r.workingDate || r.working_date;
+             const normDate = typeof rDate === "string" ? rDate.split("T")[0] : dayjs(rDate).format("YYYY-MM-DD");
+             return normDate === currentDate;
+          });
+          const existingPayloadEntry = attendancePayload.find((e) => e.workingDate === currentDate);
+
+          if (existingRecord?.status === "Half Day" || existingPayloadEntry?.status === "Half Day") {
+             attendanceData.status = "Half Day";
+             attendanceData.totalHours = existingRecord?.totalHours || existingPayloadEntry?.totalHours || 6;
+          }
+
+        } else if (finalRequestType === "Client Visit") {
+          attendanceData.workLocation = "Client Visit";
+          // Preserve Half Day status if exists
+          const existingRecord = dateRangeAttendanceRecords.find((r: any) => {
+             const rDate = r.workingDate || r.working_date;
+             const normDate = typeof rDate === "string" ? rDate.split("T")[0] : dayjs(rDate).format("YYYY-MM-DD");
+             return normDate === currentDate;
+          });
+          const existingPayloadEntry = attendancePayload.find((e) => e.workingDate === currentDate);
+
+          if (existingRecord?.status === "Half Day" || existingPayloadEntry?.status === "Half Day") {
+             attendanceData.status = "Half Day";
+             attendanceData.totalHours = existingRecord?.totalHours || existingPayloadEntry?.totalHours || 6;
+          }
+
+        } else if (finalRequestType === "Half Day") {
+          attendanceData.status = "Half Day";
+          attendanceData.totalHours = 5;
+          // Preserve existing workLocation
+          const existingRecord = dateRangeAttendanceRecords.find((r: any) => {
+            const rDate = r.workingDate || r.working_date;
+            const normDate =
+              typeof rDate === "string"
+                ? rDate.split("T")[0]
+                : dayjs(rDate).format("YYYY-MM-DD");
+            return normDate === currentDate;
+          });
+          const existingPayloadEntry = attendancePayload.find((e) => e.workingDate === currentDate);
+
+          const loc = existingRecord?.workLocation || existingRecord?.work_location || existingPayloadEntry?.workLocation;
+          if (loc) {
+            attendanceData.workLocation = loc;
+          }
+        }
+
+        // Merge logic
+        const existingIndex = attendancePayload.findIndex(
+            (e) => e.workingDate === currentDate
+        );
+
+        if (existingIndex !== -1) {
+            const existing = attendancePayload[existingIndex];
+            attendancePayload[existingIndex] = {
+                ...existing,
+                ...attendanceData,
+                status: attendanceData.status === "Half Day" || existing.status === "Half Day" ? "Half Day" : attendanceData.status || existing.status,
+                totalHours: (attendanceData.status === "Half Day" || existing.status === "Half Day") ? 5 : (attendanceData.totalHours || existing.totalHours),
+                workLocation: attendanceData.workLocation || existing.workLocation
+            };
+        } else {
+            attendancePayload.push(attendanceData);
+        }
+      }
+
+      if (attendancePayload.length > 0) {
+        await dispatch(submitBulkAttendance(attendancePayload)).unwrap();
+      }
+
       notification.success({
         message: "Applied & Approved",
-        description: "Admin request is auto-approved successfully.",
+        description: "Admin request is auto-approved successfully and conflicts handled.",
         placement: "topRight",
         duration: 3,
       });
@@ -638,10 +859,10 @@ const AdminLeaveManagement = () => {
       dispatch(resetSubmitSuccess());
     } catch (e: any) {
       notification.error({
-        message: "Timesheet Update Failed",
+        message: "Action Failed",
         description:
           e?.message ||
-          "Could not update attendance/timesheet for the approved request.",
+          "Could not define request or update attendance.",
         placement: "topRight",
         duration: 4,
       });
@@ -710,8 +931,6 @@ const AdminLeaveManagement = () => {
 
   // Note: admin requests are auto-approved in handleSubmit; we don't rely on submitSuccess side-effects here.
 
-  const totalPages = totalPagesFromRedux || 0;
-
   const handleOpenModal = (label: string) => {
     if (!selectedEmployee) {
       setErrors((prev) => ({
@@ -775,45 +994,291 @@ const AdminLeaveManagement = () => {
   };
 
   const handleCancel = (id: number) => {
-    setCancelModal({ isOpen: true, id });
+    const req = entities.find((e: any) => e.id === id);
+    if (req?.status === "Approved") {
+      handleCancelClick(req);
+    } else {
+      setCancelModal({ isOpen: true, id });
+    }
   };
 
-  const executeCancel = () => {
+  const handleCancelClick = async (req: any) => {
+    setRequestToCancel(req);
+    setIsCancelDateModalVisible(true);
+    setIsLoadingDates(true);
+    setSelectedCancelDates([]);
+
+    try {
+      const response = await dispatch(
+        getLeaveCancellableDates({
+          id: req.id,
+          employeeId: req.employeeId,
+        }),
+      ).unwrap();
+      setCancellableDates(response || []);
+    } catch (err) {
+      notification.error({
+        message: "Error",
+        description: "Failed to fetch cancellable dates",
+      });
+    } finally {
+      setIsLoadingDates(false);
+    }
+  };
+
+  const toggleDateSelection = (date: string) => {
+    setSelectedCancelDates((prev) =>
+      prev.includes(date) ? prev.filter((d) => d !== date) : [...prev, date],
+    );
+  };
+
+  const toggleSelectAll = () => {
+    const availableDates = cancellableDates
+      .filter((d) => d.isCancellable)
+      .map((d) => d.date);
+
+    if (availableDates.length === 0) return;
+
+    const areAllSelected = availableDates.every((date) =>
+      selectedCancelDates.includes(date),
+    );
+
+    if (areAllSelected) {
+      setSelectedCancelDates([]);
+    } else {
+      setSelectedCancelDates(availableDates);
+    }
+  };
+
+  const handleConfirmDateCancelItems = async () => {
+    if (!requestToCancel || !selectedEmployee) return;
+    if (selectedCancelDates.length === 0) {
+      notification.warning({
+        message: "Please select at least one date to cancel.",
+      });
+      return;
+    }
+
+    setIsCancelling(true);
+    try {
+      const action = await dispatch(
+        cancelRequestDates({
+          id: requestToCancel.id,
+          employeeId: requestToCancel.employeeId,
+          dates: selectedCancelDates,
+        }),
+      );
+
+      if (cancelRequestDates.fulfilled.match(action)) {
+        // 1. REVERT ATTENDANCE for the selected dates
+        const attendancePayload = selectedCancelDates.map((date) => ({
+          employeeId: requestToCancel.employeeId as string,
+          workingDate: date,
+          status: undefined,
+          workLocation: undefined,
+          totalHours: undefined,
+        }));
+
+        if (attendancePayload.length > 0) {
+          await dispatch(submitBulkAttendance(attendancePayload)).unwrap();
+        }
+
+        // 2. AUTO-APPROVE the created cancellation request
+        const createdCancellationRequest = action.payload;
+        if (createdCancellationRequest?.id) {
+          await dispatch(
+            updateLeaveRequestStatus({
+              id: createdCancellationRequest.id,
+              status: "Cancellation Approved",
+            }),
+          ).unwrap();
+        }
+
+        // 3. Update Parent Request (Recalculate Remaining Duration & Range)
+        if (requestToCancel) {
+          const originalStart = dayjs(requestToCancel.fromDate);
+          const originalEnd = dayjs(requestToCancel.toDate);
+          const cancelledSet = new Set(selectedCancelDates);
+          const validDates: string[] = [];
+          
+          let curr = originalStart;
+          while (curr.isBefore(originalEnd) || curr.isSame(originalEnd, 'day')) {
+             const dStr = curr.format("YYYY-MM-DD");
+             // Only count as valid if NOT cancelled and NOT weekend/holiday (if applicable)
+             if (!cancelledSet.has(dStr)) {
+                 // Check if it's a working day (for duration calc)
+                 if (!isWeekend(curr) && !isHoliday(curr)) {
+                    validDates.push(dStr);
+                 } else {
+                    // It's a weekend/holiday, but still part of the range?
+                    // Typically 'duration' only counts working days.
+                    // 'fromDate' and 'toDate' define the span.
+                    // If the span includes weekends, they are just part of the gap.
+                    // However, updateParentRequest expects new start/end from the valid set.
+                    // Let's assume validDates tracks working days for duration.
+                 }
+             }
+             curr = curr.add(1, 'day');
+          }
+
+          // Re-scan for range boundaries including weekends/holidays if they are "in between" valid working days?
+          // Simplification: The new range is from the first remaining working day to the last remaining working day.
+          // If validDates is empty, the request is fully cancelled (handled by backend or status update).
+          
+          if (validDates.length > 0) {
+             const newFrom = validDates[0];
+             const newTo = validDates[validDates.length - 1];
+             const newDuration = validDates.length;
+
+             await dispatch(
+                updateParentRequest({
+                    parentId: requestToCancel.id,
+                    duration: newDuration,
+                    fromDate: newFrom,
+                    toDate: newTo
+                })
+             ).unwrap();
+          } else {
+             // If no valid working days left, maybe mark parent as Cancelled too?
+             // Or Cancellation Approved covers it.
+             await dispatch(
+                updateLeaveRequestStatus({
+                   id: requestToCancel.id,
+                   status: "Cancellation Approved"
+                })
+             ).unwrap();
+             
+             await dispatch(
+                updateParentRequest({
+                    parentId: requestToCancel.id,
+                    duration: 0,
+                    fromDate: requestToCancel.fromDate,
+                    toDate: requestToCancel.toDate
+                })
+             ).unwrap();
+          }
+        }
+
+        notification.success({
+          message: "Cancellation Applied & Approved",
+          description: "The selected dates have been cancelled and attendance reverted.",
+        });
+        setIsCancelDateModalVisible(false);
+        // Refresh data
+        dispatch(
+          getLeaveHistory({
+            employeeId: selectedEmployee.employeeId || selectedEmployee.id,
+            page: currentPage,
+            limit: itemsPerPage,
+            month: selectedMonth,
+            year: selectedYear,
+            status: filterStatus,
+          }),
+        );
+        dispatch(
+          getLeaveStats({
+            employeeId: selectedEmployee.employeeId || selectedEmployee.id,
+          }),
+        );
+      } else {
+        throw new Error((action.payload as string) || "Cancellation failed");
+      }
+    } catch (err: any) {
+      notification.error({ message: err.message || "Cancellation failed" });
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
+  const executeCancel = async () => {
     if (
       cancelModal.id &&
       (selectedEmployee?.employeeId || selectedEmployee?.id)
     ) {
       setIsCancelling(true);
-      dispatch(
-        updateLeaveRequestStatus({ id: cancelModal.id, status: "Cancelled" }),
-      )
-        .then(() => {
-          dispatch(
-            getLeaveStats({
-              employeeId: selectedEmployee.employeeId || selectedEmployee.id,
-            }),
-          );
-          dispatch(
-            getLeaveHistory({
-              employeeId: selectedEmployee.employeeId || selectedEmployee.id,
-              page: currentPage,
-              limit: itemsPerPage,
-              month: selectedMonth,
-              year: selectedYear,
-              status: filterStatus,
-            }),
-          );
-          setCancelModal({ isOpen: false, id: null });
-          notification.success({
-            message: "Request Cancelled",
-            description: "The request has been successfully cancelled.",
-            placement: "topRight",
-            duration: 3,
-          });
-        })
-        .finally(() => {
-          setIsCancelling(false);
+      try {
+        const item = entities.find((e: any) => e.id === cancelModal.id);
+        const isAdminOrManager = currentUser?.userType === 'ADMIN' || currentUser?.userType === 'MANAGER';
+        
+        if (item?.status === "Approved") {
+          // 1. REVERT ATTENDANCE for Approved requests
+          const startDate = dayjs(item.fromDate);
+          const endDate = dayjs(item.toDate);
+          const diffDays = endDate.diff(startDate, "day");
+          const attendancePayload: any[] = [];
+
+          for (let i = 0; i <= diffDays; i++) {
+            const currentDateObj = startDate.clone().add(i, "day");
+            const currentDate = currentDateObj.format("YYYY-MM-DD");
+
+            // Skip weekends and holidays if applicable (mirroring approval logic)
+            if (
+              (item.requestType === "Client Visit" ||
+                item.requestType === "Work From Home" ||
+                item.requestType === "Apply Leave" ||
+                item.requestType === "Leave" ||
+                item.requestType === "Half Day") &&
+              (isWeekend(currentDateObj) || isHoliday(currentDateObj))
+            ) {
+              continue;
+            }
+
+            attendancePayload.push({
+              employeeId: item.employeeId,
+              workingDate: currentDate,
+              status: undefined,
+              workLocation: undefined,
+              totalHours: undefined,
+            });
+          }
+
+          if (attendancePayload.length > 0) {
+            await dispatch(submitBulkAttendance(attendancePayload)).unwrap();
+          }
+
+          // 2. Update Status to 'Cancellation Approved' for Approved requests
+          await dispatch(
+            updateLeaveRequestStatus({ id: cancelModal.id, status: "Cancellation Approved" }),
+          ).unwrap();
+        } else {
+          // For Pending requests, just set to Cancelled
+          await dispatch(
+            updateLeaveRequestStatus({ id: cancelModal.id, status: "Cancelled" }),
+          ).unwrap();
+        }
+
+        // Refresh Data
+        dispatch(
+          getLeaveStats({
+            employeeId: selectedEmployee.employeeId || selectedEmployee.id,
+          }),
+        );
+        dispatch(
+          getLeaveHistory({
+            employeeId: selectedEmployee.employeeId || selectedEmployee.id,
+            page: currentPage,
+            limit: itemsPerPage,
+            month: selectedMonth,
+            year: selectedYear,
+            status: filterStatus,
+          }),
+        );
+        
+        setCancelModal({ isOpen: false, id: null });
+        notification.success({
+          message: "Request Cancelled",
+          description: "The request has been successfully cancelled and records reverted.",
+          placement: "topRight",
+          duration: 3,
         });
+      } catch (err: any) {
+        notification.error({
+          message: "Cancellation Failed",
+          description: err.message || "An error occurred while cancelling the request.",
+        });
+      } finally {
+        setIsCancelling(false);
+      }
     }
   };
 
@@ -857,9 +1322,16 @@ const AdminLeaveManagement = () => {
   };
 
   const renderCancelButton = (item: any) => {
-    const canCancel = isCancellationAllowed(
+    // Admins and Managers have more authority to cancel
+    const isAdminOrManager = currentUser?.userType === 'ADMIN' || currentUser?.userType === 'MANAGER';
+    
+    // Original policy: next day 10am
+    const withinDeadline = isCancellationAllowed(
       item.submittedDate || item.created_at,
     );
+
+    // Allow Admin/Manager to cancel Approved requests as well
+    const canCancel = isAdminOrManager || withinDeadline;
 
     if (canCancel) {
       return (
@@ -872,7 +1344,6 @@ const AdminLeaveManagement = () => {
         </button>
       );
     }
-
     return (
       <button
         disabled
@@ -1355,7 +1826,7 @@ const AdminLeaveManagement = () => {
                             >
                               <Eye size={18} />
                             </button>
-                            {item.status === "Pending" &&
+                            {(item.status === "Pending" || item.status === "Approved") &&
                               renderCancelButton(item)}
                           </div>
                         </td>
@@ -1457,7 +1928,7 @@ const AdminLeaveManagement = () => {
                 <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
                   <XCircle size={20} className="text-red-500 shrink-0" />
                   <p className="text-xs font-bold text-red-600 leading-tight">
-                    {error}
+                    {typeof error === 'object' && error !== null ? (error as any).message || 'An error occurred' : String(error)}
                   </p>
                 </div>
               )}
@@ -1815,6 +2286,145 @@ const AdminLeaveManagement = () => {
           </div>
         </div>
       )}
+
+      {/* Partial Cancellation Modal */}
+      <Modal
+        title={
+          <div className="text-lg font-bold text-[#2B3674]">
+            Select Dates to Cancel
+          </div>
+        }
+        open={isCancelDateModalVisible}
+        onCancel={() => setIsCancelDateModalVisible(false)}
+        footer={
+          <div className="flex justify-between items-center py-2 px-1">
+            <button
+              key="back"
+              onClick={() => setIsCancelDateModalVisible(false)}
+              className="px-6 py-2.5 rounded-xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 transition-colors"
+            >
+              Close
+            </button>
+            <button
+              key="submit"
+              onClick={handleConfirmDateCancelItems}
+              disabled={selectedCancelDates.length === 0 || isCancelling}
+              className={`px-8 py-2.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${
+                selectedCancelDates.length === 0
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : isCancelling
+                    ? "bg-red-400 cursor-not-allowed opacity-80"
+                    : "bg-red-500 hover:bg-red-600 shadow-red-200 transform active:scale-95"
+              }`}
+            >
+              {isCancelling ? (
+                <>
+                  <Loader2 className="animate-spin" size={18} />
+                  Processing...
+                </>
+              ) : (
+                `Confirm Cancel (${selectedCancelDates.length})`
+              )}
+            </button>
+          </div>
+        }
+        centered
+        className="rounded-[24px] overflow-hidden"
+      >
+        <div className="py-2">
+          {isLoadingDates ? (
+            <div className="flex justify-center p-8">
+              <Loader2 className="animate-spin text-[#4318FF]" />
+            </div>
+          ) : cancellableDates.length === 0 ? (
+            <p className="text-gray-500 text-center font-medium">
+              No dates found for this request.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              <div className="text-sm text-[#4318FF] bg-[#4318FF]/5 p-4 rounded-2xl border border-[#4318FF]/10 font-medium leading-relaxed">
+                Select the dates you wish to cancel for this request. <br />
+                <span className="text-xs font-bold opacity-80">
+                  * Note: Cancellation follows standard company policies.
+                </span>
+              </div>
+
+              {/* Select All Option */}
+              {cancellableDates.some((d) => d.isCancellable) && (
+                <div
+                  className="flex items-center gap-3 px-3 py-2 bg-[#F4F7FE] rounded-xl hover:bg-[#F4F7FE]/80 transition-colors cursor-pointer"
+                  onClick={toggleSelectAll}
+                >
+                  <Checkbox
+                    checked={
+                      cancellableDates.every(
+                        (d) =>
+                          !d.isCancellable ||
+                          selectedCancelDates.includes(d.date),
+                      ) && selectedCancelDates.length > 0
+                    }
+                    indeterminate={
+                      selectedCancelDates.length > 0 &&
+                      !cancellableDates.every(
+                        (d) =>
+                          !d.isCancellable ||
+                          selectedCancelDates.includes(d.date),
+                      )
+                    }
+                    className="custom-checkbox"
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={toggleSelectAll}
+                  />
+                  <span className="text-sm font-bold text-[#2B3674]">
+                    Select All Available Dates
+                  </span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 gap-2 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
+                {cancellableDates.map((dateObj) => (
+                  <div
+                    key={dateObj.date}
+                    onClick={() =>
+                      dateObj.isCancellable && toggleDateSelection(dateObj.date)
+                    }
+                    className={`flex items-center justify-between p-4 rounded-xl border transition-all duration-200 ${
+                      dateObj.isCancellable
+                        ? selectedCancelDates.includes(dateObj.date)
+                          ? "bg-[#4318FF]/5 border-[#4318FF] shadow-sm"
+                          : "bg-white border-gray-100 hover:border-[#4318FF]/30 hover:bg-gray-50 cursor-pointer"
+                        : "bg-gray-50 border-gray-100 opacity-60 grayscale cursor-not-allowed"
+                    }`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <Checkbox
+                        checked={selectedCancelDates.includes(dateObj.date)}
+                        disabled={!dateObj.isCancellable}
+                        className="custom-checkbox"
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={() => toggleDateSelection(dateObj.date)}
+                      />
+                      <div>
+                        <div className="text-[#2B3674] font-bold">
+                          {dayjs(dateObj.date).format("DD MMM YYYY")}
+                        </div>
+                        <div className="text-xs font-bold text-gray-400">
+                          {dayjs(dateObj.date).format("dddd")}
+                        </div>
+                      </div>
+                    </div>
+                    {!dateObj.isCancellable && (
+                      <span className="text-[10px] font-black uppercase tracking-tight text-red-400 bg-red-50 px-2 py-1 rounded-lg">
+                        Deadline Passed
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 };

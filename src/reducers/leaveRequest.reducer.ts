@@ -49,6 +49,7 @@ interface LeaveRequestState {
   submitSuccess: boolean;
   uploadedFiles: any[];
   fileLoading: boolean;
+  leaveTypes: { label: string; value: string }[];
 }
 
 const initialState: LeaveRequestState = {
@@ -64,6 +65,7 @@ const initialState: LeaveRequestState = {
   submitSuccess: false,
   uploadedFiles: [],
   fileLoading: false,
+  leaveTypes: [],
 };
 
 // Async Thunk for Getting All Leave Requests (Unified)
@@ -380,6 +382,19 @@ export const getLeaveRequestFiles = createAsyncThunk(
   }
 );
 
+// Async Thunk for Getting Leave Duration Types
+export const getLeaveDurationTypes = createAsyncThunk(
+  "leaveRequest/getDurationTypes",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`${apiUrl}/duration-types`);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to fetch leave duration types");
+    }
+  }
+);
+
 const leaveRequestSlice = createSlice({
   name: "leaveRequest",
   initialState,
@@ -511,6 +526,11 @@ const leaveRequestSlice = createSlice({
     // Delete File
     builder.addCase(deleteLeaveRequestFile.fulfilled, (state, action) => {
       state.uploadedFiles = state.uploadedFiles.filter((f) => f.key !== action.payload);
+    });
+
+    // Get Leave Duration Types
+    builder.addCase(getLeaveDurationTypes.fulfilled, (state, action) => {
+      state.leaveTypes = action.payload;
     });
   },
 });
