@@ -19,9 +19,9 @@ import { RootState } from "../store";
 import {
   getEntities,
   getEntitiesSelect,
-  fetchDepartments,
   fetchManagers,
 } from "../reducers/employeeDetails.reducer";
+import { fetchDepartments } from "../reducers/masterDepartment.reducer";
 import {
   createManagerMapping,
   getManagerMappingHistory,
@@ -52,11 +52,12 @@ interface ManagerMapping {
 
 const ManagerMapping: React.FC = () => {
   const dispatch = useAppDispatch();
-  const {
-    entities: employees,
-    departments,
-    managers,
-  } = useAppSelector((state: RootState) => state.employeeDetails);
+  const { entities: employees, managers } = useAppSelector(
+    (state: RootState) => state.employeeDetails,
+  );
+  const { departments } = useAppSelector(
+    (state: RootState) => state.masterDepartments,
+  );
   const {
     historyEntities: groupedMappings,
     historyTotalItems,
@@ -115,12 +116,17 @@ const ManagerMapping: React.FC = () => {
   // Fetch employees when search changes
   useEffect(() => {
     if (selectedManager && selectedDepartment) {
-      const dept = selectedDepartment === "All Departments" ? undefined : selectedDepartment;
-      dispatch(getEntitiesSelect({ 
-        department: dept, 
-        role: "EMPLOYEE",
-        search: debouncedSearchText || undefined
-      }));
+      const dept =
+        selectedDepartment === "All Departments"
+          ? undefined
+          : selectedDepartment;
+      dispatch(
+        getEntitiesSelect({
+          department: dept,
+          role: "EMPLOYEE",
+          search: debouncedSearchText || undefined,
+        }),
+      );
     }
   }, [debouncedSearchText, selectedManager, selectedDepartment, dispatch]);
 
@@ -168,10 +174,7 @@ const ManagerMapping: React.FC = () => {
       );
       return notAssigned;
     });
-  }, [
-    employees,
-    assignedEmployees,
-  ]);
+  }, [employees, assignedEmployees]);
 
   // Handlers
   const handleDepartmentChange = (dept: string) => {
@@ -288,11 +291,13 @@ const ManagerMapping: React.FC = () => {
                   </button>
                   {departments.map((dept) => (
                     <button
-                      key={dept}
-                      onClick={() => handleDepartmentChange(dept)}
-                      className={`w-full text-left px-4 py-2 text-sm font-medium hover:bg-[#F4F7FE] ${selectedDepartment === dept ? "text-[#4318FF] bg-[#4318FF]/5" : "text-[#2B3674]"}`}
+                      key={dept.id}
+                      onClick={() =>
+                        handleDepartmentChange(dept.departmentName)
+                      }
+                      className={`w-full text-left px-4 py-2 text-sm font-medium hover:bg-[#F4F7FE] ${selectedDepartment === dept.departmentName ? "text-[#4318FF] bg-[#4318FF]/5" : "text-[#2B3674]"}`}
                     >
-                      {dept}
+                      {dept.departmentName}
                     </button>
                   ))}
                 </div>
@@ -546,15 +551,15 @@ const ManagerMapping: React.FC = () => {
                   </button>
                   {departments.map((dept) => (
                     <button
-                      key={dept}
+                      key={dept.id}
                       onClick={() => {
-                        setHistoryDepartment(dept);
+                        setHistoryDepartment(dept.departmentName);
                         setIsHistoryDeptOpen(false);
                         setHistoryPage(1);
                       }}
-                      className={`w-full text-left px-4 py-2 text-sm font-semibold hover:bg-gray-50 ${historyDepartment === dept ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+                      className={`w-full text-left px-4 py-2 text-sm font-semibold hover:bg-gray-50 ${historyDepartment === dept.departmentName ? "text-[#4318FF]" : "text-[#2B3674]"}`}
                     >
-                      {dept}
+                      {dept.departmentName}
                     </button>
                   ))}
                 </div>

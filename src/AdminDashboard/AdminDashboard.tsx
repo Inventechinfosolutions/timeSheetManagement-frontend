@@ -33,6 +33,7 @@ import {
   fetchEmployeeUpdates,
 } from "../reducers/leaveNotification.reducer";
 import { fetchNotifications } from "../reducers/notification.reducer";
+import { fetchDepartments } from "../reducers/masterDepartment.reducer";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -54,6 +55,9 @@ const AdminDashboard = () => {
   // @ts-ignore
   const { holidays } = useAppSelector(
     (state: RootState) => state.masterHolidays || { holidays: [] },
+  );
+  const { departments } = useAppSelector(
+    (state: RootState) => state.masterDepartments,
   );
 
   // Time-related constants
@@ -128,6 +132,8 @@ const AdminDashboard = () => {
     );
     // Fetch holidays for PDF export
     dispatch(fetchHolidays());
+    // Fetch departments
+    dispatch(fetchDepartments());
   }, [dispatch, currentMonth, currentYear]);
 
   // Refresh admin notifications on load
@@ -346,16 +352,7 @@ const AdminDashboard = () => {
       });
 
     // 3. Donut (Global Distribution)
-    const departmentsList = [
-      "HR",
-      "IT",
-      "Sales",
-      "Marketing",
-      "Finance",
-      "Engineering",
-      "Design",
-      "Admin",
-    ];
+    const departmentsList = departments.map((d) => d.departmentName);
 
     return {
       trend: {
@@ -717,26 +714,25 @@ const AdminDashboard = () => {
                     </button>
                     {isModalDeptOpen && (
                       <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 z-110 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                        {[
-                          "All",
-                          "HR",
-                          "IT",
-                          "Sales",
-                          "Marketing",
-                          "Finance",
-                          "Engineering",
-                          "Design",
-                          "Admin",
-                        ].map((d) => (
+                        <button
+                          onClick={() => {
+                            setModalDept("All");
+                            setIsModalDeptOpen(false);
+                          }}
+                          className={`w-full text-left px-5 py-2 text-sm font-semibold hover:bg-gray-50 ${modalDept === "All" ? "text-[#4318FF] bg-[#4318FF]/5" : "text-[#2B3674]"}`}
+                        >
+                          All
+                        </button>
+                        {departments.map((d) => (
                           <button
-                            key={d}
+                            key={d.id}
                             onClick={() => {
-                              setModalDept(d);
+                              setModalDept(d.departmentName);
                               setIsModalDeptOpen(false);
                             }}
-                            className={`w-full text-left px-5 py-2 text-sm font-semibold hover:bg-gray-50 ${modalDept === d ? "text-[#4318FF] bg-[#4318FF]/5" : "text-[#2B3674]"}`}
+                            className={`w-full text-left px-5 py-2 text-sm font-semibold hover:bg-gray-50 ${modalDept === d.departmentName ? "text-[#4318FF] bg-[#4318FF]/5" : "text-[#2B3674]"}`}
                           >
-                            {d === "All" ? "All" : d}
+                            {d.departmentName}
                           </button>
                         ))}
                       </div>

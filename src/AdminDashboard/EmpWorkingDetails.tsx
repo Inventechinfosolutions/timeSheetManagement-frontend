@@ -13,6 +13,7 @@ import {
   Filter,
 } from "lucide-react";
 import EmpWorkingDetailsMobileCard from "./EmpWorkingDetailsMobileCard";
+import { fetchDepartments } from "../reducers/masterDepartment.reducer";
 
 const EmpWorkingDetails = () => {
   const navigate = useNavigate();
@@ -35,15 +36,9 @@ const EmpWorkingDetails = () => {
     direction: "asc" | "desc";
   }>({ key: null, direction: "asc" });
 
-  const departments = [
-    "All",
-    "HR",
-    "IT",
-    "Sales",
-    "Marketing",
-    "Finance",
-    "Admin",
-  ];
+  const { departments } = useAppSelector(
+    (state: RootState) => state.masterDepartments,
+  );
 
   const dispatch = useAppDispatch();
   const { entities, totalItems } = useAppSelector(
@@ -51,6 +46,10 @@ const EmpWorkingDetails = () => {
   );
 
   // Close dropdown when clicking outside
+  useEffect(() => {
+    dispatch(fetchDepartments());
+  }, [dispatch]);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -173,22 +172,37 @@ const EmpWorkingDetails = () => {
                       Departments
                     </span>
                   </div>
+                  <button
+                    onClick={() => {
+                      setSelectedDepartment("All");
+                      setIsDropdownOpen(false);
+                      setCurrentPage(1);
+                    }}
+                    className={`w-full text-left px-5 py-2 text-sm font-semibold transition-colors
+                    ${
+                      selectedDepartment === "All"
+                        ? "text-[#4318FF] bg-[#4318FF]/5"
+                        : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
+                    }`}
+                  >
+                    All Departments
+                  </button>
                   {departments.map((dept) => (
                     <button
-                      key={dept}
+                      key={dept.id}
                       onClick={() => {
-                        setSelectedDepartment(dept);
+                        setSelectedDepartment(dept.departmentName);
                         setIsDropdownOpen(false);
                         setCurrentPage(1);
                       }}
                       className={`w-full text-left px-5 py-2 text-sm font-semibold transition-colors
                       ${
-                        selectedDepartment === dept
+                        selectedDepartment === dept.departmentName
                           ? "text-[#4318FF] bg-[#4318FF]/5"
                           : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
                       }`}
                     >
-                      {dept}
+                      {dept.departmentName}
                     </button>
                   ))}
                 </div>
