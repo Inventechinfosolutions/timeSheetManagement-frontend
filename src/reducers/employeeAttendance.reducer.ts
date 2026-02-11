@@ -314,15 +314,18 @@ export const autoUpdateTimesheet = createAsyncThunk(
     employeeId,
     month,
     year,
+    dryRun,
   }: {
     employeeId: string;
     month: string | number;
     year: string | number;
+    dryRun?: boolean;
   }) => {
     const response = await axios.post(`${apiUrl}/auto-update`, {
       employeeId,
       month,
       year,
+      dryRun,
     });
     return response.data;
   },
@@ -509,7 +512,8 @@ const attendanceSlice = createSlice({
       .addMatcher(
         (action: any) =>
           action.type.startsWith("attendance/") &&
-          action.type.endsWith("/pending"),
+          action.type.endsWith("/pending") &&
+          !action.type.includes("autoUpdate"),
         (state: AttendanceState) => {
           state.loading = true;
           state.error = null;

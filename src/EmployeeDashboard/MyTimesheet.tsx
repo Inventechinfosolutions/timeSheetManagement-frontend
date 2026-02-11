@@ -153,6 +153,8 @@ const MyTimesheet = ({
   const [isAutoUpdating, setIsAutoUpdating] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [updateResult, setUpdateResult] = useState<{ count: number } | null>(null);
+  const [autoUpdateCount, setAutoUpdateCount] = useState<number>(0);
+  const [isCheckingAutoUpdate, setIsCheckingAutoUpdate] = useState(false);
 
   const today = useMemo(() => new Date(), []);
 
@@ -308,6 +310,49 @@ const MyTimesheet = ({
     dispatch(fetchHolidays());
   }, [dispatch]);
 
+  // Check for eligible auto-updates when month/employee changes (Current Month Only)
+  // Ref to track the last checked employee/month/records-length combination
+  const lastCheckRef = useRef<string>("");
+
+  useEffect(() => {
+    if (!currentEmployeeId || (isAdmin && currentEmployeeId === "Admin")) return;
+
+    // Only check if it's the current month
+    if (now.getMonth() === today.getMonth() && now.getFullYear() === today.getFullYear()) {
+      
+      // Create a unique key for the current state
+      const checkKey = `${currentEmployeeId}-${now.getMonth()}-${now.getFullYear()}-${records.length}`;
+      
+      // Prevent duplicate checks if nothing material changed
+      if (lastCheckRef.current === checkKey) return;
+      lastCheckRef.current = checkKey;
+
+      const checkAutoUpdate = async () => {
+        setIsCheckingAutoUpdate(true);
+        try {
+          const result = await dispatch(autoUpdateTimesheet({
+            employeeId: currentEmployeeId!,
+            month: (now.getMonth() + 1).toString().padStart(2, "0"),
+            year: now.getFullYear().toString(),
+            dryRun: true // DRY RUN MODE
+          })).unwrap();
+          
+          setAutoUpdateCount(result.count || 0);
+        } catch (error) {
+          console.warn("Auto-update check failed:", error);
+          setAutoUpdateCount(0);
+        } finally {
+          setIsCheckingAutoUpdate(false);
+        }
+      };
+
+      checkAutoUpdate();
+    } else {
+        // Reset if not current month
+        setAutoUpdateCount(0);
+    }
+  }, [dispatch, currentEmployeeId, now, isAdmin, today, records.length]); // Use records.length instead of records to avoid deep equality issues
+  
   // Fetch attendance and blockers when month/employee changes
   useEffect(() => {
     if (!currentEmployeeId || (isAdmin && currentEmployeeId === "Admin"))
@@ -864,21 +909,24 @@ const MyTimesheet = ({
 
       // Close confirmation modal
       setShowAutoUpdateModal(false);
-      
-      // Store result and show success modal
+
+      // Always refetch so UI shows latest data immediately (don't rely on going back)
+      await dispatch(
+        fetchMonthlyAttendance({
+          employeeId: currentEmployeeId!,
+          month: (now.getMonth() + 1).toString().padStart(2, "0"),
+          year: now.getFullYear().toString(),
+        }),
+      );
+
+      if (result.count > 0) {
+        setManuallyEditedIndices(new Set());
+        lastCheckRef.current = "";
+      }
+
+      // Show success modal after data is refreshed so totals/calendar are already updated
       setUpdateResult(result);
       setShowSuccessModal(true);
-      
-      // Refresh data if updates were made
-      if (result.count > 0) {
-        dispatch(
-          fetchMonthlyAttendance({
-            employeeId: currentEmployeeId!,
-            month: (now.getMonth() + 1).toString().padStart(2, "0"),
-            year: now.getFullYear().toString(),
-          }),
-        );
-      }
     } catch (err: any) {
       setShowAutoUpdateModal(false);
       setToast({ show: true, message: err?.message || "Failed to auto-update timesheet.", type: "error" });
@@ -959,7 +1007,7 @@ const MyTimesheet = ({
         monthName={now.toLocaleDateString("en-US", { month: "long" })}
         year={now.getFullYear()}
       />
-      {loading && (
+      {false && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/30 backdrop-blur-[2px]">
           <div className="animate-spin rounded-full h-10 w-10 border-b-4 border-[#4318FF]"></div>
         </div>
@@ -992,11 +1040,13 @@ const MyTimesheet = ({
             <div className="flex items-center gap-1">
               <button
                 onClick={handlePrevMonth}
-                disabled={isAdminView}
+                disabled={isAdminView || loading}
                 className={`p-1.5 rounded-lg transition-all ${
                   isAdminView
                     ? "text-gray-200 cursor-not-allowed hidden"
-                    : "hover:bg-gray-50 text-gray-400 hover:text-[#4318FF]"
+                    : loading 
+                      ? "text-gray-300 cursor-wait"
+                      : "hover:bg-gray-50 text-gray-400 hover:text-[#4318FF]"
                 }`}
               >
                 <ChevronLeft size={20} strokeWidth={2.5} />
@@ -1009,11 +1059,13 @@ const MyTimesheet = ({
               </p>
               <button
                 onClick={handleNextMonth}
-                disabled={isAdminView}
+                disabled={isAdminView || loading}
                 className={`p-1.5 rounded-lg transition-all ${
                   isAdminView
                     ? "text-gray-300 cursor-not-allowed hidden"
-                    : "hover:bg-gray-50 text-gray-400 hover:text-[#4318FF]"
+                    : loading
+                      ? "text-gray-300 cursor-wait"
+                      : "hover:bg-gray-50 text-gray-400 hover:text-[#4318FF]"
                 }`}
               >
                 <ChevronRight size={20} strokeWidth={2.5} />
@@ -1060,21 +1112,37 @@ const MyTimesheet = ({
              now.getFullYear() === today.getFullYear() && (
               <button
                 onClick={handleAutoUpdateClick}
-                className="flex items-center justify-center gap-1.5 px-3 py-2 bg-gradient-to-r from-[#4318FF] to-[#868CFF] text-white rounded-xl font-bold text-[10px] shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:to-[#4318FF] transition-all active:scale-95 tracking-wide uppercase hover:-translate-y-0.5"
-                title="Auto-fill 9 hours for working days"
+                disabled={autoUpdateCount === 0 || isCheckingAutoUpdate}
+                className={`flex items-center justify-center gap-1.5 px-3 py-2 text-white rounded-xl font-bold text-[10px] transition-all active:scale-95 tracking-wide uppercase hover:-translate-y-0.5
+                  ${autoUpdateCount > 0 && !isCheckingAutoUpdate 
+                    ? "bg-gradient-to-r from-[#4318FF] to-[#868CFF] shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:to-[#4318FF]" 
+                    : "bg-gray-300 cursor-not-allowed grayscale"}`}
+                title={autoUpdateCount > 0 ? `Auto-fill ${autoUpdateCount} days` : "No eligible days to update"}
               >
-                <Rocket size={14} className="animate-pulse" />
-                <span className="hidden sm:inline">Auto Update</span>
+                <Rocket size={14} className={autoUpdateCount > 0 ? "animate-pulse" : ""} />
+                <span className="hidden sm:inline">
+                  {isCheckingAutoUpdate ? "Checking..." : "Auto Update"}
+                </span>
               </button>
             )}
 
             {(!effectiveReadOnly || (isAdmin && !isAdminView)) && (
               <button
                 onClick={onSaveAll}
-                className="flex items-center justify-center gap-1.5 px-4 py-2 bg-[#4318FF] text-white rounded-xl font-bold text-[10px] shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all active:scale-95 tracking-wide uppercase"
+                disabled={loading}
+                className={`flex items-center justify-center gap-1.5 px-4 py-2 bg-[#4318FF] text-white rounded-xl font-bold text-[10px] shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all active:scale-95 tracking-wide uppercase ${loading ? "opacity-70 cursor-wait" : ""}`}
               >
-                <Save size={14} />
-                <span>Submit</span>
+                {loading ? (
+                    <>
+                        <div className="animate-spin rounded-full h-3 w-3 border-2 border-white/30 border-t-white"></div>
+                        <span>Submiting...</span>
+                    </>
+                ) : (
+                    <>
+                        <Save size={14} />
+                        <span>Submit</span>
+                    </>
+                )}
               </button>
             )}
           </div>
