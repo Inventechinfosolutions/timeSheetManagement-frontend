@@ -17,7 +17,8 @@ import {
   getLeaveCancellableDates,
   cancelRequestDates,
   undoCancellationRequest,
-  getMonthlyLeaveRequests
+  getMonthlyLeaveRequests,
+  getLeaveDurationTypes
 } from "../reducers/leaveRequest.reducer";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import { fetchAttendanceByDateRange, AttendanceStatus } from "../reducers/employeeAttendance.reducer";
@@ -60,6 +61,7 @@ const LeaveManagement = () => {
     loading,
     submitSuccess,
     error,
+    leaveTypes = []
   } = useAppSelector((state) => state.leaveRequest || {});
   const { entity } = useAppSelector((state) => state.employeeDetails);
   const currentUser = useAppSelector((state) => state.user.currentUser);
@@ -383,6 +385,13 @@ const LeaveManagement = () => {
   useEffect(() => {
     dispatch(fetchHolidays());
   }, [dispatch]);
+
+  // Fetch leave types when modal opens
+  useEffect(() => {
+    if (isModalOpen) {
+      dispatch(getLeaveDurationTypes());
+    }
+  }, [dispatch, isModalOpen]);
 
   // Fetch attendance records for the selected date range to check for existing leaves
   useEffect(() => {
@@ -1228,8 +1237,18 @@ const LeaveManagement = () => {
                   }}
                   suffixIcon={<ChevronDown className="text-[#4318FF]" />}
                 >
-                  <Select.Option value="Full Day">Full Day Application</Select.Option>
-                  <Select.Option value="Half Day">Half Day Application</Select.Option>
+                  {leaveTypes.length > 0 ? (
+                    leaveTypes.map((type: any) => (
+                      <Select.Option key={type.value} value={type.value}>
+                        {type.label}
+                      </Select.Option>
+                    ))
+                  ) : (
+                    <>
+                      <Select.Option value="Full Day">Full Day Application</Select.Option>
+                      <Select.Option value="Half Day">Half Day Application</Select.Option>
+                    </>
+                  )}
                 </Select>
               </div>
             )}
