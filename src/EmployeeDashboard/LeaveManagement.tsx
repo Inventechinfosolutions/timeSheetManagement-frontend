@@ -140,11 +140,16 @@ const LeaveManagement = () => {
   const disabledDate = (current: any) => {
     if (!current) return false;
 
+    // URL: Disable Master Holidays for ALL request types
+    if (isHoliday(current)) {
+      return true;
+    }
+
     // Normalize current date to start of day for comparison
     const currentDate = current.startOf("day");
     const today = dayjs().startOf("day");
 
-    if (currentDate.isBefore(today)) {
+    if (selectedLeaveType !== "Client Visit" && currentDate.isBefore(today)) {
       return true;
     }
 
@@ -175,8 +180,8 @@ const LeaveManagement = () => {
     if (isCancelledDate) return false;
 
     return (entities || []).some((req: any) => {
-      // Exclude Rejected and Cancelled requests (including Cancellation Approved and Cancellation Pending)
-      if (!req || req.status === "Rejected" || req.status === "Cancelled" || req.status === "Cancellation Approved" )
+      // Exclude Rejected, Cancelled, and Request Modified (requested to be enabled)
+      if (!req || req.status === "Rejected" || req.status === "Cancelled" || req.status === "Cancellation Approved" || req.status === "Request Modified")
         return false;
 
       // Exclude the current request if we're viewing/editing it
@@ -191,33 +196,34 @@ const LeaveManagement = () => {
 
       if (!isDateInRange) return false;
 
-      const existingRequestType = req.requestType || "";
+      // If request is Pending, block the date completely
+      if (req.status === "Pending") {
+        return true;
+      }
 
-      // 1. RULE: If LEAVE already exists, block EVERYTHING (No exceptions)
-      if (existingRequestType === "Apply Leave" || existingRequestType === "Leave") {
+      const existingRequestType = req.requestType;
+      
+      // REFINED CONFLICT RULES
+      // Rule 1: Existing Leave/Half Day blocks EVERYTHING
+      if (existingRequestType === "Apply Leave" || existingRequestType === "Leave" || existingRequestType === "Half Day") {
         return true; 
       }
 
-      // 2. RULE: If WORK FROM HOME already exists
-      if (existingRequestType === "Work From Home") {
-          // Allow if applying for Leave or Client Visit or Half Day
-          if (selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave" || selectedLeaveType === "Client Visit" || selectedLeaveType === "Half Day") {
-              return false; // Valid dates, don't disable
-          }
-          return true; // Otherwise block (prevents dual WFH)
+      // Rule 2: If we are CURRENTLY APPLYING for Leave/Half Day, we are ONLY blocked by other Leaves/Half Days
+      // (This allows applying for Leave even if a CV/WFH exists on that date)
+      const isApplyingForLeave = selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave" || selectedLeaveType === "Half Day";
+      if (isApplyingForLeave) {
+        // We already checked if existing was Leave above. So if we reach here, existing is WFH/CV.
+        // Thus, no conflict for applying Leave.
+        return false;
       }
 
-      // 3. RULE: If CLIENT VISIT already exists
-      if (existingRequestType === "Client Visit") {
-          // Allow if applying for Leave or Work From Home or Half Day
-          if (selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave" || selectedLeaveType === "Work From Home" || selectedLeaveType === "Half Day") {
-              return false; // Valid dates, don't disable
-          }
-          return true; // Otherwise block (prevents dual CV)
+      // Rule 3: Remote work (WFH/CV) is blocked by same-type requests
+      if (existingRequestType === selectedLeaveType) {
+        return true;
       }
 
-      // Default: block all overlapping requests
-      return true;
+      return false; // Otherwise allow overlapping (e.g. WFH and CV)
     });
   };
 
@@ -227,7 +233,7 @@ const LeaveManagement = () => {
 
     const today = dayjs().startOf("day");
     const currentDate = current.startOf("day");
-    if (currentDate.isBefore(today)) return true;
+    if (selectedLeaveType !== "Client Visit" && currentDate.isBefore(today)) return true;
 
     // Don't allow end date before start date
     if (formData.startDate) {
@@ -287,12 +293,9 @@ const LeaveManagement = () => {
   const isHoliday = (date: dayjs.Dayjs): boolean => {
     const dateStr = date.format("YYYY-MM-DD");
     return holidays.some((h: any) => {
-      const hDate = h.date || h.holidayDate;
+      const hDate = h.date || h.holidayDate || h.workingDate || h.working_date;
       if (!hDate) return false;
-      const normalizedHDate =
-        typeof hDate === "string"
-          ? hDate.split("T")[0]
-          : new Date(hDate).toISOString().split("T")[0];
+      const normalizedHDate = dayjs(hDate).format("YYYY-MM-DD");
       return normalizedHDate === dateStr;
     });
   };
@@ -301,17 +304,130 @@ const LeaveManagement = () => {
   const hasExistingLeave = (date: dayjs.Dayjs, records: any[] = dateRangeAttendanceRecords): boolean => {
     const dateStr = date.format("YYYY-MM-DD");
     return records.some((record: any) => {
-      const recordDate = record.workingDate || record.working_date;
+      const recordDate = record.workingDate || record.working_date || record.date;
       if (!recordDate) return false;
-      const normalizedRecordDate =
-        typeof recordDate === "string"
-          ? recordDate.split("T")[0]
-          : new Date(recordDate).toISOString().split("T")[0];
+      const normalizedRecordDate = dayjs(recordDate).format("YYYY-MM-DD");
       // Check if the record has Leave status
       const status = record.status || record.attendance_status;
       return normalizedRecordDate === dateStr && 
              (status === AttendanceStatus.LEAVE || status === "Leave" || status === "LEAVE");
     });
+  };
+
+  // Helper function to check if a date is a barrier (Approved Leave, Half Day, or Same Type)
+  const isBarrierDate = (date: dayjs.Dayjs, targetType: string, records: any[] = dateRangeAttendanceRecords): boolean => {
+    const dateStr = date.format("YYYY-MM-DD");
+    
+    // Check attendance records (for approved leaves)
+    const isAttendanceBarrier = records.some((record: any) => {
+      const recordDate = record.workingDate || record.working_date || record.date;
+      if (!recordDate) return false;
+      const normalizedRecordDate = dayjs(recordDate).format("YYYY-MM-DD");
+          
+      const status = record.status || record.attendance_status;
+      const sourceRequestId = record.sourceRequestId || record.source_request_id || record.requestId || record.id;
+      
+      const isLeave = status === AttendanceStatus.LEAVE || String(status).toLowerCase() === "leave";
+      const isHalfDay = status === AttendanceStatus.HALF_DAY || String(status).toLowerCase() === "half day";
+
+      // A date is a barrier if it's a Full Leave (always a barrier for WFH/CV) 
+      // OR a Half Day that is officially linked to a request.
+      if (normalizedRecordDate === dateStr && (isLeave || (isHalfDay && sourceRequestId))) {
+        return true;
+      }
+      return false;
+    });
+
+    if (isAttendanceBarrier) return true;
+
+    // Check existing leave requests (for pending or approved leaves not yet in attendance)
+    // This is CRITICAL for "Client Visit" and "WFH" splitting to avoid backend conflict errors
+    return (entities || []).some((req: any) => {
+      // Barrier if it's Pending or Approved and it matches our conflict types
+      if (req.status !== "Pending" && req.status !== "Approved") return false;
+
+      // Rule: Pending requests prioritize global rules for splitting too
+      if (req.status === "Pending") {
+        const startDate = dayjs(req.fromDate).startOf("day");
+        const endDate = dayjs(req.toDate).startOf("day");
+        const isInRange = (date.isSame(startDate) || date.isAfter(startDate)) &&
+                         (date.isSame(endDate) || date.isBefore(endDate)) &&
+                         date.format("YYYY-MM-DD") === dateStr;
+        
+        if (!isInRange) return false;
+
+        const existingType = req.requestType || "";
+        // Same logic as disabledDate for Pending
+        if (existingType === "Apply Leave" || existingType === "Leave" || existingType === "Half Day") return true;
+
+        // If applying for Leave, only other leaves block us
+        const isApplyingForLeave = targetType === "Apply Leave" || targetType === "Leave" || targetType === "Half Day";
+        if (isApplyingForLeave) return false;
+
+        // Remote types block themselves
+        if (existingType === targetType) return true;
+        
+        return false;
+      }
+      
+      // Determine if this Approved request blocks the targetType
+      const existingType = req.requestType || "";
+      let isConflicting = false;
+
+      // Rule 1: Approved Leave blocks everything
+      if (existingType === "Apply Leave" || existingType === "Leave" || existingType === "Half Day") {
+        isConflicting = true;
+      } 
+      // Rule 2: If applying for remote work, it's blocked by same-type
+      else if (existingType === targetType) {
+        isConflicting = true;
+      }
+
+      if (!isConflicting) return false;
+      
+      const startDate = dayjs(req.fromDate).startOf("day");
+      const endDate = dayjs(req.toDate).startOf("day");
+      return (date.isSame(startDate) || date.isAfter(startDate)) &&
+             (date.isSame(endDate) || date.isBefore(endDate)) &&
+             date.format("YYYY-MM-DD") === dateStr;
+    });
+  };
+
+  // Helper function to split a date range into segments based on barriers
+  const getSplitSegments = (startDate: string, endDate: string, targetType: string, records: any[]): { fromDate: string; toDate: string }[] => {
+    const start = dayjs(startDate);
+    const end = dayjs(endDate);
+    const segments: { fromDate: string; toDate: string }[] = [];
+    let currentSegmentStart: dayjs.Dayjs | null = null;
+    let current = start;
+
+    while (current.isBefore(end) || current.isSame(end, 'day')) {
+      const isBarrier = isBarrierDate(current, targetType, records);
+      
+      if (!isBarrier) {
+        if (!currentSegmentStart) {
+          currentSegmentStart = current;
+        }
+      } else {
+        if (currentSegmentStart) {
+          segments.push({
+            fromDate: currentSegmentStart.format("YYYY-MM-DD"),
+            toDate: current.subtract(1, 'day').format("YYYY-MM-DD"),
+          });
+          currentSegmentStart = null;
+        }
+      }
+      current = current.add(1, 'day');
+    }
+
+    if (currentSegmentStart) {
+      segments.push({
+        fromDate: currentSegmentStart.format("YYYY-MM-DD"),
+        toDate: end.format("YYYY-MM-DD"),
+      });
+    }
+
+    return segments;
   };
 
   // Helper function to calculate duration excluding weekends, holidays, and existing leaves
@@ -348,9 +464,8 @@ const LeaveManagement = () => {
       }
 
       // For Client Visit, WFH, and Leave (including Half Day), fetch attendance records first to check for existing leaves
-      let duration: number;
       if (finalRequestType === "Client Visit" || finalRequestType === "Work From Home" || finalRequestType === "Apply Leave" || finalRequestType === "Leave" || finalRequestType === "Half Day") {
-        // Fetch attendance records synchronously before calculating duration
+        // Fetch attendance records synchronously before processing
         const attendanceAction = await dispatch(fetchAttendanceByDateRange({
           employeeId: employeeId!,
           startDate: formData.startDate,
@@ -362,17 +477,41 @@ const LeaveManagement = () => {
           records = attendanceAction.payload.data || attendanceAction.payload || [];
           setDateRangeAttendanceRecords(records);
         }
-        // Calculate duration with the fetched records (pass records directly to avoid state timing issues)
-        const baseDuration = calculateDurationExcludingWeekends(formData.startDate, formData.endDate, records);
-        duration = leaveDurationType === "Half Day" ? baseDuration * 0.5 : baseDuration;
-      } else {
-        duration = formData.startDate && formData.endDate
-          ? dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1
-          : 0;
-      }
 
-      dispatch(
-        submitLeaveRequest({
+        if (finalRequestType === "Client Visit" || finalRequestType === "Work From Home") {
+          const segments = getSplitSegments(formData.startDate, formData.endDate, finalRequestType, records);
+
+          if (segments.length > 1) {
+            // Submit each segment separately
+            for (const segment of segments) {
+              const segmentDuration = calculateDurationExcludingWeekends(segment.fromDate, segment.toDate, records);
+              if (segmentDuration > 0) {
+                await dispatch(submitLeaveRequest({
+                  employeeId,
+                  requestType: finalRequestType,
+                  title: formData.title,
+                  description: formData.description,
+                  fromDate: segment.fromDate,
+                  toDate: segment.toDate,
+                  duration: segmentDuration,
+                  submittedDate: dayjs().format("YYYY-MM-DD"),
+                }));
+              }
+            }
+            api.info({
+              title: "Request Segmented",
+              description: `Your ${finalRequestType} request was split into ${segments.length} parts to avoid existing Leave/Half Day approvals.`,
+              placement: "topRight"
+            });
+            return; // Exit handleSubmit as we've done multiple submissions
+          }
+        }
+
+        // Standard Single Submission Logic
+        const baseDuration = calculateDurationExcludingWeekends(formData.startDate, formData.endDate, records);
+        const duration = leaveDurationType === "Half Day" ? baseDuration * 0.5 : baseDuration;
+
+        dispatch(submitLeaveRequest({
           employeeId,
           requestType: finalRequestType,
           title: formData.title,
@@ -380,9 +519,24 @@ const LeaveManagement = () => {
           fromDate: formData.startDate,
           toDate: formData.endDate,
           duration,
-          submittedDate: new Date().toISOString().split("T")[0],
-        }),
-      );
+          submittedDate: dayjs().format("YYYY-MM-DD"),
+        }));
+      } else {
+        const duration = formData.startDate && formData.endDate
+          ? dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1
+          : 0;
+
+        dispatch(submitLeaveRequest({
+          employeeId,
+          requestType: finalRequestType,
+          title: formData.title,
+          description: formData.description,
+          fromDate: formData.startDate,
+          toDate: formData.endDate,
+          duration,
+          submittedDate: dayjs().format("YYYY-MM-DD"),
+        }));
+      }
     }
   };
 
@@ -481,6 +635,7 @@ const LeaveManagement = () => {
     );
     setIsModalOpen(true);
     setErrors({ title: "", description: "", startDate: "", endDate: "" });
+    setFormData({ title: "", description: "", startDate: "", endDate: "", duration: 0 }); // Explicitly clear any stale data
     setLeaveDurationType("Full Day");
     // Clear any previous global errors from the store
     dispatch(resetSubmitSuccess());
@@ -1229,7 +1384,9 @@ const LeaveManagement = () => {
               <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
                 <XCircle size={20} className="text-red-500 shrink-0" />
                 <p className="text-xs font-bold text-red-600 leading-tight">
-                  {error}
+                  {typeof error === "string"
+                    ? error
+                    : (error as any)?.message || JSON.stringify(error)}
                 </p>
               </div>
             )}

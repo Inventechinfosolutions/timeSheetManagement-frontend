@@ -348,20 +348,13 @@ const Requests = () => {
         const reqType = (request.requestType || "").toLowerCase();
 
         if (reqType === "apply leave" || reqType === "leave") {
-          victimTypes = [
-            "work from home",
-            "client visit",
-            "apply leave",
-            "leave",
-            "wfh",
-            "cv",
-          ];
+          victimTypes = ["work from home", "client visit"];
         } else if (reqType === "work from home" || reqType === "wfh") {
-          victimTypes = ["client visit", "work from home", "cv", "wfh"];
+          victimTypes = ["client visit", "work from home"];
         } else if (reqType === "client visit" || reqType === "cv") {
-          victimTypes = ["work from home", "client visit", "wfh", "cv"];
+          victimTypes = ["work from home", "client visit"];
         } else if (reqType === "half day") {
-          victimTypes = ["apply leave", "leave", "half day"];
+          victimTypes = ["work from home", "client visit"];
         }
 
         const requestWorkingDates = getWorkingDatesInRange(
@@ -664,7 +657,12 @@ const Requests = () => {
           let attendanceData: any = {
             employeeId: request.employeeId,
             workingDate: currentDate,
-            // Removed default totalHours: 0 to prevent overwriting existing hours (e.g. Half Day) when updating Work Location
+            sourceRequestId:
+              request.requestType === "Work From Home" ||
+              request.requestType === "Client Visit"
+                ? null
+                : request.id,
+            totalHours: null, // Default to null per user request
           };
 
           if (status === "Cancellation Approved") {
