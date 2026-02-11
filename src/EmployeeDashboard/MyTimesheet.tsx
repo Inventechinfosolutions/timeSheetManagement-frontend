@@ -864,21 +864,24 @@ const MyTimesheet = ({
 
       // Close confirmation modal
       setShowAutoUpdateModal(false);
-      
-      // Store result and show success modal
+
+      // Always refetch so UI shows latest data immediately (don't rely on going back)
+      await dispatch(
+        fetchMonthlyAttendance({
+          employeeId: currentEmployeeId!,
+          month: (now.getMonth() + 1).toString().padStart(2, "0"),
+          year: now.getFullYear().toString(),
+        }),
+      );
+
+      if (result.count > 0) {
+        setManuallyEditedIndices(new Set());
+        lastCheckRef.current = "";
+      }
+
+      // Show success modal after data is refreshed so totals/calendar are already updated
       setUpdateResult(result);
       setShowSuccessModal(true);
-      
-      // Refresh data if updates were made
-      if (result.count > 0) {
-        dispatch(
-          fetchMonthlyAttendance({
-            employeeId: currentEmployeeId!,
-            month: (now.getMonth() + 1).toString().padStart(2, "0"),
-            year: now.getFullYear().toString(),
-          }),
-        );
-      }
     } catch (err: any) {
       setShowAutoUpdateModal(false);
       setToast({ show: true, message: err?.message || "Failed to auto-update timesheet.", type: "error" });
