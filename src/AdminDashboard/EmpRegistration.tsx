@@ -92,8 +92,8 @@ const Registration = () => {
         name === "employeeId"
           ? value.toUpperCase()
           : name === "employmentType"
-            ? (value as "" | "FULL_TIMER" | "INTERN")
-            : value,
+          ? (value as "" | "FULL_TIMER" | "INTERN")
+          : value,
     });
   };
 
@@ -212,10 +212,10 @@ const Registration = () => {
                       className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#4318FF]/20 focus:border-[#4318FF] outline-none transition-all placeholder-gray-300 text-gray-700 text-sm font-medium"
                       value={formData.employeeId}
                       onChange={handleChange}
-                      onInput={(e) =>
-                        (e.currentTarget.value =
-                          e.currentTarget.value.toUpperCase())
-                      }
+                      onInput={(e) => {
+                        e.currentTarget.value =
+                          e.currentTarget.value.toUpperCase();
+                      }}
                       pattern="[A-Z0-9-]*"
                       title="Employee ID should contain only uppercase letters, numbers, and hyphens"
                       autoComplete="nope"
