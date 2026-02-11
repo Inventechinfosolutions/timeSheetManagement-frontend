@@ -164,9 +164,15 @@ const AdminLeaveManagement = () => {
 
     const currentDate = current.startOf("day");
 
-    // Disable weekends (Saturday = 6, Sunday = 0)
+    // Disable Sunday (Sunday = 0)
     const day = current.day();
-    if (day === 0 || day === 6) {
+    if (day === 0) {
+      return true;
+    }
+
+    // Disable Saturday (Saturday = 6) ONLY if department is "Information Technology"
+    const employeeDept = selectedEmployee?.department || "";
+    if (employeeDept === "Information Technology" && day === 6) {
       return true;
     }
 
@@ -360,9 +366,20 @@ const AdminLeaveManagement = () => {
   };
 
   // Helper function to check if a date is a weekend
-  const isWeekend = (date: dayjs.Dayjs): boolean => {
-    const day = date.day(); // 0 = Sunday, 6 = Saturday
-    return day === 0 || day === 6;
+  // Block Saturday only if Department is "Information Technology"
+  const isWeekend = (date: dayjs.Dayjs, department?: string): boolean => {
+    const day = date.day(); // 0 = Sunday
+    const employeeDept = department || selectedEmployee?.department || "";
+
+    // Always block Sunday
+    if (day === 0) return true;
+
+    // Block Saturday ONLY if department is Information Technology
+    if (employeeDept === "Information Technology" && day === 6) {
+      return true;
+    }
+
+    return false;
   };
 
   // Helper function to check if a date is a master holiday
@@ -408,6 +425,7 @@ const AdminLeaveManagement = () => {
     startDate: string,
     endDate: string,
     records?: any[],
+    department?: string,
   ): number => {
     if (!startDate || !endDate) return 0;
 
@@ -420,7 +438,7 @@ const AdminLeaveManagement = () => {
     while (current.isBefore(end) || current.isSame(end, "day")) {
       // Exclude weekends, holidays, and existing leave records
       if (
-        !isWeekend(current) &&
+        !isWeekend(current, department) &&
         !isHoliday(current) &&
         !hasExistingLeave(current, recordsToUse)
       ) {
@@ -436,6 +454,7 @@ const AdminLeaveManagement = () => {
   const getWorkingDatesInRange = (
     startDate: string,
     endDate: string,
+    department?: string,
   ): string[] => {
     if (!startDate || !endDate) return [];
     const start = dayjs(startDate);
@@ -443,7 +462,7 @@ const AdminLeaveManagement = () => {
     const dates: string[] = [];
     let current = start;
     while (current.isBefore(end) || current.isSame(end, "day")) {
-      if (!isWeekend(current) && !isHoliday(current)) {
+      if (!isWeekend(current, department) && !isHoliday(current)) {
         dates.push(current.format("YYYY-MM-DD"));
       }
       current = current.add(1, "day");
@@ -495,6 +514,7 @@ const AdminLeaveManagement = () => {
           formData.startDate,
           formData.endDate,
           records,
+          selectedEmployee?.department,
         );
         duration = leaveDurationType === "Half Day" ? baseDuration * 0.5 : baseDuration;
       } else {
@@ -560,7 +580,8 @@ const AdminLeaveManagement = () => {
 
         const requestWorkingDates = getWorkingDatesInRange(
             formData.startDate,
-            formData.endDate
+            formData.endDate,
+            selectedEmployee?.department,
         );
         let modificationHandledDates: string[] = [];
 

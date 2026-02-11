@@ -211,9 +211,20 @@ const Requests = () => {
   });
 
   // Helper function to check if a date is a weekend
-  const isWeekend = (date: dayjs.Dayjs): boolean => {
-    const day = date.day(); // 0 = Sunday, 6 = Saturday
-    return day === 0 || day === 6;
+  // Block Saturday only if Department is "Information Technology"
+  const isWeekend = (date: dayjs.Dayjs, department?: string): boolean => {
+    const day = date.day(); // 0 = Sunday
+    
+    // Always block Sunday
+    if (day === 0) return true;
+
+    // Block Saturday ONLY if department is Information Technology
+    const dept = department || "";
+    if (dept === "Information Technology" && day === 6) {
+      return true;
+    }
+
+    return false;
   };
 
   // Helper function to check if a date is a master holiday
@@ -254,6 +265,7 @@ const Requests = () => {
   const calculateDurationExcludingWeekends = (
     startDate: string,
     endDate: string,
+    department?: string,
   ): number => {
     if (!startDate || !endDate) return 0;
 
@@ -265,7 +277,7 @@ const Requests = () => {
     while (current.isBefore(end) || current.isSame(end, "day")) {
       // Exclude weekends, holidays, and existing leave records
       if (
-        !isWeekend(current) &&
+        !isWeekend(current, department) &&
         !isHoliday(current) &&
         !hasExistingLeave(current)
       ) {
@@ -281,6 +293,7 @@ const Requests = () => {
   const getWorkingDatesInRange = (
     startDate: string,
     endDate: string,
+    department?: string,
   ): string[] => {
     if (!startDate || !endDate) return [];
     const start = dayjs(startDate);
@@ -288,7 +301,7 @@ const Requests = () => {
     const dates: string[] = [];
     let current = start;
     while (current.isBefore(end) || current.isSame(end, "day")) {
-      if (!isWeekend(current) && !isHoliday(current)) {
+      if (!isWeekend(current, department) && !isHoliday(current)) {
         dates.push(current.format("YYYY-MM-DD"));
       }
       current = current.add(1, "day");
@@ -354,6 +367,7 @@ const Requests = () => {
         const requestWorkingDates = getWorkingDatesInRange(
           request.fromDate,
           request.toDate,
+          request.department,
         );
         let modificationHandledDates: string[] = [];
 
@@ -374,6 +388,7 @@ const Requests = () => {
           const victimWorkingDates = getWorkingDatesInRange(
             victim.fromDate,
             victim.toDate,
+            victim.department,
           );
 
           // IMPORTANT: A victim only overlaps if it claims dates that are:
@@ -446,7 +461,7 @@ const Requests = () => {
                   // Check if next working day is the next date
                   let nextWorkingDay = prevDate.add(1, "day");
                   while (
-                    isWeekend(nextWorkingDay) ||
+                    isWeekend(nextWorkingDay, victim.department) ||
                     isHoliday(nextWorkingDay)
                   ) {
                     nextWorkingDay = nextWorkingDay.add(1, "day");
@@ -577,7 +592,9 @@ const Requests = () => {
               masterRequest.requestType === "Work From Home" ||
               masterRequest.requestType === "Client Visit"
             ) {
-              return !isWeekend(dObj) && !isHoliday(dObj);
+              return (
+                !isWeekend(dObj, masterRequest.department) && !isHoliday(dObj)
+              );
             }
             return true;
           });
@@ -638,7 +655,8 @@ const Requests = () => {
               request.requestType === "Apply Leave" ||
               request.requestType === "Leave" ||
               request.requestType === "Half Day") &&
-            (isWeekend(currentDateObj) || isHoliday(currentDateObj))
+            (isWeekend(currentDateObj, request.department) ||
+              isHoliday(currentDateObj))
           ) {
             continue;
           }
@@ -970,7 +988,7 @@ const Requests = () => {
                   )}
                   All Departments
                 </button>
-                {departments.map((dept) => (
+                {departments.map((dept: any) => (
                   <button
                     key={dept.id}
                     onClick={() => {

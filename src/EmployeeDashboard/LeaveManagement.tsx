@@ -148,9 +148,15 @@ const LeaveManagement = () => {
       return true;
     }
 
-    // Disable weekends (Saturday = 6, Sunday = 0)
+    // Disable Sunday (Sunday = 0)
     const day = current.day();
-    if (day === 0 || day === 6) {
+    if (day === 0) {
+      return true;
+    }
+
+    // Disable Saturday (Saturday = 6) ONLY if department is "Information Technology"
+    const userDept = entity?.department || "";
+    if (userDept === "Information Technology" && day === 6) {
       return true;
     }
 
@@ -263,8 +269,18 @@ const LeaveManagement = () => {
   };
   // Helper function to check if a date is a weekend
   const isWeekend = (date: dayjs.Dayjs): boolean => {
-    const day = date.day(); // 0 = Sunday, 6 = Saturday
-    return day === 0 || day === 6;
+    const day = date.day(); // 0 = Sunday
+    const userDept = entity?.department || "";
+
+    // Always block Sunday
+    if (day === 0) return true;
+
+    // Block Saturday ONLY if department is Information Technology
+    if (userDept === "Information Technology" && day === 6) {
+      return true;
+    }
+
+    return false;
   };
 
   // Helper function to check if a date is a master holiday
