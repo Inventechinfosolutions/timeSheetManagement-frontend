@@ -284,8 +284,9 @@ const EmployeeListView = () => {
         }
         break;
       case "employeeId":
-        if (value && !/^(?=.*[A-Za-z])[A-Za-z0-9-]+$/.test(value)) {
-          error = "Employee ID should be alphanumeric";
+        if (value && !/^[A-Z0-9-]+$/.test(value)) {
+          error =
+            "Employee ID should contain only uppercase letters, numbers, and hyphens";
         }
         break;
       case "designation":
@@ -1110,7 +1111,23 @@ ${
                           placeholder="Employee ID"
                           className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none transition-all text-sm"
                           value={formData.employeeId}
-                          onChange={handleFormChange}
+                          onChange={(e) => {
+                            const event = {
+                              ...e,
+                              target: {
+                                ...e.target,
+                                name: "employeeId",
+                                value: e.target.value.toUpperCase(),
+                              },
+                            };
+                            handleFormChange(
+                              event as React.ChangeEvent<HTMLInputElement>,
+                            );
+                          }}
+                          onInput={(e) => {
+                            e.currentTarget.value =
+                              e.currentTarget.value.toUpperCase();
+                          }}
                           required
                         />
                         <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />

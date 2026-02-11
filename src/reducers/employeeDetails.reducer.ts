@@ -399,6 +399,9 @@ export const EmployeeDetailsSlice = createSlice({
       state.uploadResult = null;
       state.uploadLoading = false;
     },
+    clearErrorMessage: (state) => {
+      state.errorMessage = null;
+    },
   },
   extraReducers: (builder: ActionReducerMapBuilder<EmployeeDetailsState>) => {
     builder
@@ -476,11 +479,18 @@ export const EmployeeDetailsSlice = createSlice({
         (state: EmployeeDetailsState, action: any) => {
           state.updating = false;
           state.loading = false;
-          state.errorMessage = action.payload?.message || action.error?.message || 'Operation failed';
+          // Check if payload is string (from rejectWithValue) or object with message
+          if (typeof action.payload === 'string') {
+            state.errorMessage = action.payload;
+          } else if (action.payload?.message) {
+            state.errorMessage = action.payload.message;
+          } else {
+            state.errorMessage = action.error?.message || 'Operation failed';
+          }
         });
   },
 });
 
-export const { reset, setCurrentUser, clearUploadResult } = EmployeeDetailsSlice.actions;
+export const { reset, setCurrentUser, clearUploadResult, clearErrorMessage } = EmployeeDetailsSlice.actions;
 
 export default EmployeeDetailsSlice.reducer;
