@@ -23,6 +23,7 @@ import {
 } from "../reducers/employeeAttendance.reducer";
 import EmployeeTimeSheetMobileCard from "./EmployeeTimeSheetMobileCard";
 import Toast from "../components/Toast";
+import { fetchDepartments } from "../reducers/masterDepartment.reducer";
 
 const AdminEmployeeTimesheetList = () => {
   const navigate = useNavigate();
@@ -62,7 +63,10 @@ const AdminEmployeeTimesheetList = () => {
   const [downloadMonth, setDownloadMonth] = useState(selectedMonth);
   const [downloadYear, setDownloadYear] = useState(selectedYear);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error" | "info";
+  } | null>(null);
 
   // Handler to open download modal with current selected month/year
   const handleOpenDownloadModal = () => {
@@ -85,15 +89,9 @@ const AdminEmployeeTimesheetList = () => {
     }
   };
 
-  const departments = [
-    "All Departments",
-    "HR",
-    "IT",
-    "Sales",
-    "Marketing",
-    "Finance",
-    "Admin",
-  ];
+  const { departments } = useAppSelector(
+    (state: RootState) => state.masterDepartments,
+  );
 
   const statuses = ["All Status", "Submitted", "Pending"];
 
@@ -101,6 +99,10 @@ const AdminEmployeeTimesheetList = () => {
   const { entities, totalItems } = useAppSelector(
     (state: RootState) => state.employeeDetails,
   );
+
+  useEffect(() => {
+    dispatch(fetchDepartments());
+  }, [dispatch]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -332,22 +334,37 @@ const AdminEmployeeTimesheetList = () => {
                       Departments
                     </span>
                   </div>
+                  <button
+                    onClick={() => {
+                      setSelectedDepartment("All Departments");
+                      setIsDropdownOpen(false);
+                      setCurrentPage(1);
+                    }}
+                    className={`w-full text-left px-5 py-2 text-sm font-semibold transition-colors
+                    ${
+                      selectedDepartment === "All Departments"
+                        ? "text-[#4318FF] bg-[#4318FF]/5"
+                        : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
+                    }`}
+                  >
+                    All Departments
+                  </button>
                   {departments.map((dept) => (
                     <button
-                      key={dept}
+                      key={dept.id}
                       onClick={() => {
-                        setSelectedDepartment(dept);
+                        setSelectedDepartment(dept.departmentName);
                         setIsDropdownOpen(false);
                         setCurrentPage(1);
                       }}
                       className={`w-full text-left px-5 py-2 text-sm font-semibold transition-colors
                       ${
-                        selectedDepartment === dept
+                        selectedDepartment === dept.departmentName
                           ? "text-[#4318FF] bg-[#4318FF]/5"
                           : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
                       }`}
                     >
-                      {dept}
+                      {dept.departmentName}
                     </button>
                   ))}
                 </div>

@@ -23,6 +23,7 @@ import { generateMonthlyEntries } from "../utils/attendanceUtils";
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import DailyStatusMobileCard from "./DailyStatusMobileCard";
+import { fetchDepartments } from "../reducers/masterDepartment.reducer";
 
 const DailyStatus = () => {
   const navigate = useNavigate();
@@ -63,17 +64,9 @@ const DailyStatus = () => {
   );
   const [isExporting, setIsExporting] = useState(false);
 
-  const departments = [
-    "All",
-    "HR",
-    "IT",
-    "Sales",
-    "Marketing",
-    "Finance",
-    "Engineering",
-    "Design",
-    "Admin",
-  ];
+  const { departments } = useAppSelector(
+    (state: RootState) => state.masterDepartments,
+  );
 
   const { entities, totalItems } = useAppSelector(
     (state: RootState) => state.employeeDetails,
@@ -114,6 +107,7 @@ const DailyStatus = () => {
         year: currentYear,
       }),
     );
+    dispatch(fetchDepartments());
   }, [dispatch, currentMonth, currentYear]);
 
   useEffect(() => {
@@ -296,22 +290,37 @@ const DailyStatus = () => {
                       Departments
                     </span>
                   </div>
+                  <button
+                    onClick={() => {
+                      setSelectedDept("All");
+                      setIsDropdownOpen(false);
+                      setCurrentPage(1);
+                    }}
+                    className={`w-full text-left px-5 py-2 text-sm font-semibold transition-colors
+                      ${
+                        selectedDept === "All"
+                          ? "text-[#4318FF] bg-[#4318FF]/5"
+                          : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
+                      }`}
+                  >
+                    All Departments
+                  </button>
                   {departments.map((dept) => (
                     <button
-                      key={dept}
+                      key={dept.id}
                       onClick={() => {
-                        setSelectedDept(dept);
+                        setSelectedDept(dept.departmentName);
                         setIsDropdownOpen(false);
                         setCurrentPage(1);
                       }}
                       className={`w-full text-left px-5 py-2 text-sm font-semibold transition-colors
                         ${
-                          selectedDept === dept
+                          selectedDept === dept.departmentName
                             ? "text-[#4318FF] bg-[#4318FF]/5"
                             : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
                         }`}
                     >
-                      {dept === "All" ? "All Departments" : dept}
+                      {dept.departmentName}
                     </button>
                   ))}
                 </div>
@@ -549,16 +558,25 @@ const DailyStatus = () => {
                     </button>
                     {isModalDeptOpen && (
                       <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-[110]">
+                        <button
+                          onClick={() => {
+                            setModalDept("All");
+                            setIsModalDeptOpen(false);
+                          }}
+                          className={`w-full text-left px-5 py-2 text-sm font-semibold hover:bg-gray-50 ${modalDept === "All" ? "text-[#4318FF] bg-[#4318FF]/5" : "text-[#2B3674]"}`}
+                        >
+                          All Departments
+                        </button>
                         {departments.map((d) => (
                           <button
-                            key={d}
+                            key={d.id}
                             onClick={() => {
-                              setModalDept(d);
+                              setModalDept(d.departmentName);
                               setIsModalDeptOpen(false);
                             }}
-                            className={`w-full text-left px-5 py-2 text-sm font-semibold hover:bg-gray-50 ${modalDept === d ? "text-[#4318FF] bg-[#4318FF]/5" : "text-[#2B3674]"}`}
+                            className={`w-full text-left px-5 py-2 text-sm font-semibold hover:bg-gray-50 ${modalDept === d.departmentName ? "text-[#4318FF] bg-[#4318FF]/5" : "text-[#2B3674]"}`}
                           >
-                            {d === "All" ? "All Departments" : d}
+                            {d.departmentName}
                           </button>
                         ))}
                       </div>

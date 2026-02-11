@@ -41,6 +41,7 @@ import CommonMultipleUploader from "../EmployeeDashboard/CommonMultipleUploader"
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import dayjs from "dayjs";
 import { notification, Select } from "antd";
+import { fetchDepartments } from "../reducers/masterDepartment.reducer";
 
 const Requests = () => {
   const dispatch = useAppDispatch();
@@ -64,6 +65,9 @@ const Requests = () => {
   const itemsPerPage = 10;
   const { totalItems, totalPages } = useAppSelector(
     (state) => state.leaveRequest,
+  );
+  const { departments = [] } = useAppSelector(
+    (state: RootState) => state.masterDepartments,
   );
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -115,19 +119,20 @@ const Requests = () => {
     ...Array.from({ length: 11 }, (_, i) => (currentYear + 5 - i).toString()),
   ];
 
-  const departments = [
-    "All",
-    "HR",
-    "IT",
-    "Sales",
-    "Marketing",
-    "Finance",
-    "Admin",
-  ];
+  // const departments = [
+  //   "All",
+  //   "HR",
+  //   "IT",
+  //   "Sales",
+  //   "Marketing",
+  //   "Finance",
+  //   "Admin",
+  // ];
 
   // Fetch master holidays on mount
   useEffect(() => {
     dispatch(fetchHolidays());
+    dispatch(fetchDepartments());
   }, [dispatch]);
 
   // Fetch attendance records when a request is selected for viewing
@@ -435,13 +440,18 @@ const Requests = () => {
                 if (currentSegment.length === 0) {
                   currentSegment.push(remainingVictimDates[i]);
                 } else {
-                  const prevDate = dayjs(currentSegment[currentSegment.length - 1]);
+                  const prevDate = dayjs(
+                    currentSegment[currentSegment.length - 1],
+                  );
                   // Check if next working day is the next date
                   let nextWorkingDay = prevDate.add(1, "day");
-                  while (isWeekend(nextWorkingDay) || isHoliday(nextWorkingDay)) {
+                  while (
+                    isWeekend(nextWorkingDay) ||
+                    isHoliday(nextWorkingDay)
+                  ) {
                     nextWorkingDay = nextWorkingDay.add(1, "day");
                   }
-                  
+
                   if (date.isSame(nextWorkingDay, "day")) {
                     currentSegment.push(remainingVictimDates[i]);
                   } else {
@@ -459,7 +469,8 @@ const Requests = () => {
                     parentId: victim.id,
                     duration: remainingVictimDates.length,
                     fromDate: remainingVictimDates[0],
-                    toDate: remainingVictimDates[remainingVictimDates.length - 1],
+                    toDate:
+                      remainingVictimDates[remainingVictimDates.length - 1],
                   }),
                 ).unwrap();
               } else {
@@ -483,7 +494,7 @@ const Requests = () => {
                         sourceRequestId: request.id,
                         sourceRequestType: request.requestType,
                         // Use a flag or specific status in backend to mark this as an Approved segment split
-                        overrideStatus: "Approved", 
+                        overrideStatus: "Approved",
                       },
                     }),
                   ).unwrap();
@@ -654,74 +665,98 @@ const Requests = () => {
               attendanceData.totalHours = 0; // Explicitly clear hours for Leave
             } else if (request.requestType === "Work From Home") {
               attendanceData.workLocation = "WFH";
-              
+
               // Check if there's already a Half Day status on this date and preserve it
-              const existingRecord = dateRangeAttendanceRecords.find((r: any) => {
-                const rDate = r.workingDate || r.working_date;
-                const normDate =
-                  typeof rDate === "string"
-                    ? rDate.split("T")[0]
-                    : dayjs(rDate).format("YYYY-MM-DD");
-                return normDate === currentDate;
-              });
-              
+              const existingRecord = dateRangeAttendanceRecords.find(
+                (r: any) => {
+                  const rDate = r.workingDate || r.working_date;
+                  const normDate =
+                    typeof rDate === "string"
+                      ? rDate.split("T")[0]
+                      : dayjs(rDate).format("YYYY-MM-DD");
+                  return normDate === currentDate;
+                },
+              );
+
               // Also check in the current payload being built (for batch approvals)
               const existingPayloadEntry = attendancePayload.find(
-                (entry: any) => entry.workingDate === currentDate
+                (entry: any) => entry.workingDate === currentDate,
               );
-              
+
               // Preserve Half Day status and hours if it exists
-              if (existingRecord?.status === "Half Day" || existingPayloadEntry?.status === "Half Day") {
+              if (
+                existingRecord?.status === "Half Day" ||
+                existingPayloadEntry?.status === "Half Day"
+              ) {
                 attendanceData.status = "Half Day";
-                attendanceData.totalHours = existingRecord?.totalHours || existingPayloadEntry?.totalHours || 6;
+                attendanceData.totalHours =
+                  existingRecord?.totalHours ||
+                  existingPayloadEntry?.totalHours ||
+                  6;
               }
             } else if (request.requestType === "Client Visit") {
               attendanceData.workLocation = "Client Visit";
-              
+
               // Check if there's already a Half Day status on this date and preserve it
-              const existingRecord = dateRangeAttendanceRecords.find((r: any) => {
-                const rDate = r.workingDate || r.working_date;
-                const normDate =
-                  typeof rDate === "string"
-                    ? rDate.split("T")[0]
-                    : dayjs(rDate).format("YYYY-MM-DD");
-                return normDate === currentDate;
-              });
-              
+              const existingRecord = dateRangeAttendanceRecords.find(
+                (r: any) => {
+                  const rDate = r.workingDate || r.working_date;
+                  const normDate =
+                    typeof rDate === "string"
+                      ? rDate.split("T")[0]
+                      : dayjs(rDate).format("YYYY-MM-DD");
+                  return normDate === currentDate;
+                },
+              );
+
               // Also check in the current payload being built (for batch approvals)
               const existingPayloadEntry = attendancePayload.find(
-                (entry: any) => entry.workingDate === currentDate
+                (entry: any) => entry.workingDate === currentDate,
               );
-              
+
               // Preserve Half Day status and hours if it exists
-              if (existingRecord?.status === "Half Day" || existingPayloadEntry?.status === "Half Day") {
+              if (
+                existingRecord?.status === "Half Day" ||
+                existingPayloadEntry?.status === "Half Day"
+              ) {
                 attendanceData.status = "Half Day";
-                attendanceData.totalHours = existingRecord?.totalHours || existingPayloadEntry?.totalHours || 6;
+                attendanceData.totalHours =
+                  existingRecord?.totalHours ||
+                  existingPayloadEntry?.totalHours ||
+                  6;
               }
             } else if (request.requestType === "Half Day") {
               attendanceData.status = "Half Day";
               attendanceData.totalHours = 5; // Automatically set 5 hours for Half Day
-              
+
               // Preserve existing workLocation (WFH/CV) if it exists
               // If it implies "don't touch", we should not set attendanceData.workLocation at all unless we found an existing one.
               // By default attendanceData.workLocation is undefined here, which is correct (JSON.stringify will omit it, or we handle it).
-              
-              const existingRecord = dateRangeAttendanceRecords.find((r: any) => {
-                const rDate = r.workingDate || r.working_date;
-                const normDate =
-                  typeof rDate === "string"
-                    ? rDate.split("T")[0]
-                    : dayjs(rDate).format("YYYY-MM-DD");
-                return normDate === currentDate;
-              });
-              
-              const existingPayloadEntry = attendancePayload.find(
-                (entry: any) => entry.workingDate === currentDate
+
+              const existingRecord = dateRangeAttendanceRecords.find(
+                (r: any) => {
+                  const rDate = r.workingDate || r.working_date;
+                  const normDate =
+                    typeof rDate === "string"
+                      ? rDate.split("T")[0]
+                      : dayjs(rDate).format("YYYY-MM-DD");
+                  return normDate === currentDate;
+                },
               );
-              
-              if (existingRecord?.workLocation || existingRecord?.work_location || existingPayloadEntry?.workLocation) {
+
+              const existingPayloadEntry = attendancePayload.find(
+                (entry: any) => entry.workingDate === currentDate,
+              );
+
+              if (
+                existingRecord?.workLocation ||
+                existingRecord?.work_location ||
+                existingPayloadEntry?.workLocation
+              ) {
                 attendanceData.workLocation =
-                  existingRecord?.workLocation || existingRecord?.work_location || existingPayloadEntry?.workLocation;
+                  existingRecord?.workLocation ||
+                  existingRecord?.work_location ||
+                  existingPayloadEntry?.workLocation;
               }
               // ELSE: Do NOT set it to "Half Day". Leave it undefined.
             }
@@ -731,9 +766,11 @@ const Requests = () => {
 
           // Check if we already have an entry for this date in the payload and merge
           const existingIndex = attendancePayload.findIndex(
-            (entry: any) => entry.workingDate === currentDate && entry.employeeId === request.employeeId
+            (entry: any) =>
+              entry.workingDate === currentDate &&
+              entry.employeeId === request.employeeId,
           );
-          
+
           if (existingIndex !== -1) {
             // Merge with existing entry
             // Priority: Half Day status should always be preserved, workLocation should be combined
@@ -742,44 +779,57 @@ const Requests = () => {
               ...existing,
               ...attendanceData,
               // If either has Half Day status, preserve it
-              status: attendanceData.status === "Half Day" || existing.status === "Half Day" ? "Half Day" : attendanceData.status || existing.status,
+              status:
+                attendanceData.status === "Half Day" ||
+                existing.status === "Half Day"
+                  ? "Half Day"
+                  : attendanceData.status || existing.status,
               // If either has totalHours set for Half Day, preserve it
-              totalHours: (attendanceData.status === "Half Day" || existing.status === "Half Day") ? 5 : (attendanceData.totalHours || existing.totalHours),
+              totalHours:
+                attendanceData.status === "Half Day" ||
+                existing.status === "Half Day"
+                  ? 5
+                  : attendanceData.totalHours || existing.totalHours,
               // Prefer the new workLocation if set, otherwise keep existing
-              workLocation: attendanceData.workLocation || existing.workLocation,
+              workLocation:
+                attendanceData.workLocation || existing.workLocation,
             };
           } else {
             attendancePayload.push(attendanceData);
           }
         }
 
-
-        
         // Fire Bulk API Call
         if (attendancePayload.length > 0) {
           await dispatch(submitBulkAttendance(attendancePayload)).unwrap();
           console.log(
             `Frontend: ${status === "Approved" ? "Created" : "Reverted"} bulk attendance for ${attendancePayload.length} days`,
           );
-          
+
           // Update local state 'dateRangeAttendanceRecords' to prevent stale data issues on next approval
           // This avoids the need for an extra API call (which the user asked to remove)
           const updatedRecords = [...dateRangeAttendanceRecords];
           attendancePayload.forEach((newRecord) => {
-             // newRecord has 'workingDate' but records from DB might use 'working_date' or 'workingDate'
-             // Normalize comparison
-             const newDate = newRecord.workingDate;
-             const index = updatedRecords.findIndex((r) => {
-                const rDate = r.workingDate || r.working_date;
-                const normDate = typeof rDate === "string" ? rDate.split("T")[0] : dayjs(rDate).format("YYYY-MM-DD");
-                return normDate === newDate;
-             });
-             
-             if (index !== -1) {
-               updatedRecords[index] = { ...updatedRecords[index], ...newRecord };
-             } else {
-               updatedRecords.push(newRecord);
-             }
+            // newRecord has 'workingDate' but records from DB might use 'working_date' or 'workingDate'
+            // Normalize comparison
+            const newDate = newRecord.workingDate;
+            const index = updatedRecords.findIndex((r) => {
+              const rDate = r.workingDate || r.working_date;
+              const normDate =
+                typeof rDate === "string"
+                  ? rDate.split("T")[0]
+                  : dayjs(rDate).format("YYYY-MM-DD");
+              return normDate === newDate;
+            });
+
+            if (index !== -1) {
+              updatedRecords[index] = {
+                ...updatedRecords[index],
+                ...newRecord,
+              };
+            } else {
+              updatedRecords.push(newRecord);
+            }
           });
           setDateRangeAttendanceRecords(updatedRecords);
         }
@@ -903,11 +953,28 @@ const Requests = () => {
                     Departments
                   </span>
                 </div>
+                <button
+                  onClick={() => {
+                    setSelectedDept("All");
+                    setIsDeptOpen(false);
+                    setCurrentPage(1);
+                  }}
+                  className={`w-full flex items-center px-5 py-2.5 text-sm font-bold transition-all relative ${
+                    selectedDept === "All"
+                      ? "text-[#4318FF] bg-blue-50/50"
+                      : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
+                  }`}
+                >
+                  {selectedDept === "All" && (
+                    <div className="absolute left-0 w-1 h-6 bg-[#4318FF] rounded-r-full"></div>
+                  )}
+                  All Departments
+                </button>
                 {departments.map((dept) => (
                   <button
-                    key={dept}
+                    key={dept.id}
                     onClick={() => {
-                      setSelectedDept(dept);
+                      setSelectedDept(dept.departmentName);
                       setIsDeptOpen(false);
                     }}
                     className={`w-full flex items-center px-5 py-2.5 text-sm font-bold transition-all relative ${
@@ -916,10 +983,10 @@ const Requests = () => {
                         : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
                     }`}
                   >
-                    {selectedDept === dept && (
+                    {selectedDept === dept.departmentName && (
                       <div className="absolute left-0 w-1 h-6 bg-[#4318FF] rounded-r-full"></div>
                     )}
-                    {dept}
+                    {dept.departmentName}
                   </button>
                 ))}
               </div>
