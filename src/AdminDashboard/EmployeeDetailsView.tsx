@@ -3,7 +3,11 @@ import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "../store";
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { getEntity, updateEntity } from "../reducers/employeeDetails.reducer";
+import {
+  getEntity,
+  updateEntity,
+  clearErrorMessage,
+} from "../reducers/employeeDetails.reducer";
 import {
   User,
   Users,
@@ -20,17 +24,20 @@ import {
 import { resetPassword } from "../reducers/employeeDetails.reducer";
 import { EmploymentType } from "../types";
 import { getManagerMappingByEmployeeId } from "../reducers/managerMapping.reducer";
- 
- 
+import { fetchDepartments } from "../reducers/masterDepartment.reducer";
+
 const EmployeeDetailsView = () => {
   const { employeeId } = useParams<{ employeeId: string }>();
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
-  const { entities, entity, loading } = useSelector(
+  const { entities, entity, loading, errorMessage } = useSelector(
     (state: RootState) => state.employeeDetails,
   );
   const { entity: managerMapping } = useSelector(
     (state: RootState) => state.managerMapping,
+  );
+  const { departments } = useSelector(
+    (state: RootState) => state.masterDepartments,
   );
   const [viewedProfileImage, setViewedProfileImage] = useState<string | null>(
     null,
@@ -55,7 +62,8 @@ const EmployeeDetailsView = () => {
   });
   const [showConfirm, setShowConfirm] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState(false);
- 
+  const [validationError, setValidationError] = useState("");
+
   useEffect(() => {
     if (
       employeeId &&
@@ -67,7 +75,7 @@ const EmployeeDetailsView = () => {
       dispatch(getEntity(employeeId));
     }
   }, [dispatch, employeeId]); // Removed entity from dependency array
- 
+
   useEffect(() => {
     if (employeeId) {
       // Use direct axios call to avoid Redux side effects (like updating the global header avatar)
@@ -84,24 +92,37 @@ const EmployeeDetailsView = () => {
         });
     }
   }, [employeeId]);
- 
+
   const employeeFromList = entities.find(
     (e: any) => e.employeeId === employeeId || e.id === Number(employeeId),
   );
- 
+
   // Resolve manager name from API (camelCase, snake_case, or array response)
   const mappedManagerName = (() => {
-    if (!managerMapping || (typeof managerMapping === "object" && Object.keys(managerMapping).length === 0)) return null;
-    const item = Array.isArray(managerMapping) ? managerMapping[0] : managerMapping;
-    return (item?.managerName ?? item?.manager_name ?? item?.manager?.fullName ?? item?.manager?.name) || null;
+    if (
+      !managerMapping ||
+      (typeof managerMapping === "object" &&
+        Object.keys(managerMapping).length === 0)
+    )
+      return null;
+    const item = Array.isArray(managerMapping)
+      ? managerMapping[0]
+      : managerMapping;
+    return (
+      (item?.managerName ??
+        item?.manager_name ??
+        item?.manager?.fullName ??
+        item?.manager?.name) ||
+      null
+    );
   })();
- 
+
   const employee =
     entity &&
-      (entity.employeeId === employeeId || entity.id === Number(employeeId))
+    (entity.employeeId === employeeId || entity.id === Number(employeeId))
       ? entity
       : employeeFromList;
- 
+
   useEffect(() => {
     if (employee) {
       setEditedData({
@@ -118,7 +139,7 @@ const EmployeeDetailsView = () => {
       });
     }
   }, [employee]);
- 
+
   // Fetch manager mapping (use canonical employeeId once employee is loaded)
   useEffect(() => {
     const id = employee?.employeeId ?? employee?.id ?? employeeId;
@@ -126,7 +147,12 @@ const EmployeeDetailsView = () => {
       dispatch(getManagerMappingByEmployeeId(String(id)));
     }
   }, [dispatch, employeeId, employee?.employeeId, employee?.id]);
- 
+
+  // Fetch departments on mount
+  useEffect(() => {
+    dispatch(fetchDepartments());
+  }, [dispatch]);
+
   if (loading && !employee) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -134,7 +160,7 @@ const EmployeeDetailsView = () => {
       </div>
     );
   }
- 
+
   if (!employee && !loading) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-gray-500">
@@ -148,15 +174,51 @@ const EmployeeDetailsView = () => {
       </div>
     );
   }
- 
+
   const handleEdit = () => {
+    dispatch(clearErrorMessage());
     setIsEditing(true);
   };
- 
+
   const handleSave = () => {
+    setValidationError("");
+
+    // Validate required fields
+    const requiredFields = [
+      { field: "fullName", label: "Full Name" },
+      { field: "employeeId", label: "Employee ID" },
+      { field: "department", label: "Department" },
+      { field: "designation", label: "Designation" },
+      { field: "role", label: "Role" },
+      { field: "email", label: "Email" },
+    ];
+
+    for (const { field, label } of requiredFields) {
+      if (!editedData[field as keyof typeof editedData]) {
+        setValidationError(`${label} is required`);
+        return;
+      }
+    }
+
+    // Validate Employee ID pattern (letters, numbers, hyphens only)
+    const employeeIdPattern = /^[A-Z0-9-]+$/;
+    if (!employeeIdPattern.test(editedData.employeeId)) {
+      setValidationError(
+        "Employee ID should contain only uppercase letters, numbers, and hyphens",
+      );
+      return;
+    }
+
+    // Validate email format
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(editedData.email)) {
+      setValidationError("Please enter a valid email address");
+      return;
+    }
+
     setShowConfirm(true);
   };
- 
+
   const confirmSave = async () => {
     try {
       const oldEmployeeId = employee.employeeId || employee.id;
@@ -166,7 +228,7 @@ const EmployeeDetailsView = () => {
       setIsEditing(false);
       setShowConfirm(false);
       setUpdateSuccess(true);
- 
+
       // If employee ID changed, navigate to new employee ID and fetch with new ID
       const newEmployeeId = editedData.employeeId;
       if (newEmployeeId && newEmployeeId !== oldEmployeeId) {
@@ -180,7 +242,7 @@ const EmployeeDetailsView = () => {
         // Refresh the entity with current employee ID
         dispatch(getEntity(employeeId!));
       }
- 
+
       // Hide success message after 3 seconds
       setTimeout(() => {
         setUpdateSuccess(false);
@@ -190,7 +252,7 @@ const EmployeeDetailsView = () => {
       setShowConfirm(false);
     }
   };
- 
+
   const handleCancel = () => {
     setEditedData({
       fullName: employee.fullName || employee.name || "",
@@ -204,27 +266,29 @@ const EmployeeDetailsView = () => {
         : "",
       email: employee.email || "",
     });
+    setValidationError("");
+    dispatch(clearErrorMessage());
     setIsEditing(false);
   };
- 
+
   const avatarLetter = (employee.fullName || employee.name || "?")
     .charAt(0)
     .toUpperCase();
- 
+
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setResetError("");
- 
+
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       setResetError("Passwords do not match");
       return;
     }
- 
+
     if (passwordData.newPassword.length < 6) {
       setResetError("Password must be at least 6 characters long");
       return;
     }
- 
+
     try {
       await dispatch(
         resetPassword({
@@ -233,7 +297,7 @@ const EmployeeDetailsView = () => {
           confirmPassword: passwordData.confirmPassword, // Include if DTO requires it, otherwise ignored
         }),
       ).unwrap();
- 
+
       setResetSuccess(true);
       setTimeout(() => {
         setIsResetModalOpen(false);
@@ -244,7 +308,7 @@ const EmployeeDetailsView = () => {
       setResetError(err?.message || "Failed to reset password");
     }
   };
- 
+
   return (
     <div className="px-4 md:px-8 py-2 md:py-8 w-full max-w-[1400px] mx-auto animate-in fade-in duration-500 space-y-3 md:space-y-6">
       {/* Success Message */}
@@ -258,7 +322,7 @@ const EmployeeDetailsView = () => {
           </span>
         </div>
       )}
- 
+
       {/* Navigation Back */}
       <div className="flex items-center mb-2">
         <button
@@ -274,7 +338,7 @@ const EmployeeDetailsView = () => {
           </span>
         </button>
       </div>
- 
+
       {/* Top Card - User Header with Gradient */}
       <div className="relative overflow-hidden rounded-2xl md:rounded-[24px] shadow-[0px_20px_50px_0px_#111c440d] border border-gray-100">
         {/* Gradient Background */}
@@ -284,7 +348,7 @@ const EmployeeDetailsView = () => {
             background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
           }}
         ></div>
- 
+
         {/* Content */}
         <div className="relative z-10 p-4 md:p-10 flex flex-col md:flex-row items-center md:items-start gap-3 md:gap-6">
           {/* Avatar Area */}
@@ -303,7 +367,7 @@ const EmployeeDetailsView = () => {
               )}
             </div>
           </div>
- 
+
           <div className="text-center md:text-left flex-1 mt-0.5">
             <h1 className="text-base sm:text-2xl md:text-3xl font-black text-white mb-0">
               {employee.fullName || employee.name || ""}
@@ -325,7 +389,7 @@ const EmployeeDetailsView = () => {
             </div>
           </div>
         </div>
- 
+
         {/* {!employee.resetRequired && (
           <div className="absolute top-4 right-4 md:top-10 md:right-10 z-20">
             <button
@@ -338,7 +402,7 @@ const EmployeeDetailsView = () => {
           </div>
         )} */}
       </div>
- 
+
       {/* Personal Information Card */}
       <div className="bg-white rounded-2xl md:rounded-[24px] p-5 sm:p-6 md:p-8 shadow-[0px_20px_50px_0px_#111c440d] border border-gray-100 mb-4 md:mb-8">
         <div className="flex items-center justify-between mb-5">
@@ -374,7 +438,20 @@ const EmployeeDetailsView = () => {
             </div>
           )}
         </div>
- 
+
+        {/* Validation Error Message */}
+        {validationError && (
+          <div className="mb-5 p-4 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm animate-in fade-in slide-in-from-top-2 duration-300">
+            {validationError}
+          </div>
+        )}
+
+        {errorMessage && (
+          <div className="mb-5 p-4 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm animate-in fade-in slide-in-from-top-2 duration-300">
+            {errorMessage}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-7">
           {/* Full Name */}
           <div className="space-y-1.5">
@@ -393,17 +470,18 @@ const EmployeeDetailsView = () => {
                 onChange={(e) =>
                   setEditedData({ ...editedData, fullName: e.target.value })
                 }
-                className={`w-full pl-11 pr-4 py-2.5 border-2 rounded-xl text-[#1B2559] text-sm font-semibold transition-all ${isEditing
-                  ? "border-gray-200 focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white"
-                  : "border-gray-100 bg-gray-50/50"
-                  }`}
+                className={`w-full pl-11 pr-4 py-2.5 border-2 rounded-xl text-[#1B2559] text-sm font-semibold transition-all ${
+                  isEditing
+                    ? "border-gray-200 focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white"
+                    : "border-gray-100 bg-gray-50/50"
+                }`}
               />
               <div className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
                 <User className="text-[#667eea] w-4 h-4" />
               </div>
             </div>
           </div>
- 
+
           {/* Employee ID */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
@@ -419,19 +497,25 @@ const EmployeeDetailsView = () => {
                     : employee.employeeId || employee.id || ""
                 }
                 onChange={(e) =>
-                  setEditedData({ ...editedData, employeeId: e.target.value })
+                  setEditedData({
+                    ...editedData,
+                    employeeId: e.target.value.toUpperCase(),
+                  })
                 }
-                className={`w-full pl-11 pr-4 py-2.5 border-2 rounded-xl text-[#1B2559] text-sm font-semibold transition-all ${isEditing
-                  ? "border-gray-200 focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white"
-                  : "border-gray-100 bg-gray-50/50"
-                  }`}
+                pattern="[A-Z0-9-]*"
+                title="Employee ID should contain only uppercase letters, numbers, and hyphens"
+                className={`w-full pl-11 pr-4 py-2.5 border-2 rounded-xl text-[#1B2559] text-sm font-semibold transition-all ${
+                  isEditing
+                    ? "border-gray-200 focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white"
+                    : "border-gray-100 bg-gray-50/50"
+                }`}
               />
               <div className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-purple-50 flex items-center justify-center">
                 <CreditCard className="text-[#764ba2] w-4 h-4" />
               </div>
             </div>
           </div>
- 
+
           {/* Department */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
@@ -446,18 +530,18 @@ const EmployeeDetailsView = () => {
                   }
                   className="w-full pl-11 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white text-[#1B2559] text-sm font-semibold transition-all appearance-none"
                 >
-                  <option value="HR">HR</option>
-                  <option value="IT">IT</option>
-                  <option value="Finance">Finance</option>
-                  {/* <option value="Admin">Admin</option> */}
-                  <option value="Designer">Designer</option>
-                  <option value="Business Analyst">Business Analyst</option>
+                  <option value="">Select Department</option>
+                  {departments.map((dept) => (
+                    <option key={dept.id} value={dept.departmentName}>
+                      {dept.departmentName}
+                    </option>
+                  ))}
                 </select>
               ) : (
                 <input
                   type="text"
                   disabled
-                  value={employee.department || "IT"}
+                  value={employee.department || ""}
                   className="w-full pl-11 pr-4 py-2.5 border-2 border-gray-100 rounded-xl bg-gray-50/50 text-[#1B2559] text-sm font-semibold transition-all"
                 />
               )}
@@ -466,7 +550,7 @@ const EmployeeDetailsView = () => {
               </div>
             </div>
           </div>
- 
+
           {/* Designation */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
@@ -484,17 +568,18 @@ const EmployeeDetailsView = () => {
                 onChange={(e) =>
                   setEditedData({ ...editedData, designation: e.target.value })
                 }
-                className={`w-full pl-11 pr-4 py-2.5 border-2 rounded-xl text-[#1B2559] text-sm font-semibold transition-all ${isEditing
-                  ? "border-gray-200 focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white"
-                  : "border-gray-100 bg-gray-50/50"
-                  }`}
+                className={`w-full pl-11 pr-4 py-2.5 border-2 rounded-xl text-[#1B2559] text-sm font-semibold transition-all ${
+                  isEditing
+                    ? "border-gray-200 focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white"
+                    : "border-gray-100 bg-gray-50/50"
+                }`}
               />
               <div className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-orange-50 flex items-center justify-center">
                 <Briefcase className="text-[#FFB020] w-4 h-4" />
               </div>
             </div>
           </div>
- 
+
           {/* Role */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
@@ -527,7 +612,7 @@ const EmployeeDetailsView = () => {
               </div>
             </div>
           </div>
- 
+
           {/* Mapped Manager */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
@@ -545,37 +630,48 @@ const EmployeeDetailsView = () => {
               </div>
             </div>
           </div>
- 
-          {/* Employment type (leave balance) */}
-          {/* <div className="space-y-1.5">
-            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
-              Employment type
-            </label>
-            <select
-              disabled={!isEditing}
-              value={
-                isEditing
-                  ? editedData.employmentType
-                  : (employee.employmentType as string) || ""
-              }
-              onChange={(e) =>
-                setEditedData({
-                  ...editedData,
-                  employmentType: e.target.value as "" | EmploymentType,
 
-                })
-              }
-              className={`w-full pl-11 pr-4 py-2.5 border-2 rounded-xl text-[#1B2559] text-sm font-semibold transition-all appearance-none ${isEditing
-                ? "border-gray-200 focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white"
-                : "border-gray-100 bg-gray-50/50"
-                }`}
-            >
-              <option value="">Select Employment Type</option>
-              <option value="FULL_TIMER">Full time Employee</option>
-              <option value="INTERN">Intern</option>
-            </select>
+          {/* Employment Type */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
+              Employment Type
+            </label>
+            <div className="relative group">
+              {isEditing ? (
+                <select
+                  value={editedData.employmentType}
+                  onChange={(e) =>
+                    setEditedData({
+                      ...editedData,
+                      employmentType: e.target.value as "" | EmploymentType,
+                    })
+                  }
+                  className="w-full pl-11 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white text-[#1B2559] text-sm font-semibold transition-all appearance-none"
+                >
+                  <option value="">Select Employment Type</option>
+                  <option value="FULL_TIMER">Full Time Employee</option>
+                  <option value="INTERN">Intern</option>
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  disabled
+                  value={
+                    employee.employmentType === "FULL_TIMER"
+                      ? "Full Time Employee"
+                      : employee.employmentType === "INTERN"
+                        ? "Intern"
+                        : ""
+                  }
+                  className="w-full pl-11 pr-4 py-2.5 border-2 border-gray-100 rounded-xl bg-gray-50/50 text-[#1B2559] text-sm font-semibold transition-all"
+                />
+              )}
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-purple-50 flex items-center justify-center">
+                <Briefcase className="text-purple-500 w-4 h-4" />
+              </div>
+            </div>
           </div>
- 
+
           {/* Joining Date */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
@@ -590,24 +686,25 @@ const EmployeeDetailsView = () => {
                     ? editedData.joiningDate
                     : employee.joiningDate
                       ? new Date(employee.joiningDate)
-                        .toISOString()
-                        .split("T")[0]
+                          .toISOString()
+                          .split("T")[0]
                       : ""
                 }
                 onChange={(e) =>
                   setEditedData({ ...editedData, joiningDate: e.target.value })
                 }
-                className={`w-full pl-11 pr-4 py-2.5 border-2 rounded-xl text-[#1B2559] text-sm font-semibold transition-all ${isEditing
-                  ? "border-gray-200 focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white"
-                  : "border-gray-100 bg-gray-50/50"
-                  }`}
+                className={`w-full pl-11 pr-4 py-2.5 border-2 rounded-xl text-[#1B2559] text-sm font-semibold transition-all ${
+                  isEditing
+                    ? "border-gray-200 focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white"
+                    : "border-gray-100 bg-gray-50/50"
+                }`}
               />
               <div className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
                 <Calendar className="text-blue-500 w-4 h-4" />
               </div>
             </div>
           </div>
- 
+
           {/* Email */}
           <div className="space-y-1.5 md:col-span-2">
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
@@ -621,10 +718,11 @@ const EmployeeDetailsView = () => {
                 onChange={(e) =>
                   setEditedData({ ...editedData, email: e.target.value })
                 }
-                className={`w-full pl-11 pr-4 py-2.5 border-2 rounded-xl text-[#1B2559] text-sm font-semibold transition-all ${isEditing
-                  ? "border-gray-200 focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white"
-                  : "border-gray-100 bg-gray-50/50"
-                  }`}
+                className={`w-full pl-11 pr-4 py-2.5 border-2 rounded-xl text-[#1B2559] text-sm font-semibold transition-all ${
+                  isEditing
+                    ? "border-gray-200 focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white"
+                    : "border-gray-100 bg-gray-50/50"
+                }`}
               />
               <div className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center">
                 <Mail className="text-[#EE5D50] w-4 h-4" />
@@ -683,7 +781,7 @@ const EmployeeDetailsView = () => {
                 <X size={20} />
               </button>
             </div>
- 
+
             <div className="p-6">
               {resetSuccess ? (
                 <div className="flex flex-col items-center justify-center text-center py-4 text-emerald-600 animate-in fade-in zoom-in-95 duration-300">
@@ -702,7 +800,7 @@ const EmployeeDetailsView = () => {
                       {resetError}
                     </div>
                   )}
- 
+
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">
                       New Password
@@ -721,7 +819,7 @@ const EmployeeDetailsView = () => {
                       required
                     />
                   </div>
- 
+
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">
                       Confirm Password
@@ -740,7 +838,7 @@ const EmployeeDetailsView = () => {
                       required
                     />
                   </div>
- 
+
                   <button
                     type="submit"
                     className="w-full py-3 mt-2 bg-gradient-to-r from-[#4318FF] to-[#868CFF] text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all active:scale-95"
@@ -756,7 +854,5 @@ const EmployeeDetailsView = () => {
     </div>
   );
 };
- 
+
 export default EmployeeDetailsView;
- 
- 
