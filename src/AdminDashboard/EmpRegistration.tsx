@@ -13,17 +13,20 @@ import {
 import {
   createEntity,
   reset,
-  fetchDepartments,
   fetchRoles,
 } from "../reducers/employeeDetails.reducer";
+import { fetchDepartments } from "../reducers/masterDepartment.reducer";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { RootState } from "../store";
 
 const Registration = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const { loading, updateSuccess, errorMessage, entity, departments, roles } =
+  const { loading, updateSuccess, errorMessage, entity, roles } =
     useAppSelector((state: RootState) => state.employeeDetails);
+  const { departments } = useAppSelector(
+    (state: RootState) => state.masterDepartments,
+  );
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -41,6 +44,10 @@ const Registration = () => {
     dispatch(fetchDepartments());
     dispatch(fetchRoles());
   }, [dispatch]);
+
+  useEffect(() => {
+    console.log("Departments loaded:", departments);
+  }, [departments]);
 
   useEffect(() => {
     if (updateSuccess) {
@@ -94,7 +101,14 @@ const Registration = () => {
     e.preventDefault();
     setError("");
 
-    const requiredKeys = ["fullName", "employeeId", "department", "role", "designation", "email"];
+    const requiredKeys = [
+      "fullName",
+      "employeeId",
+      "department",
+      "role",
+      "designation",
+      "email",
+    ];
     if (requiredKeys.some((k) => !(formData as Record<string, unknown>)[k])) {
       setError("Please fill in all required fields");
       return;
@@ -104,7 +118,8 @@ const Registration = () => {
       ...formData,
     };
     if (!formData.employmentType) delete submissionData.employmentType;
-    console.log("Submitting Registration Data:", submissionData);
+    console.log("Department value being submitted:", formData.department);
+    console.log("Full submission data:", submissionData);
     dispatch(createEntity(submissionData));
   };
 
@@ -224,8 +239,8 @@ const Registration = () => {
                     >
                       <option value="">Select Department</option>
                       {departments.map((dept) => (
-                        <option key={dept} value={dept}>
-                          {dept}
+                        <option key={dept.id} value={dept.departmentCode}>
+                          {dept.departmentName}
                         </option>
                       ))}
                     </select>

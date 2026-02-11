@@ -25,7 +25,6 @@ interface EmployeeDetailsState {
   profileImageUrl: string | null;
   uploadLoading: boolean;
   uploadResult: any | null;
-  departments: string[];
   roles: string[];
   managers: any[];
   loggedInUserProfileImageUrl: string | null;
@@ -42,7 +41,6 @@ const initialState: EmployeeDetailsState = {
   profileImageUrl: null,
   uploadLoading: false,
   uploadResult: null,
-  departments: [],
   roles: [],
   managers: [],
   loggedInUserProfileImageUrl: null,
@@ -375,17 +373,7 @@ export const resendActivationLink = createAsyncThunk<any, string, ThunkConfig>(
   }
 );
 
-export const fetchDepartments = createAsyncThunk<any, void, ThunkConfig>(
-  'employeeDetails/fetch_departments',
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await axios.get(`${apiUrl}/departments`);
-      return response.data;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || error.message || 'Request failed');
-    }
-  }
-);
+
 
 export const fetchRoles = createAsyncThunk<any, void, ThunkConfig>(
   'employeeDetails/fetch_roles',
@@ -451,9 +439,7 @@ export const EmployeeDetailsSlice = createSlice({
         state.uploadLoading = false;
         state.updateSuccess = true;
       })
-      .addCase(fetchDepartments.fulfilled, (state, action) => {
-        state.departments = action.payload;
-      })
+
       .addCase(fetchRoles.fulfilled, (state, action) => {
         state.roles = action.payload;
       })
