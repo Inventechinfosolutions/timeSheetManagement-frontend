@@ -190,6 +190,7 @@ const EmployeeDetailsView = () => {
       { field: "department", label: "Department" },
       { field: "designation", label: "Designation" },
       { field: "role", label: "Role" },
+      { field: "employmentType", label: "Employment Type" },
       { field: "email", label: "Email" },
     ];
 
