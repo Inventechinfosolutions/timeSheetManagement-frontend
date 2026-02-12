@@ -354,7 +354,7 @@ const Requests = () => {
         } else if (reqType === "client visit" || reqType === "cv") {
           victimTypes = ["work from home", "client visit"];
         } else if (reqType === "half day") {
-          victimTypes = ["work from home", "client visit"];
+          victimTypes = [];
         }
 
         const requestWorkingDates = getWorkingDatesInRange(
