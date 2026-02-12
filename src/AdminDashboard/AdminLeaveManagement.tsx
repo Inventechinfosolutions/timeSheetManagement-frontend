@@ -163,11 +163,9 @@ const AdminLeaveManagement = () => {
       return false;
 
     const currentDate = current.startOf("day");
-    const today = dayjs().startOf("day");
 
-    if (selectedLeaveType !== "Client Visit" && currentDate.isBefore(today)) {
-      return true;
-    }
+    // Admin and Manager: all dates (including past) are enabled for Leave, WFH, Client Visit
+    // (No past-date restriction for admin/manager)
 
     // Weekends (Saturday, Sunday) are enabled for Leave, WFH, and Client Visit calendar selection.
 
@@ -230,9 +228,7 @@ const AdminLeaveManagement = () => {
   };
 
   const disabledEndDate = (current: any) => {
-    const today = dayjs().startOf("day");
-    const currentDate = current.startOf("day");
-    if (selectedLeaveType !== "Client Visit" && currentDate.isBefore(today)) return true;
+    // Admin and Manager: all dates enabled (no past-date restriction)
 
     // Disable if end date is before start date
     if (formData.startDate) {
