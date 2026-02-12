@@ -253,7 +253,7 @@ export const downloadPdf = ({
         
         const summaryY = currentY + 7.5;
         doc.text(`Full Days: ${mFullDays}`, 18, summaryY);
-        doc.text(`Half Days: ${mHalfDays}`, 54, summaryY);
+        doc.text(`Half Day Leave: ${mHalfDays}`, 54, summaryY);
         doc.text(`Leaves: ${mLeaves}`, 90, summaryY);
         doc.text(`Not Updated: ${mNotUpdated}`, 126, summaryY);
         doc.text(`Total Hours: ${mTotalHours.toFixed(1)}`, 165, summaryY);
