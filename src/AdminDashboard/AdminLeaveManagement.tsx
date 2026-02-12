@@ -163,6 +163,11 @@ const AdminLeaveManagement = () => {
       return false;
 
     const currentDate = current.startOf("day");
+    const today = dayjs().startOf("day");
+
+    if (selectedLeaveType !== "Client Visit" && currentDate.isBefore(today)) {
+      return true;
+    }
 
     // Disable Sunday (Sunday = 0)
     const day = current.day();
@@ -235,6 +240,10 @@ const AdminLeaveManagement = () => {
   };
 
   const disabledEndDate = (current: any) => {
+    const today = dayjs().startOf("day");
+    const currentDate = current.startOf("day");
+    if (selectedLeaveType !== "Client Visit" && currentDate.isBefore(today)) return true;
+
     // Disable if end date is before start date
     if (formData.startDate) {
       if (

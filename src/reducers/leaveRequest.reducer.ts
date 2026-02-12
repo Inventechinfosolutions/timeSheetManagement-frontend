@@ -401,6 +401,7 @@ const leaveRequestSlice = createSlice({
   reducers: {
     resetSubmitSuccess: (state) => {
       state.submitSuccess = false;
+      state.error = null;
     },
   },
   extraReducers: (builder) => {
