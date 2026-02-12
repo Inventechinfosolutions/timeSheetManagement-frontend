@@ -169,17 +169,7 @@ const AdminLeaveManagement = () => {
       return true;
     }
 
-    // Disable Sunday (Sunday = 0)
-    const day = current.day();
-    if (day === 0) {
-      return true;
-    }
-
-    // Disable Saturday (Saturday = 6) ONLY if department is "Information Technology"
-    const employeeDept = selectedEmployee?.department || "";
-    if (employeeDept === "Information Technology" && day === 6) {
-      return true;
-    }
+    // Weekends (Saturday, Sunday) are enabled for Leave, WFH, and Client Visit calendar selection.
 
     // Check if this date falls within any existing approved/pending request for the selected employee
     return (entities || []).some((req: any) => {
@@ -1575,7 +1565,7 @@ const AdminLeaveManagement = () => {
               icon: MapPin,
             },
             {
-              label: "Half Day",
+              label: "Half Day Leave",
               key: "halfDay",
               color: "from-[#E31C79] to-[#F78FAD]",
               icon: Clock,
@@ -2000,7 +1990,7 @@ const AdminLeaveManagement = () => {
                     suffixIcon={<ChevronDown className="text-[#4318FF]" />}
                   >
                     <Select.Option value="Full Day">Full Day Application</Select.Option>
-                    <Select.Option value="Half Day">Half Day Application</Select.Option>
+                    <Select.Option value="Half Day">Half Day Leave</Select.Option>
                   </Select>
                 </div>
               )}

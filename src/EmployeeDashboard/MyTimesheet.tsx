@@ -1157,7 +1157,7 @@ const MyTimesheet = ({
               border: "border-[#01B574]",
             },
             {
-              label: "Half Day",
+              label: "Half Day Leave",
               color: "bg-[#FEF3C7]",
               border: "border-[#FFB020]",
             },

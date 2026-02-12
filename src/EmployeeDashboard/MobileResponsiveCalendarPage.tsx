@@ -441,7 +441,7 @@ const MobileResponsiveCalendarPage = ({
                 className: "bg-green-100 border border-green-600",
               },
               {
-                label: "Half Day",
+                label: "Half Day Leave",
                 className: "bg-orange-100 border border-orange-600",
               },
               { label: "Leave", className: "bg-red-200 border border-red-600" },

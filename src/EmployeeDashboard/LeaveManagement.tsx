@@ -153,17 +153,7 @@ const LeaveManagement = () => {
       return true;
     }
 
-    // Disable Sunday (Sunday = 0)
-    const day = current.day();
-    if (day === 0) {
-      return true;
-    }
-
-    // Disable Saturday (Saturday = 6) ONLY if department is "Information Technology"
-    const userDept = entity?.department || "";
-    if (userDept === "Information Technology" && day === 6) {
-      return true;
-    }
+    // Weekends (Saturday, Sunday) are enabled for Leave, WFH, and Client Visit calendar selection.
 
     // Check if this date is explicitly covered by a Cancellation request (Finalized or Pending)
     // If so, we enable it (return false), overriding any overlapping "Approved" parent request.
@@ -964,7 +954,7 @@ const LeaveManagement = () => {
             icon: MapPin,
           },
           {
-            label: "Half Day",
+            label: "Half Day Leave",
             key: "halfDay",
             color: "from-[#E31C79] to-[#F78FAD]",
             icon: Clock,
@@ -1179,7 +1169,9 @@ const LeaveManagement = () => {
                         <span className="text-[#2B3674] text-sm font-bold">
                           {item.requestType === "Apply Leave"
                             ? "Leave"
-                            : item.requestType}
+                            : item.requestType === "Half Day"
+                              ? "Half Day Leave"
+                              : item.requestType}
                         </span>
                       </div>
                     </td>
@@ -1372,7 +1364,11 @@ const LeaveManagement = () => {
             </div>
             <div className="flex items-center justify-between w-full mt-1">
               <h2 className="text-2xl md:text-3xl font-black text-[#2B3674]">
-                {selectedLeaveType}
+                {selectedLeaveType === "Apply Leave"
+                  ? "Leave"
+                  : selectedLeaveType === "Half Day"
+                    ? "Half Day Leave"
+                    : selectedLeaveType}
               </h2>
             </div>
           </div>
@@ -1419,7 +1415,7 @@ const LeaveManagement = () => {
                   ) : (
                     <>
                       <Select.Option value="Full Day">Full Day Application</Select.Option>
-                      <Select.Option value="Half Day">Half Day Application</Select.Option>
+                      <Select.Option value="Half Day">Half Day Leave</Select.Option>
                     </>
                   )}
                 </Select>
