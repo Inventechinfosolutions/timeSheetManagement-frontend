@@ -320,6 +320,7 @@ const EmployeeListView = () => {
       "department",
       "role",
       "designation",
+      "employmentType",
       "email",
       "joiningDate",
     ];
@@ -332,8 +333,6 @@ const EmployeeListView = () => {
     setShowSuccess(false);
 
     const submitData = { ...formData };
-    if (!submitData.employmentType)
-      delete (submitData as Record<string, unknown>).employmentType;
 
     try {
       const resultAction = await dispatch(createEntity(submitData));
@@ -1251,6 +1250,7 @@ ${
                           value={formData.employmentType}
                           onChange={handleFormChange}
                           className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none transition-all text-sm appearance-none bg-white"
+                          required
                         >
                           <option value="">Select Employment Type</option>
                           <option value="FULL_TIMER">

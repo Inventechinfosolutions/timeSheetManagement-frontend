@@ -92,8 +92,8 @@ const Registration = () => {
         name === "employeeId"
           ? value.toUpperCase()
           : name === "employmentType"
-          ? (value as "" | "FULL_TIMER" | "INTERN")
-          : value,
+            ? (value as "" | "FULL_TIMER" | "INTERN")
+            : value,
     });
   };
 
@@ -101,23 +101,44 @@ const Registration = () => {
     e.preventDefault();
     setError("");
 
+    console.log("Form data on submit:", formData);
+
     const requiredKeys = [
       "fullName",
       "employeeId",
       "department",
       "role",
       "designation",
+      "employmentType",
       "email",
     ];
-    if (requiredKeys.some((k) => !(formData as Record<string, unknown>)[k])) {
-      setError("Please fill in all required fields");
+
+    // Check for empty required fields
+    const emptyField = requiredKeys.find(
+      (k) => !formData[k as keyof typeof formData],
+    );
+
+    console.log("Empty field found:", emptyField);
+
+    if (emptyField) {
+      const fieldLabels: Record<string, string> = {
+        fullName: "Full Name",
+        employeeId: "Employee ID",
+        department: "Department",
+        role: "Role",
+        designation: "Designation",
+        employmentType: "Employment Type",
+        email: "Email",
+      };
+      const errorMsg = `${fieldLabels[emptyField]} is required`;
+      console.log("Setting error:", errorMsg);
+      setError(errorMsg);
       return;
     }
 
     const submissionData: Record<string, unknown> = {
       ...formData,
     };
-    if (!formData.employmentType) delete submissionData.employmentType;
     console.log("Department value being submitted:", formData.department);
     console.log("Full submission data:", submissionData);
     dispatch(createEntity(submissionData));
@@ -323,16 +344,35 @@ const Registration = () => {
                   <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-0.5">
                     Employment type
                   </label>
-                  <select
-                    name="employmentType"
-                    value={formData.employmentType}
-                    onChange={handleChange}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#4318FF]/20 focus:border-[#4318FF] outline-none transition-all text-gray-700 text-sm font-medium bg-white"
-                  >
-                    <option value="">Select Employment type</option>
-                    <option value="FULL_TIMER">Full time Employee</option>
-                    <option value="INTERN">Intern</option>
-                  </select>
+                  <div className="relative group">
+                    <select
+                      name="employmentType"
+                      value={formData.employmentType}
+                      onChange={handleChange}
+                      className="w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#4318FF]/20 focus:border-[#4318FF] outline-none transition-all text-gray-700 text-sm font-medium appearance-none bg-white"
+                      required
+                    >
+                      <option value="">Select Employment type</option>
+                      <option value="FULL_TIMER">Full time Employee</option>
+                      <option value="INTERN">Intern</option>
+                    </select>
+                    <Briefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <svg
+                        className="w-4 h-4 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </div>
+                  </div>
                 </div>
               </div>
 
