@@ -1296,8 +1296,8 @@ const MyTimesheet = ({
               (dayMonth === currentMonth && dayYear === currentYear) ||
               (dayMonth === nextMonth && dayYear === nextMonthYear);
 
-            // Check if this record is blocked due to being auto-generated
-            const isBlockedByRequest = !!day.sourceRequestId;
+            // Check if this record is blocked due to being auto-generated from a Half Day request
+            const isBlockedByRequest = !!day.sourceRequestId && (day.status as string)?.toLowerCase() === "half day";
 
             // Logic for "isEditable"
             // - Admins and Managers can edit any date (including leave days, except blocked dates)

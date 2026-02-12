@@ -149,10 +149,13 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
               });
 
               const isBlocked = !!blocker;
+              const isBlockedByRequest = !!entry.sourceRequestId && (entry.status as string)?.toLowerCase() === "half day";
+              
               const isEditable =
-                !readOnly &&
+                (isAdmin || !readOnly) &&
                 (isAdmin || isEditableMonth(entry.fullDate)) &&
-                !isBlocked;
+                !isBlocked &&
+                (isAdmin || isManager || !isBlockedByRequest);
 
               // Styling logic (Matching MobileResponsiveCalendarPage)
               let bg = "bg-white text-gray-600 border-gray-200"; // Default
@@ -235,6 +238,13 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
                     >
                       {entry.date}
                     </div>
+
+                    {/* Lock Icon for Requests/Leave */}
+                    {((isBlockedByRequest && !isAdmin && !isManager) || (entry.status === "Leave" && !isAdmin && !isManager)) && (
+                        <div className="absolute -top-1 -left-1 p-1 rounded-full bg-red-50 text-red-500 border border-red-100 z-10">
+                            <Lock size={8} strokeWidth={3} />
+                        </div>
+                    )}
 
                     <input
                       type="text"
