@@ -654,6 +654,30 @@ const Requests = () => {
             continue;
           }
 
+          // Identify the correct sourceRequestId for attendance update
+          // If it's a cancellation approval, we must use the master request ID that owns the attendance record
+          let targetSourceRequestId = request.id;
+          if (status === "Cancellation Approved") {
+            const childRequest = request;
+            const childStart = dayjs(childRequest.fromDate);
+            const childEnd = dayjs(childRequest.toDate);
+
+            const master = entities.find(
+              (e) =>
+                e.employeeId === childRequest.employeeId &&
+                e.status === "Approved" &&
+                e.id !== childRequest.id &&
+                (dayjs(e.fromDate).isSame(childStart, "day") ||
+                  dayjs(e.fromDate).isBefore(childStart, "day")) &&
+                (dayjs(e.toDate).isSame(childEnd, "day") ||
+                  dayjs(e.toDate).isAfter(childEnd, "day")),
+            );
+            if (master) {
+              targetSourceRequestId = master.id;
+            }
+            
+          }
+
           let attendanceData: any = {
             employeeId: request.employeeId,
             workingDate: currentDate,
@@ -661,7 +685,7 @@ const Requests = () => {
               request.requestType === "Work From Home" ||
               request.requestType === "Client Visit"
                 ? null
-                : request.id,
+                : targetSourceRequestId,
             totalHours: null, // Default to null per user request
           };
 
