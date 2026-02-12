@@ -1178,7 +1178,9 @@ const Requests = () => {
                         <span className="text-sm font-semibold text-[#2B3674]">
                           {req.requestType === "Apply Leave"
                             ? "Leave"
-                            : req.requestType}
+                            : req.requestType === "Half Day"
+                              ? "Half Day Leave"
+                              : req.requestType}
                         </span>
                       </div>
                     </td>
@@ -1542,7 +1544,9 @@ const Requests = () => {
                 <h2 className="text-3xl font-black text-[#2B3674]">
                   {selectedRequest.requestType === "Apply Leave"
                     ? "Leave"
-                    : selectedRequest.requestType}
+                    : selectedRequest.requestType === "Half Day"
+                      ? "Half Day Leave"
+                      : selectedRequest.requestType}
                 </h2>
               </div>
             </div>

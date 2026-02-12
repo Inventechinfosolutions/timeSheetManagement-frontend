@@ -446,7 +446,7 @@ const Calendar = ({
                 text: "text-emerald-700",
               },
               {
-                label: "Half Day",
+                label: "Half Day Leave",
                 color: "bg-amber-50",
                 border: "border-amber-200",
                 text: "text-amber-700",

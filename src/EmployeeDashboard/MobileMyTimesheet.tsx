@@ -275,7 +275,7 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
       <div className="pt-4 flex flex-wrap justify-center gap-x-3 gap-y-2 mb-2">
         {[
           { label: "Present", className: "bg-green-100 border-green-600" },
-          { label: "Half Day", className: "bg-orange-100 border-orange-600" },
+          { label: "Half Day Leave", className: "bg-orange-100 border-orange-600" },
           { label: "Leave", className: "bg-red-200 border-red-600" },
           { label: "Not Updated", className: "bg-white border-gray-300" },
           { label: "Holiday", className: "bg-blue-100 border-blue-500" },

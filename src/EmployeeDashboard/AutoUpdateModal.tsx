@@ -76,7 +76,7 @@ const AutoUpdateModal: React.FC<AutoUpdateModalProps> = ({
                 { label: 'Weekends', icon: CalendarDays, color: 'text-red-500', bg: 'bg-red-50' },
                 { label: 'Holidays', icon: Calendar, color: 'text-orange-500', bg: 'bg-orange-50' },
                 { label: 'Approved Leaves', icon: AlertTriangle, color: 'text-amber-500', bg: 'bg-amber-50' },
-                { label: 'Half Days', icon: Clock, color: 'text-purple-500', bg: 'bg-purple-50' },
+                { label: 'Half Day Leave', icon: Clock, color: 'text-purple-500', bg: 'bg-purple-50' },
                 { label: 'Filled Days', icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-50' },
               ].map((item, idx) => (
                 <div key={idx} className={`${item.bg} p-2.5 rounded-xl border border-white flex items-center gap-2.5 transition-transform hover:scale-[1.02]`}>

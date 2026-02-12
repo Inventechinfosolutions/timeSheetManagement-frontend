@@ -229,14 +229,14 @@ const AttendanceStatsCards = ({
         </div>
         <div className="w-full">
           <div className="text-[#A3AED0] font-bold text-[10px] uppercase tracking-wider mb-1">
-            Entitlement
+            Annual Leave
           </div>
           <div className="flex flex-col">
             <span className="text-2xl font-extrabold text-[#1B2559] tracking-tight">
               {entitlement}
             </span>
             <span className="text-[9px] font-bold text-[#A3AED0] uppercase mt-1">
-              Annual Pack
+              Days Available
             </span>
           </div>
         </div>
@@ -257,7 +257,7 @@ const AttendanceStatsCards = ({
                 {dynamicCarryOver.toFixed(1)}
               </span>
               <span className="text-[9px] font-bold text-[#A3AED0] uppercase mt-1">
-                Rolled Over
+                From Previous Months
               </span>
             </div>
           </div>
@@ -271,7 +271,7 @@ const AttendanceStatsCards = ({
         </div>
         <div className="w-full">
           <div className="text-[#A3AED0] font-bold text-[10px] uppercase tracking-wider mb-1">
-            Leaves Taken
+            Leave Taken
           </div>
           <div className="flex flex-col">
             <span className="text-2xl font-extrabold text-[#1B2559] tracking-tight">
@@ -313,23 +313,23 @@ const AttendanceStatsCards = ({
         </div>
         <div className="w-full z-10">
           <div className="text-white/90 font-bold text-[10px] uppercase tracking-wider mb-1">
-            Balance
+            Balance Leave
           </div>
           <div className="flex flex-col">
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-extrabold text-white tracking-tight">
+              {/* <span className="text-2xl font-extrabold text-white tracking-tight">
                 {balance}
               </span>
               <span className="text-[10px] font-bold text-white/60 uppercase">
                 Annual
-              </span>
+              </span> */}
             </div>
             <div className="flex items-baseline gap-2 mt-0.5">
               <span className="text-lg font-bold text-white/90">
                 {balanceMonthly.toFixed(1)}
               </span>
               <span className="text-[10px] font-medium text-white/60">
-                This Month
+                For This Month
               </span>
             </div>
           </div>
