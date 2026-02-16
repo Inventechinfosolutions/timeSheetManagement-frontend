@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import {
   CheckCircle,
@@ -44,6 +45,12 @@ import { notification, Select } from "antd";
 import { fetchDepartments } from "../reducers/masterDepartment.reducer";
 
 const Requests = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const basePath = location.pathname.startsWith("/manager-dashboard")
+    ? "/manager-dashboard"
+    : "/admin-dashboard";
   const dispatch = useAppDispatch();
   const { entities, loading } = useAppSelector((state) => state.leaveRequest);
   const { holidays = [] } = useAppSelector(
@@ -214,7 +221,7 @@ const Requests = () => {
   // Block Saturday only if Department is "Information Technology"
   const isWeekend = (date: dayjs.Dayjs, department?: string): boolean => {
     const day = date.day(); // 0 = Sunday
-    
+
     // Always block Sunday
     if (day === 0) return true;
 
@@ -675,7 +682,6 @@ const Requests = () => {
             if (master) {
               targetSourceRequestId = master.id;
             }
-            
           }
 
           let attendanceData: any = {
@@ -961,78 +967,80 @@ const Requests = () => {
         </div>
 
         {/* Department Filter Dropdown */}
-        <div className="relative">
-          <button
-            onClick={() => setIsDeptOpen(!isDeptOpen)}
-            className={`flex items-center gap-3 px-5 py-3 bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all text-sm font-bold ${selectedDept !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
-          >
-            <Filter
-              size={18}
-              className={
-                selectedDept !== "All" ? "text-[#4318FF]" : "text-gray-400"
-              }
-            />
-            <span>
-              {selectedDept === "All" ? "All Departments" : selectedDept}
-            </span>
-            <ChevronDown
-              size={18}
-              className={`transition-transform duration-300 ${isDeptOpen ? "rotate-180" : ""}`}
-            />
-          </button>
+        {basePath === "/admin-dashboard" && (
+          <div className="relative">
+            <button
+              onClick={() => setIsDeptOpen(!isDeptOpen)}
+              className={`flex items-center gap-3 px-5 py-3 bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all text-sm font-bold ${selectedDept !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+            >
+              <Filter
+                size={18}
+                className={
+                  selectedDept !== "All" ? "text-[#4318FF]" : "text-gray-400"
+                }
+              />
+              <span>
+                {selectedDept === "All" ? "All Departments" : selectedDept}
+              </span>
+              <ChevronDown
+                size={18}
+                className={`transition-transform duration-300 ${isDeptOpen ? "rotate-180" : ""}`}
+              />
+            </button>
 
-          {isDeptOpen && (
-            <>
-              <div
-                className="fixed inset-0 z-40"
-                onClick={() => setIsDeptOpen(false)}
-              ></div>
-              <div className="absolute right-0 mt-3 w-56 bg-white rounded-3xl shadow-2xl border border-blue-50 py-3 z-50 overflow-hidden animate-in fade-in zoom-in duration-200 origin-top-right">
-                <div className="px-5 py-2 mb-1">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-                    Departments
-                  </span>
-                </div>
-                <button
-                  onClick={() => {
-                    setSelectedDept("All");
-                    setIsDeptOpen(false);
-                    setCurrentPage(1);
-                  }}
-                  className={`w-full flex items-center px-5 py-2.5 text-sm font-bold transition-all relative ${
-                    selectedDept === "All"
-                      ? "text-[#4318FF] bg-blue-50/50"
-                      : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
-                  }`}
-                >
-                  {selectedDept === "All" && (
-                    <div className="absolute left-0 w-1 h-6 bg-[#4318FF] rounded-r-full"></div>
-                  )}
-                  All Departments
-                </button>
-                {departments.map((dept: any) => (
+            {isDeptOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setIsDeptOpen(false)}
+                ></div>
+                <div className="absolute right-0 mt-3 w-56 bg-white rounded-3xl shadow-2xl border border-blue-50 py-3 z-50 overflow-hidden animate-in fade-in zoom-in duration-200 origin-top-right">
+                  <div className="px-5 py-2 mb-1">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                      Departments
+                    </span>
+                  </div>
                   <button
-                    key={dept.id}
                     onClick={() => {
-                      setSelectedDept(dept.departmentName);
+                      setSelectedDept("All");
                       setIsDeptOpen(false);
+                      setCurrentPage(1);
                     }}
                     className={`w-full flex items-center px-5 py-2.5 text-sm font-bold transition-all relative ${
-                      selectedDept === dept
+                      selectedDept === "All"
                         ? "text-[#4318FF] bg-blue-50/50"
                         : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
                     }`}
                   >
-                    {selectedDept === dept.departmentName && (
+                    {selectedDept === "All" && (
                       <div className="absolute left-0 w-1 h-6 bg-[#4318FF] rounded-r-full"></div>
                     )}
-                    {dept.departmentName}
+                    All Departments
                   </button>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
+                  {departments.map((dept: any) => (
+                    <button
+                      key={dept.id}
+                      onClick={() => {
+                        setSelectedDept(dept.departmentName);
+                        setIsDeptOpen(false);
+                      }}
+                      className={`w-full flex items-center px-5 py-2.5 text-sm font-bold transition-all relative ${
+                        selectedDept === dept.departmentName
+                          ? "text-[#4318FF] bg-blue-50/50"
+                          : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
+                      }`}
+                    >
+                      {selectedDept === dept.departmentName && (
+                        <div className="absolute left-0 w-1 h-6 bg-[#4318FF] rounded-r-full"></div>
+                      )}
+                      {dept.departmentName}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-3 items-center">
           <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
