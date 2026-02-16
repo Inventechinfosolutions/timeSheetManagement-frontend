@@ -2627,7 +2627,9 @@ const AdminLeaveManagement = () => {
                     )}
                   </div>
                 ) : null;
-              })()}
+
+              })())}
+
 
             {/* Description Field */}
             <div className="space-y-2">
