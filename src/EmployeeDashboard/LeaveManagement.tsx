@@ -1940,7 +1940,7 @@ const LeaveManagement = () => {
               }}
               className="px-6 py-2.5 rounded-2xl font-bold text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95 transform uppercase tracking-wider flex items-center justify-center gap-2"
             >
-              Modify Instead
+              MODIFY INSTEAD
             </button>
             <button
               key="submit"
@@ -2275,13 +2275,13 @@ const LeaveManagement = () => {
                   }
                 }}
                 disabled={selectedCancelDates.length === 0}
-                className={`px-6 py-2.5 rounded-xl font-bold transition-colors ${
+                className={`px-6 py-2.5 rounded-2xl font-bold transition-all transform active:scale-95 uppercase tracking-wider flex items-center justify-center gap-2 ${
                   selectedCancelDates.length === 0 
                   ? "text-gray-400 bg-gray-100 cursor-not-allowed" 
-                  : "text-blue-600 bg-blue-50 hover:bg-blue-100"
+                  : "text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30"
                 }`}
               >
-                Modify Instead
+                MODIFY INSTEAD
               </button>
             </div>
             <button
@@ -2314,7 +2314,7 @@ const LeaveManagement = () => {
                 <div className="space-y-4">
                     <p className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-100">
                         Select the dates you wish to cancel. <br/>
-                        <span className="text-xs text-blue-800 font-semibold">* You can only cancel dates before 12:00 PM of that particular day.</span>
+                        <span className="text-xs text-blue-800 font-semibold">* You can only cancel dates before 06:30 PM of that particular day.</span>
                     </p>
                     
                     {/* Select All Option */}

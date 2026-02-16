@@ -609,17 +609,17 @@ const MyTimesheet = ({
 
     let newStatus: string;
 
-    if (hours > 0) {
+    if (val !== "" && hours > 0) {
       // When hours > 0, calculate based on hours
       newStatus = hours > 4.5 ? "Full Day" : "Half Day";
     } else {
-      // When hours are 0, ALWAYS recalculate status - never preserve previous status (especially Leave)
+      // When hours are 0 or input is empty, ALWAYS recalculate status
       const entryDate = new Date(localEntries[entryIndex].fullDate);
       const dateStrLocal = `${entryDate.getFullYear()}-${String(
         entryDate.getMonth() + 1,
       ).padStart(2, "0")}-${String(entryDate.getDate()).padStart(2, "0")}`;
 
-      const isHoliday = holidays?.find((h: any) => {
+      const holiday = holidays?.find((h: any) => {
         const hDate = h.holidayDate || h.date;
         if (!hDate) return false;
         const normalizedHDate =
@@ -630,23 +630,28 @@ const MyTimesheet = ({
       });
 
       const dayNum = entryDate.getDay();
+      const isWeekend = dayNum === 0 || dayNum === 6;
 
-      if (isHoliday) {
+      if (holiday) {
         newStatus = "Holiday";
-      } else if (dayNum === 0 || dayNum === 6) {
+      } else if (isWeekend) {
         newStatus = "Weekend";
       } else {
-        // 0 hours on a weekday: Determine if Absent or Upcoming
+        // Workday logic
         const todayZero = new Date();
         todayZero.setHours(0, 0, 0, 0);
 
         const entryDateZero = new Date(entryDate);
         entryDateZero.setHours(0, 0, 0, 0);
 
-        if (entryDateZero <= todayZero) {
-          newStatus = "Absent";
-        } else {
+        if (entryDateZero > todayZero) {
           newStatus = "UPCOMING";
+        } else if (val === "") {
+          // Empty input on past/today workday
+          newStatus = "Not Updated";
+        } else {
+          // Explicit "0" on past/today workday
+          newStatus = "Absent";
         }
       }
     }
@@ -656,6 +661,8 @@ const MyTimesheet = ({
       ...updated[entryIndex],
       totalHours: hours,
       status: newStatus as any,
+      firstHalf: newStatus === "Absent" ? "Absent" : (newStatus === "Not Updated" ? null : updated[entryIndex].firstHalf),
+      secondHalf: newStatus === "Absent" ? "Absent" : (newStatus === "Not Updated" ? null : updated[entryIndex].secondHalf),
     };
     setLocalEntries(updated);
 
@@ -781,19 +788,24 @@ const MyTimesheet = ({
           derivedStatus = "Weekend";
         }
         // For other days: Calculate status based on hours
-        // NEVER preserve Leave status - always calculate based on hours
         else {
           if (currentTotal > 4.5) {
             derivedStatus = "Full Day";
           } else if (currentTotal > 0) {
             derivedStatus = "Half Day";
           } else {
-            // 0 hours on a weekday: Determine if Absent or Upcoming
+            // 0 hours on a weekday: Determine if Absent, Upcoming, or Not Updated
             const todayZero = new Date();
             todayZero.setHours(0, 0, 0, 0);
             const entryDateZero = new Date(d);
             entryDateZero.setHours(0, 0, 0, 0);
-            derivedStatus = entryDateZero <= todayZero ? "Absent" : "UPCOMING";
+
+            if (entryDateZero > todayZero) {
+              derivedStatus = "UPCOMING";
+            } else {
+              // Check what the local status was (from handleHoursInput)
+              derivedStatus = entry.status === "Not Updated" ? "Not Updated" : "Absent";
+            }
           }
         }
 
@@ -805,17 +817,28 @@ const MyTimesheet = ({
           return rDate === workingDate;
         });
 
-        payload.push({
-          id: existingRecord?.id,
-          employeeId: currentEmployeeId,
-          workingDate,
-          totalHours: currentTotal,
-          status: derivedStatus,
-          firstHalf: entry.firstHalf,
-          secondHalf: entry.secondHalf,
-        } as any);
+          payload.push({
+            id: existingRecord?.id,
+            employeeId: currentEmployeeId,
+            workingDate,
+            totalHours: currentTotal,
+            status: derivedStatus,
+            firstHalf: derivedStatus === "Absent" ? "Absent" : (derivedStatus === "Not Updated" ? null : entry.firstHalf),
+            secondHalf: derivedStatus === "Absent" ? "Absent" : (derivedStatus === "Not Updated" ? null : entry.secondHalf),
+          } as any);
       }
     });
+
+    const refreshData = () => {
+      dispatch(
+        fetchMonthlyAttendance({
+          employeeId: currentEmployeeId,
+          month: (now.getMonth() + 1).toString().padStart(2, "0"),
+          year: now.getFullYear().toString(),
+        }),
+      );
+      setManuallyEditedIndices(new Set());
+    };
 
     if (payload.length === 0) {
       setToast({ show: true, message: "No changes to save", type: "success" });
@@ -858,13 +881,7 @@ const MyTimesheet = ({
     const handleActualSave = async (finalPayload: any[]) => {
       try {
         await dispatch(submitBulkAttendance(finalPayload)).unwrap();
-        dispatch(
-          fetchMonthlyAttendance({
-            employeeId: currentEmployeeId,
-            month: (now.getMonth() + 1).toString().padStart(2, "0"),
-            year: now.getFullYear().toString(),
-          }),
-        );
+        refreshData();
         // Clear manually edited indices after successful save
         setManuallyEditedIndices(new Set());
         setToast({
@@ -924,157 +941,164 @@ const MyTimesheet = ({
       (item) => Number(item.totalHours) > 0 && Number(item.totalHours) <= 4.5,
     );
 
+    const absentItems = payload.filter(
+      (item) => (Number(item.totalHours) === 0 || item.totalHours === null) && item.status === "Absent",
+    );
+
     if (!isAdmin && !isManager) {
-      if (halfDayItems.length > 0) {
-        const datesString = halfDayItems
-          .map((item) => new Date(item.workingDate).getDate())
-          .sort((a, b) => a - b)
-          .join(", ");
+      if (halfDayItems.length > 0 || absentItems.length > 0) {
+        const showUnifiedModal = async () => {
+          const hasHalfDay = halfDayItems.length > 0;
+          const hasAbsent = absentItems.length > 0;
 
-        Modal.confirm({
-          title: null,
-          icon: null,
-          width: 550,
-          wrapClassName: "attractive-half-day-modal",
-          content: (
-            <div style={{ padding: "10px 0" }}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "12px",
-                  marginBottom: "20px",
-                }}
-              >
-                <div
-                  style={{
-                    backgroundColor: "#fff7e6",
-                    borderRadius: "50%",
-                    padding: "8px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    border: "1px solid #ffe7ba",
-                  }}
-                >
-                  <AlertCircle size={28} color="#fa8c16" />
+          const halfDayDates = halfDayItems
+            .map((item) => new Date(item.workingDate).getDate())
+            .sort((a, b) => a - b)
+            .join(", ");
+
+          const absentDates = absentItems
+            .map((item) => new Date(item.workingDate).getDate())
+            .sort((a, b) => a - b)
+            .join(", ");
+
+          return new Promise<void>((resolve, reject) => {
+            Modal.confirm({
+              title: null,
+              icon: null,
+              width: 550,
+              centered: true,
+              wrapClassName: "attractive-unified-modal",
+              content: (
+                <div style={{ padding: "10px 0" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "12px",
+                      marginBottom: "20px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        backgroundColor: "#f0f5ff",
+                        borderRadius: "50%",
+                        padding: "8px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        border: "1px solid #adc6ff",
+                      }}
+                    >
+                      <AlertCircle size={28} color="#2f54eb" />
+                    </div>
+                    <h2 style={{ margin: 0, fontSize: "22px", fontWeight: 700 }}>
+                      Attendance Policy Enforcement
+                    </h2>
+                  </div>
+
+                  {hasHalfDay && (
+                    <div style={{ marginBottom: "20px" }}>
+                      <h3 style={{ fontSize: "17px", fontWeight: 700, color: "#fa8c16", marginBottom: "8px" }}>
+                        Half Day Rule (Dates: {halfDayDates})
+                      </h3>
+                      <p style={{ fontSize: "14px", lineHeight: "1.6", color: "#434343", marginBottom: "8px" }}>
+                        Entries of <strong>4.5 hours or less</strong> are automatically converted:
+                      </p>
+                      <div style={{ backgroundColor: "#fff7e6", padding: "10px 15px", borderRadius: "8px", borderLeft: "4px solid #fa8c16" }}>
+                        <ul style={{ margin: 0, paddingLeft: "15px", listStyleType: "disc", fontSize: "13px" }}>
+                          <li><strong>First Half:</strong> Office</li>
+                          <li><strong>Second Half:</strong> Leave</li>
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+
+                  {hasAbsent && (
+                    <div style={{ marginBottom: "20px" }}>
+                      <h3 style={{ fontSize: "17px", fontWeight: 700, color: "#cf1322", marginBottom: "8px" }}>
+                        Absent Rule (Dates: {absentDates})
+                      </h3>
+                      <p style={{ fontSize: "14px", lineHeight: "1.6", color: "#434343", marginBottom: "8px" }}>
+                        Entries of <strong>0 hours</strong> on workdays are marked as Absent:
+                      </p>
+                      <div style={{ backgroundColor: "#fff1f0", padding: "10px 15px", borderRadius: "8px", borderLeft: "4px solid #cf1322" }}>
+                        <ul style={{ margin: 0, paddingLeft: "15px", listStyleType: "disc", fontSize: "13px" }}>
+                          <li><strong>First Half:</strong> Absent</li>
+                          <li><strong>Second Half:</strong> Absent</li>
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+
+                  {hasHalfDay && (
+                    <div
+                      style={{
+                        backgroundColor: "#fff1f0",
+                        padding: "12px",
+                        borderRadius: "6px",
+                        border: "1px dashed #ffa39e",
+                        marginTop: "10px"
+                      }}
+                    >
+                      <p style={{ fontSize: "14px", color: "#cf1322", margin: 0, fontWeight: 600, textAlign: "center" }}>
+                        Half Day splits require Manager Approval. Confirming will create official Leave Requests.
+                      </p>
+                    </div>
+                  )}
                 </div>
-                <h2 style={{ margin: 0, fontSize: "22px", fontWeight: 700 }}>
-                  Attendance Half Day Rule
-                </h2>
-              </div>
-              <p style={{ fontSize: "16px", lineHeight: "1.6", color: "#434343" }}>
-                Attendance entries of <strong>4.5 hours or less</strong> on{" "}
-                <span style={{ color: "#fa8c16", fontWeight: 700 }}>
-                  dates {datesString}
-                </span>{" "}
-                are automatically considered a <strong>Half Day</strong>.
-              </p>
-              <div
-                style={{
-                  backgroundColor: "#f5f5f5",
-                  padding: "15px",
-                  borderRadius: "8px",
-                  marginBottom: "20px",
-                  borderLeft: "4px solid #fa8c16",
-                }}
-              >
-                <ul
-                  style={{
-                    margin: 0,
-                    paddingLeft: "20px",
-                    listStyleType: "disc",
-                  }}
-                >
-                  <li style={{ marginBottom: "8px" }}>
-                    <strong>First Half:</strong> Office
-                  </li>
-                  <li>
-                    <strong>Second Half:</strong> Leave
-                  </li>
-                </ul>
-              </div>
-              <div
-                style={{
-                  backgroundColor: "#fff1f0",
-                  padding: "12px",
-                  borderRadius: "6px",
-                  border: "1px dashed #ffa39e",
-                }}
-              >
-                <p
-                  style={{
-                    fontSize: "15px",
-                    color: "#cf1322",
-                    margin: 0,
-                    fontWeight: 600,
-                    textAlign: "center",
-                  }}
-                >
-                  Since you are an employee, this requires Manager Approval.
-                  Confirming will create a formal Leave Request for you.
-                </p>
-              </div>
-            </div>
-          ),
-          okText: "Confirm and Place Request",
-          cancelText: "Cancel",
-          okButtonProps: {
-            size: "large",
-            style: { borderRadius: "6px", fontWeight: 600 },
-          },
-          cancelButtonProps: { size: "large", style: { borderRadius: "6px" } },
-          onOk: async () => {
-            try {
-              for (const item of halfDayItems) {
-                await dispatch(
-                  submitLeaveRequest({
-                    employeeId: currentEmployeeId,
-                    fromDate: item.workingDate,
-                    toDate: item.workingDate,
-                    requestType: "Half Day",
-                    isHalfDay: true,
-                    halfDayType: "Second Half",
-                    title: "Half Day (Auto-generated)",
-                    description: `Auto-generated from ${item.totalHours} hours timesheet entry`,
-                    firstHalf: "Office",
-                    secondHalf: "Leave",
-                  } as any),
-                ).unwrap();
-              }
+              ),
+              okText: hasHalfDay ? "Confirm and Place Requests" : "Confirm Updates",
+              cancelText: "Cancel",
+              onCancel: () => {
+                refreshData();
+              },
+              okButtonProps: {
+                size: "large",
+                style: { borderRadius: "6px", fontWeight: 600 },
+              },
+              cancelButtonProps: { size: "large", style: { borderRadius: "6px" } },
+              onOk: async () => {
+                try {
+                  // 1. Handle Leave Requests for Half Days
+                  if (hasHalfDay) {
+                    for (const item of halfDayItems) {
+                      await dispatch(
+                        submitLeaveRequest({
+                          employeeId: currentEmployeeId,
+                          fromDate: item.workingDate,
+                          toDate: item.workingDate,
+                          requestType: "Half Day",
+                          isHalfDay: true,
+                          halfDayType: "Second Half",
+                          title: "Half Day (Auto-generated)",
+                          description: `Auto-generated from ${item.totalHours} hours timesheet entry`,
+                          firstHalf: "Office",
+                          secondHalf: "Leave",
+                        } as any),
+                      ).unwrap();
+                    }
+                  }
 
-              const remainingPayload = payload.filter(
-                (item) =>
-                  !(Number(item.totalHours) > 0 && Number(item.totalHours) <= 4.5),
-              );
-              if (remainingPayload.length > 0) {
-                await handleActualSave(remainingPayload);
-              } else {
-                dispatch(
-                  fetchMonthlyAttendance({
-                    employeeId: currentEmployeeId,
-                    month: (now.getMonth() + 1).toString().padStart(2, "0"),
-                    year: now.getFullYear().toString(),
-                  }),
-                );
-                dispatch(getLeaveHistory({ employeeId: currentEmployeeId }));
-                setToast({
-                  show: true,
-                  message: "Leave Request Submitted Successfully",
-                  type: "success",
-                });
-              }
-            } catch (err: any) {
-              setToast({
-                show: true,
-                message: "Failed to submit leave requests",
-                type: "error",
-              });
-            }
-          },
-        });
+                  // 2. Handle Actual Save for everything else (using handleActualSave which refreshes)
+                  await handleActualSave(payload);
+                  
+                  if (hasHalfDay) {
+                    dispatch(getLeaveHistory({ employeeId: currentEmployeeId }));
+                  }
+                } catch (err: any) {
+                  setToast({
+                    show: true,
+                    message: "Failed to process requests",
+                    type: "error",
+                  });
+                }
+              },
+            });
+          });
+        };
+
+        await showUnifiedModal();
       } else {
-        // Fallback for user if no half day items (shouldn't be reached in this if block logic, but for safety in new structure)
         await handleActualSave(payload);
       }
     } else {
@@ -1114,6 +1138,7 @@ const MyTimesheet = ({
                     {payload.map((item, idx) => {
                       const date = new Date(item.workingDate);
                       const isHalf = Number(item.totalHours) > 0 && Number(item.totalHours) <= 4.5;
+                      const isAbsent = item.status === "Absent";
                       return (
                         <tr key={idx} className="border-b border-gray-50 last:border-0 hover:bg-white/50 transition-colors">
                           <td className="p-3 text-sm font-bold text-[#2B3674]">
@@ -1122,37 +1147,51 @@ const MyTimesheet = ({
                           <td className="p-3 text-sm font-black text-[#4318FF] text-right">
                             {item.totalHours}h
                           </td>
-                          <td className="p-3 text-right">
-                             <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-md tracking-tighter shadow-sm border ${
-                               isHalf 
-                                 ? "bg-amber-50 text-amber-600 border-amber-200" 
-                                 : "bg-emerald-50 text-emerald-600 border-emerald-200"
-                             }`}>
-                                {isHalf ? "Half Day" : "Full Day"}
-                             </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {halfDayItems.length > 0 && (
-                <div className="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 flex gap-3 items-start shadow-sm mb-2">
-                  <AlertCircle size={20} className="text-[#4318FF] shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="text-[13px] font-black text-[#1B2559] mb-1 leading-none uppercase tracking-wide">Sync Logic Enforcement</h4>
-                    <p className="text-[12px] text-gray-500 font-medium leading-relaxed">
-                      All <span className="font-bold text-[#4318FF]">4.5h entries</span> will be formalized with an explicit <span className="font-bold underline decoration-indigo-200 underline-offset-2">Office (1st) / Leave (2nd)</span> split during synchronization.
-                    </p>
-                  </div>
-                </div>
-              )}
+                           <td className="p-3 text-right">
+                             <div className="flex flex-col items-end gap-1">
+                               <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-md tracking-tighter shadow-sm border ${
+                                 isHalf 
+                                   ? "bg-amber-50 text-amber-600 border-amber-200" 
+                                   : isAbsent 
+                                     ? "bg-rose-50 text-rose-600 border-rose-200"
+                                     : "bg-emerald-50 text-emerald-600 border-emerald-200"
+                               }`}>
+                                  {isHalf ? "Half Day" : (isAbsent ? "Absent" : (item.status === "Not Updated" ? "Not Updated" : "Full Day"))}
+                               </span>
+                               <span className="text-[9px] font-bold text-gray-400 whitespace-nowrap">
+                                 {isHalf 
+                                    ? "First Half: Office | Second Half: Leave" 
+                                    : isAbsent 
+                                      ? "First Half: Absent | Second Half: Absent"
+                                      : item.status === "Not Updated"
+                                        ? "No changes to segments"
+                                        : "First Half: Office | Second Half: Office"}
+                               </span>
+                             </div>
+                           </td>
+                         </tr>
+                       );
+                     })}
+                   </tbody>
+                 </table>
+               </div>
+  
+               <div className="p-4 bg-[#F4F7FE] rounded-2xl border border-gray-100 flex gap-3 items-start shadow-sm mb-2">
+                 <AlertCircle size={20} className="text-[#4318FF] shrink-0 mt-0.5" />
+                 <div>
+                   <h4 className="text-[13px] font-black text-[#1B2559] mb-1 leading-none uppercase tracking-wide">Sync Logic Enforcement</h4>
+                   <p className="text-[12px] text-gray-500 font-medium leading-relaxed">
+                     Attendance entries will be <span className="font-bold text-[#4318FF]">Synchronized</span> with the system. Existing leave or restricted activity on these dates will be <span className="font-bold text-[#4318FF]">Overridden</span> with the segment splits shown above.
+                   </p>
+                 </div>
+               </div>
             </div>
           ),
           okText: "Process All Updates",
           cancelText: "Cancel",
+          onCancel: () => {
+            refreshData();
+          },
           okButtonProps: { 
             size: "large", 
             className: "bg-[#4318FF] hover:bg-[#320ec4] border-0 text-white font-bold px-8 rounded-xl h-11 shadow-lg shadow-indigo-500/30" 
@@ -1168,7 +1207,6 @@ const MyTimesheet = ({
       } else {
         await handleActualSave(payload);
       }
-
     }
   };
 
@@ -1580,9 +1618,6 @@ const MyTimesheet = ({
                 : "";
 
             const isBlocked = isDateBlocked(day.fullDate);
-            const blockedReason = isBlocked
-              ? getBlockedReason(day.fullDate)
-              : "";
 
             // Disable editing for approved Leave days only
             // WFH and Client Visit days are editable (they are present, not leave)
@@ -1611,8 +1646,9 @@ const MyTimesheet = ({
             // - WFH, Client Visit, and Half Day are editable (they are present, not leave)
             // - Leave days are editable only for admins and managers
             const isEditable =
-              (isAdmin ? !isAdminView : !readOnly) &&
+              (isAdmin || isManager ? !isAdminView : !readOnly) &&
               (isAdmin ||
+                isManager ||
                 isCurrentOrNextMonth ||
                 isEditableMonth(day.fullDate)) &&
               !isBlocked;
@@ -1729,7 +1765,7 @@ const MyTimesheet = ({
                     {day.date}
                   </div>
                   {/* Show lock if blocked by admin OR if the month is locked for non-admins */}
-                  {(isBlocked || (!isAdmin && !isCurrentOrNextMonth && !isEditableMonth(day.fullDate))) && (
+                  {(isBlocked || (!isAdmin && !isManager && !isCurrentOrNextMonth && !isEditableMonth(day.fullDate))) && (
                     <div className="p-1 rounded-full bg-red-50 text-red-500 border border-red-100 transition-transform hover:scale-110">
                       <ShieldBan size={10} strokeWidth={2.5} />
                     </div>

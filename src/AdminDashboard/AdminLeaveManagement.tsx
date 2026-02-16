@@ -2312,9 +2312,9 @@ const AdminLeaveManagement = () => {
             </div>
 
             {/* Split-Day Information (View Mode Only) */}
-            {isViewMode && (selectedRequestId !== null) && (
+            {isViewMode && !!selectedRequestId && (
               (() => {
-                const viewedRequest = entities.find((e: any) => e.id === selectedRequestId);
+                const viewedRequest = entities.find((e: any) => e.id === Number(selectedRequestId));
                 const isBothSame = viewedRequest?.firstHalf === viewedRequest?.secondHalf;
                 return viewedRequest?.isHalfDay && (viewedRequest?.firstHalf || viewedRequest?.secondHalf) ? (
                   <div className="space-y-2 p-4 bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-50 rounded-2xl border-2 border-blue-200">
@@ -2488,7 +2488,7 @@ const AdminLeaveManagement = () => {
                   }}
                   className="flex-1 py-3.5 rounded-2xl font-bold text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95 transform uppercase tracking-wider flex items-center justify-center gap-2"
                 >
-                  Modify Instead
+                  MODIFY INSTEAD
                 </button>
                 <button
                   onClick={executeCancel}
@@ -2542,13 +2542,13 @@ const AdminLeaveManagement = () => {
                   }
                 }}
                 disabled={selectedCancelDates.length === 0}
-                className={`px-6 py-2.5 rounded-2xl font-bold transition-all uppercase tracking-wider flex items-center justify-center gap-2 ${
+                className={`px-6 py-2.5 rounded-2xl font-bold transition-all transform active:scale-95 uppercase tracking-wider flex items-center justify-center gap-2 ${
                   selectedCancelDates.length === 0 
                   ? "text-gray-400 bg-gray-100 cursor-not-allowed" 
-                  : "text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 active:scale-95 transform"
+                  : "text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30"
                 }`}
               >
-                Modify Instead
+                MODIFY INSTEAD
               </button>
             </div>
             <button
