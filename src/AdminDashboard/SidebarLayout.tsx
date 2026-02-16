@@ -14,11 +14,13 @@ import {
   ClipboardList,
   ChevronDown,
   ChevronRight,
+  LogOut,
 } from "lucide-react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "../store";
 import { getEntities } from "../reducers/employeeDetails.reducer";
+import { logoutUser } from "../reducers/user.reducer";
 
 interface SidebarLayoutProps {
   children: React.ReactNode;
@@ -39,6 +41,7 @@ const SidebarLayout = ({
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const { tab } = useParams<{ tab?: string }>();
   const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
 
   // Ref for the main scrollable content area
   const mainContentRef = useRef<HTMLDivElement>(null);
@@ -140,6 +143,12 @@ const SidebarLayout = ({
       ...prev,
       [groupTitle]: !prev[groupTitle],
     }));
+  };
+
+  const handleLogout = () => {
+    dispatch(logoutUser()).then(() => {
+      navigate("/");
+    });
   };
 
   useEffect(() => {
@@ -447,6 +456,44 @@ const SidebarLayout = ({
                 );
               })}
         </nav>
+
+        {/* Logout Button */}
+        <div className="px-4 pb-6 mt-2 border-t border-white/10 pt-4">
+          <div className="relative group">
+            <button
+              onClick={handleLogout}
+              className={`w-full flex items-center p-3 rounded-2xl cursor-pointer transition-all duration-300 relative overflow-hidden group hover:bg-white/10 text-blue-100 hover:text-white
+                        ${
+                          isOpen
+                            ? "gap-4 px-4"
+                            : "md:justify-center md:px-0 gap-0"
+                        }
+                    `}
+            >
+              <div className="shrink-0 relative z-10 transition-transform duration-300">
+                <LogOut className="w-5 h-5 transition-colors duration-300 group-hover:scale-110" />
+              </div>
+              <span
+                className={`text-sm font-semibold whitespace-nowrap transition-all duration-300 relative z-10
+                        ${
+                          isOpen
+                            ? "opacity-100 translate-x-0 w-auto"
+                            : "opacity-0 -translate-x-4 w-0 overflow-hidden absolute"
+                        }
+                    `}
+              >
+                Logout
+              </span>
+            </button>
+
+            {!isOpen && (
+              <div className="hidden md:block absolute left-[calc(100%+10px)] top-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#111c44] text-white text-xs font-bold rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 whitespace-nowrap z-50">
+                Logout
+                <div className="absolute top-1/2 -left-1 -translate-y-1/2 border-4 border-r-[#111c44] border-l-transparent border-t-transparent border-b-transparent"></div>
+              </div>
+            )}
+          </div>
+        </div>
       </aside>
 
       <main
