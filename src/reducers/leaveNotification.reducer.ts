@@ -16,6 +16,8 @@ export interface LeaveNotification {
   isReadEmployee?: boolean;
   createdAt: string;
   requestModifiedFrom?: string;
+  firstHalf?: string;
+  secondHalf?: string;
 }
 
 interface NotificationState {

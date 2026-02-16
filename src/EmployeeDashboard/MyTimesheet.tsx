@@ -587,7 +587,7 @@ const MyTimesheet = ({
     
     // Restriction: Employees are capped at 4.5h for half-day leave dates.
     // Admin and Managers are NOT restricted.
-    const maxHours = (!isAdmin && !isManager && isHalfLeave) ? 4.5 : 24;
+    const maxHours = (!isAdmin && !isManager && isHalfLeave) ? 4.5 : 9;
 
     if (num > maxHours) {
       setInputError({ index: entryIndex, message: `Max: ${maxHours}h` });

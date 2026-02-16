@@ -81,6 +81,28 @@ const Header = ({
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "detail">("list");
   const notificationRef = useRef<HTMLDivElement>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  // Helper to format split-day request types
+  const formatRequestTypeLabel = (notification: LeaveNotification) => {
+    const { firstHalf, secondHalf, requestType } = notification;
+    
+    if (firstHalf && secondHalf) {
+      if (firstHalf === secondHalf) {
+        return firstHalf === "Apply Leave" || firstHalf === "Leave" ? "Leave" : firstHalf;
+      }
+      
+      const f = (firstHalf === "Apply Leave" || firstHalf === "Leave") ? "Leave" : firstHalf;
+      const s = (secondHalf === "Apply Leave" || secondHalf === "Leave") ? "Leave" : secondHalf;
+      
+      if (f === "Office") return s;
+      if (s === "Office") return f;
+      
+      return `${f} + ${s}`;
+    }
+    
+    return requestType === "Apply Leave" ? "Leave" : requestType;
+  };
 
   // Fetch notifications on mount
   useEffect(() => {
@@ -299,59 +321,51 @@ const Header = ({
                         {isApprover ? (
                           leaveNotifications.length > 0 ? (
                             leaveNotifications.map((notif) => {
-                              const getNotificationContent = (
-                                notif: LeaveNotification,
-                              ) => {
-                                let title = `${notif.requestType} Request`;
-                                let message = (
-                                  <>
-                                    <span className="font-bold text-[#2B3674]">
-                                      {notif.employeeName}
-                                    </span>{" "}
-                                    applied for {notif.requestType}.
-                                  </>
-                                );
-                                let iconColorClass =
-                                  "bg-blue-100 text-[#4318FF]"; // Default
-
-                                // Logic for Cancellations
-                                if (
-                                  notif.status === "Requesting for Cancellation"
-                                ) {
-                                  title = `Cancellation Request`;
-                                  message = (
+                                const getNotificationContent = (
+                                  notif: LeaveNotification,
+                                ) => {
+                                  const formattedType = formatRequestTypeLabel(notif);
+                                  let title = `${formattedType} Request`;
+                                  let message = (
                                     <>
                                       <span className="font-bold text-[#2B3674]">
                                         {notif.employeeName}
                                       </span>{" "}
-                                      requested to cancel an approved{" "}
-                                      <span className="font-bold">
-                                        {notif.requestType}
-                                      </span>
-                                      .
+                                      applied for {formattedType}.
                                     </>
                                   );
-                                  iconColorClass =
-                                    "bg-orange-100 text-orange-600";
-                                } else if (notif.status === "Cancelled") {
-                                  title = `Request Cancelled`;
-                                  message = (
-                                    <>
-                                      <span className="font-bold text-[#2B3674]">
-                                        {notif.employeeName}
-                                      </span>{" "}
-                                      cancelled their pending{" "}
-                                      <span className="font-bold">
-                                        {notif.requestType}
-                                      </span>{" "}
-                                      request.
-                                    </>
-                                  );
-                                  iconColorClass = "bg-red-50 text-red-500";
-                                }
+                                  let iconColorClass =
+                                    "bg-blue-100 text-[#4318FF]"; // Default
 
-                                return { title, message, iconColorClass };
-                              };
+                                  // Logic for Cancellations & Modifications
+                                  if (notif.status === "Requesting for Cancellation") {
+                                    title = `Cancellation Request`;
+                                    message = (
+                                      <>
+                                        <span className="font-bold text-[#2B3674]">{notif.employeeName}</span> requested to <span className="font-bold text-red-600">Cancel</span> an approved <span className="font-bold">{formattedType}</span>.
+                                      </>
+                                    );
+                                    iconColorClass = "bg-red-100 text-red-600";
+                                  } else if (notif.status === "Requesting for Modification") {
+                                    title = `Modification Request`;
+                                    message = (
+                                      <>
+                                        <span className="font-bold text-[#2B3674]">{notif.employeeName}</span> requested to <span className="font-bold text-orange-600">Modify</span> an approved <span className="font-bold">{formattedType}</span>.
+                                      </>
+                                    );
+                                    iconColorClass = "bg-orange-100 text-orange-600";
+                                  } else if (notif.status === "Cancelled") {
+                                    title = `Request Cancelled`;
+                                    message = (
+                                      <>
+                                        <span className="font-bold text-[#2B3674]">{notif.employeeName}</span> cancelled their pending <span className="font-bold">{formattedType}</span> request.
+                                      </>
+                                    );
+                                    iconColorClass = "bg-red-50 text-red-500";
+                                  }
+
+                                  return { title, message, iconColorClass };
+                                };
 
                               const { title, message, iconColorClass } =
                                   getNotificationContent(notif);
@@ -431,12 +445,13 @@ const Header = ({
                                   const getEmployeeNotificationContent = (
                                     update: LeaveNotification,
                                   ) => {
+                                    const formattedType = formatRequestTypeLabel(update);
                                     let title = `Request ${update.status}`;
                                     let message = (
                                       <>
                                         Your{" "}
                                         <span className="font-bold text-[#2B3674]">
-                                          {update.requestType}
+                                          {formattedType}
                                         </span>{" "}
                                         request has been{" "}
                                         <span
@@ -461,7 +476,7 @@ const Header = ({
                                         <>
                                           Your request to cancel{" "}
                                           <span className="font-bold text-[#2B3674]">
-                                            {update.requestType}
+                                            {formattedType}
                                           </span>{" "}
                                           has been{" "}
                                           <span className="font-bold text-green-600">
@@ -482,7 +497,7 @@ const Header = ({
                                         <>
                                           Your request to cancel{" "}
                                           <span className="font-bold text-[#2B3674]">
-                                            {update.requestType}
+                                            {formattedType}
                                           </span>{" "}
                                           has been{" "}
                                           <span className="font-bold text-red-600">
@@ -512,7 +527,7 @@ const Header = ({
                                         <>
                                           Your request for{" "}
                                           <span className="font-bold text-[#2B3674]">
-                                            {update.requestType}
+                                            {formattedType}
                                           </span>{" "}
                                           has been{" "}
                                           <span className="font-bold text-red-600">
@@ -536,23 +551,34 @@ const Header = ({
                                       title = "Request Modified";
                                       message = (
                                         <>
-                                          Your{" "}
-                                          <span className="font-bold text-[#2B3674]">
-                                            {update.requestType}
-                                          </span>{" "}
-                                          request has been{" "}
-                                          <span className="font-bold text-orange-600">
-                                            Modified
-                                          </span>{" "}
-                                          due to new request on same date{" "}
-                                          {source}.
+                                          Your <span className="font-bold text-[#2B3674]">{formattedType}</span> request has been <span className="font-bold text-orange-600">Modified</span> due to new request on same date {source}.
                                         </>
                                       );
                                       icon = <RotateCcw size={18} />;
                                       iconBg = "bg-orange-500";
                                     }
-                                    // Case 4: Cancellation Rejected (If we can detect it, usually status is just Rejected)
-                                    // If we rely on title or just generic rejection, generic is fine for now.
+                                    // Case 6: Modification Approved
+                                    else if (update.status === "Modification Approved") {
+                                      title = "Modification Approved";
+                                      message = (
+                                        <>
+                                          Your request to modify <span className="font-bold text-[#2B3674]">{formattedType}</span> has been <span className="font-bold text-green-600">Approved</span>.
+                                        </>
+                                      );
+                                      icon = <Check size={18} />;
+                                      iconBg = "bg-green-500";
+                                    }
+                                    // Case 7: Modification Rejected or Cancelled
+                                    else if (update.status === "Modification Rejected" || update.status === "Modification Cancelled") {
+                                      title = "Modification Rejected";
+                                      message = (
+                                        <>
+                                          Your request to modify <span className="font-bold text-[#2B3674]">{formattedType}</span> has been <span className="font-bold text-red-600">Rejected</span>.
+                                        </>
+                                      );
+                                      icon = <X size={18} />;
+                                      iconBg = "bg-red-500";
+                                    }
 
                                     return { title, message, icon, iconBg };
                                   };

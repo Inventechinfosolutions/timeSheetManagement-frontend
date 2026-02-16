@@ -600,9 +600,26 @@ const LeaveManagement = () => {
                 records,
               );
               if (segmentDuration > 0) {
-                const duration = isSplitRequest
-                  ? segmentDuration * 0.5
-                  : segmentDuration;
+
+                let duration = segmentDuration;
+                if (isSplitRequest) {
+                  // Custom Logic: WFH + CV = 1 Day
+                  const mainType = finalRequestType;
+                  const other = otherHalfType;
+                  const isMainRemote =
+                    mainType === "Work From Home" || mainType === "Client Visit";
+                  const isOtherRemote =
+                    other === "Work From Home" || other === "Client Visit";
+
+                  if (isMainRemote && isOtherRemote) {
+                    duration = segmentDuration; // 1.0 per day
+                  } else {
+                    duration = segmentDuration * 0.5; // 0.5 per day
+                  }
+                } else {
+                    duration = segmentDuration;
+                }
+
                 await dispatch(
                   submitLeaveRequest({
                     employeeId,
@@ -615,6 +632,9 @@ const LeaveManagement = () => {
                     isHalfDay: isSplitRequest,
                     halfDayType: isSplitRequest ? halfDayType : null,
                     otherHalfType: isSplitRequest ? otherHalfType : null,
+                    // Explicitly set halves for Full Day segments
+                    firstHalf: isSplitRequest ? halfDayType : finalRequestType,
+                    secondHalf: isSplitRequest ? otherHalfType : finalRequestType,
                     submittedDate: dayjs().format("YYYY-MM-DD"),
                   }),
                 );
@@ -635,7 +655,24 @@ const LeaveManagement = () => {
           formData.endDate,
           records,
         );
-        const duration = isSplitRequest ? baseDuration * 0.5 : baseDuration;
+        
+        let duration = baseDuration;
+        if (isSplitRequest) {
+             const mainType = finalRequestType;
+             const other = otherHalfType;
+             const isMainRemote =
+               mainType === "Work From Home" || mainType === "Client Visit";
+             const isOtherRemote =
+               other === "Work From Home" || other === "Client Visit";
+
+             if (isMainRemote && isOtherRemote) {
+               duration = baseDuration; 
+             } else {
+               duration = baseDuration * 0.5;
+             }
+        } else {
+            duration = baseDuration;
+        }
 
         dispatch(
           submitLeaveRequest({
@@ -649,6 +686,9 @@ const LeaveManagement = () => {
             isHalfDay: isSplitRequest,
             halfDayType: isSplitRequest ? halfDayType : null,
             otherHalfType: isSplitRequest ? otherHalfType : null,
+            // Explicitly set halves for Full Day requests to allow template matching (firstHalf == secondHalf)
+            firstHalf: isSplitRequest ? halfDayType : finalRequestType,
+            secondHalf: isSplitRequest ? otherHalfType : finalRequestType,
             submittedDate: dayjs().format("YYYY-MM-DD"),
           }),
         );
@@ -670,6 +710,9 @@ const LeaveManagement = () => {
             duration,
             halfDayType: isSplitRequest ? halfDayType : null,
             otherHalfType: isSplitRequest ? otherHalfType : null,
+            // Explicitly set halves for standard requests
+            firstHalf: isSplitRequest ? halfDayType : finalRequestType,
+            secondHalf: isSplitRequest ? otherHalfType : finalRequestType,
             submittedDate: dayjs().format("YYYY-MM-DD"),
           }),
         );
@@ -2122,11 +2165,23 @@ const LeaveManagement = () => {
                             formData.startDate,
                             formData.endDate,
                           );
-                          const finalDur =
-                            leaveDurationType === "Half Day"
-                              ? baseDur * 0.5
-                              : baseDur;
-                          return `${finalDur} Day(s)`;
+                          const isHalf = leaveDurationType === "Half Day" || leaveDurationType === "First Half" || leaveDurationType === "Second Half";
+                          
+                          if (isHalf) {
+                              const mainType = selectedLeaveType === "Apply Leave" ? "Leave" : selectedLeaveType;
+                              const other = otherHalfType;
+                              
+                              const isMainRemote = mainType === "Work From Home" || mainType === "Client Visit";
+                              const isOtherRemote = other === "Work From Home" || other === "Client Visit";
+
+                              // User Requirement: WFH + CV = 1 Day
+                              if (isMainRemote && isOtherRemote) {
+                                  return `${baseDur} Day(s)`;
+                              } else {
+                                  return `${baseDur * 0.5} Day(s)`;
+                              }
+                          }
+                          return `${baseDur} Day(s)`;
                         } else {
                           return `${dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1} Day(s)`;
                         }
