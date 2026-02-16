@@ -14,7 +14,6 @@ import {
   Download,
   X,
   Loader2,
-  RotateCcw,
 } from "lucide-react";
 import { saveAs } from "file-saver";
 import {
@@ -439,14 +438,20 @@ const AdminEmployeeTimesheetList = () => {
               )}
             </div>
 
-            <button
-              onClick={handleClearFilters}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#E9EDF7]/50 text-[#2B3674] rounded-full hover:bg-[#E9EDF7] active:scale-95 transition-all text-sm font-bold border border-transparent whitespace-nowrap"
-              title="Clear all filters"
-            >
-              <RotateCcw size={16} className="text-[#4318FF]" />
-              <span>Clear All</span>
-            </button>
+            {(searchTerm ||
+              selectedDepartment !== "All Departments" ||
+              selectedStatus !== "All Status" ||
+              selectedMonth !== new Date().getMonth() + 1 ||
+              selectedYear !== new Date().getFullYear()) && (
+              <button
+                onClick={handleClearFilters}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-gray-700 rounded-full hover:bg-gray-50 active:scale-95 transition-all text-sm font-bold border border-gray-200 whitespace-nowrap"
+                title="Clear all filters"
+              >
+                <X size={16} />
+                <span>Clear All</span>
+              </button>
+            )}
           </div>
         </div>
 

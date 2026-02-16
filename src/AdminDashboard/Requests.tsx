@@ -1158,6 +1158,29 @@ const Requests = () => {
               ))}
             </Select>
           </div>
+
+          {/* Clear Filters Button */}
+          {(searchTerm ||
+            selectedDept !== "All" ||
+            selectedMonth !== "All" ||
+            selectedYear !== "All" ||
+            filterStatus !== "All") && (
+            <button
+              onClick={() => {
+                setSearchTerm("");
+                setSelectedDept("All");
+                setSelectedMonth("All");
+                setSelectedYear("All");
+                setFilterStatus("All");
+                setCurrentPage(1);
+              }}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-gray-700 rounded-full hover:bg-gray-50 active:scale-95 transition-all text-sm font-bold border border-gray-200 whitespace-nowrap"
+              title="Clear all filters"
+            >
+              <X size={16} />
+              <span>Clear All</span>
+            </button>
+          )}
         </div>
       </div>
 

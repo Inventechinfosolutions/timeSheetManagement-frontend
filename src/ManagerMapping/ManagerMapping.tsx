@@ -630,6 +630,25 @@ const ManagerMapping: React.FC = () => {
               </button>
             )}
           </div>
+
+          {/* Clear All Button */}
+          {(historySearch ||
+            historyDepartment !== "All" ||
+            historyStatus !== "All") && (
+            <button
+              onClick={() => {
+                setHistorySearch("");
+                setHistoryDepartment("All");
+                setHistoryStatus("All");
+                setHistoryPage(1);
+              }}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-gray-700 rounded-full hover:bg-gray-50 active:scale-95 transition-all text-sm font-bold border border-gray-200 whitespace-nowrap"
+              title="Clear all filters"
+            >
+              <X size={16} />
+              <span>Clear All</span>
+            </button>
+          )}
         </div>
 
         {mappingLoading ? (

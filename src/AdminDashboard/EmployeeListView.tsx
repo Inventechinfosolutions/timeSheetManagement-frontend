@@ -588,6 +588,24 @@ ${
                 </button>
               </>
             )}
+
+            {/* Clear Filters Button */}
+            {(searchTerm || selectedDepartment !== "All") && (
+              <button
+                onClick={() => {
+                  setSearchTerm("");
+                  setDebouncedSearchTerm("");
+                  setSelectedDepartment("All");
+                  setCurrentPage(1);
+                  setSortConfig({ key: null, direction: "asc" });
+                }}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-gray-700 rounded-full hover:bg-gray-50 active:scale-95 transition-all text-sm font-bold border border-gray-200 whitespace-nowrap"
+                title="Clear all filters"
+              >
+                <X size={16} />
+                <span>Clear All</span>
+              </button>
+            )}
           </div>
         </div>
 
