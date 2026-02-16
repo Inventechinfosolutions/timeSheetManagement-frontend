@@ -901,32 +901,47 @@ const Requests = () => {
           setDateRangeAttendanceRecords(updatedRecords);
         }
       }
+      // [REMOVED] Redundant frontend attendance updates.
+      // Synchronization is now handled exclusively by the backend in LeaveRequestsService.updateStatus.
 
       notification.success({
         message: "Status Updated",
-        description: `Notification sent to ${employeeName}`,
+        description: `Request for ${employeeName} has been ${status.toLowerCase()}`,
         placement: "topRight",
         duration: 3,
       });
 
-      // Refresh admin notifications
-      dispatch(fetchUnreadNotifications());
-
+      // Close modal
       setConfirmModal({
         isOpen: false,
         id: null,
         status: null,
         employeeName: "",
       });
-    } catch (error) {
+
+      // Refresh the list to show new statuses
+      dispatch(
+        getAllLeaveRequests({
+          department: selectedDept,
+          status: filterStatus,
+          search: debouncedSearchTerm,
+          month: selectedMonth,
+          year: selectedYear,
+          page: currentPage,
+          limit: itemsPerPage,
+        }),
+      );
+    } catch (err: any) {
       notification.error({
         message: "Update Failed",
-        description: "Could not update request status.",
+        description: err.message || "Failed to update request status",
+        placement: "topRight",
       });
     } finally {
       setIsProcessing(false);
     }
   };
+
 
   const getStatusColor = (status: string) => {
     switch (status) {

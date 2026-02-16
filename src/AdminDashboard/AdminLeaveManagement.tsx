@@ -54,10 +54,9 @@ const isCancellationAllowed = (submittedDate: string) => {
   if (!submittedDate) return true;
   const submission = dayjs(submittedDate).startOf("day");
   const deadline = submission
-    .add(1, "day")
-    .set("hour", 10)
-    .set("minute", 0)
-    .set("second", 0);
+    .hour(18)
+    .minute(30)
+    .second(0);
   return dayjs().isBefore(deadline);
 };
 
@@ -1508,7 +1507,7 @@ const AdminLeaveManagement = () => {
       <button
         disabled
         className="p-2 text-gray-300 bg-gray-50 rounded-xl cursor-not-allowed"
-        title="Cancellation unavailable (Deadline: 10 AM next day)"
+        title="Cancellation unavailable (Deadline: 06:30 PM same day)"
       >
         <XCircle size={18} />
       </button>
@@ -2585,16 +2584,11 @@ const AdminLeaveManagement = () => {
             </div>
 
             {/* Split-Day Information (View Mode Only) */}
-            {isViewMode &&
-              selectedRequestId !== null &&
+            {isViewMode && !!selectedRequestId && (
               (() => {
-                const viewedRequest = entities.find(
-                  (e: any) => e.id === selectedRequestId,
-                );
-                const isBothSame =
-                  viewedRequest?.firstHalf === viewedRequest?.secondHalf;
-                return viewedRequest?.isHalfDay &&
-                  (viewedRequest?.firstHalf || viewedRequest?.secondHalf) ? (
+                const viewedRequest = entities.find((e: any) => e.id === Number(selectedRequestId));
+                const isBothSame = viewedRequest?.firstHalf === viewedRequest?.secondHalf;
+                return viewedRequest?.isHalfDay && (viewedRequest?.firstHalf || viewedRequest?.secondHalf) ? (
                   <div className="space-y-2 p-4 bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-50 rounded-2xl border-2 border-blue-200">
                     <div className="flex items-center gap-2 mb-2">
                       <Clock size={18} className="text-blue-600" />
@@ -2773,7 +2767,7 @@ const AdminLeaveManagement = () => {
                   }}
                   className="flex-1 py-3.5 rounded-2xl font-bold text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95 transform uppercase tracking-wider flex items-center justify-center gap-2"
                 >
-                  Modify Instead
+                  MODIFY INSTEAD
                 </button>
                 <button
                   onClick={executeCancel}
@@ -2838,7 +2832,7 @@ const AdminLeaveManagement = () => {
                     : "text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 active:scale-95 transform"
                 }`}
               >
-                Modify Instead
+                MODIFY INSTEAD
               </button>
             </div>
             <button
