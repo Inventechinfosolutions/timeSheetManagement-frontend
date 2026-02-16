@@ -2349,8 +2349,12 @@ const AdminLeaveManagement = () => {
                     )}
                   </div>
                 ) : null;
+<<<<<<< Updated upstream
               })()
             )}
+=======
+              })())}
+>>>>>>> Stashed changes
 
             {/* Description Field */}
             <div className="space-y-2">
