@@ -14,7 +14,6 @@ import {
   Download,
   X,
   Loader2,
-  RotateCcw,
 } from "lucide-react";
 import { saveAs } from "file-saver";
 import {
@@ -151,6 +150,7 @@ const AdminEmployeeTimesheetList = () => {
         status: selectedStatus === "All Status" ? undefined : selectedStatus,
         month: selectedMonth,
         year: selectedYear,
+        includeSelf: basePath !== "/admin-dashboard",
       }),
     );
   }, [
@@ -312,64 +312,66 @@ const AdminEmployeeTimesheetList = () => {
               <span className="whitespace-nowrap">Export Excel</span>
             </button>
             {/* Modern Custom Dropdown */}
-            <div className="relative" ref={dropdownRef}>
-              <button
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-2 px-5 py-2.5 bg-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] text-[#2B3674] font-bold text-sm hover:bg-gray-50 transition-all border border-transparent focus:border-[#4318FF]/20"
-              >
-                <div className="flex items-center gap-2">
-                  <Filter size={16} className="text-[#4318FF]" />
-                  <span>{selectedDepartment}</span>
-                </div>
-                <ChevronDown
-                  size={16}
-                  className={`text-[#A3AED0] transition-transform duration-300 ${isDropdownOpen ? "rotate-180" : ""}`}
-                />
-              </button>
-
-              {isDropdownOpen && (
-                <div className="absolute top-full left-0 mt-2 w-full sm:w-48 bg-white/80 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-white/20 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <div className="px-3 py-1 mb-1">
-                    <span className="text-[10px] font-black text-[#A3AED0] uppercase tracking-widest pl-2">
-                      Departments
-                    </span>
+            {basePath === "/admin-dashboard" && (
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-2 px-5 py-2.5 bg-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] text-[#2B3674] font-bold text-sm hover:bg-gray-50 transition-all border border-transparent focus:border-[#4318FF]/20"
+                >
+                  <div className="flex items-center gap-2">
+                    <Filter size={16} className="text-[#4318FF]" />
+                    <span>{selectedDepartment}</span>
                   </div>
-                  <button
-                    onClick={() => {
-                      setSelectedDepartment("All Departments");
-                      setIsDropdownOpen(false);
-                      setCurrentPage(1);
-                    }}
-                    className={`w-full text-left px-5 py-2 text-sm font-semibold transition-colors
+                  <ChevronDown
+                    size={16}
+                    className={`text-[#A3AED0] transition-transform duration-300 ${isDropdownOpen ? "rotate-180" : ""}`}
+                  />
+                </button>
+
+                {isDropdownOpen && (
+                  <div className="absolute top-full left-0 mt-2 w-full sm:w-48 bg-white/80 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-white/20 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="px-3 py-1 mb-1">
+                      <span className="text-[10px] font-black text-[#A3AED0] uppercase tracking-widest pl-2">
+                        Departments
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setSelectedDepartment("All Departments");
+                        setIsDropdownOpen(false);
+                        setCurrentPage(1);
+                      }}
+                      className={`w-full text-left px-5 py-2 text-sm font-semibold transition-colors
                     ${
                       selectedDepartment === "All Departments"
                         ? "text-[#4318FF] bg-[#4318FF]/5"
                         : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
                     }`}
-                  >
-                    All Departments
-                  </button>
-                  {departments.map((dept) => (
-                    <button
-                      key={dept.id}
-                      onClick={() => {
-                        setSelectedDepartment(dept.departmentName);
-                        setIsDropdownOpen(false);
-                        setCurrentPage(1);
-                      }}
-                      className={`w-full text-left px-5 py-2 text-sm font-semibold transition-colors
+                    >
+                      All Departments
+                    </button>
+                    {departments.map((dept) => (
+                      <button
+                        key={dept.id}
+                        onClick={() => {
+                          setSelectedDepartment(dept.departmentName);
+                          setIsDropdownOpen(false);
+                          setCurrentPage(1);
+                        }}
+                        className={`w-full text-left px-5 py-2 text-sm font-semibold transition-colors
                       ${
                         selectedDepartment === dept.departmentName
                           ? "text-[#4318FF] bg-[#4318FF]/5"
                           : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
                       }`}
-                    >
-                      {dept.departmentName}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+                      >
+                        {dept.departmentName}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Status Dropdown */}
             <div className="relative" ref={statusDropdownRef}>
@@ -426,16 +428,30 @@ const AdminEmployeeTimesheetList = () => {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="border-none outline-none bg-transparent text-[#2B3674] w-full text-sm font-semibold placeholder:text-[#A3AED0]/60"
               />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm("")}
+                  className="ml-2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              )}
             </div>
 
-            <button
-              onClick={handleClearFilters}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#E9EDF7]/50 text-[#2B3674] rounded-full hover:bg-[#E9EDF7] active:scale-95 transition-all text-sm font-bold border border-transparent whitespace-nowrap"
-              title="Clear all filters"
-            >
-              <RotateCcw size={16} className="text-[#4318FF]" />
-              <span>Clear All</span>
-            </button>
+            {(searchTerm ||
+              selectedDepartment !== "All Departments" ||
+              selectedStatus !== "All Status" ||
+              selectedMonth !== new Date().getMonth() + 1 ||
+              selectedYear !== new Date().getFullYear()) && (
+              <button
+                onClick={handleClearFilters}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-gray-700 rounded-full hover:bg-gray-50 active:scale-95 transition-all text-sm font-bold border border-gray-200 whitespace-nowrap"
+                title="Clear all filters"
+              >
+                <X size={16} />
+                <span>Clear All</span>
+              </button>
+            )}
           </div>
         </div>
 

@@ -338,6 +338,22 @@ const DailyStatus = () => {
                 className="border-none outline-none bg-transparent text-[#2B3674] w-full text-sm font-semibold placeholder:text-[#A3AED0]/60"
               />
             </div>
+
+            {/* Clear All Button */}
+            {(searchTerm !== "" || selectedDept !== "All") && (
+              <button
+                onClick={() => {
+                  setSearchTerm("");
+                  setSelectedDept("All");
+                  setCurrentPage(1);
+                }}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-gray-700 rounded-full hover:bg-gray-50 active:scale-95 transition-all text-sm font-bold border border-gray-200 whitespace-nowrap"
+                title="Clear all filters"
+              >
+                <X size={16} />
+                <span>Clear All</span>
+              </button>
+            )}
           </div>
         </div>
 
