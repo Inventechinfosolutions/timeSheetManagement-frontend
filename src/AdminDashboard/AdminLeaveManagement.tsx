@@ -54,10 +54,9 @@ const isCancellationAllowed = (submittedDate: string) => {
   if (!submittedDate) return true;
   const submission = dayjs(submittedDate).startOf("day");
   const deadline = submission
-    .add(1, "day")
-    .set("hour", 10)
-    .set("minute", 0)
-    .set("second", 0);
+    .hour(18)
+    .minute(30)
+    .second(0);
   return dayjs().isBefore(deadline);
 };
 
@@ -83,9 +82,9 @@ const AdminLeaveManagement = () => {
     loading: loadingRequests,
     error,
   } = useAppSelector((state) => state.leaveRequest || {});
-  const {
-    loading: loadingEmployees,
-  } = useAppSelector((state) => state.employeeDetails || {});
+  const { loading: loadingEmployees } = useAppSelector(
+    (state) => state.employeeDetails || {},
+  );
   const { holidays = [] } = useAppSelector(
     (state: any) => state.masterHolidays || {},
   );
@@ -106,7 +105,8 @@ const AdminLeaveManagement = () => {
     isOpen: boolean;
     id: number | null;
   }>({ isOpen: false, id: null });
-  const [isCancelDateModalVisible, setIsCancelDateModalVisible] = useState(false);
+  const [isCancelDateModalVisible, setIsCancelDateModalVisible] =
+    useState(false);
   const [cancellableDates, setCancellableDates] = useState<any[]>([]);
   const [selectedCancelDates, setSelectedCancelDates] = useState<string[]>([]);
   const [isLoadingDates, setIsLoadingDates] = useState(false);
@@ -131,8 +131,17 @@ const AdminLeaveManagement = () => {
   const [selectedYear, setSelectedYear] = useState<string>("All");
   const [filterStatus, setFilterStatus] = useState<string>("All");
 
-  const [modifyModal, setModifyModal] = useState<{ isOpen: boolean; request: any; datesToModify?: string[] }>({ isOpen: false, request: null });
-  const [modifyFormData, setModifyFormData] = useState({ title: "", description: "", firstHalf: "Office", secondHalf: "Office" });
+  const [modifyModal, setModifyModal] = useState<{
+    isOpen: boolean;
+    request: any;
+    datesToModify?: string[];
+  }>({ isOpen: false, request: null });
+  const [modifyFormData, setModifyFormData] = useState({
+    title: "",
+    description: "",
+    firstHalf: "Office",
+    secondHalf: "Office",
+  });
 
   const months = [
     { label: "January", value: "1" },
@@ -150,7 +159,10 @@ const AdminLeaveManagement = () => {
   ];
 
   const currentYear = new Date().getFullYear();
-  const years = ["All", ...Array.from({ length: 5 }, (_, i) => currentYear - 2 + i)];
+  const years = [
+    "All",
+    ...Array.from({ length: 5 }, (_, i) => currentYear - 2 + i),
+  ];
 
   const itemsPerPage = 10;
   const [searchTerm, setSearchTerm] = useState("");
@@ -216,20 +228,30 @@ const AdminLeaveManagement = () => {
 
       // 2. RULE: If WORK FROM HOME already exists
       if (existingRequestType === "Work From Home") {
-          // Allow if applying for Leave or Client Visit or Half Day
-          if (selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave" || selectedLeaveType === "Client Visit" || selectedLeaveType === "Half Day") {
-              return false; // Valid dates, don't disable
-          }
-          return true; // Otherwise block (prevents dual WFH)
+        // Allow if applying for Leave or Client Visit or Half Day
+        if (
+          selectedLeaveType === "Apply Leave" ||
+          selectedLeaveType === "Leave" ||
+          selectedLeaveType === "Client Visit" ||
+          selectedLeaveType === "Half Day"
+        ) {
+          return false; // Valid dates, don't disable
+        }
+        return true; // Otherwise block (prevents dual WFH)
       }
 
       // 3. RULE: If CLIENT VISIT already exists
       if (existingRequestType === "Client Visit") {
-          // Allow if applying for Leave or Work From Home or Half Day
-          if (selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave" || selectedLeaveType === "Work From Home" || selectedLeaveType === "Half Day") {
-              return false; // Valid dates, don't disable
-          }
-          return true; // Otherwise block (prevents dual CV)
+        // Allow if applying for Leave or Work From Home or Half Day
+        if (
+          selectedLeaveType === "Apply Leave" ||
+          selectedLeaveType === "Leave" ||
+          selectedLeaveType === "Work From Home" ||
+          selectedLeaveType === "Half Day"
+        ) {
+          return false; // Valid dates, don't disable
+        }
+        return true; // Otherwise block (prevents dual CV)
       }
 
       // Default: block all overlapping requests
@@ -482,7 +504,10 @@ const AdminLeaveManagement = () => {
     try {
       // Determine the actual request type based on dropdown selection if "Apply Leave" is selected
       let finalRequestType = selectedLeaveType;
-      if (selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave") {
+      if (
+        selectedLeaveType === "Apply Leave" ||
+        selectedLeaveType === "Leave"
+      ) {
         if (leaveDurationType === "Half Day") {
           finalRequestType = "Half Day";
         } else {
@@ -521,7 +546,8 @@ const AdminLeaveManagement = () => {
           records,
           selectedEmployee?.department,
         );
-        duration = leaveDurationType === "Half Day" ? baseDuration * 0.5 : baseDuration;
+        duration =
+          leaveDurationType === "Half Day" ? baseDuration * 0.5 : baseDuration;
       } else {
         duration =
           formData.startDate && formData.endDate
@@ -530,8 +556,11 @@ const AdminLeaveManagement = () => {
       }
 
       // 1. Submit the Request (Pending State)
-      const isSplitRequest = leaveDurationType === "First Half" || leaveDurationType === "Second Half" || leaveDurationType === "Half Day";
-      
+      const isSplitRequest =
+        leaveDurationType === "First Half" ||
+        leaveDurationType === "Second Half" ||
+        leaveDurationType === "Half Day";
+
       const submitAction = await dispatch(
         submitLeaveRequest({
           employeeId: selectedEmployee.employeeId || selectedEmployee.id,
@@ -579,144 +608,166 @@ const AdminLeaveManagement = () => {
         const reqType = (finalRequestType || "").toLowerCase();
 
         if (reqType === "apply leave" || reqType === "leave") {
-            victimTypes = ["work from home", "client visit", "apply leave", "leave", "wfh", "cv"];
+          victimTypes = [
+            "work from home",
+            "client visit",
+            "apply leave",
+            "leave",
+            "wfh",
+            "cv",
+          ];
         } else if (reqType === "work from home" || reqType === "wfh") {
-            victimTypes = ["client visit", "work from home", "cv", "wfh"];
+          victimTypes = ["client visit", "work from home", "cv", "wfh"];
         } else if (reqType === "client visit" || reqType === "cv") {
-            victimTypes = ["work from home", "client visit", "wfh", "cv"];
+          victimTypes = ["work from home", "client visit", "wfh", "cv"];
         } else if (reqType === "half day") {
-            victimTypes = ["apply leave", "leave", "half day"];
+          victimTypes = ["apply leave", "leave", "half day"];
         }
 
         const requestWorkingDates = getWorkingDatesInRange(
-            formData.startDate,
-            formData.endDate,
-            selectedEmployee?.department,
+          formData.startDate,
+          formData.endDate,
+          selectedEmployee?.department,
         );
         let modificationHandledDates: string[] = [];
 
         // 1. Get potential victims from the Redux entities (Leave History)
         // We ensure we are looking at the selected employee's history
         const overlaps = (entities || [])
-            .filter(
-                (e: any) =>
-                    (e.employeeId || e.id) === (selectedEmployee.employeeId || selectedEmployee.id) &&
-                    e.status === "Approved" &&
-                    victimTypes.includes((e.requestType || "").toLowerCase()) &&
-                    e.id !== createdId
-            )
-            .sort((a: any, b: any) => b.id - a.id);
+          .filter(
+            (e: any) =>
+              (e.employeeId || e.id) ===
+                (selectedEmployee.employeeId || selectedEmployee.id) &&
+              e.status === "Approved" &&
+              victimTypes.includes((e.requestType || "").toLowerCase()) &&
+              e.id !== createdId,
+          )
+          .sort((a: any, b: any) => b.id - a.id);
 
         for (const victim of overlaps) {
-            const victimWorkingDates = getWorkingDatesInRange(
-                victim.fromDate,
-                victim.toDate
-            );
+          const victimWorkingDates = getWorkingDatesInRange(
+            victim.fromDate,
+            victim.toDate,
+          );
 
-            // A victim only overlaps if it claims dates that are in the new request's range
-            // AND not already handled by a newer request
-            const intersectionDates = victimWorkingDates.filter(
-                (d) => requestWorkingDates.includes(d) && !modificationHandledDates.includes(d)
-            );
+          // A victim only overlaps if it claims dates that are in the new request's range
+          // AND not already handled by a newer request
+          const intersectionDates = victimWorkingDates.filter(
+            (d) =>
+              requestWorkingDates.includes(d) &&
+              !modificationHandledDates.includes(d),
+          );
 
-            if (intersectionDates.length > 0) {
-                const datesNeedingModification = intersectionDates;
+          if (intersectionDates.length > 0) {
+            const datesNeedingModification = intersectionDates;
 
-                if (datesNeedingModification.length > 0) {
-                    const iStart = datesNeedingModification[0];
-                    const iEnd = datesNeedingModification[datesNeedingModification.length - 1];
+            if (datesNeedingModification.length > 0) {
+              const iStart = datesNeedingModification[0];
+              const iEnd =
+                datesNeedingModification[datesNeedingModification.length - 1];
 
-                    await dispatch(
-                        submitRequestModification({
-                            id: victim.id,
-                            payload: {
-                                fromDate: iStart,
-                                toDate: iEnd,
-                                duration: datesNeedingModification.length,
-                                sourceRequestId: createdId,
-                                sourceRequestType: finalRequestType,
-                            },
-                        })
-                    ).unwrap();
+              await dispatch(
+                submitRequestModification({
+                  id: victim.id,
+                  payload: {
+                    fromDate: iStart,
+                    toDate: iEnd,
+                    duration: datesNeedingModification.length,
+                    sourceRequestId: createdId,
+                    sourceRequestType: finalRequestType,
+                  },
+                }),
+              ).unwrap();
 
-                    modificationHandledDates = [...new Set([...modificationHandledDates, ...datesNeedingModification])];
-                }
-
-                // Handle remaining segments of the victim request
-                const remainingVictimDates = victimWorkingDates.filter(
-                    (d) => !intersectionDates.includes(d)
-                );
-
-                if (remainingVictimDates.length === 0) {
-                     await dispatch(
-                        updateLeaveRequestStatus({
-                             id: victim.id,
-                             status: "Cancelled",
-                        })
-                     ).unwrap();
-                } else {
-                     // Check for gaps
-                     const segments: string[][] = [];
-                     let currentSegment: string[] = [];
-
-                     for (let i = 0; i < remainingVictimDates.length; i++) {
-                         const date = dayjs(remainingVictimDates[i]);
-                         if (currentSegment.length === 0) {
-                             currentSegment.push(remainingVictimDates[i]);
-                         } else {
-                             const prevDate = dayjs(currentSegment[currentSegment.length - 1]);
-                             let nextWorkingDay = prevDate.add(1, "day");
-                             while(isWeekend(nextWorkingDay) || isHoliday(nextWorkingDay)) {
-                                 nextWorkingDay = nextWorkingDay.add(1, "day");
-                             }
-
-                             if (date.isSame(nextWorkingDay, "day")) {
-                                 currentSegment.push(remainingVictimDates[i]);
-                             } else {
-                                 segments.push(currentSegment);
-                                 currentSegment = [remainingVictimDates[i]];
-                             }
-                         }
-                     }
-                     segments.push(currentSegment);
-
-                     if (segments.length === 1) {
-                         // Contiguous -> Just update parent
-                         await dispatch(
-                             updateParentRequest({
-                                 parentId: victim.id,
-                                 duration: remainingVictimDates.length,
-                                 fromDate: remainingVictimDates[0],
-                                 toDate: remainingVictimDates[remainingVictimDates.length - 1],
-                             })
-                         ).unwrap();
-                     } else {
-                         // Split occurred -> Cancel original and create new Approved segments
-                         await dispatch(
-                             updateLeaveRequestStatus({
-                                 id: victim.id,
-                                 status: "Cancelled",
-                             })
-                         ).unwrap();
-
-                         for (const segment of segments) {
-                             await dispatch(
-                                 submitRequestModification({
-                                     id: victim.id,
-                                     payload: {
-                                         fromDate: segment[0],
-                                         toDate: segment[segment.length - 1],
-                                         duration: segment.length,
-                                         sourceRequestId: createdId,
-                                         sourceRequestType: finalRequestType,
-                                         overrideStatus: "Approved",
-                                     }
-                                 })
-                             ).unwrap();
-                         }
-                     }
-                }
+              modificationHandledDates = [
+                ...new Set([
+                  ...modificationHandledDates,
+                  ...datesNeedingModification,
+                ]),
+              ];
             }
+
+            // Handle remaining segments of the victim request
+            const remainingVictimDates = victimWorkingDates.filter(
+              (d) => !intersectionDates.includes(d),
+            );
+
+            if (remainingVictimDates.length === 0) {
+              await dispatch(
+                updateLeaveRequestStatus({
+                  id: victim.id,
+                  status: "Cancelled",
+                }),
+              ).unwrap();
+            } else {
+              // Check for gaps
+              const segments: string[][] = [];
+              let currentSegment: string[] = [];
+
+              for (let i = 0; i < remainingVictimDates.length; i++) {
+                const date = dayjs(remainingVictimDates[i]);
+                if (currentSegment.length === 0) {
+                  currentSegment.push(remainingVictimDates[i]);
+                } else {
+                  const prevDate = dayjs(
+                    currentSegment[currentSegment.length - 1],
+                  );
+                  let nextWorkingDay = prevDate.add(1, "day");
+                  while (
+                    isWeekend(nextWorkingDay) ||
+                    isHoliday(nextWorkingDay)
+                  ) {
+                    nextWorkingDay = nextWorkingDay.add(1, "day");
+                  }
+
+                  if (date.isSame(nextWorkingDay, "day")) {
+                    currentSegment.push(remainingVictimDates[i]);
+                  } else {
+                    segments.push(currentSegment);
+                    currentSegment = [remainingVictimDates[i]];
+                  }
+                }
+              }
+              segments.push(currentSegment);
+
+              if (segments.length === 1) {
+                // Contiguous -> Just update parent
+                await dispatch(
+                  updateParentRequest({
+                    parentId: victim.id,
+                    duration: remainingVictimDates.length,
+                    fromDate: remainingVictimDates[0],
+                    toDate:
+                      remainingVictimDates[remainingVictimDates.length - 1],
+                  }),
+                ).unwrap();
+              } else {
+                // Split occurred -> Cancel original and create new Approved segments
+                await dispatch(
+                  updateLeaveRequestStatus({
+                    id: victim.id,
+                    status: "Cancelled",
+                  }),
+                ).unwrap();
+
+                for (const segment of segments) {
+                  await dispatch(
+                    submitRequestModification({
+                      id: victim.id,
+                      payload: {
+                        fromDate: segment[0],
+                        toDate: segment[segment.length - 1],
+                        duration: segment.length,
+                        sourceRequestId: createdId,
+                        sourceRequestType: finalRequestType,
+                        overrideStatus: "Approved",
+                      },
+                    }),
+                  ).unwrap();
+                }
+              }
+            }
+          }
         }
       }
 
@@ -774,32 +825,52 @@ const AdminLeaveManagement = () => {
           attendanceData.workLocation = "WFH";
           // Preserve Half Day status if exists in current state or payload
           const existingRecord = dateRangeAttendanceRecords.find((r: any) => {
-             const rDate = r.workingDate || r.working_date;
-             const normDate = typeof rDate === "string" ? rDate.split("T")[0] : dayjs(rDate).format("YYYY-MM-DD");
-             return normDate === currentDate;
+            const rDate = r.workingDate || r.working_date;
+            const normDate =
+              typeof rDate === "string"
+                ? rDate.split("T")[0]
+                : dayjs(rDate).format("YYYY-MM-DD");
+            return normDate === currentDate;
           });
-          const existingPayloadEntry = attendancePayload.find((e) => e.workingDate === currentDate);
+          const existingPayloadEntry = attendancePayload.find(
+            (e) => e.workingDate === currentDate,
+          );
 
-          if (existingRecord?.status === "Half Day" || existingPayloadEntry?.status === "Half Day") {
-             attendanceData.status = "Half Day";
-             attendanceData.totalHours = existingRecord?.totalHours || existingPayloadEntry?.totalHours || 6;
+          if (
+            existingRecord?.status === "Half Day" ||
+            existingPayloadEntry?.status === "Half Day"
+          ) {
+            attendanceData.status = "Half Day";
+            attendanceData.totalHours =
+              existingRecord?.totalHours ||
+              existingPayloadEntry?.totalHours ||
+              6;
           }
-
         } else if (finalRequestType === "Client Visit") {
           attendanceData.workLocation = "Client Visit";
           // Preserve Half Day status if exists
           const existingRecord = dateRangeAttendanceRecords.find((r: any) => {
-             const rDate = r.workingDate || r.working_date;
-             const normDate = typeof rDate === "string" ? rDate.split("T")[0] : dayjs(rDate).format("YYYY-MM-DD");
-             return normDate === currentDate;
+            const rDate = r.workingDate || r.working_date;
+            const normDate =
+              typeof rDate === "string"
+                ? rDate.split("T")[0]
+                : dayjs(rDate).format("YYYY-MM-DD");
+            return normDate === currentDate;
           });
-          const existingPayloadEntry = attendancePayload.find((e) => e.workingDate === currentDate);
+          const existingPayloadEntry = attendancePayload.find(
+            (e) => e.workingDate === currentDate,
+          );
 
-          if (existingRecord?.status === "Half Day" || existingPayloadEntry?.status === "Half Day") {
-             attendanceData.status = "Half Day";
-             attendanceData.totalHours = existingRecord?.totalHours || existingPayloadEntry?.totalHours || 6;
+          if (
+            existingRecord?.status === "Half Day" ||
+            existingPayloadEntry?.status === "Half Day"
+          ) {
+            attendanceData.status = "Half Day";
+            attendanceData.totalHours =
+              existingRecord?.totalHours ||
+              existingPayloadEntry?.totalHours ||
+              6;
           }
-
         } else if (finalRequestType === "Half Day") {
           attendanceData.status = "Half Day";
           attendanceData.totalHours = 5;
@@ -812,9 +883,14 @@ const AdminLeaveManagement = () => {
                 : dayjs(rDate).format("YYYY-MM-DD");
             return normDate === currentDate;
           });
-          const existingPayloadEntry = attendancePayload.find((e) => e.workingDate === currentDate);
+          const existingPayloadEntry = attendancePayload.find(
+            (e) => e.workingDate === currentDate,
+          );
 
-          const loc = existingRecord?.workLocation || existingRecord?.work_location || existingPayloadEntry?.workLocation;
+          const loc =
+            existingRecord?.workLocation ||
+            existingRecord?.work_location ||
+            existingPayloadEntry?.workLocation;
           if (loc) {
             attendanceData.workLocation = loc;
           }
@@ -822,20 +898,28 @@ const AdminLeaveManagement = () => {
 
         // Merge logic
         const existingIndex = attendancePayload.findIndex(
-            (e) => e.workingDate === currentDate
+          (e) => e.workingDate === currentDate,
         );
 
         if (existingIndex !== -1) {
-            const existing = attendancePayload[existingIndex];
-            attendancePayload[existingIndex] = {
-                ...existing,
-                ...attendanceData,
-                status: attendanceData.status === "Half Day" || existing.status === "Half Day" ? "Half Day" : attendanceData.status || existing.status,
-                totalHours: (attendanceData.status === "Half Day" || existing.status === "Half Day") ? 5 : (attendanceData.totalHours || existing.totalHours),
-                workLocation: attendanceData.workLocation || existing.workLocation
-            };
+          const existing = attendancePayload[existingIndex];
+          attendancePayload[existingIndex] = {
+            ...existing,
+            ...attendanceData,
+            status:
+              attendanceData.status === "Half Day" ||
+              existing.status === "Half Day"
+                ? "Half Day"
+                : attendanceData.status || existing.status,
+            totalHours:
+              attendanceData.status === "Half Day" ||
+              existing.status === "Half Day"
+                ? 5
+                : attendanceData.totalHours || existing.totalHours,
+            workLocation: attendanceData.workLocation || existing.workLocation,
+          };
         } else {
-            attendancePayload.push(attendanceData);
+          attendancePayload.push(attendanceData);
         }
       }
 
@@ -845,7 +929,8 @@ const AdminLeaveManagement = () => {
 
       notification.success({
         message: "Applied & Approved",
-        description: "Admin request is auto-approved successfully and conflicts handled.",
+        description:
+          "Admin request is auto-approved successfully and conflicts handled.",
         placement: "topRight",
         duration: 3,
       });
@@ -892,8 +977,7 @@ const AdminLeaveManagement = () => {
       notification.error({
         message: "Action Failed",
         description:
-          e?.message ||
-          "Could not define request or update attendance.",
+          e?.message || "Could not define request or update attendance.",
         placement: "topRight",
         duration: 4,
       });
@@ -958,7 +1042,14 @@ const AdminLeaveManagement = () => {
         }),
       );
     }
-  }, [dispatch, selectedEmployee, currentPage, selectedMonth, selectedYear, filterStatus]);
+  }, [
+    dispatch,
+    selectedEmployee,
+    currentPage,
+    selectedMonth,
+    selectedYear,
+    filterStatus,
+  ]);
 
   // Note: admin requests are auto-approved in handleSubmit; we don't rely on submitSuccess side-effects here.
 
@@ -1149,23 +1240,28 @@ const AdminLeaveManagement = () => {
         // Backend already handles attendance clearing when cancellation is approved
         // No need to call attendance API here
 
-      // AUTO-APPROVE the created cancellation request
-      const createdCancellationRequest = action.payload;
-      if (createdCancellationRequest?.id) {
-        await dispatch(
-          updateLeaveRequestStatus({
-            id: createdCancellationRequest.id,
-            status: "Cancellation Approved",
-          }),
-        ).unwrap();
+        // AUTO-APPROVE the created cancellation request
+        const createdCancellationRequest = action.payload;
+        if (createdCancellationRequest?.id) {
+          await dispatch(
+            updateLeaveRequestStatus({
+              id: createdCancellationRequest.id,
+              status: "Cancellation Approved",
+            }),
+          ).unwrap();
 
-        // Explicit Attendance Clearance
-        try {
-          await dispatch(clearAttendanceForRequest({ id: createdCancellationRequest.id, employeeId: createdCancellationRequest.employeeId })).unwrap();
-        } catch (err) {
-          console.error("Failed to clear attendance explicitly:", err);
+          // Explicit Attendance Clearance
+          try {
+            await dispatch(
+              clearAttendanceForRequest({
+                id: createdCancellationRequest.id,
+                employeeId: createdCancellationRequest.employeeId,
+              }),
+            ).unwrap();
+          } catch (err) {
+            console.error("Failed to clear attendance explicitly:", err);
+          }
         }
-      }
 
         // 3. Update Parent Request (Recalculate Remaining Duration & Range)
         if (requestToCancel) {
@@ -1173,68 +1269,72 @@ const AdminLeaveManagement = () => {
           const originalEnd = dayjs(requestToCancel.toDate);
           const cancelledSet = new Set(selectedCancelDates);
           const validDates: string[] = [];
-          
+
           let curr = originalStart;
-          while (curr.isBefore(originalEnd) || curr.isSame(originalEnd, 'day')) {
-             const dStr = curr.format("YYYY-MM-DD");
-             // Only count as valid if NOT cancelled and NOT weekend/holiday (if applicable)
-             if (!cancelledSet.has(dStr)) {
-                 // Check if it's a working day (for duration calc)
-                 if (!isWeekend(curr) && !isHoliday(curr)) {
-                    validDates.push(dStr);
-                 } else {
-                    // It's a weekend/holiday, but still part of the range?
-                    // Typically 'duration' only counts working days.
-                    // 'fromDate' and 'toDate' define the span.
-                    // If the span includes weekends, they are just part of the gap.
-                    // However, updateParentRequest expects new start/end from the valid set.
-                    // Let's assume validDates tracks working days for duration.
-                 }
-             }
-             curr = curr.add(1, 'day');
+          while (
+            curr.isBefore(originalEnd) ||
+            curr.isSame(originalEnd, "day")
+          ) {
+            const dStr = curr.format("YYYY-MM-DD");
+            // Only count as valid if NOT cancelled and NOT weekend/holiday (if applicable)
+            if (!cancelledSet.has(dStr)) {
+              // Check if it's a working day (for duration calc)
+              if (!isWeekend(curr) && !isHoliday(curr)) {
+                validDates.push(dStr);
+              } else {
+                // It's a weekend/holiday, but still part of the range?
+                // Typically 'duration' only counts working days.
+                // 'fromDate' and 'toDate' define the span.
+                // If the span includes weekends, they are just part of the gap.
+                // However, updateParentRequest expects new start/end from the valid set.
+                // Let's assume validDates tracks working days for duration.
+              }
+            }
+            curr = curr.add(1, "day");
           }
 
           // Re-scan for range boundaries including weekends/holidays if they are "in between" valid working days?
           // Simplification: The new range is from the first remaining working day to the last remaining working day.
           // If validDates is empty, the request is fully cancelled (handled by backend or status update).
-          
-          if (validDates.length > 0) {
-             const newFrom = validDates[0];
-             const newTo = validDates[validDates.length - 1];
-             const newDuration = validDates.length;
 
-             await dispatch(
-                updateParentRequest({
-                    parentId: requestToCancel.id,
-                    duration: newDuration,
-                    fromDate: newFrom,
-                    toDate: newTo
-                })
-             ).unwrap();
+          if (validDates.length > 0) {
+            const newFrom = validDates[0];
+            const newTo = validDates[validDates.length - 1];
+            const newDuration = validDates.length;
+
+            await dispatch(
+              updateParentRequest({
+                parentId: requestToCancel.id,
+                duration: newDuration,
+                fromDate: newFrom,
+                toDate: newTo,
+              }),
+            ).unwrap();
           } else {
-             // If no valid working days left, maybe mark parent as Cancelled too?
-             // Or Cancellation Approved covers it.
-             await dispatch(
-                updateLeaveRequestStatus({
-                   id: requestToCancel.id,
-                   status: "Cancellation Approved"
-                })
-             ).unwrap();
-             
-             await dispatch(
-                updateParentRequest({
-                    parentId: requestToCancel.id,
-                    duration: 0,
-                    fromDate: requestToCancel.fromDate,
-                    toDate: requestToCancel.toDate
-                })
-             ).unwrap();
+            // If no valid working days left, maybe mark parent as Cancelled too?
+            // Or Cancellation Approved covers it.
+            await dispatch(
+              updateLeaveRequestStatus({
+                id: requestToCancel.id,
+                status: "Cancellation Approved",
+              }),
+            ).unwrap();
+
+            await dispatch(
+              updateParentRequest({
+                parentId: requestToCancel.id,
+                duration: 0,
+                fromDate: requestToCancel.fromDate,
+                toDate: requestToCancel.toDate,
+              }),
+            ).unwrap();
           }
         }
 
         notification.success({
           message: "Cancellation Applied & Approved",
-          description: "The selected dates have been cancelled and attendance reverted.",
+          description:
+            "The selected dates have been cancelled and attendance reverted.",
         });
         setIsCancelDateModalVisible(false);
         // Refresh data
@@ -1275,19 +1375,31 @@ const AdminLeaveManagement = () => {
         if (item?.status === "Approved") {
           // Update Status to 'Cancellation Approved' for Approved requests
           await dispatch(
-            updateLeaveRequestStatus({ id: cancelModal.id, status: "Cancellation Approved" }),
+            updateLeaveRequestStatus({
+              id: cancelModal.id,
+              status: "Cancellation Approved",
+            }),
           ).unwrap();
 
-        // Explicit Attendance Clearance
-        try {
-          await dispatch(clearAttendanceForRequest({ id: cancelModal.id, employeeId: (selectedEmployee?.employeeId || selectedEmployee?.id) as string })).unwrap();
-        } catch (err) {
-          console.error("Failed to clear attendance explicitly:", err);
-        }
+          // Explicit Attendance Clearance
+          try {
+            await dispatch(
+              clearAttendanceForRequest({
+                id: cancelModal.id,
+                employeeId: (selectedEmployee?.employeeId ||
+                  selectedEmployee?.id) as string,
+              }),
+            ).unwrap();
+          } catch (err) {
+            console.error("Failed to clear attendance explicitly:", err);
+          }
         } else {
           // For Pending requests, just set to Cancelled
           await dispatch(
-            updateLeaveRequestStatus({ id: cancelModal.id, status: "Cancelled" }),
+            updateLeaveRequestStatus({
+              id: cancelModal.id,
+              status: "Cancelled",
+            }),
           ).unwrap();
         }
 
@@ -1307,18 +1419,20 @@ const AdminLeaveManagement = () => {
             status: filterStatus,
           }),
         );
-        
+
         setCancelModal({ isOpen: false, id: null });
         notification.success({
           message: "Request Cancelled",
-          description: "The request has been successfully cancelled and records reverted.",
+          description:
+            "The request has been successfully cancelled and records reverted.",
           placement: "topRight",
           duration: 3,
         });
       } catch (err: any) {
         notification.error({
           message: "Cancellation Failed",
-          description: err.message || "An error occurred while cancelling the request.",
+          description:
+            err.message || "An error occurred while cancelling the request.",
         });
       } finally {
         setIsCancelling(false);
@@ -1367,8 +1481,9 @@ const AdminLeaveManagement = () => {
 
   const renderCancelButton = (item: any) => {
     // Admins and Managers have more authority to cancel
-    const isAdminOrManager = currentUser?.userType === 'ADMIN' || currentUser?.userType === 'MANAGER';
-    
+    const isAdminOrManager =
+      currentUser?.userType === "ADMIN" || currentUser?.userType === "MANAGER";
+
     // Original policy: next day 10am
     const withinDeadline = isCancellationAllowed(
       item.submittedDate || item.created_at,
@@ -1392,7 +1507,7 @@ const AdminLeaveManagement = () => {
       <button
         disabled
         className="p-2 text-gray-300 bg-gray-50 rounded-xl cursor-not-allowed"
-        title="Cancellation unavailable (Deadline: 10 AM next day)"
+        title="Cancellation unavailable (Deadline: 06:30 PM same day)"
       >
         <XCircle size={18} />
       </button>
@@ -1636,12 +1751,11 @@ const AdminLeaveManagement = () => {
       {/* Recent Leave History - Only show if employee is selected */}
       {selectedEmployee && (
         <>
-          
           <div className="flex flex-col md:flex-row items-center justify-between mt-8 mb-4 gap-4">
             <h3 className="text-xl font-bold text-[#2B3674]">
               Recent Leave History
             </h3>
-            
+
             <div className="flex flex-wrap gap-3 items-center w-full md:w-auto">
               <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden flex-1 md:flex-none">
                 <Select
@@ -1657,7 +1771,9 @@ const AdminLeaveManagement = () => {
                     <ChevronDown
                       size={18}
                       className={
-                        selectedMonth !== "All" ? "text-[#4318FF]" : "text-gray-400"
+                        selectedMonth !== "All"
+                          ? "text-[#4318FF]"
+                          : "text-gray-400"
                       }
                     />
                   }
@@ -1685,7 +1801,9 @@ const AdminLeaveManagement = () => {
                     <ChevronDown
                       size={18}
                       className={
-                        selectedYear !== "All" ? "text-[#4318FF]" : "text-gray-400"
+                        selectedYear !== "All"
+                          ? "text-[#4318FF]"
+                          : "text-gray-400"
                       }
                     />
                   }
@@ -1712,18 +1830,47 @@ const AdminLeaveManagement = () => {
                     <ChevronDown
                       size={18}
                       className={
-                        filterStatus !== "All" ? "text-[#4318FF]" : "text-gray-400"
+                        filterStatus !== "All"
+                          ? "text-[#4318FF]"
+                          : "text-gray-400"
                       }
                     />
                   }
                 >
-                  {["All", "Pending", "Approved", "Rejected", "Request Modified", "Cancellation Approved", "Cancelled"].map((status) => (
+                  {[
+                    "All",
+                    "Pending",
+                    "Approved",
+                    "Rejected",
+                    "Request Modified",
+                    "Cancellation Approved",
+                    "Cancelled",
+                  ].map((status) => (
                     <Select.Option key={status} value={status}>
                       {status === "All" ? "All Status" : status}
                     </Select.Option>
                   ))}
                 </Select>
               </div>
+
+              {/* Clear All Button */}
+              {(selectedMonth !== "All" ||
+                selectedYear !== "All" ||
+                filterStatus !== "All") && (
+                <button
+                  onClick={() => {
+                    setSelectedMonth("All");
+                    setSelectedYear("All");
+                    setFilterStatus("All");
+                    setCurrentPage(1);
+                  }}
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-gray-700 rounded-full hover:bg-gray-50 active:scale-95 transition-all text-sm font-bold border border-gray-200 whitespace-nowrap"
+                  title="Clear all filters"
+                >
+                  <X size={16} />
+                  <span>Clear All</span>
+                </button>
+              )}
             </div>
           </div>
           <div className="bg-white rounded-[20px] shadow-[0px_18px_40px_rgba(112,144,176,0.12)] overflow-hidden border border-gray-100 mb-8">
@@ -1790,43 +1937,119 @@ const AdminLeaveManagement = () => {
                             <div className="p-1.5 bg-gray-50 rounded-lg group-hover:bg-white transition-colors">
                               {(() => {
                                 // Determine icon based on combined activities
-                                const hasWFH = item.firstHalf === "Work From Home" || item.secondHalf === "Work From Home";
-                                const hasCV = item.firstHalf === "Client Visit" || item.secondHalf === "Client Visit";
-                                const hasLeave = item.firstHalf === "Leave" || item.secondHalf === "Leave" || item.firstHalf === "Apply Leave" || item.secondHalf === "Apply Leave";
-                                
-                                if (hasWFH && hasLeave) return <Home size={16} className="text-green-600" />;
-                                if (hasCV && hasLeave) return <MapPin size={16} className="text-orange-600" />;
-                                if (item.requestType === "Work From Home") return <Home size={16} className="text-green-600" />;
-                                if (item.requestType === "Client Visit") return <MapPin size={16} className="text-orange-600" />;
-                                if (item.requestType === "Apply Leave" || item.requestType === "Leave") return <Calendar size={16} className="text-blue-600" />;
-                                if (item.requestType === "Half Day") return <Calendar size={16} className="text-pink-600" />;
-                                return <Building2 size={16} className="text-gray-600" />;
+                                const hasWFH =
+                                  item.firstHalf === "Work From Home" ||
+                                  item.secondHalf === "Work From Home";
+                                const hasCV =
+                                  item.firstHalf === "Client Visit" ||
+                                  item.secondHalf === "Client Visit";
+                                const hasLeave =
+                                  item.firstHalf === "Leave" ||
+                                  item.secondHalf === "Leave" ||
+                                  item.firstHalf === "Apply Leave" ||
+                                  item.secondHalf === "Apply Leave";
+
+                                if (hasWFH && hasLeave)
+                                  return (
+                                    <Home
+                                      size={16}
+                                      className="text-green-600"
+                                    />
+                                  );
+                                if (hasCV && hasLeave)
+                                  return (
+                                    <MapPin
+                                      size={16}
+                                      className="text-orange-600"
+                                    />
+                                  );
+                                if (item.requestType === "Work From Home")
+                                  return (
+                                    <Home
+                                      size={16}
+                                      className="text-green-600"
+                                    />
+                                  );
+                                if (item.requestType === "Client Visit")
+                                  return (
+                                    <MapPin
+                                      size={16}
+                                      className="text-orange-600"
+                                    />
+                                  );
+                                if (
+                                  item.requestType === "Apply Leave" ||
+                                  item.requestType === "Leave"
+                                )
+                                  return (
+                                    <Calendar
+                                      size={16}
+                                      className="text-blue-600"
+                                    />
+                                  );
+                                if (item.requestType === "Half Day")
+                                  return (
+                                    <Calendar
+                                      size={16}
+                                      className="text-pink-600"
+                                    />
+                                  );
+                                return (
+                                  <Building2
+                                    size={16}
+                                    className="text-gray-600"
+                                  />
+                                );
                               })()}
                             </div>
                             <span className="text-[#475569] text-sm font-semibold flex items-center gap-2">
                               {(() => {
                                 // Show combined activities for split-day requests
-                                if (item.isHalfDay && item.firstHalf && item.secondHalf) {
-                                  const activities = [item.firstHalf, item.secondHalf]
-                                    .map(a => a === "Apply Leave" ? "Leave" : a)
-                                    .filter(a => a && a !== "Office")
-                                    .filter((value, index, self) => self.indexOf(value) === index);
-                                  
+                                if (
+                                  item.isHalfDay &&
+                                  item.firstHalf &&
+                                  item.secondHalf
+                                ) {
+                                  const activities = [
+                                    item.firstHalf,
+                                    item.secondHalf,
+                                  ]
+                                    .map((a) =>
+                                      a === "Apply Leave" ? "Leave" : a,
+                                    )
+                                    .filter((a) => a && a !== "Office")
+                                    .filter(
+                                      (value, index, self) =>
+                                        self.indexOf(value) === index,
+                                    );
+
                                   if (activities.length > 1) {
                                     // Replace "Leave" with "Half Day Leave" in combined activities
-                                    return activities.map(a => a === "Leave" ? "Half Day Leave" : a).join(" + ");
+                                    return activities
+                                      .map((a) =>
+                                        a === "Leave" ? "Half Day Leave" : a,
+                                      )
+                                      .join(" + ");
                                   }
                                   if (activities.length === 1) {
                                     // For single activity that is "Leave", show "Half Day Leave"
-                                    return activities[0] === "Leave" ? "Half Day Leave" : activities[0];
+                                    return activities[0] === "Leave"
+                                      ? "Half Day Leave"
+                                      : activities[0];
                                   }
                                 }
-                                
+
                                 // Default display
-                                if (item.requestType === "Apply Leave" || item.requestType === "Leave") {
-                                  return item.isHalfDay ? "Half Day Leave" : "Leave";
+                                if (
+                                  item.requestType === "Apply Leave" ||
+                                  item.requestType === "Leave"
+                                ) {
+                                  return item.isHalfDay
+                                    ? "Half Day Leave"
+                                    : "Leave";
                                 }
-                                if (item.requestType === "Half Day") return "Half Day Leave";
+                                if (item.requestType === "Half Day")
+                                  return "Half Day Leave";
                                 return item.requestType;
                               })()}
                               {item.isModified && (
@@ -1838,34 +2061,51 @@ const AdminLeaveManagement = () => {
                           </div>
                         </td>
                         <td className="py-4 px-4 text-center">
-                          <span className={`text-xs font-bold px-3 py-1 rounded-full ${
-                            (() => {
-                              if (item.isHalfDay && item.firstHalf && item.secondHalf) {
-                                const isSame = item.firstHalf === item.secondHalf;
-                                if (isSame) return 'bg-blue-100 text-blue-700';
-                                return 'bg-purple-100 text-purple-700';
+                          <span
+                            className={`text-xs font-bold px-3 py-1 rounded-full ${(() => {
+                              if (
+                                item.isHalfDay &&
+                                item.firstHalf &&
+                                item.secondHalf
+                              ) {
+                                const isSame =
+                                  item.firstHalf === item.secondHalf;
+                                if (isSame) return "bg-blue-100 text-blue-700";
+                                return "bg-purple-100 text-purple-700";
                               }
-                              return 'bg-blue-100 text-blue-700';
-                            })()
-                          }`}>
+                              return "bg-blue-100 text-blue-700";
+                            })()}`}
+                          >
                             {(() => {
-                              if (item.isHalfDay && item.firstHalf && item.secondHalf) {
-                                const first = item.firstHalf === "Apply Leave" ? "Leave" : item.firstHalf;
-                                const second = item.secondHalf === "Apply Leave" ? "Leave" : item.secondHalf;
-                                
+                              if (
+                                item.isHalfDay &&
+                                item.firstHalf &&
+                                item.secondHalf
+                              ) {
+                                const first =
+                                  item.firstHalf === "Apply Leave"
+                                    ? "Leave"
+                                    : item.firstHalf;
+                                const second =
+                                  item.secondHalf === "Apply Leave"
+                                    ? "Leave"
+                                    : item.secondHalf;
+
                                 if (first === second && first !== "Office") {
-                                  return 'Full Day';
+                                  return "Full Day";
                                 }
-                                
+
                                 // Filter out Office
                                 const parts = [];
-                                if (first && first !== "Office") parts.push(`First Half = ${first}`);
-                                if (second && second !== "Office") parts.push(`Second Half = ${second}`);
-                                
-                                if (parts.length > 0) return parts.join(' & ');
-                                return 'Full Day';
+                                if (first && first !== "Office")
+                                  parts.push(`First Half = ${first}`);
+                                if (second && second !== "Office")
+                                  parts.push(`Second Half = ${second}`);
+
+                                if (parts.length > 0) return parts.join(" & ");
+                                return "Full Day";
                               }
-                              return 'Full Day';
+                              return "Full Day";
                             })()}
                           </span>
                         </td>
@@ -1909,24 +2149,29 @@ const AdminLeaveManagement = () => {
                             className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all whitespace-nowrap
                             ${
                               item.status === "Approved" ||
-                              item.status === "Cancellation Approved" || 
+                              item.status === "Cancellation Approved" ||
                               item.status === "Modification Approved"
                                 ? "bg-green-50 text-green-600 border-green-200"
                                 : item.status === "Pending"
                                   ? "bg-yellow-50 text-yellow-600 border-yellow-200"
-                                : item.status === "Cancelled"
+                                  : item.status === "Cancelled"
                                     ? "bg-red-50 text-red-600 border-red-200"
-                                    : item.status === "Requesting for Modification" || item.status === "Modification Cancelled"
+                                    : item.status ===
+                                          "Requesting for Modification" ||
+                                        item.status === "Modification Cancelled"
                                       ? "bg-orange-100 text-orange-600 border-orange-200"
-                                    : item.status === "Requesting for Cancellation"
-                                      ? "bg-orange-100 text-orange-600 border-orange-200"
-                                      : item.status === "Request Modified"
+                                      : item.status ===
+                                          "Requesting for Cancellation"
                                         ? "bg-orange-100 text-orange-600 border-orange-200"
-                                        : "bg-red-50 text-red-600 border-red-200"
+                                        : item.status === "Request Modified"
+                                          ? "bg-orange-100 text-orange-600 border-orange-200"
+                                          : "bg-red-50 text-red-600 border-red-200"
                             }
                           `}
                           >
-                            {(item.status === "Pending" || item.status === "Requesting for Modification") && (
+                            {(item.status === "Pending" ||
+                              item.status ===
+                                "Requesting for Modification") && (
                               <RotateCcw
                                 size={12}
                                 className="animate-spin-slow"
@@ -1954,7 +2199,8 @@ const AdminLeaveManagement = () => {
                             >
                               <Eye size={18} />
                             </button>
-                            {(item.status === "Pending" || item.status === "Approved") &&
+                            {(item.status === "Pending" ||
+                              item.status === "Approved") &&
                               renderCancelButton(item)}
                           </div>
                         </td>
@@ -2061,7 +2307,9 @@ const AdminLeaveManagement = () => {
               <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
                 <XCircle size={20} className="text-red-500 shrink-0" />
                 <p className="text-xs font-bold text-red-600 leading-tight">
-                  {typeof error === 'object' && error !== null ? (error as any).message || 'An error occurred' : String(error)}
+                  {typeof error === "object" && error !== null
+                    ? (error as any).message || "An error occurred"
+                    : String(error)}
                 </p>
               </div>
             )}
@@ -2084,74 +2332,94 @@ const AdminLeaveManagement = () => {
             )}
 
             {/* Duration Type & Split-Day Selection */}
-            {!isViewMode && (selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave" || selectedLeaveType === "Work From Home" || selectedLeaveType === "Client Visit" || selectedLeaveType === "Half Day") && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-[#2B3674] ml-1">
-                    Duration Type
-                  </label>
-                  <Select
-                    value={leaveDurationType}
-                    onChange={(val) => {
-                      setLeaveDurationType(val);
-                      const isHalf = val === "First Half" || val === "Second Half" || val === "Half Day";
-                      setIsHalfDay(isHalf);
-                      if (val === "First Half" || val === "Second Half") {
-                        setHalfDayType(val);
-                      } else {
-                        setHalfDayType(null);
-                      }
-                    }}
-                    className="w-full h-[48px] font-bold text-[#2B3674]"
-                    variant="borderless"
-                    dropdownStyle={{ borderRadius: "16px", padding: "8px" }}
-                    style={{ 
-                      backgroundColor: "#F4F7FE", 
-                      borderRadius: "16px",
-                      border: "1px solid transparent"
-                    }}
-                    suffixIcon={<ChevronDown className="text-[#4318FF]" />}
-                  >
-                    <Select.Option value="Full Day">Full Day</Select.Option>
-                    <Select.Option value="First Half">First Half</Select.Option>
-                    <Select.Option value="Second Half">Second Half</Select.Option>
-                  </Select>
-                </div>
-
-                {/* Other Half Activity (Shown if not Full Day) */}
-                {(leaveDurationType === "First Half" || leaveDurationType === "Second Half" || leaveDurationType === "Half Day") && (
-                  <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+            {!isViewMode &&
+              (selectedLeaveType === "Apply Leave" ||
+                selectedLeaveType === "Leave" ||
+                selectedLeaveType === "Work From Home" ||
+                selectedLeaveType === "Client Visit" ||
+                selectedLeaveType === "Half Day") && (
+                <div className="space-y-4">
+                  <div className="space-y-2">
                     <label className="text-sm font-bold text-[#2B3674] ml-1">
-                      Other Half Activity
+                      Duration Type
                     </label>
                     <Select
-                      value={otherHalfType}
-                      onChange={(val) => setOtherHalfType(val)}
+                      value={leaveDurationType}
+                      onChange={(val) => {
+                        setLeaveDurationType(val);
+                        const isHalf =
+                          val === "First Half" ||
+                          val === "Second Half" ||
+                          val === "Half Day";
+                        setIsHalfDay(isHalf);
+                        if (val === "First Half" || val === "Second Half") {
+                          setHalfDayType(val);
+                        } else {
+                          setHalfDayType(null);
+                        }
+                      }}
                       className="w-full h-[48px] font-bold text-[#2B3674]"
                       variant="borderless"
                       dropdownStyle={{ borderRadius: "16px", padding: "8px" }}
-                      style={{ 
-                        backgroundColor: "#F4F7FE", 
+                      style={{
+                        backgroundColor: "#F4F7FE",
                         borderRadius: "16px",
-                        border: "1px solid transparent"
+                        border: "1px solid transparent",
                       }}
                       suffixIcon={<ChevronDown className="text-[#4318FF]" />}
                     >
-                      <Select.Option value="Office">Office</Select.Option>
-                      {selectedLeaveType !== "Work From Home" && (
-                        <Select.Option value="Work From Home">Work From Home</Select.Option>
-                      )}
-                      {selectedLeaveType !== "Client Visit" && (
-                        <Select.Option value="Client Visit">Client Visit</Select.Option>
-                      )}
-                      {!(selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave" || selectedLeaveType === "Half Day") && (
-                        <Select.Option value="Leave">Leave</Select.Option>
-                      )}
+                      <Select.Option value="Full Day">Full Day</Select.Option>
+                      <Select.Option value="First Half">
+                        First Half
+                      </Select.Option>
+                      <Select.Option value="Second Half">
+                        Second Half
+                      </Select.Option>
                     </Select>
                   </div>
-                )}
-              </div>
-            )}
+
+                  {/* Other Half Activity (Shown if not Full Day) */}
+                  {(leaveDurationType === "First Half" ||
+                    leaveDurationType === "Second Half" ||
+                    leaveDurationType === "Half Day") && (
+                    <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                      <label className="text-sm font-bold text-[#2B3674] ml-1">
+                        Other Half Activity
+                      </label>
+                      <Select
+                        value={otherHalfType}
+                        onChange={(val) => setOtherHalfType(val)}
+                        className="w-full h-[48px] font-bold text-[#2B3674]"
+                        variant="borderless"
+                        dropdownStyle={{ borderRadius: "16px", padding: "8px" }}
+                        style={{
+                          backgroundColor: "#F4F7FE",
+                          borderRadius: "16px",
+                          border: "1px solid transparent",
+                        }}
+                        suffixIcon={<ChevronDown className="text-[#4318FF]" />}
+                      >
+                        <Select.Option value="Office">Office</Select.Option>
+                        {selectedLeaveType !== "Work From Home" && (
+                          <Select.Option value="Work From Home">
+                            Work From Home
+                          </Select.Option>
+                        )}
+                        {selectedLeaveType !== "Client Visit" && (
+                          <Select.Option value="Client Visit">
+                            Client Visit
+                          </Select.Option>
+                        )}
+                        {!(
+                          selectedLeaveType === "Apply Leave" ||
+                          selectedLeaveType === "Leave" ||
+                          selectedLeaveType === "Half Day"
+                        ) && <Select.Option value="Leave">Leave</Select.Option>}
+                      </Select>
+                    </div>
+                  )}
+                </div>
+              )}
 
             {/* Title Field */}
             <div className="space-y-2">
@@ -2202,9 +2470,7 @@ const AdminLeaveManagement = () => {
                         disabledDate={disabledDate}
                         className={`w-full px-5! py-3! rounded-[20px]! bg-[#F4F7FE]! border-none! focus:bg-white! focus:border-[#4318FF]! transition-all font-bold! text-[#2B3674]! shadow-none`}
                         value={
-                          formData.startDate
-                            ? dayjs(formData.startDate)
-                            : null
+                          formData.startDate ? dayjs(formData.startDate) : null
                         }
                         onChange={(date) => {
                           const newStartDate = date
@@ -2299,8 +2565,14 @@ const AdminLeaveManagement = () => {
                           selectedLeaveType === "Leave" ||
                           selectedLeaveType === "Half Day"
                         ) {
-                          const baseDur = calculateDurationExcludingWeekends(formData.startDate, formData.endDate);
-                          const finalDur = leaveDurationType === "Half Day" ? baseDur * 0.5 : baseDur;
+                          const baseDur = calculateDurationExcludingWeekends(
+                            formData.startDate,
+                            formData.endDate,
+                          );
+                          const finalDur =
+                            leaveDurationType === "Half Day"
+                              ? baseDur * 0.5
+                              : baseDur;
                           return `${finalDur} Day(s)`;
                         } else {
                           return `${dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1} Day(s)`;
@@ -2326,7 +2598,9 @@ const AdminLeaveManagement = () => {
                     </div>
                     {isBothSame ? (
                       <div className="bg-white p-3 rounded-xl shadow-sm border border-blue-100 flex items-center justify-between">
-                        <p className="text-sm font-extrabold text-blue-700">Full Day</p>
+                        <p className="text-sm font-extrabold text-blue-700">
+                          Full Day
+                        </p>
                         <span className="text-xs font-bold text-blue-500 bg-blue-50 px-3 py-1 rounded-lg">
                           {viewedRequest.firstHalf}
                         </span>
@@ -2334,27 +2608,26 @@ const AdminLeaveManagement = () => {
                     ) : (
                       <div className="grid grid-cols-2 gap-3">
                         <div className="bg-white p-3 rounded-xl shadow-sm border border-blue-100">
-                          <p className="text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wide">First Half</p>
+                          <p className="text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wide">
+                            First Half
+                          </p>
                           <p className="text-sm font-extrabold text-blue-700">
-                            {viewedRequest.firstHalf || 'N/A'}
+                            {viewedRequest.firstHalf || "N/A"}
                           </p>
                         </div>
                         <div className="bg-white p-3 rounded-xl shadow-sm border border-purple-100">
-                          <p className="text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wide">Second Half</p>
+                          <p className="text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wide">
+                            Second Half
+                          </p>
                           <p className="text-sm font-extrabold text-purple-700">
-                            {viewedRequest.secondHalf || 'N/A'}
+                            {viewedRequest.secondHalf || "N/A"}
                           </p>
                         </div>
                       </div>
                     )}
                   </div>
                 ) : null;
-<<<<<<< Updated upstream
-              })()
-            )}
-=======
               })())}
->>>>>>> Stashed changes
 
             {/* Description Field */}
             <div className="space-y-2">
@@ -2408,8 +2681,7 @@ const AdminLeaveManagement = () => {
                   key={isViewMode ? selectedRequestId : uploaderKey}
                   entityType="LEAVE_REQUEST"
                   entityId={
-                    selectedEmployee?.id &&
-                    !isNaN(Number(selectedEmployee.id))
+                    selectedEmployee?.id && !isNaN(Number(selectedEmployee.id))
                       ? Number(selectedEmployee.id)
                       : 0
                   }
@@ -2473,7 +2745,8 @@ const AdminLeaveManagement = () => {
 
               <p className="text-gray-500 font-medium leading-relaxed mb-8">
                 Are you sure you want to cancel this request? This action cannot
-                be undone. Alternatively, you can <strong>modify</strong> the request if you just need to correct some details.
+                be undone. Alternatively, you can <strong>modify</strong> the
+                request if you just need to correct some details.
               </p>
 
               <div className="flex gap-4">
@@ -2487,7 +2760,9 @@ const AdminLeaveManagement = () => {
                 </button>
                 <button
                   onClick={() => {
-                    const req = entities.find((e: any) => e.id === cancelModal.id);
+                    const req = entities.find(
+                      (e: any) => e.id === cancelModal.id,
+                    );
                     if (req) handleModifyClick(req);
                   }}
                   className="flex-1 py-3.5 rounded-2xl font-bold text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95 transform uppercase tracking-wider flex items-center justify-center gap-2"
@@ -2542,14 +2817,19 @@ const AdminLeaveManagement = () => {
                 onClick={() => {
                   if (requestToCancel) {
                     setIsCancelDateModalVisible(false);
-                    handleModifyClick(requestToCancel, selectedCancelDates.length > 0 ? selectedCancelDates : undefined);
+                    handleModifyClick(
+                      requestToCancel,
+                      selectedCancelDates.length > 0
+                        ? selectedCancelDates
+                        : undefined,
+                    );
                   }
                 }}
                 disabled={selectedCancelDates.length === 0}
-                className={`px-6 py-2.5 rounded-2xl font-bold transition-all transform active:scale-95 uppercase tracking-wider flex items-center justify-center gap-2 ${
-                  selectedCancelDates.length === 0 
-                  ? "text-gray-400 bg-gray-100 cursor-not-allowed" 
-                  : "text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30"
+                className={`px-6 py-2.5 rounded-2xl font-bold transition-all uppercase tracking-wider flex items-center justify-center gap-2 ${
+                  selectedCancelDates.length === 0
+                    ? "text-gray-400 bg-gray-100 cursor-not-allowed"
+                    : "text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 active:scale-95 transform"
                 }`}
               >
                 MODIFY INSTEAD
@@ -2678,7 +2958,9 @@ const AdminLeaveManagement = () => {
 
       {/* Modify Request Modal */}
       <Modal
-        title={<div className="text-xl font-bold text-[#2B3674]">Modify Request</div>}
+        title={
+          <div className="text-xl font-bold text-[#2B3674]">Modify Request</div>
+        }
         open={modifyModal.isOpen}
         onCancel={() => setModifyModal({ isOpen: false, request: null })}
         footer={
@@ -2697,50 +2979,85 @@ const AdminLeaveManagement = () => {
                 if (!modifyModal.request) return;
 
                 // Validation: Check if any change was made
-                const originalFirstHalf = modifyModal.request.firstHalf || modifyModal.request.requestType;
-                const originalSecondHalf = modifyModal.request.secondHalf || modifyModal.request.requestType;
+                const originalFirstHalf =
+                  modifyModal.request.firstHalf ||
+                  modifyModal.request.requestType;
+                const originalSecondHalf =
+                  modifyModal.request.secondHalf ||
+                  modifyModal.request.requestType;
 
-                const isFirstHalfChanged = modifyFormData.firstHalf !== originalFirstHalf;
-                const isSecondHalfChanged = modifyFormData.secondHalf !== originalSecondHalf;
-                const isTitleChanged = modifyFormData.title !== (modifyModal.request.title || "");
-                const isDescriptionChanged = modifyFormData.description !== (modifyModal.request.description || "");
+                const isFirstHalfChanged =
+                  modifyFormData.firstHalf !== originalFirstHalf;
+                const isSecondHalfChanged =
+                  modifyFormData.secondHalf !== originalSecondHalf;
+                const isTitleChanged =
+                  modifyFormData.title !== (modifyModal.request.title || "");
+                const isDescriptionChanged =
+                  modifyFormData.description !==
+                  (modifyModal.request.description || "");
 
-                if (!isFirstHalfChanged && !isSecondHalfChanged && !isTitleChanged && !isDescriptionChanged) {
-                   notification.warning({
-                     message: "No Changes Detected",
-                     description: "Please modify at least one field to submit.",
-                     placement: "topRight",
-                   });
-                   return;
+                if (
+                  !isFirstHalfChanged &&
+                  !isSecondHalfChanged &&
+                  !isTitleChanged &&
+                  !isDescriptionChanged
+                ) {
+                  notification.warning({
+                    message: "No Changes Detected",
+                    description: "Please modify at least one field to submit.",
+                    placement: "topRight",
+                  });
+                  return;
                 }
 
                 setIsModifying(true);
                 try {
-                  await dispatch(modifyLeaveRequest({
-                    id: modifyModal.request.id,
-                    employeeId: modifyModal.request.employeeId,
-                    updateData: {
-                      title: modifyFormData.title,
-                      description: modifyFormData.description,
-                      firstHalf: modifyFormData.firstHalf,
-                      secondHalf: modifyFormData.secondHalf,
-                      datesToModify: modifyModal.datesToModify,
-                    }
-                  })).unwrap();
-                  notification.success({ message: "Request Modified", description: "The request has been successfully modified.", placement: "topRight" });
+                  await dispatch(
+                    modifyLeaveRequest({
+                      id: modifyModal.request.id,
+                      employeeId: modifyModal.request.employeeId,
+                      updateData: {
+                        title: modifyFormData.title,
+                        description: modifyFormData.description,
+                        firstHalf: modifyFormData.firstHalf,
+                        secondHalf: modifyFormData.secondHalf,
+                        datesToModify: modifyModal.datesToModify,
+                      },
+                    }),
+                  ).unwrap();
+                  notification.success({
+                    message: "Request Modified",
+                    description: "The request has been successfully modified.",
+                    placement: "topRight",
+                  });
                   setModifyModal({ isOpen: false, request: null });
                   const empId = modifyModal.request.employeeId;
                   dispatch(getLeaveStats({ employeeId: empId }));
-                  dispatch(getLeaveHistory({ employeeId: empId, page: currentPage, limit: itemsPerPage, month: selectedMonth, year: selectedYear, status: filterStatus }));
+                  dispatch(
+                    getLeaveHistory({
+                      employeeId: empId,
+                      page: currentPage,
+                      limit: itemsPerPage,
+                      month: selectedMonth,
+                      year: selectedYear,
+                      status: filterStatus,
+                    }),
+                  );
                 } catch (err: any) {
-                  notification.error({ message: "Modification Failed", description: err.message || "Failed to modify request.", placement: "topRight" });
+                  notification.error({
+                    message: "Modification Failed",
+                    description: err.message || "Failed to modify request.",
+                    placement: "topRight",
+                  });
                 } finally {
                   setIsModifying(false);
                 }
               }}
               disabled={isModifying}
               className={`px-8 py-2.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${
-                isModifying ? "bg-blue-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600 shadow-blue-200 transform active:scale-95"
+                isModifying
+                  ? "bg-blue-400 cursor-not-allowed"
+                  : "bg-blue-500 hover:bg-blue-600 shadow-blue-200 transform active:scale-95"
               }`}
             >
               {isModifying ? (
@@ -2759,35 +3076,63 @@ const AdminLeaveManagement = () => {
       >
         <div className="py-4 space-y-4">
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
-            <p className="text-sm text-yellow-800 font-semibold">📅 {modifyModal.datesToModify ? `Modifying ${modifyModal.datesToModify.length} selected date(s).` : "Dates are locked and cannot be modified."}</p>
+            <p className="text-sm text-yellow-800 font-semibold">
+              📅{" "}
+              {modifyModal.datesToModify
+                ? `Modifying ${modifyModal.datesToModify.length} selected date(s).`
+                : "Dates are locked and cannot be modified."}
+            </p>
             {!modifyModal.datesToModify && (
               <p className="text-xs text-yellow-700 mt-1">
-                From: <strong>{dayjs(modifyModal.request?.fromDate).format("DD-MM-YYYY")}</strong> → To: <strong>{dayjs(modifyModal.request?.toDate).format("DD-MM-YYYY")}</strong>
+                From:{" "}
+                <strong>
+                  {dayjs(modifyModal.request?.fromDate).format("DD-MM-YYYY")}
+                </strong>{" "}
+                → To:{" "}
+                <strong>
+                  {dayjs(modifyModal.request?.toDate).format("DD-MM-YYYY")}
+                </strong>
               </p>
             )}
             {modifyModal.datesToModify && (
-               <p className="text-xs text-yellow-700 mt-1">
-                 Selected: <strong>{modifyModal.datesToModify.map(d => dayjs(d).format("DD MMM")).join(", ")}</strong>
-               </p>
+              <p className="text-xs text-yellow-700 mt-1">
+                Selected:{" "}
+                <strong>
+                  {modifyModal.datesToModify
+                    .map((d) => dayjs(d).format("DD MMM"))
+                    .join(", ")}
+                </strong>
+              </p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-[#2B3674] mb-2">Title</label>
+            <label className="block text-sm font-bold text-[#2B3674] mb-2">
+              Title
+            </label>
             <input
               type="text"
               value={modifyFormData.title}
-              onChange={(e) => setModifyFormData({ ...modifyFormData, title: e.target.value })}
+              onChange={(e) =>
+                setModifyFormData({ ...modifyFormData, title: e.target.value })
+              }
               className="w-full px-4 py-3 bg-[#F4F7FE] border-none rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4318FF]/20 transition font-bold text-[#2B3674]"
               placeholder="Request title"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-[#2B3674] mb-2">Description</label>
+            <label className="block text-sm font-bold text-[#2B3674] mb-2">
+              Description
+            </label>
             <textarea
               value={modifyFormData.description}
-              onChange={(e) => setModifyFormData({ ...modifyFormData, description: e.target.value })}
+              onChange={(e) =>
+                setModifyFormData({
+                  ...modifyFormData,
+                  description: e.target.value,
+                })
+              }
               rows={3}
               className="w-full px-4 py-3 bg-[#F4F7FE] border-none rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4318FF]/20 transition font-bold text-[#2B3674] resize-none"
               placeholder="Reason for modification"
@@ -2796,10 +3141,14 @@ const AdminLeaveManagement = () => {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-bold text-[#2B3674] mb-2">First Half</label>
+              <label className="block text-sm font-bold text-[#2B3674] mb-2">
+                First Half
+              </label>
               <Select
                 value={modifyFormData.firstHalf}
-                onChange={(value) => setModifyFormData({ ...modifyFormData, firstHalf: value })}
+                onChange={(value) =>
+                  setModifyFormData({ ...modifyFormData, firstHalf: value })
+                }
                 className="w-full h-[48px]"
                 size="large"
                 options={[
@@ -2812,10 +3161,14 @@ const AdminLeaveManagement = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-[#2B3674] mb-2">Second Half</label>
+              <label className="block text-sm font-bold text-[#2B3674] mb-2">
+                Second Half
+              </label>
               <Select
                 value={modifyFormData.secondHalf}
-                onChange={(value) => setModifyFormData({ ...modifyFormData, secondHalf: value })}
+                onChange={(value) =>
+                  setModifyFormData({ ...modifyFormData, secondHalf: value })
+                }
                 className="w-full h-[48px]"
                 size="large"
                 options={[
@@ -2830,12 +3183,20 @@ const AdminLeaveManagement = () => {
 
           {/* Document Upload Section */}
           <div className="mt-4">
-            <label className="block text-sm font-bold text-[#2B3674] mb-2">Supporting Documents</label>
+            <label className="block text-sm font-bold text-[#2B3674] mb-2">
+              Supporting Documents
+            </label>
             <div className="bg-[#F4F7FE] rounded-2xl p-2 border border-blue-50">
               <CommonMultipleUploader
                 key={`modify-uploader-${modifyModal.request?.id}`}
                 entityType="LEAVE_REQUEST"
-                entityId={modifyModal.request?.employeeId ? Number(modifyModal.request.employeeId) || Number(selectedEmployee?.id) || 0 : 0}
+                entityId={
+                  modifyModal.request?.employeeId
+                    ? Number(modifyModal.request.employeeId) ||
+                      Number(selectedEmployee?.id) ||
+                      0
+                    : 0
+                }
                 refId={modifyModal.request?.id || 0}
                 refType="DOCUMENT"
                 disabled={false}

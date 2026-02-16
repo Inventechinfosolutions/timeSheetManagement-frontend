@@ -163,21 +163,22 @@ export const getTimesheetList = createAsyncThunk<
     limit?: number;
     sort?: string;
     order?: string;
+    includeSelf?: boolean;
   },
   ThunkConfig
 >(
   'employeeDetails/fetch_timesheet_list',
-  async ({ search, department, status, month, year, page, limit, sort, order }, { rejectWithValue }) => {
+  async ({ search, department, status, month, year, page, limit, sort, order, includeSelf }, { rejectWithValue, getState }) => {
     try {
       const params: any = {
         search: search || '',
       };
 
-      if (department && department !== 'All') {
+      if (department && department !== "All Departments" && department !== "All") {
         params.department = department;
       }
 
-      if (status && status !== 'All') {
+      if (status && status !== "All Status" && status !== "All") {
         params.status = status;
       }
       
@@ -188,9 +189,11 @@ export const getTimesheetList = createAsyncThunk<
       if (limit) params.limit = limit;
       if (sort) params.sort = sort;
       if (order) params.order = order;
+      if (includeSelf) params.includeSelf = includeSelf;
 
       const queryParams = new URLSearchParams(params);
       const response = await axios.get(`${apiUrl}/timesheet-list?${queryParams.toString()}`);
+      
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || error.message || 'Request failed');
