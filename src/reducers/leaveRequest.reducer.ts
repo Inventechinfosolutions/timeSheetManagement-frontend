@@ -12,13 +12,21 @@ export interface LeaveRequest {
   toDate: string;
   title: string;
   description: string;
-  status: "Pending" | "Approved" | "Rejected" | "Cancelled" | "Requesting for Cancellation" | "Cancellation Approved" | "Request Modified";
+  status: "Pending" | "Approved" | "Rejected" | "Cancelled" | "Requesting for Cancellation" | "Cancellation Approved" | "Cancellation Rejected" | "Request Modified" | "Requesting for Modification" | "Modification Approved" | "Modification Cancelled" | "Modification Rejected";
   created_at?: string;
   submittedDate?: string;
   duration?: number;
   department?: string;
   fullName?: string;
   requestModifiedFrom?: string;
+  isHalfDay?: boolean;
+  halfDayType?: string | null;
+  otherHalfType?: string | null;
+  firstHalf?: string | null;
+  secondHalf?: string | null;
+  isModified?: boolean;
+  modificationCount?: number;
+  lastModifiedDate?: string | null;
 }
 
 export interface LeaveBalanceResponse {
@@ -173,12 +181,38 @@ export const deleteLeaveRequest = createAsyncThunk(
 // Async Thunk for Updating Request Status (Admin)
 export const updateLeaveRequestStatus = createAsyncThunk(
   "leaveRequest/updateStatus",
-  async ({ id, status }: { id: number; status: "Approved" | "Rejected" | "Cancelled" | "Cancellation Approved" }, { rejectWithValue }) => {
+  async ({ id, status }: { id: number; status: LeaveRequest["status"] }, { rejectWithValue }) => {
     try {
       const response = await axios.post(`${apiUrl}/${id}/update-status`, { status });
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data || `Failed to ${status.toLowerCase()} request`);
+    }
+  }
+);
+
+// Async Thunk for Explicit Attendance Clearance
+export const clearAttendanceForRequest = createAsyncThunk(
+  "leaveRequest/clearAttendance",
+  async ({ id, employeeId }: { id: number; employeeId: string }, { rejectWithValue }) => {
+    try {
+      const response = await axios.patch(`${apiUrl}/${id}/${employeeId}/clear-attendance`);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to clear attendance");
+    }
+  }
+);
+
+// Async Thunk for Modifying Leave Request
+export const modifyLeaveRequest = createAsyncThunk(
+  "leaveRequest/modify",
+  async ({ id, employeeId, updateData }: { id: number; employeeId: string; updateData: any }, { rejectWithValue }) => {
+    try {
+      const response = await axios.patch(`${apiUrl}/${id}/modify`, { ...updateData, employeeId });
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to modify request");
     }
   }
 );
@@ -231,6 +265,19 @@ export const undoCancellationRequest = createAsyncThunk(
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data || "Failed to undo cancellation");
+    }
+  }
+);
+
+// Async Thunk for Undoing Modification
+export const undoModificationRequest = createAsyncThunk(
+  "leaveRequest/undoModification",
+  async ({ id, employeeId }: { id: number; employeeId: string }, { rejectWithValue }) => {
+    try {
+      const response = await axios.patch(`${apiUrl}/${id}/undo-modification`, { employeeId });
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to undo modification");
     }
   }
 );
@@ -477,7 +524,7 @@ const leaveRequestSlice = createSlice({
 
     // Update Status
     builder.addCase(updateLeaveRequestStatus.fulfilled, (state, action) => {
-      const updatedItem = action.payload;
+      const updatedItem = action.payload.request || action.payload; // Handle both old and new response structure
       const index = state.entities.findIndex((item) => item.id === updatedItem.id);
       if (index !== -1) {
         state.entities[index].status = updatedItem.status;

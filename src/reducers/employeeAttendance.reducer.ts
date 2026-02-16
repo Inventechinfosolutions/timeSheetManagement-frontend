@@ -28,9 +28,11 @@ export interface EmployeeAttendance {
   loginTime?: string;
   logoutTime?: string;
   location?: OfficeLocation;
-  totalHours?: number;
-  status?: AttendanceStatus;
-  sourceRequestId?: number; // Track auto-generated records
+  totalHours?: number | null;
+  status?: AttendanceStatus | null;
+  sourceRequestId?: number | null; // Track auto-generated records
+  firstHalf?: string | null;
+  secondHalf?: string | null;
 }
 
 // Interface for Trends
@@ -198,6 +200,17 @@ export const fetchAttendanceByDate = createAsyncThunk(
       params: { workingDate },
     });
     return response.data;
+  },
+);
+
+// 4.1 Check Entry Block: GET /check-entry-block
+export const checkEntryBlock = createAsyncThunk(
+  "attendance/checkEntryBlock",
+  async ({ employeeId, date }: { employeeId: string; date: string }) => {
+    const response = await axios.get(`${apiUrl}/check-entry-block`, {
+      params: { employeeId, date },
+    });
+    return response.data; // Expected: { isBlocked: boolean, reason: string | null }
   },
 );
 

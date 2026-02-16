@@ -189,7 +189,7 @@ export const downloadPdf = ({
             else if (status.includes("HALF DAY")) mHalfDays++;
             else if (status.includes("LEAVE") || status === "ABSENT") mLeaves++;
             else if (status === "NOT UPDATED") mNotUpdated++;
-            mTotalHours += (entry.totalHours || 0);
+            mTotalHours += Number(entry.totalHours || 0);
 
             tableRows.push([dateStr, entry.dayName, hours, status]);
         });

@@ -23,6 +23,6 @@ export interface TimesheetEntry {
     totalHours?: number;
     workLocation?: string;
     sourceRequestId?: number; // Track auto-generated records
+    firstHalf?: string | null;
+    secondHalf?: string | null;
 }
-
-export type EmploymentType = "FULL_TIMER" | "INTERN";

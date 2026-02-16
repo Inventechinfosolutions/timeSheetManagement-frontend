@@ -5,6 +5,7 @@ import { RootState } from "../store";
 import {
   fetchMonthlyAttendance,
   AttendanceStatus,
+  resetAttendanceState,
 } from "../reducers/employeeAttendance.reducer";
 import {
   ArrowLeft,
@@ -28,8 +29,15 @@ import Toast from "../components/Toast";
 const AdminEmployeeCalenderWrapper = () => {
   const { employeeId } = useParams<{ employeeId: string }>();
   const navigate = useNavigate();
-  const location = useLocation();
   const dispatch = useAppDispatch();
+
+  // Reset attendance state on unmount to prevent data leakage between views
+  useEffect(() => {
+    return () => {
+      dispatch(resetAttendanceState());
+    };
+  }, [dispatch]);
+
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
 
   // Read month and year from URL query parameters
@@ -103,7 +111,7 @@ const AdminEmployeeCalenderWrapper = () => {
     (acc, curr) => acc + (curr.totalHours || 0),
     0,
   );
-  const avgHours = totalHours.toFixed(1);
+  const avgHours = (typeof totalHours === 'number' && !isNaN(totalHours)) ? totalHours.toFixed(1) : '0.0';
 
   const handleBack = () => {
     // Extract month and year to pass back to the list

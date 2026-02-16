@@ -17,8 +17,11 @@ import {
   getLeaveCancellableDates,
   cancelRequestDates,
   undoCancellationRequest,
+  undoModificationRequest,
   getMonthlyLeaveRequests,
-  getLeaveDurationTypes
+  getLeaveDurationTypes,
+  modifyLeaveRequest,
+  deleteLeaveRequest
 } from "../reducers/leaveRequest.reducer";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import { fetchAttendanceByDateRange, AttendanceStatus } from "../reducers/employeeAttendance.reducer";
@@ -94,6 +97,18 @@ const LeaveManagement = () => {
     request: any | null;
   }>({ isOpen: false, request: null });
   const [isUndoing, setIsUndoing] = useState(false);
+  const [modifyModal, setModifyModal] = useState<{
+    isOpen: boolean;
+    request: any | null;
+    datesToModify?: string[];
+  }>({ isOpen: false, request: null });
+  const [isModifying, setIsModifying] = useState(false);
+  const [modifyFormData, setModifyFormData] = useState({
+    title: "",
+    description: "",
+    firstHalf: "",
+    secondHalf: "",
+  });
   const [selectedLeaveType, setSelectedLeaveType] = useState("");
   const [formData, setFormData] = useState({
     title: "",
@@ -103,6 +118,9 @@ const LeaveManagement = () => {
     duration: 0,
   });
   const [leaveDurationType, setLeaveDurationType] = useState("Full Day");
+  const [halfDayType, setHalfDayType] = useState<string | null>(null);
+  const [otherHalfType, setOtherHalfType] = useState<string | null>(null);
+  const [isHalfDay, setIsHalfDay] = useState<boolean>(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [filterStatus, setFilterStatus] = useState("All");
@@ -443,14 +461,12 @@ const LeaveManagement = () => {
 
   const handleSubmit = async () => {
     if (validateForm()) {
-      // Determine the actual request type based on dropdown selection if "Apply Leave" is selected
+      // Determine the actual request type and duration factor
       let finalRequestType = selectedLeaveType;
-      if (selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave") {
-        if (leaveDurationType === "Half Day") {
-          finalRequestType = "Half Day";
-        } else {
-          finalRequestType = "Apply Leave";
-        }
+      const isSplitRequest = leaveDurationType === "Half Day" || leaveDurationType === "First Half" || leaveDurationType === "Second Half";
+      
+      if (selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave" || selectedLeaveType === "Half Day") {
+        finalRequestType = isSplitRequest ? "Half Day" : "Apply Leave";
       }
 
       // For Client Visit, WFH, and Leave (including Half Day), fetch attendance records first to check for existing leaves
@@ -476,6 +492,7 @@ const LeaveManagement = () => {
             for (const segment of segments) {
               const segmentDuration = calculateDurationExcludingWeekends(segment.fromDate, segment.toDate, records);
               if (segmentDuration > 0) {
+                const duration = isSplitRequest ? segmentDuration * 0.5 : segmentDuration;
                 await dispatch(submitLeaveRequest({
                   employeeId,
                   requestType: finalRequestType,
@@ -483,7 +500,10 @@ const LeaveManagement = () => {
                   description: formData.description,
                   fromDate: segment.fromDate,
                   toDate: segment.toDate,
-                  duration: segmentDuration,
+                  duration,
+                  isHalfDay: isSplitRequest,
+                  halfDayType: isSplitRequest ? halfDayType : null,
+                  otherHalfType: isSplitRequest ? otherHalfType : null,
                   submittedDate: dayjs().format("YYYY-MM-DD"),
                 }));
               }
@@ -499,7 +519,7 @@ const LeaveManagement = () => {
 
         // Standard Single Submission Logic
         const baseDuration = calculateDurationExcludingWeekends(formData.startDate, formData.endDate, records);
-        const duration = leaveDurationType === "Half Day" ? baseDuration * 0.5 : baseDuration;
+        const duration = isSplitRequest ? baseDuration * 0.5 : baseDuration;
 
         dispatch(submitLeaveRequest({
           employeeId,
@@ -509,12 +529,16 @@ const LeaveManagement = () => {
           fromDate: formData.startDate,
           toDate: formData.endDate,
           duration,
+          isHalfDay: isSplitRequest,
+          halfDayType: isSplitRequest ? halfDayType : null,
+          otherHalfType: isSplitRequest ? otherHalfType : null,
           submittedDate: dayjs().format("YYYY-MM-DD"),
         }));
       } else {
-        const duration = formData.startDate && formData.endDate
+        const baseDuration = formData.startDate && formData.endDate
           ? dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1
           : 0;
+        const duration = isSplitRequest ? baseDuration * 0.5 : baseDuration;
 
         dispatch(submitLeaveRequest({
           employeeId,
@@ -524,6 +548,8 @@ const LeaveManagement = () => {
           fromDate: formData.startDate,
           toDate: formData.endDate,
           duration,
+          halfDayType: isSplitRequest ? halfDayType : null,
+          otherHalfType: isSplitRequest ? otherHalfType : null,
           submittedDate: dayjs().format("YYYY-MM-DD"),
         }));
       }
@@ -626,7 +652,16 @@ const LeaveManagement = () => {
     setIsModalOpen(true);
     setErrors({ title: "", description: "", startDate: "", endDate: "" });
     setFormData({ title: "", description: "", startDate: "", endDate: "", duration: 0 }); // Explicitly clear any stale data
-    setLeaveDurationType("Full Day");
+    if (label === "Half Day") {
+      setLeaveDurationType("First Half");
+      setIsHalfDay(true);
+      setHalfDayType("First Half");
+    } else {
+      setLeaveDurationType("Full Day");
+      setIsHalfDay(false);
+      setHalfDayType(null);
+    }
+    setOtherHalfType("Office");
     // Clear any previous global errors from the store
     dispatch(resetSubmitSuccess());
   };
@@ -678,7 +713,34 @@ const LeaveManagement = () => {
     try {
       const action = await dispatch(getLeaveCancellableDates({ id: request.id, employeeId: request.employeeId }));
       if (getLeaveCancellableDates.fulfilled.match(action)) {
-          setCancellableDates(action.payload);
+          const apiDates = action.payload || [];
+          
+          // Identify dates currently under modification or pending status in other requests
+          const lockedDates = new Set<string>();
+          entities?.forEach((req: any) => {
+              // We check for requests other than the current parent request that are in a "pending-like" state
+              if (req.id !== request.id && 
+                  (req.status === "Requesting for Modification" || 
+                   req.status === "Requesting For Modification" || 
+                   req.status === "Pending" ||
+                   req.status === "Requesting for Cancellation" ||
+                   req.status === "Requesting For Cancellation" ||
+                   req.status === "Approved" ||
+                   req.status === "Modification Approved" ||
+                   req.status === "Request Modified")) {
+                  
+                  let start = dayjs(req.fromDate);
+                  const end = dayjs(req.toDate);
+                  while (start.isBefore(end) || start.isSame(end, 'day')) {
+                      lockedDates.add(start.format('YYYY-MM-DD'));
+                      start = start.add(1, 'day');
+                  }
+              }
+          });
+
+          // Filter out the dates that are already locked by a pending modification/cancellation
+          const filtered = apiDates.filter((d: any) => !lockedDates.has(dayjs(d.date).format('YYYY-MM-DD')));
+          setCancellableDates(filtered);
       } else {
           // Explicitly throw or handle potential error payload
           throw new Error(action.payload as string || "Failed to fetch");
@@ -788,6 +850,36 @@ const LeaveManagement = () => {
         api.error({
             title: "Undo Failed",
             description: err.message || "Could not undo cancellation.",
+            placement: "topRight"
+        });
+    } finally {
+        setIsUndoing(false);
+    }
+  };
+
+  const executeUndoModification = async () => {
+    if (!undoModal.request || !employeeId) return;
+
+    setIsUndoing(true);
+    try {
+        const action = await dispatch(undoModificationRequest({ id: undoModal.request.id, employeeId: employeeId! }));
+
+        if (undoModificationRequest.fulfilled.match(action)) {
+            dispatch(getLeaveHistory({ employeeId, status: filterStatus, month: selectedMonth, year: selectedYear, page: currentPage, limit: itemsPerPage }));
+            dispatch(getLeaveStats({ employeeId, month: selectedMonth, year: selectedYear }));
+            api.success({
+                title: "Modification Revoked",
+                description: "Your modification request has been undone.",
+                placement: "topRight"
+            });
+            setUndoModal({ isOpen: false, request: null });
+        } else {
+            throw new Error(action.payload as string || "Could not undo modification");
+        }
+    } catch (err: any) {
+        api.error({
+            title: "Undo Failed",
+            description: err.message || "Could not undo modification.",
             placement: "topRight"
         });
     } finally {
@@ -1082,7 +1174,7 @@ const LeaveManagement = () => {
                 />
               }
             >
-              {["All", "Pending", "Approved", "Rejected", "Request Modified", "Cancellation Approved", "Cancelled"].map((status) => (
+              {["All", "Pending", "Approved", "Rejected", "Requesting for Modification", "Request Modified", "Cancellation Approved", "Cancelled"].map((status) => (
                 <Select.Option key={status} value={status}>
                   {status === "All" ? "All Status" : status}
                 </Select.Option>
@@ -1101,6 +1193,9 @@ const LeaveManagement = () => {
                 </th>
                 <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center">
                   Request Type
+                </th>
+                <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center">
+                  Duration Type
                 </th>
                 <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center">
                   Department
@@ -1122,7 +1217,7 @@ const LeaveManagement = () => {
             <tbody className="divide-y divide-gray-50">
               {entities.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-gray-400">
+                  <td colSpan={8} className="py-8 text-center text-gray-400">
                     <div className="flex flex-col items-center justify-center gap-3">
                       <div className="bg-gray-50 p-4 rounded-full">
                         <Calendar size={32} className="text-gray-300" />
@@ -1166,14 +1261,73 @@ const LeaveManagement = () => {
                             <MapPin size={18} />
                           )}
                         </div>
-                        <span className="text-[#2B3674] text-sm font-bold">
-                          {item.requestType === "Apply Leave"
-                            ? "Leave"
-                            : item.requestType === "Half Day"
-                              ? "Half Day Leave"
-                              : item.requestType}
-                        </span>
+                        <div className="flex flex-col">
+                          <span className="text-[#2B3674] text-sm font-bold flex items-center gap-2">
+                            {(() => {
+                              // Show combined activities for split-day requests
+                              if (item.isHalfDay && item.firstHalf && item.secondHalf) {
+                                const activities = [item.firstHalf, item.secondHalf]
+                                  .map(a => a === "Apply Leave" ? "Leave" : a)
+                                  .filter(a => a && a !== "Office")
+                                  .filter((value, index, self) => self.indexOf(value) === index);
+                                
+                                if (activities.length > 1) {
+                                  // Replace "Leave" with "Half Day Leave" in combined activities
+                                  return activities.map(a => a === "Leave" ? "Half Day Leave" : a).join(" + ");
+                                }
+                                if (activities.length === 1) {
+                                  // For single activity that is "Leave", show "Half Day Leave"
+                                  return activities[0] === "Leave" ? "Half Day Leave" : activities[0];
+                                }
+                              }
+                              
+                              // Default display
+                              if (item.requestType === "Apply Leave" || item.requestType === "Leave") {
+                                return item.isHalfDay ? "Half Day Leave" : "Leave";
+                              }
+                              if (item.requestType === "Half Day") return "Half Day Leave";
+                              return item.requestType;
+                            })()}
+                            {item.isModified && (
+                              <span className="bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter shadow-sm border border-orange-200">
+                                Modified
+                              </span>
+                            )}
+                          </span>
+                        </div>
                       </div>
+                    </td>
+                    <td className="py-4 px-4 text-center">
+                      <span className={`text-xs font-bold px-3 py-1 rounded-full ${
+                        (() => {
+                          if (item.isHalfDay && item.firstHalf && item.secondHalf) {
+                            const isSame = item.firstHalf === item.secondHalf;
+                            if (isSame) return 'bg-blue-100 text-blue-700';
+                            return 'bg-purple-100 text-purple-700';
+                          }
+                          return 'bg-blue-100 text-blue-700';
+                        })()
+                      }`}>
+                        {(() => {
+                          if (item.isHalfDay && item.firstHalf && item.secondHalf) {
+                            const first = item.firstHalf === "Apply Leave" ? "Leave" : item.firstHalf;
+                            const second = item.secondHalf === "Apply Leave" ? "Leave" : item.secondHalf;
+                            
+                            if (first === second && first !== "Office") {
+                              return 'Full Day';
+                            }
+                            
+                            // Filter out Office
+                            const parts = [];
+                            if (first && first !== "Office") parts.push(`First Half = ${first}`);
+                            if (second && second !== "Office") parts.push(`Second Half = ${second}`);
+                            
+                            if (parts.length > 0) return parts.join(' & ');
+                            return 'Full Day';
+                          }
+                          return 'Full Day';
+                        })()}
+                      </span>
                     </td>
                     <td className="py-4 px-4 text-center">
                       <span className="text-xs font-bold text-gray-500 bg-gray-100/50 px-2 py-1 rounded-md">
@@ -1205,36 +1359,29 @@ const LeaveManagement = () => {
                       <span
                         className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all whitespace-nowrap
                         ${
-                          item.status === "Approved" || item.status === "Cancellation Approved"
+                          item.status === "Approved" || item.status === "Cancellation Approved" || item.status === "Modification Approved"
                             ? "bg-green-50 text-green-600 border-green-200"
                             : item.status === "Pending"
                               ? "bg-yellow-50 text-yellow-600 border-yellow-200"
                               : item.status === "Cancelled"
                                 ? "bg-yellow-50 text-yellow-600 border-yellow-200"
                                 : item.status === "Requesting for Cancellation"
-                                  ? "bg-yellow-100 text-yellow-700 border-yellow-300"
-                                  : item.status === "Request Modified"
-
-
-
-
-
-
-
-                                  
-                                    ? "bg-orange-50 text-orange-600 border-orange-200"
-                                    : item.status === "Rejected" || item.status === "Cancellation Rejected"
+                                  ? "bg-orange-100 text-orange-600 border-orange-200"
+                                  : item.status === "Request Modified" || item.status === "Requesting for Modification" || item.status === "Modification Cancelled"
+                                    ? "bg-orange-100 text-orange-600 border-orange-200"
+                                    : item.status === "Rejected" || item.status === "Cancellation Rejected" || item.status === "Modification Rejected"
                                       ? "bg-red-50 text-red-600 border-red-200"
                                       : "bg-red-50 text-red-600 border-red-200"
                         }
                       `}
                       >
-                        {item.status === "Pending" && (
+                        {(item.status === "Pending" || item.status === "Requesting for Modification") && (
                           <RotateCcw
                             size={12}
                             className="animate-spin-slow"
                           />
                         )}
+
                         {item.status}
                         {item.status === "Request Modified" && item.requestModifiedFrom && (
                           <span className="opacity-70 border-l border-orange-300 pl-1.5 ml-1 text-[9px] font-bold">
@@ -1271,6 +1418,17 @@ const LeaveManagement = () => {
                             }}
                             className="p-2 text-amber-600 bg-amber-50/50 hover:bg-amber-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-amber-200 active:scale-90"
                             title="Undo Cancellation"
+                          >
+                            <RotateCcw size={20} />
+                          </button>
+                        ) : item.status === "Requesting for Modification" ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setUndoModal({ isOpen: true, request: item });
+                            }}
+                            className="p-2 text-orange-600 bg-orange-50/50 hover:bg-orange-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-orange-200 active:scale-90"
+                            title="Undo Modification"
                           >
                             <RotateCcw size={20} />
                           </button>
@@ -1387,38 +1545,73 @@ const LeaveManagement = () => {
               </div>
             )}
             
-            {/* Leave Type Dropdown - Only for Apply Leave */}
-            {!isViewMode && (selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave") && (
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-[#2B3674] ml-1">
-                  Leave Type
-                </label>
-                <Select
-                  value={leaveDurationType}
-                  onChange={(val) => setLeaveDurationType(val)}
-                  className="w-full h-[48px] font-bold text-[#2B3674]"
-                  variant="borderless"
-                  dropdownStyle={{ borderRadius: "16px", padding: "8px" }}
-                  style={{ 
-                    backgroundColor: "#F4F7FE", 
-                    borderRadius: "16px",
-                    border: "1px solid transparent"
-                  }}
-                  suffixIcon={<ChevronDown className="text-[#4318FF]" />}
-                >
-                  {leaveTypes.length > 0 ? (
-                    leaveTypes.map((type: any) => (
-                      <Select.Option key={type.value} value={type.value}>
-                        {type.label}
-                      </Select.Option>
-                    ))
-                  ) : (
-                    <>
-                      <Select.Option value="Full Day">Full Day Application</Select.Option>
-                      <Select.Option value="Half Day">Half Day Leave</Select.Option>
-                    </>
-                  )}
-                </Select>
+            {/* Duration Type & Split-Day Selection */}
+            {!isViewMode && (selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave" || selectedLeaveType === "Work From Home" || selectedLeaveType === "Client Visit" || selectedLeaveType === "Half Day") && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-[#2B3674] ml-1">
+                    Duration Type
+                  </label>
+                  <Select
+                    value={leaveDurationType}
+                    onChange={(val) => {
+                      setLeaveDurationType(val);
+                      const isHalf = val === "First Half" || val === "Second Half" || val === "Half Day";
+                      setIsHalfDay(isHalf);
+                      if (val === "First Half" || val === "Second Half") {
+                        setHalfDayType(val);
+                      } else {
+                        setHalfDayType(null);
+                      }
+                    }}
+                    className="w-full h-[48px] font-bold text-[#2B3674]"
+                    variant="borderless"
+                    dropdownStyle={{ borderRadius: "16px", padding: "8px" }}
+                    style={{ 
+                      backgroundColor: "#F4F7FE", 
+                      borderRadius: "16px",
+                      border: "1px solid transparent"
+                    }}
+                    suffixIcon={<ChevronDown className="text-[#4318FF]" />}
+                  >
+                    <Select.Option value="Full Day">Full Day</Select.Option>
+                    <Select.Option value="First Half">First Half</Select.Option>
+                    <Select.Option value="Second Half">Second Half</Select.Option>
+                  </Select>
+                </div>
+
+                {/* Other Half Activity (Shown if not Full Day) */}
+                {(leaveDurationType === "First Half" || leaveDurationType === "Second Half" || leaveDurationType === "Half Day") && (
+                  <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                    <label className="text-sm font-bold text-[#2B3674] ml-1">
+                      Other Half Activity
+                    </label>
+                    <Select
+                      value={otherHalfType}
+                      onChange={(val) => setOtherHalfType(val)}
+                      className="w-full h-[48px] font-bold text-[#2B3674]"
+                      variant="borderless"
+                      dropdownStyle={{ borderRadius: "16px", padding: "8px" }}
+                      style={{ 
+                        backgroundColor: "#F4F7FE", 
+                        borderRadius: "16px",
+                        border: "1px solid transparent"
+                      }}
+                      suffixIcon={<ChevronDown className="text-[#4318FF]" />}
+                    >
+                      <Select.Option value="Office">Office</Select.Option>
+                      {selectedLeaveType !== "Work From Home" && (
+                        <Select.Option value="Work From Home">Work From Home</Select.Option>
+                      )}
+                      {selectedLeaveType !== "Client Visit" && (
+                        <Select.Option value="Client Visit">Client Visit</Select.Option>
+                      )}
+                      {!(selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave" || selectedLeaveType === "Half Day") && (
+                        <Select.Option value="Leave">Leave</Select.Option>
+                      )}
+                    </Select>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1575,6 +1768,47 @@ const LeaveManagement = () => {
               </div>
             </div>
 
+            {/* Split-Day Information (View Mode Only) */}
+            {isViewMode && (selectedRequestId !== null) && (
+              (() => {
+                const viewedRequest = entities.find((e: any) => e.id === selectedRequestId);
+                const isBothSame = viewedRequest?.firstHalf === viewedRequest?.secondHalf;
+                return (viewedRequest as any)?.isHalfDay && (viewedRequest?.firstHalf || viewedRequest?.secondHalf) ? (
+                  <div className="space-y-2 p-4 bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-50 rounded-2xl border-2 border-blue-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Clock size={18} className="text-blue-600" />
+                      <label className="text-sm font-black text-blue-900 uppercase tracking-wider">
+                        Day Details
+                      </label>
+                    </div>
+                    {isBothSame ? (
+                      <div className="bg-white p-3 rounded-xl shadow-sm border border-blue-100 flex items-center justify-between">
+                        <p className="text-sm font-extrabold text-blue-700">Full Day</p>
+                        <span className="text-xs font-bold text-blue-500 bg-blue-50 px-3 py-1 rounded-lg">
+                          {viewedRequest.firstHalf}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-white p-3 rounded-xl shadow-sm border border-blue-100">
+                          <p className="text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wide">First Half</p>
+                          <p className="text-sm font-extrabold text-blue-700">
+                            {viewedRequest.firstHalf || 'N/A'}
+                          </p>
+                        </div>
+                        <div className="bg-white p-3 rounded-xl shadow-sm border border-purple-100">
+                          <p className="text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wide">Second Half</p>
+                          <p className="text-sm font-extrabold text-purple-700">
+                            {viewedRequest.secondHalf || 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : null;
+              })()
+            )}
+
             {/* Description Field */}
             <div className="space-y-2">
               <label className="text-sm font-bold text-[#2B3674] ml-1">
@@ -1678,35 +1912,57 @@ const LeaveManagement = () => {
       {/* Cancel Confirmation Modal */}
       <Modal
         open={cancelModal.isOpen}
+        width={600}
         onCancel={() => setCancelModal({ isOpen: false, id: null })}
-        footer={[
-          <button
-            key="back"
-            onClick={() => setCancelModal({ isOpen: false, id: null })}
-            className="px-6 py-2.5 rounded-xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 transition-colors mr-3"
-          >
-            No, Keep It
-          </button>,
-          <button
-            key="submit"
-            onClick={executeCancel}
-            disabled={isCancelling}
-            className={`px-8 py-2.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 inline-flex ${
-              isCancelling
-                ? "bg-red-400 cursor-not-allowed opacity-80"
-                : "bg-red-500 hover:bg-red-600 shadow-red-200 transform active:scale-95"
-            }`}
-          >
-            {isCancelling ? (
-              <>
-                <Loader2 className="animate-spin" size={18} />
-                Processing...
-              </>
-            ) : (
-              "Yes, Cancel Request"
-            )}
-          </button>
-        ]}
+        footer={
+          <div className="flex justify-center gap-3 pb-2 flex-wrap">
+            <button
+              key="back"
+              onClick={() => setCancelModal({ isOpen: false, id: null })}
+              className="px-6 py-2.5 rounded-xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 transition-colors"
+            >
+              No, Keep It
+            </button>
+            <button
+              key="modify"
+              onClick={() => {
+                const request = entities.find((e: any) => e.id === cancelModal.id);
+                if (request && ['Pending', 'Approved'].includes(request.status)) {
+                  setCancelModal({ isOpen: false, id: null });
+                  setModifyFormData({
+                    title: request.title || "",
+                    description: request.description || "",
+                    firstHalf: request.firstHalf || "Office",
+                    secondHalf: request.secondHalf || "Office",
+                  });
+                  setModifyModal({ isOpen: true, request, datesToModify: undefined });
+                }
+              }}
+              className="px-6 py-2.5 rounded-2xl font-bold text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95 transform uppercase tracking-wider flex items-center justify-center gap-2"
+            >
+              Modify Instead
+            </button>
+            <button
+              key="submit"
+              onClick={executeCancel}
+              disabled={isCancelling}
+              className={`px-8 py-2.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${
+                isCancelling
+                  ? "bg-red-400 cursor-not-allowed opacity-80"
+                  : "bg-red-500 hover:bg-red-600 shadow-red-200 transform active:scale-95"
+              }`}
+            >
+              {isCancelling ? (
+                <>
+                  <Loader2 className="animate-spin" size={18} />
+                  Processing...
+                </>
+              ) : (
+                "Yes, Cancel Request"
+              )}
+            </button>
+          </div>
+        }
         centered
         closable={!isCancelling}
       >
@@ -1722,7 +1978,7 @@ const LeaveManagement = () => {
           <p className="text-gray-500 font-medium leading-relaxed">
             {(entities.find((e: any) => e.id === cancelModal.id)?.status === 'Approved') 
               ? "This request is currently Approved. Cancelling it will submit a request to the Admin for approval. Are you sure?"
-              : "Are you sure you want to cancel this request? This action cannot be undone."}
+              : "Are you sure you want to cancel this request? You can also choose to modify it instead."}
           </p>
         </div>
       </Modal>
@@ -1748,7 +2004,7 @@ const LeaveManagement = () => {
                 ? "bg-indigo-400 cursor-not-allowed"
                 : "bg-[#4318FF] hover:bg-indigo-700 shadow-indigo-200 transform active:scale-95"
             }`}
-            onClick={executeUndo}
+            onClick={undoModal.request?.status === 'Requesting for Modification' ? executeUndoModification : executeUndo}
           >
             {isUndoing ? (
               <>
@@ -1763,25 +2019,229 @@ const LeaveManagement = () => {
         centered
         closable={!isUndoing}
       >
-        <div className="py-2 text-center sm:text-left">
           <div className="flex items-center gap-4 mb-4">
-            <div className="flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-2xl bg-indigo-50 border border-indigo-100">
-              <RotateCcw className="h-6 w-6 text-[#4318FF]" />
+            <div className={`flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-2xl border ${
+                undoModal.request?.status === 'Requesting for Modification' 
+                  ? 'bg-orange-50 border-orange-100' 
+                  : 'bg-indigo-50 border-indigo-100'
+            }`}>
+              <RotateCcw className={`h-6 w-6 ${
+                  undoModal.request?.status === 'Requesting for Modification'
+                    ? 'text-orange-600'
+                    : 'text-[#4318FF]'
+              }`} />
             </div>
             <h3 className="text-xl leading-8 font-extrabold text-[#1B2559]">
-              Revert Cancellation
+              {undoModal.request?.status === 'Requesting for Modification' ? "Undo Modification" : "Revert Cancellation"}
             </h3>
           </div>
           <p className="text-sm text-gray-500 leading-relaxed font-medium">
-            Are you sure you want to revert the cancellation for{" "}
+            Are you sure you want to {undoModal.request?.status === 'Requesting for Modification' ? "undo the modification" : "revert the cancellation"} for{" "}
             <span className="text-[#1B2559] font-bold">
               "{undoModal.request?.title}"
             </span>
-            ? This will restore your original request status to{" "}
-            <span className="text-green-600 font-bold uppercase tracking-wider">
-              Approved
-            </span>.
+            ? This will {undoModal.request?.status === 'Requesting for Modification' ? "cancel the modification request" : "restore your original request status to"}{" "}
+            {undoModal.request?.status !== 'Requesting for Modification' && (
+                <span className="text-green-600 font-bold uppercase tracking-wider">
+                Approved
+                </span>
+            )}.
           </p>
+      </Modal>
+
+      {/* Modification Modal */}
+      <Modal
+        open={modifyModal.isOpen}
+        onCancel={() => !isModifying && setModifyModal({ isOpen: false, request: null })}
+        title={<div className="text-xl font-bold text-gray-800">Modify Request</div>}
+        footer={
+          <div className="flex justify-end gap-3 pt-4">
+            <button
+              key="back"
+              onClick={() => setModifyModal({ isOpen: false, request: null })}
+              disabled={isModifying}
+              className="px-6 py-2.5 rounded-xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              key="submit"
+              onClick={async () => {
+                if (!modifyModal.request) return;
+                
+                // Validation: Check if any change was made
+                const originalFirstHalf = modifyModal.request.firstHalf || modifyModal.request.requestType;
+                const originalSecondHalf = modifyModal.request.secondHalf || modifyModal.request.requestType;
+                
+                const isFirstHalfChanged = modifyFormData.firstHalf !== originalFirstHalf;
+                const isSecondHalfChanged = modifyFormData.secondHalf !== originalSecondHalf;
+                const isTitleChanged = modifyFormData.title !== (modifyModal.request.title || "");
+                const isDescriptionChanged = modifyFormData.description !== (modifyModal.request.description || "");
+                
+                if (!isFirstHalfChanged && !isSecondHalfChanged) {
+                   notification.warning({
+                     message: "No Shift Modification",
+                     description: "You must change the First Half or Second Half to submit a modification.",
+                     placement: "topRight",
+                   });
+                   return;
+                }
+
+                setIsModifying(true);
+                try {
+                  await dispatch(modifyLeaveRequest({
+                    id: modifyModal.request.id,
+                    employeeId: modifyModal.request.employeeId,
+                    updateData: {
+                      ...modifyFormData,
+                      datesToModify: modifyModal.datesToModify
+                    }
+                  })).unwrap();
+                  notification.success({ message: "Request Modified", description: "Your request has been successfully modified.", placement: "topRight" });
+                  setModifyModal({ isOpen: false, request: null });
+                  if (currentUser?.id) {
+                     dispatch(getLeaveStats({ employeeId: Number(currentUser.id) }));
+                     dispatch(getLeaveHistory({ employeeId: Number(currentUser.id), status: filterStatus, month: selectedMonth, year: selectedYear, page: currentPage, limit: itemsPerPage }));
+                  }
+                } catch (err: any) {
+                  notification.error({ message: "Modification Failed", description: err.message || "Failed to modify request.", placement: "topRight" });
+                } finally {
+                  setIsModifying(false);
+                }
+              }}
+              disabled={isModifying}
+              className={`px-8 py-2.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${
+                isModifying ? "bg-blue-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600 shadow-blue-200 transform active:scale-95"
+              }`}
+            >
+              {isModifying ? (
+                <>
+                  <Loader2 className="animate-spin" size={18} />
+                  Processing...
+                </>
+              ) : (
+                "Save and Submit"
+              )}
+            </button>
+          </div>
+        }
+        centered
+      >
+        <div className="py-4 space-y-4">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+            <p className="text-sm text-yellow-800 font-semibold">📅 {modifyModal.datesToModify ? `Modifying ${modifyModal.datesToModify.length} selected date(s).` : "Dates are locked and cannot be modified."}</p>
+            {!modifyModal.datesToModify && (
+              <p className="text-xs text-yellow-700 mt-1">
+                From: <strong>{dayjs(modifyModal.request?.fromDate).format("DD-MM-YYYY")}</strong> → To: <strong>{dayjs(modifyModal.request?.toDate).format("DD-MM-YYYY")}</strong>
+              </p>
+            )}
+            {modifyModal.datesToModify && (
+               <p className="text-xs text-yellow-700 mt-1">
+                 Selected: <strong>{modifyModal.datesToModify.map(d => dayjs(d).format("DD MMM")).join(", ")}</strong>
+               </p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">Title</label>
+            <input
+              type="text"
+              value={modifyFormData.title}
+              onChange={(e) => setModifyFormData({ ...modifyFormData, title: e.target.value })}
+              className={`w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 transition ${
+                 (modifyFormData.firstHalf === (modifyModal.request?.firstHalf || modifyModal.request?.requestType) && 
+                  modifyFormData.secondHalf === (modifyModal.request?.secondHalf || modifyModal.request?.requestType))
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : ''
+              }`}
+              placeholder="Request title"
+              disabled={
+                 modifyFormData.firstHalf === (modifyModal.request?.firstHalf || modifyModal.request?.requestType) && 
+                 modifyFormData.secondHalf === (modifyModal.request?.secondHalf || modifyModal.request?.requestType)
+              }
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">Description</label>
+            <textarea
+              value={modifyFormData.description}
+              onChange={(e) => setModifyFormData({ ...modifyFormData, description: e.target.value })}
+              rows={3}
+              className={`w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 transition ${
+                 (modifyFormData.firstHalf === (modifyModal.request?.firstHalf || modifyModal.request?.requestType) && 
+                  modifyFormData.secondHalf === (modifyModal.request?.secondHalf || modifyModal.request?.requestType))
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : ''
+              }`}
+              placeholder="Reason for request"
+              disabled={
+                 modifyFormData.firstHalf === (modifyModal.request?.firstHalf || modifyModal.request?.requestType) && 
+                 modifyFormData.secondHalf === (modifyModal.request?.secondHalf || modifyModal.request?.requestType)
+              }
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">First Half</label>
+              <Select
+                value={modifyFormData.firstHalf}
+                onChange={(value) => setModifyFormData({ ...modifyFormData, firstHalf: value })}
+                className="w-full"
+                size="large"
+                options={[
+                  { label: "Office", value: "Office" },
+                  { label: "Leave", value: "Leave" },
+                  { label: "Work From Home", value: "Work From Home" },
+                  { label: "Client Visit", value: "Client Visit" },
+                ]}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">Second Half</label>
+              <Select
+                value={modifyFormData.secondHalf}
+                onChange={(value) => setModifyFormData({ ...modifyFormData, secondHalf: value })}
+                className="w-full"
+                size="large"
+                options={[
+                  { label: "Office", value: "Office" },
+                  { label: "Leave", value: "Leave" },
+                  { label: "Work From Home", value: "Work From Home" },
+                  { label: "Client Visit", value: "Client Visit" },
+                ]}
+              />
+            </div>
+          </div>
+
+          {/* Document Upload Section */}
+          <div className={`mt-4 ${
+             (modifyFormData.firstHalf === (modifyModal.request?.firstHalf || modifyModal.request?.requestType) && 
+              modifyFormData.secondHalf === (modifyModal.request?.secondHalf || modifyModal.request?.requestType))
+              ? 'opacity-50 pointer-events-none'
+              : ''
+          }`}>
+            <label className="block text-sm font-bold text-gray-700 mb-2">Supporting Documents (Optional)</label>
+            <div className="bg-gray-50 rounded-xl p-2 border border-gray-100">
+              <CommonMultipleUploader
+                key={`modify-uploader-${modifyModal.request?.id}`}
+                entityType="LEAVE_REQUEST"
+                entityId={currentUser?.id && !isNaN(Number(currentUser.id)) ? Number(currentUser.id) : 0}
+                refId={modifyModal.request?.id || 0}
+                refType="DOCUMENT"
+                disabled={
+                   modifyFormData.firstHalf === (modifyModal.request?.firstHalf || modifyModal.request?.requestType) && 
+                   modifyFormData.secondHalf === (modifyModal.request?.secondHalf || modifyModal.request?.requestType)
+                }
+                fetchOnMount={true}
+                getFiles={getLeaveRequestFiles}
+                previewFile={previewLeaveRequestFile}
+                downloadFile={downloadLeaveRequestFile}
+              />
+            </div>
+          </div>
         </div>
       </Modal>
 
@@ -1792,13 +2252,38 @@ const LeaveManagement = () => {
         onCancel={() => setIsCancelDateModalVisible(false)}
         footer={
           <div className="flex justify-between items-center py-2 px-1">
-            <button
-              key="back"
-              onClick={() => setIsCancelDateModalVisible(false)}
-              className="px-6 py-2.5 rounded-xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 transition-colors"
-            >
-              Close
-            </button>
+            <div className="flex gap-2">
+              <button
+                key="back"
+                onClick={() => setIsCancelDateModalVisible(false)}
+                className="px-6 py-2.5 rounded-xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 transition-colors"
+              >
+                Close
+              </button>
+              <button
+                key="modify"
+                onClick={() => {
+                  if (requestToCancel) {
+                    setIsCancelDateModalVisible(false);
+                    setModifyFormData({
+                      title: requestToCancel.title || "",
+                      description: requestToCancel.description || "",
+                      firstHalf: requestToCancel.firstHalf || "Office",
+                      secondHalf: requestToCancel.secondHalf || "Office",
+                    });
+                    setModifyModal({ isOpen: true, request: requestToCancel, datesToModify: selectedCancelDates });
+                  }
+                }}
+                disabled={selectedCancelDates.length === 0}
+                className={`px-6 py-2.5 rounded-xl font-bold transition-colors ${
+                  selectedCancelDates.length === 0 
+                  ? "text-gray-400 bg-gray-100 cursor-not-allowed" 
+                  : "text-blue-600 bg-blue-50 hover:bg-blue-100"
+                }`}
+              >
+                Modify Instead
+              </button>
+            </div>
             <button
               key="submit"
               onClick={handleConfirmDateCancel}

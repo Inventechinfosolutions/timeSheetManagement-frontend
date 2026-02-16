@@ -6,9 +6,9 @@ import {
   Download,
   X,
   Calendar as CalendarIcon,
-  Lock,
   AlertCircle,
   Loader2,
+  ShieldBan,
 } from "lucide-react";
 import { downloadPdf } from "../utils/downloadPdf";
 import { useAppSelector, useAppDispatch } from "../hooks";
@@ -16,10 +16,11 @@ import { RootState } from "../store";
 import {
   generateMonthlyEntries,
   generateRangeEntries,
+  isEditableMonth,
 } from "../utils/attendanceUtils";
 import { TimesheetEntry } from "../types";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
-import { fetchMonthlyAttendance } from "../reducers/employeeAttendance.reducer";
+import { fetchMonthlyAttendance, autoUpdateTimesheet } from "../reducers/employeeAttendance.reducer";
 import { fetchBlockers } from "../reducers/timesheetBlocker.reducer";
 import { getLeaveHistory } from "../reducers/leaveRequest.reducer";
 import { UserType } from "../reducers/user.reducer";
@@ -65,20 +66,21 @@ const Calendar = ({
     (state: RootState) => state.timesheetBlocker,
   );
 
-
   const isAdmin = currentUser?.userType === UserType.ADMIN;
-  const isManager = currentUser?.userType === UserType.MANAGER || 
-                    (currentUser?.role && currentUser.role.toUpperCase().includes('MANAGER'));
-  const isMyRoute = location.pathname.includes("my-dashboard") || 
-                    location.pathname.includes("my-timesheet") || 
-                    location.pathname === "/employee-dashboard" || 
-                    location.pathname === "/employee-dashboard/";
+  const isManager =
+    currentUser?.userType === UserType.MANAGER ||
+    (currentUser?.role && currentUser.role.toUpperCase().includes("MANAGER"));
+  const isMyRoute =
+    location.pathname.includes("my-dashboard") ||
+    location.pathname.includes("my-timesheet") ||
+    location.pathname === "/employee-dashboard" ||
+    location.pathname === "/employee-dashboard/";
 
   const currentEmployeeId =
     propEmployeeId ||
-    (isMyRoute 
-      ? (currentUser?.employeeId || currentUser?.loginId) 
-      : (entity?.employeeId || currentUser?.employeeId || currentUser?.loginId));
+    (isMyRoute
+      ? currentUser?.employeeId || currentUser?.loginId
+      : entity?.employeeId || currentUser?.employeeId || currentUser?.loginId);
 
   // const holidaysFetched = useRef(false);
   const attendanceFetchedKey = useRef<string | null>(null);
@@ -160,6 +162,15 @@ const Calendar = ({
     } else {
       setInternalDisplayDate(newDate);
     }
+    
+    if (currentEmployeeId && currentEmployeeId !== "Admin") {
+      dispatch(autoUpdateTimesheet({
+        employeeId: currentEmployeeId,
+        month: (newDate.getMonth() + 1).toString().padStart(2, "0"),
+        year: newDate.getFullYear().toString(),
+        dryRun: true,
+      }));
+    }
   };
 
   const handleNextMonth = () => {
@@ -173,6 +184,15 @@ const Calendar = ({
       onMonthChange(newDate);
     } else {
       setInternalDisplayDate(newDate);
+    }
+
+    if (currentEmployeeId && currentEmployeeId !== "Admin") {
+      dispatch(autoUpdateTimesheet({
+        employeeId: currentEmployeeId,
+        month: (newDate.getMonth() + 1).toString().padStart(2, "0"),
+        year: newDate.getFullYear().toString(),
+        dryRun: true,
+      }));
     }
   };
 
@@ -266,13 +286,39 @@ const Calendar = ({
   const isDateBlocked = (date: Date) => {
     const d = new Date(date);
     d.setHours(0, 0, 0, 0);
-    return blockers.some((b) => {
+
+    // 1. Month Lock (Skip for Admin/Manager)
+    if (!isAdmin && !isManager && !isEditableMonth(d)) return true;
+
+    // 2. Manual Blockers
+    const isManualBlocked = blockers.some((b) => {
       const start = new Date(b.blockedFrom);
       start.setHours(0, 0, 0, 0);
       const end = new Date(b.blockedTo);
       end.setHours(0, 0, 0, 0);
       return d >= start && d <= end;
     });
+    if (isManualBlocked) return true;
+
+    // 3. Restricted Activity (Mixed Combinations / Leave / WFH)
+    // If the record exists and has non-office activity, it's blocked for editing
+    if (!isAdmin && !isManager) {
+      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const entry = records.find(r => {
+        const rDate = new Date(r.workingDate);
+        return rDate.toISOString().split('T')[0] === dateStr;
+      });
+
+      if (entry) {
+        const h1 = (entry.firstHalf || '').toLowerCase();
+        const h2 = (entry.secondHalf || '').toLowerCase();
+        const isRestricted = (val: string) => val && !val.includes('office') && val.trim() !== '';
+        
+        if (isRestricted(h1) || isRestricted(h2)) return true;
+      }
+    }
+
+    return false;
   };
 
   const getBlocker = (date: Date) => {
@@ -288,8 +334,33 @@ const Calendar = ({
   };
 
   const getBlockedReason = (date: Date) => {
+    // 1. Month Lock
+    const d = new Date(date);
+    d.setHours(0,0,0,0);
+    if (!isAdmin && !isManager && !isEditableMonth(d)) return "Month is Locked";
+
+    // 2. Manual Blocker
     const blocker = getBlocker(date);
-    return blocker?.reason || "Admin Blocked";
+    if (blocker) return blocker.reason || "Admin Blocked";
+
+    // 3. Restricted Activity
+    if (!isAdmin && !isManager) {
+        const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const entry = records.find(r => {
+            const rDate = new Date(r.workingDate);
+            return rDate.toISOString().split('T')[0] === dateStr;
+        });
+
+        if (entry) {
+            const h1 = (entry.firstHalf || '').toLowerCase();
+            const h2 = (entry.secondHalf || '').toLowerCase();
+            const isRestricted = (val: string) => val && !val.includes('office') && val.trim() !== '';
+            
+            if (isRestricted(h1) || isRestricted(h2)) return "Restricted Activity (Leave/WFH)";
+        }
+    }
+
+    return null;
   };
 
   const checkIsHoliday = (year: number, month: number, day: number) => {
@@ -585,10 +656,60 @@ const Calendar = ({
                 entry.status !== "Leave" &&
                 entry.status !== "Absent";
 
+              // Detect split days (when firstHalf and secondHalf differ)
+              const isSplitDay =
+                !!(entry as any)?.firstHalf &&
+                !!(entry as any)?.secondHalf &&
+                (entry as any).firstHalf !== (entry as any).secondHalf;
+
+              // Helper to get consistent styles matching MyTimesheet exactly
+              const getStatusStyles = (statusStr: string | null | undefined, location?: string | null) => {
+                const s = (statusStr || "").toLowerCase();
+                const loc = (location || "").toLowerCase();
+                
+                // Handle combined statuses (e.g. "WFH (Half Day)") by checking includes
+                const isHalfDay = s.includes("half day") || s === "half day";
+                const isWFH = s.includes("wfh") || s.includes("work from home") || loc === "wfh" || loc === "work from home";
+                const isClientVisit = s.includes("client visit") || s.includes("client place") || loc === "client visit" || loc === "client place";
+                const isOffice = s === "office" || loc === "office";
+                const isLeave = s === "leave" || s === "weekend"; 
+                
+                if (s === "blocked") return { bg: "bg-gray-200", badge: "bg-gray-600 text-white", border: "border-transparent", text: "text-gray-600" };
+                if (s === "holiday") return { bg: "bg-[#DBEAFE]", badge: "bg-[#1890FF]/70 text-white font-bold", border: "border-[#1890FF]/20", text: "text-[#1890FF]" };
+                
+                // Priority: Specific types first
+                if (isWFH) return { bg: "bg-[#DBEAFE]", badge: "bg-[#4318FF]/70 text-white font-bold", border: "border-[#4318FF]/20", text: "text-[#4318FF]" };
+                if (isClientVisit) return { bg: "bg-[#DBEAFE]", badge: "bg-[#4318FF]/70 text-white font-bold", border: "border-[#4318FF]/20", text: "text-[#4318FF]" };
+                
+                // Fallbacks
+                if (isLeave) return { bg: "bg-[#FEE2E2]", badge: "bg-[#EE5D50]/70 text-white font-bold", border: "border-[#EE5D50]/10", text: "text-[#EE5D50]" };
+                if (isOffice || s === "full day") return { bg: "bg-[#E6FFFA]", badge: "bg-[#01B574] text-white font-bold", border: "border-[#01B574]/20", text: "text-[#01B574]" };
+                if (isHalfDay) return { bg: "bg-[#FEF3C7]", badge: "bg-[#FFB020]/80 text-white font-bold", border: "border-[#FFB020]/20", text: "text-[#FFB020]" };
+                if (s === "absent") return { bg: "bg-[#FECACA]", badge: "bg-[#DC2626]/70 text-white font-bold", border: "border-[#DC2626]/20", text: "text-[#DC2626]" };
+                
+                return { bg: "bg-[#F8FAFC]", badge: "bg-[#64748B]/90 text-white font-bold", border: "border-gray-300", text: "text-gray-600" };
+              };
+
+              const getShortStatus = (status: string) => {
+                const s = (status || "").toLowerCase();
+                if (s.includes("work from home")) return "WFH";
+                return status;
+              };
+
+              const isWorkLoc = (s: string) => {
+                const lower = (s || "").toLowerCase();
+                return ["wfh", "work from home", "client visit", "client place", "office"].some(k => lower.includes(k));
+              };
+
+              const useNeutralSplit = 
+                isSplitDay && 
+                isWorkLoc((entry as any).firstHalf) && 
+                isWorkLoc((entry as any).secondHalf);
+
               // Status Logic for Styling
               const baseHover =
                 "hover:shadow-md hover:-translate-y-1 transition-all duration-300";
-              let cellClass = `bg-white border-gray-100 ${baseHover}`;
+              let cellClass = `bg-white border-gray-200 ${baseHover}`;
               // let textClass = "text-[#2B3674]";
               let statusLabel = entry?.status || "-";
 
@@ -596,11 +717,6 @@ const Calendar = ({
                 cellClass = `bg-white ring-2 ring-[#4318FF] shadow-lg shadow-blue-200 z-10 ${baseHover}`;
                 // textClass = "text-[#4318FF]";
                 if (statusLabel === "-") statusLabel = "";
-              } else if (isBlocked) {
-                cellClass =
-                  "bg-gray-200 opacity-90 grayscale border border-gray-200 shadow-inner cursor-not-allowed";
-                // textClass = "text-gray-500";
-                statusLabel = "Blocked";
               } else if (holiday) {
                 // Master holidays take priority over everything (Leave, WFH, Client Visit, etc.)
                 cellClass = `bg-blue-50 border-transparent hover:bg-blue-100 ${baseHover}`;
@@ -614,17 +730,16 @@ const Calendar = ({
                 cellClass = `bg-red-50 border-transparent text-red-600 hover:bg-red-100 ${baseHover}`;
                 // textClass = "text-red-600 font-bold";
                 statusLabel = "WEEKEND";
-              } else if (
-                entry?.status === "Full Day"
-              ) {
+              } else if (isSplitDay) {
+                // Split Day: No border
+                cellClass = `bg-white border-transparent ${baseHover}`;
+              } else if (entry?.status === "Full Day") {
                 cellClass = `bg-emerald-50 border-transparent hover:bg-emerald-100 ${baseHover}`;
                 // textClass = "text-emerald-700 font-bold";
                 if (!entry?.totalHours || Number(entry.totalHours) === 0) {
                   statusLabel = "";
                 }
-              } else if (
-                entry?.status === "Half Day"
-              ) {
+              } else if (entry?.status === "Half Day") {
                 cellClass = `bg-amber-100 border-amber-300 hover:bg-amber-200 ${baseHover}`;
                 // textClass = "text-amber-700 font-bold";
                 if (!entry?.totalHours || Number(entry.totalHours) === 0) {
@@ -649,9 +764,7 @@ const Calendar = ({
               ) {
                 cellClass = `bg-blue-50 border-transparent hover:bg-blue-100 ${baseHover}`;
                 statusLabel = entry?.workLocation || entry?.status || "WFH";
-              } else if (
-                isIncomplete
-              ) {
+              } else if (isIncomplete) {
                 cellClass = `bg-white border-gray-300 hover:bg-gray-50 ${baseHover}`;
                 if (!entry?.totalHours || Number(entry.totalHours) === 0) {
                   statusLabel = "Not Updated";
@@ -663,6 +776,11 @@ const Calendar = ({
                 cellClass = `bg-white border-gray-300 hover:bg-gray-50 ${baseHover}`;
                 // textClass = "text-gray-300 font-bold";
                 statusLabel = "UPCOMING";
+              }
+              
+              // Apply blocked cursor style if blocked
+              if (isBlocked) {
+                  cellClass += " cursor-not-allowed";
               }
 
               return (
@@ -684,97 +802,122 @@ const Calendar = ({
                       onNavigateToDate(timestamp);
                     } else {
                       const y = targetDate.getFullYear();
-                      const m = String(targetDate.getMonth() + 1).padStart(2, '0');
-                      const d = String(targetDate.getDate()).padStart(2, '0');
+                      const m = String(targetDate.getMonth() + 1).padStart(
+                        2,
+                        "0",
+                      );
+                      const d = String(targetDate.getDate()).padStart(2, "0");
                       const dateStr = `${y}-${m}-${d}`;
-                      const isPrivilegedUser = 
-                        currentUser?.userType === UserType.ADMIN || 
-                        currentUser?.userType === UserType.MANAGER || 
+                      const isPrivilegedUser =
+                        currentUser?.userType === UserType.ADMIN ||
+                        currentUser?.userType === UserType.MANAGER ||
                         currentUser?.userType === UserType.TEAM_LEAD;
 
-                      const isSelfView = currentEmployeeId === currentUser?.employeeId;
-                      const isViewAttendance = location.pathname.includes("/view-attendance/");
+                      const isSelfView =
+                        currentEmployeeId === currentUser?.employeeId;
+                      const isViewAttendance =
+                        location.pathname.includes("/view-attendance/");
 
                       // Disable navigation for Admin and Manager on dashboard or view-attendance pages
-                      if (isPrivilegedUser && (isSelfView || isViewAttendance) && (location.pathname.startsWith("/manager-dashboard") || location.pathname.startsWith("/admin-dashboard"))) {
+                      if (
+                        isPrivilegedUser &&
+                        (isSelfView || isViewAttendance) &&
+                        (location.pathname.startsWith("/manager-dashboard") ||
+                          location.pathname.startsWith("/admin-dashboard"))
+                      ) {
                         return;
                       }
 
                       // Privileged user viewing someone else's calendar (View Mode)
-                      if (viewOnly && isPrivilegedUser && currentEmployeeId && currentEmployeeId !== currentUser?.employeeId) {
-                        const basePath = location.pathname.startsWith("/manager-dashboard") 
-                          ? "/manager-dashboard" 
+                      if (
+                        viewOnly &&
+                        isPrivilegedUser &&
+                        currentEmployeeId &&
+                        currentEmployeeId !== currentUser?.employeeId
+                      ) {
+                        const basePath = location.pathname.startsWith(
+                          "/manager-dashboard",
+                        )
+                          ? "/manager-dashboard"
                           : "/admin-dashboard";
-                        
-                        navigate(`${basePath}/timesheet/${currentEmployeeId}/${dateStr}`, {
+
+                        navigate(
+                          `${basePath}/timesheet/${currentEmployeeId}/${dateStr}`,
+                          {
+                            state: {
+                              selectedDate: dateStr,
+                              timestamp: Date.now(),
+                            },
+                          },
+                        );
+                      } else {
+                        // Default: User viewing their own timesheet (Employee or Manager self-view)
+                        const basePath = location.pathname.startsWith(
+                          "/manager-dashboard",
+                        )
+                          ? "/manager-dashboard"
+                          : location.pathname.startsWith("/admin-dashboard")
+                            ? "/admin-dashboard"
+                            : "/employee-dashboard";
+
+                        navigate(`${basePath}/my-timesheet`, {
                           state: {
                             selectedDate: dateStr,
                             timestamp: Date.now(),
                           },
                         });
-                      } else {
-                        // Default: User viewing their own timesheet (Employee or Manager self-view)
-                        const basePath = location.pathname.startsWith("/manager-dashboard") 
-                          ? "/manager-dashboard" 
-                          : location.pathname.startsWith("/admin-dashboard")
-                            ? "/admin-dashboard"
-                            : "/employee-dashboard";
-                            
-                        navigate(`${basePath}/my-timesheet`, {
-                          state: {
-                            selectedDate: dateStr,
-                            timestamp: Date.now(),
-                          }
-                        });
                       }
-                      }
-                    }}
-                  className={`relative flex flex-col items-start justify-between p-2 rounded-2xl border transition-all duration-300 cursor-pointer min-h-[72px] group ${cellClass}`}
+                    }
+                  }}
+                  className={`relative flex flex-col items-start justify-between p-2 rounded-2xl border transition-all duration-300 cursor-pointer min-h-[72px] group overflow-hidden ${cellClass}`}
                   title={isBlocked ? `Blocked by Admin: ${blockedReason}` : ""}
                 >
-                  {/* Blocked Hover Overlay */}
-                  {isBlocked && (
-                    <div className="absolute inset-0 z-30 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 bg-[#111c44]/40 backdrop-blur-[3px] rounded-2xl p-2 text-center overflow-hidden pointer-events-none">
-                      <div className="bg-white/95 p-3 rounded-xl shadow-2xl flex flex-col items-center gap-1.5 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 border border-white/20 w-[90%] mx-auto">
-                        <div className="p-1.5 bg-red-100 rounded-lg">
-                          <AlertCircle size={14} className="text-red-600" />
-                        </div>
-                        <div className="space-y-0.5">
-                          <p className="text-[9px] font-black text-[#2B3674] leading-tight uppercase tracking-tight">
-                            Timesheet Blocked
-                          </p>
-                          <p className="text-[10px] font-extrabold text-[#4318FF]">
-                            {(isAdmin || isManager) ? "Unblock" : `Contact ${getBlocker(cellDate)?.blockedBy || "Admin"}`}
-                          </p>
-                        </div>
-                        {blockedReason && (
-                          <div className="mt-1 pt-1 border-t border-gray-100 w-full px-1">
-                            <p
-                              className="text-[8px] text-[#A3AED0] font-bold italic truncate overflow-hidden whitespace-nowrap"
-                              title={blockedReason}
-                            >
-                              "{blockedReason}"
-                            </p>
-                          </div>
-                        )}
-                      </div>
+                  {/* Background Layer for Split Days - Always Colored */}
+                  {isSplitDay ? (
+                    <div className="absolute inset-0 z-0 rounded-2xl flex flex-col sm:flex-row overflow-hidden">
+                       {isWorkLoc((entry as any).firstHalf) && isWorkLoc((entry as any).secondHalf) ? (
+                         <>
+                           <div className="flex-1 bg-[#E6FFFA] border-b sm:border-b-0 sm:border-r border-[#01B574]/20" />
+                           <div className="flex-1 bg-[#E6FFFA]" />
+                         </>
+                       ) : (
+                         <>
+                           <div className={`flex-1 ${getStatusStyles((entry as any).firstHalf).bg}`} />
+                           <div className={`flex-1 ${getStatusStyles((entry as any).secondHalf).bg}`} />
+                         </>
+                       )}
                     </div>
-                  )}
+                  ) : null}
+
                   <span
-                    className={`text-sm font-bold text-black mb-1 flex items-center justify-center w-6 h-6 rounded-full ${
-                      isToday ? "bg-[#4318FF] text-white" : ""
+                    className={`text-sm font-bold text-black mb-3 flex items-center justify-center w-6 h-6 rounded-full z-10 transition-colors duration-300 ${
+                      isToday ? "bg-[#4318FF] text-white" : "group-hover:bg-[#4318FF] group-hover:text-white"
                     } `}
                   >
                     {day}
                   </span>
 
                   {isBlocked && (
-                    <div className="absolute top-2 right-2">
-                      <Lock size={12} className="text-gray-400" />
+                    <div className="absolute top-2 right-2 z-10 transition-transform hover:scale-110">
+                      <ShieldBan size={14} className="text-red-500 drop-shadow-sm" strokeWidth={2.5} />
                     </div>
                   )}
 
-                  <div className="flex-1 flex flex-col items-center justify-center w-full">
+
+                  {/* Middle: Hours Display */}
+                  <div className="flex-1 flex flex-col items-center justify-center w-full z-10">
+                    {/* Split Day Badges - Show small badges when firstHalf and secondHalf differ */}
+                    {isSplitDay && (
+                      <div className="flex gap-1.5 w-full mb-1 px-1">
+                        <div className={`flex-1 py-1 rounded-md text-center text-[8px] font-bold uppercase shadow-sm ${getStatusStyles((entry as any).firstHalf).badge}`}>
+                          {getShortStatus((entry as any).firstHalf)}
+                        </div>
+                        <div className={`flex-1 py-1 rounded-md text-center text-[8px] font-bold uppercase shadow-sm ${getStatusStyles((entry as any).secondHalf).badge}`}>
+                          {getShortStatus((entry as any).secondHalf)}
+                        </div>
+                      </div>
+                    )}
+                    
                     {!isBlocked && entry?.totalHours ? (
                       <div className="text-center">
                         <span
@@ -800,11 +943,8 @@ const Calendar = ({
                   </div>
 
                   <div
-                    className={`text-[10px] font-bold uppercase truncate w-full text-center px-1 py-1 rounded-md mt-1 backdrop-blur-sm
-                         ${
-                           isBlocked
-                             ? "text-white bg-gray-600"
-                             : holiday
+                    className={`text-[10px] font-bold uppercase truncate w-full text-center px-1 py-1 rounded-md mt-1 backdrop-blur-sm z-10                         ${
+                           holiday
                                ? "text-white bg-[#1890FF]/70"
                                : entry?.status === "Full Day" && statusLabel
                                  ? "text-white bg-[#01B574]"
@@ -827,14 +967,15 @@ const Calendar = ({
                          }
                     `}
                   >
-                    {isBlocked
-                      ? "BLOCKED"
-                      : holiday
+                    {holiday
                         ? holiday.name
                         : (entry?.status as string) === "Leave"
                           ? "LEAVE"
+                          : (entry?.status as string) === "Full Day"
+                          ? `${(entry?.workLocation || "OFFICE").toUpperCase()} (FULL DAY)`
                           : entry?.workLocation &&
-                              (entry?.status as string) !== "Leave"
+                              (entry?.status as string) !== "Leave" &&
+                              (entry?.status as string) !== "Full Day"
                             ? entry.workLocation
                             : isIncomplete && !statusLabel
                               ? "Not Updated"
