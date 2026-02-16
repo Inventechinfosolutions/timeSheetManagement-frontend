@@ -193,7 +193,7 @@ const AttendanceStatsCards = ({
         const d = new Date(r.workingDate);
         return d.getFullYear() === year && d.getMonth() + 1 === month;
       })
-      .reduce((acc, r) => acc + (r.totalHours || 0), 0);
+      .reduce((acc, r) => acc + Number(r.totalHours || 0), 0);
   }, [month, year, attendanceRecords]);
 
   return (
@@ -210,7 +210,7 @@ const AttendanceStatsCards = ({
           </div>
           <div className="flex flex-col">
             <span className="text-2xl font-extrabold text-white tracking-tight">
-              {calculatedMonthlyHours.toFixed(1)}
+               {(Number(calculatedMonthlyHours) || 0).toFixed(1)}
             </span>
             <span className="text-[9px] font-bold text-white/70 uppercase mt-1">
               In{" "}
@@ -254,7 +254,7 @@ const AttendanceStatsCards = ({
             </div>
             <div className="flex flex-col">
               <span className="text-2xl font-extrabold text-[#1B2559] tracking-tight">
-                {dynamicCarryOver.toFixed(1)}
+                {(Number(dynamicCarryOver) || 0).toFixed(1)}
               </span>
               <span className="text-[9px] font-bold text-[#A3AED0] uppercase mt-1">
                 From Previous Months
@@ -326,7 +326,7 @@ const AttendanceStatsCards = ({
             </div>
             <div className="flex items-baseline gap-2 mt-0.5">
               <span className="text-lg font-bold text-white/90">
-                {balanceMonthly.toFixed(1)}
+                {(Number(balanceMonthly) || 0).toFixed(1)}
               </span>
               <span className="text-[10px] font-medium text-white/60">
                 For This Month

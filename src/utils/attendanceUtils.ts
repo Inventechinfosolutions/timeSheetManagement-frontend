@@ -77,7 +77,7 @@ export const isEditableMonth = (date: Date | string): boolean => {
  */
 // Map Backend Status enum to Frontend UI strings
 export const mapStatus = (
-    status: AttendanceStatus | string | undefined, 
+    status: AttendanceStatus | string | null | undefined, 
     isFuture: boolean, 
     isToday: boolean, 
     isWeekend: boolean,
@@ -90,7 +90,7 @@ export const mapStatus = (
         
         // Handle Leave with hours
         if ((statusStr === AttendanceStatus.LEAVE || statusStr === 'Leave') && totalHours && totalHours > 0) {
-             return totalHours >= 6 ? 'Full Day' : 'Half Day';
+             return totalHours > 4.5 ? 'Full Day' : 'Half Day';
         }
         
         // Direct status mappings (handle both enum and string)
@@ -136,18 +136,75 @@ export const mapAttendanceToEntry = (
     const isWeekend = date.getDay() === 0 || date.getDay() === 6;
 
     // Handle potential snake_case from backend
-    const totalHours = attendance?.totalHours ?? (attendance as any)?.total_hours;
+    const rawHours = attendance?.totalHours ?? (attendance as any)?.total_hours;
+    const totalHours = (rawHours !== undefined && rawHours !== null) ? Number(rawHours) : undefined;
 
     // Determine Status
     const status = mapStatus(attendance?.status, isFuture, isToday, isWeekend, totalHours);
 
-    // Determine Work Location
-    let workLocation = attendance?.location || (attendance as any)?.workLocation || (attendance as any)?.work_location;
-    
-    // Append (Half Day) if applicable
-    if (status === 'Half Day' && workLocation && !workLocation.includes('(Half Day)') && workLocation !== 'Half Day') {
-        workLocation = `${workLocation} (Half Day)`;
-    }
+    // Determine Work Location (Badge Text) derived from splits
+    const firstHalf = attendance?.firstHalf || (attendance as any)?.first_half;
+    const secondHalf = attendance?.secondHalf || (attendance as any)?.second_half;
+
+    const getBadgeLocation = (
+        statusStr: string | undefined,
+        h1: string | null | undefined,
+        h2: string | null | undefined
+    ): string | undefined => {
+        if (!statusStr) return undefined;
+        if (statusStr === 'Weekend' || statusStr === 'Holiday' || statusStr === 'Absent' || statusStr === 'Not Updated' || statusStr === 'Blocked') {
+            return undefined;
+        }
+        
+        const h1Lower = (h1 || '').toLowerCase().trim();
+        const h2Lower = (h2 || '').toLowerCase().trim();
+        
+        const normalize = (val: string): string => {
+            const low = val.toLowerCase();
+            if (low.includes('wfh') || low.includes('work from home')) return 'WFH';
+            if (low.includes('client') || low.includes('visit')) return 'Client Visit';
+            if (low.includes('office')) return 'Office';
+            return val;
+        };
+
+        const isWork = (val: string) => 
+            val.includes('office') || 
+            val.includes('wfh') || 
+            val.includes('work from home') ||
+            val.includes('client') || 
+            val.includes('visit') ||
+            val.includes('present');
+
+        const isLeave = (val: string) => val.includes('leave');
+
+        // Both same work activity
+        if (h1Lower === h2Lower && isWork(h1Lower)) {
+            return `${normalize(h1!)} (Full Day)`;
+        }
+
+        // Half Day case: One work + one leave
+        if (isWork(h1Lower) && isLeave(h2Lower)) {
+            return `Office / Leave`;
+        }
+        if (isLeave(h1Lower) && isWork(h2Lower)) {
+            return `Office / Leave`;
+        }
+
+        // Both Leave
+        if (isLeave(h1Lower) && isLeave(h2Lower)) {
+            return 'Leave';
+        }
+
+        // Two different work activities (Mixed Day)
+        if (isWork(h1Lower) && isWork(h2Lower) && h1Lower !== h2Lower) {
+            return 'Full Day'; // Mixed location, so just status
+        }
+
+        // Default to status only if it's already a descriptive status
+        return statusStr;
+    };
+
+    const workLocation = getBadgeLocation(status, firstHalf, secondHalf);
 
     return {
         date: i,
@@ -161,8 +218,10 @@ export const mapAttendanceToEntry = (
         status,
         isEditing: false,
         isSaved: !!attendance?.id,
-        workLocation, // Map workLocation
+        workLocation, // Display value derived from splits
         sourceRequestId: attendance?.sourceRequestId, // Track auto-generated records
+        firstHalf,
+        secondHalf,
         isSavedLogout: !!attendance?.logoutTime && attendance.logoutTime !== "00:00:00" && !attendance.logoutTime.includes("NaN"),
     } as TimesheetEntry;
 };
