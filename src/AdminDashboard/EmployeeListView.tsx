@@ -158,6 +158,7 @@ const EmployeeListView = () => {
         order: sortConfig.key ? sortConfig.direction.toUpperCase() : undefined,
         department:
           selectedDepartment === "All" ? undefined : selectedDepartment,
+        includeSelf: !isAdmin,
       }),
     );
   }, [
@@ -558,6 +559,14 @@ ${
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="border-none outline-none bg-transparent text-[#2B3674] w-full text-sm font-semibold placeholder:text-[#A3AED0]/60"
               />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm("")}
+                  className="ml-2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              )}
             </div>
 
             {basePath === "/admin-dashboard" && (

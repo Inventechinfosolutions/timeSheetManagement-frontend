@@ -84,13 +84,13 @@ const Requests = () => {
     isOpen: boolean;
     id: number | null;
     status:
-    | "Approved"
-    | "Rejected"
-    | "Cancellation Approved"
-    | "Reject Cancellation"
-    | "Modification Approved"
-    | "Modification Rejected"
-    | null;
+      | "Approved"
+      | "Rejected"
+      | "Cancellation Approved"
+      | "Reject Cancellation"
+      | "Modification Approved"
+      | "Modification Rejected"
+      | null;
     employeeName: string;
   }>({ isOpen: false, id: null, status: null, employeeName: "" });
 
@@ -141,7 +141,6 @@ const Requests = () => {
   //   "Finance",
   //   "Admin",
   // ];
-
 
   // Fetch master holidays on mount
   useEffect(() => {
@@ -534,11 +533,18 @@ const Requests = () => {
       if (status === "Cancellation Approved") {
         try {
           if (request?.employeeId) {
-            await dispatch(clearAttendanceForRequest({ id, employeeId: request.employeeId })).unwrap();
-            console.log(`[CLEAR_ATTENDANCE] Dedicated API call successful for Request ${id}`);
+            await dispatch(
+              clearAttendanceForRequest({ id, employeeId: request.employeeId }),
+            ).unwrap();
+            console.log(
+              `[CLEAR_ATTENDANCE] Dedicated API call successful for Request ${id}`,
+            );
           }
         } catch (err) {
-          console.error(`[CLEAR_ATTENDANCE] ❌ Failed to explicitly clear attendance:`, err);
+          console.error(
+            `[CLEAR_ATTENDANCE] ❌ Failed to explicitly clear attendance:`,
+            err,
+          );
           // Non-blocking error for the UI status update
         }
       }
@@ -981,10 +987,18 @@ const Requests = () => {
           <input
             type="text"
             placeholder="Search by name, ID or title..."
-            className="w-full pl-12 pr-4 py-3 bg-white rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-[#4318FF] transition-all text-[#2B3674] font-medium placeholder:text-gray-300"
+            className="w-full pl-12 pr-10 py-3 bg-white rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-[#4318FF] transition-all text-[#2B3674] font-medium placeholder:text-gray-300"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm("")}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X size={18} />
+            </button>
+          )}
         </div>
 
         {/* Department Filter Dropdown */}
@@ -1231,43 +1245,91 @@ const Requests = () => {
                         <div className="p-1.5 bg-gray-50 rounded-lg group-hover:bg-white transition-colors">
                           {(() => {
                             // Determine icon based on combined activities
-                            const hasWFH = req.firstHalf === "Work From Home" || req.secondHalf === "Work From Home";
-                            const hasCV = req.firstHalf === "Client Visit" || req.secondHalf === "Client Visit";
-                            const hasLeave = req.firstHalf === "Leave" || req.secondHalf === "Leave" || req.firstHalf === "Apply Leave" || req.secondHalf === "Apply Leave";
-                            
-                            if (hasWFH && hasLeave) return <Home size={16} className="text-green-600" />;
-                            if (hasCV && hasLeave) return <MapPin size={16} className="text-orange-600" />;
-                            if (req.requestType === "Work From Home") return <Home size={16} className="text-green-600" />;
-                            if (req.requestType === "Client Visit") return <MapPin size={16} className="text-orange-600" />;
-                            if (req.requestType === "Apply Leave" || req.requestType === "Leave") return <Calendar size={16} className="text-blue-600" />;
-                            if (req.requestType === "Half Day") return <Calendar size={16} className="text-pink-600" />;
-                            return <Briefcase size={16} className="text-gray-600" />;
+                            const hasWFH =
+                              req.firstHalf === "Work From Home" ||
+                              req.secondHalf === "Work From Home";
+                            const hasCV =
+                              req.firstHalf === "Client Visit" ||
+                              req.secondHalf === "Client Visit";
+                            const hasLeave =
+                              req.firstHalf === "Leave" ||
+                              req.secondHalf === "Leave" ||
+                              req.firstHalf === "Apply Leave" ||
+                              req.secondHalf === "Apply Leave";
+
+                            if (hasWFH && hasLeave)
+                              return (
+                                <Home size={16} className="text-green-600" />
+                              );
+                            if (hasCV && hasLeave)
+                              return (
+                                <MapPin size={16} className="text-orange-600" />
+                              );
+                            if (req.requestType === "Work From Home")
+                              return (
+                                <Home size={16} className="text-green-600" />
+                              );
+                            if (req.requestType === "Client Visit")
+                              return (
+                                <MapPin size={16} className="text-orange-600" />
+                              );
+                            if (
+                              req.requestType === "Apply Leave" ||
+                              req.requestType === "Leave"
+                            )
+                              return (
+                                <Calendar size={16} className="text-blue-600" />
+                              );
+                            if (req.requestType === "Half Day")
+                              return (
+                                <Calendar size={16} className="text-pink-600" />
+                              );
+                            return (
+                              <Briefcase size={16} className="text-gray-600" />
+                            );
                           })()}
                         </div>
                         <span className="text-sm font-semibold text-[#2B3674] flex items-center gap-2">
                           {(() => {
                             // Show combined activities for split-day requests
-                            if (req.isHalfDay && req.firstHalf && req.secondHalf) {
+                            if (
+                              req.isHalfDay &&
+                              req.firstHalf &&
+                              req.secondHalf
+                            ) {
                               const activities = [req.firstHalf, req.secondHalf]
-                                .map(a => a === "Apply Leave" ? "Leave" : a)
-                                .filter(a => a && a !== "Office")
-                                .filter((value, index, self) => self.indexOf(value) === index);
-                              
+                                .map((a) => (a === "Apply Leave" ? "Leave" : a))
+                                .filter((a) => a && a !== "Office")
+                                .filter(
+                                  (value, index, self) =>
+                                    self.indexOf(value) === index,
+                                );
+
                               if (activities.length > 1) {
                                 // Replace "Leave" with "Half Day Leave" in combined activities
-                                return activities.map(a => a === "Leave" ? "Half Day Leave" : a).join(" + ");
+                                return activities
+                                  .map((a) =>
+                                    a === "Leave" ? "Half Day Leave" : a,
+                                  )
+                                  .join(" + ");
                               }
                               if (activities.length === 1) {
                                 // For single activity that is "Leave", show "Half Day Leave"
-                                return activities[0] === "Leave" ? "Half Day Leave" : activities[0];
+                                return activities[0] === "Leave"
+                                  ? "Half Day Leave"
+                                  : activities[0];
                               }
                             }
-                            
+
                             // Default display
-                            if (req.requestType === "Apply Leave" || req.requestType === "Leave") {
+                            if (
+                              req.requestType === "Apply Leave" ||
+                              req.requestType === "Leave"
+                            ) {
                               return req.isHalfDay ? "Half Day Leave" : "Leave";
                             }
-                            if (req.requestType === "Half Day") return "Half Day Leave";
+                            if (req.requestType === "Half Day")
+                              return "Half Day Leave";
                             return req.requestType;
                           })()}
                           {req.isModified && (
@@ -1279,34 +1341,50 @@ const Requests = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className={`text-xs font-bold px-3 py-1 rounded-full ${
-                        (() => {
-                          if (req.isHalfDay && req.firstHalf && req.secondHalf) {
+                      <span
+                        className={`text-xs font-bold px-3 py-1 rounded-full ${(() => {
+                          if (
+                            req.isHalfDay &&
+                            req.firstHalf &&
+                            req.secondHalf
+                          ) {
                             const isSame = req.firstHalf === req.secondHalf;
-                            if (isSame) return 'bg-blue-100 text-blue-700';
-                            return 'bg-purple-100 text-purple-700';
+                            if (isSame) return "bg-blue-100 text-blue-700";
+                            return "bg-purple-100 text-purple-700";
                           }
-                          return 'bg-blue-100 text-blue-700';
-                        })()
-                      }`}>
+                          return "bg-blue-100 text-blue-700";
+                        })()}`}
+                      >
                         {(() => {
-                          if (req.isHalfDay && req.firstHalf && req.secondHalf) {
-                            const first = req.firstHalf === "Apply Leave" ? "Leave" : req.firstHalf;
-                            const second = req.secondHalf === "Apply Leave" ? "Leave" : req.secondHalf;
-                            
+                          if (
+                            req.isHalfDay &&
+                            req.firstHalf &&
+                            req.secondHalf
+                          ) {
+                            const first =
+                              req.firstHalf === "Apply Leave"
+                                ? "Leave"
+                                : req.firstHalf;
+                            const second =
+                              req.secondHalf === "Apply Leave"
+                                ? "Leave"
+                                : req.secondHalf;
+
                             if (first === second && first !== "Office") {
-                              return 'Full Day';
+                              return "Full Day";
                             }
-                            
+
                             // Filter out Office
                             const parts = [];
-                            if (first && first !== "Office") parts.push(`First Half = ${first}`);
-                            if (second && second !== "Office") parts.push(`Second Half = ${second}`);
-                            
-                            if (parts.length > 0) return parts.join(' & ');
-                            return 'Full Day';
+                            if (first && first !== "Office")
+                              parts.push(`First Half = ${first}`);
+                            if (second && second !== "Office")
+                              parts.push(`Second Half = ${second}`);
+
+                            if (parts.length > 0) return parts.join(" & ");
+                            return "Full Day";
                           }
-                          return 'Full Day';
+                          return "Full Day";
                         })()}
                       </span>
                     </td>
@@ -1350,11 +1428,9 @@ const Requests = () => {
                       <span
                         className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all inline-flex items-center gap-1.5 ${getStatusColor(req.status)}`}
                       >
-                        {(req.status === "Pending" || req.status === "Requesting for Modification") && (
-                          <RotateCcw
-                            size={12}
-                            className="animate-spin-slow"
-                          />
+                        {(req.status === "Pending" ||
+                          req.status === "Requesting for Modification") && (
+                          <RotateCcw size={12} className="animate-spin-slow" />
                         )}
                         {req.status}
                         {req.status === "Request Modified" &&
@@ -1665,7 +1741,8 @@ const Requests = () => {
                     </>
                   ) : (
                     <>
-                      {confirmModal.status === "Approved" || confirmModal.status === "Modification Approved"
+                      {confirmModal.status === "Approved" ||
+                      confirmModal.status === "Modification Approved"
                         ? entities.find((e) => e.id === confirmModal.id)
                             ?.status === "Requesting for Cancellation"
                           ? "Confirm Reject" // Special text for this specific case
@@ -1709,11 +1786,12 @@ const Requests = () => {
                 Viewing Application
               </span>
               <h2 className="text-3xl font-black text-[#2B3674]">
-                {selectedRequest && (selectedRequest.requestType === "Apply Leave"
-                  ? "Leave"
-                  : selectedRequest.requestType === "Half Day"
-                    ? "Half Day Leave"
-                    : selectedRequest.requestType)}
+                {selectedRequest &&
+                  (selectedRequest.requestType === "Apply Leave"
+                    ? "Leave"
+                    : selectedRequest.requestType === "Half Day"
+                      ? "Half Day Leave"
+                      : selectedRequest.requestType)}
               </h2>
             </div>
           </div>
@@ -1789,9 +1867,11 @@ const Requests = () => {
                 </div>
 
                 {/* Split-Day Information (View Mode Only) */}
-                {selectedRequest?.isHalfDay && (selectedRequest?.firstHalf || selectedRequest?.secondHalf) && (
+                {selectedRequest?.isHalfDay &&
+                  (selectedRequest?.firstHalf || selectedRequest?.secondHalf) &&
                   (() => {
-                    const isBothSame = selectedRequest.firstHalf === selectedRequest.secondHalf;
+                    const isBothSame =
+                      selectedRequest.firstHalf === selectedRequest.secondHalf;
                     return (
                       <div className="space-y-2 p-4 bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-50 rounded-2xl border-2 border-blue-200">
                         <div className="flex items-center gap-2 mb-2">
@@ -1802,7 +1882,9 @@ const Requests = () => {
                         </div>
                         {isBothSame ? (
                           <div className="bg-white p-3 rounded-xl shadow-sm border border-blue-100 flex items-center justify-between">
-                            <p className="text-sm font-extrabold text-blue-700">Full Day</p>
+                            <p className="text-sm font-extrabold text-blue-700">
+                              Full Day
+                            </p>
                             <span className="text-xs font-bold text-blue-500 bg-blue-50 px-3 py-1 rounded-lg">
                               {selectedRequest.firstHalf}
                             </span>
@@ -1810,23 +1892,26 @@ const Requests = () => {
                         ) : (
                           <div className="grid grid-cols-2 gap-3">
                             <div className="bg-white p-3 rounded-xl shadow-sm border border-blue-100">
-                              <p className="text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wide">First Half</p>
+                              <p className="text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wide">
+                                First Half
+                              </p>
                               <p className="text-sm font-extrabold text-blue-700">
-                                {selectedRequest.firstHalf || 'N/A'}
+                                {selectedRequest.firstHalf || "N/A"}
                               </p>
                             </div>
                             <div className="bg-white p-3 rounded-xl shadow-sm border border-purple-100">
-                              <p className="text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wide">Second Half</p>
+                              <p className="text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wide">
+                                Second Half
+                              </p>
                               <p className="text-sm font-extrabold text-purple-700">
-                                {selectedRequest.secondHalf || 'N/A'}
+                                {selectedRequest.secondHalf || "N/A"}
                               </p>
                             </div>
                           </div>
                         )}
                       </div>
                     );
-                  })()
-                )}
+                  })()}
 
                 {/* Description Field */}
                 <div className="space-y-2">
@@ -1860,8 +1945,8 @@ const Requests = () => {
           </div>
         </div>
       </Modal>
-      </div>
-    );
+    </div>
+  );
 };
 
 export default Requests;

@@ -386,8 +386,16 @@ const ManagerMapping: React.FC = () => {
                 placeholder="Search employees..."
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-[#F4F7FE] border border-transparent rounded-xl text-sm font-medium outline-none focus:border-[#4318FF] transition-colors"
+                className="w-full pl-10 pr-8 py-2.5 bg-[#F4F7FE] border border-transparent rounded-xl text-sm font-medium outline-none focus:border-[#4318FF] transition-colors"
               />
+              {searchText && (
+                <button
+                  onClick={() => setSearchText("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X size={14} />
+                </button>
+              )}
             </div>
 
             {/* Employee List */}
@@ -613,6 +621,14 @@ const ManagerMapping: React.FC = () => {
               onChange={(e) => setHistorySearch(e.target.value)}
               className="border-none outline-none bg-transparent text-[#2B3674] w-full text-sm font-semibold placeholder:text-[#A3AED0]/60"
             />
+            {historySearch && (
+              <button
+                onClick={() => setHistorySearch("")}
+                className="ml-2 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X size={16} />
+              </button>
+            )}
           </div>
         </div>
 
