@@ -1,14 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
-import { AlertTriangle } from "lucide-react";
 import {
-  Clock,
   Edit,
-  Calendar as CalendarIcon,
-  TrendingUp,
-  CheckCircle,
-  Ban,
-  ClipboardList,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -18,6 +11,7 @@ import {
   fetchMonthlyAttendance,
   fetchDashboardStats,
   fetchAttendanceByDateRange,
+  autoUpdateTimesheet,
 } from "../reducers/employeeAttendance.reducer";
 import { getEntity, setCurrentUser } from "../reducers/employeeDetails.reducer";
 import {
@@ -67,7 +61,7 @@ const TodayAttendance = ({
  
   // Leave Balance State
   // Leave Balance State
-  const { leaveBalance, loading: leaveLoading } = useAppSelector(
+  const { leaveBalance } = useAppSelector(
     (state: RootState) => state.leaveRequest,
   );
  
@@ -260,6 +254,16 @@ const TodayAttendance = ({
           year: date.getFullYear().toString(),
         }),
       );
+
+      // Trigger auto-update for the month
+      dispatch(
+        autoUpdateTimesheet({
+          employeeId: currentEmployeeId,
+          month: (date.getMonth() + 1).toString().padStart(2, "0"),
+          year: date.getFullYear().toString(),
+          dryRun: true,
+        }),
+      );
     },
     [dispatch, currentEmployeeId],
   );
@@ -419,6 +423,14 @@ const TodayAttendance = ({
                 const prev = new Date(calendarDate);
                 prev.setMonth(prev.getMonth() - 1);
                 setCalendarDate(prev);
+                if (currentEmployeeId && currentEmployeeId !== "Admin") {
+                  dispatch(autoUpdateTimesheet({
+                    employeeId: currentEmployeeId,
+                    month: (prev.getMonth() + 1).toString().padStart(2, "0"),
+                    year: prev.getFullYear().toString(),
+                    dryRun: true,
+                  }));
+                }
               }}
               className="p-1.5 hover:bg-gray-50 rounded-full transition-colors text-[#4318FF] hover:scale-110 active:scale-95"
             >
@@ -437,6 +449,14 @@ const TodayAttendance = ({
                 const next = new Date(calendarDate);
                 next.setMonth(next.getMonth() + 1);
                 setCalendarDate(next);
+                if (currentEmployeeId && currentEmployeeId !== "Admin") {
+                  dispatch(autoUpdateTimesheet({
+                    employeeId: currentEmployeeId,
+                    month: (next.getMonth() + 1).toString().padStart(2, "0"),
+                    year: next.getFullYear().toString(),
+                    dryRun: true,
+                  }));
+                }
               }}
               className="p-1.5 hover:bg-gray-50 rounded-full transition-colors text-[#4318FF] hover:scale-110 active:scale-95"
             >

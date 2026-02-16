@@ -801,7 +801,9 @@ const Header = ({
                     <span className="text-[9.5px] md:text-[11px] text-blue-100/80 leading-none mt-1">
                       {isAdmin
                         ? "Administrator"
-                        : currentUser?.employeeId || "Employee"}
+                        : isManager
+                        ? "Manager"
+                        : "Employee"}
                     </span>
                   </div>
                   <ChevronDown

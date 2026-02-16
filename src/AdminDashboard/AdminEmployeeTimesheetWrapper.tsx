@@ -15,6 +15,7 @@ import MyTimesheet from "../EmployeeDashboard/MyTimesheet";
 import {
   fetchMonthlyAttendance,
   AttendanceStatus,
+  resetAttendanceState,
 } from "../reducers/employeeAttendance.reducer";
 import {
   applyBlocker,
@@ -28,6 +29,14 @@ const AdminEmployeeTimesheetWrapper = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const location = useLocation();
+
+  // Reset attendance state on unmount to prevent data leakage between views
+  useEffect(() => {
+    return () => {
+      dispatch(resetAttendanceState());
+    };
+  }, [dispatch]);
+
   const { entities, entity, loading } = useAppSelector(
     (state) => state.employeeDetails,
   );
@@ -123,7 +132,7 @@ const AdminEmployeeTimesheetWrapper = () => {
     (acc, curr) => acc + (curr.totalHours || 0),
     0,
   );
-  const avgHours = totalHours.toFixed(1);
+  const avgHours = (typeof totalHours === 'number' && !isNaN(totalHours)) ? totalHours.toFixed(1) : '0.0';
 
   const handleApplyBlock = async () => {
     if (!fromDate || !toDate) {
