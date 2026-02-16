@@ -1,13 +1,13 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, useLocation } from "react-router-dom";
+import { Modal } from "antd";
 import {
   ChevronLeft,
   ChevronRight,
   Save,
   AlertCircle,
-  Lock,
-  Sparkles,
-  Rocket
+  Rocket,
+  ShieldBan,
 } from "lucide-react";
 import { TimesheetEntry } from "../types";
 import { useAppDispatch, useAppSelector } from "../hooks";
@@ -19,7 +19,10 @@ import {
   createAttendanceRecord,
   autoUpdateTimesheet,
 } from "../reducers/employeeAttendance.reducer";
-import { getLeaveHistory } from "../reducers/leaveRequest.reducer";
+import {
+  getLeaveHistory,
+  submitLeaveRequest
+} from "../reducers/leaveRequest.reducer";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import {
   generateMonthlyEntries,
@@ -348,8 +351,9 @@ const MyTimesheet = ({
 
       checkAutoUpdate();
     } else {
-        // Reset if not current month
+        // Reset if not current month to ensure it re-checks when returning
         setAutoUpdateCount(0);
+        lastCheckRef.current = "";
     }
   }, [dispatch, currentEmployeeId, now, isAdmin, today, records.length]); // Use records.length instead of records to avoid deep equality issues
   
@@ -454,13 +458,39 @@ const MyTimesheet = ({
   const isDateBlocked = (date: Date) => {
     const d = new Date(date);
     d.setHours(0, 0, 0, 0);
-    return blockers.some((b) => {
+
+    // 1. Month Lock (Skip for Admin/Manager)
+    if (!isAdmin && !isManager && !isEditableMonth(d)) return true;
+
+    // 2. Manual Blockers
+    const isManualBlocked = blockers.some((b) => {
       const start = new Date(b.blockedFrom);
       start.setHours(0, 0, 0, 0);
       const end = new Date(b.blockedTo);
       end.setHours(0, 0, 0, 0);
       return d >= start && d <= end;
     });
+    if (isManualBlocked) return true;
+
+    // 3. Restricted Activity (Mixed Combinations / Leave / WFH)
+    // If the record exists and has non-office activity, it's blocked for editing
+    if (!isAdmin && !isManager) {
+      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const entry = records.find(r => {
+        const rDate = new Date(r.workingDate);
+        return rDate.toISOString().split('T')[0] === dateStr;
+      });
+
+      if (entry) {
+        const h1 = (entry.firstHalf || '').toLowerCase();
+        const h2 = (entry.secondHalf || '').toLowerCase();
+        const isRestricted = (val: string) => val && !val.includes('office') && val.trim() !== '';
+        
+        if (isRestricted(h1) || isRestricted(h2)) return true;
+      }
+    }
+
+    return false;
   };
 
   const getBlocker = (date: Date) => {
@@ -476,8 +506,33 @@ const MyTimesheet = ({
   };
 
   const getBlockedReason = (date: Date) => {
+    // 1. Month Lock
+    const d = new Date(date);
+    d.setHours(0,0,0,0);
+    if (!isAdmin && !isManager && !isEditableMonth(d)) return "Month is Locked";
+
+    // 2. Manual Blocker
     const blocker = getBlocker(date);
-    return blocker?.reason || "Admin Blocked";
+    if (blocker) return blocker.reason || "Admin Blocked";
+
+    // 3. Restricted Activity
+    if (!isAdmin && !isManager) {
+        const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const entry = records.find(r => {
+            const rDate = new Date(r.workingDate);
+            return rDate.toISOString().split('T')[0] === dateStr;
+        });
+
+        if (entry) {
+            const h1 = (entry.firstHalf || '').toLowerCase();
+            const h2 = (entry.secondHalf || '').toLowerCase();
+            const isRestricted = (val: string) => val && !val.includes('office') && val.trim() !== '';
+            
+            if (isRestricted(h1) || isRestricted(h2)) return "Restricted Activity (Leave/WFH)";
+        }
+    }
+
+    return null;
   };
 
   const isHoliday = (date: Date) => {
@@ -526,11 +581,18 @@ const MyTimesheet = ({
 
     const num = parseFloat(val);
 
-    // Validation: Max 24 hours
-    if (num > 24) {
-      setInputError({ index: entryIndex, message: "Max hours: 24" });
+    // Validation: Cap hours for Half-Day Leave scenarios
+    const entry = localEntries[entryIndex];
+    const isHalfLeave = (entry.firstHalf as string)?.toLowerCase() === "leave" || (entry.secondHalf as string)?.toLowerCase() === "leave";
+    
+    // Restriction: Employees are capped at 4.5h for half-day leave dates.
+    // Admin and Managers are NOT restricted.
+    const maxHours = (!isAdmin && !isManager && isHalfLeave) ? 4.5 : 24;
 
-      // Clear the invalid value immediately so when error disappears it is empty/reset
+    if (num > maxHours) {
+      setInputError({ index: entryIndex, message: `Max: ${maxHours}h` });
+
+      // Clear the invalid value immediately
       setLocalInputValues((prev) => ({ ...prev, [entryIndex]: "" }));
 
       // Clear error after 2 seconds
@@ -549,7 +611,7 @@ const MyTimesheet = ({
 
     if (hours > 0) {
       // When hours > 0, calculate based on hours
-      newStatus = hours >= 6 ? "Full Day" : "Half Day";
+      newStatus = hours > 4.5 ? "Full Day" : "Half Day";
     } else {
       // When hours are 0, ALWAYS recalculate status - never preserve previous status (especially Leave)
       const entryDate = new Date(localEntries[entryIndex].fullDate);
@@ -675,8 +737,8 @@ const MyTimesheet = ({
     localEntries.forEach((entry, idx) => {
       if (isDateBlocked(entry.fullDate)) return;
 
-      const currentTotal = entry.totalHours || 0;
-      const originalTotal = baseEntries[idx]?.totalHours || 0;
+      const currentTotal = Number(entry.totalHours || 0);
+      const originalTotal = Number(baseEntries[idx]?.totalHours || 0);
 
       if (
         currentTotal !== originalTotal ||
@@ -721,7 +783,7 @@ const MyTimesheet = ({
         // For other days: Calculate status based on hours
         // NEVER preserve Leave status - always calculate based on hours
         else {
-          if (currentTotal >= 6) {
+          if (currentTotal > 4.5) {
             derivedStatus = "Full Day";
           } else if (currentTotal > 0) {
             derivedStatus = "Half Day";
@@ -743,17 +805,14 @@ const MyTimesheet = ({
           return rDate === workingDate;
         });
 
-        // Preserve workLocation if it exists (Client Visit or WFH)
-        const workLocation =
-          entry.workLocation || (existingRecord as any)?.workLocation;
-
         payload.push({
           id: existingRecord?.id,
           employeeId: currentEmployeeId,
           workingDate,
           totalHours: currentTotal,
           status: derivedStatus,
-          workLocation: workLocation, // Preserve Client Visit or WFH (backend accepts this field)
+          firstHalf: entry.firstHalf,
+          secondHalf: entry.secondHalf,
         } as any);
       }
     });
@@ -769,29 +828,13 @@ const MyTimesheet = ({
       const itemDate = new Date(item.workingDate);
       const dayOfWeek = itemDate.getDay(); // 0 = Sunday, 6 = Saturday
 
-      // Sunday: Always set status to "Weekend" (even if hours entered or workLocation exists)
+      // Sunday: Always set status to "Weekend" (even if hours entered)
       if (dayOfWeek === 0) {
         item.status = "Weekend";
-        item.workLocation = undefined; // Clear workLocation for Sunday
         return;
       }
 
-      // If workLocation exists (Client Visit or WFH), don't override status to Absent/Weekend
-      // These are present statuses, not leave/absent
-      // Saturday with data should show the data, not Weekend
-      if (item.workLocation) {
-        // Don't override status for Client Visit/WFH days (including Saturday)
-        // But ensure it's never "Leave"
-        if (item.status === "Leave") {
-          // If hours are 0, set to Absent; otherwise keep calculated status
-          if (!item.totalHours || Number(item.totalHours) === 0) {
-            item.status = "Absent";
-          }
-        }
-        return;
-      }
-
-      // Saturday: Only set to "Weekend" if there's NO data (no hours, no workLocation)
+      // Saturday: Only set to "Weekend" if there's NO data (no hours)
       if (
         dayOfWeek === 6 &&
         (!item.totalHours || Number(item.totalHours) === 0)
@@ -804,7 +847,7 @@ const MyTimesheet = ({
       }
       // If status is "Leave" but hours > 0, recalculate based on hours
       else if (item.status === "Leave") {
-        if (item.totalHours >= 6) {
+        if (item.totalHours >= 4.5) {
           item.status = "Full Day";
         } else if (item.totalHours > 0) {
           item.status = "Half Day";
@@ -812,50 +855,9 @@ const MyTimesheet = ({
       }
     });
 
-    try {
-      await dispatch(submitBulkAttendance(payload)).unwrap();
-      dispatch(
-        fetchMonthlyAttendance({
-          employeeId: currentEmployeeId,
-          month: (now.getMonth() + 1).toString().padStart(2, "0"),
-          year: now.getFullYear().toString(),
-        }),
-      );
-      // Clear manually edited indices after successful save
-      setManuallyEditedIndices(new Set());
-      setToast({
-        show: true,
-        message: "Attendance Submitted Successfully",
-        type: "success",
-      });
-    } catch (error: any) {
-      console.warn("Bulk API failed, attempting sequential fallback...", error);
-      let successCount = 0;
-      for (const item of payload) {
-        try {
-          if (item.id) {
-            await dispatch(
-              updateAttendanceRecord({
-                id: item.id,
-                data: { totalHours: item.totalHours, status: item.status },
-              }),
-            ).unwrap();
-          } else {
-            await dispatch(
-              createAttendanceRecord({
-                employeeId: item.employeeId,
-                workingDate: item.workingDate,
-                totalHours: item.totalHours,
-                status: item.status,
-              }),
-            ).unwrap();
-          }
-          successCount++;
-        } catch (innerError) {
-          console.error("Failed to save record:", item, innerError);
-        }
-      }
-      if (successCount > 0) {
+    const handleActualSave = async (finalPayload: any[]) => {
+      try {
+        await dispatch(submitBulkAttendance(finalPayload)).unwrap();
         dispatch(
           fetchMonthlyAttendance({
             employeeId: currentEmployeeId,
@@ -865,20 +867,314 @@ const MyTimesheet = ({
         );
         // Clear manually edited indices after successful save
         setManuallyEditedIndices(new Set());
-        setToast({ show: true, message: "Data Saved", type: "success" });
-      } else {
         setToast({
           show: true,
-          message: error?.response?.data?.message || "Failed to save records.",
-          type: "error",
+          message: "Attendance Submitted Successfully",
+          type: "success",
         });
+      } catch (error: any) {
+        console.warn("Bulk API failed, attempting sequential fallback...", error);
+        let successCount = 0;
+        for (const item of finalPayload) {
+          try {
+            if (item.id) {
+              await dispatch(
+                updateAttendanceRecord({
+                  id: item.id,
+                  data: { totalHours: item.totalHours, status: item.status },
+                }),
+              ).unwrap();
+            } else {
+              await dispatch(
+                createAttendanceRecord({
+                  employeeId: item.employeeId,
+                  workingDate: item.workingDate,
+                  totalHours: item.totalHours,
+                  status: item.status,
+                }),
+              ).unwrap();
+            }
+            successCount++;
+          } catch (innerError) {
+            console.error("Failed to save record:", item, innerError);
+          }
+        }
+        if (successCount > 0) {
+          dispatch(
+            fetchMonthlyAttendance({
+              employeeId: currentEmployeeId,
+              month: (now.getMonth() + 1).toString().padStart(2, "0"),
+              year: now.getFullYear().toString(),
+            }),
+          );
+          // Clear manually edited indices after successful save
+          setManuallyEditedIndices(new Set());
+          setToast({ show: true, message: "Data Saved", type: "success" });
+        } else {
+          setToast({
+            show: true,
+            message: error?.response?.data?.message || "Failed to save records.",
+            type: "error",
+          });
+        }
       }
+    };
+
+    const halfDayItems = payload.filter(
+      (item) => Number(item.totalHours) > 0 && Number(item.totalHours) <= 4.5,
+    );
+
+    if (!isAdmin && !isManager) {
+      if (halfDayItems.length > 0) {
+        const datesString = halfDayItems
+          .map((item) => new Date(item.workingDate).getDate())
+          .sort((a, b) => a - b)
+          .join(", ");
+
+        Modal.confirm({
+          title: null,
+          icon: null,
+          width: 550,
+          wrapClassName: "attractive-half-day-modal",
+          content: (
+            <div style={{ padding: "10px 0" }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                  marginBottom: "20px",
+                }}
+              >
+                <div
+                  style={{
+                    backgroundColor: "#fff7e6",
+                    borderRadius: "50%",
+                    padding: "8px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    border: "1px solid #ffe7ba",
+                  }}
+                >
+                  <AlertCircle size={28} color="#fa8c16" />
+                </div>
+                <h2 style={{ margin: 0, fontSize: "22px", fontWeight: 700 }}>
+                  Attendance Half Day Rule
+                </h2>
+              </div>
+              <p style={{ fontSize: "16px", lineHeight: "1.6", color: "#434343" }}>
+                Attendance entries of <strong>4.5 hours or less</strong> on{" "}
+                <span style={{ color: "#fa8c16", fontWeight: 700 }}>
+                  dates {datesString}
+                </span>{" "}
+                are automatically considered a <strong>Half Day</strong>.
+              </p>
+              <div
+                style={{
+                  backgroundColor: "#f5f5f5",
+                  padding: "15px",
+                  borderRadius: "8px",
+                  marginBottom: "20px",
+                  borderLeft: "4px solid #fa8c16",
+                }}
+              >
+                <ul
+                  style={{
+                    margin: 0,
+                    paddingLeft: "20px",
+                    listStyleType: "disc",
+                  }}
+                >
+                  <li style={{ marginBottom: "8px" }}>
+                    <strong>First Half:</strong> Office
+                  </li>
+                  <li>
+                    <strong>Second Half:</strong> Leave
+                  </li>
+                </ul>
+              </div>
+              <div
+                style={{
+                  backgroundColor: "#fff1f0",
+                  padding: "12px",
+                  borderRadius: "6px",
+                  border: "1px dashed #ffa39e",
+                }}
+              >
+                <p
+                  style={{
+                    fontSize: "15px",
+                    color: "#cf1322",
+                    margin: 0,
+                    fontWeight: 600,
+                    textAlign: "center",
+                  }}
+                >
+                  Since you are an employee, this requires Manager Approval.
+                  Confirming will create a formal Leave Request for you.
+                </p>
+              </div>
+            </div>
+          ),
+          okText: "Confirm and Place Request",
+          cancelText: "Cancel",
+          okButtonProps: {
+            size: "large",
+            style: { borderRadius: "6px", fontWeight: 600 },
+          },
+          cancelButtonProps: { size: "large", style: { borderRadius: "6px" } },
+          onOk: async () => {
+            try {
+              for (const item of halfDayItems) {
+                await dispatch(
+                  submitLeaveRequest({
+                    employeeId: currentEmployeeId,
+                    fromDate: item.workingDate,
+                    toDate: item.workingDate,
+                    requestType: "Half Day",
+                    isHalfDay: true,
+                    halfDayType: "Second Half",
+                    title: "Half Day (Auto-generated)",
+                    description: `Auto-generated from ${item.totalHours} hours timesheet entry`,
+                    firstHalf: "Office",
+                    secondHalf: "Leave",
+                  } as any),
+                ).unwrap();
+              }
+
+              const remainingPayload = payload.filter(
+                (item) =>
+                  !(Number(item.totalHours) > 0 && Number(item.totalHours) <= 4.5),
+              );
+              if (remainingPayload.length > 0) {
+                await handleActualSave(remainingPayload);
+              } else {
+                dispatch(
+                  fetchMonthlyAttendance({
+                    employeeId: currentEmployeeId,
+                    month: (now.getMonth() + 1).toString().padStart(2, "0"),
+                    year: now.getFullYear().toString(),
+                  }),
+                );
+                dispatch(getLeaveHistory({ employeeId: currentEmployeeId }));
+                setToast({
+                  show: true,
+                  message: "Leave Request Submitted Successfully",
+                  type: "success",
+                });
+              }
+            } catch (err: any) {
+              setToast({
+                show: true,
+                message: "Failed to submit leave requests",
+                type: "error",
+              });
+            }
+          },
+        });
+      } else {
+        // Fallback for user if no half day items (shouldn't be reached in this if block logic, but for safety in new structure)
+        await handleActualSave(payload);
+      }
+    } else {
+      // Admin / Manager Logic
+      if (payload.length > 0) {
+        Modal.confirm({
+          title: null,
+          icon: null,
+          width: 600,
+          centered: true,
+          content: (
+            <div className="py-2">
+              <div className="flex items-center gap-4 mb-6 border-b border-gray-100 pb-4">
+                <div className="bg-[#EEF2FF] p-3 rounded-2xl border border-[#4318FF]/20 shadow-sm">
+                  <Rocket size={32} className="text-[#4318FF]" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-[#1B2559] leading-tight">Authorize Update</h3>
+                  <p className="text-xs font-bold text-[#4318FF] uppercase tracking-widest mt-0.5">Administrator Override</p>
+                </div>
+              </div>
+              
+              <p className="text-[15px] text-[#434343] mb-5 leading-relaxed">
+                Confirming the following <span className="font-black text-[#1B2559] underline decoration-[#4318FF]/30 underline-offset-4">{payload.length} {payload.length === 1 ? 'entry' : 'entries'}</span> for attendance synchronization:
+              </p>
+              
+              <div className="max-h-[300px] overflow-y-auto mb-6 rounded-2xl border border-gray-100 bg-[#F4F7FE]/30 p-1 custom-scrollbar">
+                <table className="w-full text-left border-collapse">
+                  <thead className="sticky top-0 bg-[#F4F7FE] z-10">
+                    <tr>
+                      <th className="p-3 text-[10px] font-black text-[#A3AED0] uppercase tracking-wider">Date</th>
+                      <th className="p-3 text-[10px] font-black text-[#A3AED0] uppercase tracking-wider text-right">Updated Hours</th>
+                      <th className="p-3 text-[10px] font-black text-[#A3AED0] uppercase tracking-wider text-right">New Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {payload.map((item, idx) => {
+                      const date = new Date(item.workingDate);
+                      const isHalf = Number(item.totalHours) > 0 && Number(item.totalHours) <= 4.5;
+                      return (
+                        <tr key={idx} className="border-b border-gray-50 last:border-0 hover:bg-white/50 transition-colors">
+                          <td className="p-3 text-sm font-bold text-[#2B3674]">
+                            {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </td>
+                          <td className="p-3 text-sm font-black text-[#4318FF] text-right">
+                            {item.totalHours}h
+                          </td>
+                          <td className="p-3 text-right">
+                             <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-md tracking-tighter shadow-sm border ${
+                               isHalf 
+                                 ? "bg-amber-50 text-amber-600 border-amber-200" 
+                                 : "bg-emerald-50 text-emerald-600 border-emerald-200"
+                             }`}>
+                                {isHalf ? "Half Day" : "Full Day"}
+                             </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {halfDayItems.length > 0 && (
+                <div className="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 flex gap-3 items-start shadow-sm mb-2">
+                  <AlertCircle size={20} className="text-[#4318FF] shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-[13px] font-black text-[#1B2559] mb-1 leading-none uppercase tracking-wide">Sync Logic Enforcement</h4>
+                    <p className="text-[12px] text-gray-500 font-medium leading-relaxed">
+                      All <span className="font-bold text-[#4318FF]">4.5h entries</span> will be formalized with an explicit <span className="font-bold underline decoration-indigo-200 underline-offset-2">Office (1st) / Leave (2nd)</span> split during synchronization.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          ),
+          okText: "Process All Updates",
+          cancelText: "Cancel",
+          okButtonProps: { 
+            size: "large", 
+            className: "bg-[#4318FF] hover:bg-[#320ec4] border-0 text-white font-bold px-8 rounded-xl h-11 shadow-lg shadow-indigo-500/30" 
+          },
+          cancelButtonProps: { 
+            size: "large", 
+            className: "rounded-xl h-11 font-bold text-gray-500 border-gray-200" 
+          },
+          onOk: async () => {
+            await handleActualSave(payload);
+          },
+        });
+      } else {
+        await handleActualSave(payload);
+      }
+
     }
   };
 
   // Calculations
   const monthTotalHours = localEntries.reduce(
-    (acc, entry) => acc + (entry.totalHours || 0),
+    (acc, entry) => acc + Number(entry.totalHours || 0),
     0,
   );
 
@@ -983,6 +1279,7 @@ const MyTimesheet = ({
              ? handleAutoUpdateClick 
              : undefined
         }
+        autoUpdateCount={autoUpdateCount}
         blockers={blockers}
       />
     );
@@ -1078,7 +1375,7 @@ const MyTimesheet = ({
                 Total
               </p>
               <p className="text-lg font-black text-[#4318FF] leading-none">
-                {monthTotalHours.toFixed(1)}
+                {(Number(monthTotalHours) || 0).toFixed(1)}
               </p>
             </div>
           </div>
@@ -1100,7 +1397,7 @@ const MyTimesheet = ({
               </p>
               <div className="flex items-baseline gap-1">
                 <p className="text-xl sm:text-2xl font-black text-[#4318FF] leading-none">
-                  {monthTotalHours.toFixed(1)}
+                  {Number(monthTotalHours).toFixed(1)}
                 </p>
                 <span className="text-[10px] font-bold text-gray-700">hrs</span>
               </div>
@@ -1121,7 +1418,7 @@ const MyTimesheet = ({
               >
                 <Rocket size={14} className={autoUpdateCount > 0 ? "animate-pulse" : ""} />
                 <span className="hidden sm:inline">
-                  {isCheckingAutoUpdate ? "Checking..." : "Auto Update"}
+                  {isCheckingAutoUpdate ? "Checking..." : autoUpdateCount > 0 ? `Auto Update (${autoUpdateCount})` : "Auto Update"}
                 </span>
               </button>
             )}
@@ -1170,6 +1467,16 @@ const MyTimesheet = ({
               label: "Leave",
               color: "bg-[#FEE2E2]",
               border: "border-[#EE5D50]",
+            },
+            {
+              label: "WFH",
+              color: "bg-[#DBEAFE]",
+              border: "border-[#4318FF]/20",
+            },
+            {
+              label: "Client Visit",
+              color: "bg-[#DBEAFE]",
+              border: "border-[#4318FF]/20",
             },
             {
               label: "Pending Update",
@@ -1280,7 +1587,6 @@ const MyTimesheet = ({
             // Disable editing for approved Leave days only
             // WFH and Client Visit days are editable (they are present, not leave)
             // Half Day is also editable (employees can update hours)
-            const isLeaveDay = day.status === "Leave";
 
             // Check if date is in current month or next month
             const today = new Date();
@@ -1297,7 +1603,6 @@ const MyTimesheet = ({
               (dayMonth === nextMonth && dayYear === nextMonthYear);
 
             // Check if this record is blocked due to being auto-generated from a Half Day request
-            const isBlockedByRequest = !!day.sourceRequestId && (day.status as string)?.toLowerCase() === "half day";
 
             // Logic for "isEditable"
             // - Admins and Managers can edit any date (including leave days, except blocked dates)
@@ -1310,92 +1615,65 @@ const MyTimesheet = ({
               (isAdmin ||
                 isCurrentOrNextMonth ||
                 isEditableMonth(day.fullDate)) &&
-              !isBlocked &&
-              (isAdmin || isManager || !isBlockedByRequest) && // Allow Admin/Manager to override auto-generated locks
-              (isAdmin || isManager || !isLeaveDay); // Admins and Managers can edit leave days, employees cannot
+              !isBlocked;
 
-            // Updated Styling Logic
-            let bg = "bg-white hover:border-[#4318FF]/20";
-            let badge = "bg-gray-50 text-gray-500";
-            let border = "border-transparent";
-            let shadow = "shadow-[0px_2px_15px_rgba(0,0,0,0.02)]";
+            // Helper to get consistent styles for any status string
+            const getStatusStyles = (statusStr: string | null | undefined, location?: string | null) => {
+              const s = (statusStr || "").toLowerCase();
+              const loc = (location || "").toLowerCase();
+              
+              if (s === "blocked") return { bg: "bg-gray-200", badge: "bg-gray-600 text-white", border: "border-transparent", text: "text-gray-600" };
+              if (s === "holiday") return { bg: "bg-[#DBEAFE]", badge: "bg-[#1890FF]/70 text-white font-bold", border: "border-[#1890FF]/20", text: "text-[#1890FF]" };
+              if (s === "weekend" || s === "leave") return { bg: "bg-[#FEE2E2]", badge: "bg-[#EE5D50]/70 text-white font-bold", border: "border-[#EE5D50]/10", text: "text-[#EE5D50]" };
+              if (s === "full day") return { bg: "bg-[#E6FFFA]", badge: "bg-[#01B574] text-white font-bold", border: "border-[#01B574]/20", text: "text-[#01B574]" };
+              if (s === "full day") return { bg: "bg-[#E6FFFA]", badge: "bg-[#01B574] text-white font-bold", border: "border-[#01B574]/20", text: "text-[#01B574]" };
+              if (s.includes("half day")) return { bg: "bg-[#FEF3C7]", badge: "bg-[#FFB020]/80 text-white font-bold", border: "border-[#FFB020]/20", text: "text-[#FFB020]" };
+              if (s === "absent") return { bg: "bg-[#FECACA]", badge: "bg-[#DC2626]/70 text-white font-bold", border: "border-[#DC2626]/20", text: "text-[#DC2626]" };
+              if (s === "wfh" || loc === "wfh" || s === "work from home") return { bg: "bg-[#DBEAFE]", badge: "bg-[#4318FF]/70 text-white font-bold", border: "border-[#4318FF]/20", text: "text-[#4318FF]" };
+              if (s === "client visit" || loc === "client visit" || loc === "client place") return { bg: "bg-[#DBEAFE]", badge: "bg-[#4318FF]/70 text-white font-bold", border: "border-[#4318FF]/20", text: "text-[#4318FF]" };
+              if (loc === "office" || s === "office") return { bg: "bg-[#E6FFFA]", badge: "bg-[#01B574] text-white font-bold", border: "border-[#01B574]/20", text: "text-[#01B574]" };
+              
+              return { bg: "bg-[#F8FAFC]", badge: "bg-[#64748B]/90 text-white font-bold", border: "border-gray-300", text: "text-gray-600" };
+            };
 
-            // Sunday should always show as Weekend, regardless of any data
+            // Detect Split Day
+            const isSplitDay = !!day.firstHalf && !!day.secondHalf && day.firstHalf !== day.secondHalf;
+
+            const getShortStatus = (status: string | null | undefined) => {
+              const s = (status || "").toLowerCase();
+              if (s.includes("work from home")) return "WFH";
+              return status || "";
+            };
+
+            const isWorkLoc = (s: string | null | undefined) => {
+              const lower = (s || "").toLowerCase();
+              return ["wfh", "work from home", "client visit", "client place", "office"].some(k => lower.includes(k));
+            };
+
+
+            // Sunday/Saturday Logic
             const dayOfWeek = day.fullDate.getDay();
             const isSunday = dayOfWeek === 0;
             const isSaturday = dayOfWeek === 6;
+            const isSaturdayWithNoData = isSaturday && !day.workLocation && (!day.status || ["Weekend", "Pending", "Not Updated"].includes(day.status));
 
-            // Saturday: Only show as Weekend if there's NO data (no workLocation, no meaningful status)
-            const isSaturdayWithNoData =
-              isSaturday &&
-              !day.workLocation &&
-              (day.status === "Weekend" ||
-                day.status === "Pending" ||
-                day.status === "Not Updated" ||
-                !day.status);
+            // Determine Overall Styles (for border and badge)
+            let displayStatus = day.status as string;
+            if (holiday || (day.status as any) === "Holiday") displayStatus = "Holiday";
+            // Removed explicit Blocked override here to let original status show
+            // else if (isBlocked) displayStatus = "Blocked";
+            else if (isSunday || isSaturdayWithNoData) displayStatus = "Weekend";
 
-            if (isBlocked) {
-              // Administrative Block
-              bg = "bg-gray-200 opacity-90 grayscale";
-              badge = "bg-gray-600 text-white";
-            } else if (
-              isSunday ||
-              (isSaturdayWithNoData && !day.workLocation)
-            ) {
-              // Sunday: Always Weekend. Saturday: Only Weekend if no data
-              bg = "bg-[#FEE2E2]";
-              badge = "bg-[#EE5D50]/70 text-white font-bold";
-              border = "border-[#EE5D50]/10";
-            } else if (holiday || (day.status as any) === "Holiday") {
-              // Master holidays take priority over everything (Leave, WFH, Client Visit, etc.)
-              bg = "bg-[#DBEAFE]";
-              badge = "bg-[#1890FF]/70 text-white font-bold";
-              border = "border-[#1890FF]/20";
-            } else if (day.status === "Full Day" && displayVal !== 0) {
-              bg = "bg-[#E6FFFA]";
-              badge = "bg-[#01B574] text-white font-bold";
-              border = "border-[#01B574]/20";
-            } else if (day.status === "Half Day" && displayVal !== 0) {
-              bg = "bg-[#FEF3C7]";
-              badge = "bg-[#FFB020]/80 text-white font-bold";
-              border = "border-[#FFB020]/20";
-            } else if (day.status === "Leave") {
-              // Leave status takes priority over workLocation (even if workLocation is Client Visit)
-              bg = "bg-[#FEE2E2]";
-              badge = "bg-[#EE5D50]/70 text-white font-bold";
-              border = "border-[#EE5D50]/10";
-            } else if (
-              day.workLocation === "Client Visit" ||
-              day.status === "Client Visit"
-            ) {
-              // Client Visit - Blue Style (only if status is NOT Leave)
-              // User said "same color apply" (as WFH?). WFH in screenshot looked Greyish/Blue.
-              // Let's use the explicit Client Visit blue we have, which is definitely NOT Red.
-              bg = "bg-[#DBEAFE]";
-              badge = "bg-[#4318FF]/70 text-white font-bold";
-              border = "border-[#4318FF]/20";
-            } else if (day.workLocation === "WFH" || day.status === "WFH") {
-              // WFH Style - Match Client Visit (Blue) as requested
-              bg = "bg-[#DBEAFE]";
-              badge = "bg-[#4318FF]/70 text-white font-bold";
-              border = "border-[#4318FF]/20";
-            } else if (day.status === "Absent") {
-              bg = "bg-[#FECACA]";
-              badge = "bg-[#DC2626]/70 text-white font-bold";
-              border = "border-[#DC2626]/20";
-            } else if (
-              day.status === "Not Updated" ||
-              day.status === "Pending" ||
-              !day.status
-            ) {
-              // Not Updated, Pending, or Upcoming
-              bg = "bg-[#F8FAFC]";
-              badge = "bg-[#64748B]/90 text-white font-bold";
-              border = "border-gray-300";
-            }
+            const overallStyles = getStatusStyles(displayStatus, day.workLocation);
+            
+            let bgClass = overallStyles.bg;
+            let badgeClass = overallStyles.badge;
+            let borderClass = isSplitDay ? "border-transparent" : overallStyles.border;
+            const shadowClass = "shadow-[0px_2px_15px_rgba(0,0,0,0.02)]";
+
             if (day.isToday) {
-              bg =
-                "bg-white ring-2 ring-[#4318FF] shadow-lg shadow-blue-500/20 z-10";
+              bgClass = "bg-white ring-2 ring-[#4318FF] shadow-lg shadow-blue-500/20 z-10";
+              borderClass = "border-transparent";
             }
 
             const isError = inputError?.index === idx;
@@ -1404,8 +1682,8 @@ const MyTimesheet = ({
               <div
                 key={idx}
                 id={`day-${day.fullDate.getTime()}`}
-                className={`relative flex flex-col justify-between p-1 md:p-1.5 rounded-xl md:rounded-2xl border transition-all duration-300 min-h-[100px] md:min-h-[120px] group 
-                            ${border} ${shadow} ${highlightClass} ${bg} ${
+                className={`relative flex flex-col justify-between p-1 md:p-1.5 rounded-xl md:rounded-2xl border transition-all duration-300 min-h-[100px] md:min-h-[120px] group overflow-hidden 
+                            ${borderClass} ${shadowClass} ${highlightClass} ${day.isToday ? bgClass : "bg-white"} ${
                               isBlocked
                                 ? (isAdmin || isManager)
                                   ? "cursor-pointer"
@@ -1418,36 +1696,27 @@ const MyTimesheet = ({
                   }
                 }}
               >
-                {/* Blocked Hover Overlay */}
-                {isBlocked && (
-                  <div className="absolute inset-0 z-30 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 bg-[#111c44]/40 backdrop-blur-[3px] rounded-2xl p-2 text-center overflow-hidden pointer-events-none">
-                    <div className="bg-white/95 p-3 rounded-xl shadow-2xl flex flex-col items-center gap-1.5 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 border border-white/20 w-[90%] mx-auto">
-                      <div className="p-1.5 bg-red-100 rounded-lg">
-                        <AlertCircle size={14} className="text-red-600" />
-                      </div>
-                      <div className="space-y-0.5">
-                        <p className="text-[9px] font-black text-[#2B3674] leading-tight uppercase tracking-tight">
-                          Timesheet Blocked
-                        </p>
-                        <p className="text-[10px] font-extrabold text-[#4318FF]">
-                          {(isAdmin || isManager) ? "Unblock" : `Contact ${getBlocker(day.fullDate)?.blockedBy || "Admin"}`}
-                        </p>
-                      </div>
-                      {blockedReason && (
-                        <div className="mt-1 pt-1 border-t border-gray-100 w-full px-1">
-                          <p
-                            className="text-[8px] text-[#A3AED0] font-bold italic truncate overflow-hidden whitespace-nowrap"
-                            title={blockedReason}
-                          >
-                            "{blockedReason}"
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
+                {/* Background Layer for Split Days or Single Color */}
+                <div className="absolute inset-0 z-0 rounded-2xl overflow-hidden flex flex-col sm:flex-row">
+                  {isSplitDay ? (
+                      isWorkLoc(day.firstHalf) && isWorkLoc(day.secondHalf) ? (
+                         <>
+                           <div className="flex-1 bg-[#E6FFFA] border-b sm:border-b-0 sm:border-r border-[#01B574]/20" />
+                           <div className="flex-1 bg-[#E6FFFA]" />
+                         </>
+                       ) : (
+                         <>
+                           <div className={`flex-1 ${getStatusStyles(day.firstHalf).bg}`} />
+                           <div className={`flex-1 ${getStatusStyles(day.secondHalf).bg}`} />
+                         </>
+                       )
+                  ) : (
+                    !day.isToday && <div className={`flex-1 w-full h-full ${bgClass}`} />
+                  )}
+                </div>
+
                 {/* Top Row: Date & Lock */}
-                <div className="flex justify-between items-start z-10 mb-1">
+                <div className="flex justify-between items-start z-10 mb-2">
                   <div
                     className={`flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold transition-colors
                       ${
@@ -1459,16 +1728,28 @@ const MyTimesheet = ({
                   >
                     {day.date}
                   </div>
-                  {/* Show lock if blocked by admin OR blocked by auto-generated request OR Leave day (for non-admin/non-manager) */}
-                  {(isBlocked || (isBlockedByRequest && !isAdmin && !isManager) || (isLeaveDay && !isAdmin && !isManager)) && (
-                    <div className="p-1 rounded-full bg-red-50 text-red-500 border border-red-100">
-                      <Lock size={8} strokeWidth={3} />
+                  {/* Show lock if blocked by admin OR if the month is locked for non-admins */}
+                  {(isBlocked || (!isAdmin && !isCurrentOrNextMonth && !isEditableMonth(day.fullDate))) && (
+                    <div className="p-1 rounded-full bg-red-50 text-red-500 border border-red-100 transition-transform hover:scale-110">
+                      <ShieldBan size={10} strokeWidth={2.5} />
                     </div>
                   )}
                 </div>
 
+
                 {/* Middle: Input Area */}
                 <div className="flex-1 flex flex-col items-center justify-center gap-0.5 z-10 py-1 min-h-[50px]">
+                  {/* Split Day Indicators - Show when firstHalf and secondHalf differ */}
+                  {isSplitDay && (
+                    <div className="flex gap-1.5 w-full mb-1 z-10 px-1">
+                      <div className={`flex-1 py-1 rounded-md text-center text-[8px] font-bold uppercase ${getStatusStyles(day.firstHalf).badge}`}>
+                        {getShortStatus(day.firstHalf)}
+                      </div>
+                      <div className={`flex-1 py-1 rounded-md text-center text-[8px] font-bold uppercase ${getStatusStyles(day.secondHalf).badge}`}>
+                        {getShortStatus(day.secondHalf)}
+                      </div>
+                    </div>
+                  )}
                   <div className="relative group/input w-full flex justify-center">
                     <input
                       type="text"
@@ -1503,11 +1784,9 @@ const MyTimesheet = ({
 
                 {/* Bottom: Status Badge */}
                 <div
-                  className={`w-full py-1.5 rounded-lg text-center text-[10px] font-black uppercase tracking-wider truncate px-1 shadow-sm z-10 mt-auto ${badge}`}
+                  className={`w-full py-1.5 rounded-lg text-center text-[10px] font-black uppercase tracking-wider truncate px-1 shadow-sm z-10 mt-auto ${badgeClass}`}
                 >
-                  {isBlocked
-                    ? "BLOCKED"
-                    : holiday || day.status === "Holiday"
+                  {(holiday || day.status === "Holiday"
                       ? holiday?.holidayName || holiday?.name || "HOLIDAY"
                       : isSunday || (isSaturdayWithNoData && !day.workLocation)
                         ? "WEEKEND"
@@ -1516,8 +1795,7 @@ const MyTimesheet = ({
                           : day.workLocation &&
                               (day.status as string) !== "Leave"
                             ? day.workLocation
-                            : day.status === "Full Day" ||
-                                day.status === "Half Day" ||
+                            : day.status === "Half Day" ||
                                 day.status === "WFH" ||
                                 day.status === "Client Visit"
                               ? day.status
@@ -1525,7 +1803,7 @@ const MyTimesheet = ({
                                 ? "ABSENT"
                                 : day.status === "Not Updated"
                                   ? "Not Updated"
-                                  : day.status || "UPCOMING"}
+                                  : day.status || "UPCOMING").replace(/Work From Home/gi, "WFH")}
                 </div>
               </div>
             );

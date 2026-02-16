@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useAppDispatch, useAppSelector } from "../hooks";
-import { DatePicker, ConfigProvider, Select, Checkbox, Modal } from "antd";
+import { DatePicker, ConfigProvider, Checkbox, Select, Modal } from "antd";
 import dayjs from "dayjs";
 import {
   getLeaveHistory,
@@ -17,7 +17,10 @@ import {
   getLeaveCancellableDates,
   cancelRequestDates,
   updateParentRequest,
+  modifyLeaveRequest,
+  clearAttendanceForRequest,
   submitRequestModification,
+  LeaveRequest,
 } from "../reducers/leaveRequest.reducer";
 import { getEntities } from "../reducers/employeeDetails.reducer";
 import {
@@ -41,6 +44,8 @@ import {
   User,
   Search,
   Clock,
+  Users,
+  Building2,
 } from "lucide-react";
 import { notification } from "antd";
 import CommonMultipleUploader from "../EmployeeDashboard/CommonMultipleUploader";
@@ -71,7 +76,7 @@ const AdminLeaveManagement = () => {
   const dispatch = useAppDispatch();
   const { currentUser } = useAppSelector((state) => state.user);
   const {
-    entities = [],
+    entities = [] as LeaveRequest[],
     totalItems,
     totalPages = 0,
     stats = null,
@@ -79,9 +84,7 @@ const AdminLeaveManagement = () => {
     error,
   } = useAppSelector((state) => state.leaveRequest || {});
   const {
-    entities: employeeList = [],
     loading: loadingEmployees,
-    totalItems: totalEmployees,
   } = useAppSelector((state) => state.employeeDetails || {});
   const { holidays = [] } = useAppSelector(
     (state: any) => state.masterHolidays || {},
@@ -117,12 +120,19 @@ const AdminLeaveManagement = () => {
     duration: 0,
   });
   const [leaveDurationType, setLeaveDurationType] = useState("Full Day");
+  const [isHalfDay, setIsHalfDay] = useState(false);
+  const [halfDayType, setHalfDayType] = useState<string | null>(null);
+  const [otherHalfType, setOtherHalfType] = useState<string | null>("Office");
   const [isCancelling, setIsCancelling] = useState(false);
   const [isAutoApproving, setIsAutoApproving] = useState(false);
+  const [isModifying, setIsModifying] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedMonth, setSelectedMonth] = useState<string>("All");
   const [selectedYear, setSelectedYear] = useState<string>("All");
   const [filterStatus, setFilterStatus] = useState<string>("All");
+
+  const [modifyModal, setModifyModal] = useState<{ isOpen: boolean; request: any; datesToModify?: string[] }>({ isOpen: false, request: null });
+  const [modifyFormData, setModifyFormData] = useState({ title: "", description: "", firstHalf: "Office", secondHalf: "Office" });
 
   const months = [
     { label: "January", value: "1" },
@@ -520,6 +530,8 @@ const AdminLeaveManagement = () => {
       }
 
       // 1. Submit the Request (Pending State)
+      const isSplitRequest = leaveDurationType === "First Half" || leaveDurationType === "Second Half" || leaveDurationType === "Half Day";
+      
       const submitAction = await dispatch(
         submitLeaveRequest({
           employeeId: selectedEmployee.employeeId || selectedEmployee.id,
@@ -529,6 +541,9 @@ const AdminLeaveManagement = () => {
           fromDate: formData.startDate,
           toDate: formData.endDate,
           duration,
+          isHalfDay: isSplitRequest,
+          halfDayType: isSplitRequest ? halfDayType : null,
+          otherHalfType: isSplitRequest ? otherHalfType : null,
           submittedDate: new Date().toISOString().split("T")[0],
         }),
       );
@@ -975,6 +990,9 @@ const AdminLeaveManagement = () => {
       employee: "",
     });
     setLeaveDurationType("Full Day");
+    setHalfDayType(null);
+    setOtherHalfType("Office");
+    setIsHalfDay(false);
     dispatch(resetSubmitSuccess());
   };
 
@@ -1009,6 +1027,17 @@ const AdminLeaveManagement = () => {
     });
   };
 
+  const handleModifyClick = (req: any, datesToModify?: string[]) => {
+    setModifyFormData({
+      title: req.title || "",
+      description: req.description || "",
+      firstHalf: req.firstHalf || req.requestType,
+      secondHalf: req.secondHalf || req.requestType,
+    });
+    setModifyModal({ isOpen: true, request: req, datesToModify });
+    setCancelModal({ ...cancelModal, isOpen: false });
+  };
+
   const handleCancel = (id: number) => {
     const req = entities.find((e: any) => e.id === id);
     if (req?.status === "Approved") {
@@ -1031,7 +1060,38 @@ const AdminLeaveManagement = () => {
           employeeId: req.employeeId,
         }),
       ).unwrap();
-      setCancellableDates(response || []);
+      const apiDates = response || [];
+
+      // Identify dates currently under modification or pending status in other requests for THIS employee
+      const lockedDates = new Set<string>();
+      entities?.forEach((r: any) => {
+        // We check for requests other than the current parent request that are in a "pending-like" state
+        if (
+          r.id !== req.id &&
+          r.employeeId === req.employeeId &&
+          (r.status === "Requesting for Modification" ||
+            r.status === "Requesting For Modification" ||
+            r.status === "Pending" ||
+            r.status === "Requesting for Cancellation" ||
+            r.status === "Requesting For Cancellation" ||
+            r.status === "Approved" ||
+            r.status === "Modification Approved" ||
+            r.status === "Request Modified")
+        ) {
+          let start = dayjs(r.fromDate);
+          const end = dayjs(r.toDate);
+          while (start.isBefore(end) || start.isSame(end, "day")) {
+            lockedDates.add(start.format("YYYY-MM-DD"));
+            start = start.add(1, "day");
+          }
+        }
+      });
+
+      // Filter out the dates that are already locked
+      const filtered = apiDates.filter(
+        (d: any) => !lockedDates.has(dayjs(d.date).format("YYYY-MM-DD")),
+      );
+      setCancellableDates(filtered);
     } catch (err) {
       notification.error({
         message: "Error",
@@ -1086,29 +1146,26 @@ const AdminLeaveManagement = () => {
       );
 
       if (cancelRequestDates.fulfilled.match(action)) {
-        // 1. REVERT ATTENDANCE for the selected dates
-        const attendancePayload = selectedCancelDates.map((date) => ({
-          employeeId: requestToCancel.employeeId as string,
-          workingDate: date,
-          status: undefined,
-          workLocation: undefined,
-          totalHours: undefined,
-        }));
+        // Backend already handles attendance clearing when cancellation is approved
+        // No need to call attendance API here
 
-        if (attendancePayload.length > 0) {
-          await dispatch(submitBulkAttendance(attendancePayload)).unwrap();
-        }
+      // AUTO-APPROVE the created cancellation request
+      const createdCancellationRequest = action.payload;
+      if (createdCancellationRequest?.id) {
+        await dispatch(
+          updateLeaveRequestStatus({
+            id: createdCancellationRequest.id,
+            status: "Cancellation Approved",
+          }),
+        ).unwrap();
 
-        // 2. AUTO-APPROVE the created cancellation request
-        const createdCancellationRequest = action.payload;
-        if (createdCancellationRequest?.id) {
-          await dispatch(
-            updateLeaveRequestStatus({
-              id: createdCancellationRequest.id,
-              status: "Cancellation Approved",
-            }),
-          ).unwrap();
+        // Explicit Attendance Clearance
+        try {
+          await dispatch(clearAttendanceForRequest({ id: createdCancellationRequest.id, employeeId: createdCancellationRequest.employeeId })).unwrap();
+        } catch (err) {
+          console.error("Failed to clear attendance explicitly:", err);
         }
+      }
 
         // 3. Update Parent Request (Recalculate Remaining Duration & Range)
         if (requestToCancel) {
@@ -1214,48 +1271,19 @@ const AdminLeaveManagement = () => {
       setIsCancelling(true);
       try {
         const item = entities.find((e: any) => e.id === cancelModal.id);
-        const isAdminOrManager = currentUser?.userType === 'ADMIN' || currentUser?.userType === 'MANAGER';
-        
+
         if (item?.status === "Approved") {
-          // 1. REVERT ATTENDANCE for Approved requests
-          const startDate = dayjs(item.fromDate);
-          const endDate = dayjs(item.toDate);
-          const diffDays = endDate.diff(startDate, "day");
-          const attendancePayload: any[] = [];
-
-          for (let i = 0; i <= diffDays; i++) {
-            const currentDateObj = startDate.clone().add(i, "day");
-            const currentDate = currentDateObj.format("YYYY-MM-DD");
-
-            // Skip weekends and holidays if applicable (mirroring approval logic)
-            if (
-              (item.requestType === "Client Visit" ||
-                item.requestType === "Work From Home" ||
-                item.requestType === "Apply Leave" ||
-                item.requestType === "Leave" ||
-                item.requestType === "Half Day") &&
-              (isWeekend(currentDateObj) || isHoliday(currentDateObj))
-            ) {
-              continue;
-            }
-
-            attendancePayload.push({
-              employeeId: item.employeeId,
-              workingDate: currentDate,
-              status: undefined,
-              workLocation: undefined,
-              totalHours: undefined,
-            });
-          }
-
-          if (attendancePayload.length > 0) {
-            await dispatch(submitBulkAttendance(attendancePayload)).unwrap();
-          }
-
-          // 2. Update Status to 'Cancellation Approved' for Approved requests
+          // Update Status to 'Cancellation Approved' for Approved requests
           await dispatch(
             updateLeaveRequestStatus({ id: cancelModal.id, status: "Cancellation Approved" }),
           ).unwrap();
+
+        // Explicit Attendance Clearance
+        try {
+          await dispatch(clearAttendanceForRequest({ id: cancelModal.id, employeeId: (selectedEmployee?.employeeId || selectedEmployee?.id) as string })).unwrap();
+        } catch (err) {
+          console.error("Failed to clear attendance explicitly:", err);
+        }
         } else {
           // For Pending requests, just set to Cancelled
           await dispatch(
@@ -1710,6 +1738,9 @@ const AdminLeaveManagement = () => {
                       Request Type
                     </th>
                     <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center">
+                      Duration Type
+                    </th>
+                    <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center">
                       Department
                     </th>
                     <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center">
@@ -1754,10 +1785,89 @@ const AdminLeaveManagement = () => {
                         <td className="py-4 pl-10 pr-4 text-[#2B3674] text-sm font-bold">
                           {item.fullName || "User"} ({item.employeeId})
                         </td>
-                        <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
-                          {item.requestType === "Apply Leave"
-                            ? "Leave"
-                            : item.requestType}
+                        <td className="py-4 px-4 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <div className="p-1.5 bg-gray-50 rounded-lg group-hover:bg-white transition-colors">
+                              {(() => {
+                                // Determine icon based on combined activities
+                                const hasWFH = item.firstHalf === "Work From Home" || item.secondHalf === "Work From Home";
+                                const hasCV = item.firstHalf === "Client Visit" || item.secondHalf === "Client Visit";
+                                const hasLeave = item.firstHalf === "Leave" || item.secondHalf === "Leave" || item.firstHalf === "Apply Leave" || item.secondHalf === "Apply Leave";
+                                
+                                if (hasWFH && hasLeave) return <Home size={16} className="text-green-600" />;
+                                if (hasCV && hasLeave) return <MapPin size={16} className="text-orange-600" />;
+                                if (item.requestType === "Work From Home") return <Home size={16} className="text-green-600" />;
+                                if (item.requestType === "Client Visit") return <MapPin size={16} className="text-orange-600" />;
+                                if (item.requestType === "Apply Leave" || item.requestType === "Leave") return <Calendar size={16} className="text-blue-600" />;
+                                if (item.requestType === "Half Day") return <Calendar size={16} className="text-pink-600" />;
+                                return <Building2 size={16} className="text-gray-600" />;
+                              })()}
+                            </div>
+                            <span className="text-[#475569] text-sm font-semibold flex items-center gap-2">
+                              {(() => {
+                                // Show combined activities for split-day requests
+                                if (item.isHalfDay && item.firstHalf && item.secondHalf) {
+                                  const activities = [item.firstHalf, item.secondHalf]
+                                    .map(a => a === "Apply Leave" ? "Leave" : a)
+                                    .filter(a => a && a !== "Office")
+                                    .filter((value, index, self) => self.indexOf(value) === index);
+                                  
+                                  if (activities.length > 1) {
+                                    // Replace "Leave" with "Half Day Leave" in combined activities
+                                    return activities.map(a => a === "Leave" ? "Half Day Leave" : a).join(" + ");
+                                  }
+                                  if (activities.length === 1) {
+                                    // For single activity that is "Leave", show "Half Day Leave"
+                                    return activities[0] === "Leave" ? "Half Day Leave" : activities[0];
+                                  }
+                                }
+                                
+                                // Default display
+                                if (item.requestType === "Apply Leave" || item.requestType === "Leave") {
+                                  return item.isHalfDay ? "Half Day Leave" : "Leave";
+                                }
+                                if (item.requestType === "Half Day") return "Half Day Leave";
+                                return item.requestType;
+                              })()}
+                              {item.isModified && (
+                                <span className="bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter shadow-sm border border-orange-200">
+                                  Modified
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4 text-center">
+                          <span className={`text-xs font-bold px-3 py-1 rounded-full ${
+                            (() => {
+                              if (item.isHalfDay && item.firstHalf && item.secondHalf) {
+                                const isSame = item.firstHalf === item.secondHalf;
+                                if (isSame) return 'bg-blue-100 text-blue-700';
+                                return 'bg-purple-100 text-purple-700';
+                              }
+                              return 'bg-blue-100 text-blue-700';
+                            })()
+                          }`}>
+                            {(() => {
+                              if (item.isHalfDay && item.firstHalf && item.secondHalf) {
+                                const first = item.firstHalf === "Apply Leave" ? "Leave" : item.firstHalf;
+                                const second = item.secondHalf === "Apply Leave" ? "Leave" : item.secondHalf;
+                                
+                                if (first === second && first !== "Office") {
+                                  return 'Full Day';
+                                }
+                                
+                                // Filter out Office
+                                const parts = [];
+                                if (first && first !== "Office") parts.push(`First Half = ${first}`);
+                                if (second && second !== "Office") parts.push(`Second Half = ${second}`);
+                                
+                                if (parts.length > 0) return parts.join(' & ');
+                                return 'Full Day';
+                              }
+                              return 'Full Day';
+                            })()}
+                          </span>
                         </td>
                         <td className="py-4 px-4 text-center">
                           <span className="text-xs font-bold text-gray-500 bg-gray-100/50 px-2 py-1 rounded-md">
@@ -1799,22 +1909,24 @@ const AdminLeaveManagement = () => {
                             className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all whitespace-nowrap
                             ${
                               item.status === "Approved" ||
-                              item.status === "Cancellation Approved"
+                              item.status === "Cancellation Approved" || 
+                              item.status === "Modification Approved"
                                 ? "bg-green-50 text-green-600 border-green-200"
                                 : item.status === "Pending"
                                   ? "bg-yellow-50 text-yellow-600 border-yellow-200"
-                                  : item.status === "Cancelled"
-                                    ? "bg-yellow-50 text-yellow-600 border-yellow-200"
-                                    : item.status ===
-                                        "Requesting for Cancellation"
-                                      ? "bg-yellow-100 text-yellow-700 border-yellow-300"
+                                : item.status === "Cancelled"
+                                    ? "bg-red-50 text-red-600 border-red-200"
+                                    : item.status === "Requesting for Modification" || item.status === "Modification Cancelled"
+                                      ? "bg-orange-100 text-orange-600 border-orange-200"
+                                    : item.status === "Requesting for Cancellation"
+                                      ? "bg-orange-100 text-orange-600 border-orange-200"
                                       : item.status === "Request Modified"
-                                        ? "bg-orange-50 text-orange-600 border-orange-200"
+                                        ? "bg-orange-100 text-orange-600 border-orange-200"
                                         : "bg-red-50 text-red-600 border-red-200"
                             }
                           `}
                           >
-                            {item.status === "Pending" && (
+                            {(item.status === "Pending" || item.status === "Requesting for Modification") && (
                               <RotateCcw
                                 size={12}
                                 className="animate-spin-slow"
@@ -1908,73 +2020,88 @@ const AdminLeaveManagement = () => {
       )}
 
       {/* Application Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-100 flex items-start justify-center p-6 pt-20">
-          <div
-            className="absolute inset-0 bg-[#2B3674]/30 backdrop-blur-sm"
-            onClick={handleCloseModal}
-          />
-          <div className="relative w-full max-w-xl bg-white rounded-[32px] overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-300 flex flex-col max-h-[85vh]">
-            {/* Modal Header */}
-            <div className="pt-1 px-4 pb-0">
-              <div className="flex justify-between items-start mb-0">
-                <button
-                  onClick={handleCloseModal}
-                  className="p-1 hover:bg-gray-100 rounded-full transition-colors ml-auto"
-                >
-                  <X size={20} className="text-gray-700" />
-                </button>
-              </div>
-              <div className="flex items-center justify-between w-full">
-                <span className="text-lg font-black uppercase tracking-widest text-gray-400">
-                  {isViewMode ? "Viewing Application" : "Applying For"}
-                </span>
-                <h2 className="text-2xl md:text-3xl font-black text-[#2B3674] text-right">
-                  {selectedLeaveType === "Apply Leave"
-                    ? "Leave Request"
-                    : selectedLeaveType}
-                </h2>
-              </div>
+      <Modal
+        open={isModalOpen}
+        onCancel={handleCloseModal}
+        footer={null}
+        closable={false}
+        centered
+        width={700}
+        className="application-modal"
+      >
+        <div className="relative overflow-hidden bg-white rounded-[16px]">
+          {/* Modal Header */}
+          <div className="pt-2 px-6">
+            <div className="flex justify-between items-start">
+              <span className="text-sm font-black uppercase tracking-widest text-[#A3AED0]">
+                {isViewMode ? "Viewing Application" : "Applying For"}
+              </span>
+              <button
+                onClick={handleCloseModal}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X size={22} className="text-[#2B3674]" />
+              </button>
             </div>
+            <div className="flex items-center justify-between w-full mt-1">
+              <h2 className="text-2xl md:text-3xl font-black text-[#2B3674]">
+                {selectedLeaveType === "Apply Leave"
+                  ? "Leave"
+                  : selectedLeaveType === "Half Day"
+                    ? "Half Day Leave"
+                    : selectedLeaveType}
+              </h2>
+            </div>
+          </div>
 
-            {/* Modal Body */}
-            <div className="p-6 space-y-2 overflow-y-auto custom-scrollbar flex-1">
-              {/* Error Message */}
-              {error && (
-                <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
-                  <XCircle size={20} className="text-red-500 shrink-0" />
-                  <p className="text-xs font-bold text-red-600 leading-tight">
-                    {typeof error === 'object' && error !== null ? (error as any).message || 'An error occurred' : String(error)}
-                  </p>
+          {/* Modal Body */}
+          <div className="p-6 space-y-5 overflow-y-auto custom-scrollbar max-h-[75vh]">
+            {/* Error Message */}
+            {error && (
+              <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+                <XCircle size={20} className="text-red-500 shrink-0" />
+                <p className="text-xs font-bold text-red-600 leading-tight">
+                  {typeof error === 'object' && error !== null ? (error as any).message || 'An error occurred' : String(error)}
+                </p>
+              </div>
+            )}
+
+            {/* Employee Info (Read-only in modal) */}
+            {selectedEmployee && !isViewMode && (
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-[#2B3674] ml-1">
+                  Employee
+                </label>
+                <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none flex items-center gap-3">
+                  <User size={18} className="text-[#4318FF]" />
+                  <span>
+                    {selectedEmployee.fullName ||
+                      selectedEmployee.aliasLoginName}{" "}
+                    ({selectedEmployee.employeeId})
+                  </span>
                 </div>
-              )}
+              </div>
+            )}
 
-              {/* Employee Info (Read-only in modal) */}
-              {selectedEmployee && !isViewMode && (
+            {/* Duration Type & Split-Day Selection */}
+            {!isViewMode && (selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave" || selectedLeaveType === "Work From Home" || selectedLeaveType === "Client Visit" || selectedLeaveType === "Half Day") && (
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-[#2B3674] ml-1">
-                    Employee
-                  </label>
-                  <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none flex items-center gap-3">
-                    <User size={18} className="text-[#4318FF]" />
-                    <span>
-                      {selectedEmployee.fullName ||
-                        selectedEmployee.aliasLoginName}{" "}
-                      ({selectedEmployee.employeeId})
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Leave Type Dropdown - Only for Apply Leave */}
-              {!isViewMode && (selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave") && (
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-[#2B3674] ml-1">
-                    Leave Type
+                    Duration Type
                   </label>
                   <Select
                     value={leaveDurationType}
-                    onChange={(val) => setLeaveDurationType(val)}
+                    onChange={(val) => {
+                      setLeaveDurationType(val);
+                      const isHalf = val === "First Half" || val === "Second Half" || val === "Half Day";
+                      setIsHalfDay(isHalf);
+                      if (val === "First Half" || val === "Second Half") {
+                        setHalfDayType(val);
+                      } else {
+                        setHalfDayType(null);
+                      }
+                    }}
                     className="w-full h-[48px] font-bold text-[#2B3674]"
                     variant="borderless"
                     dropdownStyle={{ borderRadius: "16px", padding: "8px" }}
@@ -1985,268 +2112,343 @@ const AdminLeaveManagement = () => {
                     }}
                     suffixIcon={<ChevronDown className="text-[#4318FF]" />}
                   >
-                    <Select.Option value="Full Day">Full Day Application</Select.Option>
-                    <Select.Option value="Half Day">Half Day Leave</Select.Option>
+                    <Select.Option value="Full Day">Full Day</Select.Option>
+                    <Select.Option value="First Half">First Half</Select.Option>
+                    <Select.Option value="Second Half">Second Half</Select.Option>
                   </Select>
                 </div>
-              )}
 
-              {/* Title Field */}
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-[#2B3674] ml-1">
-                  Title
-                </label>
-                {isViewMode ? (
-                  <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none break-words">
-                    {formData.title}
-                  </div>
-                ) : (
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="e.g. Annual Vacation"
-                      className={`w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] border ${
-                        errors.title ? "border-red-500" : "border-transparent"
-                      } focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400`}
-                      value={formData.title}
-                      onChange={(e) =>
-                        setFormData({ ...formData, title: e.target.value })
-                      }
-                    />
-                    {errors.title && (
-                      <p className="text-red-500 text-xs mt-1 ml-2">
-                        {errors.title}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Dates Row */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-[#2B3674] ml-1">
-                    Start Date
-                  </label>
-                  {isViewMode ? (
-                    <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] text-center">
-                      {dayjs(formData.startDate).format("DD-MM-YYYY")}
-                    </div>
-                  ) : (
-                    <>
-                      <ConfigProvider theme={datePickerTheme}>
-                        <DatePicker
-                          popupClassName="hide-other-months show-weekdays"
-                          disabledDate={disabledDate}
-                          className={`w-full px-5! py-3! rounded-[20px]! bg-[#F4F7FE]! border-none! focus:bg-white! focus:border-[#4318FF]! transition-all font-bold! text-[#2B3674]! shadow-none`}
-                          value={
-                            formData.startDate
-                              ? dayjs(formData.startDate)
-                              : null
-                          }
-                          onChange={(date) => {
-                            const newStartDate = date
-                              ? date.format("YYYY-MM-DD")
-                              : "";
-                            setFormData((prev) => {
-                              const newData = {
-                                ...prev,
-                                startDate: newStartDate,
-                              };
-                              if (
-                                newData.endDate &&
-                                newData.startDate &&
-                                dayjs(newData.endDate).isBefore(
-                                  dayjs(newData.startDate),
-                                )
-                              ) {
-                                newData.endDate = "";
-                              }
-                              return newData;
-                            });
-                          }}
-                          format="DD-MM-YYYY"
-                          placeholder="dd-mm-yyyy"
-                          suffixIcon={null}
-                        />
-                      </ConfigProvider>
-                      {errors.startDate && (
-                        <p className="text-red-500 text-xs mt-1 ml-2">
-                          {errors.startDate}
-                        </p>
+                {/* Other Half Activity (Shown if not Full Day) */}
+                {(leaveDurationType === "First Half" || leaveDurationType === "Second Half" || leaveDurationType === "Half Day") && (
+                  <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                    <label className="text-sm font-bold text-[#2B3674] ml-1">
+                      Other Half Activity
+                    </label>
+                    <Select
+                      value={otherHalfType}
+                      onChange={(val) => setOtherHalfType(val)}
+                      className="w-full h-[48px] font-bold text-[#2B3674]"
+                      variant="borderless"
+                      dropdownStyle={{ borderRadius: "16px", padding: "8px" }}
+                      style={{ 
+                        backgroundColor: "#F4F7FE", 
+                        borderRadius: "16px",
+                        border: "1px solid transparent"
+                      }}
+                      suffixIcon={<ChevronDown className="text-[#4318FF]" />}
+                    >
+                      <Select.Option value="Office">Office</Select.Option>
+                      {selectedLeaveType !== "Work From Home" && (
+                        <Select.Option value="Work From Home">Work From Home</Select.Option>
                       )}
-                    </>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-[#2B3674] ml-1">
-                    End Date
-                  </label>
-                  {isViewMode ? (
-                    <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] text-center">
-                      {dayjs(formData.endDate).format("DD-MM-YYYY")}
-                    </div>
-                  ) : (
-                    <>
-                      <ConfigProvider theme={datePickerTheme}>
-                        <DatePicker
-                          popupClassName="hide-other-months show-weekdays"
-                          disabledDate={disabledEndDate}
-                          className={`w-full px-5! py-3! rounded-[20px]! bg-[#F4F7FE]! border-none! focus:bg-white! focus:border-[#4318FF]! transition-all font-bold! text-[#2B3674]! shadow-none`}
-                          value={
-                            formData.endDate ? dayjs(formData.endDate) : null
-                          }
-                          onChange={(date) =>
-                            setFormData({
-                              ...formData,
-                              endDate: date ? date.format("YYYY-MM-DD") : "",
-                            })
-                          }
-                          format="DD-MM-YYYY"
-                          placeholder="dd-mm-yyyy"
-                          suffixIcon={null}
-                        />
-                      </ConfigProvider>
-                      {errors.endDate && (
-                        <p className="text-red-500 text-xs mt-1 ml-2">
-                          {errors.endDate}
-                        </p>
+                      {selectedLeaveType !== "Client Visit" && (
+                        <Select.Option value="Client Visit">Client Visit</Select.Option>
                       )}
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Duration Field */}
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-[#2B3674] ml-1">
-                  Duration
-                </label>
-                <div className="w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] font-bold text-[#4318FF] flex items-center justify-between">
-                  <span>Total Days:</span>
-                  <span className="bg-white px-4 py-1 rounded-lg shadow-sm border border-blue-100">
-                    {formData.startDate && formData.endDate
-                      ? (() => {
-                          if (isViewMode) return `${formData.duration} Day(s)`;
-
-                          // For Client Visit, WFH, and Leave, exclude weekends and holidays from duration display
-                          if (
-                            selectedLeaveType === "Client Visit" ||
-                            selectedLeaveType === "Work From Home" ||
-                            selectedLeaveType === "Apply Leave" ||
-                            selectedLeaveType === "Leave" ||
-                            selectedLeaveType === "Half Day"
-                          ) {
-                            const baseDur = calculateDurationExcludingWeekends(formData.startDate, formData.endDate);
-                            const finalDur = leaveDurationType === "Half Day" ? baseDur * 0.5 : baseDur;
-                            return `${finalDur} Day(s)`;
-                          } else {
-                            return `${dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1} Day(s)`;
-                          }
-                        })()
-                      : "0 Days"}
-                  </span>
-                </div>
-              </div>
-
-              {/* Description Field */}
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-[#2B3674] ml-1">
-                  Description
-                </label>
-                {isViewMode ? (
-                  <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-medium text-[#2B3674] min-h-[60px] whitespace-pre-wrap break-words leading-relaxed">
-                    {formData.description || "No description provided."}
-                  </div>
-                ) : (
-                  <div className="relative">
-                    <textarea
-                      rows={3}
-                      placeholder="Please provide details about your request..."
-                      className={`w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] border ${
-                        errors.description
-                          ? "border-red-500"
-                          : "border-transparent"
-                      } focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium text-[#2B3674] placeholder:font-medium placeholder:text-gray-400 resize-none`}
-                      value={formData.description}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          description: e.target.value,
-                        })
-                      }
-                    />
-                    {errors.description && (
-                      <p className="text-red-500 text-xs mt-1 ml-2">
-                        {errors.description}
-                      </p>
-                    )}
+                      {!(selectedLeaveType === "Apply Leave" || selectedLeaveType === "Leave" || selectedLeaveType === "Half Day") && (
+                        <Select.Option value="Leave">Leave</Select.Option>
+                      )}
+                    </Select>
                   </div>
                 )}
               </div>
+            )}
 
-              {/* Document Upload Section */}
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-[#2B3674] ml-1">
-                  Supporting Documents {isViewMode ? "" : "(Optional)"}
-                </label>
-                {!isViewMode && (
-                  <p className="text-xs text-gray-500 ml-1 mb-1">
-                    Accepted formats: PDF, JPG, PNG, JPEG (Max 5 files, 5MB per
-                    file)
-                  </p>
-                )}
-                <div className="bg-[#F4F7FE] rounded-2xl p-2">
-                  <CommonMultipleUploader
-                    key={isViewMode ? selectedRequestId : uploaderKey}
-                    entityType="LEAVE_REQUEST"
-                    entityId={
-                      selectedEmployee?.id &&
-                      !isNaN(Number(selectedEmployee.id))
-                        ? Number(selectedEmployee.id)
-                        : 0
+            {/* Title Field */}
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-[#2B3674] ml-1">
+                Title
+              </label>
+              {isViewMode ? (
+                <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none break-words">
+                  {formData.title}
+                </div>
+              ) : (
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="e.g. Annual Vacation"
+                    className={`w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] border ${
+                      errors.title ? "border-red-500" : "border-transparent"
+                    } focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400`}
+                    value={formData.title}
+                    onChange={(e) =>
+                      setFormData({ ...formData, title: e.target.value })
                     }
-                    refId={isViewMode ? selectedRequestId || 0 : 0}
-                    refType="DOCUMENT"
-                    fetchOnMount={isViewMode}
-                    uploadFile={uploadLeaveRequestFile}
-                    downloadFile={downloadLeaveRequestFile}
-                    previewFile={previewLeaveRequestFile}
-                    deleteFile={deleteLeaveRequestFile}
-                    getFiles={getLeaveRequestFiles}
-                    maxFiles={5}
-                    allowedTypes={["images", "pdf"]}
-                    successMessage="Document uploaded successfully"
-                    deleteMessage="Document deleted successfully"
-                    disabled={isViewMode}
                   />
-                </div>
-              </div>
-
-              {/* Actions Footer */}
-              {!isViewMode && (
-                <div className="pt-2 flex gap-4">
-                  <button
-                    onClick={handleCloseModal}
-                    className="flex-1 py-3 rounded-2xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-200 hover:text-gray-900 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSubmit}
-                    disabled={loadingRequests || isAutoApproving}
-                    className="flex-1 py-4 rounded-2xl font-bold text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95 transform disabled:opacity-50"
-                  >
-                    {loadingRequests || isAutoApproving
-                      ? "Submitting..."
-                      : "Submit Application"}
-                  </button>
+                  {errors.title && (
+                    <p className="text-red-500 text-xs mt-1 ml-2">
+                      {errors.title}
+                    </p>
+                  )}
                 </div>
               )}
             </div>
+
+            {/* Dates Row */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-[#2B3674] ml-1">
+                  Start Date
+                </label>
+                {isViewMode ? (
+                  <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] text-center">
+                    {dayjs(formData.startDate).format("DD-MM-YYYY")}
+                  </div>
+                ) : (
+                  <>
+                    <ConfigProvider theme={datePickerTheme}>
+                      <DatePicker
+                        popupClassName="hide-other-months show-weekdays"
+                        disabledDate={disabledDate}
+                        className={`w-full px-5! py-3! rounded-[20px]! bg-[#F4F7FE]! border-none! focus:bg-white! focus:border-[#4318FF]! transition-all font-bold! text-[#2B3674]! shadow-none`}
+                        value={
+                          formData.startDate
+                            ? dayjs(formData.startDate)
+                            : null
+                        }
+                        onChange={(date) => {
+                          const newStartDate = date
+                            ? date.format("YYYY-MM-DD")
+                            : "";
+                          setFormData((prev) => {
+                            const newData = {
+                              ...prev,
+                              startDate: newStartDate,
+                            };
+                            if (
+                              newData.endDate &&
+                              newData.startDate &&
+                              dayjs(newData.endDate).isBefore(
+                                dayjs(newData.startDate),
+                              )
+                            ) {
+                              newData.endDate = "";
+                            }
+                            return newData;
+                          });
+                        }}
+                        format="DD-MM-YYYY"
+                        placeholder="dd-mm-yyyy"
+                        suffixIcon={null}
+                      />
+                    </ConfigProvider>
+                    {errors.startDate && (
+                      <p className="text-red-500 text-xs mt-1 ml-2">
+                        {errors.startDate}
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-[#2B3674] ml-1">
+                  End Date
+                </label>
+                {isViewMode ? (
+                  <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] text-center">
+                    {dayjs(formData.endDate).format("DD-MM-YYYY")}
+                  </div>
+                ) : (
+                  <>
+                    <ConfigProvider theme={datePickerTheme}>
+                      <DatePicker
+                        popupClassName="hide-other-months show-weekdays"
+                        disabledDate={disabledEndDate}
+                        className={`w-full px-5! py-3! rounded-[20px]! bg-[#F4F7FE]! border-none! focus:bg-white! focus:border-[#4318FF]! transition-all font-bold! text-[#2B3674]! shadow-none`}
+                        value={
+                          formData.endDate ? dayjs(formData.endDate) : null
+                        }
+                        onChange={(date) =>
+                          setFormData({
+                            ...formData,
+                            endDate: date ? date.format("YYYY-MM-DD") : "",
+                          })
+                        }
+                        format="DD-MM-YYYY"
+                        placeholder="dd-mm-yyyy"
+                        suffixIcon={null}
+                      />
+                    </ConfigProvider>
+                    {errors.endDate && (
+                      <p className="text-red-500 text-xs mt-1 ml-2">
+                        {errors.endDate}
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Duration Field */}
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-[#2B3674] ml-1">
+                Duration
+              </label>
+              <div className="w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] font-bold text-[#4318FF] flex items-center justify-between">
+                <span>Total Days:</span>
+                <span className="bg-white px-4 py-1 rounded-lg shadow-sm border border-blue-100">
+                  {formData.startDate && formData.endDate
+                    ? (() => {
+                        if (isViewMode) return `${formData.duration} Day(s)`;
+
+                        // For Client Visit, WFH, and Leave, exclude weekends and holidays from duration display
+                        if (
+                          selectedLeaveType === "Client Visit" ||
+                          selectedLeaveType === "Work From Home" ||
+                          selectedLeaveType === "Apply Leave" ||
+                          selectedLeaveType === "Leave" ||
+                          selectedLeaveType === "Half Day"
+                        ) {
+                          const baseDur = calculateDurationExcludingWeekends(formData.startDate, formData.endDate);
+                          const finalDur = leaveDurationType === "Half Day" ? baseDur * 0.5 : baseDur;
+                          return `${finalDur} Day(s)`;
+                        } else {
+                          return `${dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1} Day(s)`;
+                        }
+                      })()
+                    : "0 Days"}
+                </span>
+              </div>
+            </div>
+
+            {/* Split-Day Information (View Mode Only) */}
+            {isViewMode && (selectedRequestId !== null) && (
+              (() => {
+                const viewedRequest = entities.find((e: any) => e.id === selectedRequestId);
+                const isBothSame = viewedRequest?.firstHalf === viewedRequest?.secondHalf;
+                return viewedRequest?.isHalfDay && (viewedRequest?.firstHalf || viewedRequest?.secondHalf) ? (
+                  <div className="space-y-2 p-4 bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-50 rounded-2xl border-2 border-blue-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Clock size={18} className="text-blue-600" />
+                      <label className="text-sm font-black text-blue-900 uppercase tracking-wider">
+                        Day Details
+                      </label>
+                    </div>
+                    {isBothSame ? (
+                      <div className="bg-white p-3 rounded-xl shadow-sm border border-blue-100 flex items-center justify-between">
+                        <p className="text-sm font-extrabold text-blue-700">Full Day</p>
+                        <span className="text-xs font-bold text-blue-500 bg-blue-50 px-3 py-1 rounded-lg">
+                          {viewedRequest.firstHalf}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-white p-3 rounded-xl shadow-sm border border-blue-100">
+                          <p className="text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wide">First Half</p>
+                          <p className="text-sm font-extrabold text-blue-700">
+                            {viewedRequest.firstHalf || 'N/A'}
+                          </p>
+                        </div>
+                        <div className="bg-white p-3 rounded-xl shadow-sm border border-purple-100">
+                          <p className="text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wide">Second Half</p>
+                          <p className="text-sm font-extrabold text-purple-700">
+                            {viewedRequest.secondHalf || 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : null;
+              })()
+            )}
+
+            {/* Description Field */}
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-[#2B3674] ml-1">
+                Description
+              </label>
+              {isViewMode ? (
+                <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-medium text-[#2B3674] min-h-[60px] whitespace-pre-wrap break-words leading-relaxed">
+                  {formData.description || "No description provided."}
+                </div>
+              ) : (
+                <div className="relative">
+                  <textarea
+                    rows={3}
+                    placeholder="Please provide details about your request..."
+                    className={`w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] border ${
+                      errors.description
+                        ? "border-red-500"
+                        : "border-transparent"
+                    } focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium text-[#2B3674] placeholder:font-medium placeholder:text-gray-400 resize-none`}
+                    value={formData.description}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        description: e.target.value,
+                      })
+                    }
+                  />
+                  {errors.description && (
+                    <p className="text-red-500 text-xs mt-1 ml-2">
+                      {errors.description}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Document Upload Section */}
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-[#2B3674] ml-1">
+                Supporting Documents {isViewMode ? "" : "(Optional)"}
+              </label>
+              {!isViewMode && (
+                <p className="text-xs text-gray-500 ml-1 mb-1">
+                  Accepted formats: PDF, JPG, PNG, JPEG (Max 5 files, 5MB per
+                  file)
+                </p>
+              )}
+              <div className="bg-[#F4F7FE] rounded-2xl p-2">
+                <CommonMultipleUploader
+                  key={isViewMode ? selectedRequestId : uploaderKey}
+                  entityType="LEAVE_REQUEST"
+                  entityId={
+                    selectedEmployee?.id &&
+                    !isNaN(Number(selectedEmployee.id))
+                      ? Number(selectedEmployee.id)
+                      : 0
+                  }
+                  refId={isViewMode ? selectedRequestId || 0 : 0}
+                  refType="DOCUMENT"
+                  fetchOnMount={isViewMode}
+                  uploadFile={uploadLeaveRequestFile}
+                  downloadFile={downloadLeaveRequestFile}
+                  previewFile={previewLeaveRequestFile}
+                  deleteFile={deleteLeaveRequestFile}
+                  getFiles={getLeaveRequestFiles}
+                  maxFiles={5}
+                  allowedTypes={["images", "pdf"]}
+                  successMessage="Document uploaded successfully"
+                  deleteMessage="Document deleted successfully"
+                  disabled={isViewMode}
+                />
+              </div>
+            </div>
+
+            {/* Actions Footer */}
+            {!isViewMode && (
+              <div className="pt-2 flex gap-4">
+                <button
+                  onClick={handleCloseModal}
+                  className="flex-1 py-3 rounded-2xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={loadingRequests || isAutoApproving}
+                  className="flex-1 py-4 rounded-2xl font-bold text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95 transform disabled:opacity-50"
+                >
+                  {loadingRequests || isAutoApproving
+                    ? "Submitting..."
+                    : "Submit Application"}
+                </button>
+              </div>
+            )}
           </div>
         </div>
-      )}
+      </Modal>
 
       {/* Cancel Confirmation Modal */}
       {cancelModal.isOpen && (
@@ -2267,7 +2469,7 @@ const AdminLeaveManagement = () => {
 
               <p className="text-gray-500 font-medium leading-relaxed mb-8">
                 Are you sure you want to cancel this request? This action cannot
-                be undone.
+                be undone. Alternatively, you can <strong>modify</strong> the request if you just need to correct some details.
               </p>
 
               <div className="flex gap-4">
@@ -2277,7 +2479,16 @@ const AdminLeaveManagement = () => {
                   }
                   className="flex-1 py-3.5 rounded-xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 transition-colors"
                 >
-                  No, Keep It
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    const req = entities.find((e: any) => e.id === cancelModal.id);
+                    if (req) handleModifyClick(req);
+                  }}
+                  className="flex-1 py-3.5 rounded-2xl font-bold text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95 transform uppercase tracking-wider flex items-center justify-center gap-2"
+                >
+                  Modify Instead
                 </button>
                 <button
                   onClick={executeCancel}
@@ -2314,13 +2525,32 @@ const AdminLeaveManagement = () => {
         onCancel={() => setIsCancelDateModalVisible(false)}
         footer={
           <div className="flex justify-between items-center py-2 px-1">
-            <button
-              key="back"
-              onClick={() => setIsCancelDateModalVisible(false)}
-              className="px-6 py-2.5 rounded-xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 transition-colors"
-            >
-              Close
-            </button>
+            <div className="flex gap-2">
+              <button
+                key="back"
+                onClick={() => setIsCancelDateModalVisible(false)}
+                className="px-6 py-2.5 rounded-xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 transition-colors"
+              >
+                Close
+              </button>
+              <button
+                key="modify"
+                onClick={() => {
+                  if (requestToCancel) {
+                    setIsCancelDateModalVisible(false);
+                    handleModifyClick(requestToCancel, selectedCancelDates.length > 0 ? selectedCancelDates : undefined);
+                  }
+                }}
+                disabled={selectedCancelDates.length === 0}
+                className={`px-6 py-2.5 rounded-2xl font-bold transition-all uppercase tracking-wider flex items-center justify-center gap-2 ${
+                  selectedCancelDates.length === 0 
+                  ? "text-gray-400 bg-gray-100 cursor-not-allowed" 
+                  : "text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 active:scale-95 transform"
+                }`}
+              >
+                Modify Instead
+              </button>
+            </div>
             <button
               key="submit"
               onClick={handleConfirmDateCancelItems}
@@ -2439,6 +2669,179 @@ const AdminLeaveManagement = () => {
               </div>
             </div>
           )}
+        </div>
+      </Modal>
+
+      {/* Modify Request Modal */}
+      <Modal
+        title={<div className="text-xl font-bold text-[#2B3674]">Modify Request</div>}
+        open={modifyModal.isOpen}
+        onCancel={() => setModifyModal({ isOpen: false, request: null })}
+        footer={
+          <div className="flex justify-end gap-3 pt-4">
+            <button
+              key="back"
+              onClick={() => setModifyModal({ isOpen: false, request: null })}
+              disabled={isModifying}
+              className="px-6 py-2.5 rounded-xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              key="submit"
+              onClick={async () => {
+                if (!modifyModal.request) return;
+
+                // Validation: Check if any change was made
+                const originalFirstHalf = modifyModal.request.firstHalf || modifyModal.request.requestType;
+                const originalSecondHalf = modifyModal.request.secondHalf || modifyModal.request.requestType;
+
+                const isFirstHalfChanged = modifyFormData.firstHalf !== originalFirstHalf;
+                const isSecondHalfChanged = modifyFormData.secondHalf !== originalSecondHalf;
+                const isTitleChanged = modifyFormData.title !== (modifyModal.request.title || "");
+                const isDescriptionChanged = modifyFormData.description !== (modifyModal.request.description || "");
+
+                if (!isFirstHalfChanged && !isSecondHalfChanged && !isTitleChanged && !isDescriptionChanged) {
+                   notification.warning({
+                     message: "No Changes Detected",
+                     description: "Please modify at least one field to submit.",
+                     placement: "topRight",
+                   });
+                   return;
+                }
+
+                setIsModifying(true);
+                try {
+                  await dispatch(modifyLeaveRequest({
+                    id: modifyModal.request.id,
+                    employeeId: modifyModal.request.employeeId,
+                    updateData: {
+                      title: modifyFormData.title,
+                      description: modifyFormData.description,
+                      firstHalf: modifyFormData.firstHalf,
+                      secondHalf: modifyFormData.secondHalf,
+                      datesToModify: modifyModal.datesToModify,
+                    }
+                  })).unwrap();
+                  notification.success({ message: "Request Modified", description: "The request has been successfully modified.", placement: "topRight" });
+                  setModifyModal({ isOpen: false, request: null });
+                  const empId = modifyModal.request.employeeId;
+                  dispatch(getLeaveStats({ employeeId: empId }));
+                  dispatch(getLeaveHistory({ employeeId: empId, page: currentPage, limit: itemsPerPage, month: selectedMonth, year: selectedYear, status: filterStatus }));
+                } catch (err: any) {
+                  notification.error({ message: "Modification Failed", description: err.message || "Failed to modify request.", placement: "topRight" });
+                } finally {
+                  setIsModifying(false);
+                }
+              }}
+              disabled={isModifying}
+              className={`px-8 py-2.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${
+                isModifying ? "bg-blue-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600 shadow-blue-200 transform active:scale-95"
+              }`}
+            >
+              {isModifying ? (
+                <>
+                  <Loader2 className="animate-spin" size={18} />
+                  Processing...
+                </>
+              ) : (
+                "Save and Submit"
+              )}
+            </button>
+          </div>
+        }
+        centered
+        width={600}
+      >
+        <div className="py-4 space-y-4">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+            <p className="text-sm text-yellow-800 font-semibold">📅 {modifyModal.datesToModify ? `Modifying ${modifyModal.datesToModify.length} selected date(s).` : "Dates are locked and cannot be modified."}</p>
+            {!modifyModal.datesToModify && (
+              <p className="text-xs text-yellow-700 mt-1">
+                From: <strong>{dayjs(modifyModal.request?.fromDate).format("DD-MM-YYYY")}</strong> → To: <strong>{dayjs(modifyModal.request?.toDate).format("DD-MM-YYYY")}</strong>
+              </p>
+            )}
+            {modifyModal.datesToModify && (
+               <p className="text-xs text-yellow-700 mt-1">
+                 Selected: <strong>{modifyModal.datesToModify.map(d => dayjs(d).format("DD MMM")).join(", ")}</strong>
+               </p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-[#2B3674] mb-2">Title</label>
+            <input
+              type="text"
+              value={modifyFormData.title}
+              onChange={(e) => setModifyFormData({ ...modifyFormData, title: e.target.value })}
+              className="w-full px-4 py-3 bg-[#F4F7FE] border-none rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4318FF]/20 transition font-bold text-[#2B3674]"
+              placeholder="Request title"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-[#2B3674] mb-2">Description</label>
+            <textarea
+              value={modifyFormData.description}
+              onChange={(e) => setModifyFormData({ ...modifyFormData, description: e.target.value })}
+              rows={3}
+              className="w-full px-4 py-3 bg-[#F4F7FE] border-none rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4318FF]/20 transition font-bold text-[#2B3674] resize-none"
+              placeholder="Reason for modification"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-bold text-[#2B3674] mb-2">First Half</label>
+              <Select
+                value={modifyFormData.firstHalf}
+                onChange={(value) => setModifyFormData({ ...modifyFormData, firstHalf: value })}
+                className="w-full h-[48px]"
+                size="large"
+                options={[
+                  { label: "Office", value: "Office" },
+                  { label: "Leave", value: "Leave" },
+                  { label: "Work From Home", value: "Work From Home" },
+                  { label: "Client Visit", value: "Client Visit" },
+                ]}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-[#2B3674] mb-2">Second Half</label>
+              <Select
+                value={modifyFormData.secondHalf}
+                onChange={(value) => setModifyFormData({ ...modifyFormData, secondHalf: value })}
+                className="w-full h-[48px]"
+                size="large"
+                options={[
+                  { label: "Office", value: "Office" },
+                  { label: "Leave", value: "Leave" },
+                  { label: "Work From Home", value: "Work From Home" },
+                  { label: "Client Visit", value: "Client Visit" },
+                ]}
+              />
+            </div>
+          </div>
+
+          {/* Document Upload Section */}
+          <div className="mt-4">
+            <label className="block text-sm font-bold text-[#2B3674] mb-2">Supporting Documents</label>
+            <div className="bg-[#F4F7FE] rounded-2xl p-2 border border-blue-50">
+              <CommonMultipleUploader
+                key={`modify-uploader-${modifyModal.request?.id}`}
+                entityType="LEAVE_REQUEST"
+                entityId={modifyModal.request?.employeeId ? Number(modifyModal.request.employeeId) || Number(selectedEmployee?.id) || 0 : 0}
+                refId={modifyModal.request?.id || 0}
+                refType="DOCUMENT"
+                disabled={false}
+                fetchOnMount={true}
+                getFiles={getLeaveRequestFiles}
+                previewFile={previewLeaveRequestFile}
+                downloadFile={downloadLeaveRequestFile}
+              />
+            </div>
+          </div>
         </div>
       </Modal>
     </div>

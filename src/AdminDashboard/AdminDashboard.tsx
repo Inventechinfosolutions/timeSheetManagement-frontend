@@ -239,7 +239,7 @@ const AdminDashboard = () => {
           allRecords,
         );
         const totalHours = entries.reduce(
-          (acc, curr) => acc + (curr.totalHours || 0),
+          (acc, curr) => acc + Number(curr.totalHours || 0),
           0,
         );
 
@@ -276,7 +276,7 @@ const AdminDashboard = () => {
       return { totalHours: 0, todayPresent: 0, totalAbsent: 0 };
 
     const totalMinutes = allAttendance.reduce(
-      (acc, curr) => acc + (curr.totalHours || 0) * 60,
+      (acc, curr) => acc + Number(curr.totalHours || 0) * 60,
       0,
     );
 
@@ -332,9 +332,9 @@ const AdminDashboard = () => {
               : String(r.workingDate).split("T")[0];
           return rDate === dateStr;
         });
-        if (dayRecord) totalDayHours += dayRecord.totalHours || 0;
+        if (dayRecord) totalDayHours += Number(dayRecord.totalHours) || 0;
       });
-      return parseFloat(totalDayHours.toFixed(1));
+      return parseFloat((Number(totalDayHours) || 0).toFixed(1));
     });
 
     // 2. Employee Hours Comparison (Filtered)
@@ -342,7 +342,7 @@ const AdminDashboard = () => {
       .map((emp) => {
         const empId = emp.employeeId || emp.id;
         const records = employeeRecords[empId] || [];
-        const total = records.reduce((sum, r) => sum + (r.totalHours || 0), 0);
+        const total = records.reduce((sum, r) => sum + Number(r.totalHours || 0), 0);
         return { name: emp.fullName || emp.name || "Unknown", hours: total };
       })
       .sort((a, b) => {

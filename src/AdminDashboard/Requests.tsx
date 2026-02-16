@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../hooks";
+import { RootState } from "../store";
 import {
   CheckCircle,
   XCircle,
@@ -17,6 +18,8 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
+  Calendar,
+  RotateCcw,
 } from "lucide-react";
 import {
   getAllLeaveRequests,
@@ -25,10 +28,11 @@ import {
   getLeaveRequestFiles,
   previewLeaveRequestFile,
   downloadLeaveRequestFile,
-  getMonthlyLeaveRequests,
   rejectCancellationRequest,
   updateParentRequest,
   submitRequestModification,
+  clearAttendanceForRequest,
+  LeaveRequest,
 } from "../reducers/leaveRequest.reducer";
 import { getEntity } from "../reducers/employeeDetails.reducer";
 // } from "../reducers/leaveRequest.reducer";
@@ -41,7 +45,7 @@ import { fetchUnreadNotifications } from "../reducers/leaveNotification.reducer"
 import CommonMultipleUploader from "../EmployeeDashboard/CommonMultipleUploader";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import dayjs from "dayjs";
-import { notification, Select } from "antd";
+import { notification, Select, Modal } from "antd";
 import { fetchDepartments } from "../reducers/masterDepartment.reducer";
 
 const Requests = () => {
@@ -80,15 +84,15 @@ const Requests = () => {
     isOpen: boolean;
     id: number | null;
     status:
-      | "Approved"
-      | "Rejected"
-      | "Cancellation Approved"
-      | "Reject Cancellation"
-      | null;
+    | "Approved"
+    | "Rejected"
+    | "Cancellation Approved"
+    | "Reject Cancellation"
+    | "Modification Approved"
+    | "Modification Rejected"
+    | null;
     employeeName: string;
   }>({ isOpen: false, id: null, status: null, employeeName: "" });
-
-  // ... (skipping unchanged code) ...
 
   const handleUpdateStatus = (
     id: number,
@@ -96,7 +100,9 @@ const Requests = () => {
       | "Approved"
       | "Rejected"
       | "Cancellation Approved"
-      | "Reject Cancellation",
+      | "Reject Cancellation"
+      | "Modification Approved"
+      | "Modification Rejected",
     employeeName: string,
   ) => {
     setConfirmModal({ isOpen: true, id, status, employeeName });
@@ -135,6 +141,7 @@ const Requests = () => {
   //   "Finance",
   //   "Admin",
   // ];
+
 
   // Fetch master holidays on mount
   useEffect(() => {
@@ -523,6 +530,19 @@ const Requests = () => {
       // 1. Update Status first
       await dispatch(updateLeaveRequestStatus({ id, status })).unwrap();
 
+      // 1.1 Explicit Attendance Clearance for Visibility in Network Logs
+      if (status === "Cancellation Approved") {
+        try {
+          if (request?.employeeId) {
+            await dispatch(clearAttendanceForRequest({ id, employeeId: request.employeeId })).unwrap();
+            console.log(`[CLEAR_ATTENDANCE] Dedicated API call successful for Request ${id}`);
+          }
+        } catch (err) {
+          console.error(`[CLEAR_ATTENDANCE] ❌ Failed to explicitly clear attendance:`, err);
+          // Non-blocking error for the UI status update
+        }
+      }
+
       // 2. Smart Cancellation Logic (Only if Cancellation Approved)
       if (status === "Cancellation Approved" && request) {
         // Find the parent request (Approved, matching employee, covering dates)
@@ -636,7 +656,9 @@ const Requests = () => {
       }
 
       // 3. Attendance Update Logic
-      if (request) {
+      // IMPORTANT: Skip attendance API calls for Cancellation Approved
+      // Backend already clears all fields (status, totalHours, workLocation, sourceRequestId, firstHalf, secondHalf)
+      if (request && status !== "Cancellation Approved") {
         const startDate = dayjs(request.fromDate);
         const endDate = dayjs(request.toDate);
         const diffDays = endDate.diff(startDate, "day");
@@ -661,8 +683,6 @@ const Requests = () => {
             continue;
           }
 
-          // Identify the correct sourceRequestId for attendance update
-          // If it's a cancellation approval, we must use the master request ID that owns the attendance record
           let targetSourceRequestId = request.id;
           if (status === "Cancellation Approved") {
             const childRequest = request;
@@ -695,12 +715,7 @@ const Requests = () => {
             totalHours: null, // Default to null per user request
           };
 
-          if (status === "Cancellation Approved") {
-            // RESET Logic: Explicitly set fields to null to revert attendance
-            attendanceData.status = null;
-            attendanceData.workLocation = null;
-            attendanceData.totalHours = null;
-          } else if (status === "Approved") {
+          if (status === "Approved") {
             // APPROVAL Logic
             if (
               request.requestType === "Apply Leave" ||
@@ -911,14 +926,20 @@ const Requests = () => {
     switch (status) {
       case "Approved":
       case "Cancellation Approved":
+      case "Modification Approved":
         return "bg-green-50 text-green-600 border-green-200";
+      case "Modification Cancelled":
+        return "bg-orange-100 text-orange-600 border-orange-200";
       case "Rejected":
       case "Cancellation Rejected":
+      case "Modification Rejected":
         return "bg-red-50 text-red-600 border-red-200";
       case "Requesting for Cancellation":
-        return "bg-yellow-100 text-yellow-700 border-yellow-300";
+        return "bg-orange-100 text-orange-600 border-orange-200";
+      case "Requesting for Modification":
+        return "bg-orange-100 text-orange-600 border-orange-200";
       case "Request Modified":
-        return "bg-orange-50 text-orange-600 border-orange-200";
+        return "bg-orange-100 text-orange-600 border-orange-200";
       default:
         return "bg-yellow-50 text-yellow-600 border-yellow-200";
     }
@@ -1139,6 +1160,9 @@ const Requests = () => {
                   Request Type
                 </th>
                 <th className="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider">
+                  Duration Type
+                </th>
+                <th className="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider">
                   Department
                 </th>
                 <th className="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider">
@@ -1205,16 +1229,86 @@ const Requests = () => {
                     <td className="px-6 py-4 text-center">
                       <div className="flex items-center justify-center gap-2">
                         <div className="p-1.5 bg-gray-50 rounded-lg group-hover:bg-white transition-colors">
-                          {getIcon(req.requestType)}
+                          {(() => {
+                            // Determine icon based on combined activities
+                            const hasWFH = req.firstHalf === "Work From Home" || req.secondHalf === "Work From Home";
+                            const hasCV = req.firstHalf === "Client Visit" || req.secondHalf === "Client Visit";
+                            const hasLeave = req.firstHalf === "Leave" || req.secondHalf === "Leave" || req.firstHalf === "Apply Leave" || req.secondHalf === "Apply Leave";
+                            
+                            if (hasWFH && hasLeave) return <Home size={16} className="text-green-600" />;
+                            if (hasCV && hasLeave) return <MapPin size={16} className="text-orange-600" />;
+                            if (req.requestType === "Work From Home") return <Home size={16} className="text-green-600" />;
+                            if (req.requestType === "Client Visit") return <MapPin size={16} className="text-orange-600" />;
+                            if (req.requestType === "Apply Leave" || req.requestType === "Leave") return <Calendar size={16} className="text-blue-600" />;
+                            if (req.requestType === "Half Day") return <Calendar size={16} className="text-pink-600" />;
+                            return <Briefcase size={16} className="text-gray-600" />;
+                          })()}
                         </div>
-                        <span className="text-sm font-semibold text-[#2B3674]">
-                          {req.requestType === "Apply Leave"
-                            ? "Leave"
-                            : req.requestType === "Half Day"
-                              ? "Half Day Leave"
-                              : req.requestType}
+                        <span className="text-sm font-semibold text-[#2B3674] flex items-center gap-2">
+                          {(() => {
+                            // Show combined activities for split-day requests
+                            if (req.isHalfDay && req.firstHalf && req.secondHalf) {
+                              const activities = [req.firstHalf, req.secondHalf]
+                                .map(a => a === "Apply Leave" ? "Leave" : a)
+                                .filter(a => a && a !== "Office")
+                                .filter((value, index, self) => self.indexOf(value) === index);
+                              
+                              if (activities.length > 1) {
+                                // Replace "Leave" with "Half Day Leave" in combined activities
+                                return activities.map(a => a === "Leave" ? "Half Day Leave" : a).join(" + ");
+                              }
+                              if (activities.length === 1) {
+                                // For single activity that is "Leave", show "Half Day Leave"
+                                return activities[0] === "Leave" ? "Half Day Leave" : activities[0];
+                              }
+                            }
+                            
+                            // Default display
+                            if (req.requestType === "Apply Leave" || req.requestType === "Leave") {
+                              return req.isHalfDay ? "Half Day Leave" : "Leave";
+                            }
+                            if (req.requestType === "Half Day") return "Half Day Leave";
+                            return req.requestType;
+                          })()}
+                          {req.isModified && (
+                            <span className="bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter shadow-sm border border-orange-200">
+                              Modified
+                            </span>
+                          )}
                         </span>
                       </div>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className={`text-xs font-bold px-3 py-1 rounded-full ${
+                        (() => {
+                          if (req.isHalfDay && req.firstHalf && req.secondHalf) {
+                            const isSame = req.firstHalf === req.secondHalf;
+                            if (isSame) return 'bg-blue-100 text-blue-700';
+                            return 'bg-purple-100 text-purple-700';
+                          }
+                          return 'bg-blue-100 text-blue-700';
+                        })()
+                      }`}>
+                        {(() => {
+                          if (req.isHalfDay && req.firstHalf && req.secondHalf) {
+                            const first = req.firstHalf === "Apply Leave" ? "Leave" : req.firstHalf;
+                            const second = req.secondHalf === "Apply Leave" ? "Leave" : req.secondHalf;
+                            
+                            if (first === second && first !== "Office") {
+                              return 'Full Day';
+                            }
+                            
+                            // Filter out Office
+                            const parts = [];
+                            if (first && first !== "Office") parts.push(`First Half = ${first}`);
+                            if (second && second !== "Office") parts.push(`Second Half = ${second}`);
+                            
+                            if (parts.length > 0) return parts.join(' & ');
+                            return 'Full Day';
+                          }
+                          return 'Full Day';
+                        })()}
+                      </span>
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span className="text-xs font-bold text-gray-500 bg-gray-100/50 px-2 py-1 rounded-md">
@@ -1256,6 +1350,12 @@ const Requests = () => {
                       <span
                         className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all inline-flex items-center gap-1.5 ${getStatusColor(req.status)}`}
                       >
+                        {(req.status === "Pending" || req.status === "Requesting for Modification") && (
+                          <RotateCcw
+                            size={12}
+                            className="animate-spin-slow"
+                          />
+                        )}
                         {req.status}
                         {req.status === "Request Modified" &&
                           req.requestModifiedFrom && (
@@ -1355,6 +1455,36 @@ const Requests = () => {
                               }
                               className="p-2 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
                               title="Reject Cancellation"
+                            >
+                              <XCircle size={20} />
+                            </button>
+                          </>
+                        )}
+                        {req.status === "Requesting for Modification" && (
+                          <>
+                            <button
+                              onClick={() =>
+                                handleUpdateStatus(
+                                  req.id,
+                                  "Modification Approved",
+                                  req.fullName || "Employee",
+                                )
+                              }
+                              className="p-2 text-green-600 bg-green-50/50 hover:bg-green-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-green-200 active:scale-90"
+                              title="Approve Modification"
+                            >
+                              <CheckCircle size={20} />
+                            </button>
+                            <button
+                              onClick={() =>
+                                handleUpdateStatus(
+                                  req.id,
+                                  "Modification Rejected",
+                                  req.fullName || "Employee",
+                                )
+                              }
+                              className="p-2 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
+                              title="Reject Modification"
                             >
                               <XCircle size={20} />
                             </button>
@@ -1522,7 +1652,8 @@ const Requests = () => {
                       "Requesting for Cancellation"
                       ? "bg-red-500 hover:bg-red-600 shadow-red-200 active:scale-95"
                       : confirmModal.status === "Approved" ||
-                          confirmModal.status === "Cancellation Approved"
+                          confirmModal.status === "Cancellation Approved" ||
+                          confirmModal.status === "Modification Approved"
                         ? "bg-green-500 hover:bg-green-600 shadow-green-200 active:scale-95"
                         : "bg-red-500 hover:bg-red-600 shadow-red-200 active:scale-95"
                   }`}
@@ -1534,13 +1665,14 @@ const Requests = () => {
                     </>
                   ) : (
                     <>
-                      {confirmModal.status === "Approved"
+                      {confirmModal.status === "Approved" || confirmModal.status === "Modification Approved"
                         ? entities.find((e) => e.id === confirmModal.id)
                             ?.status === "Requesting for Cancellation"
                           ? "Confirm Reject" // Special text for this specific case
                           : "Confirm Approve"
                         : confirmModal.status === "Rejected" ||
-                            confirmModal.status === "Reject Cancellation"
+                            confirmModal.status === "Reject Cancellation" ||
+                            confirmModal.status === "Modification Rejected"
                           ? "Confirm Reject"
                           : "Confirm Approve"}
                     </>
@@ -1552,138 +1684,184 @@ const Requests = () => {
         </div>
       )}
       {/* View Request Modal */}
-      {isViewModalOpen && selectedRequest && (
-        <div className="fixed inset-0 z-100 flex items-start justify-center p-4 pt-20">
-          <div
-            className="absolute inset-0 bg-[#2B3674]/30 backdrop-blur-sm"
-            onClick={() => setIsViewModalOpen(false)}
-          />
-          <div className="relative w-full max-w-xl bg-white rounded-[32px] overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-300 flex flex-col max-h-[85vh]">
-            {/* Modal Header */}
-            <div className="pt-1 px-4 pb-0 shrink-0">
-              <div className="flex justify-between items-start mb-0">
-                <button
-                  onClick={() => setIsViewModalOpen(false)}
-                  className="p-1 hover:bg-gray-100 rounded-full transition-colors ml-auto"
-                >
-                  <X size={20} className="text-gray-700" />
-                </button>
-              </div>
-              <div className="flex justify-between items-center px-1 border-b border-gray-100 pb-3 mb-3">
-                <span className="text-lg font-black uppercase tracking-widest text-gray-400">
-                  Viewing Application
-                </span>
-                <h2 className="text-3xl font-black text-[#2B3674]">
-                  {selectedRequest.requestType === "Apply Leave"
-                    ? "Leave"
-                    : selectedRequest.requestType === "Half Day"
-                      ? "Half Day Leave"
-                      : selectedRequest.requestType}
-                </h2>
-              </div>
+      <Modal
+        open={isViewModalOpen && !!selectedRequest}
+        onCancel={() => setIsViewModalOpen(false)}
+        footer={null}
+        closable={false}
+        centered
+        width={700}
+        className="application-modal"
+      >
+        <div className="relative overflow-hidden bg-white rounded-[16px]">
+          {/* Modal Header */}
+          <div className="pt-1 px-4 pb-0 shrink-0">
+            <div className="flex justify-between items-start mb-0">
+              <button
+                onClick={() => setIsViewModalOpen(false)}
+                className="p-1 hover:bg-gray-100 rounded-full transition-colors ml-auto"
+              >
+                <X size={20} className="text-gray-700" />
+              </button>
             </div>
-
-            {/* Modal Body */}
-            <div className="p-6 space-y-2 overflow-y-auto custom-scrollbar flex-1">
-              {/* Title Field */}
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-[#2B3674] ml-1">
-                  Title
-                </label>
-                <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none break-words">
-                  {selectedRequest.title}
-                </div>
-              </div>
-
-              {/* Dates Row */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-[#2B3674] ml-1">
-                    Start Date
-                  </label>
-                  <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] text-center">
-                    {dayjs(selectedRequest.fromDate).format("DD-MM-YYYY")}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-[#2B3674] ml-1">
-                    End Date
-                  </label>
-                  <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] text-center">
-                    {dayjs(selectedRequest.toDate).format("DD-MM-YYYY")}
-                  </div>
-                </div>
-              </div>
-
-              {/* Duration Field */}
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-[#2B3674] ml-1">
-                  Duration
-                </label>
-                <div className="w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] font-bold text-[#4318FF] flex items-center justify-between">
-                  <span>Total Days:</span>
-                  <span className="bg-white px-4 py-1 rounded-lg shadow-sm border border-blue-100">
-                    {(() => {
-                      // For Client Visit, WFH, and Leave, recalculate duration excluding weekends and holidays
-                      if (
-                        selectedRequest.requestType === "Client Visit" ||
-                        selectedRequest.requestType === "Work From Home" ||
-                        selectedRequest.requestType === "Apply Leave" ||
-                        selectedRequest.requestType === "Leave"
-                      ) {
-                        return calculateDurationExcludingWeekends(
-                          selectedRequest.fromDate,
-                          selectedRequest.toDate,
-                        );
-                      } else {
-                        // For other types, use stored duration or calculate including all days
-                        return (
-                          selectedRequest.duration ||
-                          dayjs(selectedRequest.toDate).diff(
-                            dayjs(selectedRequest.fromDate),
-                            "day",
-                          ) + 1
-                        );
-                      }
-                    })()}{" "}
-                    Day(s)
-                  </span>
-                </div>
-              </div>
-
-              {/* Description Field */}
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-[#2B3674] ml-1">
-                  Description
-                </label>
-                <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-medium text-[#2B3674] min-h-[60px] whitespace-pre-wrap break-words leading-relaxed">
-                  {selectedRequest.description || "No description provided."}
-                </div>
-              </div>
-
-              {/* Supporting Documents (Gallery View) */}
-              <div className="space-y-1">
-                <label className="text-sm font-bold text-[#2B3674] ml-1">
-                  Supporting Documents
-                </label>
-                <CommonMultipleUploader
-                  entityType="LEAVE_REQUEST"
-                  entityId={selectedOwnerId || 0}
-                  refId={selectedRequest.id}
-                  refType="DOCUMENT"
-                  disabled={true}
-                  fetchOnMount={true}
-                  getFiles={getLeaveRequestFiles}
-                  previewFile={previewLeaveRequestFile}
-                  downloadFile={downloadLeaveRequestFile}
-                />
-              </div>
+            <div className="flex justify-between items-center px-1 border-b border-gray-100 pb-3 mb-3">
+              <span className="text-lg font-black uppercase tracking-widest text-gray-400">
+                Viewing Application
+              </span>
+              <h2 className="text-3xl font-black text-[#2B3674]">
+                {selectedRequest && (selectedRequest.requestType === "Apply Leave"
+                  ? "Leave"
+                  : selectedRequest.requestType === "Half Day"
+                    ? "Half Day Leave"
+                    : selectedRequest.requestType)}
+              </h2>
             </div>
           </div>
+
+          {/* Modal Body */}
+          <div className="p-6 space-y-5 overflow-y-auto custom-scrollbar max-h-[75vh]">
+            {selectedRequest && (
+              <>
+                {/* Title Field */}
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-[#2B3674] ml-1">
+                    Title
+                  </label>
+                  <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none wrap-break-word">
+                    {selectedRequest.title}
+                  </div>
+                </div>
+
+                {/* Dates Row */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-[#2B3674] ml-1">
+                      Start Date
+                    </label>
+                    <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] text-center">
+                      {dayjs(selectedRequest.fromDate).format("DD-MM-YYYY")}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-[#2B3674] ml-1">
+                      End Date
+                    </label>
+                    <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] text-center">
+                      {dayjs(selectedRequest.toDate).format("DD-MM-YYYY")}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Duration Field */}
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-[#2B3674] ml-1">
+                    Duration
+                  </label>
+                  <div className="w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] font-bold text-[#4318FF] flex items-center justify-between">
+                    <span>Total Days:</span>
+                    <span className="bg-white px-4 py-1 rounded-lg shadow-sm border border-blue-100">
+                      {(() => {
+                        // For Client Visit, WFH, and Leave, recalculate duration excluding weekends and holidays
+                        if (
+                          selectedRequest.requestType === "Client Visit" ||
+                          selectedRequest.requestType === "Work From Home" ||
+                          selectedRequest.requestType === "Apply Leave" ||
+                          selectedRequest.requestType === "Leave"
+                        ) {
+                          return calculateDurationExcludingWeekends(
+                            selectedRequest.fromDate,
+                            selectedRequest.toDate,
+                          );
+                        } else {
+                          // For other types, use stored duration or calculate including all days
+                          return (
+                            selectedRequest.duration ||
+                            dayjs(selectedRequest.toDate).diff(
+                              dayjs(selectedRequest.fromDate),
+                              "day",
+                            ) + 1
+                          );
+                        }
+                      })()}{" "}
+                      Day(s)
+                    </span>
+                  </div>
+                </div>
+
+                {/* Split-Day Information (View Mode Only) */}
+                {selectedRequest?.isHalfDay && (selectedRequest?.firstHalf || selectedRequest?.secondHalf) && (
+                  (() => {
+                    const isBothSame = selectedRequest.firstHalf === selectedRequest.secondHalf;
+                    return (
+                      <div className="space-y-2 p-4 bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-50 rounded-2xl border-2 border-blue-200">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Clock size={18} className="text-blue-600" />
+                          <label className="text-sm font-black text-blue-900 uppercase tracking-wider">
+                            Day Details
+                          </label>
+                        </div>
+                        {isBothSame ? (
+                          <div className="bg-white p-3 rounded-xl shadow-sm border border-blue-100 flex items-center justify-between">
+                            <p className="text-sm font-extrabold text-blue-700">Full Day</p>
+                            <span className="text-xs font-bold text-blue-500 bg-blue-50 px-3 py-1 rounded-lg">
+                              {selectedRequest.firstHalf}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-white p-3 rounded-xl shadow-sm border border-blue-100">
+                              <p className="text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wide">First Half</p>
+                              <p className="text-sm font-extrabold text-blue-700">
+                                {selectedRequest.firstHalf || 'N/A'}
+                              </p>
+                            </div>
+                            <div className="bg-white p-3 rounded-xl shadow-sm border border-purple-100">
+                              <p className="text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wide">Second Half</p>
+                              <p className="text-sm font-extrabold text-purple-700">
+                                {selectedRequest.secondHalf || 'N/A'}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()
+                )}
+
+                {/* Description Field */}
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-[#2B3674] ml-1">
+                    Description
+                  </label>
+                  <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-medium text-[#2B3674] min-h-[60px] whitespace-pre-wrap wrap-break-word leading-relaxed">
+                    {selectedRequest.description || "No description provided."}
+                  </div>
+                </div>
+
+                {/* Supporting Documents (Gallery View) */}
+                <div className="space-y-1">
+                  <label className="text-sm font-bold text-[#2B3674] ml-1">
+                    Supporting Documents
+                  </label>
+                  <CommonMultipleUploader
+                    entityType="LEAVE_REQUEST"
+                    entityId={selectedOwnerId || 0}
+                    refId={selectedRequest.id}
+                    refType="DOCUMENT"
+                    disabled={true}
+                    fetchOnMount={true}
+                    getFiles={getLeaveRequestFiles}
+                    previewFile={previewLeaveRequestFile}
+                    downloadFile={downloadLeaveRequestFile}
+                  />
+                </div>
+              </>
+            )}
+          </div>
         </div>
-      )}
-    </div>
-  );
+      </Modal>
+      </div>
+    );
 };
 
 export default Requests;

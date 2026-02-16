@@ -11,6 +11,7 @@ interface MobileMyTimesheetProps {
   onHoursInput: (index: number, value: string) => void;
   onSave: () => void;
   onAutoUpdate?: () => void;
+  autoUpdateCount?: number;
   monthTotalHours: number;
   currentMonthName: string;
   loading: boolean;
@@ -38,6 +39,7 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
   onHoursInput,
   onSave,
   onAutoUpdate,
+  autoUpdateCount = 0,
   monthTotalHours,
   currentMonthName,
   loading,
@@ -46,7 +48,7 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
   isManagerView,
   readOnly,
   blockers,
-  isDateBlocked,
+  // isDateBlocked, // Removed unused prop to fix lint warning
   isEditableMonth,
   isHoliday,
 
@@ -86,7 +88,7 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
               Total:
             </span>
             <span className="text-xl font-black text-[#4318FF]">
-              {monthTotalHours.toFixed(1)}{" "}
+              {(Number(monthTotalHours) || 0).toFixed(1)}{" "}
               <span className="text-[10px]">hrs</span>
             </span>
           </div>
@@ -96,10 +98,18 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
              {onAutoUpdate && (
               <button
                 onClick={onAutoUpdate}
-                className="flex items-center justify-center p-3 bg-white text-[#4318FF] border border-[#4318FF]/20 rounded-2xl shadow-sm active:scale-95 transition-all"
-                title="Auto Update"
+                disabled={autoUpdateCount === 0}
+                className={`flex items-center justify-center p-3 bg-white text-[#4318FF] border border-[#4318FF]/20 rounded-2xl shadow-sm active:scale-95 transition-all ${autoUpdateCount === 0 ? "opacity-30 grayscale cursor-not-allowed" : ""}`}
+                title={autoUpdateCount > 0 ? `Auto Fill ${autoUpdateCount} days` : "No eligible days"}
               >
-                <Rocket size={18} strokeWidth={2.5} className="animate-pulse" />
+                <div className="relative">
+                  <Rocket size={18} strokeWidth={2.5} className={autoUpdateCount > 0 ? "animate-pulse" : ""} />
+                  {autoUpdateCount > 0 && (
+                    <span className="absolute -top-3 -right-3 bg-red-500 text-white text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center border-2 border-white">
+                      {autoUpdateCount}
+                    </span>
+                  )}
+                </div>
               </button>
             )}
             <button
@@ -149,13 +159,11 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
               });
 
               const isBlocked = !!blocker;
-              const isBlockedByRequest = !!entry.sourceRequestId && (entry.status as string)?.toLowerCase() === "half day";
               
               const isEditable =
                 (isAdmin || !readOnly) &&
                 (isAdmin || isEditableMonth(entry.fullDate)) &&
-                !isBlocked &&
-                (isAdmin || isManager || !isBlockedByRequest);
+                !isBlocked;
 
               // Styling logic (Matching MobileResponsiveCalendarPage)
               let bg = "bg-white text-gray-600 border-gray-200"; // Default
@@ -168,8 +176,9 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
                 bg =
                   "bg-gray-200 border border-gray-400 text-gray-500 font-bold";
               } else if (
-                entry.status === "Full Day" ||
-                entry.status === "WFH"
+                (entry.status || "").toLowerCase().includes("wfh") || 
+                (entry.status || "").toLowerCase().includes("work from home") ||
+                (entry.status || "").toLowerCase().includes("full day")
               ) {
                 bg =
                   "bg-green-100 border border-green-500 text-black font-bold";
@@ -239,8 +248,8 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
                       {entry.date}
                     </div>
 
-                    {/* Lock Icon for Requests/Leave */}
-                    {((isBlockedByRequest && !isAdmin && !isManager) || (entry.status === "Leave" && !isAdmin && !isManager)) && (
+                    {/* Lock Icon for Admin Blockers or Month-end Locks */}
+                    {(isBlocked || (!isAdmin && !isEditableMonth(entry.fullDate))) && (
                         <div className="absolute -top-1 -left-1 p-1 rounded-full bg-red-50 text-red-500 border border-red-100 z-10">
                             <Lock size={8} strokeWidth={3} />
                         </div>
@@ -281,10 +290,11 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
         </div>
       </div>
 
-      {/* Legend - Minimized for mobile */}
       <div className="pt-4 flex flex-wrap justify-center gap-x-3 gap-y-2 mb-2">
         {[
           { label: "Present", className: "bg-green-100 border-green-600" },
+          { label: "WFH", className: "bg-blue-100 border-blue-600" },
+          { label: "Client Visit", className: "bg-blue-100 border-blue-600" },
           { label: "Half Day Leave", className: "bg-orange-100 border-orange-600" },
           { label: "Leave", className: "bg-red-200 border-red-600" },
           { label: "Not Updated", className: "bg-white border-gray-300" },

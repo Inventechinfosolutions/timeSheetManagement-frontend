@@ -36,6 +36,7 @@ const SidebarLayout = ({
 
   // Get employee details from Redux
   const { entity } = useAppSelector((state) => state.employeeDetails);
+  const { currentUser } = useAppSelector((state) => state.user);
 
   // Determine active tab from URL if not explicitly provided
   const derivedActiveTab = useMemo(() => {
@@ -143,7 +144,7 @@ const SidebarLayout = ({
             <AlarmClock className="w-6 h-6 text-white" />
           </div>
           <span className="text-xl font-bold text-white tracking-tight">
-            Employee
+            {currentUser?.userType === "ADMIN" ? "Admin" : currentUser?.userType === "MANAGER" ? "Manager" : "Employee"}
           </span>
         </div>
         {/* Branding & Lock Toggle - Desktop Only */}
@@ -175,7 +176,7 @@ const SidebarLayout = ({
                 {entity?.employeeId || "EMP001"}
               </span>
               <span className="text-[10px] font-medium text-blue-100 uppercase tracking-widest whitespace-nowrap">
-                Employee
+                {currentUser?.userType === "ADMIN" ? "Admin" : currentUser?.userType === "MANAGER" ? "Manager" : "Employee"}
               </span>
             </div>
           </div>

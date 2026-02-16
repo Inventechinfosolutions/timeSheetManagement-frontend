@@ -62,7 +62,7 @@ const AutoUpdateModal: React.FC<AutoUpdateModalProps> = ({
         <div className="p-6 space-y-5">
           <div className="bg-blue-50/50 rounded-2xl p-4 border border-blue-100">
             <p className="text-sm text-gray-600 leading-relaxed text-center font-medium">
-              This will automatically fill <span className="text-[#4318FF] font-black">9 hours</span> for all eligible working days in the current month up to today.
+              This will automatically fill <span className="text-[#4318FF] font-black">9 hours and location to office</span> for all eligible working days in the current month up to today.
             </p>
           </div>
 
