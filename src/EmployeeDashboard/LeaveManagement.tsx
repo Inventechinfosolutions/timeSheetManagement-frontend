@@ -312,17 +312,8 @@ const LeaveManagement = () => {
   // Helper function to check if a date is a weekend
   const isWeekend = (date: dayjs.Dayjs): boolean => {
     const day = date.day(); // 0 = Sunday
-    const userDept = entity?.department || "";
-
-    // Always block Sunday
-    if (day === 0) return true;
-
-    // Block Saturday ONLY if department is Information Technology
-    if (userDept === "Information Technology" && day === 6) {
-      return true;
-    }
-
-    return false;
+    // Block Saturday (6) and Sunday (0) for EVERYONE
+    return day === 0 || day === 6;
   };
 
   // Helper function to check if a date is a master holiday

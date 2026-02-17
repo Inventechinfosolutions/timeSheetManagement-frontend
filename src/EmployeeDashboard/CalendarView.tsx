@@ -6,7 +6,6 @@ import {
   Download,
   X,
   Calendar as CalendarIcon,
-  AlertCircle,
   Loader2,
   ShieldBan,
 } from "lucide-react";
@@ -318,14 +317,20 @@ const Calendar = ({
         return rDate.toISOString().split("T")[0] === dateStr;
       });
 
-      if (entry) {
-        const h1 = (entry.firstHalf || "").toLowerCase();
-        const h2 = (entry.secondHalf || "").toLowerCase();
-        const isRestricted = (val: string) =>
-          val && !val.includes("office") && val.trim() !== "";
+        if (entry) {
+          const h1 = (entry.firstHalf || "").toLowerCase();
+          const h2 = (entry.secondHalf || "").toLowerCase();
+          const isRestricted = (val: string) =>
+            val &&
+            !val.includes("office") &&
+            !val.includes("not updated") &&
+            !val.includes("upcoming") &&
+            !val.includes("holiday") &&
+            !val.includes("weekend") &&
+            val.trim() !== "";
 
-        if (isRestricted(h1) || isRestricted(h2)) return true;
-      }
+          if (isRestricted(h1) || isRestricted(h2)) return true;
+        }
     }
 
     return false;
@@ -361,15 +366,21 @@ const Calendar = ({
         return rDate.toISOString().split("T")[0] === dateStr;
       });
 
-      if (entry) {
-        const h1 = (entry.firstHalf || "").toLowerCase();
-        const h2 = (entry.secondHalf || "").toLowerCase();
-        const isRestricted = (val: string) =>
-          val && !val.includes("office") && val.trim() !== "";
+        if (entry) {
+          const h1 = (entry.firstHalf || "").toLowerCase();
+          const h2 = (entry.secondHalf || "").toLowerCase();
+          const isRestricted = (val: string) =>
+            val &&
+            !val.includes("office") &&
+            !val.includes("not updated") &&
+            !val.includes("upcoming") &&
+            !val.includes("holiday") &&
+            !val.includes("weekend") &&
+            val.trim() !== "";
 
-        if (isRestricted(h1) || isRestricted(h2))
-          return "Restricted Activity (Leave/WFH)";
-      }
+          if (isRestricted(h1) || isRestricted(h2))
+            return "Restricted Activity (Leave/WFH)";
+        }
     }
 
     return null;
@@ -801,8 +812,12 @@ const Calendar = ({
                 cellClass = `bg-white ring-2 ring-[#4318FF] shadow-lg shadow-blue-200 z-10 ${baseHover}`;
                 // textClass = "text-[#4318FF]";
                 if (statusLabel === "-") statusLabel = "";
-              } else if (holiday) {
-                // Master holidays take priority over everything (Leave, WFH, Client Visit, etc.)
+              } else if ((entry?.status as any) === "Absent") {
+                cellClass = `bg-red-50 border-transparent hover:bg-red-100 ${baseHover}`;
+                // textClass = "text-red-700 font-bold";
+                statusLabel = "ABSENT";
+              } else if (holiday && (!entry?.totalHours || Number(entry.totalHours) === 0)) {
+                // Master holidays take priority over everything (Leave, WFH, Client Visit, etc.) ONLY if no work hours
                 cellClass = `bg-blue-50 border-transparent hover:bg-blue-100 ${baseHover}`;
                 // textClass = "text-blue-700 font-bold";
                 statusLabel = holiday.name;
@@ -988,7 +1003,7 @@ const Calendar = ({
                     {day}
                   </span>
 
-                  {isBlocked && (
+                  {isBlocked && (entry?.status as any) !== "Absent" && (
                     <div className="absolute top-2 right-2 z-10 transition-transform hover:scale-110">
                       <ShieldBan
                         size={14}
@@ -1015,8 +1030,8 @@ const Calendar = ({
                         </div>
                       </div>
                     )}
-
-                    {!isBlocked && entry?.totalHours ? (
+                    
+                    {!isBlocked && (entry?.totalHours || entry?.totalHours === 0) ? (
                       <div className="text-center">
                         <span
                           className={`text-2xl font-medium text-gray-800 leading-none`}
@@ -1042,8 +1057,12 @@ const Calendar = ({
 
                   <div
                     className={`text-[10px] font-bold uppercase truncate w-full text-center px-1 py-1 rounded-md mt-1 backdrop-blur-sm z-10                         ${
-                           holiday
-                               ? "text-white bg-[#1890FF]/70"
+                            entry?.status === "Absent"
+                                ? "text-white bg-[#EE5D50]/70"
+                                : holiday
+                                    ? (entry?.totalHours && Number(entry.totalHours) > 0)
+                                        ? "text-white bg-[#01B574]"
+                                        : "text-white bg-[#1890FF]/70"
                                : isSplitDay
                                  ? (isWorkLoc((entry as any).firstHalf) && isWorkLoc((entry as any).secondHalf))
                                      ? "text-white bg-[#01B574]" // Green for Full Working split
@@ -1061,7 +1080,7 @@ const Calendar = ({
                                        ? "text-white bg-[#4318FF]/70"
                                        : isIncomplete && statusLabel
                                          ? "text-white bg-[#64748B]/90"
-                                         : entry?.status === "Absent"
+                                         : (entry?.status as any) === "Absent"
                                            ? "text-white bg-[#EE5D50]/70"
                                            : entry?.isWeekend
                                              ? "text-white bg-red-400/70"
@@ -1069,8 +1088,10 @@ const Calendar = ({
                          }
                     `}
                   >
-                    {holiday
-                        ? holiday.name
+                    {(entry?.status as any) === "Absent"
+                        ? "ABSENT"
+                        : holiday && (!entry?.totalHours || Number(entry.totalHours) === 0)
+                            ? holiday.name
                         : isSplitDay
                           ? (isWorkLoc((entry as any).firstHalf) && isWorkLoc((entry as any).secondHalf))
                               ? "FULL DAY"

@@ -233,7 +233,7 @@ export const checkEntryBlock = createAsyncThunk(
   },
 );
 
-// 4.5. Fetch Attendance By Date Range: GET /date-range/:employeeId/:startDate/:endDate
+// 6. Fetch Attendance By Date Range: GET /date-range/:employeeId/:startDate/:endDate
 export const fetchAttendanceByDateRange = createAsyncThunk(
   "attendance/fetchByDateRange",
   async ({
