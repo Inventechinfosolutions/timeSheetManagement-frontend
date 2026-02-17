@@ -90,7 +90,7 @@ export const mapStatus = (
         
         // Handle Leave with hours
         if ((statusStr === AttendanceStatus.LEAVE || statusStr === 'Leave') && totalHours && totalHours > 0) {
-             return totalHours > 4.5 ? 'Full Day' : 'Half Day';
+             return totalHours > 6 ? 'Full Day' : 'Half Day';
         }
         
         // Direct status mappings (handle both enum and string)
@@ -146,64 +146,6 @@ export const mapAttendanceToEntry = (
     const firstHalf = attendance?.firstHalf || (attendance as any)?.first_half;
     const secondHalf = attendance?.secondHalf || (attendance as any)?.second_half;
 
-    const getBadgeLocation = (
-        statusStr: string | undefined,
-        h1: string | null | undefined,
-        h2: string | null | undefined
-    ): string | undefined => {
-        if (!statusStr) return undefined;
-        if (statusStr === 'Weekend' || statusStr === 'Holiday' || statusStr === 'Absent' || statusStr === 'Not Updated' || statusStr === 'Blocked') {
-            return undefined;
-        }
-        
-        const h1Lower = (h1 || '').toLowerCase().trim();
-        const h2Lower = (h2 || '').toLowerCase().trim();
-        
-        const normalize = (val: string): string => {
-            const low = val.toLowerCase();
-            if (low.includes('wfh') || low.includes('work from home')) return 'WFH';
-            if (low.includes('client') || low.includes('visit')) return 'Client Visit';
-            if (low.includes('office')) return 'Office';
-            return val;
-        };
-
-        const isWork = (val: string) => 
-            val.includes('office') || 
-            val.includes('wfh') || 
-            val.includes('work from home') ||
-            val.includes('client') || 
-            val.includes('visit') ||
-            val.includes('present');
-
-        const isLeave = (val: string) => val.includes('leave');
-
-        // Both same work activity
-        if (h1Lower === h2Lower && isWork(h1Lower)) {
-            return `${normalize(h1!)} (Full Day)`;
-        }
-
-        // Half Day case: One work + one leave
-        if (isWork(h1Lower) && isLeave(h2Lower)) {
-            return `Office / Leave`;
-        }
-        if (isLeave(h1Lower) && isWork(h2Lower)) {
-            return `Office / Leave`;
-        }
-
-        // Both Leave
-        if (isLeave(h1Lower) && isLeave(h2Lower)) {
-            return 'Leave';
-        }
-
-        // Two different work activities (Mixed Day)
-        if (isWork(h1Lower) && isWork(h2Lower) && h1Lower !== h2Lower) {
-            return 'Full Day'; // Mixed location, so just status
-        }
-
-        // Default to status only if it's already a descriptive status
-        return statusStr;
-    };
-
     const workLocation = getBadgeLocation(status, firstHalf, secondHalf);
 
     return {
@@ -224,6 +166,60 @@ export const mapAttendanceToEntry = (
         secondHalf,
         isSavedLogout: !!attendance?.logoutTime && attendance.logoutTime !== "00:00:00" && !attendance.logoutTime.includes("NaN"),
     } as TimesheetEntry;
+};
+
+export const getBadgeLocation = (
+    statusStr: string | undefined,
+    h1: string | null | undefined,
+    h2: string | null | undefined
+): string | undefined => {
+    if (!statusStr) return undefined;
+    if (statusStr === 'Weekend' || statusStr === 'Holiday' || statusStr === 'Absent' || statusStr === 'Not Updated' || statusStr === 'Blocked') {
+        return undefined;
+    }
+    
+    const h1Lower = (h1 || '').toLowerCase().trim();
+    const h2Lower = (h2 || '').toLowerCase().trim();
+    
+
+
+    const isWork = (val: string) => 
+        val.includes('office') || 
+        val.includes('wfh') || 
+        val.includes('work from home') ||
+        val.includes('client') || 
+        val.includes('visit') ||
+        val.includes('present');
+
+    const isLeave = (val: string) => val.includes('leave');
+
+    // Both same work activity
+    if (h1Lower === h2Lower && isWork(h1Lower)) {
+        return `${h1!.toUpperCase()} (FULL DAY)`;
+    }
+
+    // Half Day case: One work + one leave
+    // Half Day case: One work + one leave
+    // Half Day case: One work + one leave
+    if (isWork(h1Lower) && isLeave(h2Lower)) {
+        return `${h1!.toUpperCase()} (HALF DAY)`;
+    }
+    if (isLeave(h1Lower) && isWork(h2Lower)) {
+        return `${h2!.toUpperCase()} (HALF DAY)`;
+    }
+
+    // Both Leave
+    if (isLeave(h1Lower) && isLeave(h2Lower)) {
+        return 'Leave';
+    }
+
+    // Two different work activities (Mixed Day)
+    if (isWork(h1Lower) && isWork(h2Lower) && h1Lower !== h2Lower) {
+        return 'Full Day'; // Mixed location, so just status
+    }
+
+    // Default to status only if it's already a descriptive status
+    return statusStr;
 };
 
 /**
@@ -286,14 +282,11 @@ export const generateRangeEntries = (start: Date, end: Date, now: Date, records:
 
         const entry = mapAttendanceToEntry(currentLoopDate, now, actualRecord);
         
-        // Sunday should always be Weekend, regardless of any data (Client Visit, WFH, etc.)
-        if (isSunday) {
-            entry.status = 'Weekend';
-            entry.workLocation = undefined; // Clear workLocation for Sunday
-        }
+        // Sunday: No longer forced to Weekend here, let mapAttendanceToEntry 
+        // handle it based on actualRecord status or default behavior.
         // Saturday: Only show as Weekend if there's NO data (no record, no workLocation, no status)
         // If Saturday has data (Client Visit, WFH, etc.), show that data instead
-        else if (dayOfWeek === 6) {
+        if (dayOfWeek === 6) {
             // If there's no record OR no meaningful data, show as Weekend
             if (!actualRecord || (!actualRecord.location && !(actualRecord as any).workLocation && !actualRecord.status && (!actualRecord.totalHours || actualRecord.totalHours === 0))) {
                 entry.status = 'Weekend';
