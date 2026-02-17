@@ -613,7 +613,7 @@ const AdminDashboard = () => {
         <h3 className="text-xl font-bold text-[#2B3674]">
           Attendance Analytics
         </h3>
-        <div className="flex items-center gap-4">
+        {/* <div className="flex items-center gap-4">
           <button
             onClick={() => navigate(`${basePath}/daily-attendance`)}
             className="flex items-center gap-2 px-6 py-2.5 bg-linear-to-r from-[#4318FF] to-[#868CFF] text-white rounded-xl text-xs font-black shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all duration-300 transform hover:-translate-y-0.5"
@@ -621,7 +621,7 @@ const AdminDashboard = () => {
             <TrendingUp size={16} />
             <span>View Daily Status</span>
           </button>
-        </div>
+        </div> */}
       </div>
 
       <div className="flex justify-center mb-20">
