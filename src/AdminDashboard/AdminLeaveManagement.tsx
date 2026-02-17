@@ -54,10 +54,9 @@ const isCancellationAllowed = (submittedDate: string) => {
   if (!submittedDate) return true;
   const submission = dayjs(submittedDate).startOf("day");
   const deadline = submission
-    .add(1, "day")
-    .set("hour", 10)
-    .set("minute", 0)
-    .set("second", 0);
+    .hour(18)
+    .minute(30)
+    .second(0);
   return dayjs().isBefore(deadline);
 };
 
@@ -547,8 +546,24 @@ const AdminLeaveManagement = () => {
           records,
           selectedEmployee?.department,
         );
-        duration =
-          leaveDurationType === "Half Day" ? baseDuration * 0.5 : baseDuration;
+        
+        // Custom Duration Calculation for WFH/CV split
+        if (leaveDurationType === "Half Day" || leaveDurationType === "First Half" || leaveDurationType === "Second Half") {
+            const mainType = finalRequestType; // "Work From Home", "Client Visit", "Half Day" (Leave), etc.
+            const other = otherHalfType; // "Office", "Work From Home", "Client Visit", "Leave"
+
+            const isMainRemote = mainType === "Work From Home" || mainType === "Client Visit";
+            const isOtherRemote = other === "Work From Home" || other === "Client Visit";
+
+            // User Requirement: WFH + CV = 1 Day
+            if (isMainRemote && isOtherRemote) {
+                duration = baseDuration; // 1.0 per day
+            } else {
+                duration = baseDuration * 0.5; // 0.5 per day
+            }
+        } else {
+            duration = baseDuration;
+        }
       } else {
         duration =
           formData.startDate && formData.endDate
@@ -574,6 +589,9 @@ const AdminLeaveManagement = () => {
           isHalfDay: isSplitRequest,
           halfDayType: isSplitRequest ? halfDayType : null,
           otherHalfType: isSplitRequest ? otherHalfType : null,
+          // Explicitly set halves for all requests to support template logic
+          firstHalf: isSplitRequest ? halfDayType : finalRequestType,
+          secondHalf: isSplitRequest ? otherHalfType : finalRequestType,
           submittedDate: new Date().toISOString().split("T")[0],
         }),
       );
@@ -674,6 +692,9 @@ const AdminLeaveManagement = () => {
                     fromDate: iStart,
                     toDate: iEnd,
                     duration: datesNeedingModification.length,
+                    // Split request due to gap -> ensure segments carry original half types or "Leave" if generic
+                    firstHalf: victim.isHalfDay ? victim.firstHalf : victim.requestType,
+                    secondHalf: victim.isHalfDay ? victim.secondHalf : victim.requestType,
                     sourceRequestId: createdId,
                     sourceRequestType: finalRequestType,
                   },
@@ -788,145 +809,7 @@ const AdminLeaveManagement = () => {
         return;
       }
 
-      // 4. Update Attendance (Mirroring Requests.tsx Logic)
-      const startDate = dayjs(formData.startDate);
-      const endDate = dayjs(formData.endDate);
-      const diffDays = endDate.diff(startDate, "day");
-      const attendancePayload: any[] = [];
 
-      for (let i = 0; i <= diffDays; i++) {
-        const currentDateObj = startDate.clone().add(i, "day");
-        const currentDate = currentDateObj.format("YYYY-MM-DD");
-
-        // Skip weekends and holidays for Leaves/WFH/CV
-        if (
-          (finalRequestType === "Client Visit" ||
-            finalRequestType === "Work From Home" ||
-            finalRequestType === "Apply Leave" ||
-            finalRequestType === "Leave" ||
-            finalRequestType === "Half Day") &&
-          (isWeekend(currentDateObj) || isHoliday(currentDateObj))
-        ) {
-          continue;
-        }
-
-        const attendanceData: any = {
-          employeeId: selectedEmployee.employeeId || selectedEmployee.id,
-          workingDate: currentDate,
-        };
-
-        if (
-          finalRequestType === "Apply Leave" ||
-          finalRequestType === "Leave"
-        ) {
-          attendanceData.status = AttendanceStatus.LEAVE;
-          attendanceData.workLocation = null;
-          attendanceData.totalHours = 0;
-        } else if (finalRequestType === "Work From Home") {
-          attendanceData.workLocation = "WFH";
-          // Preserve Half Day status if exists in current state or payload
-          const existingRecord = dateRangeAttendanceRecords.find((r: any) => {
-            const rDate = r.workingDate || r.working_date;
-            const normDate =
-              typeof rDate === "string"
-                ? rDate.split("T")[0]
-                : dayjs(rDate).format("YYYY-MM-DD");
-            return normDate === currentDate;
-          });
-          const existingPayloadEntry = attendancePayload.find(
-            (e) => e.workingDate === currentDate,
-          );
-
-          if (
-            existingRecord?.status === "Half Day" ||
-            existingPayloadEntry?.status === "Half Day"
-          ) {
-            attendanceData.status = "Half Day";
-            attendanceData.totalHours =
-              existingRecord?.totalHours ||
-              existingPayloadEntry?.totalHours ||
-              6;
-          }
-        } else if (finalRequestType === "Client Visit") {
-          attendanceData.workLocation = "Client Visit";
-          // Preserve Half Day status if exists
-          const existingRecord = dateRangeAttendanceRecords.find((r: any) => {
-            const rDate = r.workingDate || r.working_date;
-            const normDate =
-              typeof rDate === "string"
-                ? rDate.split("T")[0]
-                : dayjs(rDate).format("YYYY-MM-DD");
-            return normDate === currentDate;
-          });
-          const existingPayloadEntry = attendancePayload.find(
-            (e) => e.workingDate === currentDate,
-          );
-
-          if (
-            existingRecord?.status === "Half Day" ||
-            existingPayloadEntry?.status === "Half Day"
-          ) {
-            attendanceData.status = "Half Day";
-            attendanceData.totalHours =
-              existingRecord?.totalHours ||
-              existingPayloadEntry?.totalHours ||
-              6;
-          }
-        } else if (finalRequestType === "Half Day") {
-          attendanceData.status = "Half Day";
-          attendanceData.totalHours = 5;
-          // Preserve existing workLocation
-          const existingRecord = dateRangeAttendanceRecords.find((r: any) => {
-            const rDate = r.workingDate || r.working_date;
-            const normDate =
-              typeof rDate === "string"
-                ? rDate.split("T")[0]
-                : dayjs(rDate).format("YYYY-MM-DD");
-            return normDate === currentDate;
-          });
-          const existingPayloadEntry = attendancePayload.find(
-            (e) => e.workingDate === currentDate,
-          );
-
-          const loc =
-            existingRecord?.workLocation ||
-            existingRecord?.work_location ||
-            existingPayloadEntry?.workLocation;
-          if (loc) {
-            attendanceData.workLocation = loc;
-          }
-        }
-
-        // Merge logic
-        const existingIndex = attendancePayload.findIndex(
-          (e) => e.workingDate === currentDate,
-        );
-
-        if (existingIndex !== -1) {
-          const existing = attendancePayload[existingIndex];
-          attendancePayload[existingIndex] = {
-            ...existing,
-            ...attendanceData,
-            status:
-              attendanceData.status === "Half Day" ||
-              existing.status === "Half Day"
-                ? "Half Day"
-                : attendanceData.status || existing.status,
-            totalHours:
-              attendanceData.status === "Half Day" ||
-              existing.status === "Half Day"
-                ? 5
-                : attendanceData.totalHours || existing.totalHours,
-            workLocation: attendanceData.workLocation || existing.workLocation,
-          };
-        } else {
-          attendancePayload.push(attendanceData);
-        }
-      }
-
-      if (attendancePayload.length > 0) {
-        await dispatch(submitBulkAttendance(attendancePayload)).unwrap();
-      }
 
       notification.success({
         message: "Applied & Approved",
@@ -1508,7 +1391,7 @@ const AdminLeaveManagement = () => {
       <button
         disabled
         className="p-2 text-gray-300 bg-gray-50 rounded-xl cursor-not-allowed"
-        title="Cancellation unavailable (Deadline: 10 AM next day)"
+        title="Cancellation unavailable (Deadline: 06:30 PM same day)"
       >
         <XCircle size={18} />
       </button>
@@ -2570,11 +2453,23 @@ const AdminLeaveManagement = () => {
                             formData.startDate,
                             formData.endDate,
                           );
-                          const finalDur =
-                            leaveDurationType === "Half Day"
-                              ? baseDur * 0.5
-                              : baseDur;
-                          return `${finalDur} Day(s)`;
+                          const isHalf = leaveDurationType === "Half Day" || leaveDurationType === "First Half" || leaveDurationType === "Second Half";
+                          
+                          if (isHalf) {
+                              const mainType = selectedLeaveType === "Apply Leave" ? "Leave" : selectedLeaveType;
+                              const other = otherHalfType;
+                              
+                              const isMainRemote = mainType === "Work From Home" || mainType === "Client Visit";
+                              const isOtherRemote = other === "Work From Home" || other === "Client Visit";
+
+                              // User Requirement: WFH + CV = 1 Day
+                              if (isMainRemote && isOtherRemote) {
+                                  return `${baseDur} Day(s)`;
+                              } else {
+                                  return `${baseDur * 0.5} Day(s)`;
+                              }
+                          }
+                          return `${baseDur} Day(s)`;
                         } else {
                           return `${dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1} Day(s)`;
                         }
@@ -2585,16 +2480,11 @@ const AdminLeaveManagement = () => {
             </div>
 
             {/* Split-Day Information (View Mode Only) */}
-            {isViewMode &&
-              selectedRequestId !== null &&
+            {isViewMode && !!selectedRequestId && (
               (() => {
-                const viewedRequest = entities.find(
-                  (e: any) => e.id === selectedRequestId,
-                );
-                const isBothSame =
-                  viewedRequest?.firstHalf === viewedRequest?.secondHalf;
-                return viewedRequest?.isHalfDay &&
-                  (viewedRequest?.firstHalf || viewedRequest?.secondHalf) ? (
+                const viewedRequest = entities.find((e: any) => e.id === Number(selectedRequestId));
+                const isBothSame = viewedRequest?.firstHalf === viewedRequest?.secondHalf;
+                return viewedRequest?.isHalfDay && (viewedRequest?.firstHalf || viewedRequest?.secondHalf) ? (
                   <div className="space-y-2 p-4 bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-50 rounded-2xl border-2 border-blue-200">
                     <div className="flex items-center gap-2 mb-2">
                       <Clock size={18} className="text-blue-600" />
@@ -2633,7 +2523,7 @@ const AdminLeaveManagement = () => {
                     )}
                   </div>
                 ) : null;
-              })()}
+              })())}
 
             {/* Description Field */}
             <div className="space-y-2">
@@ -2773,7 +2663,7 @@ const AdminLeaveManagement = () => {
                   }}
                   className="flex-1 py-3.5 rounded-2xl font-bold text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95 transform uppercase tracking-wider flex items-center justify-center gap-2"
                 >
-                  Modify Instead
+                  MODIFY INSTEAD
                 </button>
                 <button
                   onClick={executeCancel}
@@ -2838,7 +2728,7 @@ const AdminLeaveManagement = () => {
                     : "text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 active:scale-95 transform"
                 }`}
               >
-                Modify Instead
+                MODIFY INSTEAD
               </button>
             </div>
             <button

@@ -1042,35 +1042,43 @@ const Calendar = ({
 
                   <div
                     className={`text-[10px] font-bold uppercase truncate w-full text-center px-1 py-1 rounded-md mt-1 backdrop-blur-sm z-10                         ${
-                      holiday
-                        ? "text-white bg-[#1890FF]/70"
-                        : entry?.status === "Full Day" && statusLabel
-                          ? "text-white bg-[#01B574]"
-                          : entry?.status === "Half Day" && statusLabel
-                            ? "text-white bg-[#FFB020]/80"
-                            : entry?.status === "Leave"
-                              ? "text-white bg-red-400/70"
-                              : entry?.workLocation === "Client Visit" ||
-                                  entry?.status === "Client Visit" ||
-                                  entry?.workLocation === "WFH" ||
-                                  entry?.status === "WFH"
-                                ? "text-white bg-[#4318FF]/70"
-                                : isIncomplete && statusLabel
-                                  ? "text-white bg-[#64748B]/90"
-                                  : entry?.status === "Absent"
-                                    ? "text-white bg-[#EE5D50]/70"
-                                    : entry?.isWeekend
-                                      ? "text-white bg-red-400/70"
-                                      : "text-white bg-[#64748B]/90"
-                    }
+                           holiday
+                               ? "text-white bg-[#1890FF]/70"
+                               : isSplitDay
+                                 ? (isWorkLoc((entry as any).firstHalf) && isWorkLoc((entry as any).secondHalf))
+                                     ? "text-white bg-[#01B574]" // Green for Full Working split
+                                     : "text-white bg-[#FFB020]/80" // Orange for Half leave split
+                                 : entry?.status === "Full Day" && statusLabel
+                                 ? "text-white bg-[#01B574]"
+                                 : entry?.status === "Half Day" && statusLabel
+                                   ? "text-white bg-[#FFB020]/80"
+                                   : entry?.status === "Leave"
+                                     ? "text-white bg-red-400/70"
+                                     : entry?.workLocation === "Client Visit" ||
+                                         entry?.status === "Client Visit" ||
+                                         entry?.workLocation === "WFH" ||
+                                         entry?.status === "WFH"
+                                       ? "text-white bg-[#4318FF]/70"
+                                       : isIncomplete && statusLabel
+                                         ? "text-white bg-[#64748B]/90"
+                                         : entry?.status === "Absent"
+                                           ? "text-white bg-[#EE5D50]/70"
+                                           : entry?.isWeekend
+                                             ? "text-white bg-red-400/70"
+                                             : "text-white bg-[#64748B]/90"
+                         }
                     `}
                   >
                     {holiday
-                      ? holiday.name
-                      : (entry?.status as string) === "Leave"
-                        ? "LEAVE"
-                        : (entry?.status as string) === "Full Day"
-                          ? `${(entry?.workLocation || "OFFICE").toUpperCase()} (FULL DAY)`
+                        ? holiday.name
+                        : isSplitDay
+                          ? (isWorkLoc((entry as any).firstHalf) && isWorkLoc((entry as any).secondHalf))
+                              ? "FULL DAY"
+                              : `${(isWorkLoc((entry as any).firstHalf) ? (entry as any).firstHalf : (entry as any).secondHalf)?.toUpperCase()} (HALF DAY)`
+                          : (entry?.status as string) === "Leave"
+                          ? "LEAVE"
+                          : (entry?.status as string) === "Full Day"
+                          ? `${(entry?.workLocation || "OFFICE").replace(/\(FULL DAY\)/i, "").trim().toUpperCase()} (FULL DAY)`
                           : entry?.workLocation &&
                               (entry?.status as string) !== "Leave" &&
                               (entry?.status as string) !== "Full Day"
