@@ -314,7 +314,7 @@ const EmployeeDetailsView = () => {
     <div className="px-4 md:px-8 py-2 md:py-8 w-full max-w-[1400px] mx-auto animate-in fade-in duration-500 space-y-3 md:space-y-6">
       {/* Success Message */}
       {updateSuccess && (
-        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 flex items-center gap-2 animate-in fade-in slide-in-from-top-4 duration-300 px-4 py-3 bg-white rounded-full shadow-2xl border border-green-200">
+        <div className="fixed top-24 left-1/2 transform -translate-x-1/2 z-50 flex items-center gap-2 animate-in fade-in slide-in-from-top-4 duration-300 px-4 py-3 bg-white rounded-full shadow-2xl border border-green-200">
           <div className="p-1 bg-green-100 rounded-full">
             <CheckCircle size={16} className="text-green-600" />
           </div>
@@ -468,9 +468,10 @@ const EmployeeDetailsView = () => {
                     ? editedData.fullName
                     : employee.fullName || employee.name || ""
                 }
-                onChange={(e) =>
-                  setEditedData({ ...editedData, fullName: e.target.value })
-                }
+                onChange={(e) => {
+                  setEditedData({ ...editedData, fullName: e.target.value });
+                  if (validationError) setValidationError("");
+                }}
                 className={`w-full pl-11 pr-4 py-2.5 border-2 rounded-xl text-[#1B2559] text-sm font-semibold transition-all ${
                   isEditing
                     ? "border-gray-200 focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white"
@@ -497,12 +498,13 @@ const EmployeeDetailsView = () => {
                     ? editedData.employeeId
                     : employee.employeeId || employee.id || ""
                 }
-                onChange={(e) =>
+                onChange={(e) => {
                   setEditedData({
                     ...editedData,
                     employeeId: e.target.value.toUpperCase(),
-                  })
-                }
+                  });
+                  if (validationError) setValidationError("");
+                }}
                 pattern="[A-Z0-9-]*"
                 title="Employee ID should contain only uppercase letters, numbers, and hyphens"
                 className={`w-full pl-11 pr-4 py-2.5 border-2 rounded-xl text-[#1B2559] text-sm font-semibold transition-all ${
@@ -526,9 +528,13 @@ const EmployeeDetailsView = () => {
               {isEditing ? (
                 <select
                   value={editedData.department}
-                  onChange={(e) =>
-                    setEditedData({ ...editedData, department: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setEditedData({
+                      ...editedData,
+                      department: e.target.value,
+                    });
+                    if (validationError) setValidationError("");
+                  }}
                   className="w-full pl-11 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white text-[#1B2559] text-sm font-semibold transition-all appearance-none"
                 >
                   <option value="">Select Department</option>
@@ -566,9 +572,13 @@ const EmployeeDetailsView = () => {
                     ? editedData.designation
                     : employee.designation || ""
                 }
-                onChange={(e) =>
-                  setEditedData({ ...editedData, designation: e.target.value })
-                }
+                onChange={(e) => {
+                  setEditedData({
+                    ...editedData,
+                    designation: e.target.value,
+                  });
+                  if (validationError) setValidationError("");
+                }}
                 className={`w-full pl-11 pr-4 py-2.5 border-2 rounded-xl text-[#1B2559] text-sm font-semibold transition-all ${
                   isEditing
                     ? "border-gray-200 focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white"
@@ -590,9 +600,10 @@ const EmployeeDetailsView = () => {
               {isEditing ? (
                 <select
                   value={editedData.role}
-                  onChange={(e) =>
-                    setEditedData({ ...editedData, role: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setEditedData({ ...editedData, role: e.target.value });
+                    if (validationError) setValidationError("");
+                  }}
                   className="w-full pl-11 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white text-[#1B2559] text-sm font-semibold transition-all appearance-none"
                 >
                   <option value="">Select Role</option>
@@ -641,12 +652,13 @@ const EmployeeDetailsView = () => {
               {isEditing ? (
                 <select
                   value={editedData.employmentType}
-                  onChange={(e) =>
+                  onChange={(e) => {
                     setEditedData({
                       ...editedData,
                       employmentType: e.target.value as "" | EmploymentType,
-                    })
-                  }
+                    });
+                    if (validationError) setValidationError("");
+                  }}
                   className="w-full pl-11 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white text-[#1B2559] text-sm font-semibold transition-all appearance-none"
                 >
                   <option value="">Select Employment Type</option>
@@ -691,9 +703,13 @@ const EmployeeDetailsView = () => {
                           .split("T")[0]
                       : ""
                 }
-                onChange={(e) =>
-                  setEditedData({ ...editedData, joiningDate: e.target.value })
-                }
+                onChange={(e) => {
+                  setEditedData({
+                    ...editedData,
+                    joiningDate: e.target.value,
+                  });
+                  if (validationError) setValidationError("");
+                }}
                 className={`w-full pl-11 pr-4 py-2.5 border-2 rounded-xl text-[#1B2559] text-sm font-semibold transition-all ${
                   isEditing
                     ? "border-gray-200 focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white"
@@ -716,9 +732,10 @@ const EmployeeDetailsView = () => {
                 type="email"
                 disabled={!isEditing}
                 value={isEditing ? editedData.email : employee.email || ""}
-                onChange={(e) =>
-                  setEditedData({ ...editedData, email: e.target.value })
-                }
+                onChange={(e) => {
+                  setEditedData({ ...editedData, email: e.target.value });
+                  if (validationError) setValidationError("");
+                }}
                 className={`w-full pl-11 pr-4 py-2.5 border-2 rounded-xl text-[#1B2559] text-sm font-semibold transition-all ${
                   isEditing
                     ? "border-gray-200 focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white"
