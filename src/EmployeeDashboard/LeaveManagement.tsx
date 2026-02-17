@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { DatePicker, ConfigProvider, Checkbox, Modal, Select } from "antd";
 import dayjs from "dayjs";
@@ -98,6 +98,10 @@ const LeaveManagement = () => {
     null,
   );
   const [uploaderKey, setUploaderKey] = useState(0);
+  const titleRef = useRef<HTMLDivElement>(null);
+  const startDateRef = useRef<HTMLDivElement>(null);
+  const endDateRef = useRef<HTMLDivElement>(null);
+  const descriptionRef = useRef<HTMLDivElement>(null);
   const [cancelModal, setCancelModal] = useState<{
     isOpen: boolean;
     id: number | null;
@@ -280,7 +284,7 @@ const LeaveManagement = () => {
     return false;
   };
 
-  const validateForm = () => {
+  const validateForm = (shouldScroll = false) => {
     let isValid = true;
     const newErrors = {
       title: "",
@@ -307,6 +311,33 @@ const LeaveManagement = () => {
     }
 
     setErrors(newErrors);
+
+    if (!isValid && shouldScroll) {
+      setTimeout(() => {
+        if (newErrors.title && titleRef.current) {
+          titleRef.current.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        } else if (newErrors.startDate && startDateRef.current) {
+          startDateRef.current.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        } else if (newErrors.endDate && endDateRef.current) {
+          endDateRef.current.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        } else if (newErrors.description && descriptionRef.current) {
+          descriptionRef.current.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        }
+      }, 100);
+    }
+
     return isValid;
   };
   // Helper function to check if a date is a weekend
@@ -540,7 +571,7 @@ const LeaveManagement = () => {
   };
 
   const handleSubmit = async () => {
-    if (validateForm()) {
+    if (validateForm(true)) {
       // Determine the actual request type and duration factor
       let finalRequestType = selectedLeaveType;
       const isSplitRequest =
@@ -2020,7 +2051,7 @@ const LeaveManagement = () => {
               )}
 
             {/* Title Field */}
-            <div className="space-y-2">
+            <div className="space-y-2" ref={titleRef}>
               <label className="text-sm font-bold text-[#2B3674] ml-1">
                 Title
               </label>
@@ -2052,7 +2083,7 @@ const LeaveManagement = () => {
 
             {/* Dates Row */}
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
+              <div className="space-y-2" ref={startDateRef}>
                 <label className="text-sm font-bold text-[#2B3674] ml-1">
                   Start Date
                 </label>
@@ -2107,7 +2138,7 @@ const LeaveManagement = () => {
                   </>
                 )}
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2" ref={endDateRef}>
                 <label className="text-sm font-bold text-[#2B3674] ml-1">
                   End Date
                 </label>
@@ -2260,7 +2291,7 @@ const LeaveManagement = () => {
               })()}
 
             {/* Description Field */}
-            <div className="space-y-2">
+            <div className="space-y-2" ref={descriptionRef}>
               <label className="text-sm font-bold text-[#2B3674] ml-1">
                 Description
               </label>

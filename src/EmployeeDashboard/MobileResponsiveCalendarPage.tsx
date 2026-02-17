@@ -14,14 +14,17 @@ import {
 
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { RootState } from "../store";
-import { fetchMonthlyAttendance } from "../reducers/employeeAttendance.reducer";
+import {
+  fetchMonthlyAttendance,
+  downloadAttendancePdfReport,
+} from "../reducers/employeeAttendance.reducer";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import { fetchBlockers } from "../reducers/timesheetBlocker.reducer";
 import {
   generateMonthlyEntries,
   generateRangeEntries,
 } from "../utils/attendanceUtils";
-import { downloadPdf } from "../utils/downloadPdf";
+import { saveAs } from "file-saver";
 import { UserType } from "../reducers/user.reducer";
 
 interface MobileResponsiveCalendarPageProps {
@@ -47,8 +50,7 @@ const MobileResponsiveCalendarPage = ({
   const isAdmin = currentUser?.userType === UserType.ADMIN;
   const isManager =
     currentUser?.userType === UserType.MANAGER ||
-    (currentUser?.role &&
-      currentUser.role.toUpperCase().includes("MANAGER"));
+    (currentUser?.role && currentUser.role.toUpperCase().includes("MANAGER"));
 
   // @ts-ignore
   const { holidays } = useAppSelector(
@@ -59,16 +61,17 @@ const MobileResponsiveCalendarPage = ({
   );
 
   const location = useLocation();
-  const isMyRoute = location.pathname.includes("my-dashboard") || 
-                    location.pathname.includes("my-timesheet") || 
-                    location.pathname === "/employee-dashboard" || 
-                    location.pathname === "/employee-dashboard/";
+  const isMyRoute =
+    location.pathname.includes("my-dashboard") ||
+    location.pathname.includes("my-timesheet") ||
+    location.pathname === "/employee-dashboard" ||
+    location.pathname === "/employee-dashboard/";
 
   const currentEmployeeId =
     propEmployeeId ||
-    (isMyRoute 
-      ? (currentUser?.employeeId || currentUser?.loginId) 
-      : (entity?.employeeId || currentUser?.employeeId || currentUser?.loginId));
+    (isMyRoute
+      ? currentUser?.employeeId || currentUser?.loginId
+      : entity?.employeeId || currentUser?.employeeId || currentUser?.loginId);
 
   const attendanceFetchedKey = useRef<string | null>(null);
 
@@ -172,46 +175,27 @@ const MobileResponsiveCalendarPage = ({
     setIsDownloadModalOpen(true);
   };
 
-  const handleConfirmDownload = () => {
+  const handleConfirmDownload = async () => {
     if (!currentEmployeeId) return;
 
     try {
       setIsDownloading(true);
       const fromDateStr = downloadDateRange.from;
-      const toDateStr = downloadDateRange.to;
+      const monthStr = fromDateStr.split("-")[1];
+      const yearStr = fromDateStr.split("-")[0];
 
-      const filteredRecords = records.filter((record) => {
-        const recordDate = new Date(record.workingDate)
-          .toISOString()
-          .split("T")[0];
-        return recordDate >= fromDateStr && recordDate <= toDateStr;
-      });
-
-      const start = new Date(fromDateStr);
-      const end = new Date(toDateStr);
-
-      const rangeEntries = generateRangeEntries(
-        start,
-        end,
-        now,
-        filteredRecords,
-      );
-      const totalHours = rangeEntries.reduce(
-        (sum, entry) => sum + (entry.totalHours || 0),
-        0,
+      const blob = await downloadAttendancePdfReport(
+        parseInt(monthStr),
+        parseInt(yearStr),
+        currentEmployeeId,
+        downloadDateRange.from,
+        downloadDateRange.to,
       );
 
-      downloadPdf({
-        employeeName:
-          entity?.fullName || currentUser?.aliasLoginName || "Employee",
-        employeeId: currentEmployeeId,
-        designation: entity?.designation,
-        department: entity?.department,
-        month: `${fromDateStr} to ${toDateStr}`,
-        entries: rangeEntries,
-        totalHours: totalHours,
-        holidays: holidays || [],
-      });
+      saveAs(
+        blob,
+        `Attendance_${currentEmployeeId}_${downloadDateRange.from}_to_${downloadDateRange.to}.pdf`,
+      );
 
       setIsDownloadModalOpen(false);
     } catch (error) {
@@ -360,20 +344,19 @@ const MobileResponsiveCalendarPage = ({
             } else if (isBlocked) {
               colorClass =
                 "bg-gray-200 border border-gray-400 text-gray-500 font-bold";
-            } else if (
-              entry?.status === "Full Day"
-            ) {
+            } else if (entry?.status === "Full Day") {
               colorClass =
                 "bg-green-100 border border-green-600 text-black font-bold";
             } else if (entry?.status === "Half Day" || isPendingUpdate) {
-               // Both Half Day and Pending Update (visual only) can be Orange
-               // BUT User wants Not Updated white/grey and Half Day Orange.
-               // Re-read: "make hald day color orange same as not updated and nake not updated color same as upcong"
-               // So Half Day = bg-orange-100 (matching old not updated)
-               // And Not Updated = bg-white (matching current/upcoming)
-               colorClass = entry?.status === "Half Day" 
-                 ? "bg-orange-100 border border-orange-600 text-black font-bold" 
-                 : "bg-white text-gray-600 border border-gray-200";
+              // Both Half Day and Pending Update (visual only) can be Orange
+              // BUT User wants Not Updated white/grey and Half Day Orange.
+              // Re-read: "make hald day color orange same as not updated and nake not updated color same as upcong"
+              // So Half Day = bg-orange-100 (matching old not updated)
+              // And Not Updated = bg-white (matching current/upcoming)
+              colorClass =
+                entry?.status === "Half Day"
+                  ? "bg-orange-100 border border-orange-600 text-black font-bold"
+                  : "bg-white text-gray-600 border border-gray-200";
             } else if (entry?.status === "Leave") {
               colorClass =
                 "bg-red-200 border border-red-600 text-black font-bold";
@@ -407,7 +390,7 @@ const MobileResponsiveCalendarPage = ({
                     rounded-xl relative
                     flex flex-col items-center justify-center
                     shadow-sm
-                    ${(onNavigateToDate || (isBlocked && (isAdmin || isManager) && onBlockedClick)) ? "cursor-pointer transition-all active:scale-95" : ""}
+                    ${onNavigateToDate || (isBlocked && (isAdmin || isManager) && onBlockedClick) ? "cursor-pointer transition-all active:scale-95" : ""}
                     ${colorClass}
                  `}
               >
@@ -421,10 +404,12 @@ const MobileResponsiveCalendarPage = ({
                 <span className="text-sm sm:text-lg">{day}</span>
                 {isBlocked && (
                   <div className="absolute inset-0 z-20 bg-black/40 backdrop-blur-[2px] rounded-xl flex flex-col items-center justify-center p-1 text-center pointer-events-none">
-                     <Lock size={12} className="text-white mb-0.5" />
-                     <span className="text-[6px] font-black text-white leading-none uppercase tracking-tighter">
-                       {(isAdmin || isManager) ? "Unblock" : `Contact ${getBlocker(day)?.blockedBy || "Admin"}`}
-                     </span>
+                    <Lock size={12} className="text-white mb-0.5" />
+                    <span className="text-[6px] font-black text-white leading-none uppercase tracking-tighter">
+                      {isAdmin || isManager
+                        ? "Unblock"
+                        : `Contact ${getBlocker(day)?.blockedBy || "Admin"}`}
+                    </span>
                   </div>
                 )}
               </div>

@@ -98,6 +98,10 @@ const AdminLeaveManagement = () => {
     null,
   );
   const [uploaderKey, setUploaderKey] = useState(0);
+  const titleRef = useRef<HTMLDivElement>(null);
+  const startDateRef = useRef<HTMLDivElement>(null);
+  const endDateRef = useRef<HTMLDivElement>(null);
+  const descriptionRef = useRef<HTMLDivElement>(null);
   const [cancelModal, setCancelModal] = useState<{
     isOpen: boolean;
     id: number | null;
@@ -354,7 +358,7 @@ const AdminLeaveManagement = () => {
     };
   }, []);
 
-  const validateForm = () => {
+  const validateForm = (shouldScroll = false) => {
     let isValid = true;
     const newErrors = {
       title: "",
@@ -386,6 +390,38 @@ const AdminLeaveManagement = () => {
     }
 
     setErrors(newErrors);
+
+    if (!isValid && shouldScroll) {
+      setTimeout(() => {
+        if (newErrors.employee && employeeDropdownRef.current) {
+          employeeDropdownRef.current.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        } else if (newErrors.title && titleRef.current) {
+          titleRef.current.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        } else if (newErrors.startDate && startDateRef.current) {
+          startDateRef.current.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        } else if (newErrors.endDate && endDateRef.current) {
+          endDateRef.current.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        } else if (newErrors.description && descriptionRef.current) {
+          descriptionRef.current.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        }
+      }, 100);
+    }
+
     return isValid;
   };
 
@@ -495,7 +531,7 @@ const AdminLeaveManagement = () => {
   };
 
   const handleSubmit = async () => {
-    if (!validateForm() || !selectedEmployee) return;
+    if (!validateForm(true) || !selectedEmployee) return;
 
     setIsAutoApproving(true);
     try {
@@ -2317,7 +2353,7 @@ const AdminLeaveManagement = () => {
               )}
 
             {/* Title Field */}
-            <div className="space-y-2">
+            <div className="space-y-2" ref={titleRef}>
               <label className="text-sm font-bold text-[#2B3674] ml-1">
                 Title
               </label>
@@ -2349,7 +2385,7 @@ const AdminLeaveManagement = () => {
 
             {/* Dates Row */}
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
+              <div className="space-y-2" ref={startDateRef}>
                 <label className="text-sm font-bold text-[#2B3674] ml-1">
                   Start Date
                 </label>
@@ -2401,7 +2437,7 @@ const AdminLeaveManagement = () => {
                   </>
                 )}
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2" ref={endDateRef}>
                 <label className="text-sm font-bold text-[#2B3674] ml-1">
                   End Date
                 </label>
@@ -2552,7 +2588,7 @@ const AdminLeaveManagement = () => {
               })()}
 
             {/* Description Field */}
-            <div className="space-y-2">
+            <div className="space-y-2" ref={descriptionRef}>
               <label className="text-sm font-bold text-[#2B3674] ml-1">
                 Description
               </label>

@@ -509,7 +509,7 @@ const ManagerMapping: React.FC = () => {
 
       {/* Action Buttons */}
       {selectedDepartment && selectedManager && (
-        <div className="flex gap-4 justify-center mt-4">
+        <div className="flex gap-4 justify-center mt-4 mb-6">
           <button
             onClick={handleClear}
             className="px-6 py-3 bg-white border-2 border-gray-200 text-[#2B3674] rounded-xl font-bold hover:border-[#4318FF] hover:text-[#4318FF] transition-all"

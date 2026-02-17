@@ -24,9 +24,10 @@ import {
   fetchAllEmployeesMonthlyAttendance,
   fetchMonthlyAttendance,
   AttendanceStatus,
+  downloadAttendancePdfReport,
 } from "../reducers/employeeAttendance.reducer";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
-import { downloadPdf } from "../utils/downloadPdf";
+import { saveAs } from "file-saver";
 import { generateRangeEntries } from "../utils/attendanceUtils";
 import {
   fetchUnreadNotifications,
@@ -195,64 +196,21 @@ const AdminDashboard = () => {
 
       const rangeStr = `${start.toLocaleDateString("en-US", { month: "short", year: "numeric", day: "numeric" })} to ${end.toLocaleDateString("en-US", { month: "short", year: "numeric", day: "numeric" })}`;
 
-      // Calculate months in range
-      const monthsToFetch: { month: string; year: string }[] = [];
-      const temp = new Date(start);
-      temp.setDate(1);
-      while (temp <= end) {
-        monthsToFetch.push({
-          month: (temp.getMonth() + 1).toString().padStart(2, "0"),
-          year: temp.getFullYear().toString(),
-        });
-        temp.setMonth(temp.getMonth() + 1);
-      }
-
-      const endMonth = (end.getMonth() + 1).toString().padStart(2, "0");
-      const endYear = end.getFullYear().toString();
-      if (
-        !monthsToFetch.some((m) => m.month === endMonth && m.year === endYear)
-      ) {
-        monthsToFetch.push({ month: endMonth, year: endYear });
-      }
-
       for (const emp of selectedEntities) {
         const empId = emp.employeeId || emp.id;
-        let allRecords: any[] = [];
 
-        for (const { month, year } of monthsToFetch) {
-          try {
-            const result = await dispatch(
-              fetchMonthlyAttendance({ employeeId: empId, month, year }),
-            ).unwrap();
-            if (result) allRecords = [...allRecords, ...result];
-          } catch (e) {
-            console.warn(
-              `Failed to fetch records for ${empId} at ${month}/${year}`,
-            );
-          }
-        }
-
-        const entries = generateRangeEntries(
-          start,
-          end,
-          new Date(),
-          allRecords,
-        );
-        const totalHours = entries.reduce(
-          (acc, curr) => acc + Number(curr.totalHours || 0),
-          0,
+        const blob = await downloadAttendancePdfReport(
+          parseInt(currentMonth),
+          parseInt(currentYear),
+          empId,
+          exportStartDate,
+          exportEndDate,
         );
 
-        downloadPdf({
-          employeeName: emp.fullName || emp.name,
-          employeeId: empId,
-          department: emp.department,
-          designation: emp.designation,
-          month: rangeStr,
-          entries: entries,
-          totalHours: totalHours,
-          holidays: holidays || [],
-        });
+        saveAs(
+          blob,
+          `Attendance_${empId}_${exportStartDate}_to_${exportEndDate}.pdf`,
+        );
 
         await new Promise((r) => setTimeout(r, 500));
       }
@@ -342,7 +300,10 @@ const AdminDashboard = () => {
       .map((emp) => {
         const empId = emp.employeeId || emp.id;
         const records = employeeRecords[empId] || [];
-        const total = records.reduce((sum, r) => sum + Number(r.totalHours || 0), 0);
+        const total = records.reduce(
+          (sum, r) => sum + Number(r.totalHours || 0),
+          0,
+        );
         return { name: emp.fullName || emp.name || "Unknown", hours: total };
       })
       .sort((a, b) => {
@@ -352,7 +313,16 @@ const AdminDashboard = () => {
       });
 
     // 3. Donut (Global Distribution)
-    const departmentsList = departments.map((d) => d.departmentName);
+    let departmentsList = departments.map((d) => d.departmentName);
+
+    // If manager dashboard, only show departments that actually have employees in the current view
+    const isManagerView = basePath === "/manager-dashboard";
+    if (isManagerView) {
+      const activeDepts = new Set(
+        globalEntities.map((e: any) => e.department).filter(Boolean),
+      );
+      departmentsList = departmentsList.filter((d) => activeDepts.has(d));
+    }
 
     return {
       trend: {
@@ -449,7 +419,10 @@ const AdminDashboard = () => {
                   total: {
                     show: true,
                     showAlways: true,
-                    label: "Total Employees",
+                    label:
+                      isManagerView && departmentsList.length === 1
+                        ? departmentsList[0]
+                        : "Total Employees",
                     fontSize: "14px",
                     fontWeight: 600,
                     color: "#A3AED0",

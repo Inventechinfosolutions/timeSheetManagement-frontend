@@ -17,8 +17,9 @@ import {
 import {
   fetchAllEmployeesMonthlyAttendance,
   AttendanceStatus,
+  downloadAttendancePdfReport,
 } from "../reducers/employeeAttendance.reducer";
-import { downloadPdf } from "../utils/downloadPdf";
+import { saveAs } from "file-saver";
 import { generateMonthlyEntries } from "../utils/attendanceUtils";
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -197,22 +198,19 @@ const DailyStatus = () => {
 
       for (const emp of selected) {
         const empId = emp.employeeId || emp.id;
-        let records = employeeRecords[empId] || [];
-        const entries = generateMonthlyEntries(start, new Date(), records);
-        const totalHours = entries.reduce(
-          (acc, curr) => acc + (curr.totalHours || 0),
-          0,
+
+        const blob = await downloadAttendancePdfReport(
+          parseInt(currentMonth),
+          parseInt(currentYear),
+          empId,
+          exportStartDate,
+          exportEndDate,
         );
 
-        downloadPdf({
-          employeeName: emp.fullName || emp.name,
-          employeeId: empId,
-          department: emp.department,
-          month: monthStr,
-          entries: entries,
-          totalHours: totalHours,
-          holidays: [],
-        });
+        saveAs(
+          blob,
+          `Attendance_${empId}_${exportStartDate}_to_${exportEndDate}.pdf`,
+        );
 
         await new Promise((r) => setTimeout(r, 300));
       }

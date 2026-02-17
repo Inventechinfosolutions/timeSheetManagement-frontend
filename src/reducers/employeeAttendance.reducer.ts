@@ -167,6 +167,15 @@ export const downloadAttendanceReport = async (month: number, year: number) => {
   return response.data;
 };
 
+// 1.7 Download Individual PDF Report: GET /download-pdf
+export const downloadAttendancePdfReport = async (month: number, year: number, employeeId?: string, startDate?: string, endDate?: string) => {
+  const response = await axios.get(`${apiUrl}/download-pdf`, {
+    params: { month, year, employeeId, startDate, endDate },
+    responseType: "blob",
+  });
+  return response.data;
+};
+
 // 2. Create Attendance Record: POST /
 export const createAttendanceRecord = createAsyncThunk(
   "attendance/createRecord",
