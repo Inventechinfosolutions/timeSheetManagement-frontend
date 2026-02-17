@@ -52,6 +52,15 @@ interface LeaveRequestState {
     halfDay: { applied: number; approved: number; rejected: number; total: number };
   } | null;
   leaveBalance: LeaveBalanceResponse | null;
+  monthlyLeaveBalance: {
+    carryOver: number;
+    monthlyAccrual: number;
+    leavesTaken: number;
+    lop: number;
+    balance: number;
+    ytdUsed: number;
+    ytdLop: number;
+  } | null;
   loading: boolean;
   error: string | null;
   submitSuccess: boolean;
@@ -68,6 +77,7 @@ const initialState: LeaveRequestState = {
   limit: 10,
   stats: null,
   leaveBalance: null,
+  monthlyLeaveBalance: null,
   loading: false,
   error: null,
   submitSuccess: false,
@@ -130,6 +140,25 @@ export const getLeaveBalance = createAsyncThunk(
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data || "Failed to fetch leave balance");
+    }
+  }
+);
+
+// Async Thunk for Getting Monthly Leave Balance (carryover, accrual, usage, lop, balance)
+export const getMonthlyLeaveBalance = createAsyncThunk(
+  "leaveRequest/getMonthlyBalance",
+  async (
+    params: { employeeId: string; month: string | number; year: string | number },
+    { rejectWithValue }
+  ) => {
+    try {
+      const { employeeId, month, year } = params;
+      const response = await axios.get(
+        `${apiUrl}/monthly-balance/${employeeId}?month=${month}&year=${year}`
+      );
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to fetch monthly leave balance");
     }
   }
 );
@@ -490,11 +519,19 @@ const leaveRequestSlice = createSlice({
     });
 
     // Get Leave Balance
-    builder.addCase(getLeaveBalance.fulfilled, (state, action) => {
-      state.leaveBalance = action.payload;
-    });
     builder.addCase(getLeaveBalance.rejected, (state) => {
       state.leaveBalance = null;
+    });
+
+    // Get Monthly Leave Balance
+    builder.addCase(getMonthlyLeaveBalance.pending, (state) => {
+      state.monthlyLeaveBalance = null;
+    });
+    builder.addCase(getMonthlyLeaveBalance.fulfilled, (state, action) => {
+      state.monthlyLeaveBalance = action.payload;
+    });
+    builder.addCase(getMonthlyLeaveBalance.rejected, (state) => {
+      state.monthlyLeaveBalance = null;
     });
 
     // Submit Request
