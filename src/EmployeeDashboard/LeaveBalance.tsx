@@ -87,31 +87,35 @@ const LeaveBalance = () => {
       : ENTITLEMENT.FULL_TIMER;
 
   // LOP logic for interns
-    const { paidUsed, lopUsed, approvedUsed } = useMemo(() => {
-      if (!Array.isArray(entities))
-        return { paidUsed: 0, lopUsed: 0, approvedUsed: 0 };
+  const { paidUsed, lopUsed, approvedUsed } = useMemo(() => {
+    if (!Array.isArray(entities))
+      return { paidUsed: 0, lopUsed: 0, approvedUsed: 0 };
 
-      const approvedLeaves = entities.filter(
-        (e: any) =>
-          (e.requestType === "Apply Leave" || e.requestType === "Leave") &&
-          e.status === "Approved",
+    const approvedLeaves = entities.filter(
+      (e: any) =>
+        (e.requestType === "Apply Leave" || e.requestType === "Leave") &&
+        e.status === "Approved",
+    );
+
+    if (!isIntern) {
+      const totalDuration = approvedLeaves.reduce(
+        (acc, e) => acc + (Number(e.duration) || 0),
+        0,
       );
-
-      if (!isIntern) {
-        const totalDuration = approvedLeaves.reduce((acc, e) => acc + (Number(e.duration) || 0), 0);
-        return {
-          paidUsed: totalDuration,
-          lopUsed: 0,
-          approvedUsed: totalDuration,
-        };
-      }
+      return {
+        paidUsed: totalDuration,
+        lopUsed: 0,
+        approvedUsed: totalDuration,
+      };
+    }
 
     // Group by month: YYYY-MM
     const monthlyLeaves: Record<string, number> = {};
     approvedLeaves.forEach((e: any) => {
       if (e.fromDate) {
         const month = e.fromDate.substring(0, 7);
-        monthlyLeaves[month] = (monthlyLeaves[month] || 0) + (Number(e.duration) || 0);
+        monthlyLeaves[month] =
+          (monthlyLeaves[month] || 0) + (Number(e.duration) || 0);
       }
     });
 
@@ -125,7 +129,10 @@ const LeaveBalance = () => {
     return {
       paidUsed: paid,
       lopUsed: lop,
-      approvedUsed: approvedLeaves.reduce((acc, e) => acc + (Number(e.duration) || 0), 0),
+      approvedUsed: approvedLeaves.reduce(
+        (acc, e) => acc + (Number(e.duration) || 0),
+        0,
+      ),
     };
   }, [entities, isIntern]);
 

@@ -20,7 +20,10 @@ import {
 } from "../utils/attendanceUtils";
 import { TimesheetEntry } from "../types";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
-import { fetchMonthlyAttendance, autoUpdateTimesheet } from "../reducers/employeeAttendance.reducer";
+import {
+  fetchMonthlyAttendance,
+  autoUpdateTimesheet,
+} from "../reducers/employeeAttendance.reducer";
 import { fetchBlockers } from "../reducers/timesheetBlocker.reducer";
 import { getLeaveHistory } from "../reducers/leaveRequest.reducer";
 import { UserType } from "../reducers/user.reducer";
@@ -36,6 +39,7 @@ interface CalendarProps {
   scrollable?: boolean;
   viewOnly?: boolean;
   onBlockedClick?: () => void;
+  hideMonthNavigation?: boolean;
 }
 
 const Calendar = ({
@@ -49,6 +53,7 @@ const Calendar = ({
   scrollable = true,
   viewOnly = false,
   onBlockedClick,
+  hideMonthNavigation = false,
 }: CalendarProps) => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -162,14 +167,16 @@ const Calendar = ({
     } else {
       setInternalDisplayDate(newDate);
     }
-    
+
     if (currentEmployeeId && currentEmployeeId !== "Admin") {
-      dispatch(autoUpdateTimesheet({
-        employeeId: currentEmployeeId,
-        month: (newDate.getMonth() + 1).toString().padStart(2, "0"),
-        year: newDate.getFullYear().toString(),
-        dryRun: true,
-      }));
+      dispatch(
+        autoUpdateTimesheet({
+          employeeId: currentEmployeeId,
+          month: (newDate.getMonth() + 1).toString().padStart(2, "0"),
+          year: newDate.getFullYear().toString(),
+          dryRun: true,
+        }),
+      );
     }
   };
 
@@ -187,12 +194,14 @@ const Calendar = ({
     }
 
     if (currentEmployeeId && currentEmployeeId !== "Admin") {
-      dispatch(autoUpdateTimesheet({
-        employeeId: currentEmployeeId,
-        month: (newDate.getMonth() + 1).toString().padStart(2, "0"),
-        year: newDate.getFullYear().toString(),
-        dryRun: true,
-      }));
+      dispatch(
+        autoUpdateTimesheet({
+          employeeId: currentEmployeeId,
+          month: (newDate.getMonth() + 1).toString().padStart(2, "0"),
+          year: newDate.getFullYear().toString(),
+          dryRun: true,
+        }),
+      );
     }
   };
 
@@ -303,17 +312,18 @@ const Calendar = ({
     // 3. Restricted Activity (Mixed Combinations / Leave / WFH)
     // If the record exists and has non-office activity, it's blocked for editing
     if (!isAdmin && !isManager) {
-      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      const entry = records.find(r => {
+      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const entry = records.find((r) => {
         const rDate = new Date(r.workingDate);
-        return rDate.toISOString().split('T')[0] === dateStr;
+        return rDate.toISOString().split("T")[0] === dateStr;
       });
 
       if (entry) {
-        const h1 = (entry.firstHalf || '').toLowerCase();
-        const h2 = (entry.secondHalf || '').toLowerCase();
-        const isRestricted = (val: string) => val && !val.includes('office') && val.trim() !== '';
-        
+        const h1 = (entry.firstHalf || "").toLowerCase();
+        const h2 = (entry.secondHalf || "").toLowerCase();
+        const isRestricted = (val: string) =>
+          val && !val.includes("office") && val.trim() !== "";
+
         if (isRestricted(h1) || isRestricted(h2)) return true;
       }
     }
@@ -336,7 +346,7 @@ const Calendar = ({
   const getBlockedReason = (date: Date) => {
     // 1. Month Lock
     const d = new Date(date);
-    d.setHours(0,0,0,0);
+    d.setHours(0, 0, 0, 0);
     if (!isAdmin && !isManager && !isEditableMonth(d)) return "Month is Locked";
 
     // 2. Manual Blocker
@@ -345,19 +355,21 @@ const Calendar = ({
 
     // 3. Restricted Activity
     if (!isAdmin && !isManager) {
-        const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        const entry = records.find(r => {
-            const rDate = new Date(r.workingDate);
-            return rDate.toISOString().split('T')[0] === dateStr;
-        });
+      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const entry = records.find((r) => {
+        const rDate = new Date(r.workingDate);
+        return rDate.toISOString().split("T")[0] === dateStr;
+      });
 
-        if (entry) {
-            const h1 = (entry.firstHalf || '').toLowerCase();
-            const h2 = (entry.secondHalf || '').toLowerCase();
-            const isRestricted = (val: string) => val && !val.includes('office') && val.trim() !== '';
-            
-            if (isRestricted(h1) || isRestricted(h2)) return "Restricted Activity (Leave/WFH)";
-        }
+      if (entry) {
+        const h1 = (entry.firstHalf || "").toLowerCase();
+        const h2 = (entry.secondHalf || "").toLowerCase();
+        const isRestricted = (val: string) =>
+          val && !val.includes("office") && val.trim() !== "";
+
+        if (isRestricted(h1) || isRestricted(h2))
+          return "Restricted Activity (Leave/WFH)";
+      }
     }
 
     return null;
@@ -464,44 +476,46 @@ const Calendar = ({
                 </button>
               )}
 
-              <div
-                className={`flex items-center gap-1 ${
-                  isSidebar
-                    ? "bg-transparent p-0"
-                    : "bg-[#F4F7FE] p-1 rounded-xl border border-transparent hover:border-gray-200 transition-colors"
-                }`}
-              >
-                <button
-                  onClick={handlePrevMonth}
-                  className={`p-1.5 hover:bg-white hover:shadow-sm rounded-lg transition-all text-[#A3AED0] hover:text-[#4318FF] active:scale-90 ${
-                    isSidebar ? "p-1" : ""
-                  }`}
-                >
-                  <ChevronLeft size={20} strokeWidth={2.5} />
-                </button>
-                <span
-                  className={`${
+              {!hideMonthNavigation && (
+                <div
+                  className={`flex items-center gap-1 ${
                     isSidebar
-                      ? "text-sm min-w-[90px]"
-                      : "text-sm font-extrabold min-w-[120px] md:min-w-[140px]"
-                  } text-[#2B3674] text-center select-none`}
-                >
-                  {currentMonthName}
-                </span>
-                <button
-                  onClick={handleNextMonth}
-                  disabled={!canNavigateToNextMonth}
-                  className={`p-1.5 rounded-lg transition-all active:scale-90 ${
-                    isSidebar ? "p-1" : ""
-                  } ${
-                    !canNavigateToNextMonth
-                      ? "text-gray-300 cursor-not-allowed"
-                      : "text-[#A3AED0] hover:text-[#4318FF] hover:bg-white hover:shadow-sm"
+                      ? "bg-transparent p-0"
+                      : "bg-[#F4F7FE] p-1 rounded-xl border border-transparent hover:border-gray-200 transition-colors"
                   }`}
                 >
-                  <ChevronRight size={20} strokeWidth={2.5} />
-                </button>
-              </div>
+                  <button
+                    onClick={handlePrevMonth}
+                    className={`p-1.5 hover:bg-white hover:shadow-sm rounded-lg transition-all text-[#A3AED0] hover:text-[#4318FF] active:scale-90 ${
+                      isSidebar ? "p-1" : ""
+                    }`}
+                  >
+                    <ChevronLeft size={20} strokeWidth={2.5} />
+                  </button>
+                  <span
+                    className={`${
+                      isSidebar
+                        ? "text-sm min-w-[90px]"
+                        : "text-sm font-extrabold min-w-[120px] md:min-w-[140px]"
+                    } text-[#2B3674] text-center select-none`}
+                  >
+                    {currentMonthName}
+                  </span>
+                  <button
+                    onClick={handleNextMonth}
+                    disabled={!canNavigateToNextMonth}
+                    className={`p-1.5 rounded-lg transition-all active:scale-90 ${
+                      isSidebar ? "p-1" : ""
+                    } ${
+                      !canNavigateToNextMonth
+                        ? "text-gray-300 cursor-not-allowed"
+                        : "text-[#A3AED0] hover:text-[#4318FF] hover:bg-white hover:shadow-sm"
+                    }`}
+                  >
+                    <ChevronRight size={20} strokeWidth={2.5} />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -663,31 +677,95 @@ const Calendar = ({
                 (entry as any).firstHalf !== (entry as any).secondHalf;
 
               // Helper to get consistent styles matching MyTimesheet exactly
-              const getStatusStyles = (statusStr: string | null | undefined, location?: string | null) => {
+              const getStatusStyles = (
+                statusStr: string | null | undefined,
+                location?: string | null,
+              ) => {
                 const s = (statusStr || "").toLowerCase();
                 const loc = (location || "").toLowerCase();
-                
+
                 // Handle combined statuses (e.g. "WFH (Half Day)") by checking includes
                 const isHalfDay = s.includes("half day") || s === "half day";
-                const isWFH = s.includes("wfh") || s.includes("work from home") || loc === "wfh" || loc === "work from home";
-                const isClientVisit = s.includes("client visit") || s.includes("client place") || loc === "client visit" || loc === "client place";
+                const isWFH =
+                  s.includes("wfh") ||
+                  s.includes("work from home") ||
+                  loc === "wfh" ||
+                  loc === "work from home";
+                const isClientVisit =
+                  s.includes("client visit") ||
+                  s.includes("client place") ||
+                  loc === "client visit" ||
+                  loc === "client place";
                 const isOffice = s === "office" || loc === "office";
-                const isLeave = s === "leave" || s === "weekend"; 
-                
-                if (s === "blocked") return { bg: "bg-gray-200", badge: "bg-gray-600 text-white", border: "border-transparent", text: "text-gray-600" };
-                if (s === "holiday") return { bg: "bg-[#DBEAFE]", badge: "bg-[#1890FF]/70 text-white font-bold", border: "border-[#1890FF]/20", text: "text-[#1890FF]" };
-                
+                const isLeave = s === "leave" || s === "weekend";
+
+                if (s === "blocked")
+                  return {
+                    bg: "bg-gray-200",
+                    badge: "bg-gray-600 text-white",
+                    border: "border-transparent",
+                    text: "text-gray-600",
+                  };
+                if (s === "holiday")
+                  return {
+                    bg: "bg-[#DBEAFE]",
+                    badge: "bg-[#1890FF]/70 text-white font-bold",
+                    border: "border-[#1890FF]/20",
+                    text: "text-[#1890FF]",
+                  };
+
                 // Priority: Specific types first
-                if (isWFH) return { bg: "bg-[#DBEAFE]", badge: "bg-[#4318FF]/70 text-white font-bold", border: "border-[#4318FF]/20", text: "text-[#4318FF]" };
-                if (isClientVisit) return { bg: "bg-[#DBEAFE]", badge: "bg-[#4318FF]/70 text-white font-bold", border: "border-[#4318FF]/20", text: "text-[#4318FF]" };
-                
+                if (isWFH)
+                  return {
+                    bg: "bg-[#DBEAFE]",
+                    badge: "bg-[#4318FF]/70 text-white font-bold",
+                    border: "border-[#4318FF]/20",
+                    text: "text-[#4318FF]",
+                  };
+                if (isClientVisit)
+                  return {
+                    bg: "bg-[#DBEAFE]",
+                    badge: "bg-[#4318FF]/70 text-white font-bold",
+                    border: "border-[#4318FF]/20",
+                    text: "text-[#4318FF]",
+                  };
+
                 // Fallbacks
-                if (isLeave) return { bg: "bg-[#FEE2E2]", badge: "bg-[#EE5D50]/70 text-white font-bold", border: "border-[#EE5D50]/10", text: "text-[#EE5D50]" };
-                if (isOffice || s === "full day") return { bg: "bg-[#E6FFFA]", badge: "bg-[#01B574] text-white font-bold", border: "border-[#01B574]/20", text: "text-[#01B574]" };
-                if (isHalfDay) return { bg: "bg-[#FEF3C7]", badge: "bg-[#FFB020]/80 text-white font-bold", border: "border-[#FFB020]/20", text: "text-[#FFB020]" };
-                if (s === "absent") return { bg: "bg-[#FECACA]", badge: "bg-[#DC2626]/70 text-white font-bold", border: "border-[#DC2626]/20", text: "text-[#DC2626]" };
-                
-                return { bg: "bg-[#F8FAFC]", badge: "bg-[#64748B]/90 text-white font-bold", border: "border-gray-300", text: "text-gray-600" };
+                if (isLeave)
+                  return {
+                    bg: "bg-[#FEE2E2]",
+                    badge: "bg-[#EE5D50]/70 text-white font-bold",
+                    border: "border-[#EE5D50]/10",
+                    text: "text-[#EE5D50]",
+                  };
+                if (isOffice || s === "full day")
+                  return {
+                    bg: "bg-[#E6FFFA]",
+                    badge: "bg-[#01B574] text-white font-bold",
+                    border: "border-[#01B574]/20",
+                    text: "text-[#01B574]",
+                  };
+                if (isHalfDay)
+                  return {
+                    bg: "bg-[#FEF3C7]",
+                    badge: "bg-[#FFB020]/80 text-white font-bold",
+                    border: "border-[#FFB020]/20",
+                    text: "text-[#FFB020]",
+                  };
+                if (s === "absent")
+                  return {
+                    bg: "bg-[#FECACA]",
+                    badge: "bg-[#DC2626]/70 text-white font-bold",
+                    border: "border-[#DC2626]/20",
+                    text: "text-[#DC2626]",
+                  };
+
+                return {
+                  bg: "bg-[#F8FAFC]",
+                  badge: "bg-[#64748B]/90 text-white font-bold",
+                  border: "border-gray-300",
+                  text: "text-gray-600",
+                };
               };
 
               const getShortStatus = (status: string) => {
@@ -698,12 +776,18 @@ const Calendar = ({
 
               const isWorkLoc = (s: string) => {
                 const lower = (s || "").toLowerCase();
-                return ["wfh", "work from home", "client visit", "client place", "office"].some(k => lower.includes(k));
+                return [
+                  "wfh",
+                  "work from home",
+                  "client visit",
+                  "client place",
+                  "office",
+                ].some((k) => lower.includes(k));
               };
 
-              const useNeutralSplit = 
-                isSplitDay && 
-                isWorkLoc((entry as any).firstHalf) && 
+              const useNeutralSplit =
+                isSplitDay &&
+                isWorkLoc((entry as any).firstHalf) &&
                 isWorkLoc((entry as any).secondHalf);
 
               // Status Logic for Styling
@@ -777,10 +861,10 @@ const Calendar = ({
                 // textClass = "text-gray-300 font-bold";
                 statusLabel = "UPCOMING";
               }
-              
+
               // Apply blocked cursor style if blocked
               if (isBlocked) {
-                  cellClass += " cursor-not-allowed";
+                cellClass += " cursor-not-allowed";
               }
 
               return (
@@ -875,23 +959,30 @@ const Calendar = ({
                   {/* Background Layer for Split Days - Always Colored */}
                   {isSplitDay ? (
                     <div className="absolute inset-0 z-0 rounded-2xl flex flex-col sm:flex-row overflow-hidden">
-                       {isWorkLoc((entry as any).firstHalf) && isWorkLoc((entry as any).secondHalf) ? (
-                         <>
-                           <div className="flex-1 bg-[#E6FFFA] border-b sm:border-b-0 sm:border-r border-[#01B574]/20" />
-                           <div className="flex-1 bg-[#E6FFFA]" />
-                         </>
-                       ) : (
-                         <>
-                           <div className={`flex-1 ${getStatusStyles((entry as any).firstHalf).bg}`} />
-                           <div className={`flex-1 ${getStatusStyles((entry as any).secondHalf).bg}`} />
-                         </>
-                       )}
+                      {isWorkLoc((entry as any).firstHalf) &&
+                      isWorkLoc((entry as any).secondHalf) ? (
+                        <>
+                          <div className="flex-1 bg-[#E6FFFA] border-b sm:border-b-0 sm:border-r border-[#01B574]/20" />
+                          <div className="flex-1 bg-[#E6FFFA]" />
+                        </>
+                      ) : (
+                        <>
+                          <div
+                            className={`flex-1 ${getStatusStyles((entry as any).firstHalf).bg}`}
+                          />
+                          <div
+                            className={`flex-1 ${getStatusStyles((entry as any).secondHalf).bg}`}
+                          />
+                        </>
+                      )}
                     </div>
                   ) : null}
 
                   <span
                     className={`text-sm font-bold text-black mb-3 flex items-center justify-center w-6 h-6 rounded-full z-10 transition-colors duration-300 ${
-                      isToday ? "bg-[#4318FF] text-white" : "group-hover:bg-[#4318FF] group-hover:text-white"
+                      isToday
+                        ? "bg-[#4318FF] text-white"
+                        : "group-hover:bg-[#4318FF] group-hover:text-white"
                     } `}
                   >
                     {day}
@@ -899,25 +990,32 @@ const Calendar = ({
 
                   {isBlocked && (
                     <div className="absolute top-2 right-2 z-10 transition-transform hover:scale-110">
-                      <ShieldBan size={14} className="text-red-500 drop-shadow-sm" strokeWidth={2.5} />
+                      <ShieldBan
+                        size={14}
+                        className="text-red-500 drop-shadow-sm"
+                        strokeWidth={2.5}
+                      />
                     </div>
                   )}
-
 
                   {/* Middle: Hours Display */}
                   <div className="flex-1 flex flex-col items-center justify-center w-full z-10">
                     {/* Split Day Badges - Show small badges when firstHalf and secondHalf differ */}
                     {isSplitDay && (
                       <div className="flex gap-1.5 w-full mb-1 px-1">
-                        <div className={`flex-1 py-1 rounded-md text-center text-[8px] font-bold uppercase shadow-sm ${getStatusStyles((entry as any).firstHalf).badge}`}>
+                        <div
+                          className={`flex-1 py-1 rounded-md text-center text-[8px] font-bold uppercase shadow-sm ${getStatusStyles((entry as any).firstHalf).badge}`}
+                        >
                           {getShortStatus((entry as any).firstHalf)}
                         </div>
-                        <div className={`flex-1 py-1 rounded-md text-center text-[8px] font-bold uppercase shadow-sm ${getStatusStyles((entry as any).secondHalf).badge}`}>
+                        <div
+                          className={`flex-1 py-1 rounded-md text-center text-[8px] font-bold uppercase shadow-sm ${getStatusStyles((entry as any).secondHalf).badge}`}
+                        >
                           {getShortStatus((entry as any).secondHalf)}
                         </div>
                       </div>
                     )}
-                    
+
                     {!isBlocked && entry?.totalHours ? (
                       <div className="text-center">
                         <span
