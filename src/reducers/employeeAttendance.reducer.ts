@@ -42,6 +42,7 @@ export interface WorkTrendData {
   totalLeaves: number;
   workFromHome: number;
   clientVisits: number;
+  office: number;
 }
 
 // Interface for Dashboard Stats
@@ -123,6 +124,24 @@ export const fetchWorkTrends = createAsyncThunk(
     // Custom query format requested by user: ?From<StartDate>To<EndDate>
     const response = await axios.get(
       `${apiUrl}/work-trends/${employeeId}?From${startDate}To${endDate}`,
+    );
+    return response.data;
+  },
+);
+
+export const fetchWorkTrendsDetailed = createAsyncThunk(
+  "attendance/fetchWorkTrendsDetailed",
+  async ({
+    employeeId,
+    endDate,
+    startDate,
+  }: {
+    employeeId: string;
+    endDate: string;
+    startDate?: string;
+  }) => {
+    const response = await axios.get(
+      `${apiUrl}/work-trends-detailed/${employeeId}?From${startDate}To${endDate}`,
     );
     return response.data;
   },
@@ -449,6 +468,23 @@ const attendanceSlice = createSlice({
         (state: AttendanceState, action: any) => {
           state.trendsLoading = false;
           state.error = action.error?.message || "Failed to fetch trends";
+        },
+      )
+      .addCase(fetchWorkTrendsDetailed.pending, (state: AttendanceState) => {
+        state.trendsLoading = true;
+      })
+      .addCase(
+        fetchWorkTrendsDetailed.fulfilled,
+        (state: AttendanceState, action: PayloadAction<WorkTrendData[]>) => {
+          state.trendsLoading = false;
+          state.trends = action.payload;
+        },
+      )
+      .addCase(
+        fetchWorkTrendsDetailed.rejected,
+        (state: AttendanceState, action: any) => {
+          state.trendsLoading = false;
+          state.error = action.error?.message || "Failed to fetch detailed trends";
         },
       )
       .addCase(

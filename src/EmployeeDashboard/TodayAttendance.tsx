@@ -1,10 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
-import {
-  Edit,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { Edit, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { UserType } from "../reducers/user.reducer";
 import {
@@ -12,6 +8,7 @@ import {
   fetchDashboardStats,
   fetchAttendanceByDateRange,
   autoUpdateTimesheet,
+  fetchWorkTrendsDetailed,
 } from "../reducers/employeeAttendance.reducer";
 import { getEntity, setCurrentUser } from "../reducers/employeeDetails.reducer";
 import {
@@ -22,6 +19,7 @@ import { fetchNotifications } from "../reducers/notification.reducer";
 import {
   getAllLeaveRequests,
   getLeaveBalance,
+  getMonthlyLeaveBalance,
   getLeaveStats,
 } from "../reducers/leaveRequest.reducer";
 import { generateMonthlyEntries } from "../utils/attendanceUtils";
@@ -30,14 +28,14 @@ import AttendancePieChart from "./AttendancePieChart";
 import WorkTrendsGraph from "./WorkTrendsGraph";
 import AttendanceStatsCards from "./AttendanceStatsCards";
 import { RootState } from "../store";
- 
+
 interface Props {
   setActiveTab?: (tab: string) => void;
   setScrollToDate?: (date: number | null) => void;
   onNavigate?: (timestamp: number) => void;
   viewOnly?: boolean;
 }
- 
+
 const TodayAttendance = ({
   setActiveTab,
   setScrollToDate,
@@ -48,7 +46,7 @@ const TodayAttendance = ({
   const navigate = useNavigate();
   const location = useLocation();
   const { employeeId: urlEmployeeId } = useParams<{ employeeId: string }>();
-  const { records, loading, yearlyRecords } = useAppSelector(
+  const { records, loading, yearlyRecords, trends } = useAppSelector(
     (state: RootState) => state.attendance,
   );
   const { entity } = useAppSelector(
@@ -58,26 +56,26 @@ const TodayAttendance = ({
   const { holidays } = useAppSelector(
     (state: RootState) => state.masterHolidays,
   );
- 
+
   // Leave Balance State
   // Leave Balance State
-  const { leaveBalance } = useAppSelector(
+  const { leaveBalance, monthlyLeaveBalance } = useAppSelector(
     (state: RootState) => state.leaveRequest,
   );
- 
+
   const isMyRoute =
     location.pathname.includes("my-dashboard") ||
     location.pathname.includes("my-timesheet") ||
     location.pathname === "/employee-dashboard" ||
     location.pathname === "/employee-dashboard/";
- 
+
   const currentEmployeeId = isMyRoute
     ? currentUser?.employeeId || currentUser?.loginId
     : urlEmployeeId ||
       entity?.employeeId ||
       currentUser?.employeeId ||
       currentUser?.loginId;
- 
+
   // Debug log for manager dashboard data issue
   useEffect(() => {
     if (isMyRoute) {
@@ -89,22 +87,22 @@ const TodayAttendance = ({
       });
     }
   }, [location.pathname, currentUser, currentEmployeeId, isMyRoute]);
- 
+
   const detailsFetched = useRef(false);
   const attendanceFetchedKey = useRef<string | null>(null);
- 
+
   const [now] = useState(() => new Date());
   const [calendarDate, setCalendarDate] = useState(new Date());
   const selectedYear = calendarDate.getFullYear();
- 
+
   useEffect(() => {
     if (viewOnly) return;
- 
+
     const needsFetch =
       !entity?.fullName ||
       (entity?.employeeId !== currentEmployeeId &&
         String(entity?.id) !== String(currentEmployeeId));
- 
+
     if (needsFetch && (currentEmployeeId || currentUser?.loginId)) {
       const searchTerm = currentEmployeeId || currentUser?.loginId;
       if (searchTerm) {
@@ -112,10 +110,10 @@ const TodayAttendance = ({
         if (entity?.employeeId && entity?.employeeId !== currentEmployeeId) {
           detailsFetched.current = false;
         }
- 
+
         if (detailsFetched.current) return;
         detailsFetched.current = true;
- 
+
         dispatch(getEntity(searchTerm))
           .unwrap()
           .then((found) => {
@@ -130,7 +128,7 @@ const TodayAttendance = ({
       }
     }
   }, [dispatch, entity, currentEmployeeId, currentUser, viewOnly]);
- 
+
   // Refresh updates whenever dashboard is accessed
   useEffect(() => {
     if (currentEmployeeId && currentEmployeeId !== "Admin") {
@@ -145,7 +143,7 @@ const TodayAttendance = ({
           year: calendarDate.getFullYear().toString(),
         }),
       );
- 
+
       // Leave Balance Refresh
       dispatch(
         getLeaveBalance({ employeeId: currentEmployeeId, year: selectedYear }),
@@ -157,13 +155,20 @@ const TodayAttendance = ({
         }),
       );
       dispatch(
+        getMonthlyLeaveBalance({
+          employeeId: currentEmployeeId,
+          month: calendarDate.getMonth() + 1,
+          year: selectedYear,
+        }),
+      );
+      dispatch(
         getAllLeaveRequests({
           employeeId: currentEmployeeId,
           year: String(selectedYear),
           limit: 500,
         }),
       );
- 
+
       // Fetch Annual Attendance for Stats
       const startOfYear = `${selectedYear}-01-01`;
       const endOfYear = `${selectedYear}-12-31`;
@@ -174,9 +179,27 @@ const TodayAttendance = ({
           endDate: endOfYear,
         }),
       );
+
+      // Fetch Trends for Stats Cards accuracy
+      const lastDayOfMonth = new Date(
+        selectedYear,
+        calendarDate.getMonth() + 1,
+        0,
+      );
+      const endDateStr = `${selectedYear}-${String(calendarDate.getMonth() + 1).padStart(2, "0")}-${String(lastDayOfMonth.getDate()).padStart(2, "0")}`;
+
+      const startDateStr = `${selectedYear}-${String(calendarDate.getMonth() + 1).padStart(2, "0")}-01`;
+
+      dispatch(
+        fetchWorkTrendsDetailed({
+          employeeId: currentEmployeeId,
+          endDate: endDateStr,
+          startDate: startDateStr,
+        }),
+      );
     }
   }, [dispatch, currentEmployeeId, calendarDate, selectedYear]);
- 
+
   // Leave Balance Logic
   const isIntern = useMemo(() => {
     const designation = (entity?.designation ?? entity?.designation_name ?? "")
@@ -187,18 +210,18 @@ const TodayAttendance = ({
       .toUpperCase();
     return designation.includes("intern") || employmentType === "INTERN";
   }, [entity?.designation, entity?.designation_name, entity?.employmentType]);
- 
+
   // 1. Separate "Today's" Data - ALWAYS based on current real-time Month
   const todayStatsEntry = useMemo(() => {
     // Generate entries for the ACTUAL current month (now)
     const entries = generateMonthlyEntries(now, now, records);
     return entries.find((e) => e.isToday) || null;
   }, [now, records]);
- 
+
   // 2. Calendar / Stats Data - Based on SELECTED `calendarDate`
   const currentMonthEntries = useMemo(() => {
     const entries = generateMonthlyEntries(calendarDate, now, records);
- 
+
     // Merge Master Holidays to align with MyTimesheet logic
     return entries.map((day) => {
       const dateStr = `${day.fullDate.getFullYear()}-${String(
@@ -213,7 +236,7 @@ const TodayAttendance = ({
             : new Date(hDate).toISOString().split("T")[0]) === dateStr
         );
       });
- 
+
       if (isMasterHoliday) {
         if (
           day.status !== "Full Day" &&
@@ -227,7 +250,7 @@ const TodayAttendance = ({
       return day;
     });
   }, [calendarDate, now, records, holidays]);
- 
+
   const displayEntry =
     todayStatsEntry ||
     ({
@@ -236,17 +259,17 @@ const TodayAttendance = ({
       isSaved: false,
       isToday: true,
     } as any);
- 
+
   const fetchAttendanceData = useCallback(
     (date: Date) => {
       if (!currentEmployeeId || currentEmployeeId === "Admin") return;
- 
+
       const fetchKey = `${currentEmployeeId}-${
         date.getMonth() + 1
       }-${date.getFullYear()}`;
       if (attendanceFetchedKey.current === fetchKey) return;
       attendanceFetchedKey.current = fetchKey;
- 
+
       dispatch(
         fetchMonthlyAttendance({
           employeeId: currentEmployeeId,
@@ -267,25 +290,25 @@ const TodayAttendance = ({
     },
     [dispatch, currentEmployeeId],
   );
- 
+
   useEffect(() => {
     fetchAttendanceData(now);
   }, [fetchAttendanceData, now]);
- 
+
   const handleDateNavigator = useCallback(
     (timestamp: number) => {
       if (setScrollToDate) setScrollToDate(timestamp);
- 
+
       const targetDate = new Date(timestamp);
       const isPrivilegedUser =
         currentUser?.userType === UserType.ADMIN ||
         currentUser?.userType === UserType.MANAGER ||
         currentUser?.userType === UserType.TEAM_LEAD;
- 
+
       const isSelfView =
         !currentEmployeeId || currentEmployeeId === currentUser?.employeeId;
       const isViewAttendance = location.pathname.includes("/view-attendance/");
- 
+
       // Disable navigation for Admin and Manager on dashboard or view-attendance pages
       if (
         isPrivilegedUser &&
@@ -295,7 +318,7 @@ const TodayAttendance = ({
       ) {
         return;
       }
- 
+
       // Handle Privileged User viewing someone else (fallback if not blocked above)
       if (
         viewOnly &&
@@ -310,7 +333,7 @@ const TodayAttendance = ({
         const basePath = location.pathname.startsWith("/manager-dashboard")
           ? "/manager-dashboard"
           : "/admin-dashboard";
- 
+
         navigate(`${basePath}/timesheet/${currentEmployeeId}/${dateStr}`, {
           state: {
             selectedDate: dateStr,
@@ -319,10 +342,10 @@ const TodayAttendance = ({
         });
         return;
       }
- 
+
       // If viewOnly is true and not a privileged user viewing someone else, we stop here
       if (viewOnly) return;
- 
+
       // Dynamic base path detection for self-view
       let basePath = "/employee-dashboard";
       if (location.pathname.startsWith("/manager-dashboard")) {
@@ -330,18 +353,18 @@ const TodayAttendance = ({
       } else if (location.pathname.startsWith("/admin-dashboard")) {
         basePath = "/admin-dashboard";
       }
- 
+
       const navTarget = `${basePath}/my-timesheet`;
       const y = targetDate.getFullYear();
       const m = String(targetDate.getMonth() + 1).padStart(2, "0");
       const d = String(targetDate.getDate()).padStart(2, "0");
       const dateStr = `${y}-${m}-${d}`;
- 
+
       const state = {
         selectedDate: dateStr,
         timestamp: Date.now(), // Use unique timestamp for highlight trigger
       };
- 
+
       if (setActiveTab) {
         setActiveTab("My Timesheet");
       } else {
@@ -358,7 +381,7 @@ const TodayAttendance = ({
       currentEmployeeId,
     ],
   );
- 
+
   const handleNavigate = (timestamp: number) => {
     if (onNavigate) {
       onNavigate(timestamp);
@@ -366,19 +389,19 @@ const TodayAttendance = ({
       handleDateNavigator(timestamp);
     }
   };
- 
+
   if (!todayStatsEntry && loading)
     return (
       <div className="flex items-center justify-center p-20">
         <div className="w-12 h-12 border-4 border-[#00A3C4]/20 border-t-[#00A3C4] rounded-full animate-spin"></div>
       </div>
     );
- 
+
   if (!todayStatsEntry && !loading && records.length === 0)
     return (
       <div className="p-8 text-center text-gray-500">Initializing entry...</div>
     );
- 
+
   return (
     <div className="flex flex-col h-full w-full overflow-hidden bg-gray-50/50">
       {/* Header */}
@@ -401,7 +424,7 @@ const TodayAttendance = ({
                 "Employee"}
             </p>
           </div>
- 
+
           <div className="flex items-center gap-3">
             <div className="px-4 py-2 bg-[#F4F7FE] rounded-lg text-sm font-bold text-[#2B3674]">
               {displayEntry.fullDate.toLocaleDateString("en-US", {
@@ -413,7 +436,7 @@ const TodayAttendance = ({
           </div>
         </div>
       )}
- 
+
       <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
         {/* Month Selector Section */}
         <div className="flex justify-center md:justify-end mb-2">
@@ -424,38 +447,42 @@ const TodayAttendance = ({
                 prev.setMonth(prev.getMonth() - 1);
                 setCalendarDate(prev);
                 if (currentEmployeeId && currentEmployeeId !== "Admin") {
-                  dispatch(autoUpdateTimesheet({
-                    employeeId: currentEmployeeId,
-                    month: (prev.getMonth() + 1).toString().padStart(2, "0"),
-                    year: prev.getFullYear().toString(),
-                    dryRun: true,
-                  }));
+                  dispatch(
+                    autoUpdateTimesheet({
+                      employeeId: currentEmployeeId,
+                      month: (prev.getMonth() + 1).toString().padStart(2, "0"),
+                      year: prev.getFullYear().toString(),
+                      dryRun: true,
+                    }),
+                  );
                 }
               }}
               className="p-1.5 hover:bg-gray-50 rounded-full transition-colors text-[#4318FF] hover:scale-110 active:scale-95"
             >
               <ChevronLeft size={20} strokeWidth={2.5} />
             </button>
- 
+
             <span className="text-[#1B2559] font-bold min-w-[140px] text-center text-sm md:text-base selection:bg-none tracking-tight">
               {calendarDate.toLocaleString("default", {
                 month: "long",
                 year: "numeric",
               })}
             </span>
- 
+
             <button
               onClick={() => {
                 const next = new Date(calendarDate);
                 next.setMonth(next.getMonth() + 1);
                 setCalendarDate(next);
                 if (currentEmployeeId && currentEmployeeId !== "Admin") {
-                  dispatch(autoUpdateTimesheet({
-                    employeeId: currentEmployeeId,
-                    month: (next.getMonth() + 1).toString().padStart(2, "0"),
-                    year: next.getFullYear().toString(),
-                    dryRun: true,
-                  }));
+                  dispatch(
+                    autoUpdateTimesheet({
+                      employeeId: currentEmployeeId,
+                      month: (next.getMonth() + 1).toString().padStart(2, "0"),
+                      year: next.getFullYear().toString(),
+                      dryRun: true,
+                    }),
+                  );
                 }
               }}
               className="p-1.5 hover:bg-gray-50 rounded-full transition-colors text-[#4318FF] hover:scale-110 active:scale-95"
@@ -464,17 +491,19 @@ const TodayAttendance = ({
             </button>
           </div>
         </div>
- 
+
         {/* Top Section: Dashboard Cards */}
         <AttendanceStatsCards
           year={selectedYear}
           month={calendarDate.getMonth() + 1}
           leaveBalance={leaveBalance}
+          monthlyLeaveBalance={monthlyLeaveBalance}
           attendanceRecords={yearlyRecords}
           isIntern={isIntern}
           joiningDate={entity?.joiningDate || (currentUser as any)?.joiningDate}
+          trends={trends}
         />
- 
+
         {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
           <div className="w-full">
@@ -490,7 +519,7 @@ const TodayAttendance = ({
             />
           </div>
         </div>
- 
+
         {!viewOnly && (
           <div className="flex justify-center">
             <button
@@ -502,7 +531,7 @@ const TodayAttendance = ({
             </button>
           </div>
         )}
- 
+
         {/* Bottom Section: Calendar/List */}
         <div className="bg-white rounded-xl shadow-[0px_10px_30px_rgba(0,0,0,0.02)] border border-gray-100/50 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
@@ -527,6 +556,7 @@ const TodayAttendance = ({
               onNavigateToDate={(timestamp) => {
                 handleNavigate(timestamp);
               }}
+              hideMonthNavigation={true}
             />
           </div>
         </div>
@@ -534,7 +564,5 @@ const TodayAttendance = ({
     </div>
   );
 };
- 
+
 export default TodayAttendance;
- 
- 

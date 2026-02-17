@@ -13,6 +13,7 @@ interface AttendanceViewWrapperProps {
   employeeId?: string;
   variant?: "small" | "large" | "sidebar";
   viewOnly?: boolean;
+  hideMonthNavigation?: boolean;
 }
 
 const AttendanceViewWrapper = (props: AttendanceViewWrapperProps) => {
