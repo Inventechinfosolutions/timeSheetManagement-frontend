@@ -26,6 +26,7 @@ interface Props {
     ytdUsed: number;
     ytdLop: number;
   } | null;
+  loading?: boolean;
 }
 
 const ENTITLEMENT = {
@@ -42,6 +43,7 @@ const AttendanceStatsCards = ({
   joiningDate,
   trends = [],
   monthlyLeaveBalance,
+  loading = false,
 }: Props) => {
   const currentYearMonth = `${year}-${month.toString().padStart(2, "0")}`;
 
@@ -90,13 +92,36 @@ const AttendanceStatsCards = ({
       if (!Array.isArray(attendanceRecords)) return 0;
       return attendanceRecords
         .filter((r) => {
-          const d = new Date(r.workingDate);
-          return d.getFullYear() === year && d.getMonth() + 1 === m;
+          // Use string parsing to avoid timezone shifts
+          const dateStr =
+            typeof r.workingDate === "string"
+              ? r.workingDate.split("T")[0]
+              : new Date(r.workingDate).toISOString().split("T")[0];
+          const [y, mStr] = dateStr.split("-");
+          return parseInt(y) === year && parseInt(mStr) === m;
         })
         .reduce((acc, r) => {
-          if (r.status === "Leave" || r.status === "Absent") return acc + 1;
-          if (r.status === "Half Day") return acc + 0.5;
-          return acc;
+          let dailyUsage = 0;
+          const status = (r.status || "").toLowerCase();
+
+          if (r.firstHalf || r.secondHalf) {
+            const processHalf = (half: string | null) => {
+              if (!half) return 0;
+              const h = half.toLowerCase();
+              if (h.includes("leave") || h.includes("absent")) {
+                return 0.5;
+              }
+              return 0;
+            };
+            dailyUsage = processHalf(r.firstHalf) + processHalf(r.secondHalf);
+          } else {
+            if (status.includes("leave") || status.includes("absent")) {
+              dailyUsage = 1;
+            } else if (status.includes("half day")) {
+              dailyUsage = 0.5;
+            }
+          }
+          return acc + dailyUsage;
         }, 0);
     };
 
@@ -251,7 +276,9 @@ const AttendanceStatsCards = ({
   }, [month, year, attendanceRecords]);
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+    <div
+      className={`grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 transition-opacity duration-300 ${loading ? "opacity-50 pointer-events-none" : "opacity-100"}`}
+    >
       {/* Card 1 - Total Monthly Hours */}
       <div className="bg-linear-to-br from-[#36B9CC] to-[#258391] rounded-[20px] p-4 shadow-lg shadow-cyan-500/20 flex flex-col items-start gap-3 relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 min-h-[140px]">
         <div className="absolute -right-4 -top-4 w-20 h-20 bg-white/20 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500"></div>

@@ -59,9 +59,11 @@ const TodayAttendance = ({
 
   // Leave Balance State
   // Leave Balance State
-  const { leaveBalance, monthlyLeaveBalance } = useAppSelector(
-    (state: RootState) => state.leaveRequest,
-  );
+  const {
+    leaveBalance,
+    monthlyLeaveBalance,
+    loading: leaveLoading,
+  } = useAppSelector((state: RootState) => state.leaveRequest);
 
   const isMyRoute =
     location.pathname.includes("my-dashboard") ||
@@ -494,14 +496,15 @@ const TodayAttendance = ({
 
         {/* Top Section: Dashboard Cards */}
         <AttendanceStatsCards
-          year={selectedYear}
+          year={calendarDate.getFullYear()}
           month={calendarDate.getMonth() + 1}
           leaveBalance={leaveBalance}
-          monthlyLeaveBalance={monthlyLeaveBalance}
           attendanceRecords={yearlyRecords}
           isIntern={isIntern}
           joiningDate={entity?.joiningDate || (currentUser as any)?.joiningDate}
           trends={trends}
+          monthlyLeaveBalance={monthlyLeaveBalance}
+          loading={leaveLoading}
         />
 
         {/* Charts Section */}

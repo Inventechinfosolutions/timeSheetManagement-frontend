@@ -524,6 +524,9 @@ const leaveRequestSlice = createSlice({
     });
 
     // Get Monthly Leave Balance
+    builder.addCase(getMonthlyLeaveBalance.pending, (state) => {
+      state.monthlyLeaveBalance = null;
+    });
     builder.addCase(getMonthlyLeaveBalance.fulfilled, (state, action) => {
       state.monthlyLeaveBalance = action.payload;
     });
