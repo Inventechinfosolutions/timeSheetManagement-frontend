@@ -946,7 +946,11 @@ const Calendar = ({
                     className={`text-[10px] font-bold uppercase truncate w-full text-center px-1 py-1 rounded-md mt-1 backdrop-blur-sm z-10                         ${
                            holiday
                                ? "text-white bg-[#1890FF]/70"
-                               : entry?.status === "Full Day" && statusLabel
+                               : isSplitDay
+                                 ? (isWorkLoc((entry as any).firstHalf) && isWorkLoc((entry as any).secondHalf))
+                                     ? "text-white bg-[#01B574]" // Green for Full Working split
+                                     : "text-white bg-[#FFB020]/80" // Orange for Half leave split
+                                 : entry?.status === "Full Day" && statusLabel
                                  ? "text-white bg-[#01B574]"
                                  : entry?.status === "Half Day" && statusLabel
                                    ? "text-white bg-[#FFB020]/80"
@@ -969,10 +973,14 @@ const Calendar = ({
                   >
                     {holiday
                         ? holiday.name
-                        : (entry?.status as string) === "Leave"
+                        : isSplitDay
+                          ? (isWorkLoc((entry as any).firstHalf) && isWorkLoc((entry as any).secondHalf))
+                              ? "FULL DAY"
+                              : `${(isWorkLoc((entry as any).firstHalf) ? (entry as any).firstHalf : (entry as any).secondHalf)?.toUpperCase()} (HALF DAY)`
+                          : (entry?.status as string) === "Leave"
                           ? "LEAVE"
                           : (entry?.status as string) === "Full Day"
-                          ? `${(entry?.workLocation || "OFFICE").toUpperCase()} (FULL DAY)`
+                          ? `${(entry?.workLocation || "OFFICE").replace(/\(FULL DAY\)/i, "").trim().toUpperCase()} (FULL DAY)`
                           : entry?.workLocation &&
                               (entry?.status as string) !== "Leave" &&
                               (entry?.status as string) !== "Full Day"

@@ -600,9 +600,26 @@ const LeaveManagement = () => {
                 records,
               );
               if (segmentDuration > 0) {
-                const duration = isSplitRequest
-                  ? segmentDuration * 0.5
-                  : segmentDuration;
+
+                let duration = segmentDuration;
+                if (isSplitRequest) {
+                  // Custom Logic: WFH + CV = 1 Day
+                  const mainType = finalRequestType;
+                  const other = otherHalfType;
+                  const isMainRemote =
+                    mainType === "Work From Home" || mainType === "Client Visit";
+                  const isOtherRemote =
+                    other === "Work From Home" || other === "Client Visit";
+
+                  if (isMainRemote && isOtherRemote) {
+                    duration = segmentDuration; // 1.0 per day
+                  } else {
+                    duration = segmentDuration * 0.5; // 0.5 per day
+                  }
+                } else {
+                    duration = segmentDuration;
+                }
+
                 await dispatch(
                   submitLeaveRequest({
                     employeeId,
@@ -615,6 +632,9 @@ const LeaveManagement = () => {
                     isHalfDay: isSplitRequest,
                     halfDayType: isSplitRequest ? halfDayType : null,
                     otherHalfType: isSplitRequest ? otherHalfType : null,
+                    // Explicitly set halves for Full Day segments
+                    firstHalf: isSplitRequest ? halfDayType : finalRequestType,
+                    secondHalf: isSplitRequest ? otherHalfType : finalRequestType,
                     submittedDate: dayjs().format("YYYY-MM-DD"),
                   }),
                 );
@@ -635,7 +655,24 @@ const LeaveManagement = () => {
           formData.endDate,
           records,
         );
-        const duration = isSplitRequest ? baseDuration * 0.5 : baseDuration;
+        
+        let duration = baseDuration;
+        if (isSplitRequest) {
+             const mainType = finalRequestType;
+             const other = otherHalfType;
+             const isMainRemote =
+               mainType === "Work From Home" || mainType === "Client Visit";
+             const isOtherRemote =
+               other === "Work From Home" || other === "Client Visit";
+
+             if (isMainRemote && isOtherRemote) {
+               duration = baseDuration; 
+             } else {
+               duration = baseDuration * 0.5;
+             }
+        } else {
+            duration = baseDuration;
+        }
 
         dispatch(
           submitLeaveRequest({
@@ -649,6 +686,9 @@ const LeaveManagement = () => {
             isHalfDay: isSplitRequest,
             halfDayType: isSplitRequest ? halfDayType : null,
             otherHalfType: isSplitRequest ? otherHalfType : null,
+            // Explicitly set halves for Full Day requests to allow template matching (firstHalf == secondHalf)
+            firstHalf: isSplitRequest ? halfDayType : finalRequestType,
+            secondHalf: isSplitRequest ? otherHalfType : finalRequestType,
             submittedDate: dayjs().format("YYYY-MM-DD"),
           }),
         );
@@ -670,6 +710,9 @@ const LeaveManagement = () => {
             duration,
             halfDayType: isSplitRequest ? halfDayType : null,
             otherHalfType: isSplitRequest ? otherHalfType : null,
+            // Explicitly set halves for standard requests
+            firstHalf: isSplitRequest ? halfDayType : finalRequestType,
+            secondHalf: isSplitRequest ? otherHalfType : finalRequestType,
             submittedDate: dayjs().format("YYYY-MM-DD"),
           }),
         );
@@ -2122,11 +2165,23 @@ const LeaveManagement = () => {
                             formData.startDate,
                             formData.endDate,
                           );
-                          const finalDur =
-                            leaveDurationType === "Half Day"
-                              ? baseDur * 0.5
-                              : baseDur;
-                          return `${finalDur} Day(s)`;
+                          const isHalf = leaveDurationType === "Half Day" || leaveDurationType === "First Half" || leaveDurationType === "Second Half";
+                          
+                          if (isHalf) {
+                              const mainType = selectedLeaveType === "Apply Leave" ? "Leave" : selectedLeaveType;
+                              const other = otherHalfType;
+                              
+                              const isMainRemote = mainType === "Work From Home" || mainType === "Client Visit";
+                              const isOtherRemote = other === "Work From Home" || other === "Client Visit";
+
+                              // User Requirement: WFH + CV = 1 Day
+                              if (isMainRemote && isOtherRemote) {
+                                  return `${baseDur} Day(s)`;
+                              } else {
+                                  return `${baseDur * 0.5} Day(s)`;
+                              }
+                          }
+                          return `${baseDur} Day(s)`;
                         } else {
                           return `${dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1} Day(s)`;
                         }
@@ -2329,7 +2384,7 @@ const LeaveManagement = () => {
               }}
               className="px-6 py-2.5 rounded-2xl font-bold text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95 transform uppercase tracking-wider flex items-center justify-center gap-2"
             >
-              Modify Instead
+              MODIFY INSTEAD
             </button>
             <button
               key="submit"
@@ -2798,13 +2853,13 @@ const LeaveManagement = () => {
                   }
                 }}
                 disabled={selectedCancelDates.length === 0}
-                className={`px-6 py-2.5 rounded-xl font-bold transition-colors ${
+                className={`px-6 py-2.5 rounded-2xl font-bold transition-all transform active:scale-95 uppercase tracking-wider flex items-center justify-center gap-2 ${
                   selectedCancelDates.length === 0
-                    ? "text-gray-400 bg-gray-100 cursor-not-allowed"
-                    : "text-blue-600 bg-blue-50 hover:bg-blue-100"
+                  ? "text-gray-400 bg-gray-100 cursor-not-allowed"
+                  : "text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30"
                 }`}
               >
-                Modify Instead
+                MODIFY INSTEAD
               </button>
             </div>
             <button
@@ -2832,45 +2887,35 @@ const LeaveManagement = () => {
         }
       >
         <div className="py-4">
-          {isLoadingDates ? (
-            <div className="flex justify-center p-8">
-              <Loader2 className="animate-spin text-blue-600" />
-            </div>
-          ) : cancellableDates.length === 0 ? (
-            <p className="text-gray-500 text-center">
-              No dates found for this request.
-            </p>
-          ) : (
-            <div className="space-y-4">
-              <p className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-100">
-                Select the dates you wish to cancel. <br />
-                <span className="text-xs text-blue-800 font-semibold">
-                  * You can only cancel dates before 12:00 PM of that particular
-                  day.
-                </span>
-              </p>
-
-              {/* Select All Option */}
-              {cancellableDates.some((d) => d.isCancellable) && (
-                <div className="flex items-center gap-3 px-3 py-2">
-                  <Checkbox
-                    checked={
-                      cancellableDates.filter((d) => d.isCancellable).length >
-                        0 &&
-                      cancellableDates
-                        .filter((d) => d.isCancellable)
-                        .every((d) => selectedCancelDates.includes(d.date))
-                    }
-                    onChange={toggleSelectAll}
-                  />
-                  <span
-                    onClick={toggleSelectAll}
-                    className="text-sm font-bold text-[#2B3674] cursor-pointer hover:text-[#4318FF] select-none"
-                  >
-                    Select All Available
-                  </span>
-                </div>
-              )}
+            {isLoadingDates ? (
+                <div className="flex justify-center p-8"><Loader2 className="animate-spin text-blue-600" /></div>
+            ) : cancellableDates.length === 0 ? (
+                <p className="text-gray-500 text-center">No dates found for this request.</p>
+            ) : (
+                <div className="space-y-4">
+                    <p className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-100">
+                        Select the dates you wish to cancel. <br/>
+                        <span className="text-xs text-blue-800 font-semibold">* You can only cancel dates before 06:30 PM of that particular day.</span>
+                    </p>
+                    
+                    {/* Select All Option */}
+                     {cancellableDates.some(d => d.isCancellable) && (
+                        <div className="flex items-center gap-3 px-3 py-2">
+                             <Checkbox
+                                checked={
+                                    cancellableDates.filter(d => d.isCancellable).length > 0 &&
+                                    cancellableDates.filter(d => d.isCancellable).every(d => selectedCancelDates.includes(d.date))
+                                }
+                                onChange={toggleSelectAll}
+                            />
+                            <span 
+                                onClick={toggleSelectAll}
+                                className="text-sm font-bold text-[#2B3674] cursor-pointer hover:text-[#4318FF] select-none"
+                            >
+                                Select All Available
+                            </span>
+                        </div>
+                     )}
 
               <div className="max-h-[300px] overflow-y-auto border rounded-xl p-2 space-y-1">
                 {cancellableDates.map((item) => (
