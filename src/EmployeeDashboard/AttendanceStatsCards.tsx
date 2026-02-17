@@ -398,19 +398,16 @@ const AttendanceStatsCards = ({
           <div className="flex flex-col">
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-extrabold text-white tracking-tight">
-                {!isIntern ? balance.toFixed(1) : balanceMonthly.toFixed(1)}
+                {balanceMonthly.toFixed(1)}
               </span>
               <span className="text-[10px] font-bold text-white/60 uppercase">
-                {!isIntern ? "Annual" : "Monthly"}
+                This Month
               </span>
             </div>
             {!isIntern && (
               <div className="flex items-baseline gap-2 mt-0.5">
-                {/* <span className="text-lg font-bold text-white/90">
-                  {(Number(balanceMonthly) || 0).toFixed(1)}
-                </span>
-                <span className="text-[10px] font-medium text-white/60">
-                  Accrued So Far
+                {/* <span className="text-[10px] font-medium text-white/60">
+                  Total Annual: {balance.toFixed(1)}
                 </span> */}
               </div>
             )}
