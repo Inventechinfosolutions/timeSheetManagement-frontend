@@ -53,10 +53,7 @@ import CommonMultipleUploader from "../EmployeeDashboard/CommonMultipleUploader"
 const isCancellationAllowed = (submittedDate: string) => {
   if (!submittedDate) return true;
   const submission = dayjs(submittedDate).startOf("day");
-  const deadline = submission
-    .hour(18)
-    .minute(30)
-    .second(0);
+  const deadline = submission.hour(18).minute(30).second(0);
   return dayjs().isBefore(deadline);
 };
 
@@ -546,23 +543,29 @@ const AdminLeaveManagement = () => {
           records,
           selectedEmployee?.department,
         );
-        
+
         // Custom Duration Calculation for WFH/CV split
-        if (leaveDurationType === "Half Day" || leaveDurationType === "First Half" || leaveDurationType === "Second Half") {
-            const mainType = finalRequestType; // "Work From Home", "Client Visit", "Half Day" (Leave), etc.
-            const other = otherHalfType; // "Office", "Work From Home", "Client Visit", "Leave"
+        if (
+          leaveDurationType === "Half Day" ||
+          leaveDurationType === "First Half" ||
+          leaveDurationType === "Second Half"
+        ) {
+          const mainType = finalRequestType; // "Work From Home", "Client Visit", "Half Day" (Leave), etc.
+          const other = otherHalfType; // "Office", "Work From Home", "Client Visit", "Leave"
 
-            const isMainRemote = mainType === "Work From Home" || mainType === "Client Visit";
-            const isOtherRemote = other === "Work From Home" || other === "Client Visit";
+          const isMainRemote =
+            mainType === "Work From Home" || mainType === "Client Visit";
+          const isOtherRemote =
+            other === "Work From Home" || other === "Client Visit";
 
-            // User Requirement: WFH + CV = 1 Day
-            if (isMainRemote && isOtherRemote) {
-                duration = baseDuration; // 1.0 per day
-            } else {
-                duration = baseDuration * 0.5; // 0.5 per day
-            }
+          // User Requirement: WFH + CV = 1 Day
+          if (isMainRemote && isOtherRemote) {
+            duration = baseDuration; // 1.0 per day
+          } else {
+            duration = baseDuration * 0.5; // 0.5 per day
+          }
         } else {
-            duration = baseDuration;
+          duration = baseDuration;
         }
       } else {
         duration =
@@ -693,8 +696,12 @@ const AdminLeaveManagement = () => {
                     toDate: iEnd,
                     duration: datesNeedingModification.length,
                     // Split request due to gap -> ensure segments carry original half types or "Leave" if generic
-                    firstHalf: victim.isHalfDay ? victim.firstHalf : victim.requestType,
-                    secondHalf: victim.isHalfDay ? victim.secondHalf : victim.requestType,
+                    firstHalf: victim.isHalfDay
+                      ? victim.firstHalf
+                      : victim.requestType,
+                    secondHalf: victim.isHalfDay
+                      ? victim.secondHalf
+                      : victim.requestType,
                     sourceRequestId: createdId,
                     sourceRequestType: finalRequestType,
                   },
@@ -808,8 +815,6 @@ const AdminLeaveManagement = () => {
         });
         return;
       }
-
-
 
       notification.success({
         message: "Applied & Approved",
@@ -1806,231 +1811,237 @@ const AdminLeaveManagement = () => {
                       </td>
                     </tr>
                   ) : (
-                    entities.map((item, index) => (
-                      <tr
-                        key={index}
-                        className={`group transition-all duration-200 ${
-                          index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"
-                        } hover:bg-[#F1F4FF]`}
-                      >
-                        <td className="py-4 pl-10 pr-4 text-[#2B3674] text-sm font-bold">
-                          {item.fullName || "User"} ({item.employeeId})
-                        </td>
-                        <td className="py-4 px-4 text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            <div className="p-1.5 bg-gray-50 rounded-lg group-hover:bg-white transition-colors">
-                              {(() => {
-                                // Determine icon based on combined activities
-                                const hasWFH =
-                                  item.firstHalf === "Work From Home" ||
-                                  item.secondHalf === "Work From Home";
-                                const hasCV =
-                                  item.firstHalf === "Client Visit" ||
-                                  item.secondHalf === "Client Visit";
-                                const hasLeave =
-                                  item.firstHalf === "Leave" ||
-                                  item.secondHalf === "Leave" ||
-                                  item.firstHalf === "Apply Leave" ||
-                                  item.secondHalf === "Apply Leave";
+                    [...entities]
+                      .sort((a, b) => (b.id || 0) - (a.id || 0))
+                      .map((item, index) => (
+                        <tr
+                          key={index}
+                          className={`group transition-all duration-200 ${
+                            index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"
+                          } hover:bg-[#F1F4FF]`}
+                        >
+                          <td className="py-4 pl-10 pr-4 text-[#2B3674] text-sm font-bold">
+                            {item.fullName || "User"} ({item.employeeId})
+                          </td>
+                          <td className="py-4 px-4 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <div className="p-1.5 bg-gray-50 rounded-lg group-hover:bg-white transition-colors">
+                                {(() => {
+                                  // Determine icon based on combined activities
+                                  const hasWFH =
+                                    item.firstHalf === "Work From Home" ||
+                                    item.secondHalf === "Work From Home";
+                                  const hasCV =
+                                    item.firstHalf === "Client Visit" ||
+                                    item.secondHalf === "Client Visit";
+                                  const hasLeave =
+                                    item.firstHalf === "Leave" ||
+                                    item.secondHalf === "Leave" ||
+                                    item.firstHalf === "Apply Leave" ||
+                                    item.secondHalf === "Apply Leave";
 
-                                if (hasWFH && hasLeave)
+                                  if (hasWFH && hasLeave)
+                                    return (
+                                      <Home
+                                        size={16}
+                                        className="text-green-600"
+                                      />
+                                    );
+                                  if (hasCV && hasLeave)
+                                    return (
+                                      <MapPin
+                                        size={16}
+                                        className="text-orange-600"
+                                      />
+                                    );
+                                  if (item.requestType === "Work From Home")
+                                    return (
+                                      <Home
+                                        size={16}
+                                        className="text-green-600"
+                                      />
+                                    );
+                                  if (item.requestType === "Client Visit")
+                                    return (
+                                      <MapPin
+                                        size={16}
+                                        className="text-orange-600"
+                                      />
+                                    );
+                                  if (
+                                    item.requestType === "Apply Leave" ||
+                                    item.requestType === "Leave"
+                                  )
+                                    return (
+                                      <Calendar
+                                        size={16}
+                                        className="text-blue-600"
+                                      />
+                                    );
+                                  if (item.requestType === "Half Day")
+                                    return (
+                                      <Calendar
+                                        size={16}
+                                        className="text-pink-600"
+                                      />
+                                    );
                                   return (
-                                    <Home
+                                    <Building2
                                       size={16}
-                                      className="text-green-600"
+                                      className="text-gray-600"
                                     />
                                   );
-                                if (hasCV && hasLeave)
-                                  return (
-                                    <MapPin
-                                      size={16}
-                                      className="text-orange-600"
-                                    />
-                                  );
-                                if (item.requestType === "Work From Home")
-                                  return (
-                                    <Home
-                                      size={16}
-                                      className="text-green-600"
-                                    />
-                                  );
-                                if (item.requestType === "Client Visit")
-                                  return (
-                                    <MapPin
-                                      size={16}
-                                      className="text-orange-600"
-                                    />
-                                  );
-                                if (
-                                  item.requestType === "Apply Leave" ||
-                                  item.requestType === "Leave"
-                                )
-                                  return (
-                                    <Calendar
-                                      size={16}
-                                      className="text-blue-600"
-                                    />
-                                  );
-                                if (item.requestType === "Half Day")
-                                  return (
-                                    <Calendar
-                                      size={16}
-                                      className="text-pink-600"
-                                    />
-                                  );
-                                return (
-                                  <Building2
-                                    size={16}
-                                    className="text-gray-600"
-                                  />
-                                );
-                              })()}
+                                })()}
+                              </div>
+                              <span className="text-[#475569] text-sm font-semibold flex items-center gap-2">
+                                {(() => {
+                                  // Show combined activities for split-day requests
+                                  if (
+                                    item.isHalfDay &&
+                                    item.firstHalf &&
+                                    item.secondHalf
+                                  ) {
+                                    const activities = [
+                                      item.firstHalf,
+                                      item.secondHalf,
+                                    ]
+                                      .map((a) =>
+                                        a === "Apply Leave" ? "Leave" : a,
+                                      )
+                                      .filter((a) => a && a !== "Office")
+                                      .filter(
+                                        (value, index, self) =>
+                                          self.indexOf(value) === index,
+                                      );
+
+                                    if (activities.length > 1) {
+                                      // Replace "Leave" with "Half Day Leave" in combined activities
+                                      return activities
+                                        .map((a) =>
+                                          a === "Leave" ? "Half Day Leave" : a,
+                                        )
+                                        .join(" + ");
+                                    }
+                                    if (activities.length === 1) {
+                                      // For single activity that is "Leave", show "Half Day Leave"
+                                      return activities[0] === "Leave"
+                                        ? "Half Day Leave"
+                                        : activities[0];
+                                    }
+                                  }
+
+                                  // Default display
+                                  if (
+                                    item.requestType === "Apply Leave" ||
+                                    item.requestType === "Leave"
+                                  ) {
+                                    return item.isHalfDay
+                                      ? "Half Day Leave"
+                                      : "Leave";
+                                  }
+                                  if (item.requestType === "Half Day")
+                                    return "Half Day Leave";
+                                  return item.requestType;
+                                })()}
+                                {item.isModified && (
+                                  <span className="bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter shadow-sm border border-orange-200">
+                                    Modified
+                                  </span>
+                                )}
+                              </span>
                             </div>
-                            <span className="text-[#475569] text-sm font-semibold flex items-center gap-2">
-                              {(() => {
-                                // Show combined activities for split-day requests
+                          </td>
+                          <td className="py-4 px-4 text-center">
+                            <span
+                              className={`text-xs font-bold px-3 py-1 rounded-full ${(() => {
                                 if (
                                   item.isHalfDay &&
                                   item.firstHalf &&
                                   item.secondHalf
                                 ) {
-                                  const activities = [
-                                    item.firstHalf,
-                                    item.secondHalf,
-                                  ]
-                                    .map((a) =>
-                                      a === "Apply Leave" ? "Leave" : a,
-                                    )
-                                    .filter((a) => a && a !== "Office")
-                                    .filter(
-                                      (value, index, self) =>
-                                        self.indexOf(value) === index,
-                                    );
-
-                                  if (activities.length > 1) {
-                                    // Replace "Leave" with "Half Day Leave" in combined activities
-                                    return activities
-                                      .map((a) =>
-                                        a === "Leave" ? "Half Day Leave" : a,
-                                      )
-                                      .join(" + ");
-                                  }
-                                  if (activities.length === 1) {
-                                    // For single activity that is "Leave", show "Half Day Leave"
-                                    return activities[0] === "Leave"
-                                      ? "Half Day Leave"
-                                      : activities[0];
-                                  }
+                                  const isSame =
+                                    item.firstHalf === item.secondHalf;
+                                  if (isSame)
+                                    return "bg-blue-100 text-blue-700";
+                                  return "bg-purple-100 text-purple-700";
                                 }
-
-                                // Default display
+                                return "bg-blue-100 text-blue-700";
+                              })()}`}
+                            >
+                              {(() => {
                                 if (
-                                  item.requestType === "Apply Leave" ||
-                                  item.requestType === "Leave"
+                                  item.isHalfDay &&
+                                  item.firstHalf &&
+                                  item.secondHalf
                                 ) {
-                                  return item.isHalfDay
-                                    ? "Half Day Leave"
-                                    : "Leave";
-                                }
-                                if (item.requestType === "Half Day")
-                                  return "Half Day Leave";
-                                return item.requestType;
-                              })()}
-                              {item.isModified && (
-                                <span className="bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter shadow-sm border border-orange-200">
-                                  Modified
-                                </span>
-                              )}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="py-4 px-4 text-center">
-                          <span
-                            className={`text-xs font-bold px-3 py-1 rounded-full ${(() => {
-                              if (
-                                item.isHalfDay &&
-                                item.firstHalf &&
-                                item.secondHalf
-                              ) {
-                                const isSame =
-                                  item.firstHalf === item.secondHalf;
-                                if (isSame) return "bg-blue-100 text-blue-700";
-                                return "bg-purple-100 text-purple-700";
-                              }
-                              return "bg-blue-100 text-blue-700";
-                            })()}`}
-                          >
-                            {(() => {
-                              if (
-                                item.isHalfDay &&
-                                item.firstHalf &&
-                                item.secondHalf
-                              ) {
-                                const first =
-                                  item.firstHalf === "Apply Leave"
-                                    ? "Leave"
-                                    : item.firstHalf;
-                                const second =
-                                  item.secondHalf === "Apply Leave"
-                                    ? "Leave"
-                                    : item.secondHalf;
+                                  const first =
+                                    item.firstHalf === "Apply Leave"
+                                      ? "Leave"
+                                      : item.firstHalf;
+                                  const second =
+                                    item.secondHalf === "Apply Leave"
+                                      ? "Leave"
+                                      : item.secondHalf;
 
-                                if (first === second && first !== "Office") {
+                                  if (first === second && first !== "Office") {
+                                    return "Full Day";
+                                  }
+
+                                  // Filter out Office
+                                  const parts = [];
+                                  if (first && first !== "Office")
+                                    parts.push(`First Half = ${first}`);
+                                  if (second && second !== "Office")
+                                    parts.push(`Second Half = ${second}`);
+
+                                  if (parts.length > 0)
+                                    return parts.join(" & ");
                                   return "Full Day";
                                 }
-
-                                // Filter out Office
-                                const parts = [];
-                                if (first && first !== "Office")
-                                  parts.push(`First Half = ${first}`);
-                                if (second && second !== "Office")
-                                  parts.push(`Second Half = ${second}`);
-
-                                if (parts.length > 0) return parts.join(" & ");
                                 return "Full Day";
-                              }
-                              return "Full Day";
-                            })()}
-                          </span>
-                        </td>
-                        <td className="py-4 px-4 text-center">
-                          <span className="text-xs font-bold text-gray-500 bg-gray-100/50 px-2 py-1 rounded-md">
-                            {item.department || "N/A"}
-                          </span>
-                        </td>
-                        <td className="py-4 px-4 text-center">
-                          <div className="text-sm font-bold text-[#2B3674]">
-                            {dayjs(item.fromDate).format("DD MMM")} -{" "}
-                            {dayjs(item.toDate).format("DD MMM - YYYY")}
-                          </div>
-                          <p className="text-[10px] text-[#4318FF] font-black mt-1 uppercase tracking-wider">
-                            Total:{" "}
-                            {item.duration ||
-                              (item.requestType === "Client Visit" ||
-                              item.requestType === "Work From Home" ||
-                              item.requestType === "Apply Leave" ||
-                              item.requestType === "Leave"
-                                ? calculateDurationExcludingWeekends(
-                                    item.fromDate,
-                                    item.toDate,
-                                  )
-                                : dayjs(item.toDate).diff(
-                                    dayjs(item.fromDate),
-                                    "day",
-                                  ) + 1)}{" "}
-                            Day(s)
-                          </p>
-                        </td>
-                        <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
-                          {item.submittedDate
-                            ? dayjs(item.submittedDate).format("DD MMM - YYYY")
-                            : item.created_at
-                              ? dayjs(item.created_at).format("DD MMM - YYYY")
-                              : "-"}
-                        </td>
-                        <td className="py-4 px-4 text-center">
-                          <span
-                            className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all whitespace-nowrap
+                              })()}
+                            </span>
+                          </td>
+                          <td className="py-4 px-4 text-center">
+                            <span className="text-xs font-bold text-gray-500 bg-gray-100/50 px-2 py-1 rounded-md">
+                              {item.department || "N/A"}
+                            </span>
+                          </td>
+                          <td className="py-4 px-4 text-center">
+                            <div className="text-sm font-bold text-[#2B3674]">
+                              {dayjs(item.fromDate).format("DD MMM")} -{" "}
+                              {dayjs(item.toDate).format("DD MMM - YYYY")}
+                            </div>
+                            <p className="text-[10px] text-[#4318FF] font-black mt-1 uppercase tracking-wider">
+                              Total:{" "}
+                              {item.duration ||
+                                (item.requestType === "Client Visit" ||
+                                item.requestType === "Work From Home" ||
+                                item.requestType === "Apply Leave" ||
+                                item.requestType === "Leave"
+                                  ? calculateDurationExcludingWeekends(
+                                      item.fromDate,
+                                      item.toDate,
+                                    )
+                                  : dayjs(item.toDate).diff(
+                                      dayjs(item.fromDate),
+                                      "day",
+                                    ) + 1)}{" "}
+                              Day(s)
+                            </p>
+                          </td>
+                          <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
+                            {item.submittedDate
+                              ? dayjs(item.submittedDate).format(
+                                  "DD MMM - YYYY",
+                                )
+                              : item.created_at
+                                ? dayjs(item.created_at).format("DD MMM - YYYY")
+                                : "-"}
+                          </td>
+                          <td className="py-4 px-4 text-center">
+                            <span
+                              className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all whitespace-nowrap
                             ${
                               item.status === "Approved" ||
                               item.status === "Cancellation Approved" ||
@@ -2052,44 +2063,44 @@ const AdminLeaveManagement = () => {
                                           : "bg-red-50 text-red-600 border-red-200"
                             }
                           `}
-                          >
-                            {(item.status === "Pending" ||
-                              item.status ===
-                                "Requesting for Modification") && (
-                              <RotateCcw
-                                size={12}
-                                className="animate-spin-slow"
-                              />
-                            )}
-                            {item.status}
-                            {item.status === "Request Modified" &&
-                              item.requestModifiedFrom && (
-                                <span className="opacity-70 border-l border-orange-300 pl-1.5 ml-1 text-[9px] font-bold">
-                                  (TO{" "}
-                                  {item.requestModifiedFrom === "Apply Leave"
-                                    ? "LEAVE"
-                                    : item.requestModifiedFrom.toUpperCase()}
-                                  )
-                                </span>
-                              )}
-                          </span>
-                        </td>
-                        <td className="py-4 px-4">
-                          <div className="flex items-center justify-center gap-3">
-                            <button
-                              onClick={() => handleViewApplication(item)}
-                              className="p-2 text-blue-600 bg-blue-50/50 hover:bg-blue-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-blue-200 active:scale-90"
-                              title="View Application"
                             >
-                              <Eye size={18} />
-                            </button>
-                            {(item.status === "Pending" ||
-                              item.status === "Approved") &&
-                              renderCancelButton(item)}
-                          </div>
-                        </td>
-                      </tr>
-                    ))
+                              {(item.status === "Pending" ||
+                                item.status ===
+                                  "Requesting for Modification") && (
+                                <RotateCcw
+                                  size={12}
+                                  className="animate-spin-slow"
+                                />
+                              )}
+                              {item.status}
+                              {item.status === "Request Modified" &&
+                                item.requestModifiedFrom && (
+                                  <span className="opacity-70 border-l border-orange-300 pl-1.5 ml-1 text-[9px] font-bold">
+                                    (TO{" "}
+                                    {item.requestModifiedFrom === "Apply Leave"
+                                      ? "LEAVE"
+                                      : item.requestModifiedFrom.toUpperCase()}
+                                    )
+                                  </span>
+                                )}
+                            </span>
+                          </td>
+                          <td className="py-4 px-4">
+                            <div className="flex items-center justify-center gap-3">
+                              <button
+                                onClick={() => handleViewApplication(item)}
+                                className="p-2 text-blue-600 bg-blue-50/50 hover:bg-blue-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-blue-200 active:scale-90"
+                                title="View Application"
+                              >
+                                <Eye size={18} />
+                              </button>
+                              {(item.status === "Pending" ||
+                                item.status === "Approved") &&
+                                renderCancelButton(item)}
+                            </div>
+                          </td>
+                        </tr>
+                      ))
                   )}
                 </tbody>
               </table>
@@ -2453,21 +2464,31 @@ const AdminLeaveManagement = () => {
                             formData.startDate,
                             formData.endDate,
                           );
-                          const isHalf = leaveDurationType === "Half Day" || leaveDurationType === "First Half" || leaveDurationType === "Second Half";
-                          
-                          if (isHalf) {
-                              const mainType = selectedLeaveType === "Apply Leave" ? "Leave" : selectedLeaveType;
-                              const other = otherHalfType;
-                              
-                              const isMainRemote = mainType === "Work From Home" || mainType === "Client Visit";
-                              const isOtherRemote = other === "Work From Home" || other === "Client Visit";
+                          const isHalf =
+                            leaveDurationType === "Half Day" ||
+                            leaveDurationType === "First Half" ||
+                            leaveDurationType === "Second Half";
 
-                              // User Requirement: WFH + CV = 1 Day
-                              if (isMainRemote && isOtherRemote) {
-                                  return `${baseDur} Day(s)`;
-                              } else {
-                                  return `${baseDur * 0.5} Day(s)`;
-                              }
+                          if (isHalf) {
+                            const mainType =
+                              selectedLeaveType === "Apply Leave"
+                                ? "Leave"
+                                : selectedLeaveType;
+                            const other = otherHalfType;
+
+                            const isMainRemote =
+                              mainType === "Work From Home" ||
+                              mainType === "Client Visit";
+                            const isOtherRemote =
+                              other === "Work From Home" ||
+                              other === "Client Visit";
+
+                            // User Requirement: WFH + CV = 1 Day
+                            if (isMainRemote && isOtherRemote) {
+                              return `${baseDur} Day(s)`;
+                            } else {
+                              return `${baseDur * 0.5} Day(s)`;
+                            }
                           }
                           return `${baseDur} Day(s)`;
                         } else {
@@ -2480,11 +2501,16 @@ const AdminLeaveManagement = () => {
             </div>
 
             {/* Split-Day Information (View Mode Only) */}
-            {isViewMode && !!selectedRequestId && (
+            {isViewMode &&
+              !!selectedRequestId &&
               (() => {
-                const viewedRequest = entities.find((e: any) => e.id === Number(selectedRequestId));
-                const isBothSame = viewedRequest?.firstHalf === viewedRequest?.secondHalf;
-                return viewedRequest?.isHalfDay && (viewedRequest?.firstHalf || viewedRequest?.secondHalf) ? (
+                const viewedRequest = entities.find(
+                  (e: any) => e.id === Number(selectedRequestId),
+                );
+                const isBothSame =
+                  viewedRequest?.firstHalf === viewedRequest?.secondHalf;
+                return viewedRequest?.isHalfDay &&
+                  (viewedRequest?.firstHalf || viewedRequest?.secondHalf) ? (
                   <div className="space-y-2 p-4 bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-50 rounded-2xl border-2 border-blue-200">
                     <div className="flex items-center gap-2 mb-2">
                       <Clock size={18} className="text-blue-600" />
@@ -2523,7 +2549,7 @@ const AdminLeaveManagement = () => {
                     )}
                   </div>
                 ) : null;
-              })())}
+              })()}
 
             {/* Description Field */}
             <div className="space-y-2">

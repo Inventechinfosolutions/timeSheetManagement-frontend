@@ -111,6 +111,8 @@ const AdminTabWrapper = () => {
       return <AttendanceViewWrapper />;
     case "my-profile":
       return <MyProfile />;
+    case "leave-management":
+      return <LeaveManagement />;
     default:
       return <Navigate to="/admin-dashboard" replace />;
   }
