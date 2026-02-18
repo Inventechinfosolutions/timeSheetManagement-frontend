@@ -20,7 +20,7 @@ export interface TimesheetEntry {
     attendanceType?: 'login' | 'logout' | null;
     isEditing: boolean;
     isSaved: boolean;
-    totalHours?: number;
+    totalHours?: number | null;
     workLocation?: string;
     sourceRequestId?: number; // Track auto-generated records
     firstHalf?: string | null;
