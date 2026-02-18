@@ -10,7 +10,7 @@ import {
   Loader2,
   ShieldBan,
 } from "lucide-react";
-import { downloadPdf } from "../utils/downloadPdf";
+import { saveAs } from "file-saver";
 import { useAppSelector, useAppDispatch } from "../hooks";
 import { RootState } from "../store";
 import {
@@ -23,6 +23,7 @@ import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import {
   fetchMonthlyAttendance,
   autoUpdateTimesheet,
+  downloadAttendancePdfReport,
 } from "../reducers/employeeAttendance.reducer";
 import { fetchBlockers } from "../reducers/timesheetBlocker.reducer";
 import { getLeaveHistory } from "../reducers/leaveRequest.reducer";
@@ -226,7 +227,7 @@ const Calendar = ({
     setIsDownloadModalOpen(true);
   };
 
-  const handleConfirmDownload = () => {
+  const handleConfirmDownload = async () => {
     if (!currentEmployeeId) return;
 
     // Resolve the correct employee object
@@ -244,45 +245,23 @@ const Calendar = ({
 
     try {
       setIsDownloading(true);
-      const fromDateStr = downloadDateRange.from;
-      const toDateStr = downloadDateRange.to;
+      // Backend handles extraction from month/year
+      const monthStr = downloadDateRange.from.split("-")[1];
+      const yearStr = downloadDateRange.from.split("-")[0];
+      const month = parseInt(monthStr);
+      const year = parseInt(yearStr);
 
-      // 1. Use existing data from Redux state instead of making a new API call
-      // Filter records that fall within the selected date range
-      const filteredRecords = records.filter((record) => {
-        const recordDate = new Date(record.workingDate)
-          .toISOString()
-          .split("T")[0];
-        return recordDate >= fromDateStr && recordDate <= toDateStr;
-      });
-
-      // 2. Generate full range entries (including weekends/holidays/not-updated)
-      const start = new Date(fromDateStr);
-      const end = new Date(toDateStr);
-
-      const rangeEntries = generateRangeEntries(
-        start,
-        end,
-        now,
-        filteredRecords,
+      const blob = await downloadAttendancePdfReport(
+        month,
+        year,
+        currentEmployeeId,
+        downloadDateRange.from,
+        downloadDateRange.to,
       );
-
-      const totalHours = rangeEntries.reduce(
-        (sum, entry) => sum + (entry.totalHours || 0),
-        0,
+      saveAs(
+        blob,
+        `Attendance_${currentEmployeeId}_${downloadDateRange.from}_to_${downloadDateRange.to}.pdf`,
       );
-
-      // 3. Generate PDF
-      downloadPdf({
-        employeeName: downloadEntity?.fullName || "Employee",
-        employeeId: currentEmployeeId,
-        designation: downloadEntity?.designation,
-        department: downloadEntity?.department,
-        month: `${fromDateStr} to ${toDateStr}`,
-        entries: rangeEntries,
-        totalHours: totalHours,
-        holidays: holidays || [],
-      });
 
       setIsDownloadModalOpen(false);
     } catch (error) {
@@ -1042,50 +1021,55 @@ const Calendar = ({
 
                   <div
                     className={`text-[10px] font-bold uppercase truncate w-full text-center px-1 py-1 rounded-md mt-1 backdrop-blur-sm z-10                         ${
-                           holiday
-                               ? "text-white bg-[#1890FF]/70"
-                               : isSplitDay
-                                 ? (isWorkLoc((entry as any).firstHalf) && isWorkLoc((entry as any).secondHalf))
-                                     ? "text-white bg-[#01B574]" // Green for Full Working split
-                                     : "text-white bg-[#FFB020]/80" // Orange for Half leave split
-                                 : entry?.status === "Full Day" && statusLabel
-                                 ? "text-white bg-[#01B574]"
-                                 : entry?.status === "Half Day" && statusLabel
-                                   ? "text-white bg-[#FFB020]/80"
-                                   : entry?.status === "Leave"
-                                     ? "text-white bg-red-400/70"
-                                     : entry?.workLocation === "Client Visit" ||
-                                         entry?.status === "Client Visit" ||
-                                         entry?.workLocation === "WFH" ||
-                                         entry?.status === "WFH"
-                                       ? "text-white bg-[#4318FF]/70"
-                                       : isIncomplete && statusLabel
-                                         ? "text-white bg-[#64748B]/90"
-                                         : entry?.status === "Absent"
-                                           ? "text-white bg-[#EE5D50]/70"
-                                           : entry?.isWeekend
-                                             ? "text-white bg-red-400/70"
-                                             : "text-white bg-[#64748B]/90"
-                         }
+                      holiday
+                        ? "text-white bg-[#1890FF]/70"
+                        : isSplitDay
+                          ? isWorkLoc((entry as any).firstHalf) &&
+                            isWorkLoc((entry as any).secondHalf)
+                            ? "text-white bg-[#01B574]" // Green for Full Working split
+                            : "text-white bg-[#FFB020]/80" // Orange for Half leave split
+                          : entry?.status === "Full Day" && statusLabel
+                            ? "text-white bg-[#01B574]"
+                            : entry?.status === "Half Day" && statusLabel
+                              ? "text-white bg-[#FFB020]/80"
+                              : entry?.status === "Leave"
+                                ? "text-white bg-red-400/70"
+                                : entry?.workLocation === "Client Visit" ||
+                                    entry?.status === "Client Visit" ||
+                                    entry?.workLocation === "WFH" ||
+                                    entry?.status === "WFH"
+                                  ? "text-white bg-[#4318FF]/70"
+                                  : isIncomplete && statusLabel
+                                    ? "text-white bg-[#64748B]/90"
+                                    : entry?.status === "Absent"
+                                      ? "text-white bg-[#EE5D50]/70"
+                                      : entry?.isWeekend
+                                        ? "text-white bg-red-400/70"
+                                        : "text-white bg-[#64748B]/90"
+                    }
                     `}
                   >
                     {holiday
-                        ? holiday.name
-                        : isSplitDay
-                          ? (isWorkLoc((entry as any).firstHalf) && isWorkLoc((entry as any).secondHalf))
-                              ? "FULL DAY"
-                              : `${(isWorkLoc((entry as any).firstHalf) ? (entry as any).firstHalf : (entry as any).secondHalf)?.toUpperCase()} (HALF DAY)`
-                          : (entry?.status as string) === "Leave"
+                      ? holiday.name
+                      : isSplitDay
+                        ? isWorkLoc((entry as any).firstHalf) &&
+                          isWorkLoc((entry as any).secondHalf)
+                          ? "FULL DAY"
+                          : `${(isWorkLoc((entry as any).firstHalf) ? (entry as any).firstHalf : (entry as any).secondHalf)?.toUpperCase()} (HALF DAY)`
+                        : (entry?.status as string) === "Leave"
                           ? "LEAVE"
                           : (entry?.status as string) === "Full Day"
-                          ? `${(entry?.workLocation || "OFFICE").replace(/\(FULL DAY\)/i, "").trim().toUpperCase()} (FULL DAY)`
-                          : entry?.workLocation &&
-                              (entry?.status as string) !== "Leave" &&
-                              (entry?.status as string) !== "Full Day"
-                            ? entry.workLocation
-                            : isIncomplete && !statusLabel
-                              ? "Not Updated"
-                              : statusLabel}
+                            ? `${(entry?.workLocation || "OFFICE")
+                                .replace(/\(FULL DAY\)/i, "")
+                                .trim()
+                                .toUpperCase()} (FULL DAY)`
+                            : entry?.workLocation &&
+                                (entry?.status as string) !== "Leave" &&
+                                (entry?.status as string) !== "Full Day"
+                              ? entry.workLocation
+                              : isIncomplete && !statusLabel
+                                ? "Not Updated"
+                                : statusLabel}
                   </div>
 
                   {isIncomplete && (

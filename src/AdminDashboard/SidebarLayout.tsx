@@ -55,6 +55,7 @@ const SidebarLayout = ({
           { name: "My Dashboard", icon: LayoutGrid },
           { name: "My Timesheet", icon: Calendar },
           { name: "My Timesheet View", icon: Eye },
+          { name: "Work Management ", icon: Calendar },
           { name: "My Profile", icon: User },
         ],
       },

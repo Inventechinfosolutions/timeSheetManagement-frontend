@@ -661,8 +661,6 @@ const Requests = () => {
         }
       }
 
-
-
       notification.success({
         message: "Status Updated",
         description: `Request for ${employeeName} has been ${status.toLowerCase()}`,
@@ -700,7 +698,6 @@ const Requests = () => {
       setIsProcessing(false);
     }
   };
-
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -1013,360 +1010,388 @@ const Requests = () => {
                   </td>
                 </tr>
               ) : (
-                filteredRequests.map((req) => (
-                  <tr
-                    key={req.id}
-                    className="hover:bg-gray-50/50 transition-colors"
-                  >
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-[#4318FF] font-bold text-xs ring-2 ring-blue-50">
-                          {req.fullName ? (
-                            req.fullName.charAt(0)
-                          ) : (
-                            <User size={20} />
-                          )}
+                [...filteredRequests]
+                  .sort((a, b) => (b.id || 0) - (a.id || 0))
+                  .map((req) => (
+                    <tr
+                      key={req.id}
+                      className="hover:bg-gray-50/50 transition-colors"
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-[#4318FF] font-bold text-xs ring-2 ring-blue-50">
+                            {req.fullName ? (
+                              req.fullName.charAt(0)
+                            ) : (
+                              <User size={20} />
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-bold text-[#2B3674] leading-tight">
+                              {req.fullName || "Unknown"}
+                            </p>
+                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">
+                              {req.employeeId}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-bold text-[#2B3674] leading-tight">
-                            {req.fullName || "Unknown"}
-                          </p>
-                          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">
-                            {req.employeeId}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="p-1.5 bg-gray-50 rounded-lg group-hover:bg-white transition-colors">
-                          {(() => {
-                            // Determine icon based on combined activities
-                            const hasWFH =
-                              req.firstHalf === "Work From Home" ||
-                              req.secondHalf === "Work From Home";
-                            const hasCV =
-                              req.firstHalf === "Client Visit" ||
-                              req.secondHalf === "Client Visit";
-                            const hasLeave =
-                              req.firstHalf === "Leave" ||
-                              req.secondHalf === "Leave" ||
-                              req.firstHalf === "Apply Leave" ||
-                              req.secondHalf === "Apply Leave";
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <div className="p-1.5 bg-gray-50 rounded-lg group-hover:bg-white transition-colors">
+                            {(() => {
+                              // Determine icon based on combined activities
+                              const hasWFH =
+                                req.firstHalf === "Work From Home" ||
+                                req.secondHalf === "Work From Home";
+                              const hasCV =
+                                req.firstHalf === "Client Visit" ||
+                                req.secondHalf === "Client Visit";
+                              const hasLeave =
+                                req.firstHalf === "Leave" ||
+                                req.secondHalf === "Leave" ||
+                                req.firstHalf === "Apply Leave" ||
+                                req.secondHalf === "Apply Leave";
 
-                            if (hasWFH && hasLeave)
+                              if (hasWFH && hasLeave)
+                                return (
+                                  <Home size={16} className="text-green-600" />
+                                );
+                              if (hasCV && hasLeave)
+                                return (
+                                  <MapPin
+                                    size={16}
+                                    className="text-orange-600"
+                                  />
+                                );
+                              if (req.requestType === "Work From Home")
+                                return (
+                                  <Home size={16} className="text-green-600" />
+                                );
+                              if (req.requestType === "Client Visit")
+                                return (
+                                  <MapPin
+                                    size={16}
+                                    className="text-orange-600"
+                                  />
+                                );
+                              if (
+                                req.requestType === "Apply Leave" ||
+                                req.requestType === "Leave"
+                              )
+                                return (
+                                  <Calendar
+                                    size={16}
+                                    className="text-blue-600"
+                                  />
+                                );
+                              if (req.requestType === "Half Day")
+                                return (
+                                  <Calendar
+                                    size={16}
+                                    className="text-pink-600"
+                                  />
+                                );
                               return (
-                                <Home size={16} className="text-green-600" />
+                                <Briefcase
+                                  size={16}
+                                  className="text-gray-600"
+                                />
                               );
-                            if (hasCV && hasLeave)
-                              return (
-                                <MapPin size={16} className="text-orange-600" />
-                              );
-                            if (req.requestType === "Work From Home")
-                              return (
-                                <Home size={16} className="text-green-600" />
-                              );
-                            if (req.requestType === "Client Visit")
-                              return (
-                                <MapPin size={16} className="text-orange-600" />
-                              );
-                            if (
-                              req.requestType === "Apply Leave" ||
-                              req.requestType === "Leave"
-                            )
-                              return (
-                                <Calendar size={16} className="text-blue-600" />
-                              );
-                            if (req.requestType === "Half Day")
-                              return (
-                                <Calendar size={16} className="text-pink-600" />
-                              );
-                            return (
-                              <Briefcase size={16} className="text-gray-600" />
-                            );
-                          })()}
+                            })()}
+                          </div>
+                          <span className="text-sm font-semibold text-[#2B3674] flex items-center gap-2">
+                            {(() => {
+                              // Show combined activities for split-day requests
+                              if (
+                                req.isHalfDay &&
+                                req.firstHalf &&
+                                req.secondHalf
+                              ) {
+                                const activities = [
+                                  req.firstHalf,
+                                  req.secondHalf,
+                                ]
+                                  .map((a) =>
+                                    a === "Apply Leave" ? "Leave" : a,
+                                  )
+                                  .filter((a) => a && a !== "Office")
+                                  .filter(
+                                    (value, index, self) =>
+                                      self.indexOf(value) === index,
+                                  );
+
+                                if (activities.length > 1) {
+                                  // Replace "Leave" with "Half Day Leave" in combined activities
+                                  return activities
+                                    .map((a) =>
+                                      a === "Leave" ? "Half Day Leave" : a,
+                                    )
+                                    .join(" + ");
+                                }
+                                if (activities.length === 1) {
+                                  // For single activity that is "Leave", show "Half Day Leave"
+                                  return activities[0] === "Leave"
+                                    ? "Half Day Leave"
+                                    : activities[0];
+                                }
+                              }
+
+                              // Default display
+                              if (
+                                req.requestType === "Apply Leave" ||
+                                req.requestType === "Leave"
+                              ) {
+                                return req.isHalfDay
+                                  ? "Half Day Leave"
+                                  : "Leave";
+                              }
+                              if (req.requestType === "Half Day")
+                                return "Half Day Leave";
+                              return req.requestType;
+                            })()}
+                            {req.isModified && (
+                              <span className="bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter shadow-sm border border-orange-200">
+                                Modified
+                              </span>
+                            )}
+                          </span>
                         </div>
-                        <span className="text-sm font-semibold text-[#2B3674] flex items-center gap-2">
-                          {(() => {
-                            // Show combined activities for split-day requests
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span
+                          className={`text-xs font-bold px-3 py-1 rounded-full ${(() => {
                             if (
                               req.isHalfDay &&
                               req.firstHalf &&
                               req.secondHalf
                             ) {
-                              const activities = [req.firstHalf, req.secondHalf]
-                                .map((a) => (a === "Apply Leave" ? "Leave" : a))
-                                .filter((a) => a && a !== "Office")
-                                .filter(
-                                  (value, index, self) =>
-                                    self.indexOf(value) === index,
-                                );
-
-                              if (activities.length > 1) {
-                                // Replace "Leave" with "Half Day Leave" in combined activities
-                                return activities
-                                  .map((a) =>
-                                    a === "Leave" ? "Half Day Leave" : a,
-                                  )
-                                  .join(" + ");
-                              }
-                              if (activities.length === 1) {
-                                // For single activity that is "Leave", show "Half Day Leave"
-                                return activities[0] === "Leave"
-                                  ? "Half Day Leave"
-                                  : activities[0];
-                              }
+                              const isSame = req.firstHalf === req.secondHalf;
+                              if (isSame) return "bg-blue-100 text-blue-700";
+                              return "bg-purple-100 text-purple-700";
                             }
-
-                            // Default display
+                            return "bg-blue-100 text-blue-700";
+                          })()}`}
+                        >
+                          {(() => {
                             if (
-                              req.requestType === "Apply Leave" ||
-                              req.requestType === "Leave"
+                              req.isHalfDay &&
+                              req.firstHalf &&
+                              req.secondHalf
                             ) {
-                              return req.isHalfDay ? "Half Day Leave" : "Leave";
-                            }
-                            if (req.requestType === "Half Day")
-                              return "Half Day Leave";
-                            return req.requestType;
-                          })()}
-                          {req.isModified && (
-                            <span className="bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter shadow-sm border border-orange-200">
-                              Modified
-                            </span>
-                          )}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span
-                        className={`text-xs font-bold px-3 py-1 rounded-full ${(() => {
-                          if (
-                            req.isHalfDay &&
-                            req.firstHalf &&
-                            req.secondHalf
-                          ) {
-                            const isSame = req.firstHalf === req.secondHalf;
-                            if (isSame) return "bg-blue-100 text-blue-700";
-                            return "bg-purple-100 text-purple-700";
-                          }
-                          return "bg-blue-100 text-blue-700";
-                        })()}`}
-                      >
-                        {(() => {
-                          if (
-                            req.isHalfDay &&
-                            req.firstHalf &&
-                            req.secondHalf
-                          ) {
-                            const first =
-                              req.firstHalf === "Apply Leave"
-                                ? "Leave"
-                                : req.firstHalf;
-                            const second =
-                              req.secondHalf === "Apply Leave"
-                                ? "Leave"
-                                : req.secondHalf;
+                              const first =
+                                req.firstHalf === "Apply Leave"
+                                  ? "Leave"
+                                  : req.firstHalf;
+                              const second =
+                                req.secondHalf === "Apply Leave"
+                                  ? "Leave"
+                                  : req.secondHalf;
 
-                            if (first === second && first !== "Office") {
+                              if (first === second && first !== "Office") {
+                                return "Full Day";
+                              }
+
+                              // Filter out Office
+                              const parts = [];
+                              if (first && first !== "Office")
+                                parts.push(`First Half = ${first}`);
+                              if (second && second !== "Office")
+                                parts.push(`Second Half = ${second}`);
+
+                              if (parts.length > 0) return parts.join(" & ");
                               return "Full Day";
                             }
-
-                            // Filter out Office
-                            const parts = [];
-                            if (first && first !== "Office")
-                              parts.push(`First Half = ${first}`);
-                            if (second && second !== "Office")
-                              parts.push(`Second Half = ${second}`);
-
-                            if (parts.length > 0) return parts.join(" & ");
                             return "Full Day";
-                          }
-                          return "Full Day";
-                        })()}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="text-xs font-bold text-gray-500 bg-gray-100/50 px-2 py-1 rounded-md">
-                        {req.department || "N/A"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="text-sm font-bold text-[#2B3674]">
-                        {dayjs(req.fromDate).format("DD MMM")} -{" "}
-                        {dayjs(req.toDate).format("DD MMM - YYYY")}
-                      </div>
-                      <p className="text-[10px] text-[#4318FF] font-black mt-1 uppercase tracking-wider">
-                        Total:{" "}
-                        {req.duration ||
-                          (req.requestType === "Client Visit" ||
-                          req.requestType === "Work From Home" ||
-                          req.requestType === "Apply Leave" ||
-                          req.requestType === "Leave" ||
-                          req.requestType === "Half Day"
-                            ? calculateDurationExcludingWeekends(
-                                req.fromDate,
-                                req.toDate,
-                              )
-                            : dayjs(req.toDate).diff(
-                                dayjs(req.fromDate),
-                                "day",
-                              ) + 1)}{" "}
-                        Day(s)
-                      </p>
-                    </td>
-                    <td className="px-6 py-4 text-center text-sm font-semibold text-[#475569]">
-                      {req.submittedDate
-                        ? dayjs(req.submittedDate).format("DD MMM - YYYY")
-                        : req.created_at
-                          ? dayjs(req.created_at).format("DD MMM - YYYY")
-                          : "N/A"}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span
-                        className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all inline-flex items-center gap-1.5 ${getStatusColor(req.status)}`}
-                      >
-                        {(req.status === "Pending" ||
-                          req.status === "Requesting for Modification") && (
-                          <RotateCcw size={12} className="animate-spin-slow" />
-                        )}
-                        {req.status}
-                        {req.status === "Request Modified" &&
-                          req.requestModifiedFrom && (
-                            <span className="opacity-70 border-l border-orange-300 pl-1.5 ml-1 text-[9px] font-bold">
-                              (TO{" "}
-                              {req.requestModifiedFrom === "Apply Leave"
-                                ? "LEAVE"
-                                : req.requestModifiedFrom.toUpperCase()}
-                              )
-                            </span>
-                          )}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-center gap-3">
-                        <button
-                          onClick={async () => {
-                            try {
-                              const data = await dispatch(
-                                getLeaveRequestById(req.id),
-                              ).unwrap();
-
-                              // Also fetch employee details to get their internal numeric ID
-                              if (req.employeeId) {
-                                const employeeData = await dispatch(
-                                  getEntity(req.employeeId),
-                                ).unwrap();
-                                setSelectedOwnerId(employeeData.id);
-                              }
-
-                              setSelectedRequest(data);
-                              setIsViewModalOpen(true);
-                            } catch (err) {
-                              notification.error({
-                                message: "Error",
-                                description: "Failed to fetch request details",
-                              });
-                            }
-                          }}
-                          className="p-2 text-blue-600 bg-blue-50/50 hover:bg-blue-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-blue-200 active:scale-90"
-                          title="View Details"
+                          })()}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="text-xs font-bold text-gray-500 bg-gray-100/50 px-2 py-1 rounded-md">
+                          {req.department || "N/A"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="text-sm font-bold text-[#2B3674]">
+                          {dayjs(req.fromDate).format("DD MMM")} -{" "}
+                          {dayjs(req.toDate).format("DD MMM - YYYY")}
+                        </div>
+                        <p className="text-[10px] text-[#4318FF] font-black mt-1 uppercase tracking-wider">
+                          Total:{" "}
+                          {req.duration ||
+                            (req.requestType === "Client Visit" ||
+                            req.requestType === "Work From Home" ||
+                            req.requestType === "Apply Leave" ||
+                            req.requestType === "Leave" ||
+                            req.requestType === "Half Day"
+                              ? calculateDurationExcludingWeekends(
+                                  req.fromDate,
+                                  req.toDate,
+                                )
+                              : dayjs(req.toDate).diff(
+                                  dayjs(req.fromDate),
+                                  "day",
+                                ) + 1)}{" "}
+                          Day(s)
+                        </p>
+                      </td>
+                      <td className="px-6 py-4 text-center text-sm font-semibold text-[#475569]">
+                        {req.submittedDate
+                          ? dayjs(req.submittedDate).format("DD MMM - YYYY")
+                          : req.created_at
+                            ? dayjs(req.created_at).format("DD MMM - YYYY")
+                            : "N/A"}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span
+                          className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all inline-flex items-center gap-1.5 ${getStatusColor(req.status)}`}
                         >
-                          <Eye size={20} />
-                        </button>
-                        {req.status === "Pending" && (
-                          <>
-                            <button
-                              onClick={() =>
-                                handleUpdateStatus(
-                                  req.id,
-                                  "Approved",
-                                  req.fullName || "Employee",
+                          {(req.status === "Pending" ||
+                            req.status === "Requesting for Modification") && (
+                            <RotateCcw
+                              size={12}
+                              className="animate-spin-slow"
+                            />
+                          )}
+                          {req.status}
+                          {req.status === "Request Modified" &&
+                            req.requestModifiedFrom && (
+                              <span className="opacity-70 border-l border-orange-300 pl-1.5 ml-1 text-[9px] font-bold">
+                                (TO{" "}
+                                {req.requestModifiedFrom === "Apply Leave"
+                                  ? "LEAVE"
+                                  : req.requestModifiedFrom.toUpperCase()}
                                 )
+                              </span>
+                            )}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-center gap-3">
+                          <button
+                            onClick={async () => {
+                              try {
+                                const data = await dispatch(
+                                  getLeaveRequestById(req.id),
+                                ).unwrap();
+
+                                // Also fetch employee details to get their internal numeric ID
+                                if (req.employeeId) {
+                                  const employeeData = await dispatch(
+                                    getEntity(req.employeeId),
+                                  ).unwrap();
+                                  setSelectedOwnerId(employeeData.id);
+                                }
+
+                                setSelectedRequest(data);
+                                setIsViewModalOpen(true);
+                              } catch (err) {
+                                notification.error({
+                                  message: "Error",
+                                  description:
+                                    "Failed to fetch request details",
+                                });
                               }
-                              className="p-2 text-green-600 bg-green-50/50 hover:bg-green-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-green-200 active:scale-90"
-                              title="Approve"
-                            >
-                              <CheckCircle size={20} />
-                            </button>
-                            <button
-                              onClick={() =>
-                                handleUpdateStatus(
-                                  req.id,
-                                  "Rejected",
-                                  req.fullName || "Employee",
-                                )
-                              }
-                              className="p-2 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
-                              title="Reject"
-                            >
-                              <XCircle size={20} />
-                            </button>
-                          </>
-                        )}
-                        {req.status === "Requesting for Cancellation" && (
-                          <>
-                            <button
-                              onClick={() =>
-                                handleUpdateStatus(
-                                  req.id,
-                                  "Cancellation Approved",
-                                  req.fullName || "Employee",
-                                )
-                              }
-                              className="p-2 text-green-600 bg-green-50/50 hover:bg-green-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-green-200 active:scale-90"
-                              title="Approve Cancellation"
-                            >
-                              <CheckCircle size={20} />
-                            </button>
-                            <button
-                              onClick={() =>
-                                handleUpdateStatus(
-                                  req.id,
-                                  "Reject Cancellation",
-                                  req.fullName || "Employee",
-                                )
-                              }
-                              className="p-2 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
-                              title="Reject Cancellation"
-                            >
-                              <XCircle size={20} />
-                            </button>
-                          </>
-                        )}
-                        {req.status === "Requesting for Modification" && (
-                          <>
-                            <button
-                              onClick={() =>
-                                handleUpdateStatus(
-                                  req.id,
-                                  "Modification Approved",
-                                  req.fullName || "Employee",
-                                )
-                              }
-                              className="p-2 text-green-600 bg-green-50/50 hover:bg-green-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-green-200 active:scale-90"
-                              title="Approve Modification"
-                            >
-                              <CheckCircle size={20} />
-                            </button>
-                            <button
-                              onClick={() =>
-                                handleUpdateStatus(
-                                  req.id,
-                                  "Modification Rejected",
-                                  req.fullName || "Employee",
-                                )
-                              }
-                              className="p-2 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
-                              title="Reject Modification"
-                            >
-                              <XCircle size={20} />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                            }}
+                            className="p-2 text-blue-600 bg-blue-50/50 hover:bg-blue-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-blue-200 active:scale-90"
+                            title="View Details"
+                          >
+                            <Eye size={20} />
+                          </button>
+                          {req.status === "Pending" && (
+                            <>
+                              <button
+                                onClick={() =>
+                                  handleUpdateStatus(
+                                    req.id,
+                                    "Approved",
+                                    req.fullName || "Employee",
+                                  )
+                                }
+                                className="p-2 text-green-600 bg-green-50/50 hover:bg-green-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-green-200 active:scale-90"
+                                title="Approve"
+                              >
+                                <CheckCircle size={20} />
+                              </button>
+                              <button
+                                onClick={() =>
+                                  handleUpdateStatus(
+                                    req.id,
+                                    "Rejected",
+                                    req.fullName || "Employee",
+                                  )
+                                }
+                                className="p-2 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
+                                title="Reject"
+                              >
+                                <XCircle size={20} />
+                              </button>
+                            </>
+                          )}
+                          {req.status === "Requesting for Cancellation" && (
+                            <>
+                              <button
+                                onClick={() =>
+                                  handleUpdateStatus(
+                                    req.id,
+                                    "Cancellation Approved",
+                                    req.fullName || "Employee",
+                                  )
+                                }
+                                className="p-2 text-green-600 bg-green-50/50 hover:bg-green-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-green-200 active:scale-90"
+                                title="Approve Cancellation"
+                              >
+                                <CheckCircle size={20} />
+                              </button>
+                              <button
+                                onClick={() =>
+                                  handleUpdateStatus(
+                                    req.id,
+                                    "Reject Cancellation",
+                                    req.fullName || "Employee",
+                                  )
+                                }
+                                className="p-2 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
+                                title="Reject Cancellation"
+                              >
+                                <XCircle size={20} />
+                              </button>
+                            </>
+                          )}
+                          {req.status === "Requesting for Modification" && (
+                            <>
+                              <button
+                                onClick={() =>
+                                  handleUpdateStatus(
+                                    req.id,
+                                    "Modification Approved",
+                                    req.fullName || "Employee",
+                                  )
+                                }
+                                className="p-2 text-green-600 bg-green-50/50 hover:bg-green-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-green-200 active:scale-90"
+                                title="Approve Modification"
+                              >
+                                <CheckCircle size={20} />
+                              </button>
+                              <button
+                                onClick={() =>
+                                  handleUpdateStatus(
+                                    req.id,
+                                    "Modification Rejected",
+                                    req.fullName || "Employee",
+                                  )
+                                }
+                                className="p-2 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
+                                title="Reject Modification"
+                              >
+                                <XCircle size={20} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
               )}
             </tbody>
           </table>
