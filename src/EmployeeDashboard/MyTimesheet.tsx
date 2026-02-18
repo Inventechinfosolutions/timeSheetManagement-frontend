@@ -919,6 +919,8 @@ const MyTimesheet = ({
               : derivedStatus === "Not Updated"
                 ? null
                 : entry.secondHalf,
+          // Explicitly set sourceRequestId to null for Admin/Manager to break leave link on manual save
+          ...(isAdmin || isManager ? { sourceRequestId: null } : {}),
         } as any);
       }
     });
