@@ -9,7 +9,7 @@ import {
   Loader2,
   ShieldBan,
 } from "lucide-react";
-import { downloadPdf } from "../utils/downloadPdf";
+import { saveAs } from "file-saver";
 import { useAppSelector, useAppDispatch } from "../hooks";
 import { RootState } from "../store";
 import {
@@ -22,6 +22,7 @@ import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import {
   fetchMonthlyAttendance,
   autoUpdateTimesheet,
+  downloadAttendancePdfReport,
 } from "../reducers/employeeAttendance.reducer";
 import { fetchBlockers } from "../reducers/timesheetBlocker.reducer";
 import { getLeaveHistory } from "../reducers/leaveRequest.reducer";
@@ -225,7 +226,7 @@ const Calendar = ({
     setIsDownloadModalOpen(true);
   };
 
-  const handleConfirmDownload = () => {
+  const handleConfirmDownload = async () => {
     if (!currentEmployeeId) return;
 
     // Resolve the correct employee object
@@ -243,45 +244,23 @@ const Calendar = ({
 
     try {
       setIsDownloading(true);
-      const fromDateStr = downloadDateRange.from;
-      const toDateStr = downloadDateRange.to;
+      // Backend handles extraction from month/year
+      const monthStr = downloadDateRange.from.split("-")[1];
+      const yearStr = downloadDateRange.from.split("-")[0];
+      const month = parseInt(monthStr);
+      const year = parseInt(yearStr);
 
-      // 1. Use existing data from Redux state instead of making a new API call
-      // Filter records that fall within the selected date range
-      const filteredRecords = records.filter((record) => {
-        const recordDate = new Date(record.workingDate)
-          .toISOString()
-          .split("T")[0];
-        return recordDate >= fromDateStr && recordDate <= toDateStr;
-      });
-
-      // 2. Generate full range entries (including weekends/holidays/not-updated)
-      const start = new Date(fromDateStr);
-      const end = new Date(toDateStr);
-
-      const rangeEntries = generateRangeEntries(
-        start,
-        end,
-        now,
-        filteredRecords,
+      const blob = await downloadAttendancePdfReport(
+        month,
+        year,
+        currentEmployeeId,
+        downloadDateRange.from,
+        downloadDateRange.to,
       );
-
-      const totalHours = rangeEntries.reduce(
-        (sum, entry) => sum + (entry.totalHours || 0),
-        0,
+      saveAs(
+        blob,
+        `Attendance_${currentEmployeeId}_${downloadDateRange.from}_to_${downloadDateRange.to}.pdf`,
       );
-
-      // 3. Generate PDF
-      downloadPdf({
-        employeeName: downloadEntity?.fullName || "Employee",
-        employeeId: currentEmployeeId,
-        designation: downloadEntity?.designation,
-        department: downloadEntity?.department,
-        month: `${fromDateStr} to ${toDateStr}`,
-        entries: rangeEntries,
-        totalHours: totalHours,
-        holidays: holidays || [],
-      });
 
       setIsDownloadModalOpen(false);
     } catch (error) {
@@ -1099,14 +1078,17 @@ const Calendar = ({
                           : (entry?.status as string) === "Leave"
                           ? "LEAVE"
                           : (entry?.status as string) === "Full Day"
-                          ? `${(entry?.workLocation || "OFFICE").replace(/\(FULL DAY\)/i, "").trim().toUpperCase()} (FULL DAY)`
-                          : entry?.workLocation &&
-                              (entry?.status as string) !== "Leave" &&
-                              (entry?.status as string) !== "Full Day"
-                            ? entry.workLocation
-                            : isIncomplete && !statusLabel
-                              ? "Not Updated"
-                              : statusLabel}
+                            ? `${(entry?.workLocation || "OFFICE")
+                                .replace(/\(FULL DAY\)/i, "")
+                                .trim()
+                                .toUpperCase()} (FULL DAY)`
+                            : entry?.workLocation &&
+                                (entry?.status as string) !== "Leave" &&
+                                (entry?.status as string) !== "Full Day"
+                              ? entry.workLocation
+                              : isIncomplete && !statusLabel
+                                ? "Not Updated"
+                                : statusLabel}
                   </div>
 
                   {isIncomplete && (
