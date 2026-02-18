@@ -228,20 +228,10 @@ const Requests = () => {
   });
 
   // Helper function to check if a date is a weekend
-  // Block Saturday only if Department is "Information Technology"
-  const isWeekend = (date: dayjs.Dayjs, department?: string): boolean => {
+  // Block Saturday (6) and Sunday (0) for EVERYONE to match Employee Dashboard
+  const isWeekend = (date: dayjs.Dayjs): boolean => {
     const day = date.day(); // 0 = Sunday
-
-    // Always block Sunday
-    if (day === 0) return true;
-
-    // Block Saturday ONLY if department is Information Technology
-    const dept = department || "";
-    if (dept === "Information Technology" && day === 6) {
-      return true;
-    }
-
-    return false;
+    return day === 0 || day === 6;
   };
 
   // Helper function to check if a date is a master holiday
@@ -282,7 +272,6 @@ const Requests = () => {
   const calculateDurationExcludingWeekends = (
     startDate: string,
     endDate: string,
-    department?: string,
   ): number => {
     if (!startDate || !endDate) return 0;
 
@@ -294,7 +283,7 @@ const Requests = () => {
     while (current.isBefore(end) || current.isSame(end, "day")) {
       // Exclude weekends, holidays, and existing leave records
       if (
-        !isWeekend(current, department) &&
+        !isWeekend(current) &&
         !isHoliday(current) &&
         !hasExistingLeave(current)
       ) {
@@ -310,7 +299,6 @@ const Requests = () => {
   const getWorkingDatesInRange = (
     startDate: string,
     endDate: string,
-    department?: string,
   ): string[] => {
     if (!startDate || !endDate) return [];
     const start = dayjs(startDate);
@@ -318,7 +306,7 @@ const Requests = () => {
     const dates: string[] = [];
     let current = start;
     while (current.isBefore(end) || current.isSame(end, "day")) {
-      if (!isWeekend(current, department) && !isHoliday(current)) {
+      if (!isWeekend(current) && !isHoliday(current)) {
         dates.push(current.format("YYYY-MM-DD"));
       }
       current = current.add(1, "day");
@@ -377,7 +365,6 @@ const Requests = () => {
         const requestWorkingDates = getWorkingDatesInRange(
           request.fromDate,
           request.toDate,
-          request.department,
         );
         let modificationHandledDates: string[] = [];
 
@@ -398,7 +385,6 @@ const Requests = () => {
           const victimWorkingDates = getWorkingDatesInRange(
             victim.fromDate,
             victim.toDate,
-            victim.department,
           );
 
           // IMPORTANT: A victim only overlaps if it claims dates that are:
@@ -471,7 +457,7 @@ const Requests = () => {
                   // Check if next working day is the next date
                   let nextWorkingDay = prevDate.add(1, "day");
                   while (
-                    isWeekend(nextWorkingDay, victim.department) ||
+                    isWeekend(nextWorkingDay) ||
                     isHoliday(nextWorkingDay)
                   ) {
                     nextWorkingDay = nextWorkingDay.add(1, "day");
@@ -623,7 +609,7 @@ const Requests = () => {
               masterRequest.requestType === "Client Visit"
             ) {
               return (
-                !isWeekend(dObj, masterRequest.department) && !isHoliday(dObj)
+                !isWeekend(dObj) && !isHoliday(dObj)
               );
             }
             return true;
@@ -1238,8 +1224,7 @@ const Requests = () => {
                               : dayjs(req.toDate).diff(
                                   dayjs(req.fromDate),
                                   "day",
-                                ) + 1)}{" "}
-                          Day(s)
+                                ) + 1)} Day(s)
                         </p>
                       </td>
                       <td className="px-6 py-4 text-center text-sm font-semibold text-[#475569]">
@@ -1696,7 +1681,7 @@ const Requests = () => {
                 </div>
 
                 {/* Split-Day Information (View Mode Only) */}
-                {selectedRequest?.isHalfDay &&
+                {!!selectedRequest?.isHalfDay &&
                   (selectedRequest?.firstHalf || selectedRequest?.secondHalf) &&
                   (() => {
                     const isBothSame =
