@@ -20,11 +20,11 @@ import {
   modifyLeaveRequest,
   clearAttendanceForRequest,
   submitRequestModification,
+  clearRequests,
   LeaveRequest,
 } from "../reducers/leaveRequest.reducer";
 import { getEntities } from "../reducers/employeeDetails.reducer";
 import {
-  submitBulkAttendance,
   AttendanceStatus,
   fetchAttendanceByDateRange,
 } from "../reducers/employeeAttendance.reducer";
@@ -911,9 +911,13 @@ const AdminLeaveManagement = () => {
     }
   };
 
-  // Fetch master holidays on mount
+  // Fetch master holidays and clear stale requests on mount
   useEffect(() => {
+    dispatch(clearRequests());
     dispatch(fetchHolidays());
+    return () => {
+      dispatch(clearRequests());
+    };
   }, [dispatch]);
 
   // Fetch attendance records for the selected date range to check for existing leaves

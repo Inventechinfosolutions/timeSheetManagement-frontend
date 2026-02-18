@@ -32,12 +32,12 @@ import {
   updateParentRequest,
   submitRequestModification,
   clearAttendanceForRequest,
+  clearRequests,
   LeaveRequest,
 } from "../reducers/leaveRequest.reducer";
 import { getEntity } from "../reducers/employeeDetails.reducer";
 // } from "../reducers/leaveRequest.reducer";
 import {
-  submitBulkAttendance,
   AttendanceStatus,
   fetchAttendanceByDateRange,
 } from "../reducers/employeeAttendance.reducer";
@@ -142,10 +142,14 @@ const Requests = () => {
   //   "Admin",
   // ];
 
-  // Fetch master holidays on mount
+  // Clear requests on mount to prevent stale data from other views
   useEffect(() => {
+    dispatch(clearRequests());
     dispatch(fetchHolidays());
     dispatch(fetchDepartments());
+    return () => {
+      dispatch(clearRequests());
+    };
   }, [dispatch]);
 
   // Fetch attendance records when a request is selected for viewing
@@ -660,6 +664,9 @@ const Requests = () => {
           // --- END SMART CANCELLATION ---
         }
       }
+
+      // [REMOVED] Redundant frontend attendance updates.
+      // Synchronization is now handled exclusively by the backend in LeaveRequestsService.updateStatus.
 
       notification.success({
         message: "Status Updated",

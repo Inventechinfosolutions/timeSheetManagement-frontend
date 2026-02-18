@@ -479,6 +479,13 @@ const leaveRequestSlice = createSlice({
       state.submitSuccess = false;
       state.error = null;
     },
+    clearRequests: (state) => {
+      state.entities = [];
+      state.totalItems = 0;
+      state.totalPages = 1;
+      state.currentPage = 1;
+      state.stats = null;
+    },
   },
   extraReducers: (builder) => {
     // Unified Request Fetching (History, All, Monthly)
@@ -620,5 +627,5 @@ const leaveRequestSlice = createSlice({
   },
 });
 
-export const { resetSubmitSuccess } = leaveRequestSlice.actions;
+export const { resetSubmitSuccess, clearRequests } = leaveRequestSlice.actions;
 export default leaveRequestSlice.reducer;
