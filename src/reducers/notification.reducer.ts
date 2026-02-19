@@ -36,8 +36,12 @@ const apiUrl = '/api/notifications/attendance';
 // 1. Fetch Notifications
 export const fetchNotifications = createAsyncThunk(
   'notifications/fetchNotifications',
-  async (employeeId: string, { rejectWithValue }) => {
+  async (employeeId: string, { rejectWithValue, getState }) => {
     try {
+      const state = getState() as any;
+      if (!state.user?.currentUser) {
+        return rejectWithValue("User not authenticated");
+      }
       const response = await axios.get(`${apiUrl}/${employeeId}/inbox`);
       return response.data;
     } catch (error: any) {
