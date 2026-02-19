@@ -35,6 +35,7 @@ const Registration = () => {
     role: "",
     designation: "",
     employmentType: "" as "" | "FULL_TIMER" | "INTERN",
+    gender: "" as "" | "MALE" | "FEMALE",
     email: "",
   });
   const [error, setError] = useState("");
@@ -69,6 +70,7 @@ const Registration = () => {
           role: "",
           designation: "",
           employmentType: "",
+          gender: "",
           email: "",
         });
         navigate("/admin-dashboard/activation-success", {
@@ -93,7 +95,9 @@ const Registration = () => {
           ? value.toUpperCase()
           : name === "employmentType"
             ? (value as "" | "FULL_TIMER" | "INTERN")
-            : value,
+            : name === "gender"
+              ? (value as "" | "MALE" | "FEMALE")
+              : value,
     });
   };
 
@@ -110,6 +114,7 @@ const Registration = () => {
       "role",
       "designation",
       "employmentType",
+      "gender",
       "email",
     ];
 
@@ -128,6 +133,7 @@ const Registration = () => {
         role: "Role",
         designation: "Designation",
         employmentType: "Employment Type",
+        gender: "Gender",
         email: "Email",
       };
       const errorMsg = `${fieldLabels[emptyField]} is required`;
@@ -357,6 +363,41 @@ const Registration = () => {
                       <option value="INTERN">Intern</option>
                     </select>
                     <Briefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <svg
+                        className="w-4 h-4 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-0.5">
+                    Gender
+                  </label>
+                  <div className="relative group">
+                    <select
+                      name="gender"
+                      value={formData.gender}
+                      onChange={handleChange}
+                      className="w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#4318FF]/20 focus:border-[#4318FF] outline-none transition-all text-gray-700 text-sm font-medium appearance-none bg-white"
+                      required
+                    >
+                      <option value="">Select Gender</option>
+                      <option value="MALE">Male</option>
+                      <option value="FEMALE">Female</option>
+                    </select>
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                     <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
                       <svg
                         className="w-4 h-4 text-gray-400"
