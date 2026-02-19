@@ -3,6 +3,11 @@ export enum EmploymentType {
     INTERN = 'INTERN',
 }
 
+export enum Gender {
+    MALE = 'MALE',
+    FEMALE = 'FEMALE',
+}
+
 export interface TimesheetEntry {
     loginTime: any;
     logoutTime: any;

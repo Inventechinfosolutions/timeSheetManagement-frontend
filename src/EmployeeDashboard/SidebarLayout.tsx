@@ -273,7 +273,7 @@ const SidebarLayout = ({
           <div className="relative group">
             <button
               onClick={handleLogout}
-              className={`w-full flex items-center p-3 rounded-2xl cursor-pointer transition-all duration-300 relative overflow-hidden group hover:bg-white/10 text-blue-100 hover:text-white
+              className={`w-full flex items-center p-3 rounded-2xl cursor-pointer transition-all duration-300 relative overflow-hidden group bg-white text-red-600 hover:bg-red-50
                         ${
                           isOpen || isMobileOpen
                             ? "gap-4 px-4"
@@ -281,7 +281,7 @@ const SidebarLayout = ({
                         }
                     `}
             >
-              <div className="shrink-0 relative z-10 transition-transform duration-300">
+              <div className="shrink-0 relative z-10 transition-transform duration-300 text-red-600">
                 <LogOut className="w-5 h-5 transition-colors duration-300 group-hover:scale-110" />
               </div>
               <span
