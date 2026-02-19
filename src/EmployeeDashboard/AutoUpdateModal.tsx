@@ -52,7 +52,7 @@ const AutoUpdateModal: React.FC<AutoUpdateModalProps> = ({
           <button 
             onClick={onClose}
             disabled={loading}
-            className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-xl text-white transition-colors disabled:opacity-50"
+            className="absolute top-4 right-4 z-20 p-2 bg-white/10 hover:bg-white/20 rounded-xl text-white transition-colors disabled:opacity-50"
           >
             <X size={18} />
           </button>
