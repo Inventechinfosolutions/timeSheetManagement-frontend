@@ -1977,9 +1977,9 @@ const AdminLeaveManagement = () => {
                               </span>
                             </div>
                           </td>
-                          <td className="py-4 px-4 text-center">
+                          <td className="py-4 px-4 text-center whitespace-nowrap">
                             <span
-                              className={`text-xs font-bold px-3 py-1 rounded-full ${(() => {
+                              className={`text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap ${(() => {
                                 if (
                                   item.isHalfDay &&
                                   item.firstHalf &&

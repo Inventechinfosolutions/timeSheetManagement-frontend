@@ -1235,7 +1235,7 @@ const Requests = () => {
                                   dayjs(req.fromDate),
                                   "day",
                                 ) + 1)}{" "}
-                          Day(s)
+                          DAY(S)
                         </span>
                       </td>
                       <td className="py-4 px-4 text-center text-sm font-semibold text-[#475569] whitespace-nowrap">
