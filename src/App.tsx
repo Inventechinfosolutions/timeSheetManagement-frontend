@@ -118,9 +118,12 @@ const AdminTabWrapper = () => {
   }
 };
 
+import SessionTimeout from "./components/SessionTimeout";
+
 function App() {
   return (
     <Router>
+      <SessionTimeout />
       <Routes>
         {/* Employee Activation Route - handles activation links */}
         <Route

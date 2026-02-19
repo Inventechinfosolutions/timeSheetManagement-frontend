@@ -47,7 +47,7 @@ const Header = ({
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useAppDispatch();
-  const { entity, profileImageUrl, loggedInUserProfileImageUrl } =
+  const { entity, loggedInUserProfileImageUrl, loggedInUserImageStatus } =
     useAppSelector((state) => state.employeeDetails);
   const { currentUser } = useAppSelector((state) => state.user);
   // Permissions
@@ -111,7 +111,7 @@ const Header = ({
     }
     
     // Employee updates apply to anyone with an employee record (including Managers viewing their own)
-    if (entity?.employeeId) {
+    if (entity?.employeeId && currentUser) {
       if (!isAdmin) {
         dispatch(fetchNotifications(entity?.employeeId));
         dispatch(fetchEmployeeUpdates(entity?.employeeId));
@@ -194,13 +194,25 @@ const Header = ({
       "U";
 
   // Fetch profile image - ONLY for the logged-in user, not the viewed entity (if Admin)
+  // Fetch profile image - ONLY for the logged-in user, not the viewed entity (if Admin)
   useEffect(() => {
     if (isAdmin) return;
-    const profileId = currentUser?.employeeId || currentUser?.id;
-    if (profileId) {
+    
+    // Only fetch if we don't have the image yet (e.g. initial load or after upload invalidation)
+    // AND if we are not currently fetching or failed previously
+    if (loggedInUserProfileImageUrl) return;
+
+    // Use loginId (alphanumeric) as reliable fallback if employeeId is missing. 
+    // The backend endpoint /profile-image/:id/view expects the alphanumeric EmployeeID (e.g. "ITE123"), NOT the user UUID.
+    const profileId = currentUser?.employeeId || currentUser?.loginId || currentUser?.id;
+    
+    const shouldFetch = !loggedInUserProfileImageUrl && 
+                        (loggedInUserImageStatus === 'idle' || loggedInUserImageStatus === undefined);
+
+    if (profileId && shouldFetch) {
       dispatch(fetchLoggedInUserProfileImage(String(profileId)));
     }
-  }, [dispatch, currentUser?.employeeId, currentUser?.id, isAdmin]);
+  }, [dispatch, currentUser?.employeeId, currentUser?.loginId, currentUser?.id, isAdmin, loggedInUserProfileImageUrl, loggedInUserImageStatus]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {

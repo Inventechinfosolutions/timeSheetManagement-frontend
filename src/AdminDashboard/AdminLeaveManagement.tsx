@@ -1097,6 +1097,12 @@ const AdminLeaveManagement = () => {
       const filtered = apiDates.filter(
         (d: any) => !lockedDates.has(dayjs(d.date).format("YYYY-MM-DD")),
       );
+
+      // Bypass deadline restriction for Admin/Manager Dashboard
+      filtered.forEach((d: any) => {
+        d.isCancellable = true;
+      });
+
       setCancellableDates(filtered);
     } catch (err) {
       notification.error({
@@ -2817,10 +2823,7 @@ const AdminLeaveManagement = () => {
           ) : (
             <div className="space-y-4">
               <div className="text-sm text-[#4318FF] bg-[#4318FF]/5 p-4 rounded-2xl border border-[#4318FF]/10 font-medium leading-relaxed">
-                Select the dates you wish to cancel for this request. <br />
-                <span className="text-xs font-bold opacity-80">
-                  * Note: Cancellation follows standard company policies.
-                </span>
+                Select the dates you wish to cancel for this request.
               </div>
 
               {/* Select All Option */}
@@ -2887,11 +2890,7 @@ const AdminLeaveManagement = () => {
                         </div>
                       </div>
                     </div>
-                    {!dateObj.isCancellable && (
-                      <span className="text-[10px] font-black uppercase tracking-tight text-red-400 bg-red-50 px-2 py-1 rounded-lg">
-                        Deadline Passed
-                      </span>
-                    )}
+                    {/* Deadline restriction removed for Admin/Manager view */}
                   </div>
                 ))}
               </div>
