@@ -73,7 +73,7 @@ const EmployeeListView = () => {
     email: "",
     role: "",
     employmentType: "" as "" | EmploymentType,
-
+    gender: "" as "" | "MALE" | "FEMALE",
     joiningDate: "",
   });
   const [fieldErrors, setFieldErrors] = useState({
@@ -84,6 +84,7 @@ const EmployeeListView = () => {
     email: "",
     role: "",
     employmentType: "",
+    gender: "",
     joiningDate: "",
   });
   const [generalError, setGeneralError] = useState("");
@@ -273,7 +274,11 @@ const EmployeeListView = () => {
     setFormData({
       ...formData,
       [name]:
-        name === "employmentType" ? (value as "" | EmploymentType) : value,
+        name === "employmentType"
+          ? (value as "" | EmploymentType)
+          : name === "gender"
+            ? (value as "" | "MALE" | "FEMALE")
+            : value,
     });
     // Validation
     let error = "";
@@ -322,6 +327,7 @@ const EmployeeListView = () => {
       "role",
       "designation",
       "employmentType",
+      "gender",
       "email",
       "joiningDate",
     ];
@@ -378,6 +384,7 @@ const EmployeeListView = () => {
       email: "",
       role: "",
       employmentType: "",
+      gender: "",
       joiningDate: "",
     });
     setFieldErrors({
@@ -388,6 +395,7 @@ const EmployeeListView = () => {
       email: "",
       role: "",
       employmentType: "",
+      gender: "",
       joiningDate: "",
     });
     setGeneralError("");
@@ -1307,6 +1315,42 @@ ${
                       <p className="text-gray-400 text-xs mt-0.5">
                         {/* Used for leave balance: Full timer = 18, Intern = 12 leaves/year */}
                       </p>
+                    </div>
+
+                    {/* Gender */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">
+                        Gender
+                      </label>
+                      <div className="relative">
+                        <select
+                          name="gender"
+                          value={formData.gender}
+                          onChange={handleFormChange}
+                          className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none transition-all text-sm appearance-none bg-white"
+                          required
+                        >
+                          <option value="">Select Gender</option>
+                          <option value="MALE">Male</option>
+                          <option value="FEMALE">Female</option>
+                        </select>
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                          <svg
+                            className="w-4 h-4 text-gray-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M19 9l-7 7-7-7"
+                            />
+                          </svg>
+                        </div>
+                      </div>
                     </div>
                   </div>
 

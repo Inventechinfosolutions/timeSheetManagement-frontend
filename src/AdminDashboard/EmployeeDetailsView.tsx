@@ -57,6 +57,7 @@ const EmployeeDetailsView = () => {
     designation: "",
     role: "",
     employmentType: "" as "" | EmploymentType,
+    gender: "" as "" | "MALE" | "FEMALE",
     joiningDate: "",
     email: "",
   });
@@ -132,6 +133,7 @@ const EmployeeDetailsView = () => {
         designation: employee.designation || "",
         role: employee.role || "",
         employmentType: (employee.employmentType as "" | EmploymentType) || "",
+        gender: (employee.gender as "" | "MALE" | "FEMALE") || "",
         joiningDate: employee.joiningDate
           ? new Date(employee.joiningDate).toISOString().split("T")[0]
           : "",
@@ -191,6 +193,7 @@ const EmployeeDetailsView = () => {
       { field: "designation", label: "Designation" },
       { field: "role", label: "Role" },
       { field: "employmentType", label: "Employment Type" },
+      { field: "gender", label: "Gender" },
       { field: "email", label: "Email" },
     ];
 
@@ -262,6 +265,7 @@ const EmployeeDetailsView = () => {
       designation: employee.designation || "",
       role: employee.role || "",
       employmentType: (employee.employmentType as "" | EmploymentType) || "",
+      gender: (employee.gender as "" | "MALE" | "FEMALE") || "",
       joiningDate: employee.joiningDate
         ? new Date(employee.joiningDate).toISOString().split("T")[0]
         : "",
@@ -681,6 +685,48 @@ const EmployeeDetailsView = () => {
               )}
               <div className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-purple-50 flex items-center justify-center">
                 <Briefcase className="text-purple-500 w-4 h-4" />
+              </div>
+            </div>
+          </div>
+
+          {/* Gender */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
+              Gender
+            </label>
+            <div className="relative group">
+              {isEditing ? (
+                <select
+                  value={editedData.gender}
+                  onChange={(e) => {
+                    setEditedData({
+                      ...editedData,
+                      gender: e.target.value as "" | "MALE" | "FEMALE",
+                    });
+                    if (validationError) setValidationError("");
+                  }}
+                  className="w-full pl-11 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white text-[#1B2559] text-sm font-semibold transition-all appearance-none"
+                >
+                  <option value="">Select Gender</option>
+                  <option value="MALE">Male</option>
+                  <option value="FEMALE">Female</option>
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  disabled
+                  value={
+                    employee.gender === "MALE"
+                      ? "Male"
+                      : employee.gender === "FEMALE"
+                        ? "Female"
+                        : ""
+                  }
+                  className="w-full pl-11 pr-4 py-2.5 border-2 border-gray-100 rounded-xl bg-gray-50/50 text-[#1B2559] text-sm font-semibold transition-all"
+                />
+              )}
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
+                <User className="text-[#4318FF] w-4 h-4" />
               </div>
             </div>
           </div>
