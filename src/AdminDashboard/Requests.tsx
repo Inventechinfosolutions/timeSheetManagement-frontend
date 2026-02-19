@@ -1236,7 +1236,7 @@ const Requests = () => {
                                   "day",
                                 ) + 1)}{" "}
                           Day(s)
-                        </p>
+                        </span>
                       </td>
                       <td className="py-4 px-4 text-center text-sm font-semibold text-[#475569] whitespace-nowrap">
                         {req.submittedDate
