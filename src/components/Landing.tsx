@@ -7,10 +7,16 @@ import { loginUser, clearError, UserType } from "../reducers/user.reducer";
 import loginVisual from "../assets/login_visual.png";
 import inventLogo from "../assets/invent-logo.svg";
 import LandingMobile from "./LandingMobile";
+import LoginLoader from "./LoginLoader";
+
+const LOADER_MIN_DURATION_MS = 7000;
 
 const Landing = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+
+  // Show logo/video loader on every refresh until minimum duration
+  const [showInitialLoader, setShowInitialLoader] = useState(true);
 
   // Single State for Login
   const [loginId, setLoginId] = useState("");
@@ -40,6 +46,14 @@ const Landing = () => {
       }
     }
   }, [isAuthenticated, currentUser, navigate]);
+
+  // Hide initial loader after minimum duration so logo animation is always visible on refresh
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowInitialLoader(false);
+    }, LOADER_MIN_DURATION_MS);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Clear admin errors on unmount
   useEffect(() => {
@@ -75,8 +89,12 @@ const Landing = () => {
     }
   };
 
+  if (showInitialLoader) {
+    return <LoginLoader />;
+  }
+
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-[#EFEBF5] relative overflow-hidden font-sans">
+    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-[#EFEBF5] relative overflow-hidden font-sans animate-in fade-in duration-500">
       {/* Page Background Shapes from Design */}
       <div className="absolute top-[-5%] left-[5%] w-48 h-48 bg-[#585CE5] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
       <div className="absolute bottom-[-10%] right-[-5%] w-96 h-96 bg-white rounded-full mix-blend-overlay filter blur-3xl opacity-40"></div>
