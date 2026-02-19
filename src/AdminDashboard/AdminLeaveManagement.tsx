@@ -1789,32 +1789,32 @@ const AdminLeaveManagement = () => {
             </div>
           </div>
           <div className="bg-white rounded-[20px] shadow-[0px_18px_40px_rgba(112,144,176,0.12)] overflow-hidden border border-gray-100 mb-8">
-            <div className="overflow-x-auto">
-              <table className="w-full border-separate border-spacing-0">
+            <div className="overflow-x-auto overflow-y-visible no-scrollbar">
+              <table className="w-full min-w-[900px] border-separate border-spacing-0">
                 <thead>
                   <tr className="bg-[#4318FF] text-white">
-                    <th className="py-4 pl-10 pr-4 text-[13px] font-bold uppercase tracking-wider text-left">
+                    <th className="py-4 pl-10 pr-4 text-[13px] font-bold uppercase tracking-wider text-left whitespace-nowrap">
                       Employee
                     </th>
-                    <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center">
+                    <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
                       Request Type
                     </th>
-                    <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center">
+                    <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
                       Duration Type
                     </th>
-                    <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center">
+                    <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
                       Department
                     </th>
-                    <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center">
+                    <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
                       Duration
                     </th>
-                    <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center">
+                    <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
                       Submitted Date
                     </th>
-                    <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center">
+                    <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap sticky right-[120px] w-[160px] min-w-[160px] bg-[#4318FF] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)]">
                       Status
                     </th>
-                    <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center">
+                    <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap sticky right-0 w-[120px] min-w-[120px] bg-[#4318FF] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)]">
                       Actions
                     </th>
                   </tr>
@@ -1823,7 +1823,7 @@ const AdminLeaveManagement = () => {
                   {entities.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={7}
+                        colSpan={8}
                         className="py-8 text-center text-gray-400"
                       >
                         <div className="flex flex-col items-center justify-center gap-3">
@@ -1844,12 +1844,12 @@ const AdminLeaveManagement = () => {
                           key={index}
                           className={`group transition-all duration-200 ${
                             index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"
-                          } hover:bg-[#F1F4FF]`}
+                          } hover:bg-gray-100`}
                         >
-                          <td className="py-4 pl-10 pr-4 text-[#2B3674] text-sm font-bold">
+                          <td className="py-4 pl-10 pr-4 text-[#2B3674] text-sm font-bold whitespace-nowrap">
                             {item.fullName || "User"} ({item.employeeId})
                           </td>
-                          <td className="py-4 px-4 text-center">
+                          <td className="py-4 px-4 text-center whitespace-nowrap">
                             <div className="flex items-center justify-center gap-2">
                               <div className="p-1.5 bg-gray-50 rounded-lg group-hover:bg-white transition-colors">
                                 {(() => {
@@ -2028,18 +2028,14 @@ const AdminLeaveManagement = () => {
                               })()}
                             </span>
                           </td>
-                          <td className="py-4 px-4 text-center">
+                          <td className="py-4 px-4 text-center whitespace-nowrap">
                             <span className="text-xs font-bold text-gray-500 bg-gray-100/50 px-2 py-1 rounded-md">
                               {item.department || "N/A"}
                             </span>
                           </td>
-                          <td className="py-4 px-4 text-center">
-                            <div className="text-sm font-bold text-[#2B3674]">
-                              {dayjs(item.fromDate).format("DD MMM")} -{" "}
-                              {dayjs(item.toDate).format("DD MMM - YYYY")}
-                            </div>
-                            <p className="text-[10px] text-[#4318FF] font-black mt-1 uppercase tracking-wider">
-                              Total:{" "}
+                          <td className="py-4 px-4 text-center whitespace-nowrap">
+                            <span className="text-sm font-bold text-[#2B3674]">
+                              {dayjs(item.fromDate).format("DD MMM")} - {dayjs(item.toDate).format("DD MMM - YYYY")}, TOTAL:{" "}
                               {item.duration ||
                                 (item.requestType === "Client Visit" ||
                                 item.requestType === "Work From Home" ||
@@ -2053,10 +2049,10 @@ const AdminLeaveManagement = () => {
                                       dayjs(item.fromDate),
                                       "day",
                                     ) + 1)}{" "}
-                              Day(s)
-                            </p>
+                              DAY(S)
+                            </span>
                           </td>
-                          <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
+                          <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold whitespace-nowrap">
                             {item.submittedDate
                               ? dayjs(item.submittedDate).format(
                                   "DD MMM - YYYY",
@@ -2065,7 +2061,7 @@ const AdminLeaveManagement = () => {
                                 ? dayjs(item.created_at).format("DD MMM - YYYY")
                                 : "-"}
                           </td>
-                          <td className="py-4 px-4 text-center">
+                          <td className={`py-4 px-4 text-center sticky right-[120px] w-[160px] min-w-[160px] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}>
                             <span
                               className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all whitespace-nowrap
                             ${
@@ -2111,7 +2107,7 @@ const AdminLeaveManagement = () => {
                                 )}
                             </span>
                           </td>
-                          <td className="py-4 px-4">
+                          <td className={`py-4 px-4 sticky right-0 w-[120px] min-w-[120px] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}>
                             <div className="flex items-center justify-center gap-3">
                               <button
                                 onClick={() => handleViewApplication(item)}

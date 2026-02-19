@@ -218,12 +218,24 @@ const Requests = () => {
 
   const filteredRequests = (entities || []).filter((req) => {
     if (!debouncedSearchTerm) return true;
-    const s = debouncedSearchTerm.toLowerCase();
+    const s = debouncedSearchTerm.toLowerCase().trim();
+    // Normalize search for common aliases (e.g. "wfh" -> "work from home")
+    const searchNorm = s === "wfh" ? "work from home" : s;
+    // Match request type and display variants (Half Day Leave, Client Visit, etc.)
+    const requestTypeLower = (req.requestType || "").toLowerCase();
+    const halfDayLeave = req.requestType === "Half Day" ? "half day leave" : "";
+    const firstHalf = (req.firstHalf || "").toLowerCase().replace("apply leave", "leave");
+    const secondHalf = (req.secondHalf || "").toLowerCase().replace("apply leave", "leave");
+    const matchesRequestType =
+      requestTypeLower.includes(searchNorm) ||
+      halfDayLeave.includes(searchNorm) ||
+      firstHalf.includes(searchNorm) ||
+      secondHalf.includes(searchNorm);
     return (
       (req.fullName && req.fullName.toLowerCase().includes(s)) ||
       (req.employeeId && req.employeeId.toLowerCase().includes(s)) ||
       (req.title && req.title.toLowerCase().includes(s)) ||
-      (req.requestType && req.requestType.toLowerCase().includes(s))
+      matchesRequestType
     );
   });
 
@@ -750,7 +762,7 @@ const Requests = () => {
           />
           <input
             type="text"
-            placeholder="Search by name, ID or title..."
+            placeholder="Search by name, ID, title or request type..."
             className="w-full pl-12 pr-10 py-3 bg-white rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-[#4318FF] transition-all text-[#2B3674] font-medium placeholder:text-gray-300"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -948,34 +960,34 @@ const Requests = () => {
         </div>
       </div>
 
-      {/* Requests Table */}
-      <div className="bg-white rounded-[24px] shadow-[0px_18px_40px_rgba(112,144,176,0.12)] border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
+      {/* Requests Table - same design as Leave Management: horizontal scroll, no scrollbar, Status & Actions fixed on right */}
+      <div className="bg-white rounded-[20px] shadow-[0px_18px_40px_rgba(112,144,176,0.12)] overflow-hidden border border-gray-100 mb-8">
+        <div className="overflow-x-auto overflow-y-visible no-scrollbar">
+          <table className="w-full min-w-[900px] border-separate border-spacing-0">
             <thead>
               <tr className="bg-[#4318FF] text-white">
-                <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">
+                <th className="py-4 pl-10 pr-4 text-[13px] font-bold uppercase tracking-wider text-left whitespace-nowrap">
                   Employee
                 </th>
-                <th className="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider">
+                <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
                   Request Type
                 </th>
-                <th className="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider">
+                <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
                   Duration Type
                 </th>
-                <th className="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider">
+                <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
                   Department
                 </th>
-                <th className="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider">
+                <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
                   Duration
                 </th>
-                <th className="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider">
+                <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
                   Submitted Date
                 </th>
-                <th className="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider">
+                <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap sticky right-[120px] w-[160px] min-w-[160px] bg-[#4318FF] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)]">
                   Status
                 </th>
-                <th className="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider">
+                <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap sticky right-0 w-[120px] min-w-[120px] bg-[#4318FF] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)]">
                   Actions
                 </th>
               </tr>
@@ -984,7 +996,7 @@ const Requests = () => {
               {loading ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="py-20 text-center text-gray-400 font-medium tracking-wide"
                   >
                     <div className="flex flex-col items-center gap-3">
@@ -995,7 +1007,7 @@ const Requests = () => {
                 </tr>
               ) : filteredRequests.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-20 text-center text-gray-400">
+                  <td colSpan={8} className="py-20 text-center text-gray-400">
                     <div className="flex flex-col items-center gap-2">
                       <Clock size={40} className="text-gray-200" />
                       <p className="font-medium text-lg">No requests found</p>
@@ -1005,12 +1017,14 @@ const Requests = () => {
               ) : (
                 [...filteredRequests]
                   .sort((a, b) => (b.id || 0) - (a.id || 0))
-                  .map((req) => (
+                  .map((req, index) => (
                     <tr
                       key={req.id}
-                      className="hover:bg-gray-50/50 transition-colors"
+                      className={`group transition-all duration-200 ${
+                        index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"
+                      } hover:bg-gray-100`}
                     >
-                      <td className="px-6 py-4">
+                      <td className="py-4 pl-10 pr-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-[#4318FF] font-bold text-xs ring-2 ring-blue-50">
                             {req.fullName ? (
@@ -1029,9 +1043,9 @@ const Requests = () => {
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-center">
+                      <td className="py-4 px-4 text-center whitespace-nowrap">
                         <div className="flex items-center justify-center gap-2">
-                          <div className="p-1.5 bg-gray-50 rounded-lg group-hover:bg-white transition-colors">
+                          <div className="p-1.5 bg-gray-50 rounded-lg group-hover:bg-white transition-colors shrink-0">
                             {(() => {
                               // Determine icon based on combined activities
                               const hasWFH =
@@ -1151,7 +1165,7 @@ const Requests = () => {
                           </span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-center">
+                      <td className="py-4 px-4 text-center whitespace-nowrap">
                         <span
                           className={`text-xs font-bold px-3 py-1 rounded-full ${(() => {
                             if (
@@ -1199,18 +1213,14 @@ const Requests = () => {
                           })()}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-center">
+                      <td className="py-4 px-4 text-center whitespace-nowrap">
                         <span className="text-xs font-bold text-gray-500 bg-gray-100/50 px-2 py-1 rounded-md">
                           {req.department || "N/A"}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-center">
-                        <div className="text-sm font-bold text-[#2B3674]">
-                          {dayjs(req.fromDate).format("DD MMM")} -{" "}
-                          {dayjs(req.toDate).format("DD MMM - YYYY")}
-                        </div>
-                        <p className="text-[10px] text-[#4318FF] font-black mt-1 uppercase tracking-wider">
-                          Total:{" "}
+                      <td className="py-4 px-4 text-center whitespace-nowrap">
+                        <span className="text-sm font-bold text-[#2B3674]">
+                          {dayjs(req.fromDate).format("DD MMM")} - {dayjs(req.toDate).format("DD MMM - YYYY")}, TOTAL:{" "}
                           {req.duration ||
                             (req.requestType === "Client Visit" ||
                             req.requestType === "Work From Home" ||
@@ -1224,19 +1234,20 @@ const Requests = () => {
                               : dayjs(req.toDate).diff(
                                   dayjs(req.fromDate),
                                   "day",
-                                ) + 1)} Day(s)
+                                ) + 1)}{" "}
+                          Day(s)
                         </p>
                       </td>
-                      <td className="px-6 py-4 text-center text-sm font-semibold text-[#475569]">
+                      <td className="py-4 px-4 text-center text-sm font-semibold text-[#475569] whitespace-nowrap">
                         {req.submittedDate
                           ? dayjs(req.submittedDate).format("DD MMM - YYYY")
                           : req.created_at
                             ? dayjs(req.created_at).format("DD MMM - YYYY")
                             : "N/A"}
                       </td>
-                      <td className="px-6 py-4 text-center">
+                      <td className={`py-4 px-4 text-center sticky right-[120px] w-[160px] min-w-[160px] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}>
                         <span
-                          className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all inline-flex items-center gap-1.5 ${getStatusColor(req.status)}`}
+                          className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all inline-flex items-center gap-1.5 whitespace-nowrap ${getStatusColor(req.status)}`}
                         >
                           {(req.status === "Pending" ||
                             req.status === "Requesting for Modification") && (
@@ -1258,7 +1269,7 @@ const Requests = () => {
                             )}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className={`py-4 px-4 sticky right-0 w-[120px] min-w-[120px] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}>
                         <div className="flex items-center justify-center gap-3">
                           <button
                             onClick={async () => {
