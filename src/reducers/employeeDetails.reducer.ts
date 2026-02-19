@@ -1,5 +1,6 @@
 import { ActionReducerMapBuilder, createAsyncThunk, createSlice, isFulfilled, isPending, PayloadAction } from '@reduxjs/toolkit';
 import axios from 'axios';
+import { logoutUser } from './user.reducer';
 
 const apiUrl = '/api/employee-details';
 
@@ -28,6 +29,7 @@ interface EmployeeDetailsState {
   roles: string[];
   managers: any[];
   loggedInUserProfileImageUrl: string | null;
+  loggedInUserImageStatus?: 'idle' | 'loading' | 'succeeded' | 'failed';
 }
 
 const initialState: EmployeeDetailsState = {
@@ -44,6 +46,7 @@ const initialState: EmployeeDetailsState = {
   roles: [],
   managers: [],
   loggedInUserProfileImageUrl: null,
+  loggedInUserImageStatus: 'idle',
 };
 
 
@@ -316,7 +319,13 @@ export const fetchProfileImage = createAsyncThunk<string, string, ThunkConfig>(
       // Use the view endpoint but fetch as blob to handle auth
       const response = await axios.get(`${apiUrl}/profile-image/${employeeId}/view`, {
         responseType: 'blob',
+        validateStatus: (status) => status < 500, // Resolve 404/204 as well to handle manually
       });
+
+      if (response.status === 204 || response.data.size === 0) {
+        return rejectWithValue('No image found');
+      }
+
       return URL.createObjectURL(response.data);
     } catch (error: any) {
       return rejectWithValue('No image found');
@@ -330,7 +339,13 @@ export const fetchLoggedInUserProfileImage = createAsyncThunk<string, string, Th
     try {
       const response = await axios.get(`${apiUrl}/profile-image/${employeeId}/view`, {
         responseType: 'blob',
+        validateStatus: (status) => status < 500, // Resolve 404/204 as well to handle manually
       });
+
+      if (response.status === 204 || response.data.size === 0) {
+        return rejectWithValue('No image found');
+      }
+
       return URL.createObjectURL(response.data);
     } catch (error: any) {
       return rejectWithValue('No image found');
@@ -423,9 +438,18 @@ export const EmployeeDetailsSlice = createSlice({
       .addCase(uploadProfileImage.fulfilled, (state: EmployeeDetailsState) => {
         state.profileImageUrl = null; // Trigger re-fetch or state update
         state.loggedInUserProfileImageUrl = null;
+        state.loggedInUserImageStatus = 'idle'; // Reset status to allow re-fetch
+      })
+      .addCase(fetchLoggedInUserProfileImage.pending, (state) => {
+        state.loggedInUserImageStatus = 'loading';
       })
       .addCase(fetchLoggedInUserProfileImage.fulfilled, (state: EmployeeDetailsState, action: PayloadAction<string>) => {
         state.loggedInUserProfileImageUrl = action.payload;
+        state.loggedInUserImageStatus = 'succeeded';
+      })
+      .addCase(fetchLoggedInUserProfileImage.rejected, (state) => {
+        state.loggedInUserImageStatus = 'failed';
+        // Note: Global rejected matcher below might also run, setting loading=false
       })
       .addCase(bulkUploadEmployees.pending, (state) => {
         state.uploadLoading = true;
@@ -453,6 +477,10 @@ export const EmployeeDetailsSlice = createSlice({
         state.loading = false;
         state.managers = action.payload;
       })
+      // Reset state on logout
+      .addCase(logoutUser.fulfilled, () => initialState)
+      .addCase(logoutUser.rejected, () => initialState)
+
       .addMatcher(isFulfilled(getEntities, getTimesheetList, getEntitiesSelect), (state: EmployeeDetailsState, action: PayloadAction<any>) => {
         const response = action.payload;
         state.loading = false;

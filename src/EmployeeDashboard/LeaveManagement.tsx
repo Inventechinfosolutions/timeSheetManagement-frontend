@@ -28,6 +28,7 @@ import {
   fetchAttendanceByDateRange,
   AttendanceStatus,
 } from "../reducers/employeeAttendance.reducer";
+import { UserType } from "../reducers/user.reducer";
 import {
   Home,
   MapPin,
@@ -75,6 +76,13 @@ const LeaveManagement = () => {
     (state: any) => state.masterHolidays || {},
   );
   const employeeId = entity?.employeeId || currentUser?.employeeId;
+
+  const isAdmin = currentUser?.userType === UserType.ADMIN;
+  const isManager =
+    currentUser?.userType === UserType.MANAGER ||
+    (currentUser?.role && currentUser.role.toUpperCase().includes("MANAGER"));
+  const isPrivileged = isAdmin || isManager;
+
   const [dateRangeAttendanceRecords, setDateRangeAttendanceRecords] = useState<
     any[]
   >([]);
@@ -182,8 +190,24 @@ const LeaveManagement = () => {
     const currentDate = current.startOf("day");
     const today = dayjs().startOf("day");
 
-    if (selectedLeaveType !== "Client Visit" && currentDate.isBefore(today)) {
-      return true;
+    if (!isPrivileged) {
+      if (selectedLeaveType === "Client Visit") {
+        // Any past date allowed for Client Visit
+      } else if (
+        selectedLeaveType === "Work From Home" ||
+        selectedLeaveType === "Apply Leave" ||
+        selectedLeaveType === "Half Day" ||
+        selectedLeaveType === "Leave"
+      ) {
+        // Only past 7 days for Leave/WFH
+        const sevenDaysAgo = today.subtract(7, "day");
+        if (currentDate.isBefore(sevenDaysAgo)) {
+          return true;
+        }
+      } else if (currentDate.isBefore(today)) {
+        // Default past date restriction for unidentified types
+        return true;
+      }
     }
 
     // Weekends (Saturday, Sunday) are enabled for Leave, WFH, and Client Visit calendar selection.
@@ -270,10 +294,31 @@ const LeaveManagement = () => {
     // Always check if date has Leave or WFH applied (regardless of request type)
     if (disabledDate(current)) return true;
 
+    // Privileged users and Client Visit always allowed past dates
+    if (isPrivileged || selectedLeaveType === "Client Visit") {
+      // Don't allow end date before start date
+      if (formData.startDate) {
+        return (
+          current && current.isBefore(dayjs(formData.startDate).startOf("day"))
+        );
+      }
+      return false;
+    }
+
     const today = dayjs().startOf("day");
     const currentDate = current.startOf("day");
-    if (selectedLeaveType !== "Client Visit" && currentDate.isBefore(today))
+
+    if (
+      selectedLeaveType === "Work From Home" ||
+      selectedLeaveType === "Apply Leave" ||
+      selectedLeaveType === "Half Day" ||
+      selectedLeaveType === "Leave"
+    ) {
+      const sevenDaysAgo = today.subtract(7, "day");
+      if (currentDate.isBefore(sevenDaysAgo)) return true;
+    } else if (currentDate.isBefore(today)) {
       return true;
+    }
 
     // Don't allow end date before start date
     if (formData.startDate) {
@@ -969,6 +1014,14 @@ const LeaveManagement = () => {
         const filtered = apiDates.filter(
           (d: any) => !lockedDates.has(dayjs(d.date).format("YYYY-MM-DD")),
         );
+
+        // Bypass deadline restriction for Privileged Users
+        if (isPrivileged) {
+          filtered.forEach((d: any) => {
+            d.isCancellable = true;
+          });
+        }
+
         setCancellableDates(filtered);
       } else {
         // Explicitly throw or handle potential error payload
@@ -2986,7 +3039,7 @@ const LeaveManagement = () => {
                         >
                           {formatModalDate(item.date)}
                         </span>
-                        {!item.isCancellable && (
+                        {!item.isCancellable && !isPrivileged && (
                           <span className="text-xs text-red-500 flex items-center gap-1">
                             <XCircle size={10} /> {item.reason}
                           </span>
