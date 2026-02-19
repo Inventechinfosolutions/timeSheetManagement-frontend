@@ -50,7 +50,7 @@ const AutoUpdateSuccessModal: React.FC<AutoUpdateSuccessModalProps> = ({
 
           <button 
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-xl text-white transition-colors"
+            className="absolute top-4 right-4 z-20 p-2 bg-white/10 hover:bg-white/20 rounded-xl text-white transition-colors"
           >
             <X size={18} />
           </button>
