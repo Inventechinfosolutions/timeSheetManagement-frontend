@@ -364,6 +364,7 @@ const EmployeeDetailsView = () => {
                   src={viewedProfileImage}
                   alt="Profile"
                   className="w-14 h-14 sm:w-20 md:w-24 rounded-full object-cover"
+                  onError={() => setViewedProfileImage(null)}
                 />
               ) : (
                 <div className="w-14 h-14 sm:w-20 md:w-24 rounded-full bg-gradient-to-br from-[#4318FF] to-[#00A3C4] flex items-center justify-center text-white text-xl sm:text-2xl md:text-3xl font-black shadow-inner">
