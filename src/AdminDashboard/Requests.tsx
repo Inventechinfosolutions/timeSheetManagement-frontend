@@ -224,8 +224,12 @@ const Requests = () => {
     // Match request type and display variants (Half Day Leave, Client Visit, etc.)
     const requestTypeLower = (req.requestType || "").toLowerCase();
     const halfDayLeave = req.requestType === "Half Day" ? "half day leave" : "";
-    const firstHalf = (req.firstHalf || "").toLowerCase().replace("apply leave", "leave");
-    const secondHalf = (req.secondHalf || "").toLowerCase().replace("apply leave", "leave");
+    const firstHalf = (req.firstHalf || "")
+      .toLowerCase()
+      .replace("apply leave", "leave");
+    const secondHalf = (req.secondHalf || "")
+      .toLowerCase()
+      .replace("apply leave", "leave");
     const matchesRequestType =
       requestTypeLower.includes(searchNorm) ||
       halfDayLeave.includes(searchNorm) ||
@@ -620,9 +624,7 @@ const Requests = () => {
               masterRequest.requestType === "Work From Home" ||
               masterRequest.requestType === "Client Visit"
             ) {
-              return (
-                !isWeekend(dObj) && !isHoliday(dObj)
-              );
+              return !isWeekend(dObj) && !isHoliday(dObj);
             }
             return true;
           });
@@ -754,16 +756,17 @@ const Requests = () => {
       </div>
 
       {/* Filters Area */}
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
-        <div className="relative flex-1 group">
+      <div className="flex flex-col gap-4 mb-6">
+        {/* Search Bar Row */}
+        <div className="relative w-full md:w-[400px] group">
           <Search
             className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#4318FF] transition-colors"
             size={20}
           />
           <input
             type="text"
-            placeholder="Search by name, ID, title or request type..."
-            className="w-full pl-12 pr-10 py-3 bg-white rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-[#4318FF] transition-all text-[#2B3674] font-medium placeholder:text-gray-300"
+            placeholder="Search..."
+            className="w-full pl-12 pr-10 py-3 bg-white rounded-2xl border-none outline-none shadow-sm focus:ring-2 focus:ring-[#4318FF] transition-all text-[#2B3674] font-medium placeholder:text-gray-300"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -777,83 +780,84 @@ const Requests = () => {
           )}
         </div>
 
-        {/* Department Filter Dropdown */}
-        {basePath === "/admin-dashboard" && (
-          <div className="relative">
-            <button
-              onClick={() => setIsDeptOpen(!isDeptOpen)}
-              className={`flex items-center gap-3 px-5 py-3 bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all text-sm font-bold ${selectedDept !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
-            >
-              <Filter
-                size={18}
-                className={
-                  selectedDept !== "All" ? "text-[#4318FF]" : "text-gray-400"
-                }
-              />
-              <span>
-                {selectedDept === "All" ? "All Departments" : selectedDept}
-              </span>
-              <ChevronDown
-                size={18}
-                className={`transition-transform duration-300 ${isDeptOpen ? "rotate-180" : ""}`}
-              />
-            </button>
+        {/* Filters Row */}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Department Filter Dropdown */}
+          {basePath === "/admin-dashboard" && (
+            <div className="relative">
+              <button
+                onClick={() => setIsDeptOpen(!isDeptOpen)}
+                className={`flex items-center gap-3 px-5 py-3 bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all text-sm font-bold ${selectedDept !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+              >
+                <Filter
+                  size={18}
+                  className={
+                    selectedDept !== "All" ? "text-[#4318FF]" : "text-gray-400"
+                  }
+                />
+                <span>
+                  {selectedDept === "All" ? "All Departments" : selectedDept}
+                </span>
+                <ChevronDown
+                  size={18}
+                  className={`transition-transform duration-300 ${isDeptOpen ? "rotate-180" : ""}`}
+                />
+              </button>
 
-            {isDeptOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-40"
-                  onClick={() => setIsDeptOpen(false)}
-                ></div>
-                <div className="absolute right-0 mt-3 w-56 bg-white rounded-3xl shadow-2xl border border-blue-50 py-3 z-50 overflow-hidden animate-in fade-in zoom-in duration-200 origin-top-right">
-                  <div className="px-5 py-2 mb-1">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-                      Departments
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setSelectedDept("All");
-                      setIsDeptOpen(false);
-                      setCurrentPage(1);
-                    }}
-                    className={`w-full flex items-center px-5 py-2.5 text-sm font-bold transition-all relative ${
-                      selectedDept === "All"
-                        ? "text-[#4318FF] bg-blue-50/50"
-                        : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
-                    }`}
-                  >
-                    {selectedDept === "All" && (
-                      <div className="absolute left-0 w-1 h-6 bg-[#4318FF] rounded-r-full"></div>
-                    )}
-                    All Departments
-                  </button>
-                  {departments.map((dept: any) => (
+              {isDeptOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setIsDeptOpen(false)}
+                  ></div>
+                  <div className="absolute left-0 mt-3 w-56 bg-white rounded-3xl shadow-2xl border border-blue-50 py-3 z-50 overflow-hidden animate-in fade-in zoom-in duration-200 origin-top-left">
+                    <div className="px-5 py-2 mb-1">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                        Departments
+                      </span>
+                    </div>
                     <button
-                      key={dept.id}
                       onClick={() => {
-                        setSelectedDept(dept.departmentName);
+                        setSelectedDept("All");
                         setIsDeptOpen(false);
+                        setCurrentPage(1);
                       }}
                       className={`w-full flex items-center px-5 py-2.5 text-sm font-bold transition-all relative ${
-                        selectedDept === dept.departmentName
+                        selectedDept === "All"
                           ? "text-[#4318FF] bg-blue-50/50"
                           : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
                       }`}
                     >
-                      {selectedDept === dept.departmentName && (
+                      {selectedDept === "All" && (
                         <div className="absolute left-0 w-1 h-6 bg-[#4318FF] rounded-r-full"></div>
                       )}
-                      {dept.departmentName}
+                      All Departments
                     </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        )}
+                    {departments.map((dept: any) => (
+                      <button
+                        key={dept.id}
+                        onClick={() => {
+                          setSelectedDept(dept.departmentName);
+                          setIsDeptOpen(false);
+                        }}
+                        className={`w-full flex items-center px-5 py-2.5 text-sm font-bold transition-all relative ${
+                          selectedDept === dept.departmentName
+                            ? "text-[#4318FF] bg-blue-50/50"
+                            : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
+                        }`}
+                      >
+                        {selectedDept === dept.departmentName && (
+                          <div className="absolute left-0 w-1 h-6 bg-[#4318FF] rounded-r-full"></div>
+                        )}
+                        {dept.departmentName}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
 
-        <div className="flex flex-wrap gap-3 items-center">
           <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
             <Select
               value={selectedMonth}
@@ -1220,7 +1224,8 @@ const Requests = () => {
                       </td>
                       <td className="py-4 px-4 text-center whitespace-nowrap">
                         <span className="text-sm font-bold text-[#2B3674]">
-                          {dayjs(req.fromDate).format("DD MMM")} - {dayjs(req.toDate).format("DD MMM - YYYY")}, TOTAL:{" "}
+                          {dayjs(req.fromDate).format("DD MMM")} -{" "}
+                          {dayjs(req.toDate).format("DD MMM - YYYY")}, TOTAL:{" "}
                           {req.duration ||
                             (req.requestType === "Client Visit" ||
                             req.requestType === "Work From Home" ||
@@ -1245,7 +1250,9 @@ const Requests = () => {
                             ? dayjs(req.created_at).format("DD MMM - YYYY")
                             : "N/A"}
                       </td>
-                      <td className={`py-4 px-4 text-center sticky right-[120px] w-[160px] min-w-[160px] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}>
+                      <td
+                        className={`py-4 px-4 text-center sticky right-[120px] w-[160px] min-w-[160px] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}
+                      >
                         <span
                           className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all inline-flex items-center gap-1.5 whitespace-nowrap ${getStatusColor(req.status)}`}
                         >
@@ -1269,7 +1276,9 @@ const Requests = () => {
                             )}
                         </span>
                       </td>
-                      <td className={`py-4 px-4 sticky right-0 w-[120px] min-w-[120px] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}>
+                      <td
+                        className={`py-4 px-4 sticky right-0 w-[120px] min-w-[120px] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}
+                      >
                         <div className="flex items-center justify-center gap-3">
                           <button
                             onClick={async () => {
