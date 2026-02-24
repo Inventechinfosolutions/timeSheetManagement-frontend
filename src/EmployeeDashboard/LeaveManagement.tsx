@@ -1321,7 +1321,7 @@ const LeaveManagement = () => {
         <div>
           <h1 className="text-2xl font-bold text-[#2B3674]">Work Management</h1>
           <p className="text-sm text-gray-500 mt-1">
-            View your leave balance and request new leaves
+            View your leave balance and request new leave
           </p>
         </div>
 
@@ -1343,7 +1343,7 @@ const LeaveManagement = () => {
               Request & Manage Attendance
             </h2>
             <p className="text-white/85 text-[15px] font-normal m-0 max-w-sm">
-              Easily submit leaves, log remote work, or record client visits in
+              Easily submit leave, log remote work, or record client visits in
               seconds.
             </p>
           </div>
@@ -2373,7 +2373,7 @@ const LeaveManagement = () => {
               </label>
               {!isViewMode && (
                 <p className="text-xs text-gray-500 ml-1 mb-1">
-                  Accepted formats: PDF, JPG, PNG, JPEG (Max 5 files)
+                  Accepted formats: PDF, JPG, PNG, JPEG (Max 5 files, 5MB per file)
                 </p>
               )}
               <div className="bg-[#F4F7FE] rounded-2xl p-2 border border-blue-50">
@@ -2395,6 +2395,7 @@ const LeaveManagement = () => {
                   deleteFile={deleteLeaveRequestFile}
                   getFiles={getLeaveRequestFiles}
                   maxFiles={5}
+                  maxFileSize={5 * 1024 * 1024}
                   allowedTypes={["images", "pdf"]}
                   successMessage="Document uploaded successfully"
                   deleteMessage="Document deleted successfully"

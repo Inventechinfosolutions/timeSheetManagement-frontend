@@ -169,8 +169,9 @@ const AttendancePieChart = ({ data, currentMonth }: Props) => {
       </h4>
 
       <div className="flex items-center gap-2">
-        <span className="text-xs font-medium text-gray-400">
+        <span className="text-s font-bold text-[#1B2559]">
           {currentMonth.toLocaleDateString("en-US", {
+            day: "numeric",
             month: "long",
             year: "numeric",
           })}
