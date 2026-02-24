@@ -79,6 +79,7 @@ const Header = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [imageError, setImageError] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "detail">("list");
   const notificationRef = useRef<HTMLDivElement>(null);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -820,11 +821,12 @@ const Header = ({
               >
                 <div className="flex items-center gap-1.5 md:gap-2">
                   <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white font-bold text-sm shadow-inner ring-1 ring-white/30 overflow-hidden">
-                    {loggedInUserProfileImageUrl ? (
+                    {loggedInUserProfileImageUrl && !imageError ? (
                       <img
                         src={loggedInUserProfileImageUrl}
                         alt="Avatar"
                         className="w-full h-full object-cover"
+                        onError={() => setImageError(true)}
                       />
                     ) : (
                       <span>{avatarLetter}</span>

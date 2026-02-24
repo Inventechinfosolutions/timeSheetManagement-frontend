@@ -98,9 +98,14 @@ console.error("MyProfile: API Error:", err);
 // Sync state with entity updates from other components
 // (No longer needed since we use profileImageUrl from Redux)
 
+useEffect(() => {
+  setImageError(false);
+}, [profileImageUrl]);
+
 const [uploadStatus, setUploadStatus] = useState<
 "idle" | "success" | "error"
 >("idle");
+const [imageError, setImageError] = useState(false);
 
 const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 const file = e.target.files?.[0];
@@ -168,9 +173,10 @@ accept="image/*"
 />
 <div className="p-1 rounded-full bg-white shadow-2xl overflow-hidden border-4 border-white/20">
 <img
-src={profileImageUrl || defaultImage}
+src={imageError ? defaultImage : (profileImageUrl || defaultImage)}
 alt="Profile"
 className="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover"
+onError={() => setImageError(true)}
 />
 </div>
 <div className="absolute bottom-0 right-0 md:bottom-1 md:right-1 bg-white text-[#667eea] p-1.5 md:p-2 rounded-full shadow-lg transition-transform group-hover:scale-110 border-2 border-transparent group-hover:border-[#667eea]/10">
