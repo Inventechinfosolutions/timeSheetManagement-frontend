@@ -273,186 +273,182 @@ const AdminEmployeeTimesheetList = () => {
   };
 
   return (
-    <div className="p-5 bg-[#F4F7FE] min-h-screen font-sans">
+    <div className="p-4 md:p-6 bg-[#F4F7FE] min-h-screen font-sans">
       <div className="max-w-[1600px] mx-auto">
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
-          <h1 className="text-xl md:text-2xl font-bold text-[#2B3674] m-0">
-            Employee Timesheet
-          </h1>
+        <h1 className="text-xl md:text-2xl font-bold text-[#2B3674] m-0 mb-5">
+          Employee Timesheet
+        </h1>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
-            {/* Month/Year Selector */}
-            <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] border border-transparent">
-              <button
-                onClick={handlePreviousMonth}
-                className="p-1.5 rounded-lg hover:bg-gray-50 transition-all active:scale-95"
-                title="Previous Month"
-              >
-                <ChevronLeft size={18} className="text-[#2B3674]" />
-              </button>
-              <div className="min-w-[120px] text-center">
-                <span className="text-sm font-bold text-[#2B3674]">
-                  {getMonthYearDisplay()}
-                </span>
-              </div>
-              <button
-                onClick={handleNextMonth}
-                className="p-1.5 rounded-lg hover:bg-gray-50 transition-all active:scale-95"
-                title="Next Month"
-              >
-                <ChevronRight size={18} className="text-[#2B3674]" />
-              </button>
-            </div>
-
+        {/* Filters Row */}
+        <div className="flex flex-wrap items-center gap-3 mb-6">
+          {/* Month/Year Selector */}
+          <div className="flex items-center gap-1.5 bg-white px-3 py-2 rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] border border-transparent">
             <button
-              onClick={handleOpenDownloadModal}
-              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-[#01B574] text-white rounded-full shadow-lg shadow-green-500/20 hover:shadow-green-500/40 hover:-translate-y-0.5 active:scale-95 transition-all text-sm font-bold"
+              onClick={handlePreviousMonth}
+              className="p-1.5 rounded-lg hover:bg-gray-50 transition-all active:scale-95"
+              title="Previous Month"
             >
-              <Download size={18} />
-              <span className="whitespace-nowrap">Export Excel</span>
+              <ChevronLeft size={16} className="text-[#2B3674]" />
             </button>
-            {/* Modern Custom Dropdown */}
-            {basePath === "/admin-dashboard" && (
-              <div className="relative" ref={dropdownRef}>
-                <button
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-2 px-5 py-2.5 bg-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] text-[#2B3674] font-bold text-sm hover:bg-gray-50 transition-all border border-transparent focus:border-[#4318FF]/20"
-                >
-                  <div className="flex items-center gap-2">
-                    <Filter size={16} className="text-[#4318FF]" />
-                    <span>{selectedDepartment}</span>
-                  </div>
-                  <ChevronDown
-                    size={16}
-                    className={`text-[#A3AED0] transition-transform duration-300 ${isDropdownOpen ? "rotate-180" : ""}`}
-                  />
-                </button>
+            <div className="min-w-[110px] text-center">
+              <span className="text-sm font-bold text-[#2B3674]">
+                {getMonthYearDisplay()}
+              </span>
+            </div>
+            <button
+              onClick={handleNextMonth}
+              className="p-1.5 rounded-lg hover:bg-gray-50 transition-all active:scale-95"
+              title="Next Month"
+            >
+              <ChevronRight size={16} className="text-[#2B3674]" />
+            </button>
+          </div>
 
-                {isDropdownOpen && (
-                  <div className="absolute top-full left-0 mt-2 w-full sm:w-48 bg-white/80 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-white/20 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="px-3 py-1 mb-1">
-                      <span className="text-[10px] font-black text-[#A3AED0] uppercase tracking-widest pl-2">
-                        Departments
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setSelectedDepartment("All Departments");
-                        setIsDropdownOpen(false);
-                        setCurrentPage(1);
-                      }}
-                      className={`w-full text-left px-5 py-2 text-sm font-semibold transition-colors
+          <button
+            onClick={handleOpenDownloadModal}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#01B574] text-white rounded-full shadow-lg shadow-green-500/20 hover:shadow-green-500/40 hover:-translate-y-0.5 active:scale-95 transition-all text-sm font-bold"
+          >
+            <Download size={16} />
+            <span className="whitespace-nowrap">Export Excel</span>
+          </button>
+
+          {/* Department Dropdown */}
+          {basePath === "/admin-dashboard" && (
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className={`flex items-center gap-2 px-4 py-2.5 bg-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] font-bold text-sm hover:bg-gray-50 transition-all border border-transparent focus:border-[#4318FF]/20 whitespace-nowrap ${selectedDepartment !== "All Departments" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+              >
+                <Filter size={14} className="text-[#4318FF]" />
+                <span>{selectedDepartment}</span>
+                <ChevronDown
+                  size={14}
+                  className={`text-[#A3AED0] transition-transform duration-300 ${isDropdownOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+
+              {isDropdownOpen && (
+                <div className="absolute top-full left-0 mt-2 w-full sm:w-48 bg-white/80 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-white/20 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="px-3 py-1 mb-1">
+                    <span className="text-[10px] font-black text-[#A3AED0] uppercase tracking-widest pl-2">
+                      Departments
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setSelectedDepartment("All Departments");
+                      setIsDropdownOpen(false);
+                      setCurrentPage(1);
+                    }}
+                    className={`w-full text-left px-5 py-2 text-sm font-semibold transition-colors
                     ${
                       selectedDepartment === "All Departments"
                         ? "text-[#4318FF] bg-[#4318FF]/5"
                         : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
                     }`}
-                    >
-                      All Departments
-                    </button>
-                    {departments.map((dept) => (
-                      <button
-                        key={dept.id}
-                        onClick={() => {
-                          setSelectedDepartment(dept.departmentName);
-                          setIsDropdownOpen(false);
-                          setCurrentPage(1);
-                        }}
-                        className={`w-full text-left px-5 py-2 text-sm font-semibold transition-colors
+                  >
+                    All Departments
+                  </button>
+                  {departments.map((dept) => (
+                    <button
+                      key={dept.id}
+                      onClick={() => {
+                        setSelectedDepartment(dept.departmentName);
+                        setIsDropdownOpen(false);
+                        setCurrentPage(1);
+                      }}
+                      className={`w-full text-left px-5 py-2 text-sm font-semibold transition-colors
                       ${
                         selectedDepartment === dept.departmentName
                           ? "text-[#4318FF] bg-[#4318FF]/5"
                           : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
                       }`}
-                      >
-                        {dept.departmentName}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Status Dropdown */}
-            <div className="relative" ref={statusDropdownRef}>
-              <button
-                onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
-                className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-2 px-5 py-2.5 bg-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] text-[#2B3674] font-bold text-sm hover:bg-gray-50 transition-all border border-transparent focus:border-[#4318FF]/20"
-              >
-                <div className="flex items-center gap-2">
-                  <Filter size={16} className="text-[#4318FF]" />
-                  <span>{selectedStatus}</span>
-                </div>
-                <ChevronDown
-                  size={16}
-                  className={`text-[#A3AED0] transition-transform duration-300 ${isStatusDropdownOpen ? "rotate-180" : ""}`}
-                />
-              </button>
-
-              {isStatusDropdownOpen && (
-                <div className="absolute top-full left-0 mt-2 w-full sm:w-48 bg-white/80 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-white/20 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <div className="px-3 py-1 mb-1">
-                    <span className="text-[10px] font-black text-[#A3AED0] uppercase tracking-widest pl-2">
-                      Status
-                    </span>
-                  </div>
-                  {statuses.map((status) => (
-                    <button
-                      key={status}
-                      onClick={() => {
-                        setSelectedStatus(status);
-                        setIsStatusDropdownOpen(false);
-                        setCurrentPage(1);
-                      }}
-                      className={`w-full text-left px-5 py-2 text-sm font-semibold transition-colors
-                      ${
-                        selectedStatus === status
-                          ? "text-[#4318FF] bg-[#4318FF]/5"
-                          : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
-                      }`}
                     >
-                      {status}
+                      {dept.departmentName}
                     </button>
                   ))}
                 </div>
               )}
             </div>
+          )}
 
-            {/* Search Box */}
-            <div className="flex items-center bg-white rounded-full px-5 py-2.5 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] min-w-0 sm:min-w-[250px] flex-1 border border-transparent focus-within:border-[#4318FF]/20 transition-all">
-              <Search size={18} className="text-[#A3AED0] mr-2" />
-              <input
-                type="text"
-                placeholder="Search..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="border-none outline-none bg-transparent text-[#2B3674] w-full text-sm font-semibold placeholder:text-[#A3AED0]/60"
+          {/* Status Dropdown */}
+          <div className="relative" ref={statusDropdownRef}>
+            <button
+              onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
+              className={`flex items-center gap-2 px-4 py-2.5 bg-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] font-bold text-sm hover:bg-gray-50 transition-all border border-transparent focus:border-[#4318FF]/20 whitespace-nowrap ${selectedStatus !== "All Status" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+            >
+              <Filter size={14} className="text-[#4318FF]" />
+              <span>{selectedStatus}</span>
+              <ChevronDown
+                size={14}
+                className={`text-[#A3AED0] transition-transform duration-300 ${isStatusDropdownOpen ? "rotate-180" : ""}`}
               />
-              {searchTerm && (
-                <button
-                  onClick={() => setSearchTerm("")}
-                  className="ml-2 text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <X size={16} />
-                </button>
-              )}
-            </div>
+            </button>
 
-            {(searchTerm ||
-              selectedDepartment !== "All Departments" ||
-              selectedStatus !== "All Status" ||
-              selectedMonth !== new Date().getMonth() + 1 ||
-              selectedYear !== new Date().getFullYear()) && (
+            {isStatusDropdownOpen && (
+              <div className="absolute top-full left-0 mt-2 w-full sm:w-48 bg-white/80 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-white/20 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="px-3 py-1 mb-1">
+                  <span className="text-[10px] font-black text-[#A3AED0] uppercase tracking-widest pl-2">
+                    Status
+                  </span>
+                </div>
+                {statuses.map((status) => (
+                  <button
+                    key={status}
+                    onClick={() => {
+                      setSelectedStatus(status);
+                      setIsStatusDropdownOpen(false);
+                      setCurrentPage(1);
+                    }}
+                    className={`w-full text-left px-5 py-2 text-sm font-semibold transition-colors
+                    ${
+                      selectedStatus === status
+                        ? "text-[#4318FF] bg-[#4318FF]/5"
+                        : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
+                    }`}
+                  >
+                    {status}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Search Box */}
+          <div className="flex items-center bg-white rounded-full px-4 py-2.5 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] min-w-[180px] border border-transparent focus-within:border-[#4318FF]/20 transition-all">
+            <Search size={16} className="text-[#A3AED0] mr-2 flex-shrink-0" />
+            <input
+              type="text"
+              placeholder="Search..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="border-none outline-none bg-transparent text-[#2B3674] w-full text-sm font-semibold placeholder:text-[#A3AED0]/60"
+            />
+            {searchTerm && (
               <button
-                onClick={handleClearFilters}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-gray-700 rounded-full hover:bg-gray-50 active:scale-95 transition-all text-sm font-bold border border-gray-200 whitespace-nowrap"
-                title="Clear all filters"
+                onClick={() => setSearchTerm("")}
+                className="ml-2 text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
               >
-                <X size={16} />
-                <span>Clear All</span>
+                <X size={14} />
               </button>
             )}
           </div>
+
+          {(searchTerm ||
+            selectedDepartment !== "All Departments" ||
+            selectedStatus !== "All Status" ||
+            selectedMonth !== new Date().getMonth() + 1 ||
+            selectedYear !== new Date().getFullYear()) && (
+            <button
+              onClick={handleClearFilters}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-gray-700 rounded-full hover:bg-gray-50 active:scale-95 transition-all text-sm font-bold border border-gray-200 whitespace-nowrap flex-shrink-0"
+              title="Clear all filters"
+            >
+              <X size={14} />
+              <span>Clear All</span>
+            </button>
+          )}
         </div>
 
         <div className="bg-white rounded-[20px] p-0 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] overflow-hidden border border-gray-100">
