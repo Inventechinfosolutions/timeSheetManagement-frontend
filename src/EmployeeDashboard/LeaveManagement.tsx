@@ -2108,9 +2108,10 @@ const LeaveManagement = () => {
                       errors.title ? "border-red-500" : "border-transparent"
                     } focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400`}
                     value={formData.title}
-                    onChange={(e) =>
-                      setFormData({ ...formData, title: e.target.value })
-                    }
+                    onChange={(e) => {
+                      setFormData({ ...formData, title: e.target.value });
+                      if (errors.title) setErrors({ ...errors, title: "" });
+                    }}
                   />
                   {errors.title && (
                     <p className="text-red-500 text-xs mt-1 ml-2">
@@ -2163,6 +2164,7 @@ const LeaveManagement = () => {
                             }
                             return newData;
                           });
+                          if (errors.startDate) setErrors({ ...errors, startDate: "" });
                         }}
                         format="DD-MM-YYYY"
                         placeholder="dd-mm-yyyy"
@@ -2198,12 +2200,13 @@ const LeaveManagement = () => {
                         value={
                           formData.endDate ? dayjs(formData.endDate) : null
                         }
-                        onChange={(date) =>
+                        onChange={(date) => {
                           setFormData({
                             ...formData,
                             endDate: date ? date.format("YYYY-MM-DD") : "",
-                          })
-                        }
+                          });
+                          if (errors.endDate) setErrors({ ...errors, endDate: "" });
+                        }}
                         format="DD-MM-YYYY"
                         placeholder="dd-mm-yyyy"
                         suffixIcon={null}
@@ -2350,12 +2353,13 @@ const LeaveManagement = () => {
                         : "border-transparent"
                     } focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium text-[#2B3674] placeholder:font-medium placeholder:text-gray-400 resize-none`}
                     value={formData.description}
-                    onChange={(e) =>
+                    onChange={(e) => {
                       setFormData({
                         ...formData,
                         description: e.target.value,
-                      })
-                    }
+                      });
+                      if (errors.description) setErrors({ ...errors, description: "" });
+                    }}
                   />
                   {errors.description && (
                     <p className="text-red-500 text-xs mt-1 ml-2">
