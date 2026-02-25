@@ -124,7 +124,7 @@ const WorkTrendsGraph = ({ currentMonth }: Props) => {
 
               <Bar
                 dataKey="totalLeaves"
-                name="Taken Leaves"
+                name="Taken Leave"
                 fill="#F43F5E"
                 radius={[6, 6, 0, 0]}
                 activeBar={{ fill: "#FB7185" }}

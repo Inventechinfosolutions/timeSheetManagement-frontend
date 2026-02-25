@@ -2362,9 +2362,10 @@ const AdminLeaveManagement = () => {
                       errors.title ? "border-red-500" : "border-transparent"
                     } focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400`}
                     value={formData.title}
-                    onChange={(e) =>
-                      setFormData({ ...formData, title: e.target.value })
-                    }
+                    onChange={(e) => {
+                      setFormData({ ...formData, title: e.target.value });
+                      setErrors((prev) => ({ ...prev, title: "" }));
+                    }}
                   />
                   {errors.title && (
                     <p className="text-red-500 text-xs mt-1 ml-2">
@@ -2415,6 +2416,7 @@ const AdminLeaveManagement = () => {
                             }
                             return newData;
                           });
+                          setErrors((prev) => ({ ...prev, startDate: "" }));
                         }}
                         format="DD-MM-YYYY"
                         placeholder="dd-mm-yyyy"
@@ -2447,12 +2449,13 @@ const AdminLeaveManagement = () => {
                         value={
                           formData.endDate ? dayjs(formData.endDate) : null
                         }
-                        onChange={(date) =>
+                        onChange={(date) => {
                           setFormData({
                             ...formData,
                             endDate: date ? date.format("YYYY-MM-DD") : "",
-                          })
-                        }
+                          });
+                          setErrors((prev) => ({ ...prev, endDate: "" }));
+                        }}
                         format="DD-MM-YYYY"
                         placeholder="dd-mm-yyyy"
                         suffixIcon={null}
@@ -2599,12 +2602,13 @@ const AdminLeaveManagement = () => {
                         : "border-transparent"
                     } focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium text-[#2B3674] placeholder:font-medium placeholder:text-gray-400 resize-none`}
                     value={formData.description}
-                    onChange={(e) =>
+                    onChange={(e) => {
                       setFormData({
                         ...formData,
                         description: e.target.value,
-                      })
-                    }
+                      });
+                      setErrors((prev) => ({ ...prev, description: "" }));
+                    }}
                   />
                   {errors.description && (
                     <p className="text-red-500 text-xs mt-1 ml-2">
