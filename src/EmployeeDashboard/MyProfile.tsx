@@ -8,7 +8,8 @@ Building,
 CreditCard,
 ShieldCheck,
 Calendar,
-Users
+Users,
+
 } from "lucide-react";
 import { useAppSelector, useAppDispatch } from "../hooks";
 import {
@@ -53,6 +54,7 @@ const email = entity?.email ?? entity?.email_address ?? "";
 const role = entity?.role ?? entity?.user_role ?? entity?.userRole ?? "";
 const joiningDate = entity?.joiningDate ?? entity?.joining_date ?? "";
 const employmentType = entity?.employmentType ?? entity?.employment_type ?? "";
+const gender = entity?.gender ?? entity?.gender_type ?? "";
 
 // Use entity values or fallbacks
 // Default to a local asset if no image found in entity
@@ -373,6 +375,24 @@ className="w-full pl-12 pr-4 py-3.5 border-2 border-gray-100 rounded-2xl bg-gray
 />
 <div className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl bg-cyan-50 flex items-center justify-center">
 <Calendar className="text-cyan-500 w-4 h-4" />
+</div>
+</div>
+</div>
+
+{/* Gender */}
+<div className="space-y-2">
+<label className="text-[10px] font-bold text-[#A3AED0] uppercase tracking-widest pl-1">
+Gender
+</label>
+<div className="relative group">
+<input
+type="text"
+disabled
+value={gender ? (gender.toLowerCase() === 'male' ? 'Male' : gender.toLowerCase() === 'female' ? 'Female' : gender.toLowerCase() === 'other' ? 'Other' : gender) : "-"}
+className="w-full pl-12 pr-4 py-3.5 border-2 border-gray-100 rounded-2xl bg-gray-50/40 text-[#1B2559] text-sm md:text-base font-bold transition-all"
+/>
+<div className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl bg-pink-50 flex items-center justify-center">
+<User className="text-[#667eea] w-4 h-4" />
 </div>
 </div>
 </div>

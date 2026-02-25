@@ -7,9 +7,7 @@ import {
   Legend,
   Sector,
 } from "recharts";
-import {
-  PieChart as PieChartIcon,
-} from "lucide-react";
+import { PieChart as PieChartIcon } from "lucide-react";
 
 interface Props {
   data: any[];
@@ -45,9 +43,30 @@ const AttendancePieChart = ({ data, currentMonth }: Props) => {
       // Skip future dates to keep the chart focused on historical attendance
       if (isFuture) return;
 
-      if (
+      if (status === "HALF DAY") {
+        const h1 = (record.firstHalf || "").toUpperCase();
+        const h2 = (record.secondHalf || "").toUpperCase();
+
+        [h1, h2].forEach((half) => {
+          if (half.includes("LEAVE")) {
+            counts["Leave"] += 0.5;
+          } else if (
+            half.includes("OFFICE") ||
+            half.includes("WFH") ||
+            half.includes("CLIENT") ||
+            half.includes("PRESENT") ||
+            half.includes("FULL DAY")
+          ) {
+            counts["Present"] += 0.5;
+          } else if (half.includes("ABSENT")) {
+            counts["Absent"] += 0.5;
+          } else {
+            // Fallback for unidentified halves in a Half Day record
+            counts["Not Updated"] += 0.5;
+          }
+        });
+      } else if (
         status === "FULL DAY" ||
-        status === "HALF DAY" ||
         status === "WFH" ||
         status === "CLIENT VISIT"
       ) {
@@ -73,7 +92,12 @@ const AttendancePieChart = ({ data, currentMonth }: Props) => {
       { name: "Holiday", value: counts["Holiday"], color: "#2563EB" },
       { name: "Weekend", value: counts["Weekend"], color: "#38BDF8" },
       { name: "Not Updated", value: counts["Not Updated"], color: "#F97316" },
-    ].filter((item) => item.value > 0);
+    ]
+      .map((item) => ({
+        ...item,
+        value: Number(item.value.toFixed(1)), // Ensure no floating point artifacts
+      }))
+      .filter((item) => item.value > 0);
   }, [data]);
 
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
