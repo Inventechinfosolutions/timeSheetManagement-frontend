@@ -1766,6 +1766,7 @@ const AdminLeaveManagement = () => {
                     "Request Modified",
                     "Cancellation Approved",
                     "Cancelled",
+                    "Cancellation Reverted",
                   ].map((status) => (
                     <Select.Option key={status} value={status}>
                       {status === "All" ? "All Status" : status}
@@ -2075,7 +2076,8 @@ const AdminLeaveManagement = () => {
                               item.status === "Cancellation Approved" ||
                               item.status === "Modification Approved"
                                 ? "bg-green-50 text-green-600 border-green-200"
-                                : item.status === "Pending"
+                                : item.status === "Pending" ||
+                                  item.status === "Cancellation Reverted"
                                   ? "bg-yellow-50 text-yellow-600 border-yellow-200"
                                   : item.status === "Cancelled"
                                     ? "bg-red-50 text-red-600 border-red-200"

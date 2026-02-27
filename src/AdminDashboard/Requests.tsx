@@ -717,7 +717,10 @@ const Requests = () => {
       case "Rejected":
       case "Cancellation Rejected":
       case "Modification Rejected":
+      case "Cancelled":
         return "bg-red-50 text-red-600 border-red-200";
+      case "Cancellation Reverted":
+        return "bg-yellow-50 text-yellow-600 border-yellow-200";
       case "Requesting for Cancellation":
         return "bg-orange-100 text-orange-600 border-orange-200";
       case "Requesting for Modification":
@@ -931,6 +934,7 @@ const Requests = () => {
                 "Request Modified",
                 "Cancellation Approved",
                 "Cancelled",
+                "Cancellation Reverted",
               ].map((status) => (
                 <Select.Option key={status} value={status}>
                   {status === "All" ? "All Status" : status}
