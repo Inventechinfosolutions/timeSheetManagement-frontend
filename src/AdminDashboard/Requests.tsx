@@ -1226,8 +1226,9 @@ const Requests = () => {
                         <span className="text-sm font-bold text-[#2B3674]">
                           {dayjs(req.fromDate).format("DD MMM")} -{" "}
                           {dayjs(req.toDate).format("DD MMM - YYYY")}, TOTAL:{" "}
-                          {req.duration ||
-                            (req.requestType === "Client Visit" ||
+                           {req.duration
+                            ? parseFloat(String(req.duration))
+                            : (req.requestType === "Client Visit" ||
                             req.requestType === "Work From Home" ||
                             req.requestType === "Apply Leave" ||
                             req.requestType === "Leave" ||
@@ -1240,7 +1241,7 @@ const Requests = () => {
                                   dayjs(req.fromDate),
                                   "day",
                                 ) + 1)}{" "}
-                          DAY(S)
+                           DAY(S)
                         </span>
                       </td>
                       <td className="py-4 px-4 text-center text-sm font-semibold text-[#475569] whitespace-nowrap">
@@ -1680,19 +1681,19 @@ const Requests = () => {
                           selectedRequest.requestType === "Apply Leave" ||
                           selectedRequest.requestType === "Leave"
                         ) {
-                          return calculateDurationExcludingWeekends(
+                          return parseFloat(String(calculateDurationExcludingWeekends(
                             selectedRequest.fromDate,
                             selectedRequest.toDate,
-                          );
+                          )));
                         } else {
                           // For other types, use stored duration or calculate including all days
-                          return (
+                          return parseFloat(String(
                             selectedRequest.duration ||
                             dayjs(selectedRequest.toDate).diff(
                               dayjs(selectedRequest.fromDate),
                               "day",
                             ) + 1
-                          );
+                          ));
                         }
                       })()}{" "}
                       Day(s)

@@ -2233,7 +2233,7 @@ const LeaveManagement = () => {
                 <span className="bg-white px-4 py-1 rounded-lg shadow-sm border border-blue-100">
                   {formData.startDate && formData.endDate
                     ? (() => {
-                        if (isViewMode) return `${formData.duration} Day(s)`;
+                        if (isViewMode) return `${parseFloat(String(formData.duration))} Day(s)`;
 
                         if (
                           selectedLeaveType === "Client Visit" ||
