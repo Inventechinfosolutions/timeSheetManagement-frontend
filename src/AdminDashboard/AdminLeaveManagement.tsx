@@ -20,6 +20,7 @@ import {
   modifyLeaveRequest,
   clearAttendanceForRequest,
   submitRequestModification,
+  undoModificationRequest,
   clearRequests,
   LeaveRequest,
 } from "../reducers/leaveRequest.reducer";
@@ -143,6 +144,11 @@ const AdminLeaveManagement = () => {
     firstHalf: "Office",
     secondHalf: "Office",
   });
+  const [undoModal, setUndoModal] = useState<{
+    isOpen: boolean;
+    request: any;
+  }>({ isOpen: false, request: null });
+  const [isUndoing, setIsUndoing] = useState(false);
 
   const months = [
     { label: "January", value: "1" },
@@ -1361,6 +1367,63 @@ const AdminLeaveManagement = () => {
     }
   };
 
+  const handleUndoModification = (request: any) => {
+    setUndoModal({ isOpen: true, request });
+  };
+
+  const executeUndoModification = async () => {
+    if (!undoModal.request) return;
+
+    setIsUndoing(true);
+    try {
+      const employeeId = undoModal.request.employeeId;
+      const action = await dispatch(
+        undoModificationRequest({
+          id: undoModal.request.id,
+          employeeId: employeeId,
+        }),
+      );
+
+      if (undoModificationRequest.fulfilled.match(action)) {
+        // Refresh Data
+        dispatch(
+          getLeaveStats({
+            employeeId: employeeId,
+          }),
+        );
+        dispatch(
+          getLeaveHistory({
+            employeeId: employeeId,
+            page: currentPage,
+            limit: itemsPerPage,
+            month: selectedMonth,
+            year: selectedYear,
+            status: filterStatus,
+          }),
+        );
+
+        setUndoModal({ isOpen: false, request: null });
+        notification.success({
+          message: "Modification Revoked",
+          description: "The modification request has been successfully undone.",
+          placement: "topRight",
+        });
+      } else {
+        throw new Error(
+          (action.payload as string) || "Could not undo modification",
+        );
+      }
+    } catch (err: any) {
+      notification.error({
+        message: "Undo Failed",
+        description: err.message || "Could not undo modification.",
+        placement: "topRight",
+      });
+    } finally {
+      setIsUndoing(false);
+    }
+  };
+
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setIsViewMode(false);
@@ -2127,6 +2190,15 @@ const AdminLeaveManagement = () => {
                               {(item.status === "Pending" ||
                                 item.status === "Approved") &&
                                 renderCancelButton(item)}
+                              {item.status === "Requesting for Modification" && (
+                                <button
+                                  onClick={() => handleUndoModification(item)}
+                                  className="p-2 text-orange-600 bg-orange-50/50 hover:bg-orange-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-orange-200 active:scale-90"
+                                  title="Undo Modification"
+                                >
+                                  <RotateCcw size={18} />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -3155,6 +3227,54 @@ const AdminLeaveManagement = () => {
                 downloadFile={downloadLeaveRequestFile}
               />
             </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Undo Modification Confirmation Modal */}
+      <Modal
+        open={undoModal.isOpen}
+        onCancel={() => setUndoModal({ isOpen: false, request: null })}
+        footer={null}
+        centered
+        width={400}
+        styles={{
+          mask: { backdropFilter: "blur(4px)", backgroundColor: "rgba(43, 54, 116, 0.4)" },
+          body: { padding: 0, borderRadius: "24px" }
+        }}
+        closeIcon={null}
+      >
+        <div className="p-8 text-center">
+          <div className="mx-auto w-16 h-16 rounded-full bg-orange-50 flex items-center justify-center mb-6">
+            <RotateCcw size={32} className="text-orange-500" />
+          </div>
+          
+          <h3 className="text-2xl font-black text-[#2B3674] mb-2">Undo Modification?</h3>
+          <p className="text-gray-500 font-medium leading-relaxed mb-8">
+            Are you sure you want to revert this modification request? This will restore the original request status and cancel the modification.
+          </p>
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => setUndoModal({ isOpen: false, request: null })}
+              className="flex-1 py-3 font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all active:scale-95"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={executeUndoModification}
+              disabled={isUndoing}
+              className="flex-1 py-3 font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-xl shadow-lg shadow-orange-200 transition-all active:scale-95 flex items-center justify-center gap-2"
+            >
+              {isUndoing ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  <span>Undoing...</span>
+                </>
+              ) : (
+                "Yes, Undo"
+              )}
+            </button>
           </div>
         </div>
       </Modal>

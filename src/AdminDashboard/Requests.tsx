@@ -630,14 +630,7 @@ const Requests = () => {
           });
 
           if (validWorkingDates.length === 0) {
-            // CASE: All working dates cancelled -> Set Parent to 'Cancellation Approved'
-            await dispatch(
-              updateLeaveRequestStatus({
-                id: masterRequest.id,
-                status: "Cancellation Approved",
-              }),
-            ).unwrap();
-
+            // CASE: All working dates cancelled -> Do not change parent status to 'Cancellation Approved' (keep as Approved), but set duration to 0
             await dispatch(
               updateParentRequest({
                 parentId: masterRequest.id,
