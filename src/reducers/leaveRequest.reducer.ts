@@ -12,7 +12,7 @@ export interface LeaveRequest {
   toDate: string;
   title: string;
   description: string;
-  status: "Pending" | "Approved" | "Rejected" | "Cancelled" | "Requesting for Cancellation" | "Cancellation Approved" | "Cancellation Rejected" | "Request Modified" | "Requesting for Modification" | "Modification Approved" | "Modification Cancelled" | "Modification Rejected";
+  status: "Pending" | "Approved" | "Rejected" | "Cancelled" | "Cancellation Reverted" | "Requesting for Cancellation" | "Cancellation Approved" | "Cancellation Rejected" | "Request Modified" | "Requesting for Modification" | "Modification Approved" | "Modification Cancelled" | "Modification Rejected";
   created_at?: string;
   submittedDate?: string;
   duration?: number;

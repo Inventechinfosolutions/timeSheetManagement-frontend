@@ -1548,6 +1548,7 @@ const LeaveManagement = () => {
                 "Request Modified",
                 "Cancellation Approved",
                 "Cancelled",
+                "Cancellation Reverted",
               ].map((status) => (
                 <Select.Option key={status} value={status}>
                   {status === "All" ? "All Status" : status}
@@ -1807,7 +1808,8 @@ const LeaveManagement = () => {
                             ? "bg-green-50 text-green-600 border-green-200"
                             : item.status === "Pending"
                               ? "bg-yellow-50 text-yellow-600 border-yellow-200"
-                              : item.status === "Cancelled"
+                              : item.status === "Cancelled" ||
+                                item.status === "Cancellation Reverted"
                                 ? "bg-yellow-50 text-yellow-600 border-yellow-200"
                                 : item.status === "Requesting for Cancellation"
                                   ? "bg-orange-100 text-orange-600 border-orange-200"
@@ -2233,7 +2235,7 @@ const LeaveManagement = () => {
                 <span className="bg-white px-4 py-1 rounded-lg shadow-sm border border-blue-100">
                   {formData.startDate && formData.endDate
                     ? (() => {
-                        if (isViewMode) return `${formData.duration} Day(s)`;
+                        if (isViewMode) return `${parseFloat(String(formData.duration))} Day(s)`;
 
                         if (
                           selectedLeaveType === "Client Visit" ||
@@ -2671,11 +2673,6 @@ const LeaveManagement = () => {
                       },
                     }),
                   ).unwrap();
-                  notification.success({
-                    message: "Request Modified",
-                    description: "Your request has been successfully modified.",
-                    placement: "topRight",
-                  });
                   setModifyModal({ isOpen: false, request: null });
                   if (currentUser?.id) {
                     dispatch(
