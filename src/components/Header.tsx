@@ -67,7 +67,7 @@ const Header = ({
 
   // Filter out Cancelled requests from Approver notifications
   const leaveNotifications = rawLeaveNotifications.filter(
-    (n) => n.status !== "Cancelled",
+    (n) => n.status !== "Cancelled" && n.status !== "Cancellation Reverted",
   );
 
   // Total count for the bell bubble

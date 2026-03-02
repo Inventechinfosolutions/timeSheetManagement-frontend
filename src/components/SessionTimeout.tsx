@@ -15,6 +15,11 @@ const SessionTimeout: React.FC = () => {
   const isLoggingOut = useRef(false);
 
   const logout = useCallback((reason: 'inactivity' | 'api' = 'inactivity') => {
+    if (reason === 'inactivity') {
+      const hasToken = Storage.local.get('TimeSheet-authenticationToken') || Storage.session.get('TimeSheet-authenticationToken');
+      if (!hasToken) return; // Don't trigger inactivity logout if already logged out
+    }
+
     if (isLoggingOut.current) return;
     isLoggingOut.current = true;
 
@@ -34,6 +39,7 @@ const SessionTimeout: React.FC = () => {
     
     setTimeout(() => {
        navigate('/landing');
+       isLoggingOut.current = false;
     }, 2000);
   }, [navigate, dispatch]);
 

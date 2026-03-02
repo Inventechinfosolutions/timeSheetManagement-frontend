@@ -630,14 +630,7 @@ const Requests = () => {
           });
 
           if (validWorkingDates.length === 0) {
-            // CASE: All working dates cancelled -> Set Parent to 'Cancellation Approved'
-            await dispatch(
-              updateLeaveRequestStatus({
-                id: masterRequest.id,
-                status: "Cancellation Approved",
-              }),
-            ).unwrap();
-
+            // CASE: All working dates cancelled -> Do not change parent status to 'Cancellation Approved' (keep as Approved), but set duration to 0
             await dispatch(
               updateParentRequest({
                 parentId: masterRequest.id,
@@ -717,7 +710,10 @@ const Requests = () => {
       case "Rejected":
       case "Cancellation Rejected":
       case "Modification Rejected":
+      case "Cancelled":
         return "bg-red-50 text-red-600 border-red-200";
+      case "Cancellation Reverted":
+        return "bg-yellow-50 text-yellow-600 border-yellow-200";
       case "Requesting for Cancellation":
         return "bg-orange-100 text-orange-600 border-orange-200";
       case "Requesting for Modification":
@@ -931,6 +927,7 @@ const Requests = () => {
                 "Request Modified",
                 "Cancellation Approved",
                 "Cancelled",
+                "Cancellation Reverted",
               ].map((status) => (
                 <Select.Option key={status} value={status}>
                   {status === "All" ? "All Status" : status}
@@ -1226,8 +1223,9 @@ const Requests = () => {
                         <span className="text-sm font-bold text-[#2B3674]">
                           {dayjs(req.fromDate).format("DD MMM")} -{" "}
                           {dayjs(req.toDate).format("DD MMM - YYYY")}, TOTAL:{" "}
-                          {req.duration ||
-                            (req.requestType === "Client Visit" ||
+                           {req.duration
+                            ? parseFloat(String(req.duration))
+                            : (req.requestType === "Client Visit" ||
                             req.requestType === "Work From Home" ||
                             req.requestType === "Apply Leave" ||
                             req.requestType === "Leave" ||
@@ -1240,7 +1238,7 @@ const Requests = () => {
                                   dayjs(req.fromDate),
                                   "day",
                                 ) + 1)}{" "}
-                          DAY(S)
+                           DAY(S)
                         </span>
                       </td>
                       <td className="py-4 px-4 text-center text-sm font-semibold text-[#475569] whitespace-nowrap">
@@ -1680,19 +1678,19 @@ const Requests = () => {
                           selectedRequest.requestType === "Apply Leave" ||
                           selectedRequest.requestType === "Leave"
                         ) {
-                          return calculateDurationExcludingWeekends(
+                          return parseFloat(String(calculateDurationExcludingWeekends(
                             selectedRequest.fromDate,
                             selectedRequest.toDate,
-                          );
+                          )));
                         } else {
                           // For other types, use stored duration or calculate including all days
-                          return (
+                          return parseFloat(String(
                             selectedRequest.duration ||
                             dayjs(selectedRequest.toDate).diff(
                               dayjs(selectedRequest.fromDate),
                               "day",
                             ) + 1
-                          );
+                          ));
                         }
                       })()}{" "}
                       Day(s)

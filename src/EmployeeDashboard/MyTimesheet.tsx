@@ -166,6 +166,9 @@ const MyTimesheet = ({
   );
   const [autoUpdateCount, setAutoUpdateCount] = useState<number>(0);
   const [isCheckingAutoUpdate, setIsCheckingAutoUpdate] = useState(false);
+  const [autoUpdateTrigger, setAutoUpdateTrigger] = useState(0);
+
+  const refreshDryRun = () => setAutoUpdateTrigger(prev => prev + 1);
 
   const today = useMemo(() => new Date(), []);
 
@@ -334,8 +337,9 @@ const MyTimesheet = ({
       now.getMonth() === today.getMonth() &&
       now.getFullYear() === today.getFullYear()
     ) {
-      // Create a unique key for the current state
-      const checkKey = `${currentEmployeeId}-${now.getMonth()}-${now.getFullYear()}-${records.length}`;
+      // Create a unique key for the current state. Include autoUpdateTrigger to bypass
+      // duplicate checks when a manual refresh is explicitly requested (e.g. after save).
+      const checkKey = `${currentEmployeeId}-${now.getMonth()}-${now.getFullYear()}-${records.length}-${autoUpdateTrigger}`;
 
       // Prevent duplicate checks if nothing material changed
       if (lastCheckRef.current === checkKey) return;
@@ -368,7 +372,7 @@ const MyTimesheet = ({
       setAutoUpdateCount(0);
       lastCheckRef.current = "";
     }
-  }, [dispatch, currentEmployeeId, now, isAdmin, today, records.length]); // Use records.length instead of records to avoid deep equality issues
+  }, [dispatch, currentEmployeeId, now, isAdmin, today, records.length, autoUpdateTrigger]); // Use records.length instead of records to avoid deep equality issues
 
   // Fetch attendance and blockers when month/employee changes
   useEffect(() => {
@@ -987,6 +991,7 @@ const MyTimesheet = ({
         refreshData();
         // Clear manually edited indices after successful save
         setManuallyEditedIndices(new Set());
+        refreshDryRun();
         setToast({
           show: true,
           message: "Attendance Submitted Successfully",
@@ -1032,6 +1037,7 @@ const MyTimesheet = ({
           );
           // Clear manually edited indices after successful save
           setManuallyEditedIndices(new Set());
+          refreshDryRun();
           setToast({ show: true, message: "Data Saved", type: "success" });
         } else {
           setToast({
@@ -1601,6 +1607,7 @@ const MyTimesheet = ({
       // Show success modal after data is refreshed so totals/calendar are already updated
       setUpdateResult(result);
       setShowSuccessModal(true);
+      refreshDryRun();
     } catch (err: any) {
       setShowAutoUpdateModal(false);
       setToast({
@@ -1673,7 +1680,10 @@ const MyTimesheet = ({
     >
       <AutoUpdateModal
         isOpen={showAutoUpdateModal}
-        onClose={() => setShowAutoUpdateModal(false)}
+        onClose={() => {
+          setShowAutoUpdateModal(false);
+          refreshDryRun();
+        }}
         onConfirm={confirmAutoUpdate}
         monthName={now.toLocaleDateString("en-US", { month: "long" })}
         year={now.getFullYear()}
@@ -1681,7 +1691,10 @@ const MyTimesheet = ({
       />
       <AutoUpdateSuccessModal
         isOpen={showSuccessModal}
-        onClose={() => setShowSuccessModal(false)}
+        onClose={() => {
+          setShowSuccessModal(false);
+          refreshDryRun();
+        }}
         count={updateResult?.count || 0}
         monthName={now.toLocaleDateString("en-US", { month: "long" })}
         year={now.getFullYear()}
