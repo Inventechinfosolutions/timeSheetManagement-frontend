@@ -33,15 +33,16 @@ import {
   submitRequestModification,
   clearAttendanceForRequest,
   clearRequests,
-  LeaveRequest,
 } from "../reducers/leaveRequest.reducer";
 import { getEntity } from "../reducers/employeeDetails.reducer";
 // } from "../reducers/leaveRequest.reducer";
+import { fetchAttendanceByDateRange } from "../reducers/employeeAttendance.reducer";
 import {
+  WorkLocation,
+  LeaveRequestStatus,
   AttendanceStatus,
-  fetchAttendanceByDateRange,
-} from "../reducers/employeeAttendance.reducer";
-import { fetchUnreadNotifications } from "../reducers/leaveNotification.reducer";
+  LeaveRequestType,
+} from "../enums";
 import CommonMultipleUploader from "../EmployeeDashboard/CommonMultipleUploader";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import dayjs from "dayjs";
@@ -84,12 +85,12 @@ const Requests = () => {
     isOpen: boolean;
     id: number | null;
     status:
-      | "Approved"
-      | "Rejected"
-      | "Cancellation Approved"
+      | LeaveRequestStatus.APPROVED
+      | LeaveRequestStatus.REJECTED
+      | LeaveRequestStatus.CANCELLATION_APPROVED
       | "Reject Cancellation"
-      | "Modification Approved"
-      | "Modification Rejected"
+      | LeaveRequestStatus.MODIFICATION_APPROVED
+      | LeaveRequestStatus.MODIFICATION_REJECTED
       | null;
     employeeName: string;
   }>({ isOpen: false, id: null, status: null, employeeName: "" });
@@ -97,12 +98,12 @@ const Requests = () => {
   const handleUpdateStatus = (
     id: number,
     status:
-      | "Approved"
-      | "Rejected"
-      | "Cancellation Approved"
+      | LeaveRequestStatus.APPROVED
+      | LeaveRequestStatus.REJECTED
+      | LeaveRequestStatus.CANCELLATION_APPROVED
       | "Reject Cancellation"
-      | "Modification Approved"
-      | "Modification Rejected",
+      | LeaveRequestStatus.MODIFICATION_APPROVED
+      | LeaveRequestStatus.MODIFICATION_REJECTED,
     employeeName: string,
   ) => {
     setConfirmModal({ isOpen: true, id, status, employeeName });
@@ -219,22 +220,28 @@ const Requests = () => {
   const filteredRequests = (entities || []).filter((req) => {
     if (!debouncedSearchTerm) return true;
     const s = debouncedSearchTerm.toLowerCase().trim();
-    // Normalize search for common aliases (e.g. "wfh" -> "work from home")
-    const searchNorm = s === "wfh" ? "work from home" : s;
-    // Match request type and display variants (Half Day Leave, Client Visit, etc.)
+
+    // Normalize request types for searching
     const requestTypeLower = (req.requestType || "").toLowerCase();
-    const halfDayLeave = req.requestType === "Half Day" ? "half day leave" : "";
+    const halfDayLeave = req.isHalfDay ? "half day leave" : "";
     const firstHalf = (req.firstHalf || "")
       .toLowerCase()
       .replace("apply leave", "leave");
     const secondHalf = (req.secondHalf || "")
       .toLowerCase()
       .replace("apply leave", "leave");
+
+    // Search normalization for aliases
+    const searchNorm = s
+      .replace("wfh", "work from home")
+      .replace("cv", "client visit");
+
     const matchesRequestType =
       requestTypeLower.includes(searchNorm) ||
       halfDayLeave.includes(searchNorm) ||
       firstHalf.includes(searchNorm) ||
       secondHalf.includes(searchNorm);
+
     return (
       (req.fullName && req.fullName.toLowerCase().includes(s)) ||
       (req.employeeId && req.employeeId.toLowerCase().includes(s)) ||
@@ -278,9 +285,7 @@ const Requests = () => {
       const status = record.status || record.attendance_status;
       return (
         normalizedRecordDate === dateStr &&
-        (status === AttendanceStatus.LEAVE ||
-          status === "Leave" ||
-          status === "LEAVE")
+        (status === AttendanceStatus.LEAVE || status === "LEAVE")
       );
     });
   };
@@ -363,7 +368,7 @@ const Requests = () => {
       }
 
       // --- REFINED: Handle Overlaps for Approval ---
-      if (status === "Approved") {
+      if (status === LeaveRequestStatus.APPROVED) {
         // Define which request types this approval should victimize (modify) if overlapping
         let victimTypes: string[] = [];
         const reqType = (request.requestType || "").toLowerCase();
@@ -391,7 +396,7 @@ const Requests = () => {
             (e) =>
               e.employeeId?.toLowerCase() ===
                 request.employeeId?.toLowerCase() &&
-              e.status === "Approved" &&
+              e.status === LeaveRequestStatus.APPROVED &&
               victimTypes.includes((e.requestType || "").toLowerCase()) &&
               e.id !== request.id,
           )
@@ -454,7 +459,7 @@ const Requests = () => {
               await dispatch(
                 updateLeaveRequestStatus({
                   id: victim.id,
-                  status: "Cancelled",
+                  status: LeaveRequestStatus.CANCELLED,
                 }),
               ).unwrap();
             } else {
@@ -506,7 +511,7 @@ const Requests = () => {
                 await dispatch(
                   updateLeaveRequestStatus({
                     id: victim.id,
-                    status: "Cancelled",
+                    status: LeaveRequestStatus.CANCELLED,
                   }),
                 ).unwrap();
 
@@ -521,7 +526,7 @@ const Requests = () => {
                         sourceRequestId: request.id,
                         sourceRequestType: request.requestType,
                         // Use a flag or specific status in backend to mark this as an Approved segment split
-                        overrideStatus: "Approved",
+                        overrideStatus: LeaveRequestStatus.APPROVED,
                       },
                     }),
                   ).unwrap();
@@ -536,7 +541,7 @@ const Requests = () => {
       await dispatch(updateLeaveRequestStatus({ id, status })).unwrap();
 
       // 1.1 Explicit Attendance Clearance for Visibility in Network Logs
-      if (status === "Cancellation Approved") {
+      if (status === LeaveRequestStatus.CANCELLATION_APPROVED) {
         try {
           if (request?.employeeId) {
             await dispatch(
@@ -556,7 +561,7 @@ const Requests = () => {
       }
 
       // 2. Smart Cancellation Logic (Only if Cancellation Approved)
-      if (status === "Cancellation Approved" && request) {
+      if (status === LeaveRequestStatus.CANCELLATION_APPROVED && request) {
         // Find the parent request (Approved, matching employee, covering dates)
         const childRequest = request;
         const childStart = dayjs(childRequest.fromDate);
@@ -565,7 +570,7 @@ const Requests = () => {
         const masterRequest = entities.find(
           (e) =>
             e.employeeId === childRequest.employeeId &&
-            e.status === "Approved" &&
+            e.status === LeaveRequestStatus.APPROVED &&
             e.id !== childRequest.id &&
             (dayjs(e.fromDate).isSame(childStart, "day") ||
               dayjs(e.fromDate).isBefore(childStart, "day")) &&
@@ -579,7 +584,8 @@ const Requests = () => {
           const allCancelledRequests = entities.filter(
             (e) =>
               e.employeeId === masterRequest.employeeId &&
-              (e.status === "Cancellation Approved" || e.id === id) &&
+              (e.status === LeaveRequestStatus.CANCELLATION_APPROVED ||
+                e.id === id) &&
               (dayjs(e.fromDate).isAfter(dayjs(masterRequest.fromDate)) ||
                 dayjs(e.fromDate).isSame(
                   dayjs(masterRequest.fromDate),
@@ -619,10 +625,12 @@ const Requests = () => {
           const validWorkingDates = validDates.filter((d) => {
             const dObj = dayjs(d);
             if (
-              masterRequest.requestType === "Apply Leave" ||
-              masterRequest.requestType === "Leave" ||
-              masterRequest.requestType === "Work From Home" ||
-              masterRequest.requestType === "Client Visit"
+              masterRequest.requestType === WorkLocation.WORK_FROM_HOME ||
+              masterRequest.requestType === LeaveRequestType.WFH ||
+              masterRequest.requestType === WorkLocation.CLIENT_VISIT ||
+              masterRequest.requestType === LeaveRequestType.CLIENT_VISIT ||
+              masterRequest.requestType === LeaveRequestType.APPLY_LEAVE ||
+              masterRequest.requestType === LeaveRequestType.LEAVE
             ) {
               return !isWeekend(dObj) && !isHoliday(dObj);
             }
@@ -701,37 +709,39 @@ const Requests = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "Approved":
-      case "Cancellation Approved":
-      case "Modification Approved":
+      case LeaveRequestStatus.APPROVED:
+      case LeaveRequestStatus.CANCELLATION_APPROVED:
+      case LeaveRequestStatus.MODIFICATION_APPROVED:
         return "bg-green-50 text-green-600 border-green-200";
-      case "Modification Cancelled":
+      case LeaveRequestStatus.MODIFICATION_CANCELLED:
         return "bg-orange-100 text-orange-600 border-orange-200";
-      case "Rejected":
-      case "Cancellation Rejected":
-      case "Modification Rejected":
-      case "Cancelled":
+      case LeaveRequestStatus.REJECTED:
+      case LeaveRequestStatus.CANCELLATION_REJECTED:
+      case LeaveRequestStatus.MODIFICATION_REJECTED:
+      case LeaveRequestStatus.CANCELLED:
         return "bg-red-50 text-red-600 border-red-200";
-      case "Cancellation Reverted":
+      case LeaveRequestStatus.CANCELLATION_REVERTED:
         return "bg-yellow-50 text-yellow-600 border-yellow-200";
-      case "Requesting for Cancellation":
+      case LeaveRequestStatus.REQUESTING_FOR_CANCELLATION:
         return "bg-orange-100 text-orange-600 border-orange-200";
-      case "Requesting for Modification":
+      case LeaveRequestStatus.REQUESTING_FOR_MODIFICATION:
         return "bg-orange-100 text-orange-600 border-orange-200";
-      case "Request Modified":
+      case LeaveRequestStatus.REQUEST_MODIFIED:
         return "bg-orange-100 text-orange-600 border-orange-200";
       default:
         return "bg-yellow-50 text-yellow-600 border-yellow-200";
     }
   };
 
-  const getIcon = (type: string) => {
+  // Placeholder if needed later, currently logic is inlined in table
+  const _getIcon = (type: string) => {
     switch (type) {
-      case "Work From Home":
+      case WorkLocation.WFH:
+      case WorkLocation.WORK_FROM_HOME:
         return <Home size={18} className="text-green-500" />;
-      case "Client Visit":
+      case WorkLocation.CLIENT_VISIT:
         return <MapPin size={18} className="text-orange-500" />;
-      case "Half Day":
+      case AttendanceStatus.HALF_DAY:
         return <Clock size={18} className="text-[#E31C79]" />;
       default:
         return <Briefcase size={18} className="text-blue-500" />;
@@ -921,13 +931,13 @@ const Requests = () => {
             >
               {[
                 "All",
-                "Pending",
-                "Approved",
-                "Rejected",
-                "Request Modified",
-                "Cancellation Approved",
-                "Cancelled",
-                "Cancellation Reverted",
+                LeaveRequestStatus.PENDING,
+                LeaveRequestStatus.APPROVED,
+                LeaveRequestStatus.REJECTED,
+                LeaveRequestStatus.REQUEST_MODIFIED,
+                LeaveRequestStatus.CANCELLATION_APPROVED,
+                LeaveRequestStatus.CANCELLED,
+                LeaveRequestStatus.CANCELLATION_REVERTED,
               ].map((status) => (
                 <Select.Option key={status} value={status}>
                   {status === "All" ? "All Status" : status}
@@ -1017,7 +1027,24 @@ const Requests = () => {
                 </tr>
               ) : (
                 [...filteredRequests]
-                  .sort((a, b) => (b.id || 0) - (a.id || 0))
+                  .sort((a: any, b: any) => {
+                    const timeA = Math.max(
+                      a.created_at ? new Date(a.created_at).getTime() : 0,
+                      a.updated_at ? new Date(a.updated_at).getTime() : 0,
+                      a.createdAt ? new Date(a.createdAt).getTime() : 0,
+                      a.updatedAt ? new Date(a.updatedAt).getTime() : 0,
+                    );
+                    const timeB = Math.max(
+                      b.created_at ? new Date(b.created_at).getTime() : 0,
+                      b.updated_at ? new Date(b.updated_at).getTime() : 0,
+                      b.createdAt ? new Date(b.createdAt).getTime() : 0,
+                      b.updatedAt ? new Date(b.updatedAt).getTime() : 0,
+                    );
+                    if (timeA === 0 && timeB === 0) {
+                      return (b.id || 0) - (a.id || 0);
+                    }
+                    return timeB - timeA;
+                  })
                   .map((req, index) => (
                     <tr
                       key={req.id}
@@ -1050,16 +1077,18 @@ const Requests = () => {
                             {(() => {
                               // Determine icon based on combined activities
                               const hasWFH =
-                                req.firstHalf === "Work From Home" ||
-                                req.secondHalf === "Work From Home";
+                                req.firstHalf === WorkLocation.WORK_FROM_HOME ||
+                                req.secondHalf === WorkLocation.WORK_FROM_HOME;
                               const hasCV =
-                                req.firstHalf === "Client Visit" ||
-                                req.secondHalf === "Client Visit";
+                                req.firstHalf === WorkLocation.CLIENT_VISIT ||
+                                req.secondHalf === WorkLocation.CLIENT_VISIT;
                               const hasLeave =
-                                req.firstHalf === "Leave" ||
-                                req.secondHalf === "Leave" ||
-                                req.firstHalf === "Apply Leave" ||
-                                req.secondHalf === "Apply Leave";
+                                req.firstHalf ===
+                                  LeaveRequestType.APPLY_LEAVE ||
+                                req.secondHalf ===
+                                  LeaveRequestType.APPLY_LEAVE ||
+                                req.firstHalf === LeaveRequestType.LEAVE ||
+                                req.secondHalf === LeaveRequestType.LEAVE;
 
                               if (hasWFH && hasLeave)
                                 return (
@@ -1072,11 +1101,13 @@ const Requests = () => {
                                     className="text-orange-600"
                                   />
                                 );
-                              if (req.requestType === "Work From Home")
+                              if (
+                                req.requestType === WorkLocation.WORK_FROM_HOME
+                              )
                                 return (
                                   <Home size={16} className="text-green-600" />
                                 );
-                              if (req.requestType === "Client Visit")
+                              if (req.requestType === WorkLocation.CLIENT_VISIT)
                                 return (
                                   <MapPin
                                     size={16}
@@ -1084,8 +1115,9 @@ const Requests = () => {
                                   />
                                 );
                               if (
-                                req.requestType === "Apply Leave" ||
-                                req.requestType === "Leave"
+                                req.requestType ===
+                                  LeaveRequestType.APPLY_LEAVE ||
+                                req.requestType === LeaveRequestType.LEAVE
                               )
                                 return (
                                   <Calendar
@@ -1093,7 +1125,7 @@ const Requests = () => {
                                     className="text-blue-600"
                                   />
                                 );
-                              if (req.requestType === "Half Day")
+                              if (req.requestType === AttendanceStatus.HALF_DAY)
                                 return (
                                   <Calendar
                                     size={16}
@@ -1121,9 +1153,11 @@ const Requests = () => {
                                   req.secondHalf,
                                 ]
                                   .map((a) =>
-                                    a === "Apply Leave" ? "Leave" : a,
+                                    a === LeaveRequestType.APPLY_LEAVE
+                                      ? LeaveRequestType.LEAVE
+                                      : a,
                                   )
-                                  .filter((a) => a && a !== "Office")
+                                  .filter((a) => a && a !== WorkLocation.OFFICE)
                                   .filter(
                                     (value, index, self) =>
                                       self.indexOf(value) === index,
@@ -1133,13 +1167,16 @@ const Requests = () => {
                                   // Replace "Leave" with "Half Day Leave" in combined activities
                                   return activities
                                     .map((a) =>
-                                      a === "Leave" ? "Half Day Leave" : a,
+                                      a === LeaveRequestType.LEAVE
+                                        ? "Half Day Leave"
+                                        : a,
                                     )
                                     .join(" + ");
                                 }
                                 if (activities.length === 1) {
                                   // For single activity that is "Leave", show "Half Day Leave"
-                                  return activities[0] === "Leave"
+                                  return activities[0] ===
+                                    LeaveRequestType.LEAVE
                                     ? "Half Day Leave"
                                     : activities[0];
                                 }
@@ -1147,14 +1184,15 @@ const Requests = () => {
 
                               // Default display
                               if (
-                                req.requestType === "Apply Leave" ||
-                                req.requestType === "Leave"
+                                req.requestType ===
+                                  LeaveRequestType.APPLY_LEAVE ||
+                                req.requestType === LeaveRequestType.LEAVE
                               ) {
                                 return req.isHalfDay
                                   ? "Half Day Leave"
-                                  : "Leave";
+                                  : LeaveRequestType.LEAVE;
                               }
-                              if (req.requestType === "Half Day")
+                              if (req.requestType === AttendanceStatus.HALF_DAY)
                                 return "Half Day Leave";
                               return req.requestType;
                             })()}
@@ -1188,29 +1226,39 @@ const Requests = () => {
                               req.secondHalf
                             ) {
                               const first =
-                                req.firstHalf === "Apply Leave"
-                                  ? "Leave"
+                                req.firstHalf === LeaveRequestType.APPLY_LEAVE
+                                  ? LeaveRequestType.LEAVE
                                   : req.firstHalf;
                               const second =
-                                req.secondHalf === "Apply Leave"
-                                  ? "Leave"
+                                req.secondHalf === LeaveRequestType.APPLY_LEAVE
+                                  ? LeaveRequestType.LEAVE
                                   : req.secondHalf;
 
-                              if (first === second && first !== "Office") {
-                                return "Full Day";
+                              if (
+                                first === second &&
+                                first !== WorkLocation.OFFICE
+                              ) {
+                                return AttendanceStatus.FULL_DAY;
                               }
 
                               // Filter out Office
+                              const validActivities = [first, second].filter(
+                                (a) => a && a !== WorkLocation.OFFICE,
+                              );
+                              if (validActivities.length === 0) {
+                                return WorkLocation.OFFICE;
+                              }
+
                               const parts = [];
-                              if (first && first !== "Office")
+                              if (first && first !== WorkLocation.OFFICE)
                                 parts.push(`First Half = ${first}`);
-                              if (second && second !== "Office")
+                              if (second && second !== WorkLocation.OFFICE)
                                 parts.push(`Second Half = ${second}`);
 
                               if (parts.length > 0) return parts.join(" & ");
-                              return "Full Day";
+                              return AttendanceStatus.FULL_DAY;
                             }
-                            return "Full Day";
+                            return AttendanceStatus.FULL_DAY;
                           })()}
                         </span>
                       </td>
@@ -1223,13 +1271,15 @@ const Requests = () => {
                         <span className="text-sm font-bold text-[#2B3674]">
                           {dayjs(req.fromDate).format("DD MMM")} -{" "}
                           {dayjs(req.toDate).format("DD MMM - YYYY")}, TOTAL:{" "}
-                           {req.duration
+                          {req.duration
                             ? parseFloat(String(req.duration))
-                            : (req.requestType === "Client Visit" ||
-                            req.requestType === "Work From Home" ||
-                            req.requestType === "Apply Leave" ||
-                            req.requestType === "Leave" ||
-                            req.requestType === "Half Day"
+                            : req.requestType === WorkLocation.CLIENT_VISIT ||
+                                req.requestType ===
+                                  WorkLocation.WORK_FROM_HOME ||
+                                req.requestType ===
+                                  LeaveRequestType.APPLY_LEAVE ||
+                                req.requestType === LeaveRequestType.LEAVE ||
+                                req.requestType === AttendanceStatus.HALF_DAY
                               ? calculateDurationExcludingWeekends(
                                   req.fromDate,
                                   req.toDate,
@@ -1237,8 +1287,8 @@ const Requests = () => {
                               : dayjs(req.toDate).diff(
                                   dayjs(req.fromDate),
                                   "day",
-                                ) + 1)}{" "}
-                           DAY(S)
+                                ) + 1}{" "}
+                          DAY(S)
                         </span>
                       </td>
                       <td className="py-4 px-4 text-center text-sm font-semibold text-[#475569] whitespace-nowrap">
@@ -1254,22 +1304,23 @@ const Requests = () => {
                         <span
                           className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all inline-flex items-center gap-1.5 whitespace-nowrap ${getStatusColor(req.status)}`}
                         >
-                          {(req.status === "Pending" ||
-                            req.status === "Requesting for Modification") && (
+                          {(req.status === LeaveRequestStatus.PENDING ||
+                            req.status ===
+                              LeaveRequestStatus.REQUESTING_FOR_MODIFICATION) && (
                             <RotateCcw
                               size={12}
                               className="animate-spin-slow"
                             />
                           )}
                           {req.status}
-                          {req.status === "Request Modified" &&
+                          {req.status === LeaveRequestStatus.REQUEST_MODIFIED &&
                             req.requestModifiedFrom && (
                               <span className="opacity-70 border-l border-orange-300 pl-1.5 ml-1 text-[9px] font-bold">
-                                (TO{" "}
-                                {req.requestModifiedFrom === "Apply Leave"
+                                MODIFIED FROM:{" "}
+                                {req.requestModifiedFrom ===
+                                LeaveRequestType.APPLY_LEAVE
                                   ? "LEAVE"
                                   : req.requestModifiedFrom.toUpperCase()}
-                                )
                               </span>
                             )}
                         </span>
@@ -1308,13 +1359,13 @@ const Requests = () => {
                           >
                             <Eye size={20} />
                           </button>
-                          {req.status === "Pending" && (
+                          {req.status === LeaveRequestStatus.PENDING && (
                             <>
                               <button
                                 onClick={() =>
                                   handleUpdateStatus(
                                     req.id,
-                                    "Approved",
+                                    LeaveRequestStatus.APPROVED,
                                     req.fullName || "Employee",
                                   )
                                 }
@@ -1327,7 +1378,7 @@ const Requests = () => {
                                 onClick={() =>
                                   handleUpdateStatus(
                                     req.id,
-                                    "Rejected",
+                                    LeaveRequestStatus.REJECTED,
                                     req.fullName || "Employee",
                                   )
                                 }
@@ -1338,13 +1389,14 @@ const Requests = () => {
                               </button>
                             </>
                           )}
-                          {req.status === "Requesting for Cancellation" && (
+                          {req.status ===
+                            LeaveRequestStatus.REQUESTING_FOR_CANCELLATION && (
                             <>
                               <button
                                 onClick={() =>
                                   handleUpdateStatus(
                                     req.id,
-                                    "Cancellation Approved",
+                                    LeaveRequestStatus.CANCELLATION_APPROVED,
                                     req.fullName || "Employee",
                                   )
                                 }
@@ -1368,13 +1420,14 @@ const Requests = () => {
                               </button>
                             </>
                           )}
-                          {req.status === "Requesting for Modification" && (
+                          {req.status ===
+                            LeaveRequestStatus.REQUESTING_FOR_MODIFICATION && (
                             <>
                               <button
                                 onClick={() =>
                                   handleUpdateStatus(
                                     req.id,
-                                    "Modification Approved",
+                                    LeaveRequestStatus.MODIFICATION_APPROVED,
                                     req.fullName || "Employee",
                                   )
                                 }
@@ -1387,7 +1440,7 @@ const Requests = () => {
                                 onClick={() =>
                                   handleUpdateStatus(
                                     req.id,
-                                    "Modification Rejected",
+                                    LeaveRequestStatus.MODIFICATION_REJECTED,
                                     req.fullName || "Employee",
                                   )
                                 }
@@ -1468,18 +1521,20 @@ const Requests = () => {
             <div className="p-8 text-center">
               <div
                 className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-6 ${
-                  confirmModal.status === "Approved" &&
+                  confirmModal.status === LeaveRequestStatus.APPROVED &&
                   entities.find((e) => e.id === confirmModal.id)?.status ===
-                    "Requesting for Cancellation"
+                    LeaveRequestStatus.REQUESTING_FOR_CANCELLATION
                     ? "bg-red-50 text-red-500" // Rejecting Cancellation
-                    : confirmModal.status === "Approved" ||
-                        confirmModal.status === "Cancellation Approved"
+                    : confirmModal.status === LeaveRequestStatus.APPROVED ||
+                        confirmModal.status ===
+                          LeaveRequestStatus.CANCELLATION_APPROVED
                       ? "bg-green-50 text-green-500"
                       : "bg-red-50 text-red-500"
                 }`}
               >
-                {confirmModal.status === "Approved" ||
-                confirmModal.status === "Cancellation Approved" ? (
+                {confirmModal.status === LeaveRequestStatus.APPROVED ||
+                confirmModal.status ===
+                  LeaveRequestStatus.CANCELLATION_APPROVED ? (
                   <CheckCircle size={32} strokeWidth={2.5} />
                 ) : (
                   <XCircle size={32} strokeWidth={2.5} />
@@ -1487,12 +1542,12 @@ const Requests = () => {
               </div>
 
               <h3 className="text-2xl font-black text-[#2B3674] mb-2">
-                {confirmModal.status === "Approved"
+                {confirmModal.status === LeaveRequestStatus.APPROVED
                   ? entities.find((e) => e.id === confirmModal.id)?.status ===
-                    "Requesting for Cancellation"
+                    LeaveRequestStatus.REQUESTING_FOR_CANCELLATION
                     ? "Reject Request?"
                     : "Approve Request?"
-                  : confirmModal.status === "Rejected" ||
+                  : confirmModal.status === LeaveRequestStatus.REJECTED ||
                       confirmModal.status === "Reject Cancellation"
                     ? "Reject Request?"
                     : "Approve Request?"}
@@ -1502,22 +1557,23 @@ const Requests = () => {
                 Are you sure you want to{" "}
                 <span
                   className={`font-bold ${
-                    confirmModal.status === "Approved" &&
+                    confirmModal.status === LeaveRequestStatus.APPROVED &&
                     entities.find((e) => e.id === confirmModal.id)?.status ===
-                      "Requesting for Cancellation"
+                      LeaveRequestStatus.REQUESTING_FOR_CANCELLATION
                       ? "text-red-600"
-                      : confirmModal.status === "Approved" ||
-                          confirmModal.status === "Cancellation Approved"
+                      : confirmModal.status === LeaveRequestStatus.APPROVED ||
+                          confirmModal.status ===
+                            LeaveRequestStatus.CANCELLATION_APPROVED
                         ? "text-green-600"
                         : "text-red-600"
                   }`}
                 >
-                  {confirmModal.status === "Approved"
+                  {confirmModal.status === LeaveRequestStatus.APPROVED
                     ? entities.find((e) => e.id === confirmModal.id)?.status ===
-                      "Requesting for Cancellation"
+                      LeaveRequestStatus.REQUESTING_FOR_CANCELLATION
                       ? "Reject"
                       : "Approve"
-                    : confirmModal.status === "Rejected" ||
+                    : confirmModal.status === LeaveRequestStatus.REJECTED ||
                         confirmModal.status === "Reject Cancellation"
                       ? "Reject"
                       : "Approve"}
@@ -1527,13 +1583,14 @@ const Requests = () => {
                   {confirmModal.employeeName}
                 </span>
                 ?
-                {confirmModal.status === "Approved" &&
+                {confirmModal.status === LeaveRequestStatus.APPROVED &&
                   " This will automatically update attendance records."}
-                {confirmModal.status === "Cancellation Approved" &&
+                {confirmModal.status ===
+                  LeaveRequestStatus.CANCELLATION_APPROVED &&
                   " This will revert any associated attendance records."}
-                {confirmModal.status === "Approved" && // This handles the case where we are rejecting the cancellation (reverting locally to Approved)
+                {confirmModal.status === LeaveRequestStatus.APPROVED && // This handles the case where we are rejecting the cancellation (reverting locally to Approved)
                   entities.find((e) => e.id === confirmModal.id)?.status ===
-                    "Requesting for Cancellation" &&
+                    LeaveRequestStatus.REQUESTING_FOR_CANCELLATION &&
                   " This will reject the cancellation request and keep the request as Approved."}
               </p>
 
@@ -1555,13 +1612,15 @@ const Requests = () => {
                       ? "opacity-70 cursor-not-allowed"
                       : "transform active:scale-95"
                   } ${
-                    confirmModal.status === "Approved" &&
+                    confirmModal.status === LeaveRequestStatus.APPROVED &&
                     entities.find((e) => e.id === confirmModal.id)?.status ===
-                      "Requesting for Cancellation"
+                      LeaveRequestStatus.REQUESTING_FOR_CANCELLATION
                       ? "bg-red-500 hover:bg-red-600 shadow-red-200 active:scale-95"
-                      : confirmModal.status === "Approved" ||
-                          confirmModal.status === "Cancellation Approved" ||
-                          confirmModal.status === "Modification Approved"
+                      : confirmModal.status === LeaveRequestStatus.APPROVED ||
+                          confirmModal.status ===
+                            LeaveRequestStatus.CANCELLATION_APPROVED ||
+                          confirmModal.status ===
+                            LeaveRequestStatus.MODIFICATION_APPROVED
                         ? "bg-green-500 hover:bg-green-600 shadow-green-200 active:scale-95"
                         : "bg-red-500 hover:bg-red-600 shadow-red-200 active:scale-95"
                   }`}
@@ -1573,15 +1632,18 @@ const Requests = () => {
                     </>
                   ) : (
                     <>
-                      {confirmModal.status === "Approved" ||
-                      confirmModal.status === "Modification Approved"
+                      {confirmModal.status === LeaveRequestStatus.APPROVED ||
+                      confirmModal.status ===
+                        LeaveRequestStatus.MODIFICATION_APPROVED
                         ? entities.find((e) => e.id === confirmModal.id)
-                            ?.status === "Requesting for Cancellation"
+                            ?.status ===
+                          LeaveRequestStatus.REQUESTING_FOR_CANCELLATION
                           ? "Confirm Reject" // Special text for this specific case
                           : "Confirm Approve"
-                        : confirmModal.status === "Rejected" ||
+                        : confirmModal.status === LeaveRequestStatus.REJECTED ||
                             confirmModal.status === "Reject Cancellation" ||
-                            confirmModal.status === "Modification Rejected"
+                            confirmModal.status ===
+                              LeaveRequestStatus.MODIFICATION_REJECTED
                           ? "Confirm Reject"
                           : "Confirm Approve"}
                     </>
@@ -1619,9 +1681,9 @@ const Requests = () => {
               </span>
               <h2 className="text-3xl font-black text-[#2B3674]">
                 {selectedRequest &&
-                  (selectedRequest.requestType === "Apply Leave"
-                    ? "Leave"
-                    : selectedRequest.requestType === "Half Day"
+                  (selectedRequest.requestType === LeaveRequestType.APPLY_LEAVE
+                    ? AttendanceStatus.LEAVE
+                    : selectedRequest.requestType === AttendanceStatus.HALF_DAY
                       ? "Half Day Leave"
                       : selectedRequest.requestType)}
               </h2>
@@ -1673,24 +1735,38 @@ const Requests = () => {
                       {(() => {
                         // For Client Visit, WFH, and Leave, recalculate duration excluding weekends and holidays
                         if (
-                          selectedRequest.requestType === "Client Visit" ||
-                          selectedRequest.requestType === "Work From Home" ||
-                          selectedRequest.requestType === "Apply Leave" ||
-                          selectedRequest.requestType === "Leave"
+                          selectedRequest.requestType ===
+                            WorkLocation.CLIENT_VISIT ||
+                          selectedRequest.requestType ===
+                            WorkLocation.WORK_FROM_HOME ||
+                          selectedRequest.requestType ===
+                            LeaveRequestType.WFH ||
+                          selectedRequest.requestType ===
+                            LeaveRequestType.CLIENT_VISIT ||
+                          selectedRequest.requestType ===
+                            LeaveRequestType.LEAVE ||
+                          selectedRequest.requestType ===
+                            LeaveRequestType.APPLY_LEAVE
                         ) {
-                          return parseFloat(String(calculateDurationExcludingWeekends(
-                            selectedRequest.fromDate,
-                            selectedRequest.toDate,
-                          )));
+                          return parseFloat(
+                            String(
+                              calculateDurationExcludingWeekends(
+                                selectedRequest.fromDate,
+                                selectedRequest.toDate,
+                              ),
+                            ),
+                          );
                         } else {
                           // For other types, use stored duration or calculate including all days
-                          return parseFloat(String(
-                            selectedRequest.duration ||
-                            dayjs(selectedRequest.toDate).diff(
-                              dayjs(selectedRequest.fromDate),
-                              "day",
-                            ) + 1
-                          ));
+                          return parseFloat(
+                            String(
+                              selectedRequest.duration ||
+                                dayjs(selectedRequest.toDate).diff(
+                                  dayjs(selectedRequest.fromDate),
+                                  "day",
+                                ) + 1,
+                            ),
+                          );
                         }
                       })()}{" "}
                       Day(s)

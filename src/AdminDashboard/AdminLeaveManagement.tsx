@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { DatePicker, ConfigProvider, Checkbox, Select, Modal } from "antd";
 import dayjs from "dayjs";
@@ -25,11 +26,16 @@ import {
   LeaveRequest,
 } from "../reducers/leaveRequest.reducer";
 import { getEntities } from "../reducers/employeeDetails.reducer";
-import {
-  AttendanceStatus,
-  fetchAttendanceByDateRange,
-} from "../reducers/employeeAttendance.reducer";
+import { fetchAttendanceByDateRange } from "../reducers/employeeAttendance.reducer";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
+import {
+  LeaveRequestStatus,
+  AttendanceStatus,
+  WorkLocation,
+  LeaveRequestType,
+  UserType,
+  HalfDayType,
+} from "../enums";
 import {
   Home,
   MapPin,
@@ -45,7 +51,6 @@ import {
   User,
   Search,
   Clock,
-  Users,
   Building2,
 } from "lucide-react";
 import { notification } from "antd";
@@ -98,6 +103,13 @@ const AdminLeaveManagement = () => {
   const [selectedRequestId, setSelectedRequestId] = useState<number | null>(
     null,
   );
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const basePath = location.pathname.startsWith("/manager-dashboard")
+    ? "/manager-dashboard"
+    : "/admin-dashboard";
+
   const [uploaderKey, setUploaderKey] = useState(0);
   const titleRef = useRef<HTMLDivElement>(null);
   const startDateRef = useRef<HTMLDivElement>(null);
@@ -121,10 +133,14 @@ const AdminLeaveManagement = () => {
     endDate: "",
     duration: 0,
   });
-  const [leaveDurationType, setLeaveDurationType] = useState("Full Day");
+  const [leaveDurationType, setLeaveDurationType] = useState(
+    HalfDayType.FULL_DAY,
+  );
   const [isHalfDay, setIsHalfDay] = useState(false);
   const [halfDayType, setHalfDayType] = useState<string | null>(null);
-  const [otherHalfType, setOtherHalfType] = useState<string | null>("Office");
+  const [otherHalfType, setOtherHalfType] = useState<string | null>(
+    WorkLocation.OFFICE,
+  );
   const [isCancelling, setIsCancelling] = useState(false);
   const [isAutoApproving, setIsAutoApproving] = useState(false);
   const [isModifying, setIsModifying] = useState(false);
@@ -141,8 +157,8 @@ const AdminLeaveManagement = () => {
   const [modifyFormData, setModifyFormData] = useState({
     title: "",
     description: "",
-    firstHalf: "Office",
-    secondHalf: "Office",
+    firstHalf: WorkLocation.OFFICE,
+    secondHalf: WorkLocation.OFFICE,
   });
   const [undoModal, setUndoModal] = useState<{
     isOpen: boolean;
@@ -207,7 +223,11 @@ const AdminLeaveManagement = () => {
         return false;
 
       // Exclude rejected and cancelled requests
-      if (req.status === "Rejected" || req.status === "Cancelled") return false;
+      if (
+        req.status === LeaveRequestStatus.REJECTED ||
+        req.status === LeaveRequestStatus.CANCELLED
+      )
+        return false;
 
       // Exclude the current request if we're viewing/editing it
       if (isViewMode && selectedRequestId && req.id === selectedRequestId)
@@ -227,20 +247,20 @@ const AdminLeaveManagement = () => {
 
       // 1. RULE: If LEAVE already exists, block EVERYTHING (No exceptions)
       if (
-        existingRequestType === "Apply Leave" ||
-        existingRequestType === "Leave"
+        existingRequestType === LeaveRequestType.APPLY_LEAVE ||
+        existingRequestType === AttendanceStatus.LEAVE
       ) {
         return true;
       }
 
       // 2. RULE: If WORK FROM HOME already exists
-      if (existingRequestType === "Work From Home") {
+      if (existingRequestType === WorkLocation.WORK_FROM_HOME) {
         // Allow if applying for Leave or Client Visit or Half Day
         if (
-          selectedLeaveType === "Apply Leave" ||
-          selectedLeaveType === "Leave" ||
-          selectedLeaveType === "Client Visit" ||
-          selectedLeaveType === "Half Day"
+          selectedLeaveType === LeaveRequestType.APPLY_LEAVE ||
+          selectedLeaveType === AttendanceStatus.LEAVE ||
+          selectedLeaveType === WorkLocation.CLIENT_VISIT ||
+          selectedLeaveType === AttendanceStatus.HALF_DAY
         ) {
           return false; // Valid dates, don't disable
         }
@@ -248,13 +268,13 @@ const AdminLeaveManagement = () => {
       }
 
       // 3. RULE: If CLIENT VISIT already exists
-      if (existingRequestType === "Client Visit") {
+      if (existingRequestType === WorkLocation.CLIENT_VISIT) {
         // Allow if applying for Leave or Work From Home or Half Day
         if (
-          selectedLeaveType === "Apply Leave" ||
-          selectedLeaveType === "Leave" ||
-          selectedLeaveType === "Work From Home" ||
-          selectedLeaveType === "Half Day"
+          selectedLeaveType === LeaveRequestType.APPLY_LEAVE ||
+          selectedLeaveType === AttendanceStatus.LEAVE ||
+          selectedLeaveType === WorkLocation.WFH ||
+          selectedLeaveType === AttendanceStatus.HALF_DAY
         ) {
           return false; // Valid dates, don't disable
         }
@@ -470,7 +490,7 @@ const AdminLeaveManagement = () => {
       return (
         normalizedRecordDate === dateStr &&
         (status === AttendanceStatus.LEAVE ||
-          status === "Leave" ||
+          status === LeaveRequestType.LEAVE ||
           status === "LEAVE")
       );
     });
@@ -529,27 +549,27 @@ const AdminLeaveManagement = () => {
 
     setIsAutoApproving(true);
     try {
-      // Determine the actual request type based on dropdown selection if "Apply Leave" is selected
+      // Determine the actual request type based on dropdown selection if LeaveRequestType.APPLY_LEAVE is selected
       let finalRequestType = selectedLeaveType;
       if (
-        selectedLeaveType === "Apply Leave" ||
-        selectedLeaveType === "Leave"
+        selectedLeaveType === LeaveRequestType.APPLY_LEAVE ||
+        selectedLeaveType === LeaveRequestType.LEAVE
       ) {
-        if (leaveDurationType === "Half Day") {
-          finalRequestType = "Half Day";
+        if (leaveDurationType === HalfDayType.HALF_DAY) {
+          finalRequestType = LeaveRequestType.HALF_DAY;
         } else {
-          finalRequestType = "Apply Leave";
+          finalRequestType = LeaveRequestType.APPLY_LEAVE;
         }
       }
 
       // For Client Visit, WFH, and Leave (including Half Day), fetch attendance records first to check for existing leaves
       let duration: number;
       if (
-        finalRequestType === "Client Visit" ||
-        finalRequestType === "Work From Home" ||
-        finalRequestType === "Apply Leave" ||
-        finalRequestType === "Leave" ||
-        finalRequestType === "Half Day"
+        finalRequestType === WorkLocation.CLIENT_VISIT ||
+        finalRequestType === WorkLocation.WORK_FROM_HOME ||
+        finalRequestType === LeaveRequestType.APPLY_LEAVE ||
+        finalRequestType === LeaveRequestType.LEAVE ||
+        finalRequestType === LeaveRequestType.HALF_DAY
       ) {
         // Fetch attendance records synchronously before calculating duration
         const attendanceAction = await dispatch(
@@ -575,17 +595,19 @@ const AdminLeaveManagement = () => {
 
         // Custom Duration Calculation for WFH/CV split
         if (
-          leaveDurationType === "Half Day" ||
-          leaveDurationType === "First Half" ||
-          leaveDurationType === "Second Half"
+          leaveDurationType === HalfDayType.HALF_DAY ||
+          leaveDurationType === HalfDayType.FIRST_HALF ||
+          leaveDurationType === HalfDayType.SECOND_HALF
         ) {
-          const mainType = finalRequestType; // "Work From Home", "Client Visit", "Half Day" (Leave), etc.
-          const other = otherHalfType; // "Office", "Work From Home", "Client Visit", "Leave"
+          const mainType = finalRequestType; // WorkLocation.WORK_FROM_HOME, WorkLocation.CLIENT_VISIT, LeaveRequestType.HALF_DAY (Leave), etc.
+          const other = otherHalfType; // WorkLocation.OFFICE, WorkLocation.WORK_FROM_HOME, WorkLocation.CLIENT_VISIT, LeaveRequestType.LEAVE
 
           const isMainRemote =
-            mainType === "Work From Home" || mainType === "Client Visit";
+            mainType === WorkLocation.WORK_FROM_HOME ||
+            mainType === WorkLocation.CLIENT_VISIT;
           const isOtherRemote =
-            other === "Work From Home" || other === "Client Visit";
+            other === WorkLocation.WORK_FROM_HOME ||
+            other === WorkLocation.CLIENT_VISIT;
 
           // User Requirement: WFH + CV = 1 Day
           if (isMainRemote && isOtherRemote) {
@@ -605,9 +627,9 @@ const AdminLeaveManagement = () => {
 
       // 1. Submit the Request (Pending State)
       const isSplitRequest =
-        leaveDurationType === "First Half" ||
-        leaveDurationType === "Second Half" ||
-        leaveDurationType === "Half Day";
+        leaveDurationType === HalfDayType.FIRST_HALF ||
+        leaveDurationType === HalfDayType.SECOND_HALF ||
+        leaveDurationType === HalfDayType.HALF_DAY;
 
       const submitAction = await dispatch(
         submitLeaveRequest({
@@ -688,7 +710,7 @@ const AdminLeaveManagement = () => {
             (e: any) =>
               (e.employeeId || e.id) ===
                 (selectedEmployee.employeeId || selectedEmployee.id) &&
-              e.status === "Approved" &&
+              e.status === LeaveRequestStatus.APPROVED &&
               victimTypes.includes((e.requestType || "").toLowerCase()) &&
               e.id !== createdId,
           )
@@ -723,7 +745,7 @@ const AdminLeaveManagement = () => {
                     fromDate: iStart,
                     toDate: iEnd,
                     duration: datesNeedingModification.length,
-                    // Split request due to gap -> ensure segments carry original half types or "Leave" if generic
+                    // Split request due to gap -> ensure segments carry original half types or LeaveRequestType.LEAVE if generic
                     firstHalf: victim.isHalfDay
                       ? victim.firstHalf
                       : victim.requestType,
@@ -753,7 +775,7 @@ const AdminLeaveManagement = () => {
               await dispatch(
                 updateLeaveRequestStatus({
                   id: victim.id,
-                  status: "Cancelled",
+                  status: LeaveRequestStatus.CANCELLED,
                 }),
               ).unwrap();
             } else {
@@ -803,7 +825,7 @@ const AdminLeaveManagement = () => {
                 await dispatch(
                   updateLeaveRequestStatus({
                     id: victim.id,
-                    status: "Cancelled",
+                    status: LeaveRequestStatus.CANCELLED,
                   }),
                 ).unwrap();
 
@@ -817,7 +839,7 @@ const AdminLeaveManagement = () => {
                         duration: segment.length,
                         sourceRequestId: createdId,
                         sourceRequestType: finalRequestType,
-                        overrideStatus: "Approved",
+                        overrideStatus: LeaveRequestStatus.APPROVED,
                       },
                     }),
                   ).unwrap();
@@ -830,7 +852,10 @@ const AdminLeaveManagement = () => {
 
       // 3. Approve the New Request
       const approveAction = await dispatch(
-        updateLeaveRequestStatus({ id: createdId, status: "Approved" }),
+        updateLeaveRequestStatus({
+          id: createdId,
+          status: LeaveRequestStatus.APPROVED,
+        }),
       );
 
       if (!updateLeaveRequestStatus.fulfilled.match(approveAction)) {
@@ -991,7 +1016,9 @@ const AdminLeaveManagement = () => {
     setSelectedRequestId(null);
     setUploaderKey((prev) => prev + 1);
     setSelectedLeaveType(
-      label === "Leave" || label === "Apply Leave" ? "Apply Leave" : label,
+      label === LeaveRequestType.LEAVE || label === LeaveRequestType.APPLY_LEAVE
+        ? LeaveRequestType.APPLY_LEAVE
+        : label,
     );
     setIsModalOpen(true);
     setErrors({
@@ -1001,9 +1028,9 @@ const AdminLeaveManagement = () => {
       endDate: "",
       employee: "",
     });
-    setLeaveDurationType("Full Day");
+    setLeaveDurationType(HalfDayType.FULL_DAY);
     setHalfDayType(null);
-    setOtherHalfType("Office");
+    setOtherHalfType(WorkLocation.OFFICE);
     setIsHalfDay(false);
     dispatch(resetSubmitSuccess());
   };
@@ -1052,7 +1079,7 @@ const AdminLeaveManagement = () => {
 
   const handleCancel = (id: number) => {
     const req = entities.find((e: any) => e.id === id);
-    if (req?.status === "Approved") {
+    if (req?.status === LeaveRequestStatus.APPROVED) {
       handleCancelClick(req);
     } else {
       setCancelModal({ isOpen: true, id });
@@ -1081,14 +1108,14 @@ const AdminLeaveManagement = () => {
         if (
           r.id !== req.id &&
           r.employeeId === req.employeeId &&
-          (r.status === "Requesting for Modification" ||
+          (r.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION ||
             r.status === "Requesting For Modification" ||
-            r.status === "Pending" ||
-            r.status === "Requesting for Cancellation" ||
+            r.status === LeaveRequestStatus.PENDING ||
+            r.status === LeaveRequestStatus.REQUESTING_FOR_CANCELLATION ||
             r.status === "Requesting For Cancellation" ||
-            r.status === "Approved" ||
-            r.status === "Modification Approved" ||
-            r.status === "Request Modified")
+            r.status === LeaveRequestStatus.APPROVED ||
+            r.status === LeaveRequestStatus.MODIFICATION_APPROVED ||
+            r.status === LeaveRequestStatus.REQUEST_MODIFIED)
         ) {
           let start = dayjs(r.fromDate);
           const end = dayjs(r.toDate);
@@ -1173,7 +1200,7 @@ const AdminLeaveManagement = () => {
           await dispatch(
             updateLeaveRequestStatus({
               id: createdCancellationRequest.id,
-              status: "Cancellation Approved",
+              status: LeaveRequestStatus.CANCELLATION_APPROVED,
             }),
           ).unwrap();
 
@@ -1243,7 +1270,7 @@ const AdminLeaveManagement = () => {
             await dispatch(
               updateLeaveRequestStatus({
                 id: requestToCancel.id,
-                status: "Cancellation Approved",
+                status: LeaveRequestStatus.CANCELLATION_APPROVED,
               }),
             ).unwrap();
 
@@ -1299,12 +1326,12 @@ const AdminLeaveManagement = () => {
       try {
         const item = entities.find((e: any) => e.id === cancelModal.id);
 
-        if (item?.status === "Approved") {
+        if (item?.status === LeaveRequestStatus.APPROVED) {
           // Update Status to 'Cancellation Approved' for Approved requests
           await dispatch(
             updateLeaveRequestStatus({
               id: cancelModal.id,
-              status: "Cancellation Approved",
+              status: LeaveRequestStatus.CANCELLATION_APPROVED,
             }),
           ).unwrap();
 
@@ -1325,7 +1352,7 @@ const AdminLeaveManagement = () => {
           await dispatch(
             updateLeaveRequestStatus({
               id: cancelModal.id,
-              status: "Cancelled",
+              status: LeaveRequestStatus.CANCELLED,
             }),
           ).unwrap();
         }
@@ -1443,14 +1470,14 @@ const AdminLeaveManagement = () => {
       endDate: "",
       employee: "",
     });
-    setLeaveDurationType("Full Day");
+    setLeaveDurationType(HalfDayType.FULL_DAY);
     dispatch(resetSubmitSuccess());
   };
 
   const applyOptions = [
-    { label: "Leave", icon: Calendar, color: "#4318FF" },
-    { label: "Work From Home", icon: Home, color: "#38A169" },
-    { label: "Client Visit", icon: MapPin, color: "#FFB547" },
+    { label: LeaveRequestType.LEAVE, icon: Calendar, color: "#4318FF" },
+    { label: WorkLocation.WORK_FROM_HOME, icon: Home, color: "#38A169" },
+    { label: WorkLocation.CLIENT_VISIT, icon: MapPin, color: "#FFB547" },
   ];
 
   const hexToRgb = (hex: string) => {
@@ -1466,7 +1493,8 @@ const AdminLeaveManagement = () => {
   const renderCancelButton = (item: any) => {
     // Admins and Managers have more authority to cancel
     const isAdminOrManager =
-      currentUser?.userType === "ADMIN" || currentUser?.userType === "MANAGER";
+      currentUser?.userType === UserType.ADMIN ||
+      currentUser?.userType === UserType.MANAGER;
 
     // Original policy: next day 10am
     const withinDeadline = isCancellationAllowed(
@@ -1670,19 +1698,19 @@ const AdminLeaveManagement = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 mt-4">
           {[
             {
-              label: "Leave",
+              label: LeaveRequestType.LEAVE,
               key: "leave",
               color: "from-[#4318FF] to-[#868CFF]",
               icon: Calendar,
             },
             {
-              label: "Work From Home",
+              label: WorkLocation.WORK_FROM_HOME,
               key: "wfh",
               color: "from-[#38A169] to-[#68D391]",
               icon: Home,
             },
             {
-              label: "Client Visit",
+              label: WorkLocation.CLIENT_VISIT,
               key: "clientVisit",
               color: "from-[#FFB547] to-[#FCCD75]",
               icon: MapPin,
@@ -1823,13 +1851,13 @@ const AdminLeaveManagement = () => {
                 >
                   {[
                     "All",
-                    "Pending",
-                    "Approved",
-                    "Rejected",
-                    "Request Modified",
-                    "Cancellation Approved",
-                    "Cancelled",
-                    "Cancellation Reverted",
+                    LeaveRequestStatus.PENDING,
+                    LeaveRequestStatus.APPROVED,
+                    LeaveRequestStatus.REJECTED,
+                    LeaveRequestStatus.REQUEST_MODIFIED,
+                    LeaveRequestStatus.CANCELLATION_APPROVED,
+                    LeaveRequestStatus.CANCELLED,
+                    LeaveRequestStatus.CANCELLATION_REVERTED,
                   ].map((status) => (
                     <Select.Option key={status} value={status}>
                       {status === "All" ? "All Status" : status}
@@ -1925,16 +1953,23 @@ const AdminLeaveManagement = () => {
                                 {(() => {
                                   // Determine icon based on combined activities
                                   const hasWFH =
-                                    item.firstHalf === "Work From Home" ||
-                                    item.secondHalf === "Work From Home";
+                                    item.firstHalf ===
+                                      WorkLocation.WORK_FROM_HOME ||
+                                    item.secondHalf ===
+                                      WorkLocation.WORK_FROM_HOME;
                                   const hasCV =
-                                    item.firstHalf === "Client Visit" ||
-                                    item.secondHalf === "Client Visit";
+                                    item.firstHalf ===
+                                      WorkLocation.CLIENT_VISIT ||
+                                    item.secondHalf ===
+                                      WorkLocation.CLIENT_VISIT;
                                   const hasLeave =
-                                    item.firstHalf === "Leave" ||
-                                    item.secondHalf === "Leave" ||
-                                    item.firstHalf === "Apply Leave" ||
-                                    item.secondHalf === "Apply Leave";
+                                    item.firstHalf === LeaveRequestType.LEAVE ||
+                                    item.secondHalf ===
+                                      LeaveRequestType.LEAVE ||
+                                    item.firstHalf ===
+                                      LeaveRequestType.APPLY_LEAVE ||
+                                    item.secondHalf ===
+                                      LeaveRequestType.APPLY_LEAVE;
 
                                   if (hasWFH && hasLeave)
                                     return (
@@ -1950,14 +1985,20 @@ const AdminLeaveManagement = () => {
                                         className="text-orange-600"
                                       />
                                     );
-                                  if (item.requestType === "Work From Home")
+                                  if (
+                                    item.requestType ===
+                                    WorkLocation.WORK_FROM_HOME
+                                  )
                                     return (
                                       <Home
                                         size={16}
                                         className="text-green-600"
                                       />
                                     );
-                                  if (item.requestType === "Client Visit")
+                                  if (
+                                    item.requestType ===
+                                    WorkLocation.CLIENT_VISIT
+                                  )
                                     return (
                                       <MapPin
                                         size={16}
@@ -1965,8 +2006,9 @@ const AdminLeaveManagement = () => {
                                       />
                                     );
                                   if (
-                                    item.requestType === "Apply Leave" ||
-                                    item.requestType === "Leave"
+                                    item.requestType ===
+                                      LeaveRequestType.APPLY_LEAVE ||
+                                    item.requestType === LeaveRequestType.LEAVE
                                   )
                                     return (
                                       <Calendar
@@ -1974,7 +2016,10 @@ const AdminLeaveManagement = () => {
                                         className="text-blue-600"
                                       />
                                     );
-                                  if (item.requestType === "Half Day")
+                                  if (
+                                    item.requestType ===
+                                    LeaveRequestType.HALF_DAY
+                                  )
                                     return (
                                       <Calendar
                                         size={16}
@@ -2002,25 +2047,32 @@ const AdminLeaveManagement = () => {
                                       item.secondHalf,
                                     ]
                                       .map((a) =>
-                                        a === "Apply Leave" ? "Leave" : a,
+                                        a === LeaveRequestType.APPLY_LEAVE
+                                          ? LeaveRequestType.LEAVE
+                                          : a,
                                       )
-                                      .filter((a) => a && a !== "Office")
+                                      .filter(
+                                        (a) => a && a !== WorkLocation.OFFICE,
+                                      )
                                       .filter(
                                         (value, index, self) =>
                                           self.indexOf(value) === index,
                                       );
 
                                     if (activities.length > 1) {
-                                      // Replace "Leave" with "Half Day Leave" in combined activities
+                                      // Replace LeaveRequestType.LEAVE with "Half Day Leave" in combined activities
                                       return activities
                                         .map((a) =>
-                                          a === "Leave" ? "Half Day Leave" : a,
+                                          a === LeaveRequestType.LEAVE
+                                            ? "Half Day Leave"
+                                            : a,
                                         )
                                         .join(" + ");
                                     }
                                     if (activities.length === 1) {
-                                      // For single activity that is "Leave", show "Half Day Leave"
-                                      return activities[0] === "Leave"
+                                      // For single activity that is LeaveRequestType.LEAVE, show "Half Day Leave"
+                                      return activities[0] ===
+                                        LeaveRequestType.LEAVE
                                         ? "Half Day Leave"
                                         : activities[0];
                                     }
@@ -2028,14 +2080,18 @@ const AdminLeaveManagement = () => {
 
                                   // Default display
                                   if (
-                                    item.requestType === "Apply Leave" ||
-                                    item.requestType === "Leave"
+                                    item.requestType ===
+                                      LeaveRequestType.APPLY_LEAVE ||
+                                    item.requestType === LeaveRequestType.LEAVE
                                   ) {
                                     return item.isHalfDay
                                       ? "Half Day Leave"
-                                      : "Leave";
+                                      : LeaveRequestType.LEAVE;
                                   }
-                                  if (item.requestType === "Half Day")
+                                  if (
+                                    item.requestType ===
+                                    LeaveRequestType.HALF_DAY
+                                  )
                                     return "Half Day Leave";
                                   return item.requestType;
                                 })()}
@@ -2071,30 +2127,35 @@ const AdminLeaveManagement = () => {
                                   item.secondHalf
                                 ) {
                                   const first =
-                                    item.firstHalf === "Apply Leave"
-                                      ? "Leave"
+                                    item.firstHalf ===
+                                    LeaveRequestType.APPLY_LEAVE
+                                      ? LeaveRequestType.LEAVE
                                       : item.firstHalf;
                                   const second =
-                                    item.secondHalf === "Apply Leave"
-                                      ? "Leave"
+                                    item.secondHalf ===
+                                    LeaveRequestType.APPLY_LEAVE
+                                      ? LeaveRequestType.LEAVE
                                       : item.secondHalf;
 
-                                  if (first === second && first !== "Office") {
-                                    return "Full Day";
+                                  if (
+                                    first === second &&
+                                    first !== WorkLocation.OFFICE
+                                  ) {
+                                    return HalfDayType.FULL_DAY;
                                   }
 
                                   // Filter out Office
                                   const parts = [];
-                                  if (first && first !== "Office")
+                                  if (first && first !== WorkLocation.OFFICE)
                                     parts.push(`First Half = ${first}`);
-                                  if (second && second !== "Office")
+                                  if (second && second !== WorkLocation.OFFICE)
                                     parts.push(`Second Half = ${second}`);
 
                                   if (parts.length > 0)
                                     return parts.join(" & ");
-                                  return "Full Day";
+                                  return HalfDayType.FULL_DAY;
                                 }
-                                return "Full Day";
+                                return HalfDayType.FULL_DAY;
                               })()}
                             </span>
                           </td>
@@ -2105,12 +2166,17 @@ const AdminLeaveManagement = () => {
                           </td>
                           <td className="py-4 px-4 text-center whitespace-nowrap">
                             <span className="text-sm font-bold text-[#2B3674]">
-                              {dayjs(item.fromDate).format("DD MMM")} - {dayjs(item.toDate).format("DD MMM - YYYY")}, TOTAL:{" "}
+                              {dayjs(item.fromDate).format("DD MMM")} -{" "}
+                              {dayjs(item.toDate).format("DD MMM - YYYY")},
+                              TOTAL:{" "}
                               {item.duration ||
-                                (item.requestType === "Client Visit" ||
-                                item.requestType === "Work From Home" ||
-                                item.requestType === "Apply Leave" ||
-                                item.requestType === "Leave"
+                                (item.requestType ===
+                                  WorkLocation.CLIENT_VISIT ||
+                                item.requestType ===
+                                  WorkLocation.WORK_FROM_HOME ||
+                                item.requestType ===
+                                  LeaveRequestType.APPLY_LEAVE ||
+                                item.requestType === LeaveRequestType.LEAVE
                                   ? calculateDurationExcludingWeekends(
                                       item.fromDate,
                                       item.toDate,
@@ -2131,46 +2197,53 @@ const AdminLeaveManagement = () => {
                                 ? dayjs(item.created_at).format("DD MMM - YYYY")
                                 : "-"}
                           </td>
-                          <td className={`py-4 px-4 text-center sticky right-[120px] w-[160px] min-w-[160px] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}>
+                          <td
+                            className={`py-4 px-4 text-center sticky right-[120px] w-[160px] min-w-[160px] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}
+                          >
                             <span
                               className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all whitespace-nowrap
                             ${
-                              item.status === "Approved" ||
-                              item.status === "Cancellation Approved" ||
-                              item.status === "Modification Approved"
+                              item.status === LeaveRequestStatus.APPROVED ||
+                              item.status ===
+                                LeaveRequestStatus.CANCELLATION_APPROVED ||
+                              item.status ===
+                                LeaveRequestStatus.MODIFICATION_APPROVED
                                 ? "bg-green-50 text-green-600 border-green-200"
-                                : item.status === "Pending" ||
-                                  item.status === "Cancellation Reverted"
+                                : item.status === LeaveRequestStatus.PENDING
                                   ? "bg-yellow-50 text-yellow-600 border-yellow-200"
-                                  : item.status === "Cancelled"
+                                  : item.status === LeaveRequestStatus.CANCELLED
                                     ? "bg-red-50 text-red-600 border-red-200"
                                     : item.status ===
-                                          "Requesting for Modification" ||
-                                        item.status === "Modification Cancelled"
+                                          LeaveRequestStatus.REQUESTING_FOR_MODIFICATION ||
+                                        item.status ===
+                                          LeaveRequestStatus.MODIFICATION_CANCELLED
                                       ? "bg-orange-100 text-orange-600 border-orange-200"
                                       : item.status ===
-                                          "Requesting for Cancellation"
+                                          LeaveRequestStatus.REQUESTING_FOR_CANCELLATION
                                         ? "bg-orange-100 text-orange-600 border-orange-200"
-                                        : item.status === "Request Modified"
+                                        : item.status ===
+                                            LeaveRequestStatus.REQUEST_MODIFIED
                                           ? "bg-orange-100 text-orange-600 border-orange-200"
                                           : "bg-red-50 text-red-600 border-red-200"
                             }
                           `}
                             >
-                              {(item.status === "Pending" ||
+                              {(item.status === LeaveRequestStatus.PENDING ||
                                 item.status ===
-                                  "Requesting for Modification") && (
+                                  LeaveRequestStatus.REQUESTING_FOR_MODIFICATION) && (
                                 <RotateCcw
                                   size={12}
                                   className="animate-spin-slow"
                                 />
                               )}
                               {item.status}
-                              {item.status === "Request Modified" &&
+                              {item.status ===
+                                LeaveRequestStatus.REQUEST_MODIFIED &&
                                 item.requestModifiedFrom && (
                                   <span className="opacity-70 border-l border-orange-300 pl-1.5 ml-1 text-[9px] font-bold">
                                     (TO{" "}
-                                    {item.requestModifiedFrom === "Apply Leave"
+                                    {item.requestModifiedFrom ===
+                                    LeaveRequestType.APPLY_LEAVE
                                       ? "LEAVE"
                                       : item.requestModifiedFrom.toUpperCase()}
                                     )
@@ -2178,7 +2251,9 @@ const AdminLeaveManagement = () => {
                                 )}
                             </span>
                           </td>
-                          <td className={`py-4 px-4 sticky right-0 w-[120px] min-w-[120px] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}>
+                          <td
+                            className={`py-4 px-4 sticky right-0 w-[120px] min-w-[120px] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}
+                          >
                             <div className="flex items-center justify-center gap-3">
                               <button
                                 onClick={() => handleViewApplication(item)}
@@ -2187,10 +2262,11 @@ const AdminLeaveManagement = () => {
                               >
                                 <Eye size={18} />
                               </button>
-                              {(item.status === "Pending" ||
-                                item.status === "Approved") &&
+                              {(item.status === LeaveRequestStatus.PENDING ||
+                                item.status === LeaveRequestStatus.APPROVED) &&
                                 renderCancelButton(item)}
-                              {item.status === "Requesting for Modification" && (
+                              {item.status ===
+                                "Requesting for Modification" && (
                                 <button
                                   onClick={() => handleUndoModification(item)}
                                   className="p-2 text-orange-600 bg-orange-50/50 hover:bg-orange-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-orange-200 active:scale-90"
@@ -2288,9 +2364,9 @@ const AdminLeaveManagement = () => {
             </div>
             <div className="flex items-center justify-between w-full mt-1">
               <h2 className="text-2xl md:text-3xl font-black text-[#2B3674]">
-                {selectedLeaveType === "Apply Leave"
-                  ? "Leave"
-                  : selectedLeaveType === "Half Day"
+                {selectedLeaveType === LeaveRequestType.APPLY_LEAVE
+                  ? LeaveRequestType.LEAVE
+                  : selectedLeaveType === LeaveRequestType.HALF_DAY
                     ? "Half Day Leave"
                     : selectedLeaveType}
               </h2>
@@ -2330,11 +2406,11 @@ const AdminLeaveManagement = () => {
 
             {/* Duration Type & Split-Day Selection */}
             {!isViewMode &&
-              (selectedLeaveType === "Apply Leave" ||
-                selectedLeaveType === "Leave" ||
-                selectedLeaveType === "Work From Home" ||
-                selectedLeaveType === "Client Visit" ||
-                selectedLeaveType === "Half Day") && (
+              (selectedLeaveType === LeaveRequestType.APPLY_LEAVE ||
+                selectedLeaveType === LeaveRequestType.LEAVE ||
+                selectedLeaveType === WorkLocation.WORK_FROM_HOME ||
+                selectedLeaveType === WorkLocation.CLIENT_VISIT ||
+                selectedLeaveType === LeaveRequestType.HALF_DAY) && (
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-[#2B3674] ml-1">
@@ -2345,11 +2421,14 @@ const AdminLeaveManagement = () => {
                       onChange={(val) => {
                         setLeaveDurationType(val);
                         const isHalf =
-                          val === "First Half" ||
-                          val === "Second Half" ||
-                          val === "Half Day";
+                          val === HalfDayType.FIRST_HALF ||
+                          val === HalfDayType.SECOND_HALF ||
+                          val === HalfDayType.HALF_DAY;
                         setIsHalfDay(isHalf);
-                        if (val === "First Half" || val === "Second Half") {
+                        if (
+                          val === HalfDayType.FIRST_HALF ||
+                          val === HalfDayType.SECOND_HALF
+                        ) {
                           setHalfDayType(val);
                         } else {
                           setHalfDayType(null);
@@ -2365,20 +2444,22 @@ const AdminLeaveManagement = () => {
                       }}
                       suffixIcon={<ChevronDown className="text-[#4318FF]" />}
                     >
-                      <Select.Option value="Full Day">Full Day</Select.Option>
-                      <Select.Option value="First Half">
+                      <Select.Option value={HalfDayType.FULL_DAY}>
+                        Full Day
+                      </Select.Option>
+                      <Select.Option value={HalfDayType.FIRST_HALF}>
                         First Half
                       </Select.Option>
-                      <Select.Option value="Second Half">
+                      <Select.Option value={HalfDayType.SECOND_HALF}>
                         Second Half
                       </Select.Option>
                     </Select>
                   </div>
 
                   {/* Other Half Activity (Shown if not Full Day) */}
-                  {(leaveDurationType === "First Half" ||
-                    leaveDurationType === "Second Half" ||
-                    leaveDurationType === "Half Day") && (
+                  {(leaveDurationType === HalfDayType.FIRST_HALF ||
+                    leaveDurationType === HalfDayType.SECOND_HALF ||
+                    leaveDurationType === HalfDayType.HALF_DAY) && (
                     <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
                       <label className="text-sm font-bold text-[#2B3674] ml-1">
                         Other Half Activity
@@ -2396,22 +2477,28 @@ const AdminLeaveManagement = () => {
                         }}
                         suffixIcon={<ChevronDown className="text-[#4318FF]" />}
                       >
-                        <Select.Option value="Office">Office</Select.Option>
-                        {selectedLeaveType !== "Work From Home" && (
-                          <Select.Option value="Work From Home">
+                        <Select.Option value={WorkLocation.OFFICE}>
+                          Office
+                        </Select.Option>
+                        {selectedLeaveType !== WorkLocation.WORK_FROM_HOME && (
+                          <Select.Option value={WorkLocation.WORK_FROM_HOME}>
                             Work From Home
                           </Select.Option>
                         )}
-                        {selectedLeaveType !== "Client Visit" && (
-                          <Select.Option value="Client Visit">
+                        {selectedLeaveType !== WorkLocation.CLIENT_VISIT && (
+                          <Select.Option value={WorkLocation.CLIENT_VISIT}>
                             Client Visit
                           </Select.Option>
                         )}
                         {!(
-                          selectedLeaveType === "Apply Leave" ||
-                          selectedLeaveType === "Leave" ||
-                          selectedLeaveType === "Half Day"
-                        ) && <Select.Option value="Leave">Leave</Select.Option>}
+                          selectedLeaveType === LeaveRequestType.APPLY_LEAVE ||
+                          selectedLeaveType === LeaveRequestType.LEAVE ||
+                          selectedLeaveType === LeaveRequestType.HALF_DAY
+                        ) && (
+                          <Select.Option value={LeaveRequestType.LEAVE}>
+                            Leave
+                          </Select.Option>
+                        )}
                       </Select>
                     </div>
                   )}
@@ -2555,38 +2642,39 @@ const AdminLeaveManagement = () => {
                 <span className="bg-white px-4 py-1 rounded-lg shadow-sm border border-blue-100">
                   {formData.startDate && formData.endDate
                     ? (() => {
-                        if (isViewMode) return `${parseFloat(String(formData.duration))} Day(s)`;
+                        if (isViewMode)
+                          return `${parseFloat(String(formData.duration))} Day(s)`;
 
                         // For Client Visit, WFH, and Leave, exclude weekends and holidays from duration display
                         if (
-                          selectedLeaveType === "Client Visit" ||
-                          selectedLeaveType === "Work From Home" ||
-                          selectedLeaveType === "Apply Leave" ||
-                          selectedLeaveType === "Leave" ||
-                          selectedLeaveType === "Half Day"
+                          selectedLeaveType === WorkLocation.CLIENT_VISIT ||
+                          selectedLeaveType === WorkLocation.WORK_FROM_HOME ||
+                          selectedLeaveType === LeaveRequestType.APPLY_LEAVE ||
+                          selectedLeaveType === LeaveRequestType.LEAVE ||
+                          selectedLeaveType === LeaveRequestType.HALF_DAY
                         ) {
                           const baseDur = calculateDurationExcludingWeekends(
                             formData.startDate,
                             formData.endDate,
                           );
                           const isHalf =
-                            leaveDurationType === "Half Day" ||
-                            leaveDurationType === "First Half" ||
-                            leaveDurationType === "Second Half";
+                            leaveDurationType === HalfDayType.HALF_DAY ||
+                            leaveDurationType === HalfDayType.FIRST_HALF ||
+                            leaveDurationType === HalfDayType.SECOND_HALF;
 
                           if (isHalf) {
                             const mainType =
-                              selectedLeaveType === "Apply Leave"
-                                ? "Leave"
+                              selectedLeaveType === LeaveRequestType.APPLY_LEAVE
+                                ? LeaveRequestType.LEAVE
                                 : selectedLeaveType;
                             const other = otherHalfType;
 
                             const isMainRemote =
-                              mainType === "Work From Home" ||
-                              mainType === "Client Visit";
+                              mainType === WorkLocation.WORK_FROM_HOME ||
+                              mainType === WorkLocation.CLIENT_VISIT;
                             const isOtherRemote =
-                              other === "Work From Home" ||
-                              other === "Client Visit";
+                              other === WorkLocation.WORK_FROM_HOME ||
+                              other === WorkLocation.CLIENT_VISIT;
 
                             // User Requirement: WFH + CV = 1 Day
                             if (isMainRemote && isOtherRemote) {
@@ -3173,10 +3261,19 @@ const AdminLeaveManagement = () => {
                 className="w-full h-[48px]"
                 size="large"
                 options={[
-                  { label: "Office", value: "Office" },
-                  { label: "Leave", value: "Leave" },
-                  { label: "Work From Home", value: "Work From Home" },
-                  { label: "Client Visit", value: "Client Visit" },
+                  { label: WorkLocation.OFFICE, value: WorkLocation.OFFICE },
+                  {
+                    label: LeaveRequestType.LEAVE,
+                    value: LeaveRequestType.LEAVE,
+                  },
+                  {
+                    label: WorkLocation.WORK_FROM_HOME,
+                    value: WorkLocation.WORK_FROM_HOME,
+                  },
+                  {
+                    label: WorkLocation.CLIENT_VISIT,
+                    value: WorkLocation.CLIENT_VISIT,
+                  },
                 ]}
               />
             </div>
@@ -3193,10 +3290,19 @@ const AdminLeaveManagement = () => {
                 className="w-full h-[48px]"
                 size="large"
                 options={[
-                  { label: "Office", value: "Office" },
-                  { label: "Leave", value: "Leave" },
-                  { label: "Work From Home", value: "Work From Home" },
-                  { label: "Client Visit", value: "Client Visit" },
+                  { label: WorkLocation.OFFICE, value: WorkLocation.OFFICE },
+                  {
+                    label: LeaveRequestType.LEAVE,
+                    value: LeaveRequestType.LEAVE,
+                  },
+                  {
+                    label: WorkLocation.WORK_FROM_HOME,
+                    value: WorkLocation.WORK_FROM_HOME,
+                  },
+                  {
+                    label: WorkLocation.CLIENT_VISIT,
+                    value: WorkLocation.CLIENT_VISIT,
+                  },
                 ]}
               />
             </div>
@@ -3239,8 +3345,11 @@ const AdminLeaveManagement = () => {
         centered
         width={400}
         styles={{
-          mask: { backdropFilter: "blur(4px)", backgroundColor: "rgba(43, 54, 116, 0.4)" },
-          body: { padding: 0, borderRadius: "24px" }
+          mask: {
+            backdropFilter: "blur(4px)",
+            backgroundColor: "rgba(43, 54, 116, 0.4)",
+          },
+          body: { padding: 0, borderRadius: "24px" },
         }}
         closeIcon={null}
       >
@@ -3248,10 +3357,13 @@ const AdminLeaveManagement = () => {
           <div className="mx-auto w-16 h-16 rounded-full bg-orange-50 flex items-center justify-center mb-6">
             <RotateCcw size={32} className="text-orange-500" />
           </div>
-          
-          <h3 className="text-2xl font-black text-[#2B3674] mb-2">Undo Modification?</h3>
+
+          <h3 className="text-2xl font-black text-[#2B3674] mb-2">
+            Undo Modification?
+          </h3>
           <p className="text-gray-500 font-medium leading-relaxed mb-8">
-            Are you sure you want to revert this modification request? This will restore the original request status and cancel the modification.
+            Are you sure you want to revert this modification request? This will
+            restore the original request status and cancel the modification.
           </p>
 
           <div className="flex gap-3">

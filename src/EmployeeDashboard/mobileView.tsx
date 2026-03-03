@@ -1,5 +1,6 @@
 import { Calendar, Clock } from "lucide-react";
 import { TimesheetEntry } from "../types";
+import { AttendanceStatus } from "src/enums";
 
 interface MobileTimesheetCardProps {
   day: TimesheetEntry;
@@ -131,17 +132,17 @@ export const MobileTimesheetCard = ({
           <span
             className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider
                         ${
-                          day.status === "Full Day"
+                          day.status === AttendanceStatus.FULL_DAY
                             ? "bg-[#01B574] text-white"
                             : day.status === "WFH"
                               ? "bg-[#A3AED0] text-white"
-                              : day.status === "Leave"
+                              : day.status === AttendanceStatus.LEAVE
                                 ? "bg-[#EE5D50] text-white"
-                                : day.status === "Half Day"
+                                : day.status === AttendanceStatus.HALF_DAY
                                   ? "bg-[#FFB547] text-white"
                                   : day.status === "Client Visit"
                                     ? "bg-[#6366F1] text-white"
-                                    : day.status === "Pending" ||
+                                    : day.status === AttendanceStatus.PENDING ||
                                         (!day.isFuture &&
                                           day.loginTime &&
                                           !day.logoutTime)

@@ -20,10 +20,10 @@ import {
   ArrowLeft,
   ChevronLeft,
 } from "lucide-react";
+import { AttendanceStatus , UserStatus} from "../enums";
 import {
   fetchAllEmployeesMonthlyAttendance,
   fetchMonthlyAttendance,
-  AttendanceStatus,
   downloadAttendancePdfReport,
 } from "../reducers/employeeAttendance.reducer";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";

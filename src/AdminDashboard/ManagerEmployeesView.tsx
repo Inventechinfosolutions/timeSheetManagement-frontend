@@ -44,7 +44,7 @@ const ManagerEmployeesView: React.FC = () => {
           page: teamPage,
           limit: itemsPerPage,
           search: debouncedSearch,
-          status: "ACTIVE",
+          status: UserStatus.ACTIVE,
         }),
       );
     }
@@ -77,9 +77,9 @@ const ManagerEmployeesView: React.FC = () => {
         {/* Stats Card */}
         <div className="bg-white rounded-[24px] p-6 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] flex items-center gap-4 max-w-sm">
           <div className="w-12 h-12 bg-[#4318FF]/10 rounded-xl flex items-center justify-center text-[#4318FF]">
-            <metric-icon>
+            <div className="metric-icon">
               <Users size={24} />
-            </metric-icon>
+            </div>
           </div>
           <div>
             <p className="text-sm text-[#A3AED0] font-medium">Total Managed</p>
@@ -168,9 +168,9 @@ const ManagerEmployeesView: React.FC = () => {
                         <td className="py-4 pl-4 pr-10 text-center">
                           <span
                             className={`inline-flex px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider border ${
-                              m.status === "ACTIVE"
+                              m.status === UserStatus.ACTIVE
                                 ? "bg-green-50 text-green-500 border-green-100"
-                                : m.status === "INACTIVE"
+                                : m.status === UserStatus.INACTIVE
                                   ? "bg-red-50 text-red-500 border-red-100"
                                   : "bg-gray-50 text-gray-500 border-gray-100"
                             }`}

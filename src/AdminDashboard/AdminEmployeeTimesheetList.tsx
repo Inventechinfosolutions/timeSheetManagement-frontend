@@ -23,6 +23,7 @@ import {
 import EmployeeTimeSheetMobileCard from "./EmployeeTimeSheetMobileCard";
 import Toast from "../components/Toast";
 import { fetchDepartments } from "../reducers/masterDepartment.reducer";
+import { MonthStatus } from "../enums";
 
 const AdminEmployeeTimesheetList = () => {
   const navigate = useNavigate();
@@ -92,7 +93,7 @@ const AdminEmployeeTimesheetList = () => {
     (state: RootState) => state.masterDepartments,
   );
 
-  const statuses = ["All Status", "Submitted", "Pending"];
+  const statuses = ["All Status", MonthStatus.SUBMITTED, MonthStatus.PENDING];
 
   const dispatch = useAppDispatch();
   const { entities, totalItems } = useAppSelector(
@@ -194,8 +195,11 @@ const AdminEmployeeTimesheetList = () => {
       department: emp.department,
       status:
         emp.monthStatus ||
+        emp.month_status ||
+        emp.status ||
         employeeMonthlyStats[empId]?.monthStatus ||
-        "Pending",
+        (employeeMonthlyStats[empId] as any)?.month_status ||
+        MonthStatus.PENDING,
     };
   });
 
@@ -498,12 +502,12 @@ const AdminEmployeeTimesheetList = () => {
                     <td className="py-4 px-4 text-center">
                       <span
                         className={`inline-flex px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider border ${
-                          emp.status === "Submitted"
+                          (emp.status || "").toLowerCase() === "submitted"
                             ? "bg-green-50 text-green-500 border-green-100"
                             : "bg-amber-50 text-amber-500 border-amber-100"
                         }`}
                       >
-                        {emp.status === "Submitted" ? "Submitted" : "Pending"}
+                        {emp.status}
                       </span>
                     </td>
                     <td className="py-4 pl-4 pr-10 text-center">
