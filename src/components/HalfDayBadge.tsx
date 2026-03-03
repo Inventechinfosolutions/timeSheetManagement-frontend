@@ -1,8 +1,8 @@
-import React from 'react';
+import { WorkLocation, AttendanceStatus } from '../enums';
 
 interface HalfDayBadgeProps {
-  firstHalf: string | null | undefined;
-  secondHalf: string | null | undefined;
+  firstHalf: string | WorkLocation | null | undefined;
+  secondHalf: string | WorkLocation | null | undefined;
   className?: string;
 }
 
@@ -11,13 +11,13 @@ export const HalfDayBadge: React.FC<HalfDayBadgeProps> = ({
   secondHalf, 
   className = '' 
 }) => {
-  const normalize = (val: string | null | undefined): string | null => {
+  const normalize = (val: string | WorkLocation | null | undefined): string | null => {
     if (!val) return null;
     const lower = val.toLowerCase();
-    if (lower.includes('wfh') || lower.includes('work from home')) return 'WFH';
+    if (lower.includes(WorkLocation.WFH.toLowerCase()) || lower.includes(WorkLocation.WORK_FROM_HOME.toLowerCase())) return 'WFH';
     if (lower.includes('client') || lower.includes('visit')) return 'CV';
-    if (lower.includes('leave')) return 'Leave';
-    if (lower.includes('office')) return 'Office';
+    if (lower.includes(AttendanceStatus.LEAVE.toLowerCase())) return AttendanceStatus.LEAVE;
+    if (lower.includes(WorkLocation.OFFICE.toLowerCase())) return WorkLocation.OFFICE;
     return val;
   };
 

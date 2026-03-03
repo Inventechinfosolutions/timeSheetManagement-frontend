@@ -20,12 +20,13 @@ import {
 } from "../reducers/employeeAttendance.reducer";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import { fetchBlockers } from "../reducers/timesheetBlocker.reducer";
+import { AttendanceStatus, UserType } from "../enums";
 import {
   generateMonthlyEntries,
   generateRangeEntries,
 } from "../utils/attendanceUtils";
 import { saveAs } from "file-saver";
-import { UserType } from "../reducers/user.reducer";
+// Reducer imports remaining
 
 interface MobileResponsiveCalendarPageProps {
   employeeId?: string;
@@ -50,7 +51,8 @@ const MobileResponsiveCalendarPage = ({
   const isAdmin = currentUser?.userType === UserType.ADMIN;
   const isManager =
     currentUser?.userType === UserType.MANAGER ||
-    (currentUser?.role && currentUser.role.toUpperCase().includes("MANAGER"));
+    (currentUser?.role &&
+      currentUser.role.toUpperCase().includes(UserType.MANAGER));
 
   // @ts-ignore
   const { holidays } = useAppSelector(
@@ -333,7 +335,8 @@ const MobileResponsiveCalendarPage = ({
               !isBlocked &&
               !holiday &&
               !entry?.isWeekend &&
-              (entry?.status === "Not Updated" || entry?.status === "Pending");
+              (entry?.status === AttendanceStatus.NOT_UPDATED ||
+                entry?.status === AttendanceStatus.PENDING);
 
             // Determine color class
             let colorClass = "bg-white text-gray-600 border border-gray-200"; // Default / Future / Pending
@@ -344,20 +347,23 @@ const MobileResponsiveCalendarPage = ({
             } else if (isBlocked) {
               colorClass =
                 "bg-gray-200 border border-gray-400 text-gray-500 font-bold";
-            } else if (entry?.status === "Full Day") {
+            } else if (entry?.status === AttendanceStatus.FULL_DAY) {
               colorClass =
                 "bg-green-100 border border-green-600 text-black font-bold";
-            } else if (entry?.status === "Half Day" || isPendingUpdate) {
+            } else if (
+              entry?.status === AttendanceStatus.HALF_DAY ||
+              isPendingUpdate
+            ) {
               // Both Half Day and Pending Update (visual only) can be Orange
               // BUT User wants Not Updated white/grey and Half Day Orange.
               // Re-read: "make hald day color orange same as not updated and nake not updated color same as upcong"
               // So Half Day = bg-orange-100 (matching old not updated)
               // And Not Updated = bg-white (matching current/upcoming)
               colorClass =
-                entry?.status === "Half Day"
+                entry?.status === AttendanceStatus.HALF_DAY
                   ? "bg-orange-100 border border-orange-600 text-black font-bold"
                   : "bg-white text-gray-600 border border-gray-200";
-            } else if (entry?.status === "Leave") {
+            } else if (entry?.status === AttendanceStatus.LEAVE) {
               colorClass =
                 "bg-red-200 border border-red-600 text-black font-bold";
             } else if (holiday) {
@@ -422,20 +428,23 @@ const MobileResponsiveCalendarPage = ({
           <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
             {[
               {
-                label: "Full Day",
+                label: AttendanceStatus.FULL_DAY,
                 className: "bg-green-100 border border-green-600",
               },
               {
                 label: "Half Day Leave",
                 className: "bg-orange-100 border border-orange-600",
               },
-              { label: "Leave", className: "bg-red-200 border border-red-600" },
+              {
+                label: AttendanceStatus.LEAVE,
+                className: "bg-red-200 border border-red-600",
+              },
               {
                 label: "Today",
                 className: "bg-white border-2 border-[#4318FF]",
               },
               {
-                label: "Holiday",
+                label: AttendanceStatus.HOLIDAY,
                 className: "bg-blue-100 border border-blue-500",
               },
               {

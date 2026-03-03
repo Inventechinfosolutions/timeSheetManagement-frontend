@@ -8,6 +8,7 @@ import {
   ClipboardList,
 } from "lucide-react";
 import { WorkTrendData } from "../reducers/employeeAttendance.reducer";
+import { LeaveRequestStatus } from "../enums";
 
 interface Props {
   year: number;
@@ -262,7 +263,7 @@ const AttendanceStatsCards = ({
       const d = new Date(r.workingDate);
       return d.getFullYear() === year && d.getMonth() + 1 === month;
     });
-    return recordsMonthly.filter((r) => r.status === "Pending").length;
+    return recordsMonthly.filter((r) => r.status === LeaveRequestStatus.PENDING).length;
   }, [month, year, attendanceRecords]);
 
   const calculatedMonthlyHours = useMemo(() => {

@@ -15,7 +15,7 @@ import ManagerLayout from "./navigation/ManagerLayout";
 import { mainComponentConfigs } from "./mainComponentConfigs";
 import EmployeeLayout from "./navigation/EmployeeLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
-import { UserType } from "./reducers/user.reducer";
+import { UserType } from "./enums";
 
 // Lazy load authentication components
 const EmployeeActivation = lazy(() => import("./Login/EmployeeActivation"));

@@ -37,7 +37,7 @@ import {
 } from "lucide-react";
 import EmployeeListMobileCard from "./EmployeeListMobileCard";
 import Toast from "../components/Toast";
-import { EmploymentType } from "../types";
+import { UserType, EmploymentType , UserStatus} from "../enums";
 
 const EmployeeListView = () => {
   const navigate = useNavigate();
@@ -193,6 +193,7 @@ const EmployeeListView = () => {
     createdAt: emp.createdAt,
     lastLoggedIn: emp.lastLoggedIn,
     isActive: emp.userStatus !== "INACTIVE",
+    isAdmin: emp.userType === UserType.ADMIN, // Or similar logic. Actually, we have `isAdmin` in the component scope. Let me just set it to false for now, it's just a UI model.
   }));
 
   const currentItems = employees.filter((emp) => {

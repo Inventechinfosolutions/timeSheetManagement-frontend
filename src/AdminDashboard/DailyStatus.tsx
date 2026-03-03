@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import {
   fetchAllEmployeesMonthlyAttendance,
-  AttendanceStatus,
   downloadAttendancePdfReport,
 } from "../reducers/employeeAttendance.reducer";
 import { saveAs } from "file-saver";
@@ -25,6 +24,7 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import DailyStatusMobileCard from "./DailyStatusMobileCard";
 import { fetchDepartments } from "../reducers/masterDepartment.reducer";
+import { AttendanceStatus } from "../enums";
 
 const DailyStatus = () => {
   const navigate = useNavigate();

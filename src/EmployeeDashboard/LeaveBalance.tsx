@@ -1,10 +1,16 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useAppSelector, useAppDispatch } from "../hooks";
+import { useLocation } from "react-router-dom";
 import {
   getLeaveBalance,
   getLeaveStats,
   getAllLeaveRequests,
 } from "../reducers/leaveRequest.reducer";
+import {
+  LeaveRequestStatus,
+  AttendanceStatus,
+  LeaveRequestType,
+} from "../enums";
 import { Calendar, CheckCircle, Clock, TrendingUp, Ban } from "lucide-react";
 import { Select } from "antd";
 import { ChevronDown } from "lucide-react";
@@ -27,15 +33,27 @@ const LeaveBalance = () => {
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [balanceLoading, setBalanceLoading] = useState(false);
 
-  const employeeId = useMemo(
-    () =>
-      currentUser?.loginId ||
+  const location = useLocation();
+  const isMyRoute =
+    location.pathname.includes("/employee-dashboard") ||
+    location.pathname.includes("/manager-dashboard/leave-balance") ||
+    location.pathname.includes("/admin-dashboard/leave-balance") ||
+    location.pathname.includes("my-dashboard") ||
+    location.pathname.includes("my-timesheet");
+
+  const employeeId = useMemo(() => {
+    if (isMyRoute) {
+      return currentUser?.employeeId || currentUser?.loginId || "";
+    }
+    return (
       entity?.employeeId ||
       entity?.id ||
+      currentUser?.employeeId ||
+      currentUser?.loginId ||
       localStorage.getItem("userLoginId") ||
-      "",
-    [currentUser?.loginId, entity?.employeeId, entity?.id],
-  );
+      ""
+    );
+  }, [currentUser, entity, isMyRoute]);
 
   // Prefer backend balance API; fallback to stats + designation
   useEffect(() => {
@@ -93,8 +111,9 @@ const LeaveBalance = () => {
 
     const approvedLeaves = entities.filter(
       (e: any) =>
-        (e.requestType === "Apply Leave" || e.requestType === "Leave") &&
-        e.status === "Approved",
+        (e.requestType === LeaveRequestType.APPLY_LEAVE ||
+          e.requestType === AttendanceStatus.LEAVE) &&
+        e.status === LeaveRequestStatus.APPROVED,
     );
 
     if (!isIntern) {
@@ -142,8 +161,10 @@ const LeaveBalance = () => {
     return entities
       .filter(
         (e: any) =>
-          (e.requestType === "Apply Leave" || e.requestType === "Leave") &&
-          (e.status === "Pending" || e.status === "pending"),
+          (e.requestType === LeaveRequestType.APPLY_LEAVE ||
+            e.requestType === AttendanceStatus.LEAVE) &&
+          (e.status === LeaveRequestStatus.PENDING ||
+            e.status === LeaveRequestStatus.PENDING),
       )
       .reduce((acc, e) => acc + (Number(e.duration) || 0), 0);
   }, [entities]);

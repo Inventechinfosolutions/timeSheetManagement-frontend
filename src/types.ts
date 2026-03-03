@@ -1,12 +1,4 @@
-export enum EmploymentType {
-    FULL_TIMER = 'FULL_TIMER',
-    INTERN = 'INTERN',
-}
-
-export enum Gender {
-    MALE = 'MALE',
-    FEMALE = 'FEMALE',
-}
+import { AttendanceStatus, WorkLocation, EmploymentType, Gender } from './enums';
 
 export interface TimesheetEntry {
     loginTime: any;
@@ -21,13 +13,13 @@ export interface TimesheetEntry {
     isFuture: boolean;
 
     // Editable Fields
-    status: 'Full Day' | 'Half Day' | 'WFH' | 'Client Visit' | 'Pending' | 'Leave' | 'Absent' | 'Not Updated' | 'Holiday' | 'Weekend' |'Blocked' | undefined;
+    status: AttendanceStatus | undefined;
     attendanceType?: 'login' | 'logout' | null;
     isEditing: boolean;
     isSaved: boolean;
     totalHours?: number | null;
-    workLocation?: string;
+    workLocation?: WorkLocation | string;
     sourceRequestId?: number; // Track auto-generated records
-    firstHalf?: string | null;
-    secondHalf?: string | null;
+    firstHalf?: string | WorkLocation | null;
+    secondHalf?: string | WorkLocation | null;
 }

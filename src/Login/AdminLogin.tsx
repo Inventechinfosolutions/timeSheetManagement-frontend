@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { User, Lock, Eye, EyeOff } from "lucide-react";
-import { loginUser, clearError, UserType } from "../reducers/user.reducer";
+import { loginUser, clearError } from "../reducers/user.reducer";
+import { UserType } from "../enums";
 import type { AppDispatch, RootState } from "../store";
 
 const AdminLogin = () => {
@@ -24,7 +25,7 @@ const AdminLogin = () => {
     if (isAuthenticated && currentUser) {
       if (
         currentUser.userType === UserType.MANAGER ||
-        (currentUser.role && currentUser.role.toUpperCase().includes("MANAGER"))
+        (currentUser.role && currentUser.role.toUpperCase().includes(UserType.MANAGER))
       ) {
         navigate("/manager-dashboard");
       } else {
