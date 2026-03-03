@@ -10,6 +10,7 @@ import {
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { RootState } from "../store";
 import { getAllManagerMappings } from "../reducers/managerMapping.reducer";
+import { UserStatus } from "../enums";
 
 const ManagerEmployeesView: React.FC = () => {
   const { managerId } = useParams<{ managerId: string }>();
