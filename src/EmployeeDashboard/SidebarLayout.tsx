@@ -13,6 +13,7 @@ import {
 import { useAppSelector, useAppDispatch } from "../hooks";
 import { useParams, useNavigate } from "react-router-dom";
 import { logoutUser } from "../reducers/user.reducer";
+import { UserType } from "../enums";
 
 interface SidebarLayoutProps {
   children: React.ReactNode;
@@ -144,7 +145,7 @@ const SidebarLayout = ({
             <AlarmClock className="w-6 h-6 text-white" />
           </div>
           <span className="text-xl font-bold text-white tracking-tight">
-            {currentUser?.userType === "ADMIN" ? "Admin" : currentUser?.userType === "MANAGER" ? "Manager" : "Employee"}
+            {currentUser?.userType === UserType.ADMIN ? "Admin" : currentUser?.userType === UserType.MANAGER ? "Manager" : "Employee"}
           </span>
         </div>
         {/* Branding & Lock Toggle - Desktop Only */}
@@ -176,7 +177,7 @@ const SidebarLayout = ({
                 {entity?.employeeId || "EMP001"}
               </span>
               <span className="text-[10px] font-medium text-blue-100 uppercase tracking-widest whitespace-nowrap">
-                {currentUser?.userType === "ADMIN" ? "Admin" : currentUser?.userType === "MANAGER" ? "Manager" : "Employee"}
+                {currentUser?.userType === UserType.ADMIN ? "Admin" : currentUser?.userType === UserType.MANAGER ? "Manager" : "Employee"}
               </span>
             </div>
           </div>

@@ -21,10 +21,10 @@ import {
   AlertCircle,
   Calendar,
 } from "lucide-react";
-import { resetPassword } from "../reducers/employeeDetails.reducer";
-import { EmploymentType } from "../types";
 import { getManagerMappingByEmployeeId } from "../reducers/managerMapping.reducer";
 import { fetchDepartments } from "../reducers/masterDepartment.reducer";
+import { resetPassword } from "../reducers/employeeDetails.reducer";
+import { UserType, EmploymentType } from "../enums";
 
 const EmployeeDetailsView = () => {
   const { employeeId } = useParams<{ employeeId: string }>();
@@ -612,9 +612,9 @@ const EmployeeDetailsView = () => {
                   className="w-full pl-11 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white text-[#1B2559] text-sm font-semibold transition-all appearance-none"
                 >
                   <option value="">Select Role</option>
-                  {/* <option value="ADMIN">Admin</option> */}
-                  <option value="MANAGER">Manager</option>
-                  <option value="EMPLOYEE">Employee</option>
+                  {/* <option value={UserType.ADMIN}>Admin</option> */}
+                  <option value={UserType.MANAGER}>Manager</option>
+                  <option value={UserType.EMPLOYEE}>Employee</option>
                 </select>
               ) : (
                 <input

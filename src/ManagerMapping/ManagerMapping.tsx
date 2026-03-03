@@ -16,6 +16,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { RootState } from "../store";
+import { UserType , UserStatus} from "../enums";
 import {
   getEntities,
   getEntitiesSelect,
@@ -46,7 +47,7 @@ interface ManagerMapping {
   employeeId: string;
   employeeName: string;
   department: string;
-  status: "ACTIVE" | "INACTIVE";
+  status: UserStatus.ACTIVE | "INACTIVE";
   createdDate: string;
 }
 
@@ -123,7 +124,7 @@ const ManagerMapping: React.FC = () => {
       dispatch(
         getEntitiesSelect({
           department: dept,
-          role: "EMPLOYEE",
+          role: UserType.EMPLOYEE,
           search: debouncedSearchText || undefined,
         }),
       );
@@ -200,7 +201,7 @@ const ManagerMapping: React.FC = () => {
     // Fetch employees for selected department to assign
     const dept =
       selectedDepartment === "All Departments" ? undefined : selectedDepartment;
-    dispatch(getEntitiesSelect({ department: dept, role: "EMPLOYEE" }));
+    dispatch(getEntitiesSelect({ department: dept, role: UserType.EMPLOYEE }));
   };
 
   const toggleEmployeeSelection = (employeeId: string) => {
@@ -233,7 +234,7 @@ const ManagerMapping: React.FC = () => {
           employeeId: employee.employeeId,
           employeeName: employee.fullName,
           department: selectedDepartment,
-          status: "ACTIVE",
+          status: UserStatus.ACTIVE,
         }),
       );
     }
@@ -784,7 +785,7 @@ const ManagerMapping: React.FC = () => {
                       <td className="py-4 px-4 text-center">
                         <span
                           className={`inline-flex px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider border ${
-                            mapping.status === "ACTIVE"
+                            mapping.status === UserStatus.ACTIVE
                               ? "bg-green-50 text-green-500 border-green-100"
                               : "bg-red-50 text-red-500 border-red-100"
                           }`}
@@ -799,14 +800,14 @@ const ManagerMapping: React.FC = () => {
                               `/admin-dashboard/manager-employees/${mapping.managerId}`,
                             )
                           }
-                          disabled={mapping.status === "INACTIVE"}
+                          disabled={mapping.status === UserStatus.INACTIVE}
                           className={`inline-flex items-center gap-2 bg-transparent border-none cursor-pointer text-[#4318FF] text-sm font-bold transition-all ${
-                            mapping.status === "INACTIVE"
+                            mapping.status === UserStatus.INACTIVE
                               ? "opacity-30 cursor-not-allowed"
                               : "hover:underline hover:scale-105 active:scale-95"
                           }`}
                           title={
-                            mapping.status === "INACTIVE"
+                            mapping.status === UserStatus.INACTIVE
                               ? "Cannot view inactive manager team"
                               : "View mapped employees"
                           }

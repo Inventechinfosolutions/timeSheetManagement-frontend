@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { Edit, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../hooks";
-import { UserType } from "../reducers/user.reducer";
+import { AttendanceStatus, UserType } from "../enums";
 import {
   fetchMonthlyAttendance,
   fetchDashboardStats,
@@ -241,12 +241,12 @@ const TodayAttendance = ({
 
       if (isMasterHoliday) {
         if (
-          day.status !== "Full Day" &&
-          day.status !== "Half Day" &&
-          day.status !== "WFH" &&
-          day.status !== "Client Visit"
+          day.status !== AttendanceStatus.FULL_DAY &&
+          day.status !== AttendanceStatus.HALF_DAY &&
+          day.status !== AttendanceStatus.WFH &&
+          day.status !== AttendanceStatus.CLIENT_VISIT
         ) {
-          return { ...day, status: "Holiday" };
+          return { ...day, status: AttendanceStatus.HOLIDAY };
         }
       }
       return day;
@@ -257,7 +257,7 @@ const TodayAttendance = ({
     todayStatsEntry ||
     ({
       fullDate: now,
-      status: "Pending",
+      status: AttendanceStatus.PENDING,
       isSaved: false,
       isToday: true,
     } as any);
@@ -305,7 +305,7 @@ const TodayAttendance = ({
       const isPrivilegedUser =
         currentUser?.userType === UserType.ADMIN ||
         currentUser?.userType === UserType.MANAGER ||
-        currentUser?.userType === UserType.TEAM_LEAD;
+        currentUser?.userType === UserType.TEAMLEAD;
 
       const isSelfView =
         !currentEmployeeId || currentEmployeeId === currentUser?.employeeId;

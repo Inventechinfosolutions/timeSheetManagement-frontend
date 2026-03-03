@@ -11,7 +11,12 @@ import {
 } from "lucide-react";
 import { TimesheetEntry } from "../types";
 import { useAppDispatch, useAppSelector } from "../hooks";
-import { UserType } from "../reducers/user.reducer";
+import {
+  AttendanceStatus,
+  UserType,
+  WorkLocation as OfficeLocation,
+  HalfDayType,
+} from "../enums";
 import {
   updateAttendanceRecord,
   submitBulkAttendance,
@@ -69,7 +74,8 @@ const MyTimesheet = ({
   const isAdmin = currentUser?.userType === UserType.ADMIN;
   const isManager = !!(
     currentUser?.userType === UserType.MANAGER ||
-    (currentUser?.role && currentUser.role.toUpperCase().includes("MANAGER"))
+    (currentUser?.role &&
+      currentUser.role.toUpperCase().includes(UserType.MANAGER))
   );
   const isMyRoute =
     location.pathname.includes("my-dashboard") ||
@@ -168,7 +174,7 @@ const MyTimesheet = ({
   const [isCheckingAutoUpdate, setIsCheckingAutoUpdate] = useState(false);
   const [autoUpdateTrigger, setAutoUpdateTrigger] = useState(0);
 
-  const refreshDryRun = () => setAutoUpdateTrigger(prev => prev + 1);
+  const refreshDryRun = () => setAutoUpdateTrigger((prev) => prev + 1);
 
   const today = useMemo(() => new Date(), []);
 
@@ -372,7 +378,15 @@ const MyTimesheet = ({
       setAutoUpdateCount(0);
       lastCheckRef.current = "";
     }
-  }, [dispatch, currentEmployeeId, now, isAdmin, today, records.length, autoUpdateTrigger]); // Use records.length instead of records to avoid deep equality issues
+  }, [
+    dispatch,
+    currentEmployeeId,
+    now,
+    isAdmin,
+    today,
+    records.length,
+    autoUpdateTrigger,
+  ]); // Use records.length instead of records to avoid deep equality issues
 
   // Fetch attendance and blockers when month/employee changes
   useEffect(() => {
@@ -651,9 +665,12 @@ const MyTimesheet = ({
       const isSaturday = entryDate.getDay() === 6;
 
       if (isSaturday && hours !== null && hours > 3) {
-        newStatus = "Full Day";
+        newStatus = AttendanceStatus.FULL_DAY;
       } else {
-        newStatus = (hours !== null && hours > 6) ? "Full Day" : "Half Day";
+        newStatus =
+          hours !== null && hours > 6
+            ? AttendanceStatus.FULL_DAY
+            : AttendanceStatus.HALF_DAY;
       }
     } else {
       // When hours are 0 or input is empty, ALWAYS recalculate status
@@ -677,11 +694,11 @@ const MyTimesheet = ({
 
       // 1. Explicit 0 means Absent, regardless of Holidays, Weekends, or Future
       if (val !== "" && Number(val) === 0) {
-        newStatus = "Absent";
+        newStatus = AttendanceStatus.ABSENT;
       } else if (holiday) {
-        newStatus = "Holiday";
+        newStatus = AttendanceStatus.HOLIDAY;
       } else if (isWeekend) {
-        newStatus = "Weekend";
+        newStatus = AttendanceStatus.WEEKEND;
       } else {
         // Workday logic
         const todayZero = new Date();
@@ -691,42 +708,50 @@ const MyTimesheet = ({
         entryDateZero.setHours(0, 0, 0, 0);
 
         if (entryDateZero > todayZero) {
-          newStatus = "UPCOMING";
+          newStatus = AttendanceStatus.UPCOMING;
         } else if (val === "") {
           // Empty input on past/today workday
-          newStatus = "Not Updated";
+          newStatus = AttendanceStatus.NOT_UPDATED;
         } else {
           // Fallback
-          newStatus = "Not Updated";
+          newStatus = AttendanceStatus.NOT_UPDATED;
         }
       }
     }
 
     const updated = [...localEntries];
-    
+
     // Auto-update splits for manual entry to reflect Office status immediately (UI Request)
     let fHalf = updated[entryIndex].firstHalf;
     let sHalf = updated[entryIndex].secondHalf;
-    
+
     const entryDate = new Date(localEntries[entryIndex].fullDate);
     const isSaturday = entryDate.getDay() === 6;
 
     if (isSaturday && hours !== null && hours > 3) {
-       // Force Office for Saturday > 3 hours
-       fHalf = 'Office';
-       sHalf = 'Office';
-    } else if (newStatus === "Full Day") {
-       const isWork = (v: any) => v && v !== 'Leave' && v !== 'Absent' && v !== 'Holiday';
-       if (!isWork(fHalf)) fHalf = 'Office';
-       if (!isWork(sHalf)) sHalf = 'Office';
-    } else if (newStatus === "Half Day") {
-       const isWork = (v: any) => v && v !== 'Leave' && v !== 'Absent' && v !== 'Holiday';
-       if (!isWork(fHalf) && !isWork(sHalf)) {
-           fHalf = 'Office';
-           sHalf = 'Leave';
-       } else if (isWork(fHalf) && isWork(sHalf)) {
-           sHalf = 'Leave'; // Default to afternoon leave if downgrading from Full Day
-       }
+      // Force Office for Saturday > 3 hours
+      fHalf = OfficeLocation.OFFICE;
+      sHalf = OfficeLocation.OFFICE;
+    } else if (newStatus === AttendanceStatus.FULL_DAY) {
+      const isWork = (v: any) =>
+        v &&
+        v !== AttendanceStatus.LEAVE &&
+        v !== AttendanceStatus.ABSENT &&
+        v !== AttendanceStatus.HOLIDAY;
+      if (!isWork(fHalf)) fHalf = OfficeLocation.OFFICE;
+      if (!isWork(sHalf)) sHalf = OfficeLocation.OFFICE;
+    } else if (newStatus === AttendanceStatus.HALF_DAY) {
+      const isWork = (v: any) =>
+        v &&
+        v !== AttendanceStatus.LEAVE &&
+        v !== AttendanceStatus.ABSENT &&
+        v !== AttendanceStatus.HOLIDAY;
+      if (!isWork(fHalf) && !isWork(sHalf)) {
+        fHalf = OfficeLocation.OFFICE;
+        sHalf = AttendanceStatus.LEAVE;
+      } else if (isWork(fHalf) && isWork(sHalf)) {
+        sHalf = AttendanceStatus.LEAVE; // Default to afternoon leave if downgrading from Full Day
+      }
     }
 
     updated[entryIndex] = {
@@ -734,15 +759,15 @@ const MyTimesheet = ({
       totalHours: hours,
       status: newStatus as any,
       firstHalf:
-        newStatus === "Absent"
-          ? "Absent"
-          : newStatus === "Not Updated"
+        newStatus === AttendanceStatus.ABSENT
+          ? AttendanceStatus.ABSENT
+          : newStatus === AttendanceStatus.NOT_UPDATED
             ? null
             : fHalf,
       secondHalf:
-        newStatus === "Absent"
-          ? "Absent"
-          : newStatus === "Not Updated"
+        newStatus === AttendanceStatus.ABSENT
+          ? AttendanceStatus.ABSENT
+          : newStatus === AttendanceStatus.NOT_UPDATED
             ? null
             : sHalf,
       workLocation: getBadgeLocation(newStatus, fHalf, sHalf),
@@ -776,7 +801,11 @@ const MyTimesheet = ({
       if (isDateBlocked(entry.fullDate)) return;
 
       // 2. Skip exclusions: Leave, Half Day
-      if (entry.status === "Leave" || entry.status === "Half Day") return;
+      if (
+        entry.status === AttendanceStatus.LEAVE ||
+        entry.status === AttendanceStatus.HALF_DAY
+      )
+        return;
 
       // 3. Skip Holidays
       if (isHoliday(entry.fullDate)) return;
@@ -790,7 +819,7 @@ const MyTimesheet = ({
         updatedEntries[idx] = {
           ...entry,
           totalHours: 9,
-          status: "Full Day",
+          status: AttendanceStatus.FULL_DAY,
         };
         newEditedIndices.add(idx);
 
@@ -827,7 +856,7 @@ const MyTimesheet = ({
     localEntries.forEach((entry, idx) => {
       if (isDateBlocked(entry.fullDate)) return;
 
-      const currentTotal = entry.totalHours; 
+      const currentTotal = entry.totalHours;
       const originalTotal = baseEntries[idx]?.totalHours;
 
       if (
@@ -859,27 +888,48 @@ const MyTimesheet = ({
 
         let derivedStatus: string;
 
-        // For Sunday: Default status to "Weekend" ONLY if no hours are present
-        if (dayOfWeek === 0 && (!currentTotal || currentTotal === 0) && entry.status !== "Absent") {
-          derivedStatus = "Weekend";
+        // For Sunday: Default status to AttendanceStatus.WEEKEND ONLY if no hours are present
+        if (
+          dayOfWeek === 0 &&
+          (!currentTotal || currentTotal === 0) &&
+          entry.status !== AttendanceStatus.ABSENT
+        ) {
+          derivedStatus = AttendanceStatus.WEEKEND;
         }
-        // For holidays: Always set status to "Holiday" ONLY if hours are NULL (cleared)
+        // For holidays: Always set status to AttendanceStatus.HOLIDAY ONLY if hours are NULL (cleared)
         else if (isHoliday && currentTotal === null) {
-          derivedStatus = "Holiday";
+          derivedStatus = AttendanceStatus.HOLIDAY;
         }
-        // For Saturday: Only set to "Weekend" if there's NO data (no hours AND no workLocation)
+        // For Saturday: Only set to AttendanceStatus.WEEKEND if there's NO data (no hours AND no workLocation)
         // If Saturday has data (Client Visit, WFH, etc.), keep that data
-        else if (dayOfWeek === 6 && (!currentTotal || currentTotal === 0) && !entry.workLocation) {
-          derivedStatus = "Weekend";
+        else if (
+          dayOfWeek === 6 &&
+          (!currentTotal || currentTotal === 0) &&
+          !entry.workLocation
+        ) {
+          derivedStatus = AttendanceStatus.WEEKEND;
         }
         // For other days or for holiday/saturday WITH hours: Calculate status based on hours
         else {
-          if (dayOfWeek === 6 && currentTotal !== null && currentTotal !== undefined && currentTotal > 3) {
-             derivedStatus = "Full Day";
-          } else if (currentTotal !== null && currentTotal !== undefined && currentTotal > 6) {
-             derivedStatus = "Full Day";
-          } else if (currentTotal !== null && currentTotal !== undefined && currentTotal > 0) {
-            derivedStatus = "Half Day";
+          if (
+            dayOfWeek === 6 &&
+            currentTotal !== null &&
+            currentTotal !== undefined &&
+            currentTotal > 3
+          ) {
+            derivedStatus = AttendanceStatus.FULL_DAY;
+          } else if (
+            currentTotal !== null &&
+            currentTotal !== undefined &&
+            currentTotal > 6
+          ) {
+            derivedStatus = AttendanceStatus.FULL_DAY;
+          } else if (
+            currentTotal !== null &&
+            currentTotal !== undefined &&
+            currentTotal > 0
+          ) {
+            derivedStatus = AttendanceStatus.HALF_DAY;
           } else {
             // 0 hours on a weekday: Determine if Absent, Upcoming, or Not Updated
             const todayZero = new Date();
@@ -888,11 +938,14 @@ const MyTimesheet = ({
             entryDateZero.setHours(0, 0, 0, 0);
 
             if (entryDateZero > todayZero) {
-              derivedStatus = "UPCOMING";
+              derivedStatus = AttendanceStatus.UPCOMING;
             } else {
               // Check what the local status was (from handleHoursInput)
               derivedStatus =
-                entry.status === "Not Updated" || currentTotal === null ? "Not Updated" : "Absent";
+                entry.status === AttendanceStatus.NOT_UPDATED ||
+                currentTotal === null
+                  ? AttendanceStatus.NOT_UPDATED
+                  : AttendanceStatus.ABSENT;
             }
           }
         }
@@ -912,15 +965,15 @@ const MyTimesheet = ({
           totalHours: currentTotal,
           status: derivedStatus,
           firstHalf:
-            derivedStatus === "Absent"
-              ? "Absent"
-              : derivedStatus === "Not Updated"
+            derivedStatus === AttendanceStatus.ABSENT
+              ? AttendanceStatus.ABSENT
+              : derivedStatus === AttendanceStatus.NOT_UPDATED
                 ? null
                 : entry.firstHalf,
           secondHalf:
-            derivedStatus === "Absent"
-              ? "Absent"
-              : derivedStatus === "Not Updated"
+            derivedStatus === AttendanceStatus.ABSENT
+              ? AttendanceStatus.ABSENT
+              : derivedStatus === AttendanceStatus.NOT_UPDATED
                 ? null
                 : entry.secondHalf,
           // Explicitly set sourceRequestId to null for Admin/Manager to break leave link on manual save
@@ -951,36 +1004,44 @@ const MyTimesheet = ({
       const itemDate = new Date(item.workingDate);
       const dayOfWeek = itemDate.getDay(); // 0 = Sunday, 6 = Saturday
 
-      // If hours are explicitly 0, allow "Absent" even on weekends
+      // If hours are explicitly 0, allow AttendanceStatus.ABSENT even on weekends
       if (item.totalHours === 0) {
-        item.status = "Absent";
-        return; 
-      }
-
-      // Sunday: Default status to "Weekend" if no hours and not explicitly Absent
-      if (dayOfWeek === 0 && (!item.totalHours || Number(item.totalHours) === 0) && item.status !== "Absent") {
-        item.status = "Weekend";
+        item.status = AttendanceStatus.ABSENT;
         return;
       }
 
-      // Saturday: Only set to "Weekend" if there's NO data (no hours)
+      // Sunday: Default status to AttendanceStatus.WEEKEND if no hours and not explicitly Absent
+      if (
+        dayOfWeek === 0 &&
+        (!item.totalHours || Number(item.totalHours) === 0) &&
+        item.status !== AttendanceStatus.ABSENT
+      ) {
+        item.status = AttendanceStatus.WEEKEND;
+        return;
+      }
+
+      // Saturday: Only set to AttendanceStatus.WEEKEND if there's NO data (no hours)
       if (
         dayOfWeek === 6 &&
         (!item.totalHours || Number(item.totalHours) === 0)
       ) {
-        item.status = "Weekend";
+        item.status = AttendanceStatus.WEEKEND;
       }
-      // Other days: If hours is 0, ALWAYS set status to "Absent" (never Leave)
+      // Other days: If hours is 0, ALWAYS set status to AttendanceStatus.ABSENT (never Leave)
       // If hours is null, it's a "Clear/Reset" action - keep as Not Updated/Upcoming
-      else if (item.totalHours === 0) { // This is covered by the first check now, but keeping safe
-        item.status = "Absent";
+      else if (item.totalHours === 0) {
+        // This is covered by the first check now, but keeping safe
+        item.status = AttendanceStatus.ABSENT;
       }
       // If status is "Leave" but hours > 0, recalculate based on hours
-      else if (item.status === "Leave" && item.totalHours !== null) {
+      else if (
+        item.status === AttendanceStatus.LEAVE &&
+        item.totalHours !== null
+      ) {
         if (item.totalHours >= 6) {
-          item.status = "Full Day";
+          item.status = AttendanceStatus.FULL_DAY;
         } else if (item.totalHours > 0) {
-          item.status = "Half Day";
+          item.status = AttendanceStatus.HALF_DAY;
         }
       }
     });
@@ -1051,19 +1112,33 @@ const MyTimesheet = ({
     };
 
     const halfDayItems = payload.filter(
-      (item) => item.status !== "Full Day" && Number(item.totalHours) > 0 && Number(item.totalHours) <= 6,
+      (item) =>
+        item.status !== AttendanceStatus.FULL_DAY &&
+        Number(item.totalHours) > 0 &&
+        Number(item.totalHours) <= 6,
     );
 
     const absentItems = payload.filter(
-      (item) => Number(item.totalHours) === 0 && item.status === "Absent",
+      (item) =>
+        Number(item.totalHours) === 0 &&
+        item.status === AttendanceStatus.ABSENT,
     );
 
     const clearedItems = payload.filter(
-      (item) => item.totalHours === null && (item.status === "Not Updated" || item.status === "UPCOMING" || item.status === "Holiday" || item.status === "Weekend")
+      (item) =>
+        item.totalHours === null &&
+        (item.status === AttendanceStatus.NOT_UPDATED ||
+          item.status === AttendanceStatus.UPCOMING ||
+          item.status === AttendanceStatus.HOLIDAY ||
+          item.status === AttendanceStatus.WEEKEND),
     );
 
     if (!isAdmin && !isManager) {
-      if (halfDayItems.length > 0 || absentItems.length > 0 || clearedItems.length > 0) {
+      if (
+        halfDayItems.length > 0 ||
+        absentItems.length > 0 ||
+        clearedItems.length > 0
+      ) {
         const showUnifiedModal = async () => {
           const hasHalfDay = halfDayItems.length > 0;
           const hasAbsent = absentItems.length > 0;
@@ -1161,10 +1236,11 @@ const MyTimesheet = ({
                           }}
                         >
                           <li>
-                            <strong>First Half:</strong> Office
+                            <strong>First Half:</strong> {OfficeLocation.OFFICE}
                           </li>
                           <li>
-                            <strong>Second Half:</strong> Leave
+                            <strong>Second Half:</strong>{" "}
+                            {AttendanceStatus.LEAVE}
                           </li>
                         </ul>
                       </div>
@@ -1241,7 +1317,8 @@ const MyTimesheet = ({
                           marginBottom: "8px",
                         }}
                       >
-                        You are trying to clear save attendance for date(s): <strong>{clearedDates}</strong>.
+                        You are trying to clear save attendance for date(s):{" "}
+                        <strong>{clearedDates}</strong>.
                       </p>
                       <div
                         style={{
@@ -1252,12 +1329,13 @@ const MyTimesheet = ({
                         }}
                       >
                         <p style={{ margin: 0, fontSize: "13px" }}>
-                          This will reset the entry to its default state (Weekend, Holiday, or Not Updated / Upcoming) and set all values to empty.
+                          This will reset the entry to its default state
+                          (Weekend, Holiday, or Not Updated / Upcoming) and set
+                          all values to empty.
                         </p>
                       </div>
                     </div>
                   )}
-
 
                   {hasHalfDay && (
                     <div
@@ -1310,13 +1388,13 @@ const MyTimesheet = ({
                           employeeId: currentEmployeeId,
                           fromDate: item.workingDate,
                           toDate: item.workingDate,
-                          requestType: "Half Day",
+                          requestType: AttendanceStatus.HALF_DAY,
                           isHalfDay: true,
-                          halfDayType: "Second Half",
+                          halfDayType: HalfDayType.SECOND_HALF,
                           title: "Half Day (Auto-generated)",
                           description: `Auto-generated from ${item.totalHours} hours timesheet entry`,
-                          firstHalf: "Office",
-                          secondHalf: "Leave",
+                          firstHalf: OfficeLocation.OFFICE,
+                          secondHalf: AttendanceStatus.LEAVE,
                         } as any),
                       ).unwrap();
                     }
@@ -1398,7 +1476,8 @@ const MyTimesheet = ({
                       const date = new Date(item.workingDate);
                       const isClear = item.totalHours === null;
                       const isUpcoming =
-                        (item.status || "").toUpperCase() === "UPCOMING";
+                        (item.status || "").toUpperCase() ===
+                        AttendanceStatus.UPCOMING;
 
                       // Check for Weekend/Holiday
                       const d_modal = new Date(item.workingDate);
@@ -1420,13 +1499,15 @@ const MyTimesheet = ({
                         return normHDate === dateStr_modal;
                       });
 
-                      const isWeekend = dayOfWeek_modal === 0 || dayOfWeek_modal === 6;
-                      const isNotUpdated = item.status === "Not Updated";
+                      const isWeekend =
+                        dayOfWeek_modal === 0 || dayOfWeek_modal === 6;
+                      const isNotUpdated =
+                        item.status === AttendanceStatus.NOT_UPDATED;
                       const isHalf =
                         !isClear &&
                         Number(item.totalHours) > 0 &&
                         Number(item.totalHours) <= 6;
-                      const isAbsent = item.status === "Absent";
+                      const isAbsent = item.status === AttendanceStatus.ABSENT;
                       return (
                         <tr
                           key={idx}
@@ -1460,26 +1541,26 @@ const MyTimesheet = ({
                                 }`}
                               >
                                 {isHalf
-                                  ? "Half Day"
+                                  ? AttendanceStatus.HALF_DAY
                                   : isAbsent
-                                    ? "Absent"
+                                    ? AttendanceStatus.ABSENT
                                     : isClear || isNotUpdated || isUpcoming
                                       ? isHoliday_modal
                                         ? (
                                             isHoliday_modal.holidayName ||
                                             isHoliday_modal.name ||
-                                            "Holiday"
+                                            AttendanceStatus.HOLIDAY
                                           ).toUpperCase()
                                         : isWeekend
-                                          ? "Weekend"
+                                          ? AttendanceStatus.WEEKEND
                                           : isUpcoming
-                                            ? "Upcoming"
-                                            : "Not Updated"
-                                      : "Full Day"}
+                                            ? AttendanceStatus.UPCOMING
+                                            : AttendanceStatus.NOT_UPDATED
+                                      : AttendanceStatus.FULL_DAY}
                               </span>
                               <span className="text-[9px] font-bold text-gray-400 whitespace-nowrap">
                                 {isHalf
-                                  ? "First Half: Office | Second Half: Leave"
+                                  ? `First Half: ${OfficeLocation.OFFICE} | Second Half: ${AttendanceStatus.LEAVE}`
                                   : isAbsent
                                     ? "First Half: Absent | Second Half: Absent"
                                     : isClear || isNotUpdated || isUpcoming
@@ -1488,7 +1569,7 @@ const MyTimesheet = ({
                                         : isWeekend
                                           ? "Reverting to Weekend"
                                           : "Reset to system defaults"
-                                      : "First Half: Office | Second Half: Office"}
+                                      : `First Half: ${OfficeLocation.OFFICE} | Second Half: ${OfficeLocation.OFFICE}`}
                               </span>
                             </div>
                           </td>
@@ -1859,7 +1940,7 @@ const MyTimesheet = ({
         <div className="flex items-center gap-x-6 gap-y-2 flex-nowrap overflow-x-auto pb-4 scrollbar-none px-2 mb-2">
           {[
             {
-              label: "Full Day",
+              label: AttendanceStatus.FULL_DAY,
               color: "bg-[#E6FFFA]",
               border: "border-[#01B574]",
             },
@@ -1869,12 +1950,12 @@ const MyTimesheet = ({
               border: "border-[#FFB020]",
             },
             {
-              label: "Absent",
+              label: AttendanceStatus.ABSENT,
               color: "bg-[#FECACA]",
               border: "border-[#DC2626]",
             },
             {
-              label: "Leave",
+              label: AttendanceStatus.LEAVE,
               color: "bg-[#FEE2E2]",
               border: "border-[#EE5D50]",
             },
@@ -1899,12 +1980,12 @@ const MyTimesheet = ({
               border: "border-transparent",
             },
             {
-              label: "Holiday",
+              label: AttendanceStatus.HOLIDAY,
               color: "bg-[#E6F7FF]",
               border: "border-[#00A3C4]",
             },
             {
-              label: "Pending",
+              label: AttendanceStatus.PENDING,
               color: "bg-[#F8FAFC]",
               border: "border-[#64748B]",
             },
@@ -1959,7 +2040,7 @@ const MyTimesheet = ({
             const inputValue =
               localInputValues[idx] !== undefined
                 ? localInputValues[idx]
-                : (day.totalHours === null || day.totalHours === undefined)
+                : day.totalHours === null || day.totalHours === undefined
                   ? ""
                   : day.totalHours.toString();
             const dateStr = `${day.fullDate.getFullYear()}-${String(
@@ -2023,7 +2104,7 @@ const MyTimesheet = ({
                 isManager ||
                 isCurrentOrNextMonth ||
                 isEditableMonth(day.fullDate) ||
-                day.status === "Absent") &&
+                day.status === AttendanceStatus.ABSENT) &&
               !isBlocked;
 
             // Helper to get consistent styles for any status string
@@ -2048,14 +2129,17 @@ const MyTimesheet = ({
                   border: "border-[#1890FF]/20",
                   text: "text-[#1890FF]",
                 };
-              if (s === "weekend" || s === "leave")
+              if (
+                s === AttendanceStatus.WEEKEND.toLowerCase() ||
+                s === AttendanceStatus.LEAVE.toLowerCase()
+              )
                 return {
                   bg: "bg-[#FEE2E2]",
                   badge: "bg-[#EE5D50]/70 text-white font-bold",
                   border: "border-[#EE5D50]/10",
                   text: "text-[#EE5D50]",
                 };
-              if (s === "full day")
+              if (s === AttendanceStatus.FULL_DAY.toLowerCase())
                 return {
                   bg: "bg-[#E6FFFA]",
                   badge: "bg-[#01B574] text-white font-bold",
@@ -2076,7 +2160,7 @@ const MyTimesheet = ({
                   border: "border-[#FFB020]/20",
                   text: "text-[#FFB020]",
                 };
-              if (s === "absent")
+              if (s === AttendanceStatus.ABSENT.toLowerCase())
                 return {
                   bg: "bg-[#FECACA]",
                   badge: "bg-[#DC2626]/70 text-white font-bold",
@@ -2148,23 +2232,43 @@ const MyTimesheet = ({
               isSaturday &&
               !day.workLocation &&
               (!day.status ||
-                ["Weekend", "Pending", "Not Updated"].includes(day.status));
+                [
+                  AttendanceStatus.WEEKEND,
+                  AttendanceStatus.PENDING,
+                  AttendanceStatus.NOT_UPDATED,
+                ].includes(day.status));
 
             // Determine Overall Styles (for border and badge)
             let displayStatus = day.status as string;
-            
+
             // Priority: If explicitly ABSENT, always show Absent
-            if (displayStatus === "Absent") {
-                // Keep it as Absent
-            }
-            else if ((holiday || (displayStatus as any) === "Holiday") && (!day.totalHours || Number(day.totalHours) === 0))
-              displayStatus = "Holiday";
-            else if ((isSunday && (!day.totalHours || Number(day.totalHours) === 0) && displayStatus !== "Absent") || isSaturdayWithNoData)
-              displayStatus = "Weekend";
-            // Check if status is "Weekend" (or potentially "Holiday") but hours exist -> force work status for display
-            else if (day.totalHours && Number(day.totalHours) > 0 && displayStatus !== "Absent" && displayStatus !== "Leave") {
-               const isSatFull = isSaturday && Number(day.totalHours) > 3;
-               displayStatus = (Number(day.totalHours) > 6 || isSatFull) ? "Full Day" : "Half Day";
+            if (displayStatus === AttendanceStatus.ABSENT) {
+              // Keep it as Absent
+            } else if (
+              (holiday ||
+                (displayStatus as any) === AttendanceStatus.HOLIDAY) &&
+              (!day.totalHours || Number(day.totalHours) === 0)
+            )
+              displayStatus = AttendanceStatus.HOLIDAY;
+            else if (
+              (isSunday &&
+                (!day.totalHours || Number(day.totalHours) === 0) &&
+                displayStatus !== AttendanceStatus.ABSENT) ||
+              isSaturdayWithNoData
+            )
+              displayStatus = AttendanceStatus.WEEKEND;
+            // Check if status is AttendanceStatus.WEEKEND (or potentially AttendanceStatus.HOLIDAY) but hours exist -> force work status for display
+            else if (
+              day.totalHours &&
+              Number(day.totalHours) > 0 &&
+              displayStatus !== AttendanceStatus.ABSENT &&
+              displayStatus !== AttendanceStatus.LEAVE
+            ) {
+              const isSatFull = isSaturday && Number(day.totalHours) > 3;
+              displayStatus =
+                Number(day.totalHours) > 6 || isSatFull
+                  ? AttendanceStatus.FULL_DAY
+                  : AttendanceStatus.HALF_DAY;
             }
 
             const overallStyles = getStatusStyles(
@@ -2248,12 +2352,12 @@ const MyTimesheet = ({
                     (!isAdmin &&
                       !isManager &&
                       !isCurrentOrNextMonth &&
-                      !isEditableMonth(day.fullDate))) && 
-                    displayStatus !== "Absent" && (
-                    <div className="p-1 rounded-full bg-red-50 text-red-500 border border-red-100 transition-transform hover:scale-110">
-                      <ShieldBan size={10} strokeWidth={2.5} />
-                    </div>
-                  )}
+                      !isEditableMonth(day.fullDate))) &&
+                    displayStatus !== AttendanceStatus.ABSENT && (
+                      <div className="p-1 rounded-full bg-red-50 text-red-500 border border-red-100 transition-transform hover:scale-110">
+                        <ShieldBan size={10} strokeWidth={2.5} />
+                      </div>
+                    )}
                 </div>
 
                 {/* Middle: Input Area */}
@@ -2286,7 +2390,7 @@ const MyTimesheet = ({
                               : "text-gray-800 text-3xl group-hover:scale-105 focus:scale-105"
                         }`}
                       placeholder={
-                        day.status === "Weekend" ||
+                        day.status === AttendanceStatus.WEEKEND ||
                         (day.status as any) === "WEEKEND" ||
                         holiday
                           ? "-"
@@ -2309,22 +2413,29 @@ const MyTimesheet = ({
                 <div
                   className={`w-full py-1.5 rounded-lg text-center text-[10px] font-black uppercase tracking-wider truncate px-1 shadow-sm z-10 mt-auto ${badgeClass}`}
                 >
-                  {displayStatus === "Absent"
+                  {displayStatus === AttendanceStatus.ABSENT
                     ? "ABSENT"
-                    : (holiday || displayStatus === "Holiday") && (!day.totalHours || Number(day.totalHours) === 0)
+                    : (holiday || displayStatus === AttendanceStatus.HOLIDAY) &&
+                        (!day.totalHours || Number(day.totalHours) === 0)
                       ? holiday?.holidayName || holiday?.name || "HOLIDAY"
-                    : (isSunday && (!day.totalHours || Number(day.totalHours) === 0) && displayStatus !== 'Absent') || (isSaturdayWithNoData && !day.workLocation)
-                      ? "WEEKEND"
-                      : displayStatus === "Leave"
-                        ? "LEAVE"
-                        : day.workLocation && (displayStatus as string) !== "Leave"
-                          ? day.workLocation
-                          : displayStatus === "Half Day" ||
-                              displayStatus === "WFH" ||
-                              displayStatus === "Client Visit" ||
-                              displayStatus === "Full Day"
-                            ? displayStatus
-                            : displayStatus || "UPCOMING"}
+                      : (isSunday &&
+                            (!day.totalHours || Number(day.totalHours) === 0) &&
+                            displayStatus !== AttendanceStatus.ABSENT) ||
+                          (isSaturdayWithNoData && !day.workLocation)
+                        ? "WEEKEND"
+                        : displayStatus === AttendanceStatus.LEAVE
+                          ? "LEAVE"
+                          : day.workLocation &&
+                              (displayStatus as string) !==
+                                AttendanceStatus.LEAVE
+                            ? day.workLocation
+                            : displayStatus === AttendanceStatus.HALF_DAY ||
+                                displayStatus === AttendanceStatus.WFH ||
+                                displayStatus ===
+                                  AttendanceStatus.CLIENT_VISIT ||
+                                displayStatus === AttendanceStatus.FULL_DAY
+                              ? displayStatus
+                              : displayStatus || AttendanceStatus.UPCOMING}
                 </div>
               </div>
             );

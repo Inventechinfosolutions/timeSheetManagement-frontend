@@ -4,7 +4,6 @@ import { useAppDispatch, useAppSelector } from "../hooks";
 import { RootState } from "../store";
 import {
   fetchMonthlyAttendance,
-  AttendanceStatus,
   resetAttendanceState,
 } from "../reducers/employeeAttendance.reducer";
 import {
@@ -25,6 +24,7 @@ import {
   deleteBlocker,
 } from "../reducers/timesheetBlocker.reducer";
 import Toast from "../components/Toast";
+import { AttendanceStatus } from "../enums";
 
 const AdminEmployeeCalenderWrapper = () => {
   const { employeeId } = useParams<{ employeeId: string }>();

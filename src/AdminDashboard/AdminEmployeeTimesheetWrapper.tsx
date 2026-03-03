@@ -14,7 +14,6 @@ import {
 import MyTimesheet from "../EmployeeDashboard/MyTimesheet";
 import {
   fetchMonthlyAttendance,
-  AttendanceStatus,
   resetAttendanceState,
 } from "../reducers/employeeAttendance.reducer";
 import {
@@ -23,6 +22,7 @@ import {
   deleteBlocker,
 } from "../reducers/timesheetBlocker.reducer";
 import Toast from "../components/Toast";
+import { UserType, AttendanceStatus } from "../enums";
 
 const AdminEmployeeTimesheetWrapper = () => {
   const { employeeId, date: urlDate } = useParams<{ employeeId: string; date?: string }>();
@@ -147,7 +147,7 @@ const AdminEmployeeTimesheetWrapper = () => {
           blockedFrom: fromDate,
           blockedTo: toDate,
           reason: reason || "Timesheet Locked",
-          blockedBy: currentUser?.userType === "ADMIN" ? "Admin" : "Manager",
+          blockedBy: currentUser?.userType === UserType.ADMIN ? "Admin" : "Manager",
         }),
       ).unwrap();
 

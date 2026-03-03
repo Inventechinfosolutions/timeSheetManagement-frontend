@@ -1,5 +1,6 @@
 import { CalendarCheck, Clock, AlertTriangle } from "lucide-react";
 import { TimesheetEntry } from "../types";
+import { AttendanceStatus } from "../enums";
 
 interface Props {
   employeeName: string;
@@ -8,7 +9,9 @@ interface Props {
 
 const SelectedEmployeeSummary = ({ employeeName, entries }: Props) => {
   const presentDays = entries.filter(
-    (e) => e.status === "Full Day" || e.status === "Half Day"
+    (e) =>
+      e.status === AttendanceStatus.FULL_DAY ||
+      e.status === AttendanceStatus.HALF_DAY,
   ).length;
 
   const totalWorkingMinutes = entries.reduce((acc, curr) => {
@@ -37,7 +40,7 @@ const SelectedEmployeeSummary = ({ employeeName, entries }: Props) => {
       !day.isToday &&
       !day.isWeekend &&
       !day.loginTime &&
-      day.status !== "Leave"
+      day.status !== AttendanceStatus.LEAVE,
   ).length;
 
   return (

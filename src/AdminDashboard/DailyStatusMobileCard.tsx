@@ -1,5 +1,5 @@
 import { Clock } from "lucide-react";
-import { AttendanceStatus } from "../reducers/employeeAttendance.reducer";
+import { AttendanceStatus } from "../enums";
 
 interface Employee {
   id: string;
