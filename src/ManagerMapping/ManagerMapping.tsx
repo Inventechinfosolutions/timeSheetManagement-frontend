@@ -276,10 +276,26 @@ const ManagerMapping: React.FC = () => {
                 className="w-full flex items-center justify-between px-4 py-3 bg-white border border-gray-200 rounded-xl text-[#2B3674] font-medium hover:border-[#4318FF] transition-colors"
               >
                 <span>{selectedDepartment || "Select Department"}</span>
-                <ChevronDown
-                  size={20}
-                  className={`text-[#A3AED0] transition-transform ${isDeptDropdownOpen ? "rotate-180" : ""}`}
-                />
+                <div className="flex items-center gap-1">
+                  {selectedDepartment && (
+                    <span
+                      role="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleClear();
+                        setIsDeptDropdownOpen(false);
+                      }}
+                      className="p-1 rounded-full hover:bg-red-50 text-[#A3AED0] hover:text-red-500 transition-colors"
+                      title="Clear department"
+                    >
+                      <X size={16} />
+                    </span>
+                  )}
+                  <ChevronDown
+                    size={20}
+                    className={`text-[#A3AED0] transition-transform ${isDeptDropdownOpen ? "rotate-180" : ""}`}
+                  />
+                </div>
               </button>
               {isDeptDropdownOpen && (
                 <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50 max-h-64 overflow-y-auto">
@@ -310,24 +326,41 @@ const ManagerMapping: React.FC = () => {
             <label className="block text-sm font-bold text-[#2B3674] mb-2">
               Manager
             </label>
-            <select
-              value={selectedManager?.id || ""}
-              onChange={(e) => {
-                const manager = availableManagers.find(
-                  (m) => String(m.id) === e.target.value,
-                );
-                if (manager) handleManagerSelect(manager);
-              }}
-              disabled={selectedDepartment === "All Departments"}
-              className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-[#2B3674] font-medium hover:border-[#4318FF] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <option value="">Select Manager</option>
-              {availableManagers.map((manager) => (
-                <option key={manager.id} value={manager.id}>
-                  {manager.fullName} ({manager.employeeId})
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                value={selectedManager?.id || ""}
+                onChange={(e) => {
+                  const manager = availableManagers.find(
+                    (m) => String(m.id) === e.target.value,
+                  );
+                  if (manager) handleManagerSelect(manager);
+                }}
+                disabled={selectedDepartment === "All Departments"}
+                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-[#2B3674] font-medium hover:border-[#4318FF] transition-colors disabled:opacity-50 disabled:cursor-not-allowed pr-10"
+              >
+                <option value="">Select Manager</option>
+                {availableManagers.map((manager) => (
+                  <option key={manager.id} value={manager.id}>
+                    {manager.fullName} ({manager.employeeId})
+                  </option>
+                ))}
+              </select>
+              {selectedManager && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedManager(null);
+                    setAssignedEmployees([]);
+                    setSelectedEmployees([]);
+                  }}
+                  className="absolute right-8 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-red-50 text-[#A3AED0] hover:text-red-500 transition-colors"
+                  title="Clear manager"
+                  type="button"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
