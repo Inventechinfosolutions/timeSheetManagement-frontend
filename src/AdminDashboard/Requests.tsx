@@ -761,7 +761,7 @@ const Requests = () => {
           />
           <input
             type="text"
-            placeholder="Search..."
+            placeholder="Search by name or employee ID..."
             className="w-full pl-12 pr-10 py-3 bg-white rounded-2xl border-none outline-none shadow-sm focus:ring-2 focus:ring-[#4318FF] transition-all text-[#2B3674] font-medium placeholder:text-gray-300"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -1599,7 +1599,7 @@ const Requests = () => {
         footer={null}
         closable={false}
         centered
-        width={700}
+        width={1092}
         className="application-modal"
       >
         <div className="relative overflow-hidden bg-white rounded-[16px]">

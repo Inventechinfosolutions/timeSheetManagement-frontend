@@ -1959,7 +1959,7 @@ const LeaveManagement = () => {
         footer={null}
         closable={false}
         centered
-        width={700}
+        width={910}
         className="application-modal"
       >
         <div className="relative overflow-hidden bg-white rounded-[16px]">

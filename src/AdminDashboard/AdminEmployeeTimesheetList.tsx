@@ -420,7 +420,7 @@ const AdminEmployeeTimesheetList = () => {
             <Search size={16} className="text-[#A3AED0] mr-2 flex-shrink-0" />
             <input
               type="text"
-              placeholder="Search..."
+              placeholder="Search by name or employee ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="border-none outline-none bg-transparent text-[#2B3674] w-full text-sm font-semibold placeholder:text-[#A3AED0]/60"

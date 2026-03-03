@@ -563,7 +563,7 @@ ${
               <Search size={18} className="text-[#A3AED0] mr-2" />
               <input
                 type="text"
-                placeholder="Search..."
+                placeholder="Search by name or employee ID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="border-none outline-none bg-transparent text-[#2B3674] w-full text-sm font-semibold placeholder:text-[#A3AED0]/60"

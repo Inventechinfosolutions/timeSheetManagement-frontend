@@ -972,6 +972,20 @@ const AdminLeaveManagement = () => {
     filterStatus,
   ]);
 
+  // Clear selected employee and reset all related state
+  const handleClearEmployee = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedEmployee(null);
+    setIsEmployeeDropdownOpen(false);
+    setSearchTerm("");
+    setCurrentPage(1);
+    setSelectedMonth("All");
+    setSelectedYear("All");
+    setFilterStatus("All");
+    setErrors((prev) => ({ ...prev, employee: "" }));
+    dispatch(clearRequests());
+  };
+
   // Note: admin requests are auto-approved in handleSubmit; we don't rely on submitSuccess side-effects here.
 
   const handleOpenModal = (label: string) => {
@@ -1530,12 +1544,24 @@ const AdminLeaveManagement = () => {
                   : "Select an employee"}
               </span>
             </div>
-            <ChevronDown
-              size={20}
-              className={`text-gray-400 transition-transform ${
-                isEmployeeDropdownOpen ? "rotate-180" : ""
-              }`}
-            />
+            <div className="flex items-center gap-1">
+              {selectedEmployee && (
+                <span
+                  role="button"
+                  onClick={handleClearEmployee}
+                  className="p-1 rounded-full hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
+                  title="Clear selection"
+                >
+                  <X size={16} />
+                </span>
+              )}
+              <ChevronDown
+                size={20}
+                className={`text-gray-400 transition-transform ${
+                  isEmployeeDropdownOpen ? "rotate-180" : ""
+                }`}
+              />
+            </div>
           </button>
           {errors.employee && (
             <p className="text-red-500 text-xs mt-1 ml-2">{errors.employee}</p>
@@ -1554,7 +1580,7 @@ const AdminLeaveManagement = () => {
                   />
                   <input
                     type="text"
-                    placeholder="Search by name or ID..."
+                    placeholder="Search by employee ID..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-9 pr-4 py-2 bg-[#F4F7FE] rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#4318FF]/20 text-[#2B3674]"
@@ -2269,7 +2295,7 @@ const AdminLeaveManagement = () => {
         footer={null}
         closable={false}
         centered
-        width={700}
+        width={910}
         className="application-modal"
       >
         <div className="relative overflow-hidden bg-white rounded-[16px]">
