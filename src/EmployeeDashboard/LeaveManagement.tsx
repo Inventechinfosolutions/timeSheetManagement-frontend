@@ -47,7 +47,7 @@ import {
   ChevronDown,
   Clock,
 } from "lucide-react";
-import { notification } from "antd";
+import { message } from "antd";
 import CommonMultipleUploader from "./CommonMultipleUploader";
 
 const datePickerTheme = {
@@ -105,8 +105,13 @@ const LeaveManagement = () => {
     any[]
   >([]);
 
-  // AntD Notification Hook
-  const [api, contextHolder] = notification.useNotification();
+  // Configure AntD message position to be below the header
+  useEffect(() => {
+    message.config({
+      top: 70,
+      duration: 3,
+    });
+  }, []);
 
   // --- Partial Cancellation State ---
   const [isCancelDateModalVisible, setIsCancelDateModalVisible] =
@@ -198,7 +203,7 @@ const LeaveManagement = () => {
   const currentYear = dayjs().year();
   const years = [
     "All",
-    ...Array.from({ length: 11 }, (_, i) => (currentYear + 5 - i).toString()),
+    ...Array.from({ length: 6 }, (_, i) => (currentYear + i).toString()),
   ];
 
   const [errors, setErrors] = useState({
@@ -207,6 +212,21 @@ const LeaveManagement = () => {
     startDate: "",
     endDate: "",
   });
+
+  const refreshData = (page?: number, limit?: number) => {
+    if (!employeeId) return;
+    dispatch(
+      getLeaveHistory({
+        employeeId,
+        status: filterStatus,
+        month: selectedMonth,
+        year: selectedYear,
+        page: page || currentPage,
+        limit: limit || itemsPerPage,
+      }),
+    );
+    dispatch(getLeaveStats({ employeeId }));
+  };
 
   useEffect(() => {
     if (modifyModal.isOpen && modifyModal.request?.employeeId) {
@@ -381,7 +401,7 @@ const LeaveManagement = () => {
     };
 
     if (!formData.title.trim()) {
-      newErrors.title = "Title is required";
+      newErrors.title = "Subject is required";
       isValid = false;
     }
     if (!formData.startDate) {
@@ -758,11 +778,9 @@ const LeaveManagement = () => {
                 );
               }
             }
-            api.info({
-              title: "Request Segmented",
-              description: `Your ${finalRequestType} request was split into ${segments.length} parts to avoid existing Leave/Half Day approvals.`,
-              placement: "topRight",
-            });
+            message.info(
+              `Your ${finalRequestType} request was split into ${segments.length} parts to avoid existing Leave/Half Day approvals.`,
+            );
             return; // Exit handleSubmit as we've done multiple submissions
           }
         }
@@ -842,12 +860,7 @@ const LeaveManagement = () => {
 
   useEffect(() => {
     if (submitSuccess) {
-      api.success({
-        title: "Application Submitted",
-        description: "Notification sent to Manager",
-        placement: "topRight",
-        duration: 3,
-      });
+      message.success("Application Submitted: Notification sent to Manager");
     }
   }, [submitSuccess]);
 
@@ -885,21 +898,7 @@ const LeaveManagement = () => {
   }, [dispatch, employeeId, formData.startDate, formData.endDate, isViewMode]);
 
   useEffect(() => {
-    if (employeeId) {
-      dispatch(
-        getLeaveHistory({
-          employeeId,
-          status: filterStatus,
-          month: selectedMonth,
-          year: selectedYear,
-          page: currentPage,
-          limit: itemsPerPage,
-        }),
-      );
-      dispatch(
-        getLeaveStats({ employeeId, month: selectedMonth, year: selectedYear }),
-      );
-    }
+    refreshData();
   }, [
     dispatch,
     employeeId,
@@ -916,20 +915,8 @@ const LeaveManagement = () => {
   useEffect(() => {
     if (submitSuccess && employeeId) {
       setIsModalOpen(false);
-      dispatch(
-        getLeaveHistory({
-          employeeId,
-          status: filterStatus,
-          month: selectedMonth,
-          year: selectedYear,
-          page: 1,
-          limit: itemsPerPage,
-        }),
-      );
+      refreshData(1);
       if (currentPage !== 1) setCurrentPage(1);
-      dispatch(
-        getLeaveStats({ employeeId, month: selectedMonth, year: selectedYear }),
-      );
       dispatch(resetSubmitSuccess());
       setFormData({
         title: "",
@@ -1026,10 +1013,7 @@ const LeaveManagement = () => {
       setIsModalOpen(true);
       setErrors({ title: "", description: "", startDate: "", endDate: "" });
     } else {
-      api.error({
-        title: "Error",
-        description: "Failed to fetch request details",
-      });
+      message.error("Failed to fetch request details");
     }
   };
 
@@ -1115,7 +1099,8 @@ const LeaveManagement = () => {
               req.status === "Requesting For Cancellation" ||
               req.status === LeaveRequestStatus.APPROVED ||
               req.status === LeaveRequestStatus.MODIFICATION_APPROVED ||
-              req.status === LeaveRequestStatus.REQUEST_MODIFIED)
+              req.status === LeaveRequestStatus.REQUEST_MODIFIED ||
+              req.status === LeaveRequestStatus.CANCELLED)
           ) {
             let start = dayjs(req.fromDate);
             const end = dayjs(req.toDate);
@@ -1144,7 +1129,7 @@ const LeaveManagement = () => {
         throw new Error((action.payload as string) || "Failed to fetch");
       }
     } catch (err) {
-      api.error({ title: "Failed to fetch cancellable dates" });
+      message.error("Failed to fetch cancellable dates");
       setIsCancelDateModalVisible(false);
     } finally {
       setIsLoadingDates(false);
@@ -1154,7 +1139,7 @@ const LeaveManagement = () => {
   const handleConfirmDateCancel = async () => {
     if (!requestToCancel) return;
     if (selectedCancelDates.length === 0) {
-      api.warning({ title: "Please select at least one date to cancel." });
+      message.warning("Please select at least one date to cancel.");
       return;
     }
 
@@ -1169,30 +1154,17 @@ const LeaveManagement = () => {
       );
 
       if (cancelRequestDates.fulfilled.match(action)) {
-        api.success({ title: "Cancellation request submitted successfully" });
+        const msg = requestToCancel?.status === LeaveRequestStatus.PENDING
+          ? "Dates cancelled successfully"
+          : "Cancellation request submitted successfully";
+        message.success(msg);
         setIsCancelDateModalVisible(false);
-        dispatch(
-          getLeaveHistory({
-            employeeId: employeeId,
-            status: filterStatus,
-            month: selectedMonth,
-            year: selectedYear,
-            page: 1,
-            limit: 10,
-          }),
-        );
-        dispatch(
-          getLeaveStats({
-            employeeId,
-            month: selectedMonth,
-            year: selectedYear,
-          }),
-        );
+        refreshData(1, 10);
       } else {
         throw new Error((action.payload as string) || "Cancellation failed");
       }
     } catch (err: any) {
-      api.error({ title: err.message || "Cancellation failed" });
+      message.error(err.message || "Cancellation failed");
     } finally {
       setIsCancelling(false);
     }
@@ -1227,13 +1199,13 @@ const LeaveManagement = () => {
   const formatModalDate = (dateStr: string) =>
     dayjs(dateStr).format("DD MMM YYYY");
 
-  // Modified handleCancel to use the new partial cancellation flow for Approved requests
+  // Modified handleCancel to use the date-picker cancellation flow for both Approved and Pending requests
   const handleCancel = (id: number) => {
     const req = entities.find((e: any) => e.id === id);
-    if (req?.status === LeaveRequestStatus.APPROVED) {
+    if (req?.status === LeaveRequestStatus.APPROVED || req?.status === LeaveRequestStatus.PENDING) {
       handleCancelClick(req);
     } else {
-      // For Pending or other statuses, use the original full cancellation flow
+      // For other statuses, use the original full cancellation flow
       setCancelModal({ isOpen: true, id });
     }
   };
@@ -1256,28 +1228,8 @@ const LeaveManagement = () => {
       );
 
       if (undoCancellationRequest.fulfilled.match(action)) {
-        dispatch(
-          getLeaveHistory({
-            employeeId,
-            status: filterStatus,
-            month: selectedMonth,
-            year: selectedYear,
-            page: currentPage,
-            limit: itemsPerPage,
-          }),
-        );
-        dispatch(
-          getLeaveStats({
-            employeeId,
-            month: selectedMonth,
-            year: selectedYear,
-          }),
-        );
-        api.success({
-          title: "Cancellation Revoked",
-          description: "Your cancellation request has been undone.",
-          placement: "topRight",
-        });
+        refreshData();
+        message.success("Cancellation Revoked");
         setUndoModal({ isOpen: false, request: null });
       } else {
         throw new Error(
@@ -1285,11 +1237,9 @@ const LeaveManagement = () => {
         );
       }
     } catch (err: any) {
-      api.error({
-        title: "Undo Failed",
-        description: err.message || "Could not undo cancellation.",
-        placement: "topRight",
-      });
+      message.error(
+        `Undo Failed: ${err.message || "Could not undo cancellation."}`,
+      );
     } finally {
       setIsUndoing(false);
     }
@@ -1308,28 +1258,8 @@ const LeaveManagement = () => {
       );
 
       if (undoModificationRequest.fulfilled.match(action)) {
-        dispatch(
-          getLeaveHistory({
-            employeeId,
-            status: filterStatus,
-            month: selectedMonth,
-            year: selectedYear,
-            page: currentPage,
-            limit: itemsPerPage,
-          }),
-        );
-        dispatch(
-          getLeaveStats({
-            employeeId,
-            month: selectedMonth,
-            year: selectedYear,
-          }),
-        );
-        api.success({
-          title: "Modification Revoked",
-          description: "Your modification request has been undone.",
-          placement: "topRight",
-        });
+        refreshData();
+        message.success("Modification Revoked");
         setUndoModal({ isOpen: false, request: null });
       } else {
         throw new Error(
@@ -1337,11 +1267,9 @@ const LeaveManagement = () => {
         );
       }
     } catch (err: any) {
-      api.error({
-        title: "Undo Failed",
-        description: err.message || "Could not undo modification.",
-        placement: "topRight",
-      });
+      message.error(
+        `Undo Failed: ${err.message || "Could not undo modification."}`,
+      );
     } finally {
       setIsUndoing(false);
     }
@@ -1384,31 +1312,14 @@ const LeaveManagement = () => {
                 year: selectedYear,
               }),
             );
-            dispatch(
-              getLeaveHistory({
-                employeeId,
-                status: filterStatus,
-                month: selectedMonth,
-                year: selectedYear,
-                page: 1,
-                limit: 10,
-              }),
-            );
+            refreshData(1);
             setCancelModal({ isOpen: false, id: null });
-            api.success({
-              title: "Request Cancelled",
-              description: "Your request has been successfully cancelled.",
-              placement: "topRight",
-              duration: 3,
-            });
+            message.success("Request Cancelled");
           } else {
             // Handle error
-            api.error({
-              title: "Cancellation Failed",
-              description:
-                result.payload?.message || "Failed to cancel request.",
-              placement: "topRight",
-            });
+            message.error(
+              `Cancellation Failed: ${result.payload?.message || "Failed to cancel request."}`,
+            );
           }
         })
         .finally(() => {
@@ -1435,7 +1346,7 @@ const LeaveManagement = () => {
 
   return (
     <div className="p-4 md:px-8 md:pb-8 md:pt-0 bg-[#F4F7FE] min-h-screen font-sans text-[#2B3674]">
-      {contextHolder}
+      {/* AntD message context handled via global config */}
       {/* Header */}
       <div className="sticky top-0 z-40 bg-[#F4F7FE] -mx-4 px-4 py-2 mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all">
         <div>
@@ -2129,7 +2040,7 @@ const LeaveManagement = () => {
         open={isModalOpen}
         onCancel={handleCloseModal}
         footer={null}
-        closable={false}
+        closable={true}
         centered
         width={980}
         className="application-modal"
@@ -2138,18 +2049,6 @@ const LeaveManagement = () => {
           {/* Modal Header */}
           <div className="pt-2 px-6">
             <div className="flex justify-between items-start">
-              <span className="text-sm font-black uppercase tracking-widest text-[#A3AED0]">
-                {isViewMode ? "Viewing Application" : "Applying For"}
-              </span>
-              <button
-                onClick={handleCloseModal}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                disabled={loading}
-              >
-                <X size={22} className="text-[#2B3674]" />
-              </button>
-            </div>
-            <div className="flex items-center justify-between w-full mt-1">
               <h2 className="text-2xl md:text-3xl font-black text-[#2B3674]">
                 {selectedLeaveType === LeaveRequestType.APPLY_LEAVE
                   ? LeaveRequestType.LEAVE
@@ -2161,7 +2060,7 @@ const LeaveManagement = () => {
           </div>
 
           {/* Modal Body */}
-          <div className="p-6 space-y-5 overflow-y-auto custom-scrollbar max-h-[80vh]">
+          <div className="p-6 space-y-5 overflow-y-auto custom-scrollbar max-h-[60vh]">
             {/* Error Message */}
             {error && (
               <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
@@ -2174,13 +2073,14 @@ const LeaveManagement = () => {
               </div>
             )}
 
-            {/* Email recipients - at top */}
-            <div className="space-y-3">
-              <label className="text-sm font-bold text-[#2B3674] ml-1 block">
-                Email recipients
-              </label>
-              <div className="space-y-2">
-                <div className="flex flex-wrap gap-4 items-start">
+            {/* Email recipients - in card */}
+            <div className="rounded-2xl border border-[#E0E7FF] bg-[#F8FAFC] p-4 shadow-sm">
+              <div className="space-y-3">
+                <label className="text-sm font-bold text-[#2B3674] ml-1 block">
+                  Email recipients
+                </label>
+                <div className="space-y-4 opacity-75 pointer-events-none">
+                  <div className="flex flex-wrap gap-4 items-start">
                   {emailConfig.assignedManagerEmail && (
                     <div className="min-w-0 flex-1">
                       <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">Assigned manager (To)</span>
@@ -2205,60 +2105,53 @@ const LeaveManagement = () => {
                     />
                   </div>
                 </div>
-                {!isViewMode && (
-                  <div>
-                    <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">CC (optional)</span>
-                    <div className="flex flex-wrap gap-2 items-center">
-                      {ccEmails.map((email) => (
-                        <span
-                          key={email}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#EEF4FF] text-[#4318FF] text-sm font-medium"
-                        >
-                          {email}
-                          <button
-                            type="button"
-                            onClick={() => removeCcEmail(email)}
-                            className="hover:bg-[#4318FF]/20 rounded-full p-0.5"
-                            aria-label={`Remove ${email}`}
-                          >
-                            <X size={14} />
-                          </button>
-                        </span>
-                      ))}
-                      <input
-                        type="email"
-                        value={ccEmailInput}
-                        onChange={(e) => {
-                          setCcEmailInput(e.target.value);
-                          setCcEmailError("");
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === ",") {
-                            e.preventDefault();
-                            addCcEmail(ccEmailInput);
-                          }
-                        }}
-                        onBlur={() => ccEmailInput.trim() && addCcEmail(ccEmailInput)}
-                        placeholder="Add email and press Enter"
-                        className="flex-1 min-w-[180px] px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[#4318FF] bg-[#F4F7FE]"
-                      />
-                    </div>
-                    {ccEmailError && <p className="text-red-500 text-xs mt-1 ml-1">{ccEmailError}</p>}
-                  </div>
-                )}
-                {isViewMode && ccEmails.length > 0 && (
+                
+                {ccEmails.length > 0 && (
                   <div>
                     <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">Additional CC</span>
                     <div className="flex flex-wrap gap-2">
                       {ccEmails.map((email) => (
-                        <span key={email} className="px-3 py-1.5 rounded-xl bg-gray-100 text-gray-700 text-sm">
+                        <span key={email} className="px-3 py-1.5 rounded-xl bg-gray-100 text-gray-700 text-sm font-bold">
                           {email}
                         </span>
                       ))}
                     </div>
                   </div>
                 )}
+                </div>
+                </div>
               </div>
+
+            {/* Subject Field - above Duration Type */}
+            <div className="space-y-2" ref={titleRef}>
+              <label className="text-sm font-bold text-[#2B3674] ml-1">
+                Subject
+              </label>
+              {isViewMode ? (
+                <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none break-words">
+                  {formData.title}
+                </div>
+              ) : (
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="e.g. Annual Vacation"
+                    className={`w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] border ${
+                      errors.title ? "border-red-500" : "border-transparent"
+                    } focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400`}
+                    value={formData.title}
+                    onChange={(e) => {
+                      setFormData({ ...formData, title: e.target.value });
+                      if (errors.title) setErrors({ ...errors, title: "" });
+                    }}
+                  />
+                  {errors.title && (
+                    <p className="text-red-500 text-xs mt-1 ml-2">
+                      {errors.title}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Duration Type & Split-Day Selection */}
@@ -2361,38 +2254,6 @@ const LeaveManagement = () => {
                   )}
                 </div>
               )}
-
-            {/* Title Field */}
-            <div className="space-y-2" ref={titleRef}>
-              <label className="text-sm font-bold text-[#2B3674] ml-1">
-                Title
-              </label>
-              {isViewMode ? (
-                <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none break-words">
-                  {formData.title}
-                </div>
-              ) : (
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="e.g. Annual Vacation"
-                    className={`w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] border ${
-                      errors.title ? "border-red-500" : "border-transparent"
-                    } focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400`}
-                    value={formData.title}
-                    onChange={(e) => {
-                      setFormData({ ...formData, title: e.target.value });
-                      if (errors.title) setErrors({ ...errors, title: "" });
-                    }}
-                  />
-                  {errors.title && (
-                    <p className="text-red-500 text-xs mt-1 ml-2">
-                      {errors.title}
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
 
             {/* Dates Row + Total Days */}
             <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-4 items-end">
@@ -2502,51 +2363,47 @@ const LeaveManagement = () => {
                 <div className="px-4 py-3 rounded-2xl bg-[#F4F7FE] font-bold text-[#4318FF] inline-flex items-center gap-2 min-h-[48px]">
                   <span className="bg-white px-3 py-1.5 rounded-lg shadow-sm border border-blue-100">
                     {formData.startDate && formData.endDate
-                      ? (() => {
-                          if (isViewMode)
-                            return `${parseFloat(String(formData.duration))} Day(s)`;
+                        ? (() => {
+                            if (isViewMode)
+                              return `${parseFloat(String(formData.duration))} Day(s)`;
 
-                          if (
-                            selectedLeaveType === WorkLocation.CLIENT_VISIT ||
-                            selectedLeaveType === WorkLocation.WORK_FROM_HOME ||
-                            selectedLeaveType === LeaveRequestType.APPLY_LEAVE ||
-                            selectedLeaveType === LeaveRequestType.LEAVE ||
-                            selectedLeaveType === LeaveRequestType.HALF_DAY
-                          ) {
-                            const baseDur = calculateDurationExcludingWeekends(
-                              formData.startDate,
-                              formData.endDate,
-                            );
-                            const isHalf =
-                              leaveDurationType === HalfDayType.HALF_DAY ||
-                              leaveDurationType === HalfDayType.FIRST_HALF ||
-                              leaveDurationType === HalfDayType.SECOND_HALF;
+                            if (
+                              selectedLeaveType === WorkLocation.CLIENT_VISIT ||
+                              selectedLeaveType === WorkLocation.WORK_FROM_HOME ||
+                              selectedLeaveType === LeaveRequestType.APPLY_LEAVE ||
+                              selectedLeaveType === LeaveRequestType.LEAVE ||
+                              selectedLeaveType === LeaveRequestType.HALF_DAY
+                            ) {
+                              const baseDur = calculateDurationExcludingWeekends(
+                                formData.startDate,
+                                formData.endDate,
+                              );
+                              const isHalf =
+                                leaveDurationType === HalfDayType.HALF_DAY ||
+                                leaveDurationType === HalfDayType.FIRST_HALF ||
+                                leaveDurationType === HalfDayType.SECOND_HALF;
 
-                            if (isHalf) {
-                              const mainType =
-                                selectedLeaveType === LeaveRequestType.APPLY_LEAVE
-                                  ? LeaveRequestType.LEAVE
-                                  : selectedLeaveType;
-                              const other = otherHalfType;
+                              if (isHalf) {
+                                const mainType =
+                                  selectedLeaveType === LeaveRequestType.APPLY_LEAVE
+                                    ? LeaveRequestType.LEAVE
+                                    : selectedLeaveType;
+                                const other = otherHalfType;
 
-                              const isMainRemote =
-                                mainType === WorkLocation.WORK_FROM_HOME ||
-                                mainType === WorkLocation.CLIENT_VISIT;
-                              const isOtherRemote =
-                                other === WorkLocation.WORK_FROM_HOME ||
-                                other === WorkLocation.CLIENT_VISIT;
+                                const isMainRemote = mainType === WorkLocation.WORK_FROM_HOME || mainType === WorkLocation.CLIENT_VISIT;
+                                const isOtherRemote = other === WorkLocation.WORK_FROM_HOME || other === WorkLocation.CLIENT_VISIT;
 
-                              if (isMainRemote && isOtherRemote) {
-                                return `${baseDur} Day(s)`;
-                              } else {
-                                return `${baseDur * 0.5} Day(s)`;
+                                if (isMainRemote && isOtherRemote) {
+                                  return `${baseDur} Day(s)`;
+                                } else {
+                                  return `${baseDur * 0.5} Day(s)`;
+                                }
                               }
+                              return `${baseDur} Day(s)`;
+                            } else {
+                              return `${dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1} Day(s)`;
                             }
-                            return `${baseDur} Day(s)`;
-                          } else {
-                            return `${dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1} Day(s)`;
-                          }
-                        })()
+                          })()
                       : "0 Days"}
                   </span>
                 </div>
@@ -2814,7 +2671,7 @@ const LeaveManagement = () => {
       <Modal
         open={undoModal.isOpen}
         onCancel={() =>
-          !isUndoing && setUndoModal({ isOpen: true, request: null })
+          !isUndoing && setUndoModal({ isOpen: false, request: null })
         }
         footer={[
           <button
@@ -2909,6 +2766,7 @@ const LeaveManagement = () => {
         onCancel={() =>
           !isModifying && setModifyModal({ isOpen: false, request: null })
         }
+        width={980}
         title={
           <div className="text-xl font-bold text-gray-800">Modify Request</div>
         }
@@ -2946,12 +2804,9 @@ const LeaveManagement = () => {
                   (modifyModal.request.description || "");
 
                 if (!isFirstHalfChanged && !isSecondHalfChanged) {
-                  notification.warning({
-                    message: "No Shift Modification",
-                    description:
-                      "You must change the First Half or Second Half to submit a modification.",
-                    placement: "topRight",
-                  });
+                  message.warning(
+                    "You must change the First Half or Second Half to submit a modification.",
+                  );
                   return;
                 }
 
@@ -2969,24 +2824,12 @@ const LeaveManagement = () => {
                   ).unwrap();
                   setModifyModal({ isOpen: false, request: null });
                   if (employeeId) {
-                    dispatch(getLeaveStats({ employeeId }));
-                    dispatch(
-                      getLeaveHistory({
-                        employeeId,
-                        status: filterStatus,
-                        month: selectedMonth,
-                        year: selectedYear,
-                        page: currentPage,
-                        limit: itemsPerPage,
-                      }),
-                    );
+                    refreshData();
                   }
                 } catch (err: any) {
-                  notification.error({
-                    message: "Modification Failed",
-                    description: err.message || "Failed to modify request.",
-                    placement: "topRight",
-                  });
+                  message.error(
+                    `Modification Failed: ${err.message || "Failed to modify request."}`,
+                  );
                 } finally {
                   setIsModifying(false);
                 }
@@ -3011,7 +2854,39 @@ const LeaveManagement = () => {
         }
         centered
       >
-        <div className="py-4 space-y-4">
+        <div className="py-2 space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar px-1">
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              Subject
+            </label>
+            <input
+              type="text"
+              value={modifyFormData.title}
+              onChange={(e) =>
+                setModifyFormData({ ...modifyFormData, title: e.target.value })
+              }
+              className={`w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 transition ${
+                modifyFormData.firstHalf ===
+                  (modifyModal.request?.firstHalf ||
+                    modifyModal.request?.requestType) &&
+                modifyFormData.secondHalf ===
+                  (modifyModal.request?.secondHalf ||
+                    modifyModal.request?.requestType)
+                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  : ""
+              }`}
+              placeholder="Request title"
+              disabled={
+                modifyFormData.firstHalf ===
+                  (modifyModal.request?.firstHalf ||
+                    modifyModal.request?.requestType) &&
+                modifyFormData.secondHalf ===
+                  (modifyModal.request?.secondHalf ||
+                    modifyModal.request?.requestType)
+              }
+            />
+          </div>
+
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
             <p className="text-sm text-yellow-800 font-semibold">
               📅{" "}
@@ -3041,38 +2916,6 @@ const LeaveManagement = () => {
                 </strong>
               </p>
             )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              Title
-            </label>
-            <input
-              type="text"
-              value={modifyFormData.title}
-              onChange={(e) =>
-                setModifyFormData({ ...modifyFormData, title: e.target.value })
-              }
-              className={`w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 transition ${
-                modifyFormData.firstHalf ===
-                  (modifyModal.request?.firstHalf ||
-                    modifyModal.request?.requestType) &&
-                modifyFormData.secondHalf ===
-                  (modifyModal.request?.secondHalf ||
-                    modifyModal.request?.requestType)
-                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                  : ""
-              }`}
-              placeholder="Request title"
-              disabled={
-                modifyFormData.firstHalf ===
-                  (modifyModal.request?.firstHalf ||
-                    modifyModal.request?.requestType) &&
-                modifyFormData.secondHalf ===
-                  (modifyModal.request?.secondHalf ||
-                    modifyModal.request?.requestType)
-              }
-            />
           </div>
 
           <div>
@@ -3169,10 +3012,11 @@ const LeaveManagement = () => {
               />
             </div>
 
-            {/* Email recipients in Modify modal */}
-            <div className="space-y-2 mt-4">
-              <label className="block text-sm font-bold text-gray-700">Email recipients</label>
+            {/* Email recipients in Modify modal - disabled/read-only */}
+            <div className="rounded-2xl border border-[#E0E7FF] bg-[#F8FAFC] p-4 shadow-sm mt-4 opacity-70 pointer-events-none">
               <div className="space-y-2">
+                <label className="block text-sm font-bold text-gray-700">Email recipients (Read Only)</label>
+                <div className="space-y-2">
                 <div className="flex flex-wrap gap-4 items-start">
                   {emailConfig.assignedManagerEmail && (
                     <div className="min-w-0 flex-1">
@@ -3199,7 +3043,7 @@ const LeaveManagement = () => {
                   </div>
                 </div>
                 <div>
-                  <span className="text-xs text-gray-600 block mb-1">Additional CC (optional)</span>
+                  <span className="text-xs text-gray-600 block mb-1">Additional CC</span>
                     <div className="flex flex-wrap gap-2 items-center">
                       {(modifyFormData.ccEmails || []).map((email) => (
                         <span
@@ -3207,35 +3051,10 @@ const LeaveManagement = () => {
                           className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#EEF4FF] text-[#4318FF] text-sm"
                         >
                           {email}
-                          <button
-                            type="button"
-                            onClick={() => removeModifyCcEmail(email)}
-                            className="hover:bg-[#4318FF]/20 rounded-full p-0.5"
-                            aria-label={`Remove ${email}`}
-                          >
-                            <X size={12} />
-                          </button>
                         </span>
                       ))}
-                      <input
-                        type="email"
-                        value={modifyCcInput}
-                        onChange={(e) => {
-                          setModifyCcInput(e.target.value);
-                          setModifyCcError("");
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === ",") {
-                            e.preventDefault();
-                            addModifyCcEmail(modifyCcInput);
-                          }
-                        }}
-                        onBlur={() => modifyCcInput.trim() && addModifyCcEmail(modifyCcInput)}
-                        placeholder="Add email, Enter"
-                        className="flex-1 min-w-[140px] px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#4318FF]"
-                      />
                     </div>
-                    {modifyCcError && <p className="text-red-500 text-xs mt-1">{modifyCcError}</p>}
+                  </div>
                 </div>
               </div>
             </div>
@@ -3338,9 +3157,9 @@ const LeaveManagement = () => {
                     });
                   }
                 }}
-                disabled={selectedCancelDates.length === 0}
+                disabled={selectedCancelDates.length === 0 || requestToCancel?.status === LeaveRequestStatus.PENDING}
                 className={`px-6 py-2.5 rounded-2xl font-bold transition-all transform active:scale-95 uppercase tracking-wider flex items-center justify-center gap-2 ${
-                  selectedCancelDates.length === 0
+                  selectedCancelDates.length === 0 || requestToCancel?.status === LeaveRequestStatus.PENDING
                     ? "text-gray-400 bg-gray-100 cursor-not-allowed"
                     : "text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30"
                 }`}

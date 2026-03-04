@@ -54,7 +54,7 @@ import {
   Clock,
   Building2,
 } from "lucide-react";
-import { notification } from "antd";
+import { message } from "antd";
 import CommonMultipleUploader from "../EmployeeDashboard/CommonMultipleUploader";
 
 const isCancellationAllowed = (submittedDate: string) => {
@@ -99,6 +99,14 @@ const AdminLeaveManagement = () => {
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [isEmployeeDropdownOpen, setIsEmployeeDropdownOpen] = useState(false);
   const employeeDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Configure AntD message position to be below the header
+  useEffect(() => {
+    message.config({
+      top: 70,
+      duration: 3,
+    });
+  }, []);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewMode, setIsViewMode] = useState(false);
   const [selectedRequestId, setSelectedRequestId] = useState<number | null>(
@@ -192,7 +200,7 @@ const AdminLeaveManagement = () => {
   const currentYear = new Date().getFullYear();
   const years = [
     "All",
-    ...Array.from({ length: 5 }, (_, i) => currentYear - 2 + i),
+    ...Array.from({ length: 6 }, (_, i) => currentYear + i),
   ];
 
   const itemsPerPage = 10;
@@ -209,6 +217,24 @@ const AdminLeaveManagement = () => {
     endDate: "",
     employee: "",
   });
+
+  const refreshData = (page?: number, limit?: number) => {
+    if (!selectedEmployee) return;
+    const empId = selectedEmployee.employeeId || selectedEmployee.id;
+    dispatch(
+      getLeaveHistory({
+        employeeId: empId,
+        page: page || currentPage,
+        limit: limit || itemsPerPage,
+        month: selectedMonth,
+        year: selectedYear,
+        status: filterStatus,
+      }),
+    );
+    dispatch(getLeaveStats({ employeeId: empId }));
+  };
+
+
 
   // Disable dates that already have approved/pending leave requests for the selected employee
   const disabledDate = (current: any) => {
@@ -407,7 +433,7 @@ const AdminLeaveManagement = () => {
       isValid = false;
     }
     if (!formData.title.trim()) {
-      newErrors.title = "Title is required";
+      newErrors.title = "Subject is required";
       isValid = false;
     }
     if (!formData.startDate) {
@@ -659,12 +685,7 @@ const AdminLeaveManagement = () => {
       );
 
       if (!submitLeaveRequest.fulfilled.match(submitAction)) {
-        notification.error({
-          message: "Submit Failed",
-          description: "Failed to submit request",
-          placement: "topRight",
-          duration: 3,
-        });
+        message.error("Submit Failed: Failed to submit request");
         return;
       }
 
@@ -672,13 +693,7 @@ const AdminLeaveManagement = () => {
       const createdId = createdRequest?.id;
 
       if (!createdId) {
-        notification.warning({
-          message: "Submitted",
-          description:
-            "Request submitted, but auto-approval couldn't be completed (missing request id).",
-          placement: "topRight",
-          duration: 4,
-        });
+        message.warning("Submitted: Request submitted, but auto-approval couldn't be completed (missing request id).");
         return;
       }
 
@@ -867,41 +882,15 @@ const AdminLeaveManagement = () => {
       );
 
       if (!updateLeaveRequestStatus.fulfilled.match(approveAction)) {
-        notification.warning({
-          message: "Submitted",
-          description:
-            "Request submitted, but auto-approval failed. Please approve it from Requests/Notifications.",
-          placement: "topRight",
-          duration: 4,
-        });
+        message.warning("Submitted: Request submitted, but auto-approval failed. Please approve it from Requests/Notifications.");
         return;
       }
 
-      notification.success({
-        message: "Applied & Approved",
-        description:
-          "Admin request is auto-approved successfully and conflicts handled.",
-        placement: "topRight",
-        duration: 3,
-      });
+      message.success("Request Approved");
 
       // Refresh data for selected employee
-      await dispatch(
-        getLeaveHistory({
-          employeeId: selectedEmployee.employeeId || selectedEmployee.id,
-          page: 1,
-          limit: itemsPerPage,
-          month: selectedMonth,
-          year: selectedYear,
-          status: filterStatus,
-        }),
-      );
+      await refreshData(1);
       setCurrentPage(1);
-      await dispatch(
-        getLeaveStats({
-          employeeId: selectedEmployee.employeeId || selectedEmployee.id,
-        }),
-      );
 
       // Close & reset form
       setIsModalOpen(false);
@@ -924,13 +913,7 @@ const AdminLeaveManagement = () => {
       setIsViewMode(false);
       dispatch(resetSubmitSuccess());
     } catch (e: any) {
-      notification.error({
-        message: "Action Failed",
-        description:
-          e?.message || "Could not define request or update attendance.",
-        placement: "topRight",
-        duration: 4,
-      });
+      message.error(e?.message || "Could not define request or update attendance.");
     } finally {
       setIsAutoApproving(false);
     }
@@ -979,26 +962,11 @@ const AdminLeaveManagement = () => {
   ]);
 
   useEffect(() => {
-    if (selectedEmployee?.employeeId || selectedEmployee?.id) {
-      dispatch(
-        getLeaveHistory({
-          employeeId: selectedEmployee.employeeId || selectedEmployee.id,
-          page: currentPage,
-          limit: itemsPerPage,
-          month: selectedMonth,
-          year: selectedYear,
-          status: filterStatus,
-        }),
-      );
-      dispatch(
-        getLeaveStats({
-          employeeId: selectedEmployee.employeeId || selectedEmployee.id,
-        }),
-      );
-    }
+    refreshData();
   }, [
     dispatch,
-    selectedEmployee,
+    selectedEmployee?.employeeId,
+    selectedEmployee?.id,
     currentPage,
     selectedMonth,
     selectedYear,
@@ -1027,11 +995,7 @@ const AdminLeaveManagement = () => {
         ...prev,
         employee: "Please select an employee first",
       }));
-      notification.warning({
-        message: "Employee Required",
-        description: "Please select an employee before applying for leave",
-        placement: "topRight",
-      });
+      message.warning("Please select an employee before applying for leave");
       return;
     }
     setIsViewMode(false);
@@ -1074,6 +1038,37 @@ const AdminLeaveManagement = () => {
           endDate: fetchedItem.toDate,
           duration: fetchedItem.duration,
         });
+
+        const parsedCc = Array.isArray(fetchedItem.ccEmails)
+          ? fetchedItem.ccEmails
+          : typeof fetchedItem.ccEmails === "string"
+            ? (() => {
+                try {
+                  const p = JSON.parse(fetchedItem.ccEmails);
+                  return Array.isArray(p) ? p : [];
+                } catch {
+                  return [];
+                }
+              })()
+            : [];
+        setCcEmails(parsedCc);
+        setCcEmailInput("");
+        setCcEmailError("");
+
+        if (fetchedItem.employeeId) {
+          dispatch(getLeaveRequestEmailConfig(fetchedItem.employeeId))
+            .unwrap()
+            .then((data) =>
+              setEmailConfig({
+                assignedManagerEmail: data?.assignedManagerEmail ?? null,
+                hrEmail: data?.hrEmail ?? null,
+              }),
+            )
+            .catch(() =>
+              setEmailConfig({ assignedManagerEmail: null, hrEmail: null }),
+            );
+        }
+
         setIsModalOpen(true);
         setErrors({
           title: "",
@@ -1083,10 +1078,7 @@ const AdminLeaveManagement = () => {
           employee: "",
         });
       } else {
-        notification.error({
-          message: "Error",
-          description: "Failed to fetch request details",
-        });
+        message.error("Failed to fetch request details");
       }
     });
   };
@@ -1104,7 +1096,7 @@ const AdminLeaveManagement = () => {
 
   const handleCancel = (id: number) => {
     const req = entities.find((e: any) => e.id === id);
-    if (req?.status === LeaveRequestStatus.APPROVED) {
+    if (req?.status === LeaveRequestStatus.APPROVED || req?.status === LeaveRequestStatus.PENDING) {
       handleCancelClick(req);
     } else {
       setCancelModal({ isOpen: true, id });
@@ -1140,7 +1132,8 @@ const AdminLeaveManagement = () => {
             r.status === "Requesting For Cancellation" ||
             r.status === LeaveRequestStatus.APPROVED ||
             r.status === LeaveRequestStatus.MODIFICATION_APPROVED ||
-            r.status === LeaveRequestStatus.REQUEST_MODIFIED)
+            r.status === LeaveRequestStatus.REQUEST_MODIFIED ||
+            r.status === LeaveRequestStatus.CANCELLED)
         ) {
           let start = dayjs(r.fromDate);
           const end = dayjs(r.toDate);
@@ -1163,10 +1156,7 @@ const AdminLeaveManagement = () => {
 
       setCancellableDates(filtered);
     } catch (err) {
-      notification.error({
-        message: "Error",
-        description: "Failed to fetch cancellable dates",
-      });
+      message.error("Failed to fetch cancellable dates");
     } finally {
       setIsLoadingDates(false);
     }
@@ -1199,9 +1189,7 @@ const AdminLeaveManagement = () => {
   const handleConfirmDateCancelItems = async () => {
     if (!requestToCancel || !selectedEmployee) return;
     if (selectedCancelDates.length === 0) {
-      notification.warning({
-        message: "Please select at least one date to cancel.",
-      });
+      message.warning("Please select at least one date to cancel.");
       return;
     }
 
@@ -1216,127 +1204,96 @@ const AdminLeaveManagement = () => {
       );
 
       if (cancelRequestDates.fulfilled.match(action)) {
-        // Backend already handles attendance clearing when cancellation is approved
-        // No need to call attendance API here
-
-        // AUTO-APPROVE the created cancellation request
-        const createdCancellationRequest = action.payload;
-        if (createdCancellationRequest?.id) {
-          await dispatch(
-            updateLeaveRequestStatus({
-              id: createdCancellationRequest.id,
-              status: LeaveRequestStatus.CANCELLATION_APPROVED,
-            }),
-          ).unwrap();
-
-          // Explicit Attendance Clearance
-          try {
-            await dispatch(
-              clearAttendanceForRequest({
-                id: createdCancellationRequest.id,
-                employeeId: createdCancellationRequest.employeeId,
-              }),
-            ).unwrap();
-          } catch (err) {
-            console.error("Failed to clear attendance explicitly:", err);
-          }
-        }
-
-        // 3. Update Parent Request (Recalculate Remaining Duration & Range)
-        if (requestToCancel) {
-          const originalStart = dayjs(requestToCancel.fromDate);
-          const originalEnd = dayjs(requestToCancel.toDate);
-          const cancelledSet = new Set(selectedCancelDates);
-          const validDates: string[] = [];
-
-          let curr = originalStart;
-          while (
-            curr.isBefore(originalEnd) ||
-            curr.isSame(originalEnd, "day")
-          ) {
-            const dStr = curr.format("YYYY-MM-DD");
-            // Only count as valid if NOT cancelled and NOT weekend/holiday (if applicable)
-            if (!cancelledSet.has(dStr)) {
-              // Check if it's a working day (for duration calc)
-              if (!isWeekend(curr) && !isHoliday(curr)) {
-                validDates.push(dStr);
-              } else {
-                // It's a weekend/holiday, but still part of the range?
-                // Typically 'duration' only counts working days.
-                // 'fromDate' and 'toDate' define the span.
-                // If the span includes weekends, they are just part of the gap.
-                // However, updateParentRequest expects new start/end from the valid set.
-                // Let's assume validDates tracks working days for duration.
-              }
-            }
-            curr = curr.add(1, "day");
-          }
-
-          // Re-scan for range boundaries including weekends/holidays if they are "in between" valid working days?
-          // Simplification: The new range is from the first remaining working day to the last remaining working day.
-          // If validDates is empty, the request is fully cancelled (handled by backend or status update).
-
-          if (validDates.length > 0) {
-            const newFrom = validDates[0];
-            const newTo = validDates[validDates.length - 1];
-            const newDuration = validDates.length;
-
-            await dispatch(
-              updateParentRequest({
-                parentId: requestToCancel.id,
-                duration: newDuration,
-                fromDate: newFrom,
-                toDate: newTo,
-              }),
-            ).unwrap();
-          } else {
-            // If no valid working days left, maybe mark parent as Cancelled too?
-            // Or Cancellation Approved covers it.
+        // For PENDING requests, backend already updated the parent request and created CANCELLED sub-requests.
+        // We only perform auto-approval and parent recalc for APPROVED requests being partially cancelled.
+        if (requestToCancel.status !== LeaveRequestStatus.PENDING) {
+          // AUTO-APPROVE the created cancellation request
+          const createdCancellationRequest = action.payload;
+          if (createdCancellationRequest?.id) {
             await dispatch(
               updateLeaveRequestStatus({
-                id: requestToCancel.id,
+                id: createdCancellationRequest.id,
                 status: LeaveRequestStatus.CANCELLATION_APPROVED,
               }),
             ).unwrap();
 
-            await dispatch(
-              updateParentRequest({
-                parentId: requestToCancel.id,
-                duration: 0,
-                fromDate: requestToCancel.fromDate,
-                toDate: requestToCancel.toDate,
-              }),
-            ).unwrap();
+            // Explicit Attendance Clearance
+            try {
+              await dispatch(
+                clearAttendanceForRequest({
+                  id: createdCancellationRequest.id,
+                  employeeId: createdCancellationRequest.employeeId,
+                }),
+              ).unwrap();
+            } catch (err) {
+              console.error("Failed to clear attendance explicitly:", err);
+            }
           }
-        }
 
-        notification.success({
-          message: "Cancellation Applied & Approved",
-          description:
-            "The selected dates have been cancelled and attendance reverted.",
-        });
+          // Update Parent Request (Recalculate Remaining Duration & Range)
+          if (requestToCancel) {
+            const originalStart = dayjs(requestToCancel.fromDate);
+            const originalEnd = dayjs(requestToCancel.toDate);
+            const cancelledSet = new Set(selectedCancelDates);
+            const validDates: string[] = [];
+
+            let curr = originalStart;
+            while (
+              curr.isBefore(originalEnd) ||
+              curr.isSame(originalEnd, "day")
+            ) {
+              const dStr = curr.format("YYYY-MM-DD");
+              if (!cancelledSet.has(dStr)) {
+                if (!isWeekend(curr) && !isHoliday(curr)) {
+                  validDates.push(dStr);
+                }
+              }
+              curr = curr.add(1, "day");
+            }
+
+            if (validDates.length > 0) {
+              const newFrom = validDates[0];
+              const newTo = validDates[validDates.length - 1];
+              const newDuration = validDates.length;
+
+              await dispatch(
+                updateParentRequest({
+                  parentId: requestToCancel.id,
+                  duration: newDuration,
+                  fromDate: newFrom,
+                  toDate: newTo,
+                }),
+              ).unwrap();
+            } else {
+              await dispatch(
+                updateLeaveRequestStatus({
+                  id: requestToCancel.id,
+                  status: LeaveRequestStatus.CANCELLATION_APPROVED,
+                }),
+              ).unwrap();
+
+              await dispatch(
+                updateParentRequest({
+                  parentId: requestToCancel.id,
+                  duration: 0,
+                  fromDate: requestToCancel.fromDate,
+                  toDate: requestToCancel.toDate,
+                }),
+              ).unwrap();
+            }
+          }
+          message.success("Cancellation Approved");
+        } else {
+          message.success("Dates cancelled successfully");
+        }
         setIsCancelDateModalVisible(false);
         // Refresh data
-        dispatch(
-          getLeaveHistory({
-            employeeId: selectedEmployee.employeeId || selectedEmployee.id,
-            page: currentPage,
-            limit: itemsPerPage,
-            month: selectedMonth,
-            year: selectedYear,
-            status: filterStatus,
-          }),
-        );
-        dispatch(
-          getLeaveStats({
-            employeeId: selectedEmployee.employeeId || selectedEmployee.id,
-          }),
-        );
+        refreshData();
       } else {
         throw new Error((action.payload as string) || "Cancellation failed");
       }
     } catch (err: any) {
-      notification.error({ message: err.message || "Cancellation failed" });
+      message.error(err.message || "Cancellation failed");
     } finally {
       setIsCancelling(false);
     }
@@ -1383,36 +1340,14 @@ const AdminLeaveManagement = () => {
         }
 
         // Refresh Data
-        dispatch(
-          getLeaveStats({
-            employeeId: selectedEmployee.employeeId || selectedEmployee.id,
-          }),
-        );
-        dispatch(
-          getLeaveHistory({
-            employeeId: selectedEmployee.employeeId || selectedEmployee.id,
-            page: currentPage,
-            limit: itemsPerPage,
-            month: selectedMonth,
-            year: selectedYear,
-            status: filterStatus,
-          }),
-        );
+        refreshData();
 
         setCancelModal({ isOpen: false, id: null });
-        notification.success({
-          message: "Request Cancelled",
-          description:
-            "The request has been successfully cancelled and records reverted.",
-          placement: "topRight",
-          duration: 3,
-        });
+        message.success("Cancellation Approved");
       } catch (err: any) {
-        notification.error({
-          message: "Cancellation Failed",
-          description:
-            err.message || "An error occurred while cancelling the request.",
-        });
+        message.error(
+          err.message || "An error occurred while cancelling the request.",
+        );
       } finally {
         setIsCancelling(false);
       }
@@ -1438,39 +1373,17 @@ const AdminLeaveManagement = () => {
 
       if (undoModificationRequest.fulfilled.match(action)) {
         // Refresh Data
-        dispatch(
-          getLeaveStats({
-            employeeId: employeeId,
-          }),
-        );
-        dispatch(
-          getLeaveHistory({
-            employeeId: employeeId,
-            page: currentPage,
-            limit: itemsPerPage,
-            month: selectedMonth,
-            year: selectedYear,
-            status: filterStatus,
-          }),
-        );
+        refreshData();
 
         setUndoModal({ isOpen: false, request: null });
-        notification.success({
-          message: "Modification Revoked",
-          description: "The modification request has been successfully undone.",
-          placement: "topRight",
-        });
+        message.success("Modification Revoked");
       } else {
         throw new Error(
           (action.payload as string) || "Could not undo modification",
         );
       }
     } catch (err: any) {
-      notification.error({
-        message: "Undo Failed",
-        description: err.message || "Could not undo modification.",
-        placement: "topRight",
-      });
+      message.error(`Undo Failed: ${err.message || "Could not undo modification."}`);
     } finally {
       setIsUndoing(false);
     }
@@ -2414,26 +2327,15 @@ const AdminLeaveManagement = () => {
         open={isModalOpen}
         onCancel={handleCloseModal}
         footer={null}
-        closable={false}
+        closable={true}
         centered
-        width={910}
+        width={980}
         className="application-modal"
       >
         <div className="relative overflow-hidden bg-white rounded-[16px]">
           {/* Modal Header */}
           <div className="pt-2 px-6">
             <div className="flex justify-between items-start">
-              <span className="text-sm font-black uppercase tracking-widest text-[#A3AED0]">
-                {isViewMode ? "Viewing Application" : "Applying For"}
-              </span>
-              <button
-                onClick={handleCloseModal}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <X size={22} className="text-[#2B3674]" />
-              </button>
-            </div>
-            <div className="flex items-center justify-between w-full mt-1">
               <h2 className="text-2xl md:text-3xl font-black text-[#2B3674]">
                 {selectedLeaveType === LeaveRequestType.APPLY_LEAVE
                   ? LeaveRequestType.LEAVE
@@ -2445,7 +2347,7 @@ const AdminLeaveManagement = () => {
           </div>
 
           {/* Modal Body */}
-          <div className="p-6 space-y-5 overflow-y-auto custom-scrollbar max-h-[75vh]">
+          <div className="p-6 space-y-5 overflow-y-auto custom-scrollbar max-h-[60vh]">
             {/* Error Message */}
             {error && (
               <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
@@ -2458,78 +2360,52 @@ const AdminLeaveManagement = () => {
               </div>
             )}
 
-            {/* Email recipients - at top for manager/admin */}
-            {!isViewMode && selectedEmployee && (
-              <div className="space-y-3">
-                <label className="text-sm font-bold text-[#2B3674] ml-1 block">
-                  Email recipients
-                </label>
-                <div className="space-y-2">
-                  <div className="flex flex-wrap gap-4 items-start">
+            {/* Email recipients - in card for manager/admin */}
+            {selectedEmployee && (
+              <div className="rounded-2xl border border-[#E0E7FF] bg-[#F8FAFC] p-4 shadow-sm">
+                <div className="space-y-3">
+                  <label className="text-sm font-bold text-[#2B3674] ml-1 block">
+                    Email recipients
+                  </label>
+                  <div className="space-y-4 opacity-75 pointer-events-none">
+                    <div className="flex flex-wrap gap-4 items-start">
                     {emailConfig.assignedManagerEmail && (
                       <div className="min-w-0 flex-1">
-                        <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">Assigned manager (To)</span>
-                        <input
-                          type="text"
-                          readOnly
-                          disabled
-                          value={emailConfig.assignedManagerEmail}
-                          className="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-gray-50 text-gray-700 cursor-not-allowed"
-                        />
+                        <span className="text-xs font-medium text-gray-600 block mb-1 uppercase tracking-wide">
+                          Assigned manager (To)
+                        </span>
+                        <div className="px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-gray-700 font-bold text-sm">
+                          {emailConfig.assignedManagerEmail}
+                        </div>
                       </div>
                     )}
                     <div className="min-w-0 flex-1">
-                      <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">HR</span>
-                      <input
-                        type="text"
-                        readOnly
-                        disabled
-                        value={emailConfig.hrEmail || ""}
-                        placeholder="Not configured"
-                        className="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-gray-50 text-gray-700 cursor-not-allowed"
-                      />
+                      <span className="text-xs font-medium text-gray-600 block mb-1 uppercase tracking-wide">
+                        HR
+                      </span>
+                      <div className="px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-gray-700 font-bold text-sm">
+                        {emailConfig.hrEmail || "Not configured"}
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">Additional CC (optional)</span>
-                    <div className="flex flex-wrap gap-2 items-center">
-                      {ccEmails.map((email) => (
-                        <span
-                          key={email}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#EEF4FF] text-[#4318FF] text-sm font-medium"
-                        >
-                          {email}
-                          <button
-                            type="button"
-                            onClick={() => removeCcEmail(email)}
-                            className="hover:bg-[#4318FF]/20 rounded-full p-0.5"
-                            aria-label={`Remove ${email}`}
+
+                  {ccEmails.length > 0 && (
+                    <div>
+                      <span className="text-xs font-medium text-gray-600 ml-1 block mb-1 uppercase tracking-wide">
+                        Additional CC
+                      </span>
+                      <div className="flex flex-wrap gap-2">
+                        {ccEmails.map((email) => (
+                          <span
+                            key={email}
+                            className="px-3 py-1.5 rounded-xl bg-gray-100 text-gray-700 text-sm font-bold"
                           >
-                            <X size={14} />
-                          </button>
-                        </span>
-                      ))}
-                      <input
-                        type="email"
-                        value={ccEmailInput}
-                        onChange={(e) => {
-                          setCcEmailInput(e.target.value);
-                          setCcEmailError("");
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === ",") {
-                            e.preventDefault();
-                            addCcEmail(ccEmailInput);
-                          }
-                        }}
-                        onBlur={() => ccEmailInput.trim() && addCcEmail(ccEmailInput)}
-                        placeholder="Add email and press Enter"
-                        className="flex-1 min-w-[180px] px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[#4318FF] bg-[#F4F7FE]"
-                      />
+                            {email}
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                    {ccEmailError && (
-                      <p className="text-red-500 text-xs mt-1 ml-1">{ccEmailError}</p>
-                    )}
+                  )}
                   </div>
                 </div>
               </div>
@@ -2551,6 +2427,38 @@ const AdminLeaveManagement = () => {
                 </div>
               </div>
             )}
+
+            {/* Subject Field - above Duration Type */}
+            <div className="space-y-2" ref={titleRef}>
+              <label className="text-sm font-bold text-[#2B3674] ml-1">
+                Subject
+              </label>
+              {isViewMode ? (
+                <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none break-words">
+                  {formData.title}
+                </div>
+              ) : (
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="e.g. Annual Vacation"
+                    className={`w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] border ${
+                      errors.title ? "border-red-500" : "border-transparent"
+                    } focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400`}
+                    value={formData.title}
+                    onChange={(e) => {
+                      setFormData({ ...formData, title: e.target.value });
+                      setErrors((prev) => ({ ...prev, title: "" }));
+                    }}
+                  />
+                  {errors.title && (
+                    <p className="text-red-500 text-xs mt-1 ml-2">
+                      {errors.title}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Duration Type & Split-Day Selection */}
             {!isViewMode &&
@@ -2652,38 +2560,6 @@ const AdminLeaveManagement = () => {
                   )}
                 </div>
               )}
-
-            {/* Title Field */}
-            <div className="space-y-2" ref={titleRef}>
-              <label className="text-sm font-bold text-[#2B3674] ml-1">
-                Title
-              </label>
-              {isViewMode ? (
-                <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none break-words">
-                  {formData.title}
-                </div>
-              ) : (
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="e.g. Annual Vacation"
-                    className={`w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] border ${
-                      errors.title ? "border-red-500" : "border-transparent"
-                    } focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400`}
-                    value={formData.title}
-                    onChange={(e) => {
-                      setFormData({ ...formData, title: e.target.value });
-                      setErrors((prev) => ({ ...prev, title: "" }));
-                    }}
-                  />
-                  {errors.title && (
-                    <p className="text-red-500 text-xs mt-1 ml-2">
-                      {errors.title}
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
 
             {/* Dates Row + Total Days (same design as employee) */}
             <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-4 items-end">
@@ -3084,9 +2960,9 @@ const AdminLeaveManagement = () => {
                     );
                   }
                 }}
-                disabled={selectedCancelDates.length === 0}
+                disabled={selectedCancelDates.length === 0 || requestToCancel?.status === LeaveRequestStatus.PENDING}
                 className={`px-6 py-2.5 rounded-2xl font-bold transition-all uppercase tracking-wider flex items-center justify-center gap-2 ${
-                  selectedCancelDates.length === 0
+                  selectedCancelDates.length === 0 || requestToCancel?.status === LeaveRequestStatus.PENDING
                     ? "text-gray-400 bg-gray-100 cursor-not-allowed"
                     : "text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 active:scale-95 transform"
                 }`}
@@ -3254,11 +3130,7 @@ const AdminLeaveManagement = () => {
                   !isTitleChanged &&
                   !isDescriptionChanged
                 ) {
-                  notification.warning({
-                    message: "No Changes Detected",
-                    description: "Please modify at least one field to submit.",
-                    placement: "topRight",
-                  });
+                  message.warning("Please modify at least one field to submit.");
                   return;
                 }
 
@@ -3277,30 +3149,11 @@ const AdminLeaveManagement = () => {
                       },
                     }),
                   ).unwrap();
-                  notification.success({
-                    message: "Request Modified",
-                    description: "The request has been successfully modified.",
-                    placement: "topRight",
-                  });
+                  message.success("Modification Submitted");
                   setModifyModal({ isOpen: false, request: null });
-                  const empId = modifyModal.request.employeeId;
-                  dispatch(getLeaveStats({ employeeId: empId }));
-                  dispatch(
-                    getLeaveHistory({
-                      employeeId: empId,
-                      page: currentPage,
-                      limit: itemsPerPage,
-                      month: selectedMonth,
-                      year: selectedYear,
-                      status: filterStatus,
-                    }),
-                  );
+                  refreshData();
                 } catch (err: any) {
-                  notification.error({
-                    message: "Modification Failed",
-                    description: err.message || "Failed to modify request.",
-                    placement: "topRight",
-                  });
+                  message.error(err.message || "Failed to modify request.");
                 } finally {
                   setIsModifying(false);
                 }
@@ -3360,7 +3213,7 @@ const AdminLeaveManagement = () => {
 
           <div>
             <label className="block text-sm font-bold text-[#2B3674] mb-2">
-              Title
+              Subject
             </label>
             <input
               type="text"
@@ -3369,7 +3222,7 @@ const AdminLeaveManagement = () => {
                 setModifyFormData({ ...modifyFormData, title: e.target.value })
               }
               className="w-full px-4 py-3 bg-[#F4F7FE] border-none rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4318FF]/20 transition font-bold text-[#2B3674]"
-              placeholder="Request title"
+              placeholder="Request subject"
             />
           </div>
 
@@ -3494,7 +3347,6 @@ const AdminLeaveManagement = () => {
           },
           body: { padding: 0, borderRadius: "24px" },
         }}
-        closeIcon={null}
       >
         <div className="p-8 text-center">
           <div className="mx-auto w-16 h-16 rounded-full bg-orange-50 flex items-center justify-center mb-6">
@@ -3538,3 +3390,4 @@ const AdminLeaveManagement = () => {
 };
 
 export default AdminLeaveManagement;
+
