@@ -2349,7 +2349,7 @@ const AdminLeaveManagement = () => {
           </div>
 
           {/* Modal Body */}
-          <div className="p-6 space-y-5 overflow-y-auto custom-scrollbar max-h-[60vh]">
+          <div className="p-6 space-y-5 overflow-y-auto custom-scrollbar max-h-[90vh]">
             {/* Error Message */}
             {error && (
               <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
@@ -2374,7 +2374,7 @@ const AdminLeaveManagement = () => {
                     {emailConfig.assignedManagerEmail && (
                       <div className="min-w-0 flex-1">
                         <span className="text-xs font-medium text-gray-600 block mb-1 uppercase tracking-wide">
-                          Assigned manager (To)
+                          Assigned Manager
                         </span>
                         <div className="px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-gray-700 font-bold text-sm">
                           {emailConfig.assignedManagerEmail}
@@ -2394,7 +2394,7 @@ const AdminLeaveManagement = () => {
                   {ccEmails.length > 0 && (
                     <div>
                       <span className="text-xs font-medium text-gray-600 ml-1 block mb-1 uppercase tracking-wide">
-                        Additional CC
+                        CC
                       </span>
                       <div className="flex flex-wrap gap-2">
                         {ccEmails.map((email) => (
