@@ -47,7 +47,7 @@ import {
   ChevronDown,
   Clock,
 } from "lucide-react";
-import { notification } from "antd";
+import { message } from "antd";
 import CommonMultipleUploader from "./CommonMultipleUploader";
 
 const datePickerTheme = {
@@ -105,8 +105,13 @@ const LeaveManagement = () => {
     any[]
   >([]);
 
-  // AntD Notification Hook
-  const [api, contextHolder] = notification.useNotification();
+  // Configure AntD message position to be below the header
+  useEffect(() => {
+    message.config({
+      top: 70,
+      duration: 3,
+    });
+  }, []);
 
   // --- Partial Cancellation State ---
   const [isCancelDateModalVisible, setIsCancelDateModalVisible] =
@@ -198,7 +203,7 @@ const LeaveManagement = () => {
   const currentYear = dayjs().year();
   const years = [
     "All",
-    ...Array.from({ length: 11 }, (_, i) => (currentYear + 5 - i).toString()),
+    ...Array.from({ length: 6 }, (_, i) => (currentYear + i).toString()),
   ];
 
   const [errors, setErrors] = useState({
@@ -758,11 +763,9 @@ const LeaveManagement = () => {
                 );
               }
             }
-            api.info({
-              title: "Request Segmented",
-              description: `Your ${finalRequestType} request was split into ${segments.length} parts to avoid existing Leave/Half Day approvals.`,
-              placement: "topRight",
-            });
+            message.info(
+              `Your ${finalRequestType} request was split into ${segments.length} parts to avoid existing Leave/Half Day approvals.`,
+            );
             return; // Exit handleSubmit as we've done multiple submissions
           }
         }
@@ -842,12 +845,7 @@ const LeaveManagement = () => {
 
   useEffect(() => {
     if (submitSuccess) {
-      api.success({
-        title: "Application Submitted",
-        description: "Notification sent to Manager",
-        placement: "topRight",
-        duration: 3,
-      });
+      message.success("Application Submitted: Notification sent to Manager");
     }
   }, [submitSuccess]);
 
@@ -1026,10 +1024,7 @@ const LeaveManagement = () => {
       setIsModalOpen(true);
       setErrors({ title: "", description: "", startDate: "", endDate: "" });
     } else {
-      api.error({
-        title: "Error",
-        description: "Failed to fetch request details",
-      });
+      message.error("Failed to fetch request details");
     }
   };
 
@@ -1144,7 +1139,7 @@ const LeaveManagement = () => {
         throw new Error((action.payload as string) || "Failed to fetch");
       }
     } catch (err) {
-      api.error({ title: "Failed to fetch cancellable dates" });
+      message.error("Failed to fetch cancellable dates");
       setIsCancelDateModalVisible(false);
     } finally {
       setIsLoadingDates(false);
@@ -1154,7 +1149,7 @@ const LeaveManagement = () => {
   const handleConfirmDateCancel = async () => {
     if (!requestToCancel) return;
     if (selectedCancelDates.length === 0) {
-      api.warning({ title: "Please select at least one date to cancel." });
+      message.warning("Please select at least one date to cancel.");
       return;
     }
 
@@ -1169,7 +1164,7 @@ const LeaveManagement = () => {
       );
 
       if (cancelRequestDates.fulfilled.match(action)) {
-        api.success({ title: "Cancellation request submitted successfully" });
+        message.success("Cancellation request submitted successfully");
         setIsCancelDateModalVisible(false);
         dispatch(
           getLeaveHistory({
@@ -1192,7 +1187,7 @@ const LeaveManagement = () => {
         throw new Error((action.payload as string) || "Cancellation failed");
       }
     } catch (err: any) {
-      api.error({ title: err.message || "Cancellation failed" });
+      message.error(err.message || "Cancellation failed");
     } finally {
       setIsCancelling(false);
     }
@@ -1227,13 +1222,13 @@ const LeaveManagement = () => {
   const formatModalDate = (dateStr: string) =>
     dayjs(dateStr).format("DD MMM YYYY");
 
-  // Modified handleCancel to use the new partial cancellation flow for Approved requests
+  // Modified handleCancel to use the date-picker cancellation flow for both Approved and Pending requests
   const handleCancel = (id: number) => {
     const req = entities.find((e: any) => e.id === id);
     if (req?.status === LeaveRequestStatus.APPROVED) {
       handleCancelClick(req);
     } else {
-      // For Pending or other statuses, use the original full cancellation flow
+      // For other statuses, use the original full cancellation flow
       setCancelModal({ isOpen: true, id });
     }
   };
@@ -1273,11 +1268,7 @@ const LeaveManagement = () => {
             year: selectedYear,
           }),
         );
-        api.success({
-          title: "Cancellation Revoked",
-          description: "Your cancellation request has been undone.",
-          placement: "topRight",
-        });
+        message.success("Cancellation Revoked");
         setUndoModal({ isOpen: false, request: null });
       } else {
         throw new Error(
@@ -1285,11 +1276,9 @@ const LeaveManagement = () => {
         );
       }
     } catch (err: any) {
-      api.error({
-        title: "Undo Failed",
-        description: err.message || "Could not undo cancellation.",
-        placement: "topRight",
-      });
+      message.error(
+        `Undo Failed: ${err.message || "Could not undo cancellation."}`,
+      );
     } finally {
       setIsUndoing(false);
     }
@@ -1325,11 +1314,7 @@ const LeaveManagement = () => {
             year: selectedYear,
           }),
         );
-        api.success({
-          title: "Modification Revoked",
-          description: "Your modification request has been undone.",
-          placement: "topRight",
-        });
+        message.success("Modification Revoked");
         setUndoModal({ isOpen: false, request: null });
       } else {
         throw new Error(
@@ -1337,11 +1322,9 @@ const LeaveManagement = () => {
         );
       }
     } catch (err: any) {
-      api.error({
-        title: "Undo Failed",
-        description: err.message || "Could not undo modification.",
-        placement: "topRight",
-      });
+      message.error(
+        `Undo Failed: ${err.message || "Could not undo modification."}`,
+      );
     } finally {
       setIsUndoing(false);
     }
@@ -1395,20 +1378,12 @@ const LeaveManagement = () => {
               }),
             );
             setCancelModal({ isOpen: false, id: null });
-            api.success({
-              title: "Request Cancelled",
-              description: "Your request has been successfully cancelled.",
-              placement: "topRight",
-              duration: 3,
-            });
+            message.success("Request Cancelled");
           } else {
             // Handle error
-            api.error({
-              title: "Cancellation Failed",
-              description:
-                result.payload?.message || "Failed to cancel request.",
-              placement: "topRight",
-            });
+            message.error(
+              `Cancellation Failed: ${result.payload?.message || "Failed to cancel request."}`,
+            );
           }
         })
         .finally(() => {
@@ -1435,7 +1410,7 @@ const LeaveManagement = () => {
 
   return (
     <div className="p-4 md:px-8 md:pb-8 md:pt-0 bg-[#F4F7FE] min-h-screen font-sans text-[#2B3674]">
-      {contextHolder}
+      {/* AntD message context handled via global config */}
       {/* Header */}
       <div className="sticky top-0 z-40 bg-[#F4F7FE] -mx-4 px-4 py-2 mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all">
         <div>
@@ -2129,7 +2104,7 @@ const LeaveManagement = () => {
         open={isModalOpen}
         onCancel={handleCloseModal}
         footer={null}
-        closable={false}
+        closable={true}
         centered
         width={980}
         className="application-modal"
@@ -2138,18 +2113,6 @@ const LeaveManagement = () => {
           {/* Modal Header */}
           <div className="pt-2 px-6">
             <div className="flex justify-between items-start">
-              <span className="text-sm font-black uppercase tracking-widest text-[#A3AED0]">
-                {isViewMode ? "Viewing Application" : "Applying For"}
-              </span>
-              <button
-                onClick={handleCloseModal}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                disabled={loading}
-              >
-                <X size={22} className="text-[#2B3674]" />
-              </button>
-            </div>
-            <div className="flex items-center justify-between w-full mt-1">
               <h2 className="text-2xl md:text-3xl font-black text-[#2B3674]">
                 {selectedLeaveType === LeaveRequestType.APPLY_LEAVE
                   ? LeaveRequestType.LEAVE
@@ -2522,19 +2485,28 @@ const LeaveManagement = () => {
                               leaveDurationType === HalfDayType.FIRST_HALF ||
                               leaveDurationType === HalfDayType.SECOND_HALF;
 
+                          if (
+                            selectedLeaveType === WorkLocation.CLIENT_VISIT ||
+                            selectedLeaveType === WorkLocation.WORK_FROM_HOME ||
+                            selectedLeaveType === LeaveRequestType.APPLY_LEAVE ||
+                            selectedLeaveType === LeaveRequestType.LEAVE ||
+                            selectedLeaveType === LeaveRequestType.HALF_DAY
+                          ) {
+                            const baseDur = calculateDurationExcludingWeekends(
+                              formData.startDate,
+                              formData.endDate,
+                            );
+                            const isHalf =
+                              leaveDurationType === HalfDayType.HALF_DAY ||
+                              leaveDurationType === HalfDayType.FIRST_HALF ||
+                              leaveDurationType === HalfDayType.SECOND_HALF;
+
                             if (isHalf) {
                               const mainType =
                                 selectedLeaveType === LeaveRequestType.APPLY_LEAVE
                                   ? LeaveRequestType.LEAVE
                                   : selectedLeaveType;
                               const other = otherHalfType;
-
-                              const isMainRemote =
-                                mainType === WorkLocation.WORK_FROM_HOME ||
-                                mainType === WorkLocation.CLIENT_VISIT;
-                              const isOtherRemote =
-                                other === WorkLocation.WORK_FROM_HOME ||
-                                other === WorkLocation.CLIENT_VISIT;
 
                               if (isMainRemote && isOtherRemote) {
                                 return `${baseDur} Day(s)`;
@@ -2814,7 +2786,7 @@ const LeaveManagement = () => {
       <Modal
         open={undoModal.isOpen}
         onCancel={() =>
-          !isUndoing && setUndoModal({ isOpen: true, request: null })
+          !isUndoing && setUndoModal({ isOpen: false, request: null })
         }
         footer={[
           <button
@@ -2946,12 +2918,9 @@ const LeaveManagement = () => {
                   (modifyModal.request.description || "");
 
                 if (!isFirstHalfChanged && !isSecondHalfChanged) {
-                  notification.warning({
-                    message: "No Shift Modification",
-                    description:
-                      "You must change the First Half or Second Half to submit a modification.",
-                    placement: "topRight",
-                  });
+                  message.warning(
+                    "You must change the First Half or Second Half to submit a modification.",
+                  );
                   return;
                 }
 
@@ -2982,11 +2951,9 @@ const LeaveManagement = () => {
                     );
                   }
                 } catch (err: any) {
-                  notification.error({
-                    message: "Modification Failed",
-                    description: err.message || "Failed to modify request.",
-                    placement: "topRight",
-                  });
+                  message.error(
+                    `Modification Failed: ${err.message || "Failed to modify request."}`,
+                  );
                 } finally {
                   setIsModifying(false);
                 }
@@ -3012,6 +2979,38 @@ const LeaveManagement = () => {
         centered
       >
         <div className="py-4 space-y-4">
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              Subject
+            </label>
+            <input
+              type="text"
+              value={modifyFormData.title}
+              onChange={(e) =>
+                setModifyFormData({ ...modifyFormData, title: e.target.value })
+              }
+              className={`w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 transition ${
+                modifyFormData.firstHalf ===
+                  (modifyModal.request?.firstHalf ||
+                    modifyModal.request?.requestType) &&
+                modifyFormData.secondHalf ===
+                  (modifyModal.request?.secondHalf ||
+                    modifyModal.request?.requestType)
+                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  : ""
+              }`}
+              placeholder="Request title"
+              disabled={
+                modifyFormData.firstHalf ===
+                  (modifyModal.request?.firstHalf ||
+                    modifyModal.request?.requestType) &&
+                modifyFormData.secondHalf ===
+                  (modifyModal.request?.secondHalf ||
+                    modifyModal.request?.requestType)
+              }
+            />
+          </div>
+
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
             <p className="text-sm text-yellow-800 font-semibold">
               📅{" "}
@@ -3041,38 +3040,6 @@ const LeaveManagement = () => {
                 </strong>
               </p>
             )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              Title
-            </label>
-            <input
-              type="text"
-              value={modifyFormData.title}
-              onChange={(e) =>
-                setModifyFormData({ ...modifyFormData, title: e.target.value })
-              }
-              className={`w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 transition ${
-                modifyFormData.firstHalf ===
-                  (modifyModal.request?.firstHalf ||
-                    modifyModal.request?.requestType) &&
-                modifyFormData.secondHalf ===
-                  (modifyModal.request?.secondHalf ||
-                    modifyModal.request?.requestType)
-                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                  : ""
-              }`}
-              placeholder="Request title"
-              disabled={
-                modifyFormData.firstHalf ===
-                  (modifyModal.request?.firstHalf ||
-                    modifyModal.request?.requestType) &&
-                modifyFormData.secondHalf ===
-                  (modifyModal.request?.secondHalf ||
-                    modifyModal.request?.requestType)
-              }
-            />
           </div>
 
           <div>

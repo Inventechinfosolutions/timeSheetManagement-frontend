@@ -33,6 +33,8 @@ import {
   submitRequestModification,
   clearAttendanceForRequest,
   clearRequests,
+  LeaveRequest,
+  getLeaveRequestEmailConfig,
 } from "../reducers/leaveRequest.reducer";
 import { getEntity } from "../reducers/employeeDetails.reducer";
 // } from "../reducers/leaveRequest.reducer";
@@ -46,7 +48,7 @@ import {
 import CommonMultipleUploader from "../EmployeeDashboard/CommonMultipleUploader";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import dayjs from "dayjs";
-import { notification, Select, Modal } from "antd";
+import { message, Select, Modal } from "antd";
 import { fetchDepartments } from "../reducers/masterDepartment.reducer";
 
 const Requests = () => {
@@ -58,6 +60,14 @@ const Requests = () => {
     : "/admin-dashboard";
   const dispatch = useAppDispatch();
   const { entities, loading } = useAppSelector((state) => state.leaveRequest);
+
+  // Configure AntD message position to be below the header
+  useEffect(() => {
+    message.config({
+      top: 70,
+      duration: 3,
+    });
+  }, []);
   const { holidays = [] } = useAppSelector(
     (state: any) => state.masterHolidays || {},
   );
@@ -72,6 +82,11 @@ const Requests = () => {
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [selectedOwnerId, setSelectedOwnerId] = useState<number | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [emailConfig, setEmailConfig] = useState<{
+    assignedManagerEmail: string | null;
+    hrEmail: string | null;
+  }>({ assignedManagerEmail: null, hrEmail: null });
+  const [ccEmails, setCcEmails] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -130,7 +145,7 @@ const Requests = () => {
   const currentYear = dayjs().year();
   const years = [
     "All",
-    ...Array.from({ length: 11 }, (_, i) => (currentYear + 5 - i).toString()),
+    ...Array.from({ length: 6 }, (_, i) => (currentYear + i).toString()),
   ];
 
   // const departments = [
@@ -337,7 +352,7 @@ const Requests = () => {
 
   const executeStatusUpdate = async () => {
     if (!confirmModal.id || !confirmModal.status) return;
-    const { id, status, employeeName } = confirmModal;
+    const { id, status } = confirmModal;
 
     setIsProcessing(true);
     try {
@@ -351,12 +366,7 @@ const Requests = () => {
             rejectCancellationRequest({ id, employeeId: request.employeeId }),
           ).unwrap();
 
-          notification.success({
-            message: "Cancellation Rejected",
-            description: `Cancellation request was rejected for ${employeeName}`,
-            placement: "topRight",
-            duration: 3,
-          });
+          message.success("Cancellation Rejected");
         }
         setConfirmModal({
           isOpen: false,
@@ -669,12 +679,17 @@ const Requests = () => {
       // [REMOVED] Redundant frontend attendance updates.
       // Synchronization is now handled exclusively by the backend in LeaveRequestsService.updateStatus.
 
-      notification.success({
-        message: "Status Updated",
-        description: `Request for ${employeeName} has been ${status.toLowerCase()}`,
-        placement: "topRight",
-        duration: 3,
-      });
+      const statusMessages: Record<string, string> = {
+        [LeaveRequestStatus.APPROVED]: "Request Approved",
+        [LeaveRequestStatus.REJECTED]: "Request Rejected",
+        [LeaveRequestStatus.MODIFICATION_APPROVED]: "Modification Approved",
+        [LeaveRequestStatus.MODIFICATION_REJECTED]: "Modification Rejected",
+        [LeaveRequestStatus.CANCELLATION_APPROVED]: "Cancellation Approved",
+        [LeaveRequestStatus.CANCELLATION_REJECTED]: "Cancellation Rejected",
+        "Reject Cancellation": "Cancellation Rejected",
+      };
+
+      message.success(statusMessages[status] || `Request ${status}`);
 
       // Close modal
       setConfirmModal({
@@ -697,11 +712,7 @@ const Requests = () => {
         }),
       );
     } catch (err: any) {
-      notification.error({
-        message: "Update Failed",
-        description: err.message || "Failed to update request status",
-        placement: "topRight",
-      });
+      message.error(`Update Failed: ${err.message || "Failed to update request status"}`);
     } finally {
       setIsProcessing(false);
     }
@@ -1344,14 +1355,38 @@ const Requests = () => {
                                   setSelectedOwnerId(employeeData.id);
                                 }
 
+                                const parsedCc = Array.isArray(data.ccEmails)
+                                  ? data.ccEmails
+                                  : typeof data.ccEmails === "string"
+                                    ? (() => {
+                                        try {
+                                          const p = JSON.parse(data.ccEmails);
+                                          return Array.isArray(p) ? p : [];
+                                        } catch {
+                                          return [];
+                                        }
+                                      })()
+                                    : [];
+                                setCcEmails(parsedCc);
+
+                                if (req.employeeId) {
+                                  dispatch(getLeaveRequestEmailConfig(req.employeeId))
+                                    .unwrap()
+                                    .then((config) => {
+                                      setEmailConfig({
+                                        assignedManagerEmail: config?.assignedManagerEmail ?? null,
+                                        hrEmail: config?.hrEmail ?? null,
+                                      });
+                                    })
+                                    .catch(() => {
+                                      setEmailConfig({ assignedManagerEmail: null, hrEmail: null });
+                                    });
+                                }
+
                                 setSelectedRequest(data);
                                 setIsViewModalOpen(true);
                               } catch (err) {
-                                notification.error({
-                                  message: "Error",
-                                  description:
-                                    "Failed to fetch request details",
-                                });
+                                  message.error("Failed to fetch request details");
                               }
                             }}
                             className="p-2 text-blue-600 bg-blue-50/50 hover:bg-blue-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-blue-200 active:scale-90"
@@ -1697,10 +1732,68 @@ const Requests = () => {
                 {/* Title Field */}
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-[#2B3674] ml-1">
-                    Title
+                    Subject
                   </label>
                   <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none wrap-break-word">
                     {selectedRequest.title}
+                  </div>
+                </div>
+
+                {/* Email recipients */}
+                <div className="space-y-3">
+                  <label className="text-sm font-bold text-[#2B3674] ml-1 block">
+                    Email recipients
+                  </label>
+                  <div className="space-y-2">
+                    <div className="flex items-stretch border border-gray-200 rounded-2xl overflow-hidden bg-gray-50">
+                      {emailConfig.assignedManagerEmail && (
+                        <>
+                          <div className="min-w-0 flex-1 px-4 py-3">
+                            <span className="text-xs font-medium text-gray-500 block mb-1">
+                              Assigned manager (To)
+                            </span>
+                            <input
+                              type="text"
+                              readOnly
+                              disabled
+                              value={emailConfig.assignedManagerEmail}
+                              className="w-full bg-transparent text-gray-700 font-medium cursor-not-allowed outline-none text-sm border-none"
+                            />
+                          </div>
+                          <div className="w-px bg-gray-200 self-stretch" />
+                        </>
+                      )}
+                      <div className="min-w-0 flex-1 px-4 py-3">
+                        <span className="text-xs font-medium text-gray-500 block mb-1">
+                          HR
+                        </span>
+                        <input
+                          type="text"
+                          readOnly
+                          disabled
+                          value={emailConfig.hrEmail || ""}
+                          placeholder="Not configured"
+                          className="w-full bg-transparent text-gray-700 font-medium cursor-not-allowed outline-none text-sm border-none"
+                        />
+                      </div>
+                    </div>
+                    {ccEmails.length > 0 && (
+                      <div>
+                        <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
+                          Additional CC
+                        </span>
+                        <div className="flex flex-wrap gap-2">
+                          {ccEmails.map((email) => (
+                            <span
+                              key={email}
+                              className="px-3 py-1.5 rounded-xl bg-gray-100 text-gray-700 text-sm"
+                            >
+                              {email}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 

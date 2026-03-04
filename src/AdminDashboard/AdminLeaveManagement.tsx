@@ -54,7 +54,7 @@ import {
   Clock,
   Building2,
 } from "lucide-react";
-import { notification } from "antd";
+import { message } from "antd";
 import CommonMultipleUploader from "../EmployeeDashboard/CommonMultipleUploader";
 
 const isCancellationAllowed = (submittedDate: string) => {
@@ -99,6 +99,14 @@ const AdminLeaveManagement = () => {
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [isEmployeeDropdownOpen, setIsEmployeeDropdownOpen] = useState(false);
   const employeeDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Configure AntD message position to be below the header
+  useEffect(() => {
+    message.config({
+      top: 70,
+      duration: 3,
+    });
+  }, []);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewMode, setIsViewMode] = useState(false);
   const [selectedRequestId, setSelectedRequestId] = useState<number | null>(
@@ -192,7 +200,7 @@ const AdminLeaveManagement = () => {
   const currentYear = new Date().getFullYear();
   const years = [
     "All",
-    ...Array.from({ length: 5 }, (_, i) => currentYear - 2 + i),
+    ...Array.from({ length: 6 }, (_, i) => currentYear + i),
   ];
 
   const itemsPerPage = 10;
@@ -659,12 +667,7 @@ const AdminLeaveManagement = () => {
       );
 
       if (!submitLeaveRequest.fulfilled.match(submitAction)) {
-        notification.error({
-          message: "Submit Failed",
-          description: "Failed to submit request",
-          placement: "topRight",
-          duration: 3,
-        });
+        message.error("Submit Failed: Failed to submit request");
         return;
       }
 
@@ -672,13 +675,7 @@ const AdminLeaveManagement = () => {
       const createdId = createdRequest?.id;
 
       if (!createdId) {
-        notification.warning({
-          message: "Submitted",
-          description:
-            "Request submitted, but auto-approval couldn't be completed (missing request id).",
-          placement: "topRight",
-          duration: 4,
-        });
+        message.warning("Submitted: Request submitted, but auto-approval couldn't be completed (missing request id).");
         return;
       }
 
@@ -867,23 +864,11 @@ const AdminLeaveManagement = () => {
       );
 
       if (!updateLeaveRequestStatus.fulfilled.match(approveAction)) {
-        notification.warning({
-          message: "Submitted",
-          description:
-            "Request submitted, but auto-approval failed. Please approve it from Requests/Notifications.",
-          placement: "topRight",
-          duration: 4,
-        });
+        message.warning("Submitted: Request submitted, but auto-approval failed. Please approve it from Requests/Notifications.");
         return;
       }
 
-      notification.success({
-        message: "Applied & Approved",
-        description:
-          "Admin request is auto-approved successfully and conflicts handled.",
-        placement: "topRight",
-        duration: 3,
-      });
+      message.success("Request Approved");
 
       // Refresh data for selected employee
       await dispatch(
@@ -924,13 +909,7 @@ const AdminLeaveManagement = () => {
       setIsViewMode(false);
       dispatch(resetSubmitSuccess());
     } catch (e: any) {
-      notification.error({
-        message: "Action Failed",
-        description:
-          e?.message || "Could not define request or update attendance.",
-        placement: "topRight",
-        duration: 4,
-      });
+      message.error(e?.message || "Could not define request or update attendance.");
     } finally {
       setIsAutoApproving(false);
     }
@@ -1027,11 +1006,7 @@ const AdminLeaveManagement = () => {
         ...prev,
         employee: "Please select an employee first",
       }));
-      notification.warning({
-        message: "Employee Required",
-        description: "Please select an employee before applying for leave",
-        placement: "topRight",
-      });
+      message.warning("Please select an employee before applying for leave");
       return;
     }
     setIsViewMode(false);
@@ -1074,6 +1049,37 @@ const AdminLeaveManagement = () => {
           endDate: fetchedItem.toDate,
           duration: fetchedItem.duration,
         });
+
+        const parsedCc = Array.isArray(fetchedItem.ccEmails)
+          ? fetchedItem.ccEmails
+          : typeof fetchedItem.ccEmails === "string"
+            ? (() => {
+                try {
+                  const p = JSON.parse(fetchedItem.ccEmails);
+                  return Array.isArray(p) ? p : [];
+                } catch {
+                  return [];
+                }
+              })()
+            : [];
+        setCcEmails(parsedCc);
+        setCcEmailInput("");
+        setCcEmailError("");
+
+        if (fetchedItem.employeeId) {
+          dispatch(getLeaveRequestEmailConfig(fetchedItem.employeeId))
+            .unwrap()
+            .then((data) =>
+              setEmailConfig({
+                assignedManagerEmail: data?.assignedManagerEmail ?? null,
+                hrEmail: data?.hrEmail ?? null,
+              }),
+            )
+            .catch(() =>
+              setEmailConfig({ assignedManagerEmail: null, hrEmail: null }),
+            );
+        }
+
         setIsModalOpen(true);
         setErrors({
           title: "",
@@ -1083,10 +1089,7 @@ const AdminLeaveManagement = () => {
           employee: "",
         });
       } else {
-        notification.error({
-          message: "Error",
-          description: "Failed to fetch request details",
-        });
+        message.error("Failed to fetch request details");
       }
     });
   };
@@ -1163,10 +1166,7 @@ const AdminLeaveManagement = () => {
 
       setCancellableDates(filtered);
     } catch (err) {
-      notification.error({
-        message: "Error",
-        description: "Failed to fetch cancellable dates",
-      });
+      message.error("Failed to fetch cancellable dates");
     } finally {
       setIsLoadingDates(false);
     }
@@ -1199,9 +1199,7 @@ const AdminLeaveManagement = () => {
   const handleConfirmDateCancelItems = async () => {
     if (!requestToCancel || !selectedEmployee) return;
     if (selectedCancelDates.length === 0) {
-      notification.warning({
-        message: "Please select at least one date to cancel.",
-      });
+      message.warning("Please select at least one date to cancel.");
       return;
     }
 
@@ -1310,11 +1308,7 @@ const AdminLeaveManagement = () => {
           }
         }
 
-        notification.success({
-          message: "Cancellation Applied & Approved",
-          description:
-            "The selected dates have been cancelled and attendance reverted.",
-        });
+        message.success("Cancellation Approved");
         setIsCancelDateModalVisible(false);
         // Refresh data
         dispatch(
@@ -1336,7 +1330,7 @@ const AdminLeaveManagement = () => {
         throw new Error((action.payload as string) || "Cancellation failed");
       }
     } catch (err: any) {
-      notification.error({ message: err.message || "Cancellation failed" });
+      message.error(err.message || "Cancellation failed");
     } finally {
       setIsCancelling(false);
     }
@@ -1400,19 +1394,11 @@ const AdminLeaveManagement = () => {
         );
 
         setCancelModal({ isOpen: false, id: null });
-        notification.success({
-          message: "Request Cancelled",
-          description:
-            "The request has been successfully cancelled and records reverted.",
-          placement: "topRight",
-          duration: 3,
-        });
+        message.success("Cancellation Approved");
       } catch (err: any) {
-        notification.error({
-          message: "Cancellation Failed",
-          description:
-            err.message || "An error occurred while cancelling the request.",
-        });
+        message.error(
+          err.message || "An error occurred while cancelling the request.",
+        );
       } finally {
         setIsCancelling(false);
       }
@@ -1455,22 +1441,14 @@ const AdminLeaveManagement = () => {
         );
 
         setUndoModal({ isOpen: false, request: null });
-        notification.success({
-          message: "Modification Revoked",
-          description: "The modification request has been successfully undone.",
-          placement: "topRight",
-        });
+        message.success("Modification Revoked");
       } else {
         throw new Error(
           (action.payload as string) || "Could not undo modification",
         );
       }
     } catch (err: any) {
-      notification.error({
-        message: "Undo Failed",
-        description: err.message || "Could not undo modification.",
-        placement: "topRight",
-      });
+      message.error(`Undo Failed: ${err.message || "Could not undo modification."}`);
     } finally {
       setIsUndoing(false);
     }
@@ -2414,7 +2392,7 @@ const AdminLeaveManagement = () => {
         open={isModalOpen}
         onCancel={handleCloseModal}
         footer={null}
-        closable={false}
+        closable={true}
         centered
         width={910}
         className="application-modal"
@@ -2423,17 +2401,6 @@ const AdminLeaveManagement = () => {
           {/* Modal Header */}
           <div className="pt-2 px-6">
             <div className="flex justify-between items-start">
-              <span className="text-sm font-black uppercase tracking-widest text-[#A3AED0]">
-                {isViewMode ? "Viewing Application" : "Applying For"}
-              </span>
-              <button
-                onClick={handleCloseModal}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <X size={22} className="text-[#2B3674]" />
-              </button>
-            </div>
-            <div className="flex items-center justify-between w-full mt-1">
               <h2 className="text-2xl md:text-3xl font-black text-[#2B3674]">
                 {selectedLeaveType === LeaveRequestType.APPLY_LEAVE
                   ? LeaveRequestType.LEAVE
@@ -2458,79 +2425,143 @@ const AdminLeaveManagement = () => {
               </div>
             )}
 
+            {/* Title Field */}
+            <div className="space-y-2" ref={titleRef}>
+              <label className="text-sm font-bold text-[#2B3674] ml-1">
+                Subject
+              </label>
+              {isViewMode ? (
+                <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none break-words">
+                  {formData.title}
+                </div>
+              ) : (
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="e.g. Annual Vacation"
+                    className={`w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] border ${
+                      errors.title ? "border-red-500" : "border-transparent"
+                    } focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400`}
+                    value={formData.title}
+                    onChange={(e) => {
+                      setFormData({ ...formData, title: e.target.value });
+                      setErrors((prev) => ({ ...prev, title: "" }));
+                    }}
+                  />
+                  {errors.title && (
+                    <p className="text-red-500 text-xs mt-1 ml-2">
+                      {errors.title}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Email recipients - at top for manager/admin */}
-            {!isViewMode && selectedEmployee && (
+            {selectedEmployee && (
               <div className="space-y-3">
                 <label className="text-sm font-bold text-[#2B3674] ml-1 block">
                   Email recipients
                 </label>
                 <div className="space-y-2">
+
                   <div className="flex flex-wrap gap-4 items-start">
                     {emailConfig.assignedManagerEmail && (
                       <div className="min-w-0 flex-1">
                         <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">Assigned manager (To)</span>
-                        <input
-                          type="text"
-                          readOnly
-                          disabled
-                          value={emailConfig.assignedManagerEmail}
-                          className="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-gray-50 text-gray-700 cursor-not-allowed"
-                        />
-                      </div>
+                            Assigned manager (To)
+                          </span>
+                          <input
+                            type="text"
+                            readOnly
+                            disabled
+                            value={emailConfig.assignedManagerEmail}
+                            className="w-full bg-transparent text-gray-700 font-medium cursor-not-allowed outline-none text-sm border-none"
+                          />
+                        </div>
+                        <div className="w-px bg-gray-200 self-stretch" />
+                      </>
                     )}
-                    <div className="min-w-0 flex-1">
-                      <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">HR</span>
+                    <div className="min-w-0 flex-1 px-4 py-3">
+                      <span className="text-xs font-medium text-gray-500 block mb-1">
+                        HR
+                      </span>
+
                       <input
                         type="text"
                         readOnly
                         disabled
-                        value={emailConfig.hrEmail || ""}
                         placeholder="Not configured"
-                        className="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-gray-50 text-gray-700 cursor-not-allowed"
+                        className="w-full bg-transparent text-gray-700 font-medium cursor-not-allowed outline-none text-sm border-none"
                       />
                     </div>
                   </div>
-                  <div>
-                    <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">Additional CC (optional)</span>
-                    <div className="flex flex-wrap gap-2 items-center">
-                      {ccEmails.map((email) => (
-                        <span
-                          key={email}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#EEF4FF] text-[#4318FF] text-sm font-medium"
-                        >
-                          {email}
-                          <button
-                            type="button"
-                            onClick={() => removeCcEmail(email)}
-                            className="hover:bg-[#4318FF]/20 rounded-full p-0.5"
-                            aria-label={`Remove ${email}`}
+                  {!isViewMode && (
+                    <div>
+                      <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
+                        Additional CC (optional)
+                      </span>
+                      <div className="flex flex-wrap gap-2 items-center">
+                        {ccEmails.map((email) => (
+                          <span
+                            key={email}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#EEF4FF] text-[#4318FF] text-sm font-medium"
                           >
-                            <X size={14} />
-                          </button>
-                        </span>
-                      ))}
-                      <input
-                        type="email"
-                        value={ccEmailInput}
-                        onChange={(e) => {
-                          setCcEmailInput(e.target.value);
-                          setCcEmailError("");
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === ",") {
-                            e.preventDefault();
-                            addCcEmail(ccEmailInput);
+                            {email}
+                            <button
+                              type="button"
+                              onClick={() => removeCcEmail(email)}
+                              className="hover:bg-[#4318FF]/20 rounded-full p-0.5"
+                              aria-label={`Remove ${email}`}
+                            >
+                              <X size={14} />
+                            </button>
+                          </span>
+                        ))}
+                        <input
+                          type="email"
+                          value={ccEmailInput}
+                          onChange={(e) => {
+                            setCcEmailInput(e.target.value);
+                            setCcEmailError("");
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === ",") {
+                              e.preventDefault();
+                              addCcEmail(ccEmailInput);
+                            }
+                          }}
+                          onBlur={() =>
+                            ccEmailInput.trim() && addCcEmail(ccEmailInput)
                           }
-                        }}
-                        onBlur={() => ccEmailInput.trim() && addCcEmail(ccEmailInput)}
-                        placeholder="Add email and press Enter"
-                        className="flex-1 min-w-[180px] px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[#4318FF] bg-[#F4F7FE]"
-                      />
+                          placeholder="Add email and press Enter"
+                          className="flex-1 min-w-[180px] px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[#4318FF] bg-[#F4F7FE]"
+                        />
+                      </div>
+                      {ccEmailError && (
+                        <p className="text-red-500 text-xs mt-1 ml-1">
+                          {ccEmailError}
+                        </p>
+                      )}
                     </div>
-                    {ccEmailError && (
-                      <p className="text-red-500 text-xs mt-1 ml-1">{ccEmailError}</p>
-                    )}
-                  </div>
+                  )}
+                  {isViewMode && ccEmails.length > 0 && (
+                    <div>
+                      <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
+                        Additional CC
+                      </span>
+                      <div className="flex flex-wrap gap-2">
+                        {ccEmails.map((email) => (
+                          <span
+                            key={email}
+                            className="px-3 py-1.5 rounded-xl bg-gray-100 text-gray-700 text-sm"
+                          >
+                            {email}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -2652,38 +2683,6 @@ const AdminLeaveManagement = () => {
                   )}
                 </div>
               )}
-
-            {/* Title Field */}
-            <div className="space-y-2" ref={titleRef}>
-              <label className="text-sm font-bold text-[#2B3674] ml-1">
-                Title
-              </label>
-              {isViewMode ? (
-                <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none break-words">
-                  {formData.title}
-                </div>
-              ) : (
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="e.g. Annual Vacation"
-                    className={`w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] border ${
-                      errors.title ? "border-red-500" : "border-transparent"
-                    } focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400`}
-                    value={formData.title}
-                    onChange={(e) => {
-                      setFormData({ ...formData, title: e.target.value });
-                      setErrors((prev) => ({ ...prev, title: "" }));
-                    }}
-                  />
-                  {errors.title && (
-                    <p className="text-red-500 text-xs mt-1 ml-2">
-                      {errors.title}
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
 
             {/* Dates Row + Total Days (same design as employee) */}
             <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-4 items-end">
@@ -3254,11 +3253,7 @@ const AdminLeaveManagement = () => {
                   !isTitleChanged &&
                   !isDescriptionChanged
                 ) {
-                  notification.warning({
-                    message: "No Changes Detected",
-                    description: "Please modify at least one field to submit.",
-                    placement: "topRight",
-                  });
+                  message.warning("Please modify at least one field to submit.");
                   return;
                 }
 
@@ -3277,11 +3272,7 @@ const AdminLeaveManagement = () => {
                       },
                     }),
                   ).unwrap();
-                  notification.success({
-                    message: "Request Modified",
-                    description: "The request has been successfully modified.",
-                    placement: "topRight",
-                  });
+                  message.success("Modification Submitted");
                   setModifyModal({ isOpen: false, request: null });
                   const empId = modifyModal.request.employeeId;
                   dispatch(getLeaveStats({ employeeId: empId }));
@@ -3296,11 +3287,7 @@ const AdminLeaveManagement = () => {
                     }),
                   );
                 } catch (err: any) {
-                  notification.error({
-                    message: "Modification Failed",
-                    description: err.message || "Failed to modify request.",
-                    placement: "topRight",
-                  });
+                  message.error(err.message || "Failed to modify request.");
                 } finally {
                   setIsModifying(false);
                 }
@@ -3494,7 +3481,6 @@ const AdminLeaveManagement = () => {
           },
           body: { padding: 0, borderRadius: "24px" },
         }}
-        closeIcon={null}
       >
         <div className="p-8 text-center">
           <div className="mx-auto w-16 h-16 rounded-full bg-orange-50 flex items-center justify-center mb-6">
@@ -3538,3 +3524,4 @@ const AdminLeaveManagement = () => {
 };
 
 export default AdminLeaveManagement;
+
