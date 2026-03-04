@@ -2118,36 +2118,42 @@ const LeaveManagement = () => {
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-200 text-gray-700 text-sm font-medium"
                         >
                           {email}
-                          <button
-                            type="button"
-                            onClick={() => removeCcEmail(email)}
-                            className="text-gray-500 hover:text-red-600 focus:outline-none"
-                            aria-label={`Remove ${email}`}
-                          >
-                            ×
-                          </button>
+                          {!isViewMode && (
+                            <button
+                              type="button"
+                              onClick={() => removeCcEmail(email)}
+                              className="text-gray-500 hover:text-red-600 focus:outline-none"
+                              aria-label={`Remove ${email}`}
+                            >
+                              ×
+                            </button>
+                          )}
                         </span>
                       ))}
-                      <input
-                        type="text"
-                        value={ccEmailInput}
-                        onChange={(e) => {
-                          setCcEmailInput(e.target.value);
-                          if (ccEmailError) setCcEmailError("");
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === ",") {
-                            e.preventDefault();
-                            addCcEmail(ccEmailInput);
-                          }
-                        }}
-                        placeholder="Add email and press Enter"
-                        className="min-w-[200px] flex-1 px-3 py-2 border border-gray-200 rounded-xl bg-white text-gray-700 text-sm placeholder-gray-400 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none"
-                      />
+                      {!isViewMode && (
+                        <>
+                          <input
+                            type="text"
+                            value={ccEmailInput}
+                            onChange={(e) => {
+                              setCcEmailInput(e.target.value);
+                              if (ccEmailError) setCcEmailError("");
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === ",") {
+                                e.preventDefault();
+                                addCcEmail(ccEmailInput);
+                              }
+                            }}
+                            placeholder="Add email and press Enter"
+                            className="min-w-[200px] flex-1 px-3 py-2 border border-gray-200 rounded-xl bg-white text-gray-700 text-sm placeholder-gray-400 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none"
+                          />
+                          {ccEmailError && (
+                            <p className="text-red-500 text-xs mt-1 ml-1 w-full">{ccEmailError}</p>
+                          )}
+                        </>
+                      )}
                     </div>
-                    {ccEmailError && (
-                      <p className="text-red-500 text-xs mt-1 ml-1">{ccEmailError}</p>
-                    )}
                   </div>
                 </div>
               </div>
