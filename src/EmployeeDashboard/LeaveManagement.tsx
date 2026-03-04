@@ -21,6 +21,7 @@ import {
   undoModificationRequest,
   getLeaveDurationTypes,
   modifyLeaveRequest,
+  getLeaveRequestEmailConfig,
 } from "../reducers/leaveRequest.reducer";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import { fetchAttendanceByDateRange } from "../reducers/employeeAttendance.reducer";
@@ -147,7 +148,17 @@ const LeaveManagement = () => {
     description: "",
     firstHalf: "",
     secondHalf: "",
+    ccEmails: [] as string[],
   });
+  const [emailConfig, setEmailConfig] = useState<{
+    assignedManagerEmail: string | null;
+    hrEmail: string | null;
+  }>({ assignedManagerEmail: null, hrEmail: null });
+  const [ccEmails, setCcEmails] = useState<string[]>([]);
+  const [ccEmailInput, setCcEmailInput] = useState("");
+  const [ccEmailError, setCcEmailError] = useState("");
+  const [modifyCcInput, setModifyCcInput] = useState("");
+  const [modifyCcError, setModifyCcError] = useState("");
   const [selectedLeaveType, setSelectedLeaveType] = useState("");
   const [formData, setFormData] = useState({
     title: "",
@@ -196,6 +207,15 @@ const LeaveManagement = () => {
     startDate: "",
     endDate: "",
   });
+
+  useEffect(() => {
+    if (modifyModal.isOpen && modifyModal.request?.employeeId) {
+      dispatch(getLeaveRequestEmailConfig(modifyModal.request.employeeId))
+        .unwrap()
+        .then((data) => setEmailConfig({ assignedManagerEmail: data?.assignedManagerEmail ?? null, hrEmail: data?.hrEmail ?? null }))
+        .catch(() => setEmailConfig({ assignedManagerEmail: null, hrEmail: null }));
+    }
+  }, [modifyModal.isOpen, modifyModal.request?.employeeId, dispatch]);
 
   const disabledDate = (current: any) => {
     if (!current) return false;
@@ -728,12 +748,12 @@ const LeaveManagement = () => {
                     isHalfDay: isSplitRequest,
                     halfDayType: isSplitRequest ? halfDayType : null,
                     otherHalfType: isSplitRequest ? otherHalfType : null,
-                    // Explicitly set halves for Full Day segments
                     firstHalf: isSplitRequest ? halfDayType : finalRequestType,
                     secondHalf: isSplitRequest
                       ? otherHalfType
                       : finalRequestType,
                     submittedDate: dayjs().format("YYYY-MM-DD"),
+                    ccEmails: ccEmails && ccEmails.length > 0 ? ccEmails : [],
                   }),
                 );
               }
@@ -786,10 +806,10 @@ const LeaveManagement = () => {
             isHalfDay: isSplitRequest,
             halfDayType: isSplitRequest ? halfDayType : null,
             otherHalfType: isSplitRequest ? otherHalfType : null,
-            // Explicitly set halves for Full Day requests to allow template matching (firstHalf == secondHalf)
             firstHalf: isSplitRequest ? halfDayType : finalRequestType,
             secondHalf: isSplitRequest ? otherHalfType : finalRequestType,
             submittedDate: dayjs().format("YYYY-MM-DD"),
+            ccEmails: ccEmails && ccEmails.length > 0 ? ccEmails : [],
           }),
         );
       } else {
@@ -810,10 +830,10 @@ const LeaveManagement = () => {
             duration,
             halfDayType: isSplitRequest ? halfDayType : null,
             otherHalfType: isSplitRequest ? otherHalfType : null,
-            // Explicitly set halves for standard requests
             firstHalf: isSplitRequest ? halfDayType : finalRequestType,
             secondHalf: isSplitRequest ? otherHalfType : finalRequestType,
             submittedDate: dayjs().format("YYYY-MM-DD"),
+            ccEmails: ccEmails && ccEmails.length > 0 ? ccEmails : [],
           }),
         );
       }
@@ -955,8 +975,17 @@ const LeaveManagement = () => {
       setHalfDayType(null);
     }
     setOtherHalfType(WorkLocation.OFFICE);
+    setCcEmails([]);
+    setCcEmailInput("");
+    setCcEmailError("");
     // Clear any previous global errors from the store
     dispatch(resetSubmitSuccess());
+    if (employeeId) {
+      dispatch(getLeaveRequestEmailConfig(employeeId))
+        .unwrap()
+        .then((data) => setEmailConfig({ assignedManagerEmail: data?.assignedManagerEmail ?? null, hrEmail: data?.hrEmail ?? null }))
+        .catch(() => setEmailConfig({ assignedManagerEmail: null, hrEmail: null }));
+    }
   };
 
   const handleViewApplication = async (item: any) => {
@@ -973,9 +1002,27 @@ const LeaveManagement = () => {
         endDate: fetchedItem.toDate,
         duration: fetchedItem.duration,
       });
-
-      // Removed redundant attendance fetch for View Mode
-
+      const parsedCc = Array.isArray(fetchedItem.ccEmails)
+        ? fetchedItem.ccEmails
+        : typeof fetchedItem.ccEmails === "string"
+          ? (() => {
+              try {
+                const p = JSON.parse(fetchedItem.ccEmails);
+                return Array.isArray(p) ? p : [];
+              } catch {
+                return [];
+              }
+            })()
+          : [];
+      setCcEmails(parsedCc);
+      setCcEmailInput("");
+      setCcEmailError("");
+      if (fetchedItem.employeeId) {
+        dispatch(getLeaveRequestEmailConfig(fetchedItem.employeeId))
+          .unwrap()
+          .then((data) => setEmailConfig({ assignedManagerEmail: data?.assignedManagerEmail ?? null, hrEmail: data?.hrEmail ?? null }))
+          .catch(() => setEmailConfig({ assignedManagerEmail: null, hrEmail: null }));
+      }
       setIsModalOpen(true);
       setErrors({ title: "", description: "", startDate: "", endDate: "" });
     } else {
@@ -998,8 +1045,44 @@ const LeaveManagement = () => {
       endDate: "",
       duration: 0,
     });
+    setCcEmails([]);
+    setCcEmailInput("");
+    setCcEmailError("");
     setErrors({ title: "", description: "", startDate: "", endDate: "" });
     dispatch(resetSubmitSuccess());
+  };
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const addCcEmail = (email: string) => {
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed) return;
+    if (!emailRegex.test(trimmed)) {
+      setCcEmailError("Please enter a valid email address.");
+      return;
+    }
+    setCcEmailError("");
+    if (!ccEmails.includes(trimmed)) setCcEmails([...ccEmails, trimmed]);
+    setCcEmailInput("");
+  };
+  const removeCcEmail = (email: string) => setCcEmails(ccEmails.filter((e) => e !== email));
+
+  const addModifyCcEmail = (email: string) => {
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed) return;
+    if (!emailRegex.test(trimmed)) {
+      setModifyCcError("Please enter a valid email address.");
+      return;
+    }
+    setModifyCcError("");
+    const current = modifyFormData.ccEmails || [];
+    if (!current.includes(trimmed)) setModifyFormData({ ...modifyFormData, ccEmails: [...current, trimmed] });
+    setModifyCcInput("");
+  };
+  const removeModifyCcEmail = (email: string) => {
+    setModifyFormData({
+      ...modifyFormData,
+      ccEmails: (modifyFormData.ccEmails || []).filter((e) => e !== email),
+    });
   };
 
   const handleCancelClick = async (request: any) => {
@@ -2048,7 +2131,7 @@ const LeaveManagement = () => {
         footer={null}
         closable={false}
         centered
-        width={910}
+        width={980}
         className="application-modal"
       >
         <div className="relative overflow-hidden bg-white rounded-[16px]">
@@ -2078,7 +2161,7 @@ const LeaveManagement = () => {
           </div>
 
           {/* Modal Body */}
-          <div className="p-6 space-y-5 overflow-y-auto custom-scrollbar max-h-[75vh]">
+          <div className="p-6 space-y-5 overflow-y-auto custom-scrollbar max-h-[80vh]">
             {/* Error Message */}
             {error && (
               <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
@@ -2090,6 +2173,93 @@ const LeaveManagement = () => {
                 </p>
               </div>
             )}
+
+            {/* Email recipients - at top */}
+            <div className="space-y-3">
+              <label className="text-sm font-bold text-[#2B3674] ml-1 block">
+                Email recipients
+              </label>
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-4 items-start">
+                  {emailConfig.assignedManagerEmail && (
+                    <div className="min-w-0 flex-1">
+                      <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">Assigned manager (To)</span>
+                      <input
+                        type="text"
+                        readOnly
+                        disabled
+                        value={emailConfig.assignedManagerEmail}
+                        className="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-gray-50 text-gray-700 cursor-not-allowed"
+                      />
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">HR</span>
+                    <input
+                      type="text"
+                      readOnly
+                      disabled
+                      value={emailConfig.hrEmail || ""}
+                      placeholder="Not configured"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-gray-50 text-gray-700 cursor-not-allowed"
+                    />
+                  </div>
+                </div>
+                {!isViewMode && (
+                  <div>
+                    <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">CC (optional)</span>
+                    <div className="flex flex-wrap gap-2 items-center">
+                      {ccEmails.map((email) => (
+                        <span
+                          key={email}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#EEF4FF] text-[#4318FF] text-sm font-medium"
+                        >
+                          {email}
+                          <button
+                            type="button"
+                            onClick={() => removeCcEmail(email)}
+                            className="hover:bg-[#4318FF]/20 rounded-full p-0.5"
+                            aria-label={`Remove ${email}`}
+                          >
+                            <X size={14} />
+                          </button>
+                        </span>
+                      ))}
+                      <input
+                        type="email"
+                        value={ccEmailInput}
+                        onChange={(e) => {
+                          setCcEmailInput(e.target.value);
+                          setCcEmailError("");
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === ",") {
+                            e.preventDefault();
+                            addCcEmail(ccEmailInput);
+                          }
+                        }}
+                        onBlur={() => ccEmailInput.trim() && addCcEmail(ccEmailInput)}
+                        placeholder="Add email and press Enter"
+                        className="flex-1 min-w-[180px] px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[#4318FF] bg-[#F4F7FE]"
+                      />
+                    </div>
+                    {ccEmailError && <p className="text-red-500 text-xs mt-1 ml-1">{ccEmailError}</p>}
+                  </div>
+                )}
+                {isViewMode && ccEmails.length > 0 && (
+                  <div>
+                    <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">Additional CC</span>
+                    <div className="flex flex-wrap gap-2">
+                      {ccEmails.map((email) => (
+                        <span key={email} className="px-3 py-1.5 rounded-xl bg-gray-100 text-gray-700 text-sm">
+                          {email}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
 
             {/* Duration Type & Split-Day Selection */}
             {!isViewMode &&
@@ -2224,8 +2394,8 @@ const LeaveManagement = () => {
               )}
             </div>
 
-            {/* Dates Row */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Dates Row + Total Days */}
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-4 items-end">
               <div className="space-y-2" ref={startDateRef}>
                 <label className="text-sm font-bold text-[#2B3674] ml-1">
                   Start Date
@@ -2325,65 +2495,61 @@ const LeaveManagement = () => {
                   </>
                 )}
               </div>
-            </div>
+              <div className="space-y-2 flex flex-col justify-end">
+                <label className="text-sm font-bold text-[#2B3674] ml-1">
+                  Total Days:
+                </label>
+                <div className="px-4 py-3 rounded-2xl bg-[#F4F7FE] font-bold text-[#4318FF] inline-flex items-center gap-2 min-h-[48px]">
+                  <span className="bg-white px-3 py-1.5 rounded-lg shadow-sm border border-blue-100">
+                    {formData.startDate && formData.endDate
+                      ? (() => {
+                          if (isViewMode)
+                            return `${parseFloat(String(formData.duration))} Day(s)`;
 
-            {/* Duration Field */}
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-[#2B3674] ml-1">
-                Duration
-              </label>
-              <div className="w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] font-bold text-[#4318FF] flex items-center justify-between">
-                <span>Total Days:</span>
-                <span className="bg-white px-4 py-1 rounded-lg shadow-sm border border-blue-100">
-                  {formData.startDate && formData.endDate
-                    ? (() => {
-                        if (isViewMode)
-                          return `${parseFloat(String(formData.duration))} Day(s)`;
+                          if (
+                            selectedLeaveType === WorkLocation.CLIENT_VISIT ||
+                            selectedLeaveType === WorkLocation.WORK_FROM_HOME ||
+                            selectedLeaveType === LeaveRequestType.APPLY_LEAVE ||
+                            selectedLeaveType === LeaveRequestType.LEAVE ||
+                            selectedLeaveType === LeaveRequestType.HALF_DAY
+                          ) {
+                            const baseDur = calculateDurationExcludingWeekends(
+                              formData.startDate,
+                              formData.endDate,
+                            );
+                            const isHalf =
+                              leaveDurationType === HalfDayType.HALF_DAY ||
+                              leaveDurationType === HalfDayType.FIRST_HALF ||
+                              leaveDurationType === HalfDayType.SECOND_HALF;
 
-                        if (
-                          selectedLeaveType === WorkLocation.CLIENT_VISIT ||
-                          selectedLeaveType === WorkLocation.WORK_FROM_HOME ||
-                          selectedLeaveType === LeaveRequestType.APPLY_LEAVE ||
-                          selectedLeaveType === LeaveRequestType.LEAVE ||
-                          selectedLeaveType === LeaveRequestType.HALF_DAY
-                        ) {
-                          const baseDur = calculateDurationExcludingWeekends(
-                            formData.startDate,
-                            formData.endDate,
-                          );
-                          const isHalf =
-                            leaveDurationType === HalfDayType.HALF_DAY ||
-                            leaveDurationType === HalfDayType.FIRST_HALF ||
-                            leaveDurationType === HalfDayType.SECOND_HALF;
+                            if (isHalf) {
+                              const mainType =
+                                selectedLeaveType === LeaveRequestType.APPLY_LEAVE
+                                  ? LeaveRequestType.LEAVE
+                                  : selectedLeaveType;
+                              const other = otherHalfType;
 
-                          if (isHalf) {
-                            const mainType =
-                              selectedLeaveType === LeaveRequestType.APPLY_LEAVE
-                                ? LeaveRequestType.LEAVE
-                                : selectedLeaveType;
-                            const other = otherHalfType;
+                              const isMainRemote =
+                                mainType === WorkLocation.WORK_FROM_HOME ||
+                                mainType === WorkLocation.CLIENT_VISIT;
+                              const isOtherRemote =
+                                other === WorkLocation.WORK_FROM_HOME ||
+                                other === WorkLocation.CLIENT_VISIT;
 
-                            const isMainRemote =
-                              mainType === WorkLocation.WORK_FROM_HOME ||
-                              mainType === WorkLocation.CLIENT_VISIT;
-                            const isOtherRemote =
-                              other === WorkLocation.WORK_FROM_HOME ||
-                              other === WorkLocation.CLIENT_VISIT;
-
-                            // User Requirement: WFH + CV = 1 Day
-                            if (isMainRemote && isOtherRemote) {
-                              return `${baseDur} Day(s)`;
-                            } else {
-                              return `${baseDur * 0.5} Day(s)`;
+                              if (isMainRemote && isOtherRemote) {
+                                return `${baseDur} Day(s)`;
+                              } else {
+                                return `${baseDur * 0.5} Day(s)`;
+                              }
                             }
+                            return `${baseDur} Day(s)`;
+                          } else {
+                            return `${dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1} Day(s)`;
                           }
-                          return `${baseDur} Day(s)`;
-                        } else {
-                          return `${dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1} Day(s)`;
-                        }
-                      })()
-                    : "0 Days"}
-                </span>
+                        })()
+                      : "0 Days"}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -2572,11 +2738,24 @@ const LeaveManagement = () => {
                   ].includes(request.status)
                 ) {
                   setCancelModal({ isOpen: false, id: null });
+                  const parsedCc = Array.isArray(request.ccEmails)
+                    ? request.ccEmails
+                    : typeof request.ccEmails === "string"
+                      ? (() => {
+                          try {
+                            const p = JSON.parse(request.ccEmails);
+                            return Array.isArray(p) ? p : [];
+                          } catch {
+                            return [];
+                          }
+                        })()
+                      : [];
                   setModifyFormData({
                     title: request.title || "",
                     description: request.description || "",
                     firstHalf: request.firstHalf || WorkLocation.OFFICE,
                     secondHalf: request.secondHalf || WorkLocation.OFFICE,
+                    ccEmails: parsedCc,
                   });
                   setModifyModal({
                     isOpen: true,
@@ -2989,6 +3168,77 @@ const LeaveManagement = () => {
                 ]}
               />
             </div>
+
+            {/* Email recipients in Modify modal */}
+            <div className="space-y-2 mt-4">
+              <label className="block text-sm font-bold text-gray-700">Email recipients</label>
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-4 items-start">
+                  {emailConfig.assignedManagerEmail && (
+                    <div className="min-w-0 flex-1">
+                      <span className="text-xs text-gray-600 block mb-1">Assigned manager (To)</span>
+                      <input
+                        type="text"
+                        readOnly
+                        disabled
+                        value={emailConfig.assignedManagerEmail}
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-gray-600 text-sm"
+                      />
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <span className="text-xs text-gray-600 block mb-1">HR</span>
+                    <input
+                      type="text"
+                      readOnly
+                      disabled
+                      value={emailConfig.hrEmail || ""}
+                      placeholder="Not configured"
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-gray-600 text-sm"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <span className="text-xs text-gray-600 block mb-1">Additional CC (optional)</span>
+                    <div className="flex flex-wrap gap-2 items-center">
+                      {(modifyFormData.ccEmails || []).map((email) => (
+                        <span
+                          key={email}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#EEF4FF] text-[#4318FF] text-sm"
+                        >
+                          {email}
+                          <button
+                            type="button"
+                            onClick={() => removeModifyCcEmail(email)}
+                            className="hover:bg-[#4318FF]/20 rounded-full p-0.5"
+                            aria-label={`Remove ${email}`}
+                          >
+                            <X size={12} />
+                          </button>
+                        </span>
+                      ))}
+                      <input
+                        type="email"
+                        value={modifyCcInput}
+                        onChange={(e) => {
+                          setModifyCcInput(e.target.value);
+                          setModifyCcError("");
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === ",") {
+                            e.preventDefault();
+                            addModifyCcEmail(modifyCcInput);
+                          }
+                        }}
+                        onBlur={() => modifyCcInput.trim() && addModifyCcEmail(modifyCcInput)}
+                        placeholder="Add email, Enter"
+                        className="flex-1 min-w-[140px] px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#4318FF]"
+                      />
+                    </div>
+                    {modifyCcError && <p className="text-red-500 text-xs mt-1">{modifyCcError}</p>}
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Document Upload Section */}
@@ -3060,6 +3310,18 @@ const LeaveManagement = () => {
                 onClick={() => {
                   if (requestToCancel) {
                     setIsCancelDateModalVisible(false);
+                    const parsedCc = Array.isArray(requestToCancel.ccEmails)
+                      ? requestToCancel.ccEmails
+                      : typeof requestToCancel.ccEmails === "string"
+                        ? (() => {
+                            try {
+                              const p = JSON.parse(requestToCancel.ccEmails);
+                              return Array.isArray(p) ? p : [];
+                            } catch {
+                              return [];
+                            }
+                          })()
+                        : [];
                     setModifyFormData({
                       title: requestToCancel.title || "",
                       description: requestToCancel.description || "",
@@ -3067,6 +3329,7 @@ const LeaveManagement = () => {
                         requestToCancel.firstHalf || WorkLocation.OFFICE,
                       secondHalf:
                         requestToCancel.secondHalf || WorkLocation.OFFICE,
+                      ccEmails: parsedCc,
                     });
                     setModifyModal({
                       isOpen: true,
