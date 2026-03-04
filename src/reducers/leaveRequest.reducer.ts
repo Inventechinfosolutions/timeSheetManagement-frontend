@@ -28,6 +28,11 @@ export interface LeaveRequest {
   isModified?: boolean;
   modificationCount?: number;
   lastModifiedDate?: string | null;
+  /** Additional CC emails (from API as array or JSON string) */
+  ccEmails?: string[];
+  /** From GET /leave-requests/:id or email-config */
+  assignedManagerEmail?: string | null;
+  hrEmail?: string | null;
 }
 
 export interface LeaveBalanceResponse {
@@ -336,6 +341,19 @@ export const getLeaveRequestById = createAsyncThunk(
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data || "Failed to fetch request details");
+    }
+  }
+);
+
+// Async Thunk for Leave Request Email Config (assigned manager + HR for form)
+export const getLeaveRequestEmailConfig = createAsyncThunk(
+  "leaveRequest/getEmailConfig",
+  async (employeeId: string, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`${apiUrl}/email-config?employeeId=${encodeURIComponent(employeeId)}`);
+      return response.data as { assignedManagerEmail: string | null; hrEmail: string | null };
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to fetch email config");
     }
   }
 );
