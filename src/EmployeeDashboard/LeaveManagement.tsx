@@ -2112,26 +2112,37 @@ const LeaveManagement = () => {
                   <div>
                     <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">CC</span>
                     <div className="flex flex-wrap gap-2 items-center">
-                      {ccEmails.map((email) => (
-                        <span
-                          key={email}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-200 text-gray-700 text-sm font-medium"
-                        >
-                          {email}
-                          {!isViewMode && (
-                            <button
-                              type="button"
-                              onClick={() => removeCcEmail(email)}
-                              className="text-gray-500 hover:text-red-600 focus:outline-none"
-                              aria-label={`Remove ${email}`}
+                      {isViewMode ? (
+                        ccEmails.length > 0 ? (
+                          ccEmails.map((email) => (
+                            <span
+                              key={email}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-200 text-gray-700 text-sm font-medium"
                             >
-                              ×
-                            </button>
-                          )}
-                        </span>
-                      ))}
-                      {!isViewMode && (
+                              {email}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-sm text-gray-500">—</span>
+                        )
+                      ) : (
                         <>
+                          {ccEmails.map((email) => (
+                            <span
+                              key={email}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-200 text-gray-700 text-sm font-medium"
+                            >
+                              {email}
+                              <button
+                                type="button"
+                                onClick={() => removeCcEmail(email)}
+                                className="text-gray-500 hover:text-red-600 focus:outline-none"
+                                aria-label={`Remove ${email}`}
+                              >
+                                ×
+                              </button>
+                            </span>
+                          ))}
                           <input
                             type="text"
                             value={ccEmailInput}
@@ -2145,6 +2156,7 @@ const LeaveManagement = () => {
                                 addCcEmail(ccEmailInput);
                               }
                             }}
+                            onBlur={() => addCcEmail(ccEmailInput)}
                             placeholder="Add email and press Enter"
                             className="min-w-[200px] flex-1 px-3 py-2 border border-gray-200 rounded-xl bg-white text-gray-700 text-sm placeholder-gray-400 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none"
                           />
@@ -2156,39 +2168,38 @@ const LeaveManagement = () => {
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
-
-            {/* Subject Field - above Duration Type */}
-            <div className="space-y-2" ref={titleRef}>
-              <label className="text-sm font-bold text-[#2B3674] ml-1">
-                Subject
-              </label>
-              {isViewMode ? (
-                <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none break-words">
-                  {formData.title}
-                </div>
-              ) : (
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="e.g. Annual Vacation"
-                    className={`w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] border ${
-                      errors.title ? "border-red-500" : "border-transparent"
-                    } focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400`}
-                    value={formData.title}
-                    onChange={(e) => {
-                      setFormData({ ...formData, title: e.target.value });
-                      if (errors.title) setErrors({ ...errors, title: "" });
-                    }}
-                  />
-                  {errors.title && (
-                    <p className="text-red-500 text-xs mt-1 ml-2">
-                      {errors.title}
-                    </p>
+                {/* Subject - inside card */}
+                <div className="space-y-2 pt-2" ref={titleRef}>
+                  <label className="text-sm font-bold text-[#2B3674] ml-1">
+                    Subject
+                  </label>
+                  {isViewMode ? (
+                    <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none break-words">
+                      {formData.title}
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="e.g. Annual Vacation"
+                        className={`w-full px-5 py-3 rounded-xl bg-white border ${
+                          errors.title ? "border-red-500" : "border-gray-200"
+                        } text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400`}
+                        value={formData.title}
+                        onChange={(e) => {
+                          setFormData({ ...formData, title: e.target.value });
+                          if (errors.title) setErrors({ ...errors, title: "" });
+                        }}
+                      />
+                      {errors.title && (
+                        <p className="text-red-500 text-xs mt-1 ml-2">
+                          {errors.title}
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
+              </div>
             </div>
 
             {/* Duration Type & Split-Day Selection */}
@@ -2891,40 +2902,91 @@ const LeaveManagement = () => {
         }
         centered
       >
-        <div className="py-2 space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar px-1">
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              Subject
-            </label>
-            <input
-              type="text"
-              value={modifyFormData.title}
-              onChange={(e) =>
-                setModifyFormData({ ...modifyFormData, title: e.target.value })
-              }
-              className={`w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 transition ${
-                modifyFormData.firstHalf ===
-                  (modifyModal.request?.firstHalf ||
-                    modifyModal.request?.requestType) &&
-                modifyFormData.secondHalf ===
-                  (modifyModal.request?.secondHalf ||
-                    modifyModal.request?.requestType)
-                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                  : ""
-              }`}
-              placeholder="Request title"
-              disabled={
-                modifyFormData.firstHalf ===
-                  (modifyModal.request?.firstHalf ||
-                    modifyModal.request?.requestType) &&
-                modifyFormData.secondHalf ===
-                  (modifyModal.request?.secondHalf ||
-                    modifyModal.request?.requestType)
-              }
-            />
+        <div className="py-2 space-y-4 max-h-[80vh] overflow-y-auto custom-scrollbar px-1">
+          {/* Email recipients + Subject card - same as Create */}
+          <div className="rounded-2xl border border-[#E0E7FF] bg-[#F8FAFC] p-4 shadow-sm">
+            <div className="space-y-3">
+              <label className="text-sm font-bold text-[#2B3674] ml-1 block">
+                Email recipients
+              </label>
+              <div className="space-y-4">
+                <div className="flex flex-wrap gap-4 items-start">
+                  {emailConfig.assignedManagerEmail && (
+                    <div className="min-w-0 flex-1">
+                      <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">Assigned Manager</span>
+                      <input
+                        type="text"
+                        readOnly
+                        disabled
+                        value={emailConfig.assignedManagerEmail}
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-gray-700 cursor-not-allowed"
+                      />
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">HR</span>
+                    <input
+                      type="text"
+                      readOnly
+                      disabled
+                      value={emailConfig.hrEmail || ""}
+                      placeholder="Not configured"
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-gray-700 cursor-not-allowed"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">CC</span>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    {(modifyFormData.ccEmails || []).length > 0 ? (
+                      (modifyFormData.ccEmails || []).map((email: string) => (
+                        <span
+                          key={email}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-200 text-gray-700 text-sm font-medium"
+                        >
+                          {email}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-sm text-gray-500">—</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              {/* Subject - inside card */}
+              <div className="space-y-2 pt-2 border-t border-[#E0E7FF]">
+                <label className="text-sm font-bold text-[#2B3674] ml-1">Subject</label>
+                <input
+                  type="text"
+                  value={modifyFormData.title}
+                  onChange={(e) =>
+                    setModifyFormData({ ...modifyFormData, title: e.target.value })
+                  }
+                  className={`w-full px-5 py-3 rounded-xl border text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400 ${
+                    modifyFormData.firstHalf ===
+                      (modifyModal.request?.firstHalf ||
+                        modifyModal.request?.requestType) &&
+                    modifyFormData.secondHalf ===
+                      (modifyModal.request?.secondHalf ||
+                        modifyModal.request?.requestType)
+                      ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
+                      : "bg-white border-gray-200"
+                  }`}
+                  placeholder="e.g. Annual Vacation"
+                  disabled={
+                    modifyFormData.firstHalf ===
+                      (modifyModal.request?.firstHalf ||
+                        modifyModal.request?.requestType) &&
+                    modifyFormData.secondHalf ===
+                      (modifyModal.request?.secondHalf ||
+                        modifyModal.request?.requestType)
+                  }
+                />
+              </div>
+            </div>
           </div>
 
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3">
             <p className="text-sm text-yellow-800 font-semibold">
               📅{" "}
               {modifyModal.datesToModify
@@ -2956,7 +3018,7 @@ const LeaveManagement = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
+            <label className="block text-sm font-bold text-[#2B3674] mb-2">
               Description
             </label>
             <textarea
@@ -2968,17 +3030,17 @@ const LeaveManagement = () => {
                 })
               }
               rows={3}
-              className={`w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 transition ${
+              className={`w-full px-5 py-3 border rounded-xl text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-medium text-[#2B3674] placeholder:text-gray-400 resize-none ${
                 modifyFormData.firstHalf ===
                   (modifyModal.request?.firstHalf ||
                     modifyModal.request?.requestType) &&
                 modifyFormData.secondHalf ===
                   (modifyModal.request?.secondHalf ||
                     modifyModal.request?.requestType)
-                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                  : ""
+                  ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
+                  : "bg-white border-gray-200"
               }`}
-              placeholder="Reason for request"
+              placeholder="Please provide details about your request..."
               disabled={
                 modifyFormData.firstHalf ===
                   (modifyModal.request?.firstHalf ||
@@ -2992,7 +3054,7 @@ const LeaveManagement = () => {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">
+              <label className="block text-sm font-bold text-[#2B3674] mb-2">
                 First Half
               </label>
               <Select
@@ -3021,7 +3083,7 @@ const LeaveManagement = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">
+              <label className="block text-sm font-bold text-[#2B3674] mb-2">
                 Second Half
               </label>
               <Select
@@ -3049,52 +3111,6 @@ const LeaveManagement = () => {
               />
             </div>
 
-            {/* Email recipients in Modify modal - disabled/read-only */}
-            <div className="rounded-2xl border border-[#E0E7FF] bg-[#F8FAFC] p-4 shadow-sm mt-4 opacity-70 pointer-events-none">
-              <div className="space-y-2">
-                <label className="block text-sm font-bold text-gray-700">Email recipients (Read Only)</label>
-                <div className="space-y-2">
-                <div className="flex flex-wrap gap-4 items-start">
-                  {emailConfig.assignedManagerEmail && (
-                    <div className="min-w-0 flex-1">
-                      <span className="text-xs text-gray-600 block mb-1">Assigned Manager</span>
-                      <input
-                        type="text"
-                        readOnly
-                        disabled
-                        value={emailConfig.assignedManagerEmail}
-                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-gray-600 text-sm"
-                      />
-                    </div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <span className="text-xs text-gray-600 block mb-1">HR</span>
-                    <input
-                      type="text"
-                      readOnly
-                      disabled
-                      value={emailConfig.hrEmail || ""}
-                      placeholder="Not configured"
-                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-gray-600 text-sm"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <span className="text-xs text-gray-600 block mb-1">CC</span>
-                    <div className="flex flex-wrap gap-2 items-center">
-                      {(modifyFormData.ccEmails || []).map((email) => (
-                        <span
-                          key={email}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#EEF4FF] text-[#4318FF] text-sm"
-                        >
-                          {email}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
 
           {/* Document Upload Section */}
@@ -3110,10 +3126,10 @@ const LeaveManagement = () => {
                 : ""
             }`}
           >
-            <label className="block text-sm font-bold text-gray-700 mb-2">
+            <label className="block text-sm font-bold text-[#2B3674] mb-2">
               Supporting Documents (Optional)
             </label>
-            <div className="bg-gray-50 rounded-xl p-2 border border-gray-100">
+            <div className="bg-[#F4F7FE] rounded-2xl p-2 border border-blue-50">
               <CommonMultipleUploader
                 key={`modify-uploader-${modifyModal.request?.id}`}
                 entityType="LEAVE_REQUEST"
