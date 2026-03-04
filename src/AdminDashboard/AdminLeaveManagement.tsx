@@ -2467,8 +2467,9 @@ const AdminLeaveManagement = () => {
 
                   <div className="flex flex-wrap gap-4 items-start">
                     {emailConfig.assignedManagerEmail && (
-                      <div className="min-w-0 flex-1">
-                        <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">Assigned manager (To)</span>
+                      <>
+                        <div className="min-w-0 flex-1">
+                          <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
                             Assigned manager (To)
                           </span>
                           <input

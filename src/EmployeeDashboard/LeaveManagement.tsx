@@ -2465,60 +2465,47 @@ const LeaveManagement = () => {
                 <div className="px-4 py-3 rounded-2xl bg-[#F4F7FE] font-bold text-[#4318FF] inline-flex items-center gap-2 min-h-[48px]">
                   <span className="bg-white px-3 py-1.5 rounded-lg shadow-sm border border-blue-100">
                     {formData.startDate && formData.endDate
-                      ? (() => {
-                          if (isViewMode)
-                            return `${parseFloat(String(formData.duration))} Day(s)`;
+                        ? (() => {
+                            if (isViewMode)
+                              return `${parseFloat(String(formData.duration))} Day(s)`;
 
-                          if (
-                            selectedLeaveType === WorkLocation.CLIENT_VISIT ||
-                            selectedLeaveType === WorkLocation.WORK_FROM_HOME ||
-                            selectedLeaveType === LeaveRequestType.APPLY_LEAVE ||
-                            selectedLeaveType === LeaveRequestType.LEAVE ||
-                            selectedLeaveType === LeaveRequestType.HALF_DAY
-                          ) {
-                            const baseDur = calculateDurationExcludingWeekends(
-                              formData.startDate,
-                              formData.endDate,
-                            );
-                            const isHalf =
-                              leaveDurationType === HalfDayType.HALF_DAY ||
-                              leaveDurationType === HalfDayType.FIRST_HALF ||
-                              leaveDurationType === HalfDayType.SECOND_HALF;
+                            if (
+                              selectedLeaveType === WorkLocation.CLIENT_VISIT ||
+                              selectedLeaveType === WorkLocation.WORK_FROM_HOME ||
+                              selectedLeaveType === LeaveRequestType.APPLY_LEAVE ||
+                              selectedLeaveType === LeaveRequestType.LEAVE ||
+                              selectedLeaveType === LeaveRequestType.HALF_DAY
+                            ) {
+                              const baseDur = calculateDurationExcludingWeekends(
+                                formData.startDate,
+                                formData.endDate,
+                              );
+                              const isHalf =
+                                leaveDurationType === HalfDayType.HALF_DAY ||
+                                leaveDurationType === HalfDayType.FIRST_HALF ||
+                                leaveDurationType === HalfDayType.SECOND_HALF;
 
-                          if (
-                            selectedLeaveType === WorkLocation.CLIENT_VISIT ||
-                            selectedLeaveType === WorkLocation.WORK_FROM_HOME ||
-                            selectedLeaveType === LeaveRequestType.APPLY_LEAVE ||
-                            selectedLeaveType === LeaveRequestType.LEAVE ||
-                            selectedLeaveType === LeaveRequestType.HALF_DAY
-                          ) {
-                            const baseDur = calculateDurationExcludingWeekends(
-                              formData.startDate,
-                              formData.endDate,
-                            );
-                            const isHalf =
-                              leaveDurationType === HalfDayType.HALF_DAY ||
-                              leaveDurationType === HalfDayType.FIRST_HALF ||
-                              leaveDurationType === HalfDayType.SECOND_HALF;
+                              if (isHalf) {
+                                const mainType =
+                                  selectedLeaveType === LeaveRequestType.APPLY_LEAVE
+                                    ? LeaveRequestType.LEAVE
+                                    : selectedLeaveType;
+                                const other = otherHalfType;
 
-                            if (isHalf) {
-                              const mainType =
-                                selectedLeaveType === LeaveRequestType.APPLY_LEAVE
-                                  ? LeaveRequestType.LEAVE
-                                  : selectedLeaveType;
-                              const other = otherHalfType;
+                                const isMainRemote = mainType === WorkLocation.WORK_FROM_HOME || mainType === WorkLocation.CLIENT_VISIT;
+                                const isOtherRemote = other === WorkLocation.WORK_FROM_HOME || other === WorkLocation.CLIENT_VISIT;
 
-                              if (isMainRemote && isOtherRemote) {
-                                return `${baseDur} Day(s)`;
-                              } else {
-                                return `${baseDur * 0.5} Day(s)`;
+                                if (isMainRemote && isOtherRemote) {
+                                  return `${baseDur} Day(s)`;
+                                } else {
+                                  return `${baseDur * 0.5} Day(s)`;
+                                }
                               }
+                              return `${baseDur} Day(s)`;
+                            } else {
+                              return `${dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1} Day(s)`;
                             }
-                            return `${baseDur} Day(s)`;
-                          } else {
-                            return `${dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1} Day(s)`;
-                          }
-                        })()
+                          })()
                       : "0 Days"}
                   </span>
                 </div>

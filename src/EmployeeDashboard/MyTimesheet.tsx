@@ -203,6 +203,25 @@ const MyTimesheet = ({
 
   const refreshDryRun = () => setAutoUpdateTrigger(prev => prev + 1);
 
+  const refreshData = () => {
+    if (!currentEmployeeId || (isAdmin && currentEmployeeId === "Admin"))
+      return;
+    dispatch(
+      fetchMonthlyAttendance({
+        employeeId: currentEmployeeId,
+        month: (now.getMonth() + 1).toString().padStart(2, "0"),
+        year: now.getFullYear().toString(),
+      }),
+    );
+    dispatch(
+      getLeaveHistory({
+        employeeId: currentEmployeeId,
+        page: 1,
+        limit: 500,
+      }),
+    );
+  };
+
   const today = useMemo(() => new Date(), []);
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -1069,55 +1088,22 @@ const MyTimesheet = ({
       try {
         await dispatch(submitBulkAttendance(finalPayload)).unwrap();
         refreshData();
-            if (item.id) {
-              await dispatch(
-                updateAttendanceRecord({
-                  id: item.id,
-                  data: {
-                    totalHours: item.totalHours,
-                    status: item.status,
-                    firstHalf: item.firstHalf,
-                    secondHalf: item.secondHalf,
-                    ...(item.sourceRequestId !== undefined
-                      ? { sourceRequestId: item.sourceRequestId }
-                      : {}),
-                  },
-              ).unwrap();
-            } else {
-              await dispatch(
-                createAttendanceRecord({
-                  employeeId: item.employeeId,
-                  workingDate: item.workingDate,
-                  totalHours: item.totalHours,
-                  status: item.status,
-                  firstHalf: item.firstHalf,
-                  secondHalf: item.secondHalf, 
-                }),
-              ).unwrap();
-            }
-            successCount++;
-          } catch (innerError) {
-            console.error("Failed to save record:", item, innerError);
-          }
-        }
-        if (successCount > 0) {
-          dispatch(
-            fetchMonthlyAttendance({
-              employeeId: currentEmployeeId,
-              month: (now.getMonth() + 1).toString().padStart(2, "0"),
-              year: now.getFullYear().toString(),
-            }),
-          );
-          // Clear manually edited indices after successful save
-          setManuallyEditedIndices(new Set());
-          refreshDryRun();
-          refreshDryRun();
-          message.success("Data Saved Successfully");
-        } else {
-          const finalError = cleanErrorMessage(error?.response?.data?.message || error?.message || "Failed to save records.");
-          message.error(finalError);
-          refreshData();
-        }
+        dispatch(
+          fetchMonthlyAttendance({
+            employeeId: currentEmployeeId,
+            month: (now.getMonth() + 1).toString().padStart(2, "0"),
+            year: now.getFullYear().toString(),
+          }),
+        );
+        // Clear manually edited indices after successful save
+        setManuallyEditedIndices(new Set());
+        refreshDryRun();
+        refreshDryRun();
+        message.success("Data Saved Successfully");
+      } catch (error: any) {
+        const finalError = cleanErrorMessage(error?.response?.data?.message || error?.message || "Failed to save records.");
+        message.error(finalError);
+        refreshData();
       }
     };
 
