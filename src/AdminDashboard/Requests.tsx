@@ -1713,7 +1713,7 @@ const Requests = () => {
           </div>
 
           {/* Modal Body */}
-          <div className="px-8 pb-8 pt-2 space-y-6 overflow-y-auto custom-scrollbar max-h-[60vh]">
+          <div className="px-8 pb-8 pt-2 space-y-6 overflow-y-auto custom-scrollbar max-h-[90vh]">
             {selectedRequest && (
               <>
                 {/* Email recipients - in card */}
@@ -1727,7 +1727,7 @@ const Requests = () => {
                         {emailConfig.assignedManagerEmail && (
                           <div className="flex-1">
                             <span className="text-xs font-bold text-[#A3AED0] block mb-2 uppercase tracking-wide">
-                              Assigned manager (To)
+                              Assigned Manager
                             </span>
                             <div className="text-sm font-bold text-[#1B2559]">
                               {emailConfig.assignedManagerEmail}
@@ -1751,7 +1751,7 @@ const Requests = () => {
                       {ccEmails.length > 0 && (
                         <div className="mt-6 pt-6 border-t border-[#F4F7FE]">
                           <span className="text-xs font-bold text-[#A3AED0] block mb-3 uppercase tracking-wide">
-                            Additional CC
+                            CC
                           </span>
                           <div className="flex flex-wrap gap-2">
                             {ccEmails.map((email) => (

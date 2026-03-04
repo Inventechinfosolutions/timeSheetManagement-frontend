@@ -2064,7 +2064,7 @@ const LeaveManagement = () => {
           </div>
 
           {/* Modal Body */}
-          <div className="p-6 space-y-5 overflow-y-auto custom-scrollbar max-h-[60vh]">
+          <div className="p-6 space-y-5 overflow-y-auto custom-scrollbar max-h-[90vh]">
             {/* Error Message */}
             {error && (
               <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
@@ -2083,48 +2083,75 @@ const LeaveManagement = () => {
                 <label className="text-sm font-bold text-[#2B3674] ml-1 block">
                   Email recipients
                 </label>
-                <div className="space-y-4 opacity-75 pointer-events-none">
+                <div className="space-y-4">
                   <div className="flex flex-wrap gap-4 items-start">
-                  {emailConfig.assignedManagerEmail && (
+                    {emailConfig.assignedManagerEmail && (
+                      <div className="min-w-0 flex-1">
+                        <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">Assigned Manager</span>
+                        <input
+                          type="text"
+                          readOnly
+                          disabled
+                          value={emailConfig.assignedManagerEmail}
+                          className="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-gray-50 text-gray-700 cursor-not-allowed"
+                        />
+                      </div>
+                    )}
                     <div className="min-w-0 flex-1">
-                      <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">Assigned manager (To)</span>
+                      <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">HR</span>
                       <input
                         type="text"
                         readOnly
                         disabled
-                        value={emailConfig.assignedManagerEmail}
+                        value={emailConfig.hrEmail || ""}
+                        placeholder="Not configured"
                         className="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-gray-50 text-gray-700 cursor-not-allowed"
                       />
                     </div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">HR</span>
-                    <input
-                      type="text"
-                      readOnly
-                      disabled
-                      value={emailConfig.hrEmail || ""}
-                      placeholder="Not configured"
-                      className="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-gray-50 text-gray-700 cursor-not-allowed"
-                    />
                   </div>
-                </div>
-                
-                {ccEmails.length > 0 && (
                   <div>
-                    <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">Additional CC</span>
-                    <div className="flex flex-wrap gap-2">
+                    <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">CC</span>
+                    <div className="flex flex-wrap gap-2 items-center">
                       {ccEmails.map((email) => (
-                        <span key={email} className="px-3 py-1.5 rounded-xl bg-gray-100 text-gray-700 text-sm font-bold">
+                        <span
+                          key={email}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-200 text-gray-700 text-sm font-medium"
+                        >
                           {email}
+                          <button
+                            type="button"
+                            onClick={() => removeCcEmail(email)}
+                            className="text-gray-500 hover:text-red-600 focus:outline-none"
+                            aria-label={`Remove ${email}`}
+                          >
+                            ×
+                          </button>
                         </span>
                       ))}
+                      <input
+                        type="text"
+                        value={ccEmailInput}
+                        onChange={(e) => {
+                          setCcEmailInput(e.target.value);
+                          if (ccEmailError) setCcEmailError("");
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === ",") {
+                            e.preventDefault();
+                            addCcEmail(ccEmailInput);
+                          }
+                        }}
+                        placeholder="Add email and press Enter"
+                        className="min-w-[200px] flex-1 px-3 py-2 border border-gray-200 rounded-xl bg-white text-gray-700 text-sm placeholder-gray-400 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none"
+                      />
                     </div>
+                    {ccEmailError && (
+                      <p className="text-red-500 text-xs mt-1 ml-1">{ccEmailError}</p>
+                    )}
                   </div>
-                )}
-                </div>
                 </div>
               </div>
+            </div>
 
             {/* Subject Field - above Duration Type */}
             <div className="space-y-2" ref={titleRef}>
@@ -3024,7 +3051,7 @@ const LeaveManagement = () => {
                 <div className="flex flex-wrap gap-4 items-start">
                   {emailConfig.assignedManagerEmail && (
                     <div className="min-w-0 flex-1">
-                      <span className="text-xs text-gray-600 block mb-1">Assigned manager (To)</span>
+                      <span className="text-xs text-gray-600 block mb-1">Assigned Manager</span>
                       <input
                         type="text"
                         readOnly
@@ -3047,7 +3074,7 @@ const LeaveManagement = () => {
                   </div>
                 </div>
                 <div>
-                  <span className="text-xs text-gray-600 block mb-1">Additional CC</span>
+                  <span className="text-xs text-gray-600 block mb-1">CC</span>
                     <div className="flex flex-wrap gap-2 items-center">
                       {(modifyFormData.ccEmails || []).map((email) => (
                         <span
