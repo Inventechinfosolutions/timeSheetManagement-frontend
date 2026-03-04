@@ -15,6 +15,8 @@ export interface LeaveRequest {
   description: string;
   status: LeaveRequestStatus;
   created_at?: string;
+  createdAt?: string;
+  updatedAt?: string;
   submittedDate?: string;
   duration?: number;
   department?: string;
