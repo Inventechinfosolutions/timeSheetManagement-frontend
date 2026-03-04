@@ -100,13 +100,13 @@ const Requests = () => {
     isOpen: boolean;
     id: number | null;
     status:
-      | LeaveRequestStatus.APPROVED
-      | LeaveRequestStatus.REJECTED
-      | LeaveRequestStatus.CANCELLATION_APPROVED
-      | "Reject Cancellation"
-      | LeaveRequestStatus.MODIFICATION_APPROVED
-      | LeaveRequestStatus.MODIFICATION_REJECTED
-      | null;
+    | LeaveRequestStatus.APPROVED
+    | LeaveRequestStatus.REJECTED
+    | LeaveRequestStatus.CANCELLATION_APPROVED
+    | "Reject Cancellation"
+    | LeaveRequestStatus.MODIFICATION_APPROVED
+    | LeaveRequestStatus.MODIFICATION_REJECTED
+    | null;
     employeeName: string;
   }>({ isOpen: false, id: null, status: null, employeeName: "" });
 
@@ -405,7 +405,7 @@ const Requests = () => {
           .filter(
             (e) =>
               e.employeeId?.toLowerCase() ===
-                request.employeeId?.toLowerCase() &&
+              request.employeeId?.toLowerCase() &&
               e.status === LeaveRequestStatus.APPROVED &&
               victimTypes.includes((e.requestType || "").toLowerCase()) &&
               e.id !== request.id,
@@ -839,11 +839,10 @@ const Requests = () => {
                         setIsDeptOpen(false);
                         setCurrentPage(1);
                       }}
-                      className={`w-full flex items-center px-5 py-2.5 text-sm font-bold transition-all relative ${
-                        selectedDept === "All"
-                          ? "text-[#4318FF] bg-blue-50/50"
-                          : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
-                      }`}
+                      className={`w-full flex items-center px-5 py-2.5 text-sm font-bold transition-all relative ${selectedDept === "All"
+                        ? "text-[#4318FF] bg-blue-50/50"
+                        : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
+                        }`}
                     >
                       {selectedDept === "All" && (
                         <div className="absolute left-0 w-1 h-6 bg-[#4318FF] rounded-r-full"></div>
@@ -857,11 +856,10 @@ const Requests = () => {
                           setSelectedDept(dept.departmentName);
                           setIsDeptOpen(false);
                         }}
-                        className={`w-full flex items-center px-5 py-2.5 text-sm font-bold transition-all relative ${
-                          selectedDept === dept.departmentName
-                            ? "text-[#4318FF] bg-blue-50/50"
-                            : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
-                        }`}
+                        className={`w-full flex items-center px-5 py-2.5 text-sm font-bold transition-all relative ${selectedDept === dept.departmentName
+                          ? "text-[#4318FF] bg-blue-50/50"
+                          : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
+                          }`}
                       >
                         {selectedDept === dept.departmentName && (
                           <div className="absolute left-0 w-1 h-6 bg-[#4318FF] rounded-r-full"></div>
@@ -963,22 +961,22 @@ const Requests = () => {
             selectedMonth !== "All" ||
             selectedYear !== "All" ||
             filterStatus !== "All") && (
-            <button
-              onClick={() => {
-                setSearchTerm("");
-                setSelectedDept("All");
-                setSelectedMonth("All");
-                setSelectedYear("All");
-                setFilterStatus("All");
-                setCurrentPage(1);
-              }}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-gray-700 rounded-full hover:bg-gray-50 active:scale-95 transition-all text-sm font-bold border border-gray-200 whitespace-nowrap"
-              title="Clear all filters"
-            >
-              <X size={16} />
-              <span>Clear All</span>
-            </button>
-          )}
+              <button
+                onClick={() => {
+                  setSearchTerm("");
+                  setSelectedDept("All");
+                  setSelectedMonth("All");
+                  setSelectedYear("All");
+                  setFilterStatus("All");
+                  setCurrentPage(1);
+                }}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-gray-700 rounded-full hover:bg-gray-50 active:scale-95 transition-all text-sm font-bold border border-gray-200 whitespace-nowrap"
+                title="Clear all filters"
+              >
+                <X size={16} />
+                <span>Clear All</span>
+              </button>
+            )}
         </div>
       </div>
 
@@ -1059,9 +1057,8 @@ const Requests = () => {
                   .map((req, index) => (
                     <tr
                       key={req.id}
-                      className={`group transition-all duration-200 ${
-                        index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"
-                      } hover:bg-gray-100`}
+                      className={`group transition-all duration-200 ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"
+                        } hover:bg-gray-100`}
                     >
                       <td className="py-4 pl-10 pr-4">
                         <div className="flex items-center gap-3">
@@ -1095,9 +1092,9 @@ const Requests = () => {
                                 req.secondHalf === WorkLocation.CLIENT_VISIT;
                               const hasLeave =
                                 req.firstHalf ===
-                                  LeaveRequestType.APPLY_LEAVE ||
+                                LeaveRequestType.APPLY_LEAVE ||
                                 req.secondHalf ===
-                                  LeaveRequestType.APPLY_LEAVE ||
+                                LeaveRequestType.APPLY_LEAVE ||
                                 req.firstHalf === LeaveRequestType.LEAVE ||
                                 req.secondHalf === LeaveRequestType.LEAVE;
 
@@ -1127,7 +1124,7 @@ const Requests = () => {
                                 );
                               if (
                                 req.requestType ===
-                                  LeaveRequestType.APPLY_LEAVE ||
+                                LeaveRequestType.APPLY_LEAVE ||
                                 req.requestType === LeaveRequestType.LEAVE
                               )
                                 return (
@@ -1196,7 +1193,7 @@ const Requests = () => {
                               // Default display
                               if (
                                 req.requestType ===
-                                  LeaveRequestType.APPLY_LEAVE ||
+                                LeaveRequestType.APPLY_LEAVE ||
                                 req.requestType === LeaveRequestType.LEAVE
                               ) {
                                 return req.isHalfDay
@@ -1285,20 +1282,20 @@ const Requests = () => {
                           {req.duration
                             ? parseFloat(String(req.duration))
                             : req.requestType === WorkLocation.CLIENT_VISIT ||
-                                req.requestType ===
-                                  WorkLocation.WORK_FROM_HOME ||
-                                req.requestType ===
-                                  LeaveRequestType.APPLY_LEAVE ||
-                                req.requestType === LeaveRequestType.LEAVE ||
-                                req.requestType === AttendanceStatus.HALF_DAY
+                              req.requestType ===
+                              WorkLocation.WORK_FROM_HOME ||
+                              req.requestType ===
+                              LeaveRequestType.APPLY_LEAVE ||
+                              req.requestType === LeaveRequestType.LEAVE ||
+                              req.requestType === AttendanceStatus.HALF_DAY
                               ? calculateDurationExcludingWeekends(
-                                  req.fromDate,
-                                  req.toDate,
-                                )
+                                req.fromDate,
+                                req.toDate,
+                              )
                               : dayjs(req.toDate).diff(
-                                  dayjs(req.fromDate),
-                                  "day",
-                                ) + 1}{" "}
+                                dayjs(req.fromDate),
+                                "day",
+                              ) + 1}{" "}
                           DAY(S)
                         </span>
                       </td>
@@ -1317,19 +1314,19 @@ const Requests = () => {
                         >
                           {(req.status === LeaveRequestStatus.PENDING ||
                             req.status ===
-                              LeaveRequestStatus.REQUESTING_FOR_MODIFICATION) && (
-                            <RotateCcw
-                              size={12}
-                              className="animate-spin-slow"
-                            />
-                          )}
+                            LeaveRequestStatus.REQUESTING_FOR_MODIFICATION) && (
+                              <RotateCcw
+                                size={12}
+                                className="animate-spin-slow"
+                              />
+                            )}
                           {req.status}
                           {req.status === LeaveRequestStatus.REQUEST_MODIFIED &&
                             req.requestModifiedFrom && (
                               <span className="opacity-70 border-l border-orange-300 pl-1.5 ml-1 text-[9px] font-bold">
                                 MODIFIED FROM:{" "}
                                 {req.requestModifiedFrom ===
-                                LeaveRequestType.APPLY_LEAVE
+                                  LeaveRequestType.APPLY_LEAVE
                                   ? "LEAVE"
                                   : req.requestModifiedFrom.toUpperCase()}
                               </span>
@@ -1359,13 +1356,13 @@ const Requests = () => {
                                   ? data.ccEmails
                                   : typeof data.ccEmails === "string"
                                     ? (() => {
-                                        try {
-                                          const p = JSON.parse(data.ccEmails);
-                                          return Array.isArray(p) ? p : [];
-                                        } catch {
-                                          return [];
-                                        }
-                                      })()
+                                      try {
+                                        const p = JSON.parse(data.ccEmails);
+                                        return Array.isArray(p) ? p : [];
+                                      } catch {
+                                        return [];
+                                      }
+                                    })()
                                     : [];
                                 setCcEmails(parsedCc);
 
@@ -1386,7 +1383,7 @@ const Requests = () => {
                                 setSelectedRequest(data);
                                 setIsViewModalOpen(true);
                               } catch (err) {
-                                  message.error("Failed to fetch request details");
+                                message.error("Failed to fetch request details");
                               }
                             }}
                             className="p-2 text-blue-600 bg-blue-50/50 hover:bg-blue-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-blue-200 active:scale-90"
@@ -1426,66 +1423,66 @@ const Requests = () => {
                           )}
                           {req.status ===
                             LeaveRequestStatus.REQUESTING_FOR_CANCELLATION && (
-                            <>
-                              <button
-                                onClick={() =>
-                                  handleUpdateStatus(
-                                    req.id,
-                                    LeaveRequestStatus.CANCELLATION_APPROVED,
-                                    req.fullName || "Employee",
-                                  )
-                                }
-                                className="p-2 text-green-600 bg-green-50/50 hover:bg-green-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-green-200 active:scale-90"
-                                title="Approve Cancellation"
-                              >
-                                <CheckCircle size={20} />
-                              </button>
-                              <button
-                                onClick={() =>
-                                  handleUpdateStatus(
-                                    req.id,
-                                    "Reject Cancellation",
-                                    req.fullName || "Employee",
-                                  )
-                                }
-                                className="p-2 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
-                                title="Reject Cancellation"
-                              >
-                                <XCircle size={20} />
-                              </button>
-                            </>
-                          )}
+                              <>
+                                <button
+                                  onClick={() =>
+                                    handleUpdateStatus(
+                                      req.id,
+                                      LeaveRequestStatus.CANCELLATION_APPROVED,
+                                      req.fullName || "Employee",
+                                    )
+                                  }
+                                  className="p-2 text-green-600 bg-green-50/50 hover:bg-green-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-green-200 active:scale-90"
+                                  title="Approve Cancellation"
+                                >
+                                  <CheckCircle size={20} />
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    handleUpdateStatus(
+                                      req.id,
+                                      "Reject Cancellation",
+                                      req.fullName || "Employee",
+                                    )
+                                  }
+                                  className="p-2 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
+                                  title="Reject Cancellation"
+                                >
+                                  <XCircle size={20} />
+                                </button>
+                              </>
+                            )}
                           {req.status ===
                             LeaveRequestStatus.REQUESTING_FOR_MODIFICATION && (
-                            <>
-                              <button
-                                onClick={() =>
-                                  handleUpdateStatus(
-                                    req.id,
-                                    LeaveRequestStatus.MODIFICATION_APPROVED,
-                                    req.fullName || "Employee",
-                                  )
-                                }
-                                className="p-2 text-green-600 bg-green-50/50 hover:bg-green-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-green-200 active:scale-90"
-                                title="Approve Modification"
-                              >
-                                <CheckCircle size={20} />
-                              </button>
-                              <button
-                                onClick={() =>
-                                  handleUpdateStatus(
-                                    req.id,
-                                    LeaveRequestStatus.MODIFICATION_REJECTED,
-                                    req.fullName || "Employee",
-                                  )
-                                }
-                                className="p-2 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
-                                title="Reject Modification"
-                              >
-                                <XCircle size={20} />
-                              </button>
-                            </>
-                          )}
+                              <>
+                                <button
+                                  onClick={() =>
+                                    handleUpdateStatus(
+                                      req.id,
+                                      LeaveRequestStatus.MODIFICATION_APPROVED,
+                                      req.fullName || "Employee",
+                                    )
+                                  }
+                                  className="p-2 text-green-600 bg-green-50/50 hover:bg-green-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-green-200 active:scale-90"
+                                  title="Approve Modification"
+                                >
+                                  <CheckCircle size={20} />
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    handleUpdateStatus(
+                                      req.id,
+                                      LeaveRequestStatus.MODIFICATION_REJECTED,
+                                      req.fullName || "Employee",
+                                    )
+                                  }
+                                  className="p-2 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
+                                  title="Reject Modification"
+                                >
+                                  <XCircle size={20} />
+                                </button>
+                              </>
+                            )}
                         </div>
                       </td>
                     </tr>
@@ -1514,11 +1511,10 @@ const Requests = () => {
               onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
               disabled={currentPage === 1}
               className={`p-2 rounded-xl border border-[#E9EDF7] transition-all flex items-center justify-center
-              ${
-                currentPage === 1
+              ${currentPage === 1
                   ? "bg-gray-50 text-gray-300 cursor-not-allowed"
                   : "bg-white text-[#4318FF] hover:bg-[#4318FF]/5 active:scale-90 shadow-sm"
-              }`}
+                }`}
             >
               <ChevronLeft size={18} />
             </button>
@@ -1533,11 +1529,10 @@ const Requests = () => {
               }
               disabled={currentPage === totalPages || totalPages === 0}
               className={`p-2 rounded-xl border border-[#E9EDF7] transition-all flex items-center justify-center
-              ${
-                currentPage === totalPages || totalPages === 0
+              ${currentPage === totalPages || totalPages === 0
                   ? "bg-gray-50 text-gray-300 cursor-not-allowed"
                   : "bg-white text-[#4318FF] hover:bg-[#4318FF]/5 active:scale-90 shadow-sm"
-              }`}
+                }`}
             >
               <ChevronRight size={18} />
             </button>
@@ -1555,20 +1550,19 @@ const Requests = () => {
           <div className="relative w-full max-w-md bg-white rounded-[24px] overflow-hidden shadow-[0px_20px_40px_rgba(0,0,0,0.1)] animate-in fade-in zoom-in duration-200 transform">
             <div className="p-8 text-center">
               <div
-                className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-6 ${
-                  confirmModal.status === LeaveRequestStatus.APPROVED &&
+                className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-6 ${confirmModal.status === LeaveRequestStatus.APPROVED &&
                   entities.find((e) => e.id === confirmModal.id)?.status ===
-                    LeaveRequestStatus.REQUESTING_FOR_CANCELLATION
-                    ? "bg-red-50 text-red-500" // Rejecting Cancellation
-                    : confirmModal.status === LeaveRequestStatus.APPROVED ||
-                        confirmModal.status ===
-                          LeaveRequestStatus.CANCELLATION_APPROVED
-                      ? "bg-green-50 text-green-500"
-                      : "bg-red-50 text-red-500"
-                }`}
+                  LeaveRequestStatus.REQUESTING_FOR_CANCELLATION
+                  ? "bg-red-50 text-red-500" // Rejecting Cancellation
+                  : confirmModal.status === LeaveRequestStatus.APPROVED ||
+                    confirmModal.status ===
+                    LeaveRequestStatus.CANCELLATION_APPROVED
+                    ? "bg-green-50 text-green-500"
+                    : "bg-red-50 text-red-500"
+                  }`}
               >
                 {confirmModal.status === LeaveRequestStatus.APPROVED ||
-                confirmModal.status ===
+                  confirmModal.status ===
                   LeaveRequestStatus.CANCELLATION_APPROVED ? (
                   <CheckCircle size={32} strokeWidth={2.5} />
                 ) : (
@@ -1583,7 +1577,7 @@ const Requests = () => {
                     ? "Reject Request?"
                     : "Approve Request?"
                   : confirmModal.status === LeaveRequestStatus.REJECTED ||
-                      confirmModal.status === "Reject Cancellation"
+                    confirmModal.status === "Reject Cancellation"
                     ? "Reject Request?"
                     : "Approve Request?"}
               </h3>
@@ -1591,17 +1585,16 @@ const Requests = () => {
               <p className="text-gray-500 font-medium leading-relaxed mb-8">
                 Are you sure you want to{" "}
                 <span
-                  className={`font-bold ${
-                    confirmModal.status === LeaveRequestStatus.APPROVED &&
+                  className={`font-bold ${confirmModal.status === LeaveRequestStatus.APPROVED &&
                     entities.find((e) => e.id === confirmModal.id)?.status ===
-                      LeaveRequestStatus.REQUESTING_FOR_CANCELLATION
-                      ? "text-red-600"
-                      : confirmModal.status === LeaveRequestStatus.APPROVED ||
-                          confirmModal.status ===
-                            LeaveRequestStatus.CANCELLATION_APPROVED
-                        ? "text-green-600"
-                        : "text-red-600"
-                  }`}
+                    LeaveRequestStatus.REQUESTING_FOR_CANCELLATION
+                    ? "text-red-600"
+                    : confirmModal.status === LeaveRequestStatus.APPROVED ||
+                      confirmModal.status ===
+                      LeaveRequestStatus.CANCELLATION_APPROVED
+                      ? "text-green-600"
+                      : "text-red-600"
+                    }`}
                 >
                   {confirmModal.status === LeaveRequestStatus.APPROVED
                     ? entities.find((e) => e.id === confirmModal.id)?.status ===
@@ -1609,7 +1602,7 @@ const Requests = () => {
                       ? "Reject"
                       : "Approve"
                     : confirmModal.status === LeaveRequestStatus.REJECTED ||
-                        confirmModal.status === "Reject Cancellation"
+                      confirmModal.status === "Reject Cancellation"
                       ? "Reject"
                       : "Approve"}
                 </span>{" "}
@@ -1625,7 +1618,7 @@ const Requests = () => {
                   " This will revert any associated attendance records."}
                 {confirmModal.status === LeaveRequestStatus.APPROVED && // This handles the case where we are rejecting the cancellation (reverting locally to Approved)
                   entities.find((e) => e.id === confirmModal.id)?.status ===
-                    LeaveRequestStatus.REQUESTING_FOR_CANCELLATION &&
+                  LeaveRequestStatus.REQUESTING_FOR_CANCELLATION &&
                   " This will reject the cancellation request and keep the request as Approved."}
               </p>
 
@@ -1642,23 +1635,21 @@ const Requests = () => {
                 <button
                   onClick={executeStatusUpdate}
                   disabled={isProcessing}
-                  className={`flex-1 py-3.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${
-                    isProcessing
-                      ? "opacity-70 cursor-not-allowed"
-                      : "transform active:scale-95"
-                  } ${
-                    confirmModal.status === LeaveRequestStatus.APPROVED &&
-                    entities.find((e) => e.id === confirmModal.id)?.status ===
+                  className={`flex-1 py-3.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${isProcessing
+                    ? "opacity-70 cursor-not-allowed"
+                    : "transform active:scale-95"
+                    } ${confirmModal.status === LeaveRequestStatus.APPROVED &&
+                      entities.find((e) => e.id === confirmModal.id)?.status ===
                       LeaveRequestStatus.REQUESTING_FOR_CANCELLATION
                       ? "bg-red-500 hover:bg-red-600 shadow-red-200 active:scale-95"
                       : confirmModal.status === LeaveRequestStatus.APPROVED ||
-                          confirmModal.status ===
-                            LeaveRequestStatus.CANCELLATION_APPROVED ||
-                          confirmModal.status ===
-                            LeaveRequestStatus.MODIFICATION_APPROVED
+                        confirmModal.status ===
+                        LeaveRequestStatus.CANCELLATION_APPROVED ||
+                        confirmModal.status ===
+                        LeaveRequestStatus.MODIFICATION_APPROVED
                         ? "bg-green-500 hover:bg-green-600 shadow-green-200 active:scale-95"
                         : "bg-red-500 hover:bg-red-600 shadow-red-200 active:scale-95"
-                  }`}
+                    }`}
                 >
                   {isProcessing ? (
                     <>
@@ -1668,17 +1659,17 @@ const Requests = () => {
                   ) : (
                     <>
                       {confirmModal.status === LeaveRequestStatus.APPROVED ||
-                      confirmModal.status ===
+                        confirmModal.status ===
                         LeaveRequestStatus.MODIFICATION_APPROVED
                         ? entities.find((e) => e.id === confirmModal.id)
-                            ?.status ===
+                          ?.status ===
                           LeaveRequestStatus.REQUESTING_FOR_CANCELLATION
                           ? "Confirm Reject" // Special text for this specific case
                           : "Confirm Approve"
                         : confirmModal.status === LeaveRequestStatus.REJECTED ||
-                            confirmModal.status === "Reject Cancellation" ||
-                            confirmModal.status ===
-                              LeaveRequestStatus.MODIFICATION_REJECTED
+                          confirmModal.status === "Reject Cancellation" ||
+                          confirmModal.status ===
+                          LeaveRequestStatus.MODIFICATION_REJECTED
                           ? "Confirm Reject"
                           : "Confirm Approve"}
                     </>
@@ -1701,20 +1692,9 @@ const Requests = () => {
       >
         <div className="relative overflow-hidden bg-white rounded-[16px]">
           {/* Modal Header */}
-          <div className="pt-1 px-4 pb-0 shrink-0">
-            <div className="flex justify-between items-start mb-0">
-              <button
-                onClick={() => setIsViewModalOpen(false)}
-                className="p-1 hover:bg-gray-100 rounded-full transition-colors ml-auto"
-              >
-                <X size={20} className="text-gray-700" />
-              </button>
-            </div>
-            <div className="flex justify-between items-center px-1 border-b border-gray-100 pb-3 mb-3">
-              <span className="text-lg font-black uppercase tracking-widest text-gray-400">
-                Viewing Application
-              </span>
-              <h2 className="text-3xl font-black text-[#2B3674]">
+          <div className="pt-6 px-8 pb-4 shrink-0">
+            <div className="flex justify-between items-start">
+              <h2 className="text-[32px] font-black text-[#1B2559] leading-tight">
                 {selectedRequest &&
                   (selectedRequest.requestType === LeaveRequestType.APPLY_LEAVE
                     ? AttendanceStatus.LEAVE
@@ -1722,150 +1702,135 @@ const Requests = () => {
                       ? "Half Day Leave"
                       : selectedRequest.requestType)}
               </h2>
+              <button
+                onClick={() => setIsViewModalOpen(false)}
+                className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+                style={{ marginTop: '-8px', marginRight: '-8px' }}
+              >
+                <X size={24} className="text-[#8F9BBA]" />
+              </button>
             </div>
           </div>
 
           {/* Modal Body */}
-          <div className="p-6 space-y-5 overflow-y-auto custom-scrollbar max-h-[75vh]">
+          <div className="px-8 pb-8 pt-2 space-y-6 overflow-y-auto custom-scrollbar max-h-[75vh]">
             {selectedRequest && (
               <>
-                {/* Title Field */}
+                {/* Email recipients - in card */}
+                <div className="rounded-[20px] border border-[#E0E7FF] bg-white p-6 shadow-[0px_18px_40px_rgba(112,144,176,0.12)]">
+                  <div className="space-y-4">
+                    <label className="text-sm font-bold text-[#1B2559] block">
+                      Email recipients
+                    </label>
+                    <div className="relative">
+                      <div className="flex items-start">
+                        {emailConfig.assignedManagerEmail && (
+                          <div className="flex-1">
+                            <span className="text-xs font-bold text-[#A3AED0] block mb-2 uppercase tracking-wide">
+                              Assigned manager (To)
+                            </span>
+                            <div className="text-sm font-bold text-[#1B2559]">
+                              {emailConfig.assignedManagerEmail}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Vertical Divider */}
+                        <div className="w-[1px] bg-[#E0E7FF] self-stretch mx-8 h-auto min-h-[40px]" />
+
+                        <div className="flex-1">
+                          <span className="text-xs font-bold text-[#A3AED0] block mb-2 uppercase tracking-wide">
+                            HR
+                          </span>
+                          <div className="text-sm font-bold text-[#A3AED0]">
+                            {emailConfig.hrEmail || "Not configured"}
+                          </div>
+                        </div>
+                      </div>
+
+                      {ccEmails.length > 0 && (
+                        <div className="mt-6 pt-6 border-t border-[#F4F7FE]">
+                          <span className="text-xs font-bold text-[#A3AED0] block mb-3 uppercase tracking-wide">
+                            Additional CC
+                          </span>
+                          <div className="flex flex-wrap gap-2">
+                            {ccEmails.map((email) => (
+                              <span
+                                key={email}
+                                className="px-4 py-2 rounded-[12px] bg-[#F4F7FE] text-[#1B2559] text-sm font-bold"
+                              >
+                                {email}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Subject Field */}
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-[#2B3674] ml-1">
+                  <label className="text-base font-bold text-[#1B2559] ml-1">
                     Subject
                   </label>
-                  <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none wrap-break-word">
+                  <div className="w-full px-5 py-4 rounded-[20px] bg-[#F4F7FE] font-bold text-[#1B2559] border-none wrap-break-word">
                     {selectedRequest.title}
                   </div>
                 </div>
 
-                {/* Email recipients */}
-                <div className="space-y-3">
-                  <label className="text-sm font-bold text-[#2B3674] ml-1 block">
-                    Email recipients
-                  </label>
-                  <div className="space-y-2">
-                    <div className="flex items-stretch border border-gray-200 rounded-2xl overflow-hidden bg-gray-50">
-                      {emailConfig.assignedManagerEmail && (
-                        <>
-                          <div className="min-w-0 flex-1 px-4 py-3">
-                            <span className="text-xs font-medium text-gray-500 block mb-1">
-                              Assigned manager (To)
-                            </span>
-                            <input
-                              type="text"
-                              readOnly
-                              disabled
-                              value={emailConfig.assignedManagerEmail}
-                              className="w-full bg-transparent text-gray-700 font-medium cursor-not-allowed outline-none text-sm border-none"
-                            />
-                          </div>
-                          <div className="w-px bg-gray-200 self-stretch" />
-                        </>
-                      )}
-                      <div className="min-w-0 flex-1 px-4 py-3">
-                        <span className="text-xs font-medium text-gray-500 block mb-1">
-                          HR
-                        </span>
-                        <input
-                          type="text"
-                          readOnly
-                          disabled
-                          value={emailConfig.hrEmail || ""}
-                          placeholder="Not configured"
-                          className="w-full bg-transparent text-gray-700 font-medium cursor-not-allowed outline-none text-sm border-none"
-                        />
+                {/* Dates & Duration Row */}
+                <div className="flex items-end justify-between gap-6">
+                  <div className="flex gap-4 flex-1">
+                    <div className="flex-1 space-y-2">
+                      <label className="text-base font-bold text-[#1B2559] ml-1">
+                        Start Date
+                      </label>
+                      <div className="w-full px-5 py-4 rounded-[20px] bg-[#F4F7FE] font-bold text-[#1B2559] text-center">
+                        {dayjs(selectedRequest.fromDate).format("DD-MM-YYYY")}
                       </div>
                     </div>
-                    {ccEmails.length > 0 && (
-                      <div>
-                        <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
-                          Additional CC
-                        </span>
-                        <div className="flex flex-wrap gap-2">
-                          {ccEmails.map((email) => (
-                            <span
-                              key={email}
-                              className="px-3 py-1.5 rounded-xl bg-gray-100 text-gray-700 text-sm"
-                            >
-                              {email}
-                            </span>
-                          ))}
-                        </div>
+                    <div className="flex-1 space-y-2">
+                      <label className="text-base font-bold text-[#1B2559] ml-1">
+                        End Date
+                      </label>
+                      <div className="w-full px-5 py-4 rounded-[20px] bg-[#F4F7FE] font-bold text-[#1B2559] text-center">
+                        {dayjs(selectedRequest.toDate).format("DD-MM-YYYY")}
                       </div>
-                    )}
+                    </div>
                   </div>
-                </div>
 
-                {/* Dates Row */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold text-[#2B3674] ml-1">
-                      Start Date
-                    </label>
-                    <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] text-center">
-                      {dayjs(selectedRequest.fromDate).format("DD-MM-YYYY")}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold text-[#2B3674] ml-1">
-                      End Date
-                    </label>
-                    <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] text-center">
-                      {dayjs(selectedRequest.toDate).format("DD-MM-YYYY")}
+                  <div className="flex items-center gap-4 mb-3">
+                    <span className="text-sm font-bold text-[#1B2559] whitespace-nowrap">Total Days:</span>
+                    <div className="bg-white px-6 py-3 rounded-[16px] shadow-[0px_10px_20px_rgba(0,0,0,0.05)] border border-[#E0E7FF] min-w-[100px] text-center">
+                      <span className="text-[#4318FF] font-black">
+                        {(() => {
+                          if (
+                            selectedRequest.requestType === WorkLocation.CLIENT_VISIT ||
+                            selectedRequest.requestType === WorkLocation.WORK_FROM_HOME ||
+                            selectedRequest.requestType === LeaveRequestType.WFH ||
+                            selectedRequest.requestType === LeaveRequestType.CLIENT_VISIT ||
+                            selectedRequest.requestType === LeaveRequestType.LEAVE ||
+                            selectedRequest.requestType === LeaveRequestType.APPLY_LEAVE
+                          ) {
+                            return calculateDurationExcludingWeekends(
+                              selectedRequest.fromDate,
+                              selectedRequest.toDate,
+                            );
+                          } else {
+                            return selectedRequest.duration ||
+                              dayjs(selectedRequest.toDate).diff(
+                                dayjs(selectedRequest.fromDate),
+                                "day",
+                              ) + 1;
+                          }
+                        })()}{" "}
+                        Day(s)
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                {/* Duration Field */}
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-[#2B3674] ml-1">
-                    Duration
-                  </label>
-                  <div className="w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] font-bold text-[#4318FF] flex items-center justify-between">
-                    <span>Total Days:</span>
-                    <span className="bg-white px-4 py-1 rounded-lg shadow-sm border border-blue-100">
-                      {(() => {
-                        // For Client Visit, WFH, and Leave, recalculate duration excluding weekends and holidays
-                        if (
-                          selectedRequest.requestType ===
-                            WorkLocation.CLIENT_VISIT ||
-                          selectedRequest.requestType ===
-                            WorkLocation.WORK_FROM_HOME ||
-                          selectedRequest.requestType ===
-                            LeaveRequestType.WFH ||
-                          selectedRequest.requestType ===
-                            LeaveRequestType.CLIENT_VISIT ||
-                          selectedRequest.requestType ===
-                            LeaveRequestType.LEAVE ||
-                          selectedRequest.requestType ===
-                            LeaveRequestType.APPLY_LEAVE
-                        ) {
-                          return parseFloat(
-                            String(
-                              calculateDurationExcludingWeekends(
-                                selectedRequest.fromDate,
-                                selectedRequest.toDate,
-                              ),
-                            ),
-                          );
-                        } else {
-                          // For other types, use stored duration or calculate including all days
-                          return parseFloat(
-                            String(
-                              selectedRequest.duration ||
-                                dayjs(selectedRequest.toDate).diff(
-                                  dayjs(selectedRequest.fromDate),
-                                  "day",
-                                ) + 1,
-                            ),
-                          );
-                        }
-                      })()}{" "}
-                      Day(s)
-                    </span>
-                  </div>
-                </div>
 
                 {/* Split-Day Information (View Mode Only) */}
                 {!!selectedRequest?.isHalfDay &&
@@ -1916,17 +1881,17 @@ const Requests = () => {
 
                 {/* Description Field */}
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-[#2B3674] ml-1">
+                  <label className="text-base font-bold text-[#1B2559] ml-1">
                     Description
                   </label>
-                  <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-medium text-[#2B3674] min-h-[60px] whitespace-pre-wrap wrap-break-word leading-relaxed">
+                  <div className="w-full px-5 py-4 rounded-[20px] bg-[#F4F7FE] font-medium text-[#1B2559] min-h-[60px] whitespace-pre-wrap wrap-break-word leading-relaxed">
                     {selectedRequest.description || "No description provided."}
                   </div>
                 </div>
 
                 {/* Supporting Documents (Gallery View) */}
-                <div className="space-y-1">
-                  <label className="text-sm font-bold text-[#2B3674] ml-1">
+                <div className="space-y-3">
+                  <label className="text-base font-bold text-[#1B2559] ml-1">
                     Supporting Documents
                   </label>
                   <CommonMultipleUploader

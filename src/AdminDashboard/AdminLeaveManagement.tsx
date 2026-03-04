@@ -415,7 +415,7 @@ const AdminLeaveManagement = () => {
       isValid = false;
     }
     if (!formData.title.trim()) {
-      newErrors.title = "Title is required";
+      newErrors.title = "Subject is required";
       isValid = false;
     }
     if (!formData.startDate) {
@@ -2425,47 +2425,15 @@ const AdminLeaveManagement = () => {
               </div>
             )}
 
-            {/* Title Field */}
-            <div className="space-y-2" ref={titleRef}>
-              <label className="text-sm font-bold text-[#2B3674] ml-1">
-                Subject
-              </label>
-              {isViewMode ? (
-                <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none break-words">
-                  {formData.title}
-                </div>
-              ) : (
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="e.g. Annual Vacation"
-                    className={`w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] border ${
-                      errors.title ? "border-red-500" : "border-transparent"
-                    } focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400`}
-                    value={formData.title}
-                    onChange={(e) => {
-                      setFormData({ ...formData, title: e.target.value });
-                      setErrors((prev) => ({ ...prev, title: "" }));
-                    }}
-                  />
-                  {errors.title && (
-                    <p className="text-red-500 text-xs mt-1 ml-2">
-                      {errors.title}
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Email recipients - at top for manager/admin */}
+            {/* Email recipients - in card for manager/admin */}
             {selectedEmployee && (
-              <div className="space-y-3">
-                <label className="text-sm font-bold text-[#2B3674] ml-1 block">
-                  Email recipients
-                </label>
-                <div className="space-y-2">
-
-                  <div className="flex flex-wrap gap-4 items-start">
+              <div className="rounded-2xl border border-[#E0E7FF] bg-[#F8FAFC] p-4 shadow-sm">
+                <div className="space-y-3">
+                  <label className="text-sm font-bold text-[#2B3674] ml-1 block">
+                    Email recipients
+                  </label>
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap gap-4 items-start">
                     {emailConfig.assignedManagerEmail && (
                       <>
                         <div className="min-w-0 flex-1">
@@ -2565,6 +2533,7 @@ const AdminLeaveManagement = () => {
                   )}
                 </div>
               </div>
+            </div>
             )}
 
             {/* Employee Info (Read-only in modal) */}
@@ -2583,6 +2552,38 @@ const AdminLeaveManagement = () => {
                 </div>
               </div>
             )}
+
+            {/* Subject Field - above Duration Type */}
+            <div className="space-y-2" ref={titleRef}>
+              <label className="text-sm font-bold text-[#2B3674] ml-1">
+                Subject
+              </label>
+              {isViewMode ? (
+                <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none break-words">
+                  {formData.title}
+                </div>
+              ) : (
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="e.g. Annual Vacation"
+                    className={`w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] border ${
+                      errors.title ? "border-red-500" : "border-transparent"
+                    } focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400`}
+                    value={formData.title}
+                    onChange={(e) => {
+                      setFormData({ ...formData, title: e.target.value });
+                      setErrors((prev) => ({ ...prev, title: "" }));
+                    }}
+                  />
+                  {errors.title && (
+                    <p className="text-red-500 text-xs mt-1 ml-2">
+                      {errors.title}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Duration Type & Split-Day Selection */}
             {!isViewMode &&
@@ -3348,7 +3349,7 @@ const AdminLeaveManagement = () => {
 
           <div>
             <label className="block text-sm font-bold text-[#2B3674] mb-2">
-              Title
+              Subject
             </label>
             <input
               type="text"
@@ -3357,7 +3358,7 @@ const AdminLeaveManagement = () => {
                 setModifyFormData({ ...modifyFormData, title: e.target.value })
               }
               className="w-full px-4 py-3 bg-[#F4F7FE] border-none rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4318FF]/20 transition font-bold text-[#2B3674]"
-              placeholder="Request title"
+              placeholder="Request subject"
             />
           </div>
 
