@@ -103,7 +103,7 @@ const Requests = () => {
     | LeaveRequestStatus.APPROVED
     | LeaveRequestStatus.REJECTED
     | LeaveRequestStatus.CANCELLATION_APPROVED
-    | "Reject Cancellation"
+    | LeaveRequestStatus.CANCELLATION_REJECTED
     | LeaveRequestStatus.MODIFICATION_APPROVED
     | LeaveRequestStatus.MODIFICATION_REJECTED
     | null;
@@ -116,7 +116,7 @@ const Requests = () => {
       | LeaveRequestStatus.APPROVED
       | LeaveRequestStatus.REJECTED
       | LeaveRequestStatus.CANCELLATION_APPROVED
-      | "Reject Cancellation"
+      | LeaveRequestStatus.CANCELLATION_REJECTED
       | LeaveRequestStatus.MODIFICATION_APPROVED
       | LeaveRequestStatus.MODIFICATION_REJECTED,
     employeeName: string,
@@ -360,7 +360,7 @@ const Requests = () => {
       if (!request) return;
 
       // HANDLE REJECTION
-      if (status === "Reject Cancellation") {
+      if (status === LeaveRequestStatus.CANCELLATION_REJECTED) {
         if (request.employeeId) {
           await dispatch(
             rejectCancellationRequest({ id, employeeId: request.employeeId }),
@@ -686,7 +686,7 @@ const Requests = () => {
         [LeaveRequestStatus.MODIFICATION_REJECTED]: "Modification Rejected",
         [LeaveRequestStatus.CANCELLATION_APPROVED]: "Cancellation Approved",
         [LeaveRequestStatus.CANCELLATION_REJECTED]: "Cancellation Rejected",
-        "Reject Cancellation": "Cancellation Rejected",
+
       };
 
       message.success(statusMessages[status] || `Request ${status}`);
@@ -1441,7 +1441,7 @@ const Requests = () => {
                                   onClick={() =>
                                     handleUpdateStatus(
                                       req.id,
-                                      "Reject Cancellation",
+                                      LeaveRequestStatus.CANCELLATION_REJECTED,
                                       req.fullName || "Employee",
                                     )
                                   }
@@ -1577,7 +1577,7 @@ const Requests = () => {
                     ? "Reject Request?"
                     : "Approve Request?"
                   : confirmModal.status === LeaveRequestStatus.REJECTED ||
-                    confirmModal.status === "Reject Cancellation"
+                    confirmModal.status === LeaveRequestStatus.CANCELLATION_REJECTED
                     ? "Reject Request?"
                     : "Approve Request?"}
               </h3>
@@ -1602,7 +1602,7 @@ const Requests = () => {
                       ? "Reject"
                       : "Approve"
                     : confirmModal.status === LeaveRequestStatus.REJECTED ||
-                      confirmModal.status === "Reject Cancellation"
+                      confirmModal.status === LeaveRequestStatus.CANCELLATION_REJECTED
                       ? "Reject"
                       : "Approve"}
                 </span>{" "}
@@ -1667,7 +1667,7 @@ const Requests = () => {
                           ? "Confirm Reject" // Special text for this specific case
                           : "Confirm Approve"
                         : confirmModal.status === LeaveRequestStatus.REJECTED ||
-                          confirmModal.status === "Reject Cancellation" ||
+                          confirmModal.status === LeaveRequestStatus.CANCELLATION_REJECTED ||
                           confirmModal.status ===
                           LeaveRequestStatus.MODIFICATION_REJECTED
                           ? "Confirm Reject"
@@ -1892,6 +1892,8 @@ const Requests = () => {
 
                 {/* Supporting Documents (Gallery View) */}
                 <div className="space-y-3">
+
+
                   <label className="text-base font-bold text-[#1B2559] ml-1">
                     Supporting Documents
                   </label>

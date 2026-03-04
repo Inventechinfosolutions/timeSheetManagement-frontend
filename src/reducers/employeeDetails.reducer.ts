@@ -171,7 +171,7 @@ export const getTimesheetList = createAsyncThunk<
   ThunkConfig
 >(
   'employeeDetails/fetch_timesheet_list',
-  async ({ search, department, status, month, year, page, limit, sort, order, includeSelf }, { rejectWithValue, getState }) => {
+  async ({ search, department, status, month, year, page, limit, sort, order, includeSelf }, { rejectWithValue }) => {
     try {
       const params: any = {
         search: search || '',
@@ -312,6 +312,18 @@ export const uploadProfileImage = createAsyncThunk<any, { employeeId: string; fi
   }
 );
 
+export const removeProfileImage = createAsyncThunk<any, string, ThunkConfig>(
+  'employeeDetails/remove_profile_image',
+  async (employeeId, { rejectWithValue }) => {
+    try {
+      const response = await axios.delete(`${apiUrl}/profile-image/${employeeId}`);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || error.message || 'Removal failed');
+    }
+  }
+);
+
 export const fetchProfileImage = createAsyncThunk<string, string, ThunkConfig>(
   'employeeDetails/fetch_profile_image',
   async (employeeId, { rejectWithValue }) => {
@@ -439,6 +451,11 @@ export const EmployeeDetailsSlice = createSlice({
         state.profileImageUrl = null; // Trigger re-fetch or state update
         state.loggedInUserProfileImageUrl = null;
         state.loggedInUserImageStatus = 'idle'; // Reset status to allow re-fetch
+      })
+      .addCase(removeProfileImage.fulfilled, (state: EmployeeDetailsState) => {
+        state.profileImageUrl = null;
+        state.loggedInUserProfileImageUrl = null;
+        state.loggedInUserImageStatus = 'idle';
       })
       .addCase(fetchLoggedInUserProfileImage.pending, (state) => {
         state.loggedInUserImageStatus = 'loading';

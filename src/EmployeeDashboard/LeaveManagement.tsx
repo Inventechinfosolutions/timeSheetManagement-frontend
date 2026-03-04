@@ -178,6 +178,7 @@ const LeaveManagement = () => {
   const [halfDayType, setHalfDayType] = useState<string | null>(null);
   const [otherHalfType, setOtherHalfType] = useState<string | null>(null);
   const [isHalfDay, setIsHalfDay] = useState<boolean>(false);
+  const [uploadedDocumentKeys, setUploadedDocumentKeys] = useState<string[]>([]);
   const [isCancelling, setIsCancelling] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [filterStatus, setFilterStatus] = useState("All");
@@ -774,6 +775,7 @@ const LeaveManagement = () => {
                       : finalRequestType,
                     submittedDate: dayjs().format("YYYY-MM-DD"),
                     ccEmails: ccEmails && ccEmails.length > 0 ? ccEmails : [],
+                    documentKeys: uploadedDocumentKeys,
                   }),
                 );
               }
@@ -828,6 +830,7 @@ const LeaveManagement = () => {
             secondHalf: isSplitRequest ? otherHalfType : finalRequestType,
             submittedDate: dayjs().format("YYYY-MM-DD"),
             ccEmails: ccEmails && ccEmails.length > 0 ? ccEmails : [],
+            documentKeys: uploadedDocumentKeys,
           }),
         );
       } else {
@@ -852,6 +855,7 @@ const LeaveManagement = () => {
             secondHalf: isSplitRequest ? otherHalfType : finalRequestType,
             submittedDate: dayjs().format("YYYY-MM-DD"),
             ccEmails: ccEmails && ccEmails.length > 0 ? ccEmails : [],
+            documentKeys: uploadedDocumentKeys,
           }),
         );
       }
@@ -1033,6 +1037,7 @@ const LeaveManagement = () => {
     setCcEmailInput("");
     setCcEmailError("");
     setErrors({ title: "", description: "", startDate: "", endDate: "" });
+    setUploadedDocumentKeys([]);
     dispatch(resetSubmitSuccess());
   };
 
@@ -2582,6 +2587,8 @@ const LeaveManagement = () => {
                   successMessage="Document uploaded successfully"
                   deleteMessage="Document deleted successfully"
                   disabled={isViewMode}
+                  onFileUpload={(file) => setUploadedDocumentKeys((prev) => [...prev, file.key])}
+                  onFileDelete={(fileKey) => setUploadedDocumentKeys((prev) => prev.filter((k) => k !== fileKey))}
                 />
               </div>
             </div>
@@ -2629,50 +2636,54 @@ const LeaveManagement = () => {
             >
               No, Keep It
             </button>
-            <button
-              key="modify"
-              onClick={() => {
-                const request = entities.find(
-                  (e: any) => e.id === cancelModal.id,
-                );
-                if (
-                  request &&
-                  [
-                    LeaveRequestStatus.PENDING,
-                    LeaveRequestStatus.APPROVED,
-                  ].includes(request.status)
-                ) {
-                  setCancelModal({ isOpen: false, id: null });
-                  const parsedCc = Array.isArray(request.ccEmails)
-                    ? request.ccEmails
-                    : typeof request.ccEmails === "string"
-                      ? (() => {
-                          try {
-                            const p = JSON.parse(request.ccEmails);
-                            return Array.isArray(p) ? p : [];
-                          } catch {
-                            return [];
-                          }
-                        })()
-                      : [];
-                  setModifyFormData({
-                    title: request.title || "",
-                    description: request.description || "",
-                    firstHalf: request.firstHalf || WorkLocation.OFFICE,
-                    secondHalf: request.secondHalf || WorkLocation.OFFICE,
-                    ccEmails: parsedCc,
-                  });
-                  setModifyModal({
-                    isOpen: true,
-                    request,
-                    datesToModify: undefined,
-                  });
-                }
-              }}
-              className="px-6 py-2.5 rounded-2xl font-bold text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95 transform uppercase tracking-wider flex items-center justify-center gap-2"
-            >
-              MODIFY INSTEAD
-            </button>
+            {!(entities.find((e: any) => e.id === cancelModal.id)?.status === LeaveRequestStatus.PENDING || 
+               entities.find((e: any) => e.id === cancelModal.id)?.status === LeaveRequestStatus.REQUESTING_FOR_CANCELLATION ||
+               entities.find((e: any) => e.id === cancelModal.id)?.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION) && (
+              <button
+                key="modify"
+                onClick={() => {
+                  const request = entities.find(
+                    (e: any) => e.id === cancelModal.id,
+                  );
+                  if (
+                    request &&
+                    [
+                      LeaveRequestStatus.PENDING,
+                      LeaveRequestStatus.APPROVED,
+                    ].includes(request.status)
+                  ) {
+                    setCancelModal({ isOpen: false, id: null });
+                    const parsedCc = Array.isArray(request.ccEmails)
+                      ? request.ccEmails
+                      : typeof request.ccEmails === "string"
+                        ? (() => {
+                            try {
+                              const p = JSON.parse(request.ccEmails);
+                              return Array.isArray(p) ? p : [];
+                            } catch {
+                              return [];
+                            }
+                          })()
+                        : [];
+                    setModifyFormData({
+                      title: request.title || "",
+                      description: request.description || "",
+                      firstHalf: request.firstHalf || WorkLocation.OFFICE,
+                      secondHalf: request.secondHalf || WorkLocation.OFFICE,
+                      ccEmails: parsedCc,
+                    });
+                    setModifyModal({
+                      isOpen: true,
+                      request,
+                      datesToModify: undefined,
+                    });
+                  }
+                }}
+                className="px-6 py-2.5 rounded-2xl font-bold text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95 transform uppercase tracking-wider flex items-center justify-center gap-2"
+              >
+                MODIFY INSTEAD
+              </button>
+            )}
             <button
               key="submit"
               onClick={executeCancel}
@@ -3177,48 +3188,52 @@ const LeaveManagement = () => {
               >
                 Close
               </button>
-              <button
-                key="modify"
-                onClick={() => {
-                  if (requestToCancel) {
-                    setIsCancelDateModalVisible(false);
-                    const parsedCc = Array.isArray(requestToCancel.ccEmails)
-                      ? requestToCancel.ccEmails
-                      : typeof requestToCancel.ccEmails === "string"
-                        ? (() => {
-                            try {
-                              const p = JSON.parse(requestToCancel.ccEmails);
-                              return Array.isArray(p) ? p : [];
-                            } catch {
-                              return [];
-                            }
-                          })()
-                        : [];
-                    setModifyFormData({
-                      title: requestToCancel.title || "",
-                      description: requestToCancel.description || "",
-                      firstHalf:
-                        requestToCancel.firstHalf || WorkLocation.OFFICE,
-                      secondHalf:
-                        requestToCancel.secondHalf || WorkLocation.OFFICE,
-                      ccEmails: parsedCc,
-                    });
-                    setModifyModal({
-                      isOpen: true,
-                      request: requestToCancel,
-                      datesToModify: selectedCancelDates,
-                    });
-                  }
-                }}
-                disabled={selectedCancelDates.length === 0 || requestToCancel?.status === LeaveRequestStatus.PENDING}
-                className={`px-6 py-2.5 rounded-2xl font-bold transition-all transform active:scale-95 uppercase tracking-wider flex items-center justify-center gap-2 ${
-                  selectedCancelDates.length === 0 || requestToCancel?.status === LeaveRequestStatus.PENDING
-                    ? "text-gray-400 bg-gray-100 cursor-not-allowed"
-                    : "text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30"
-                }`}
-              >
-                MODIFY INSTEAD
-              </button>
+              {!(requestToCancel?.status === LeaveRequestStatus.PENDING || 
+                 requestToCancel?.status === LeaveRequestStatus.REQUESTING_FOR_CANCELLATION || 
+                 requestToCancel?.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION) && (
+                <button
+                  key="modify"
+                  onClick={() => {
+                    if (requestToCancel) {
+                      setIsCancelDateModalVisible(false);
+                      const parsedCc = Array.isArray(requestToCancel.ccEmails)
+                        ? requestToCancel.ccEmails
+                        : typeof requestToCancel.ccEmails === "string"
+                          ? (() => {
+                              try {
+                                const p = JSON.parse(requestToCancel.ccEmails);
+                                return Array.isArray(p) ? p : [];
+                              } catch {
+                                return [];
+                              }
+                            })()
+                          : [];
+                      setModifyFormData({
+                        title: requestToCancel.title || "",
+                        description: requestToCancel.description || "",
+                        firstHalf:
+                          requestToCancel.firstHalf || WorkLocation.OFFICE,
+                        secondHalf:
+                          requestToCancel.secondHalf || WorkLocation.OFFICE,
+                        ccEmails: parsedCc,
+                      });
+                      setModifyModal({
+                        isOpen: true,
+                        request: requestToCancel,
+                        datesToModify: selectedCancelDates,
+                      });
+                    }
+                  }}
+                  disabled={selectedCancelDates.length === 0}
+                  className={`px-6 py-2.5 rounded-2xl font-bold transition-all transform active:scale-95 uppercase tracking-wider flex items-center justify-center gap-2 ${
+                    selectedCancelDates.length === 0
+                      ? "text-gray-400 bg-gray-100 cursor-not-allowed"
+                      : "text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30"
+                  }`}
+                >
+                  MODIFY INSTEAD
+                </button>
+              )}
             </div>
             <button
               key="submit"
@@ -3251,16 +3266,23 @@ const LeaveManagement = () => {
             </div>
           ) : cancellableDates.length === 0 ? (
             <p className="text-gray-500 text-center">
-              No dates found for this request.
+              All dates are already modified or cancelled, check table for dates.
             </p>
           ) : (
             <div className="space-y-4">
               <p className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-100">
-                Select the dates you wish to cancel. <br />
-                <span className="text-xs text-blue-800 font-semibold">
-                  * You can only cancel dates before 06:30 PM of that particular
-                  day.
-                </span>
+                Select the dates you wish to cancel.
+                {!(requestToCancel?.status === LeaveRequestStatus.PENDING || 
+                   requestToCancel?.status === LeaveRequestStatus.REQUESTING_FOR_CANCELLATION || 
+                   requestToCancel?.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION) && (
+                  <>
+                    <br />
+                    <span className="text-xs text-blue-800 font-semibold">
+                      * You can only cancel dates before 06:30 PM of that particular
+                      day.
+                    </span>
+                  </>
+                )}
               </p>
 
               {/* Select All Option */}

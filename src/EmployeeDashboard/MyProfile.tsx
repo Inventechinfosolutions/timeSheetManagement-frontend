@@ -9,14 +9,16 @@ CreditCard,
 ShieldCheck,
 Calendar,
 Users,
-
+Trash2,
 } from "lucide-react";
+import { Popconfirm } from "antd";
 import { useAppSelector, useAppDispatch } from "../hooks";
 import {
 getEntity,
 setCurrentUser,
 uploadProfileImage,
 fetchProfileImage,
+removeProfileImage,
 } from "../reducers/employeeDetails.reducer";
 import { getManagerMappingByEmployeeId } from "../reducers/managerMapping.reducer";
 import defaultAvatar from "../assets/default-avatar.jpg";
@@ -143,6 +145,21 @@ setTimeout(() => setUploadStatus("idle"), 3000);
 }
 };
 
+  const handleConfirmRemove = () => {
+    const idToUse = displayEmployeeId || String(currentDbId || "");
+    if (!idToUse) return;
+
+    dispatch(removeProfileImage(idToUse))
+      .unwrap()
+      .then(() => {
+        console.log("Profile image removed successfully");
+        dispatch(fetchProfileImage(idToUse));
+      })
+      .catch((err: any) => {
+        console.error("Failed to remove profile photo:", err);
+      });
+  };
+
 const handleCameraClick = () => {
 fileInputRef.current?.click();
 };
@@ -181,46 +198,70 @@ className="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover"
 onError={() => setImageError(true)}
 />
 </div>
-<div className="absolute bottom-0 right-0 md:bottom-1 md:right-1 bg-white text-[#667eea] p-1.5 md:p-2 rounded-full shadow-lg transition-transform group-hover:scale-110 border-2 border-transparent group-hover:border-[#667eea]/10">
-<Camera size={14} />
-</div>
-</div>
+            <div className="absolute bottom-0 right-0 md:bottom-1 md:right-1 bg-white text-[#667eea] p-1.5 md:p-2 rounded-full shadow-lg transition-transform group-hover:scale-110 border-2 border-transparent group-hover:border-[#667eea]/10">
+              <Camera size={14} />
+            </div>
 
-<div className="h-4 flex items-center justify-center">
-{uploadStatus === "success" && (
-<span className="text-white text-[10px] font-bold animate-in fade-in slide-in-from-top-1 px-2 py-0.5 bg-white/20 backdrop-blur-sm rounded-full">
-✓ Updated
-</span>
-)}
-{uploadStatus === "error" && (
-<span className="text-white text-[10px] font-bold animate-in fade-in slide-in-from-top-1 px-2 py-0.5 bg-red-500/80 backdrop-blur-sm rounded-full">
-Failed
-</span>
-)}
-</div>
-</div>
+            {profileImageUrl && !imageError && (
+              <div 
+                className="absolute top-0 right-0 md:top-0 md:right-0 z-30 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Popconfirm
+                  title="Remove photo"
+                  description="Are you sure you want to remove your profile photo?"
+                  onConfirm={handleConfirmRemove}
+                  okText="Yes"
+                  cancelText="No"
+                  placement="rightTop"
+                >
+                  <button
+                    type="button"
+                    className="bg-red-500 text-white p-1.5 md:p-2 rounded-full shadow-lg hover:bg-red-600 transition-all scale-90 hover:scale-110"
+                    title="Remove profile image"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </Popconfirm>
+              </div>
+            )}
+          </div>
 
-<div className="text-center md:text-left flex-1 space-y-2">
-<div className="space-y-0">
-<h1 className="text-xl md:text-2xl font-black text-white leading-tight">
-{fullName}
-</h1>
-<p className="text-white/80 font-bold text-sm md:text-base">
-{designation}
-</p>
-</div>
-<div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
-<div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 backdrop-blur-md rounded-xl border border-white/10 text-white text-[11px] font-bold">
-<Building size={14} />
-<span>InvenTech</span>
-</div>
-<div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 backdrop-blur-md rounded-xl border border-white/10 text-white text-[11px] font-bold">
-<CreditCard size={14} />
-<span>{displayEmployeeId}</span>
-</div>
-</div>
-</div>
-</div>
+          <div className="h-4 flex items-center justify-center mt-1">
+            {uploadStatus === "success" && (
+              <span className="text-white text-[10px] font-bold animate-in fade-in slide-in-from-top-1 px-2 py-0.5 bg-white/20 backdrop-blur-sm rounded-full">
+                ✓ Updated
+              </span>
+            )}
+            {uploadStatus === "error" && (
+              <span className="text-white text-[10px] font-bold animate-in fade-in slide-in-from-top-1 px-2 py-0.5 bg-red-500/80 backdrop-blur-sm rounded-full">
+                Failed
+              </span>
+            )}
+          </div>
+        </div>
+
+    <div className="text-center md:text-left flex-1 space-y-2">
+      <div className="space-y-0">
+        <h1 className="text-xl md:text-2xl font-black text-white leading-tight">
+          {fullName}
+        </h1>
+        <p className="text-white/80 font-bold text-sm md:text-base">
+          {designation}
+        </p>
+      </div>
+      <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
+        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 backdrop-blur-md rounded-xl border border-white/10 text-white text-[11px] font-bold">
+          <Building size={14} />
+          <span>InvenTech</span>
+        </div>
+        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 backdrop-blur-md rounded-xl border border-white/10 text-white text-[11px] font-bold">
+          <CreditCard size={14} />
+          <span>{displayEmployeeId}</span>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 {/* Personal Information Card */}
