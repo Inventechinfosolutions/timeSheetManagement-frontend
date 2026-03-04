@@ -163,11 +163,18 @@ const AdminLeaveManagement = () => {
     request: any;
     datesToModify?: string[];
   }>({ isOpen: false, request: null });
-  const [modifyFormData, setModifyFormData] = useState({
+  const [modifyFormData, setModifyFormData] = useState<{
+    title: string;
+    description: string;
+    firstHalf: string;
+    secondHalf: string;
+    ccEmails?: string[];
+  }>({
     title: "",
     description: "",
     firstHalf: WorkLocation.OFFICE,
     secondHalf: WorkLocation.OFFICE,
+    ccEmails: [],
   });
   const [emailConfig, setEmailConfig] = useState<{
     assignedManagerEmail: string | null;
@@ -1084,11 +1091,24 @@ const AdminLeaveManagement = () => {
   };
 
   const handleModifyClick = (req: any, datesToModify?: string[]) => {
+    const parsedCc = Array.isArray(req.ccEmails)
+      ? req.ccEmails
+      : typeof req.ccEmails === "string"
+        ? (() => {
+            try {
+              const p = JSON.parse(req.ccEmails);
+              return Array.isArray(p) ? p : [];
+            } catch {
+              return [];
+            }
+          })()
+        : [];
     setModifyFormData({
       title: req.title || "",
       description: req.description || "",
       firstHalf: req.firstHalf || req.requestType,
       secondHalf: req.secondHalf || req.requestType,
+      ccEmails: parsedCc,
     });
     setModifyModal({ isOpen: true, request: req, datesToModify });
     setCancelModal({ ...cancelModal, isOpen: false });
@@ -1432,6 +1452,22 @@ const AdminLeaveManagement = () => {
         );
     }
   }, [isModalOpen, selectedEmployee?.employeeId, dispatch]);
+
+  useEffect(() => {
+    if (modifyModal.isOpen && modifyModal.request?.employeeId) {
+      dispatch(getLeaveRequestEmailConfig(modifyModal.request.employeeId))
+        .unwrap()
+        .then((data) =>
+          setEmailConfig({
+            assignedManagerEmail: data?.assignedManagerEmail ?? null,
+            hrEmail: data?.hrEmail ?? null,
+          })
+        )
+        .catch(() =>
+          setEmailConfig({ assignedManagerEmail: null, hrEmail: null })
+        );
+    }
+  }, [modifyModal.isOpen, modifyModal.request?.employeeId, dispatch]);
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const addCcEmail = (email: string) => {
@@ -2362,52 +2398,127 @@ const AdminLeaveManagement = () => {
               </div>
             )}
 
-            {/* Email recipients - in card for manager/admin */}
+            {/* Email recipients + Subject - in card for manager/admin */}
             {selectedEmployee && (
               <div className="rounded-2xl border border-[#E0E7FF] bg-[#F8FAFC] p-4 shadow-sm">
                 <div className="space-y-3">
                   <label className="text-sm font-bold text-[#2B3674] ml-1 block">
                     Email recipients
                   </label>
-                  <div className="space-y-4 opacity-75 pointer-events-none">
+                  <div className="space-y-4">
                     <div className="flex flex-wrap gap-4 items-start">
-                    {emailConfig.assignedManagerEmail && (
+                      {emailConfig.assignedManagerEmail && (
+                        <div className="min-w-0 flex-1">
+                          <span className="text-xs font-medium text-gray-600 block mb-1 uppercase tracking-wide">
+                            Assigned Manager
+                          </span>
+                          <div className="px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-gray-700 font-bold text-sm">
+                            {emailConfig.assignedManagerEmail}
+                          </div>
+                        </div>
+                      )}
                       <div className="min-w-0 flex-1">
                         <span className="text-xs font-medium text-gray-600 block mb-1 uppercase tracking-wide">
-                          Assigned Manager
+                          HR
                         </span>
                         <div className="px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-gray-700 font-bold text-sm">
-                          {emailConfig.assignedManagerEmail}
+                          {emailConfig.hrEmail || "Not configured"}
                         </div>
                       </div>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <span className="text-xs font-medium text-gray-600 block mb-1 uppercase tracking-wide">
-                        HR
-                      </span>
-                      <div className="px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-gray-700 font-bold text-sm">
-                        {emailConfig.hrEmail || "Not configured"}
-                      </div>
                     </div>
-                  </div>
 
-                  {ccEmails.length > 0 && (
                     <div>
                       <span className="text-xs font-medium text-gray-600 ml-1 block mb-1 uppercase tracking-wide">
                         CC
                       </span>
-                      <div className="flex flex-wrap gap-2">
-                        {ccEmails.map((email) => (
-                          <span
-                            key={email}
-                            className="px-3 py-1.5 rounded-xl bg-gray-100 text-gray-700 text-sm font-bold"
-                          >
-                            {email}
-                          </span>
-                        ))}
+                      <div className="flex flex-wrap gap-2 items-center">
+                        {isViewMode ? (
+                          ccEmails.length > 0 ? (
+                            ccEmails.map((email) => (
+                              <span
+                                key={email}
+                                className="px-3 py-1.5 rounded-xl bg-gray-100 text-gray-700 text-sm font-bold"
+                              >
+                                {email}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-sm text-gray-500">—</span>
+                          )
+                        ) : (
+                          <>
+                            {ccEmails.map((email) => (
+                              <span
+                                key={email}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-200 text-gray-700 text-sm font-medium"
+                              >
+                                {email}
+                                <button
+                                  type="button"
+                                  onClick={() => removeCcEmail(email)}
+                                  className="text-gray-500 hover:text-red-600 focus:outline-none"
+                                  aria-label={`Remove ${email}`}
+                                >
+                                  ×
+                                </button>
+                              </span>
+                            ))}
+                            <input
+                              type="text"
+                              value={ccEmailInput}
+                              onChange={(e) => {
+                                setCcEmailInput(e.target.value);
+                                if (ccEmailError) setCcEmailError("");
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === ",") {
+                                  e.preventDefault();
+                                  addCcEmail(ccEmailInput);
+                                }
+                              }}
+                              onBlur={() => addCcEmail(ccEmailInput)}
+                              placeholder="Add email and press Enter"
+                              className="min-w-[200px] flex-1 px-3 py-2 border border-gray-200 rounded-xl bg-white text-gray-700 text-sm placeholder-gray-400 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none"
+                            />
+                            {ccEmailError && (
+                              <p className="text-red-500 text-xs mt-1 ml-1 w-full">{ccEmailError}</p>
+                            )}
+                          </>
+                        )}
                       </div>
                     </div>
-                  )}
+                  </div>
+
+                  {/* Subject - inside card */}
+                  <div className="space-y-2 pt-2 border-t border-[#E0E7FF]" ref={titleRef}>
+                    <label className="text-sm font-bold text-[#2B3674] ml-1">
+                      Subject
+                    </label>
+                    {isViewMode ? (
+                      <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none break-words">
+                        {formData.title}
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="e.g. Annual Vacation"
+                          className={`w-full px-5 py-3 rounded-xl bg-white border ${
+                            errors.title ? "border-red-500" : "border-gray-200"
+                          } text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400`}
+                          value={formData.title}
+                          onChange={(e) => {
+                            setFormData({ ...formData, title: e.target.value });
+                            setErrors((prev) => ({ ...prev, title: "" }));
+                          }}
+                        />
+                        {errors.title && (
+                          <p className="text-red-500 text-xs mt-1 ml-2">
+                            {errors.title}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2429,38 +2540,6 @@ const AdminLeaveManagement = () => {
                 </div>
               </div>
             )}
-
-            {/* Subject Field - above Duration Type */}
-            <div className="space-y-2" ref={titleRef}>
-              <label className="text-sm font-bold text-[#2B3674] ml-1">
-                Subject
-              </label>
-              {isViewMode ? (
-                <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none break-words">
-                  {formData.title}
-                </div>
-              ) : (
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="e.g. Annual Vacation"
-                    className={`w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] border ${
-                      errors.title ? "border-red-500" : "border-transparent"
-                    } focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400`}
-                    value={formData.title}
-                    onChange={(e) => {
-                      setFormData({ ...formData, title: e.target.value });
-                      setErrors((prev) => ({ ...prev, title: "" }));
-                    }}
-                  />
-                  {errors.title && (
-                    <p className="text-red-500 text-xs mt-1 ml-2">
-                      {errors.title}
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
 
             {/* Duration Type & Split-Day Selection */}
             {!isViewMode &&
@@ -3181,8 +3260,65 @@ const AdminLeaveManagement = () => {
         centered
         width={600}
       >
-        <div className="py-4 space-y-4">
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+        <div className="py-4 space-y-4 max-h-[80vh] overflow-y-auto custom-scrollbar">
+          {/* Email recipients + Subject card - same as Create / Employee Modify */}
+          <div className="rounded-2xl border border-[#E0E7FF] bg-[#F8FAFC] p-4 shadow-sm">
+            <div className="space-y-3">
+              <label className="text-sm font-bold text-[#2B3674] ml-1 block">
+                Email recipients
+              </label>
+              <div className="space-y-4">
+                <div className="flex flex-wrap gap-4 items-start">
+                  {emailConfig.assignedManagerEmail && (
+                    <div className="min-w-0 flex-1">
+                      <span className="text-xs font-medium text-gray-600 block mb-1 uppercase tracking-wide">Assigned Manager</span>
+                      <div className="px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-gray-700 font-bold text-sm">
+                        {emailConfig.assignedManagerEmail}
+                      </div>
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <span className="text-xs font-medium text-gray-600 block mb-1 uppercase tracking-wide">HR</span>
+                    <div className="px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-gray-700 font-bold text-sm">
+                      {emailConfig.hrEmail || "Not configured"}
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <span className="text-xs font-medium text-gray-600 ml-1 block mb-1 uppercase tracking-wide">CC</span>
+                  <div className="flex flex-wrap gap-2">
+                    {(modifyFormData.ccEmails || []).length > 0 ? (
+                      (modifyFormData.ccEmails || []).map((email: string) => (
+                        <span
+                          key={email}
+                          className="px-3 py-1.5 rounded-xl bg-gray-100 text-gray-700 text-sm font-bold"
+                        >
+                          {email}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-sm text-gray-500">—</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              {/* Subject - inside card */}
+              <div className="space-y-2 pt-2 border-t border-[#E0E7FF]">
+                <label className="text-sm font-bold text-[#2B3674] ml-1">Subject</label>
+                <input
+                  type="text"
+                  value={modifyFormData.title}
+                  onChange={(e) =>
+                    setModifyFormData({ ...modifyFormData, title: e.target.value })
+                  }
+                  className="w-full px-5 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400"
+                  placeholder="e.g. Annual Vacation"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3">
             <p className="text-sm text-yellow-800 font-semibold">
               📅{" "}
               {modifyModal.datesToModify
@@ -3215,21 +3351,6 @@ const AdminLeaveManagement = () => {
 
           <div>
             <label className="block text-sm font-bold text-[#2B3674] mb-2">
-              Subject
-            </label>
-            <input
-              type="text"
-              value={modifyFormData.title}
-              onChange={(e) =>
-                setModifyFormData({ ...modifyFormData, title: e.target.value })
-              }
-              className="w-full px-4 py-3 bg-[#F4F7FE] border-none rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4318FF]/20 transition font-bold text-[#2B3674]"
-              placeholder="Request subject"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-bold text-[#2B3674] mb-2">
               Description
             </label>
             <textarea
@@ -3241,8 +3362,8 @@ const AdminLeaveManagement = () => {
                 })
               }
               rows={3}
-              className="w-full px-4 py-3 bg-[#F4F7FE] border-none rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4318FF]/20 transition font-bold text-[#2B3674] resize-none"
-              placeholder="Reason for modification"
+              className="w-full px-5 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-medium text-[#2B3674] placeholder:text-gray-400 resize-none"
+              placeholder="Please provide details about your request..."
             />
           </div>
 

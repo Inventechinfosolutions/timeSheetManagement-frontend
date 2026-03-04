@@ -1748,34 +1748,35 @@ const Requests = () => {
                         </div>
                       </div>
 
-                      {ccEmails.length > 0 && (
-                        <div className="mt-6 pt-6 border-t border-[#F4F7FE]">
-                          <span className="text-xs font-bold text-[#A3AED0] block mb-3 uppercase tracking-wide">
-                            CC
-                          </span>
-                          <div className="flex flex-wrap gap-2">
-                            {ccEmails.map((email) => (
+                      <div className="mt-6 pt-6 border-t border-[#F4F7FE]">
+                        <span className="text-xs font-bold text-[#A3AED0] block mb-3 uppercase tracking-wide">
+                          CC
+                        </span>
+                        <div className="flex flex-wrap gap-2">
+                          {ccEmails.length > 0 ? (
+                            ccEmails.map((email) => (
                               <span
                                 key={email}
                                 className="px-4 py-2 rounded-[12px] bg-[#F4F7FE] text-[#1B2559] text-sm font-bold"
                               >
                                 {email}
                               </span>
-                            ))}
-                          </div>
+                            ))
+                          ) : (
+                            <span className="text-sm text-[#A3AED0]">—</span>
+                          )}
                         </div>
-                      )}
+                      </div>
                     </div>
                   </div>
-                </div>
-
-                {/* Subject Field */}
-                <div className="space-y-2">
-                  <label className="text-base font-bold text-[#1B2559] ml-1">
-                    Subject
-                  </label>
-                  <div className="w-full px-5 py-4 rounded-[20px] bg-[#F4F7FE] font-bold text-[#1B2559] border-none wrap-break-word">
-                    {selectedRequest.title}
+                  {/* Subject - inside card */}
+                  <div className="space-y-2 pt-4 mt-4 border-t border-[#F4F7FE]">
+                    <label className="text-base font-bold text-[#1B2559] ml-1">
+                      Subject
+                    </label>
+                    <div className="w-full px-5 py-4 rounded-[20px] bg-[#F4F7FE] font-bold text-[#1B2559] border-none wrap-break-word">
+                      {selectedRequest.title}
+                    </div>
                   </div>
                 </div>
 
