@@ -213,6 +213,21 @@ const LeaveManagement = () => {
     endDate: "",
   });
 
+  const refreshData = (page?: number, limit?: number) => {
+    if (!employeeId) return;
+    dispatch(
+      getLeaveHistory({
+        employeeId,
+        status: filterStatus,
+        month: selectedMonth,
+        year: selectedYear,
+        page: page || currentPage,
+        limit: limit || itemsPerPage,
+      }),
+    );
+    dispatch(getLeaveStats({ employeeId }));
+  };
+
   useEffect(() => {
     if (modifyModal.isOpen && modifyModal.request?.employeeId) {
       dispatch(getLeaveRequestEmailConfig(modifyModal.request.employeeId))
@@ -883,21 +898,7 @@ const LeaveManagement = () => {
   }, [dispatch, employeeId, formData.startDate, formData.endDate, isViewMode]);
 
   useEffect(() => {
-    if (employeeId) {
-      dispatch(
-        getLeaveHistory({
-          employeeId,
-          status: filterStatus,
-          month: selectedMonth,
-          year: selectedYear,
-          page: currentPage,
-          limit: itemsPerPage,
-        }),
-      );
-      dispatch(
-        getLeaveStats({ employeeId, month: selectedMonth, year: selectedYear }),
-      );
-    }
+    refreshData();
   }, [
     dispatch,
     employeeId,
@@ -914,20 +915,8 @@ const LeaveManagement = () => {
   useEffect(() => {
     if (submitSuccess && employeeId) {
       setIsModalOpen(false);
-      dispatch(
-        getLeaveHistory({
-          employeeId,
-          status: filterStatus,
-          month: selectedMonth,
-          year: selectedYear,
-          page: 1,
-          limit: itemsPerPage,
-        }),
-      );
+      refreshData(1);
       if (currentPage !== 1) setCurrentPage(1);
-      dispatch(
-        getLeaveStats({ employeeId, month: selectedMonth, year: selectedYear }),
-      );
       dispatch(resetSubmitSuccess());
       setFormData({
         title: "",
@@ -1110,7 +1099,8 @@ const LeaveManagement = () => {
               req.status === "Requesting For Cancellation" ||
               req.status === LeaveRequestStatus.APPROVED ||
               req.status === LeaveRequestStatus.MODIFICATION_APPROVED ||
-              req.status === LeaveRequestStatus.REQUEST_MODIFIED)
+              req.status === LeaveRequestStatus.REQUEST_MODIFIED ||
+              req.status === LeaveRequestStatus.CANCELLED)
           ) {
             let start = dayjs(req.fromDate);
             const end = dayjs(req.toDate);
@@ -1164,25 +1154,12 @@ const LeaveManagement = () => {
       );
 
       if (cancelRequestDates.fulfilled.match(action)) {
-        message.success("Cancellation request submitted successfully");
+        const msg = requestToCancel?.status === LeaveRequestStatus.PENDING
+          ? "Dates cancelled successfully"
+          : "Cancellation request submitted successfully";
+        message.success(msg);
         setIsCancelDateModalVisible(false);
-        dispatch(
-          getLeaveHistory({
-            employeeId: employeeId,
-            status: filterStatus,
-            month: selectedMonth,
-            year: selectedYear,
-            page: 1,
-            limit: 10,
-          }),
-        );
-        dispatch(
-          getLeaveStats({
-            employeeId,
-            month: selectedMonth,
-            year: selectedYear,
-          }),
-        );
+        refreshData(1, 10);
       } else {
         throw new Error((action.payload as string) || "Cancellation failed");
       }
@@ -1225,7 +1202,7 @@ const LeaveManagement = () => {
   // Modified handleCancel to use the date-picker cancellation flow for both Approved and Pending requests
   const handleCancel = (id: number) => {
     const req = entities.find((e: any) => e.id === id);
-    if (req?.status === LeaveRequestStatus.APPROVED) {
+    if (req?.status === LeaveRequestStatus.APPROVED || req?.status === LeaveRequestStatus.PENDING) {
       handleCancelClick(req);
     } else {
       // For other statuses, use the original full cancellation flow
@@ -1251,23 +1228,7 @@ const LeaveManagement = () => {
       );
 
       if (undoCancellationRequest.fulfilled.match(action)) {
-        dispatch(
-          getLeaveHistory({
-            employeeId,
-            status: filterStatus,
-            month: selectedMonth,
-            year: selectedYear,
-            page: currentPage,
-            limit: itemsPerPage,
-          }),
-        );
-        dispatch(
-          getLeaveStats({
-            employeeId,
-            month: selectedMonth,
-            year: selectedYear,
-          }),
-        );
+        refreshData();
         message.success("Cancellation Revoked");
         setUndoModal({ isOpen: false, request: null });
       } else {
@@ -1297,23 +1258,7 @@ const LeaveManagement = () => {
       );
 
       if (undoModificationRequest.fulfilled.match(action)) {
-        dispatch(
-          getLeaveHistory({
-            employeeId,
-            status: filterStatus,
-            month: selectedMonth,
-            year: selectedYear,
-            page: currentPage,
-            limit: itemsPerPage,
-          }),
-        );
-        dispatch(
-          getLeaveStats({
-            employeeId,
-            month: selectedMonth,
-            year: selectedYear,
-          }),
-        );
+        refreshData();
         message.success("Modification Revoked");
         setUndoModal({ isOpen: false, request: null });
       } else {
@@ -1367,16 +1312,7 @@ const LeaveManagement = () => {
                 year: selectedYear,
               }),
             );
-            dispatch(
-              getLeaveHistory({
-                employeeId,
-                status: filterStatus,
-                month: selectedMonth,
-                year: selectedYear,
-                page: 1,
-                limit: 10,
-              }),
-            );
+            refreshData(1);
             setCancelModal({ isOpen: false, id: null });
             message.success("Request Cancelled");
           } else {
@@ -2124,7 +2060,7 @@ const LeaveManagement = () => {
           </div>
 
           {/* Modal Body */}
-          <div className="p-6 space-y-5 overflow-y-auto custom-scrollbar max-h-[80vh]">
+          <div className="p-6 space-y-5 overflow-y-auto custom-scrollbar max-h-[60vh]">
             {/* Error Message */}
             {error && (
               <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
@@ -2143,7 +2079,7 @@ const LeaveManagement = () => {
                 <label className="text-sm font-bold text-[#2B3674] ml-1 block">
                   Email recipients
                 </label>
-                <div className="space-y-2">
+                <div className="space-y-4 opacity-75 pointer-events-none">
                   <div className="flex flex-wrap gap-4 items-start">
                   {emailConfig.assignedManagerEmail && (
                     <div className="min-w-0 flex-1">
@@ -2169,53 +2105,13 @@ const LeaveManagement = () => {
                     />
                   </div>
                 </div>
-                {!isViewMode && (
-                  <div>
-                    <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">CC (optional)</span>
-                    <div className="flex flex-wrap gap-2 items-center">
-                      {ccEmails.map((email) => (
-                        <span
-                          key={email}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#EEF4FF] text-[#4318FF] text-sm font-medium"
-                        >
-                          {email}
-                          <button
-                            type="button"
-                            onClick={() => removeCcEmail(email)}
-                            className="hover:bg-[#4318FF]/20 rounded-full p-0.5"
-                            aria-label={`Remove ${email}`}
-                          >
-                            <X size={14} />
-                          </button>
-                        </span>
-                      ))}
-                      <input
-                        type="email"
-                        value={ccEmailInput}
-                        onChange={(e) => {
-                          setCcEmailInput(e.target.value);
-                          setCcEmailError("");
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === ",") {
-                            e.preventDefault();
-                            addCcEmail(ccEmailInput);
-                          }
-                        }}
-                        onBlur={() => ccEmailInput.trim() && addCcEmail(ccEmailInput)}
-                        placeholder="Add email and press Enter"
-                        className="flex-1 min-w-[180px] px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[#4318FF] bg-[#F4F7FE]"
-                      />
-                    </div>
-                    {ccEmailError && <p className="text-red-500 text-xs mt-1 ml-1">{ccEmailError}</p>}
-                  </div>
-                )}
-                {isViewMode && ccEmails.length > 0 && (
+                
+                {ccEmails.length > 0 && (
                   <div>
                     <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">Additional CC</span>
                     <div className="flex flex-wrap gap-2">
                       {ccEmails.map((email) => (
-                        <span key={email} className="px-3 py-1.5 rounded-xl bg-gray-100 text-gray-700 text-sm">
+                        <span key={email} className="px-3 py-1.5 rounded-xl bg-gray-100 text-gray-700 text-sm font-bold">
                           {email}
                         </span>
                       ))}
@@ -2223,8 +2119,8 @@ const LeaveManagement = () => {
                   </div>
                 )}
                 </div>
+                </div>
               </div>
-            </div>
 
             {/* Subject Field - above Duration Type */}
             <div className="space-y-2" ref={titleRef}>
@@ -2870,6 +2766,7 @@ const LeaveManagement = () => {
         onCancel={() =>
           !isModifying && setModifyModal({ isOpen: false, request: null })
         }
+        width={980}
         title={
           <div className="text-xl font-bold text-gray-800">Modify Request</div>
         }
@@ -2927,17 +2824,7 @@ const LeaveManagement = () => {
                   ).unwrap();
                   setModifyModal({ isOpen: false, request: null });
                   if (employeeId) {
-                    dispatch(getLeaveStats({ employeeId }));
-                    dispatch(
-                      getLeaveHistory({
-                        employeeId,
-                        status: filterStatus,
-                        month: selectedMonth,
-                        year: selectedYear,
-                        page: currentPage,
-                        limit: itemsPerPage,
-                      }),
-                    );
+                    refreshData();
                   }
                 } catch (err: any) {
                   message.error(
@@ -2967,7 +2854,7 @@ const LeaveManagement = () => {
         }
         centered
       >
-        <div className="py-4 space-y-4">
+        <div className="py-2 space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar px-1">
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-2">
               Subject
@@ -3125,10 +3012,10 @@ const LeaveManagement = () => {
               />
             </div>
 
-            {/* Email recipients in Modify modal - in card */}
-            <div className="rounded-2xl border border-[#E0E7FF] bg-[#F8FAFC] p-4 shadow-sm mt-4">
+            {/* Email recipients in Modify modal - disabled/read-only */}
+            <div className="rounded-2xl border border-[#E0E7FF] bg-[#F8FAFC] p-4 shadow-sm mt-4 opacity-70 pointer-events-none">
               <div className="space-y-2">
-                <label className="block text-sm font-bold text-gray-700">Email recipients</label>
+                <label className="block text-sm font-bold text-gray-700">Email recipients (Read Only)</label>
                 <div className="space-y-2">
                 <div className="flex flex-wrap gap-4 items-start">
                   {emailConfig.assignedManagerEmail && (
@@ -3156,7 +3043,7 @@ const LeaveManagement = () => {
                   </div>
                 </div>
                 <div>
-                  <span className="text-xs text-gray-600 block mb-1">Additional CC (optional)</span>
+                  <span className="text-xs text-gray-600 block mb-1">Additional CC</span>
                     <div className="flex flex-wrap gap-2 items-center">
                       {(modifyFormData.ccEmails || []).map((email) => (
                         <span
@@ -3164,38 +3051,12 @@ const LeaveManagement = () => {
                           className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#EEF4FF] text-[#4318FF] text-sm"
                         >
                           {email}
-                          <button
-                            type="button"
-                            onClick={() => removeModifyCcEmail(email)}
-                            className="hover:bg-[#4318FF]/20 rounded-full p-0.5"
-                            aria-label={`Remove ${email}`}
-                          >
-                            <X size={12} />
-                          </button>
                         </span>
                       ))}
-                      <input
-                        type="email"
-                        value={modifyCcInput}
-                        onChange={(e) => {
-                          setModifyCcInput(e.target.value);
-                          setModifyCcError("");
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === ",") {
-                            e.preventDefault();
-                            addModifyCcEmail(modifyCcInput);
-                          }
-                        }}
-                        onBlur={() => modifyCcInput.trim() && addModifyCcEmail(modifyCcInput)}
-                        placeholder="Add email, Enter"
-                        className="flex-1 min-w-[140px] px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#4318FF]"
-                      />
                     </div>
-                    {modifyCcError && <p className="text-red-500 text-xs mt-1">{modifyCcError}</p>}
+                  </div>
                 </div>
               </div>
-            </div>
             </div>
           </div>
 
@@ -3296,9 +3157,9 @@ const LeaveManagement = () => {
                     });
                   }
                 }}
-                disabled={selectedCancelDates.length === 0}
+                disabled={selectedCancelDates.length === 0 || requestToCancel?.status === LeaveRequestStatus.PENDING}
                 className={`px-6 py-2.5 rounded-2xl font-bold transition-all transform active:scale-95 uppercase tracking-wider flex items-center justify-center gap-2 ${
-                  selectedCancelDates.length === 0
+                  selectedCancelDates.length === 0 || requestToCancel?.status === LeaveRequestStatus.PENDING
                     ? "text-gray-400 bg-gray-100 cursor-not-allowed"
                     : "text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30"
                 }`}

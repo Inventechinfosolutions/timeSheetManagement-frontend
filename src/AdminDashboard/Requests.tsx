@@ -1713,7 +1713,7 @@ const Requests = () => {
           </div>
 
           {/* Modal Body */}
-          <div className="px-8 pb-8 pt-2 space-y-6 overflow-y-auto custom-scrollbar max-h-[75vh]">
+          <div className="px-8 pb-8 pt-2 space-y-6 overflow-y-auto custom-scrollbar max-h-[60vh]">
             {selectedRequest && (
               <>
                 {/* Email recipients - in card */}
