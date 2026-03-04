@@ -1126,7 +1126,9 @@ const LeaveManagement = () => {
         setCancellableDates(filtered);
       } else {
         // Explicitly throw or handle potential error payload
-        throw new Error((action.payload as string) || "Failed to fetch");
+        const payload = action.payload as any;
+        const errorMsg = typeof payload === 'string' ? payload : (payload?.message || payload?.error || "Failed to fetch");
+        throw new Error(Array.isArray(errorMsg) ? errorMsg.join(', ') : errorMsg);
       }
     } catch (err) {
       message.error("Failed to fetch cancellable dates");
@@ -1161,7 +1163,9 @@ const LeaveManagement = () => {
         setIsCancelDateModalVisible(false);
         refreshData(1, 10);
       } else {
-        throw new Error((action.payload as string) || "Cancellation failed");
+        const payload = action.payload as any;
+        const errorMsg = typeof payload === 'string' ? payload : (payload?.message || payload?.error || "Cancellation failed");
+        throw new Error(Array.isArray(errorMsg) ? errorMsg.join(', ') : errorMsg);
       }
     } catch (err: any) {
       message.error(err.message || "Cancellation failed");
@@ -1232,9 +1236,9 @@ const LeaveManagement = () => {
         message.success("Cancellation Revoked");
         setUndoModal({ isOpen: false, request: null });
       } else {
-        throw new Error(
-          (action.payload as string) || "Could not undo cancellation",
-        );
+        const payload = action.payload as any;
+        const errorMsg = typeof payload === 'string' ? payload : (payload?.message || payload?.error || "Could not undo cancellation");
+        throw new Error(Array.isArray(errorMsg) ? errorMsg.join(', ') : errorMsg);
       }
     } catch (err: any) {
       message.error(
@@ -1262,9 +1266,9 @@ const LeaveManagement = () => {
         message.success("Modification Revoked");
         setUndoModal({ isOpen: false, request: null });
       } else {
-        throw new Error(
-          (action.payload as string) || "Could not undo modification",
-        );
+        const payload = action.payload as any;
+        const errorMsg = typeof payload === 'string' ? payload : (payload?.message || payload?.error || "Could not undo modification");
+        throw new Error(Array.isArray(errorMsg) ? errorMsg.join(', ') : errorMsg);
       }
     } catch (err: any) {
       message.error(

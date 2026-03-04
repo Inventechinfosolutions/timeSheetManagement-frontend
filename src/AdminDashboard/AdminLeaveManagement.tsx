@@ -1290,7 +1290,9 @@ const AdminLeaveManagement = () => {
         // Refresh data
         refreshData();
       } else {
-        throw new Error((action.payload as string) || "Cancellation failed");
+        const payload = action.payload as any;
+        const errorMsg = typeof payload === 'string' ? payload : (payload?.message || payload?.error || "Cancellation failed");
+        throw new Error(Array.isArray(errorMsg) ? errorMsg.join(', ') : errorMsg);
       }
     } catch (err: any) {
       message.error(err.message || "Cancellation failed");
@@ -1378,9 +1380,9 @@ const AdminLeaveManagement = () => {
         setUndoModal({ isOpen: false, request: null });
         message.success("Modification Revoked");
       } else {
-        throw new Error(
-          (action.payload as string) || "Could not undo modification",
-        );
+        const payload = action.payload as any;
+        const errorMsg = typeof payload === 'string' ? payload : (payload?.message || payload?.error || "Could not undo modification");
+        throw new Error(Array.isArray(errorMsg) ? errorMsg.join(', ') : errorMsg);
       }
     } catch (err: any) {
       message.error(`Undo Failed: ${err.message || "Could not undo modification."}`);
