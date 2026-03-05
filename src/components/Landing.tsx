@@ -37,7 +37,8 @@ const Landing = () => {
         navigate("/timesheet/reset-password");
       } else if (
         currentUser.userType?.toUpperCase() === UserType.MANAGER ||
-        (currentUser.role && currentUser.role.toUpperCase().includes(UserType.MANAGER))
+        (currentUser.role &&
+          currentUser.role.toUpperCase().includes(UserType.MANAGER))
       ) {
         navigate("/manager-dashboard");
       } else if (currentUser.userType?.toUpperCase() === UserType.ADMIN) {
@@ -95,7 +96,7 @@ const Landing = () => {
   }
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-[#EFEBF5] relative overflow-hidden font-sans animate-in fade-in duration-500">
+    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-white relative overflow-hidden font-sans animate-in fade-in duration-500">
       {/* Page Background Shapes from Design */}
       <div className="absolute top-[-5%] left-[5%] w-48 h-48 bg-[#585CE5] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
       <div className="absolute bottom-[-10%] right-[-5%] w-96 h-96 bg-white rounded-full mix-blend-overlay filter blur-3xl opacity-40"></div>
