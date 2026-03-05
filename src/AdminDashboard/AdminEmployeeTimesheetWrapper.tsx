@@ -123,16 +123,19 @@ const AdminEmployeeTimesheetWrapper = () => {
 
   // Calculate metrics for stats cards
   const presentDays = records.filter(
-    (r) =>
-      r.status === AttendanceStatus.FULL_DAY ||
-      r.status === AttendanceStatus.HALF_DAY,
+    (r: any) =>
+      (r.status || r.attendance_status) === AttendanceStatus.FULL_DAY ||
+      (r.status || r.attendance_status) === AttendanceStatus.HALF_DAY,
   ).length;
 
   const totalHours = records.reduce(
-    (acc, curr) => acc + (curr.totalHours || 0),
+    (acc, curr: any) => {
+      const hours = curr.totalHours ?? curr.total_hours ?? 0;
+      return acc + Number(hours);
+    },
     0,
   );
-  const avgHours = (typeof totalHours === 'number' && !isNaN(totalHours)) ? totalHours.toFixed(1) : '0.0';
+  const formattedTotalHours = (typeof totalHours === 'number' && !isNaN(totalHours)) ? totalHours.toFixed(1) : '0.0';
 
   const handleApplyBlock = async () => {
     if (!fromDate || !toDate) {
@@ -280,7 +283,7 @@ const AdminEmployeeTimesheetWrapper = () => {
                 </p>
                 <div className="flex items-baseline gap-2">
                   <h3 className="text-xl md:text-2xl font-black text-[#2B3674]">
-                    {avgHours}
+                    {formattedTotalHours}
                   </h3>
                   <span className="text-[10px] font-bold text-[#4318FF] bg-[#F4F7FE] px-2 py-0.5 rounded-full uppercase">
                     Hours

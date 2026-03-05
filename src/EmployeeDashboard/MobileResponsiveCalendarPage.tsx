@@ -20,7 +20,7 @@ import {
 } from "../reducers/employeeAttendance.reducer";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import { fetchBlockers } from "../reducers/timesheetBlocker.reducer";
-import { AttendanceStatus, UserType } from "../enums";
+import { AttendanceStatus, UserType, Department } from "../enums";
 import {
   generateMonthlyEntries,
   generateRangeEntries,
@@ -313,7 +313,17 @@ const MobileResponsiveCalendarPage = ({
           {monthDays.map((day) => {
             const entry = entries.find((e) => e.date === day);
             const holiday = checkIsHoliday(day);
-            const isBlocked = checkIsBlocked(day);
+            const manualBlocker = getBlocker(day);
+            
+            // Block if manual blocker exists OR (if not admin/manager and status is Leave or Sunday/Holiday)
+            const dObj = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+            const dayOfWeek = dObj.getDay();
+            
+            let isDeptBlocked = false;
+            if (dayOfWeek === 0) isDeptBlocked = true;
+
+            const isBlocked = !!manualBlocker || (!isAdmin && !isManager && (entry?.status === AttendanceStatus.LEAVE || isDeptBlocked || !!holiday));
+            
             const isToday =
               day === now.getDate() &&
               currentDate.getMonth() === now.getMonth() &&
@@ -412,9 +422,11 @@ const MobileResponsiveCalendarPage = ({
                   <div className="absolute inset-0 z-20 bg-black/40 backdrop-blur-[2px] rounded-xl flex flex-col items-center justify-center p-1 text-center pointer-events-none">
                     <Lock size={12} className="text-white mb-0.5" />
                     <span className="text-[6px] font-black text-white leading-none uppercase tracking-tighter">
-                      {isAdmin || isManager
-                        ? "Unblock"
-                        : `Contact ${getBlocker(day)?.blockedBy || "Admin"}`}
+                      {manualBlocker
+                        ? (isAdmin || isManager
+                          ? "Unblock"
+                          : `Contact ${manualBlocker.blockedBy || "Admin"}`)
+                        : "On Leave"}
                     </span>
                   </div>
                 )}

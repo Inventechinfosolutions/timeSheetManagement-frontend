@@ -1091,21 +1091,23 @@ const LeaveManagement = () => {
       if (getLeaveCancellableDates.fulfilled.match(action)) {
         const apiDates = action.payload || [];
 
-        // Identify dates currently under modification or pending status in other requests
+        // Identify dates currently under an ACTIVE modification or cancellation child
+        // process (different from the current request).
+        // IMPORTANT: Do NOT include CANCELLED or APPROVED here — those are dead/
+        // separate records and must never block the current request's dates.
         const lockedDates = new Set<string>();
         entities?.forEach((req: any) => {
-          // We check for requests other than the current parent request that are in a "pending-like" state
+          // Only lock dates if the other request is an in-flight child (linked via
+          // requestModifiedFrom) that is actively pending cancellation/modification.
           if (
             req.id !== request.id &&
             (req.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION ||
               req.status === "Requesting For Modification" ||
-              req.status === LeaveRequestStatus.PENDING ||
               req.status === LeaveRequestStatus.REQUESTING_FOR_CANCELLATION ||
               req.status === "Requesting For Cancellation" ||
-              req.status === LeaveRequestStatus.APPROVED ||
-              req.status === LeaveRequestStatus.MODIFICATION_APPROVED ||
-              req.status === LeaveRequestStatus.REQUEST_MODIFIED ||
-              req.status === LeaveRequestStatus.CANCELLED)
+              req.status === LeaveRequestStatus.MODIFICATION_APPROVED) &&
+            req.requestModifiedFrom &&
+            Number(req.requestModifiedFrom) === request.id
           ) {
             let start = dayjs(req.fromDate);
             const end = dayjs(req.toDate);
@@ -1116,7 +1118,7 @@ const LeaveManagement = () => {
           }
         });
 
-        // Filter out the dates that are already locked by a pending modification/cancellation
+        // Filter out dates that are already locked by an active child cancellation/modification
         const filtered = apiDates.filter(
           (d: any) => !lockedDates.has(dayjs(d.date).format("YYYY-MM-DD")),
         );

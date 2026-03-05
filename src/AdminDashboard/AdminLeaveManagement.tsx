@@ -1149,22 +1149,21 @@ const AdminLeaveManagement = () => {
       ).unwrap();
       const apiDates = response || [];
 
-      // Identify dates currently under modification or pending status in other requests for THIS employee
+      // Only lock dates from in-flight child records belonging to THIS request.
+      // CANCELLED, APPROVED, PENDING, REQUEST_MODIFIED records must NOT block dates
+      // for a new request on the same dates.
       const lockedDates = new Set<string>();
       entities?.forEach((r: any) => {
-        // We check for requests other than the current parent request that are in a "pending-like" state
         if (
           r.id !== req.id &&
           r.employeeId === req.employeeId &&
           (r.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION ||
             r.status === "Requesting For Modification" ||
-            r.status === LeaveRequestStatus.PENDING ||
             r.status === LeaveRequestStatus.REQUESTING_FOR_CANCELLATION ||
             r.status === "Requesting For Cancellation" ||
-            r.status === LeaveRequestStatus.APPROVED ||
-            r.status === LeaveRequestStatus.MODIFICATION_APPROVED ||
-            r.status === LeaveRequestStatus.REQUEST_MODIFIED ||
-            r.status === LeaveRequestStatus.CANCELLED)
+            r.status === LeaveRequestStatus.MODIFICATION_APPROVED) &&
+          r.requestModifiedFrom &&
+          Number(r.requestModifiedFrom) === req.id
         ) {
           let start = dayjs(r.fromDate);
           const end = dayjs(r.toDate);
@@ -1175,7 +1174,7 @@ const AdminLeaveManagement = () => {
         }
       });
 
-      // Filter out the dates that are already locked
+      // Filter out dates that are already locked by an active child cancellation/modification
       const filtered = apiDates.filter(
         (d: any) => !lockedDates.has(dayjs(d.date).format("YYYY-MM-DD")),
       );
