@@ -13,6 +13,8 @@ import {
 import { useAppSelector, useAppDispatch } from "../hooks";
 import { useParams, useNavigate } from "react-router-dom";
 import { logoutUser } from "../reducers/user.reducer";
+import { UserType } from "../enums";
+import ApiLoadingSpinner from "../components/ApiLoadingSpinner";
 
 interface SidebarLayoutProps {
   children: React.ReactNode;
@@ -144,7 +146,7 @@ const SidebarLayout = ({
             <AlarmClock className="w-6 h-6 text-white" />
           </div>
           <span className="text-xl font-bold text-white tracking-tight">
-            {currentUser?.userType === "ADMIN" ? "Admin" : currentUser?.userType === "MANAGER" ? "Manager" : "Employee"}
+            {currentUser?.userType === UserType.ADMIN ? "Admin" : currentUser?.userType === UserType.MANAGER ? "Manager" : "Employee"}
           </span>
         </div>
         {/* Branding & Lock Toggle - Desktop Only */}
@@ -176,7 +178,7 @@ const SidebarLayout = ({
                 {entity?.employeeId || "EMP001"}
               </span>
               <span className="text-[10px] font-medium text-blue-100 uppercase tracking-widest whitespace-nowrap">
-                {currentUser?.userType === "ADMIN" ? "Admin" : currentUser?.userType === "MANAGER" ? "Manager" : "Employee"}
+                {currentUser?.userType === UserType.ADMIN ? "Admin" : currentUser?.userType === UserType.MANAGER ? "Manager" : "Employee"}
               </span>
             </div>
           </div>
@@ -273,7 +275,7 @@ const SidebarLayout = ({
           <div className="relative group">
             <button
               onClick={handleLogout}
-              className={`w-full flex items-center p-3 rounded-2xl cursor-pointer transition-all duration-300 relative overflow-hidden group hover:bg-white/10 text-blue-100 hover:text-white
+              className={`w-full flex items-center p-3 rounded-2xl cursor-pointer transition-all duration-300 relative overflow-hidden group bg-white text-red-600 hover:bg-red-50
                         ${
                           isOpen || isMobileOpen
                             ? "gap-4 px-4"
@@ -281,7 +283,7 @@ const SidebarLayout = ({
                         }
                     `}
             >
-              <div className="shrink-0 relative z-10 transition-transform duration-300">
+              <div className="shrink-0 relative z-10 transition-transform duration-300 text-red-600">
                 <LogOut className="w-5 h-5 transition-colors duration-300 group-hover:scale-110" />
               </div>
               <span
@@ -308,7 +310,10 @@ const SidebarLayout = ({
       </aside>
 
       <main className="flex-1 min-h-0 h-full relative no-scrollbar flex flex-col bg-[#F4F7FE] overflow-auto">
-        {children}
+        <div className="relative flex-1 min-h-0 flex flex-col">
+          {children}
+          <ApiLoadingSpinner contained />
+        </div>
       </main>
     </div>
   );

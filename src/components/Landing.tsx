@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { User, Eye, EyeOff, Lock, Zap } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { setCurrentUser } from "../reducers/employeeDetails.reducer";
-import { loginUser, clearError, UserType } from "../reducers/user.reducer";
+import { loginUser, clearError } from "../reducers/user.reducer";
+import { UserType } from "../enums";
 import loginVisual from "../assets/login_visual.png";
 import inventLogo from "../assets/invent-logo.svg";
 import LandingMobile from "./LandingMobile";
@@ -36,7 +37,7 @@ const Landing = () => {
         navigate("/timesheet/reset-password");
       } else if (
         currentUser.userType?.toUpperCase() === UserType.MANAGER ||
-        (currentUser.role && currentUser.role.toUpperCase().includes("MANAGER"))
+        (currentUser.role && currentUser.role.toUpperCase().includes(UserType.MANAGER))
       ) {
         navigate("/manager-dashboard");
       } else if (currentUser.userType?.toUpperCase() === UserType.ADMIN) {

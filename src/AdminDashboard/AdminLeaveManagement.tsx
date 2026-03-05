@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { DatePicker, ConfigProvider, Checkbox, Select, Modal } from "antd";
 import dayjs from "dayjs";
@@ -20,15 +21,23 @@ import {
   modifyLeaveRequest,
   clearAttendanceForRequest,
   submitRequestModification,
+  undoModificationRequest,
+  undoCancellationRequest,
   clearRequests,
   LeaveRequest,
+  getLeaveRequestEmailConfig,
 } from "../reducers/leaveRequest.reducer";
 import { getEntities } from "../reducers/employeeDetails.reducer";
-import {
-  AttendanceStatus,
-  fetchAttendanceByDateRange,
-} from "../reducers/employeeAttendance.reducer";
+import { fetchAttendanceByDateRange } from "../reducers/employeeAttendance.reducer";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
+import {
+  LeaveRequestStatus,
+  AttendanceStatus,
+  WorkLocation,
+  LeaveRequestType,
+  UserType,
+  HalfDayType,
+} from "../enums";
 import {
   Home,
   MapPin,
@@ -44,16 +53,22 @@ import {
   User,
   Search,
   Clock,
-  Users,
   Building2,
 } from "lucide-react";
-import { notification } from "antd";
+import { message } from "antd";
 import CommonMultipleUploader from "../EmployeeDashboard/CommonMultipleUploader";
 
 const isCancellationAllowed = (submittedDate: string) => {
   if (!submittedDate) return true;
   const submission = dayjs(submittedDate).startOf("day");
   const deadline = submission.hour(18).minute(30).second(0);
+  return dayjs().isBefore(deadline);
+};
+
+const isUndoable = (req: any) => {
+  // Rule: Next Day 10 AM
+  const submissionTime = dayjs(req.submittedDate || req.created_at);
+  const deadline = submissionTime.add(1, "day").hour(10).minute(0).second(0);
   return dayjs().isBefore(deadline);
 };
 
@@ -92,11 +107,26 @@ const AdminLeaveManagement = () => {
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [isEmployeeDropdownOpen, setIsEmployeeDropdownOpen] = useState(false);
   const employeeDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Configure AntD message position to be below the header
+  useEffect(() => {
+    message.config({
+      top: 70,
+      duration: 3,
+    });
+  }, []);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewMode, setIsViewMode] = useState(false);
   const [selectedRequestId, setSelectedRequestId] = useState<number | null>(
     null,
   );
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const basePath = location.pathname.startsWith("/manager-dashboard")
+    ? "/manager-dashboard"
+    : "/admin-dashboard";
+
   const [uploaderKey, setUploaderKey] = useState(0);
   const titleRef = useRef<HTMLDivElement>(null);
   const startDateRef = useRef<HTMLDivElement>(null);
@@ -120,14 +150,19 @@ const AdminLeaveManagement = () => {
     endDate: "",
     duration: 0,
   });
-  const [leaveDurationType, setLeaveDurationType] = useState("Full Day");
+  const [leaveDurationType, setLeaveDurationType] = useState(
+    HalfDayType.FULL_DAY,
+  );
   const [isHalfDay, setIsHalfDay] = useState(false);
   const [halfDayType, setHalfDayType] = useState<string | null>(null);
-  const [otherHalfType, setOtherHalfType] = useState<string | null>("Office");
+  const [otherHalfType, setOtherHalfType] = useState<string | null>(
+    WorkLocation.OFFICE,
+  );
   const [isCancelling, setIsCancelling] = useState(false);
   const [isAutoApproving, setIsAutoApproving] = useState(false);
   const [isModifying, setIsModifying] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [uploadedDocumentKeys, setUploadedDocumentKeys] = useState<string[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string>("All");
   const [selectedYear, setSelectedYear] = useState<string>("All");
   const [filterStatus, setFilterStatus] = useState<string>("All");
@@ -137,12 +172,31 @@ const AdminLeaveManagement = () => {
     request: any;
     datesToModify?: string[];
   }>({ isOpen: false, request: null });
-  const [modifyFormData, setModifyFormData] = useState({
+  const [modifyFormData, setModifyFormData] = useState<{
+    title: string;
+    description: string;
+    firstHalf: string;
+    secondHalf: string;
+    ccEmails?: string[];
+  }>({
     title: "",
     description: "",
-    firstHalf: "Office",
-    secondHalf: "Office",
+    firstHalf: WorkLocation.OFFICE,
+    secondHalf: WorkLocation.OFFICE,
+    ccEmails: [],
   });
+  const [emailConfig, setEmailConfig] = useState<{
+    assignedManagerEmail: string | null;
+    hrEmail: string | null;
+  }>({ assignedManagerEmail: null, hrEmail: null });
+  const [ccEmails, setCcEmails] = useState<string[]>([]);
+  const [ccEmailInput, setCcEmailInput] = useState("");
+  const [ccEmailError, setCcEmailError] = useState("");
+  const [undoModal, setUndoModal] = useState<{
+    isOpen: boolean;
+    request: any;
+  }>({ isOpen: false, request: null });
+  const [isUndoing, setIsUndoing] = useState(false);
 
   const months = [
     { label: "January", value: "1" },
@@ -162,7 +216,7 @@ const AdminLeaveManagement = () => {
   const currentYear = new Date().getFullYear();
   const years = [
     "All",
-    ...Array.from({ length: 5 }, (_, i) => currentYear - 2 + i),
+    ...Array.from({ length: 6 }, (_, i) => currentYear + i),
   ];
 
   const itemsPerPage = 10;
@@ -179,6 +233,24 @@ const AdminLeaveManagement = () => {
     endDate: "",
     employee: "",
   });
+
+  const refreshData = (page?: number, limit?: number) => {
+    if (!selectedEmployee) return;
+    const empId = selectedEmployee.employeeId || selectedEmployee.id;
+    dispatch(
+      getLeaveHistory({
+        employeeId: empId,
+        page: page || currentPage,
+        limit: limit || itemsPerPage,
+        month: selectedMonth,
+        year: selectedYear,
+        status: filterStatus,
+      }),
+    );
+    dispatch(getLeaveStats({ employeeId: empId }));
+  };
+
+
 
   // Disable dates that already have approved/pending leave requests for the selected employee
   const disabledDate = (current: any) => {
@@ -201,7 +273,11 @@ const AdminLeaveManagement = () => {
         return false;
 
       // Exclude rejected and cancelled requests
-      if (req.status === "Rejected" || req.status === "Cancelled") return false;
+      if (
+        req.status === LeaveRequestStatus.REJECTED ||
+        req.status === LeaveRequestStatus.CANCELLED
+      )
+        return false;
 
       // Exclude the current request if we're viewing/editing it
       if (isViewMode && selectedRequestId && req.id === selectedRequestId)
@@ -221,20 +297,20 @@ const AdminLeaveManagement = () => {
 
       // 1. RULE: If LEAVE already exists, block EVERYTHING (No exceptions)
       if (
-        existingRequestType === "Apply Leave" ||
-        existingRequestType === "Leave"
+        existingRequestType === LeaveRequestType.APPLY_LEAVE ||
+        existingRequestType === AttendanceStatus.LEAVE
       ) {
         return true;
       }
 
       // 2. RULE: If WORK FROM HOME already exists
-      if (existingRequestType === "Work From Home") {
+      if (existingRequestType === WorkLocation.WORK_FROM_HOME) {
         // Allow if applying for Leave or Client Visit or Half Day
         if (
-          selectedLeaveType === "Apply Leave" ||
-          selectedLeaveType === "Leave" ||
-          selectedLeaveType === "Client Visit" ||
-          selectedLeaveType === "Half Day"
+          selectedLeaveType === LeaveRequestType.APPLY_LEAVE ||
+          selectedLeaveType === AttendanceStatus.LEAVE ||
+          selectedLeaveType === WorkLocation.CLIENT_VISIT ||
+          selectedLeaveType === AttendanceStatus.HALF_DAY
         ) {
           return false; // Valid dates, don't disable
         }
@@ -242,13 +318,13 @@ const AdminLeaveManagement = () => {
       }
 
       // 3. RULE: If CLIENT VISIT already exists
-      if (existingRequestType === "Client Visit") {
+      if (existingRequestType === WorkLocation.CLIENT_VISIT) {
         // Allow if applying for Leave or Work From Home or Half Day
         if (
-          selectedLeaveType === "Apply Leave" ||
-          selectedLeaveType === "Leave" ||
-          selectedLeaveType === "Work From Home" ||
-          selectedLeaveType === "Half Day"
+          selectedLeaveType === LeaveRequestType.APPLY_LEAVE ||
+          selectedLeaveType === AttendanceStatus.LEAVE ||
+          selectedLeaveType === WorkLocation.WFH ||
+          selectedLeaveType === AttendanceStatus.HALF_DAY
         ) {
           return false; // Valid dates, don't disable
         }
@@ -373,7 +449,7 @@ const AdminLeaveManagement = () => {
       isValid = false;
     }
     if (!formData.title.trim()) {
-      newErrors.title = "Title is required";
+      newErrors.title = "Subject is required";
       isValid = false;
     }
     if (!formData.startDate) {
@@ -464,7 +540,7 @@ const AdminLeaveManagement = () => {
       return (
         normalizedRecordDate === dateStr &&
         (status === AttendanceStatus.LEAVE ||
-          status === "Leave" ||
+          status === LeaveRequestType.LEAVE ||
           status === "LEAVE")
       );
     });
@@ -523,27 +599,27 @@ const AdminLeaveManagement = () => {
 
     setIsAutoApproving(true);
     try {
-      // Determine the actual request type based on dropdown selection if "Apply Leave" is selected
+      // Determine the actual request type based on dropdown selection if LeaveRequestType.APPLY_LEAVE is selected
       let finalRequestType = selectedLeaveType;
       if (
-        selectedLeaveType === "Apply Leave" ||
-        selectedLeaveType === "Leave"
+        selectedLeaveType === LeaveRequestType.APPLY_LEAVE ||
+        selectedLeaveType === LeaveRequestType.LEAVE
       ) {
-        if (leaveDurationType === "Half Day") {
-          finalRequestType = "Half Day";
+        if (leaveDurationType === HalfDayType.HALF_DAY) {
+          finalRequestType = LeaveRequestType.HALF_DAY;
         } else {
-          finalRequestType = "Apply Leave";
+          finalRequestType = LeaveRequestType.APPLY_LEAVE;
         }
       }
 
       // For Client Visit, WFH, and Leave (including Half Day), fetch attendance records first to check for existing leaves
       let duration: number;
       if (
-        finalRequestType === "Client Visit" ||
-        finalRequestType === "Work From Home" ||
-        finalRequestType === "Apply Leave" ||
-        finalRequestType === "Leave" ||
-        finalRequestType === "Half Day"
+        finalRequestType === WorkLocation.CLIENT_VISIT ||
+        finalRequestType === WorkLocation.WORK_FROM_HOME ||
+        finalRequestType === LeaveRequestType.APPLY_LEAVE ||
+        finalRequestType === LeaveRequestType.LEAVE ||
+        finalRequestType === LeaveRequestType.HALF_DAY
       ) {
         // Fetch attendance records synchronously before calculating duration
         const attendanceAction = await dispatch(
@@ -569,17 +645,19 @@ const AdminLeaveManagement = () => {
 
         // Custom Duration Calculation for WFH/CV split
         if (
-          leaveDurationType === "Half Day" ||
-          leaveDurationType === "First Half" ||
-          leaveDurationType === "Second Half"
+          leaveDurationType === HalfDayType.HALF_DAY ||
+          leaveDurationType === HalfDayType.FIRST_HALF ||
+          leaveDurationType === HalfDayType.SECOND_HALF
         ) {
-          const mainType = finalRequestType; // "Work From Home", "Client Visit", "Half Day" (Leave), etc.
-          const other = otherHalfType; // "Office", "Work From Home", "Client Visit", "Leave"
+          const mainType = finalRequestType; // WorkLocation.WORK_FROM_HOME, WorkLocation.CLIENT_VISIT, LeaveRequestType.HALF_DAY (Leave), etc.
+          const other = otherHalfType; // WorkLocation.OFFICE, WorkLocation.WORK_FROM_HOME, WorkLocation.CLIENT_VISIT, LeaveRequestType.LEAVE
 
           const isMainRemote =
-            mainType === "Work From Home" || mainType === "Client Visit";
+            mainType === WorkLocation.WORK_FROM_HOME ||
+            mainType === WorkLocation.CLIENT_VISIT;
           const isOtherRemote =
-            other === "Work From Home" || other === "Client Visit";
+            other === WorkLocation.WORK_FROM_HOME ||
+            other === WorkLocation.CLIENT_VISIT;
 
           // User Requirement: WFH + CV = 1 Day
           if (isMainRemote && isOtherRemote) {
@@ -599,9 +677,9 @@ const AdminLeaveManagement = () => {
 
       // 1. Submit the Request (Pending State)
       const isSplitRequest =
-        leaveDurationType === "First Half" ||
-        leaveDurationType === "Second Half" ||
-        leaveDurationType === "Half Day";
+        leaveDurationType === HalfDayType.FIRST_HALF ||
+        leaveDurationType === HalfDayType.SECOND_HALF ||
+        leaveDurationType === HalfDayType.HALF_DAY;
 
       const submitAction = await dispatch(
         submitLeaveRequest({
@@ -615,20 +693,16 @@ const AdminLeaveManagement = () => {
           isHalfDay: isSplitRequest,
           halfDayType: isSplitRequest ? halfDayType : null,
           otherHalfType: isSplitRequest ? otherHalfType : null,
-          // Explicitly set halves for all requests to support template logic
           firstHalf: isSplitRequest ? halfDayType : finalRequestType,
           secondHalf: isSplitRequest ? otherHalfType : finalRequestType,
           submittedDate: new Date().toISOString().split("T")[0],
+          ccEmails: ccEmails && ccEmails.length > 0 ? ccEmails : [],
+          documentKeys: uploadedDocumentKeys,
         }),
       );
 
       if (!submitLeaveRequest.fulfilled.match(submitAction)) {
-        notification.error({
-          message: "Submit Failed",
-          description: "Failed to submit request",
-          placement: "topRight",
-          duration: 3,
-        });
+        message.error("Submit Failed: Failed to submit request");
         return;
       }
 
@@ -636,13 +710,7 @@ const AdminLeaveManagement = () => {
       const createdId = createdRequest?.id;
 
       if (!createdId) {
-        notification.warning({
-          message: "Submitted",
-          description:
-            "Request submitted, but auto-approval couldn't be completed (missing request id).",
-          placement: "topRight",
-          duration: 4,
-        });
+        message.warning("Submitted: Request submitted, but auto-approval couldn't be completed (missing request id).");
         return;
       }
 
@@ -682,7 +750,7 @@ const AdminLeaveManagement = () => {
             (e: any) =>
               (e.employeeId || e.id) ===
                 (selectedEmployee.employeeId || selectedEmployee.id) &&
-              e.status === "Approved" &&
+              e.status === LeaveRequestStatus.APPROVED &&
               victimTypes.includes((e.requestType || "").toLowerCase()) &&
               e.id !== createdId,
           )
@@ -717,7 +785,7 @@ const AdminLeaveManagement = () => {
                     fromDate: iStart,
                     toDate: iEnd,
                     duration: datesNeedingModification.length,
-                    // Split request due to gap -> ensure segments carry original half types or "Leave" if generic
+                    // Split request due to gap -> ensure segments carry original half types or LeaveRequestType.LEAVE if generic
                     firstHalf: victim.isHalfDay
                       ? victim.firstHalf
                       : victim.requestType,
@@ -747,7 +815,7 @@ const AdminLeaveManagement = () => {
               await dispatch(
                 updateLeaveRequestStatus({
                   id: victim.id,
-                  status: "Cancelled",
+                  status: LeaveRequestStatus.CANCELLED,
                 }),
               ).unwrap();
             } else {
@@ -797,7 +865,7 @@ const AdminLeaveManagement = () => {
                 await dispatch(
                   updateLeaveRequestStatus({
                     id: victim.id,
-                    status: "Cancelled",
+                    status: LeaveRequestStatus.CANCELLED,
                   }),
                 ).unwrap();
 
@@ -811,7 +879,7 @@ const AdminLeaveManagement = () => {
                         duration: segment.length,
                         sourceRequestId: createdId,
                         sourceRequestType: finalRequestType,
-                        overrideStatus: "Approved",
+                        overrideStatus: LeaveRequestStatus.APPROVED,
                       },
                     }),
                   ).unwrap();
@@ -824,45 +892,22 @@ const AdminLeaveManagement = () => {
 
       // 3. Approve the New Request
       const approveAction = await dispatch(
-        updateLeaveRequestStatus({ id: createdId, status: "Approved" }),
+        updateLeaveRequestStatus({
+          id: createdId,
+          status: LeaveRequestStatus.APPROVED,
+        }),
       );
 
       if (!updateLeaveRequestStatus.fulfilled.match(approveAction)) {
-        notification.warning({
-          message: "Submitted",
-          description:
-            "Request submitted, but auto-approval failed. Please approve it from Requests/Notifications.",
-          placement: "topRight",
-          duration: 4,
-        });
+        message.warning("Submitted: Request submitted, but auto-approval failed. Please approve it from Requests/Notifications.");
         return;
       }
 
-      notification.success({
-        message: "Applied & Approved",
-        description:
-          "Admin request is auto-approved successfully and conflicts handled.",
-        placement: "topRight",
-        duration: 3,
-      });
+      message.success("Request Approved");
 
       // Refresh data for selected employee
-      await dispatch(
-        getLeaveHistory({
-          employeeId: selectedEmployee.employeeId || selectedEmployee.id,
-          page: 1,
-          limit: itemsPerPage,
-          month: selectedMonth,
-          year: selectedYear,
-          status: filterStatus,
-        }),
-      );
+      await refreshData(1);
       setCurrentPage(1);
-      await dispatch(
-        getLeaveStats({
-          employeeId: selectedEmployee.employeeId || selectedEmployee.id,
-        }),
-      );
 
       // Close & reset form
       setIsModalOpen(false);
@@ -883,15 +928,10 @@ const AdminLeaveManagement = () => {
       setSelectedLeaveType("");
       setSelectedRequestId(null);
       setIsViewMode(false);
+      setUploadedDocumentKeys([]);
       dispatch(resetSubmitSuccess());
     } catch (e: any) {
-      notification.error({
-        message: "Action Failed",
-        description:
-          e?.message || "Could not define request or update attendance.",
-        placement: "topRight",
-        duration: 4,
-      });
+      message.error(e?.message || "Could not define request or update attendance.");
     } finally {
       setIsAutoApproving(false);
     }
@@ -940,31 +980,30 @@ const AdminLeaveManagement = () => {
   ]);
 
   useEffect(() => {
-    if (selectedEmployee?.employeeId || selectedEmployee?.id) {
-      dispatch(
-        getLeaveHistory({
-          employeeId: selectedEmployee.employeeId || selectedEmployee.id,
-          page: currentPage,
-          limit: itemsPerPage,
-          month: selectedMonth,
-          year: selectedYear,
-          status: filterStatus,
-        }),
-      );
-      dispatch(
-        getLeaveStats({
-          employeeId: selectedEmployee.employeeId || selectedEmployee.id,
-        }),
-      );
-    }
+    refreshData();
   }, [
     dispatch,
-    selectedEmployee,
+    selectedEmployee?.employeeId,
+    selectedEmployee?.id,
     currentPage,
     selectedMonth,
     selectedYear,
     filterStatus,
   ]);
+
+  // Clear selected employee and reset all related state
+  const handleClearEmployee = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedEmployee(null);
+    setIsEmployeeDropdownOpen(false);
+    setSearchTerm("");
+    setCurrentPage(1);
+    setSelectedMonth("All");
+    setSelectedYear("All");
+    setFilterStatus("All");
+    setErrors((prev) => ({ ...prev, employee: "" }));
+    dispatch(clearRequests());
+  };
 
   // Note: admin requests are auto-approved in handleSubmit; we don't rely on submitSuccess side-effects here.
 
@@ -974,20 +1013,21 @@ const AdminLeaveManagement = () => {
         ...prev,
         employee: "Please select an employee first",
       }));
-      notification.warning({
-        message: "Employee Required",
-        description: "Please select an employee before applying for leave",
-        placement: "topRight",
-      });
+      message.warning("Please select an employee before applying for leave");
       return;
     }
     setIsViewMode(false);
     setSelectedRequestId(null);
     setUploaderKey((prev) => prev + 1);
     setSelectedLeaveType(
-      label === "Leave" || label === "Apply Leave" ? "Apply Leave" : label,
+      label === LeaveRequestType.LEAVE || label === LeaveRequestType.APPLY_LEAVE
+        ? LeaveRequestType.APPLY_LEAVE
+        : label,
     );
     setIsModalOpen(true);
+    setCcEmails([]);
+    setCcEmailInput("");
+    setCcEmailError("");
     setErrors({
       title: "",
       description: "",
@@ -995,9 +1035,9 @@ const AdminLeaveManagement = () => {
       endDate: "",
       employee: "",
     });
-    setLeaveDurationType("Full Day");
+    setLeaveDurationType(HalfDayType.FULL_DAY);
     setHalfDayType(null);
-    setOtherHalfType("Office");
+    setOtherHalfType(WorkLocation.OFFICE);
     setIsHalfDay(false);
     dispatch(resetSubmitSuccess());
   };
@@ -1016,6 +1056,37 @@ const AdminLeaveManagement = () => {
           endDate: fetchedItem.toDate,
           duration: fetchedItem.duration,
         });
+
+        const parsedCc = Array.isArray(fetchedItem.ccEmails)
+          ? fetchedItem.ccEmails
+          : typeof fetchedItem.ccEmails === "string"
+            ? (() => {
+                try {
+                  const p = JSON.parse(fetchedItem.ccEmails);
+                  return Array.isArray(p) ? p : [];
+                } catch {
+                  return [];
+                }
+              })()
+            : [];
+        setCcEmails(parsedCc);
+        setCcEmailInput("");
+        setCcEmailError("");
+
+        if (fetchedItem.employeeId) {
+          dispatch(getLeaveRequestEmailConfig(fetchedItem.employeeId))
+            .unwrap()
+            .then((data) =>
+              setEmailConfig({
+                assignedManagerEmail: data?.assignedManagerEmail ?? null,
+                hrEmail: data?.hrEmail ?? null,
+              }),
+            )
+            .catch(() =>
+              setEmailConfig({ assignedManagerEmail: null, hrEmail: null }),
+            );
+        }
+
         setIsModalOpen(true);
         setErrors({
           title: "",
@@ -1025,20 +1096,30 @@ const AdminLeaveManagement = () => {
           employee: "",
         });
       } else {
-        notification.error({
-          message: "Error",
-          description: "Failed to fetch request details",
-        });
+        message.error("Failed to fetch request details");
       }
     });
   };
 
   const handleModifyClick = (req: any, datesToModify?: string[]) => {
+    const parsedCc = Array.isArray(req.ccEmails)
+      ? req.ccEmails
+      : typeof req.ccEmails === "string"
+        ? (() => {
+            try {
+              const p = JSON.parse(req.ccEmails);
+              return Array.isArray(p) ? p : [];
+            } catch {
+              return [];
+            }
+          })()
+        : [];
     setModifyFormData({
       title: req.title || "",
       description: req.description || "",
       firstHalf: req.firstHalf || req.requestType,
       secondHalf: req.secondHalf || req.requestType,
+      ccEmails: parsedCc,
     });
     setModifyModal({ isOpen: true, request: req, datesToModify });
     setCancelModal({ ...cancelModal, isOpen: false });
@@ -1046,7 +1127,7 @@ const AdminLeaveManagement = () => {
 
   const handleCancel = (id: number) => {
     const req = entities.find((e: any) => e.id === id);
-    if (req?.status === "Approved") {
+    if (req?.status === LeaveRequestStatus.APPROVED || req?.status === LeaveRequestStatus.PENDING) {
       handleCancelClick(req);
     } else {
       setCancelModal({ isOpen: true, id });
@@ -1068,21 +1149,21 @@ const AdminLeaveManagement = () => {
       ).unwrap();
       const apiDates = response || [];
 
-      // Identify dates currently under modification or pending status in other requests for THIS employee
+      // Only lock dates from in-flight child records belonging to THIS request.
+      // CANCELLED, APPROVED, PENDING, REQUEST_MODIFIED records must NOT block dates
+      // for a new request on the same dates.
       const lockedDates = new Set<string>();
       entities?.forEach((r: any) => {
-        // We check for requests other than the current parent request that are in a "pending-like" state
         if (
           r.id !== req.id &&
           r.employeeId === req.employeeId &&
-          (r.status === "Requesting for Modification" ||
+          (r.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION ||
             r.status === "Requesting For Modification" ||
-            r.status === "Pending" ||
-            r.status === "Requesting for Cancellation" ||
+            r.status === LeaveRequestStatus.REQUESTING_FOR_CANCELLATION ||
             r.status === "Requesting For Cancellation" ||
-            r.status === "Approved" ||
-            r.status === "Modification Approved" ||
-            r.status === "Request Modified")
+            r.status === LeaveRequestStatus.MODIFICATION_APPROVED) &&
+          r.requestModifiedFrom &&
+          Number(r.requestModifiedFrom) === req.id
         ) {
           let start = dayjs(r.fromDate);
           const end = dayjs(r.toDate);
@@ -1093,16 +1174,19 @@ const AdminLeaveManagement = () => {
         }
       });
 
-      // Filter out the dates that are already locked
+      // Filter out dates that are already locked by an active child cancellation/modification
       const filtered = apiDates.filter(
         (d: any) => !lockedDates.has(dayjs(d.date).format("YYYY-MM-DD")),
       );
+
+      // Bypass deadline restriction for Admin/Manager Dashboard
+      filtered.forEach((d: any) => {
+        d.isCancellable = true;
+      });
+
       setCancellableDates(filtered);
     } catch (err) {
-      notification.error({
-        message: "Error",
-        description: "Failed to fetch cancellable dates",
-      });
+      message.error("Failed to fetch cancellable dates");
     } finally {
       setIsLoadingDates(false);
     }
@@ -1135,9 +1219,7 @@ const AdminLeaveManagement = () => {
   const handleConfirmDateCancelItems = async () => {
     if (!requestToCancel || !selectedEmployee) return;
     if (selectedCancelDates.length === 0) {
-      notification.warning({
-        message: "Please select at least one date to cancel.",
-      });
+      message.warning("Please select at least one date to cancel.");
       return;
     }
 
@@ -1152,127 +1234,16 @@ const AdminLeaveManagement = () => {
       );
 
       if (cancelRequestDates.fulfilled.match(action)) {
-        // Backend already handles attendance clearing when cancellation is approved
-        // No need to call attendance API here
-
-        // AUTO-APPROVE the created cancellation request
-        const createdCancellationRequest = action.payload;
-        if (createdCancellationRequest?.id) {
-          await dispatch(
-            updateLeaveRequestStatus({
-              id: createdCancellationRequest.id,
-              status: "Cancellation Approved",
-            }),
-          ).unwrap();
-
-          // Explicit Attendance Clearance
-          try {
-            await dispatch(
-              clearAttendanceForRequest({
-                id: createdCancellationRequest.id,
-                employeeId: createdCancellationRequest.employeeId,
-              }),
-            ).unwrap();
-          } catch (err) {
-            console.error("Failed to clear attendance explicitly:", err);
-          }
-        }
-
-        // 3. Update Parent Request (Recalculate Remaining Duration & Range)
-        if (requestToCancel) {
-          const originalStart = dayjs(requestToCancel.fromDate);
-          const originalEnd = dayjs(requestToCancel.toDate);
-          const cancelledSet = new Set(selectedCancelDates);
-          const validDates: string[] = [];
-
-          let curr = originalStart;
-          while (
-            curr.isBefore(originalEnd) ||
-            curr.isSame(originalEnd, "day")
-          ) {
-            const dStr = curr.format("YYYY-MM-DD");
-            // Only count as valid if NOT cancelled and NOT weekend/holiday (if applicable)
-            if (!cancelledSet.has(dStr)) {
-              // Check if it's a working day (for duration calc)
-              if (!isWeekend(curr) && !isHoliday(curr)) {
-                validDates.push(dStr);
-              } else {
-                // It's a weekend/holiday, but still part of the range?
-                // Typically 'duration' only counts working days.
-                // 'fromDate' and 'toDate' define the span.
-                // If the span includes weekends, they are just part of the gap.
-                // However, updateParentRequest expects new start/end from the valid set.
-                // Let's assume validDates tracks working days for duration.
-              }
-            }
-            curr = curr.add(1, "day");
-          }
-
-          // Re-scan for range boundaries including weekends/holidays if they are "in between" valid working days?
-          // Simplification: The new range is from the first remaining working day to the last remaining working day.
-          // If validDates is empty, the request is fully cancelled (handled by backend or status update).
-
-          if (validDates.length > 0) {
-            const newFrom = validDates[0];
-            const newTo = validDates[validDates.length - 1];
-            const newDuration = validDates.length;
-
-            await dispatch(
-              updateParentRequest({
-                parentId: requestToCancel.id,
-                duration: newDuration,
-                fromDate: newFrom,
-                toDate: newTo,
-              }),
-            ).unwrap();
-          } else {
-            // If no valid working days left, maybe mark parent as Cancelled too?
-            // Or Cancellation Approved covers it.
-            await dispatch(
-              updateLeaveRequestStatus({
-                id: requestToCancel.id,
-                status: "Cancellation Approved",
-              }),
-            ).unwrap();
-
-            await dispatch(
-              updateParentRequest({
-                parentId: requestToCancel.id,
-                duration: 0,
-                fromDate: requestToCancel.fromDate,
-                toDate: requestToCancel.toDate,
-              }),
-            ).unwrap();
-          }
-        }
-
-        notification.success({
-          message: "Cancellation Applied & Approved",
-          description:
-            "The selected dates have been cancelled and attendance reverted.",
-        });
+        message.success("Cancellation request submitted successfully");
         setIsCancelDateModalVisible(false);
-        // Refresh data
-        dispatch(
-          getLeaveHistory({
-            employeeId: selectedEmployee.employeeId || selectedEmployee.id,
-            page: currentPage,
-            limit: itemsPerPage,
-            month: selectedMonth,
-            year: selectedYear,
-            status: filterStatus,
-          }),
-        );
-        dispatch(
-          getLeaveStats({
-            employeeId: selectedEmployee.employeeId || selectedEmployee.id,
-          }),
-        );
+        refreshData();
       } else {
-        throw new Error((action.payload as string) || "Cancellation failed");
+        const payload = action.payload as any;
+        const errorMsg = typeof payload === 'string' ? payload : (payload?.message || payload?.error || "Cancellation failed");
+        throw new Error(Array.isArray(errorMsg) ? errorMsg.join(', ') : errorMsg);
       }
     } catch (err: any) {
-      notification.error({ message: err.message || "Cancellation failed" });
+      message.error(err.message || "Cancellation failed");
     } finally {
       setIsCancelling(false);
     }
@@ -1285,73 +1256,91 @@ const AdminLeaveManagement = () => {
     ) {
       setIsCancelling(true);
       try {
-        const item = entities.find((e: any) => e.id === cancelModal.id);
-
-        if (item?.status === "Approved") {
-          // Update Status to 'Cancellation Approved' for Approved requests
-          await dispatch(
-            updateLeaveRequestStatus({
-              id: cancelModal.id,
-              status: "Cancellation Approved",
-            }),
-          ).unwrap();
-
-          // Explicit Attendance Clearance
-          try {
-            await dispatch(
-              clearAttendanceForRequest({
-                id: cancelModal.id,
-                employeeId: (selectedEmployee?.employeeId ||
-                  selectedEmployee?.id) as string,
-              }),
-            ).unwrap();
-          } catch (err) {
-            console.error("Failed to clear attendance explicitly:", err);
-          }
-        } else {
-          // For Pending requests, just set to Cancelled
-          await dispatch(
-            updateLeaveRequestStatus({
-              id: cancelModal.id,
-              status: "Cancelled",
-            }),
-          ).unwrap();
-        }
-
-        // Refresh Data
-        dispatch(
-          getLeaveStats({
-            employeeId: selectedEmployee.employeeId || selectedEmployee.id,
+        await dispatch(
+          updateLeaveRequestStatus({
+            id: cancelModal.id,
+            status: LeaveRequestStatus.CANCELLED,
           }),
-        );
-        dispatch(
-          getLeaveHistory({
-            employeeId: selectedEmployee.employeeId || selectedEmployee.id,
-            page: currentPage,
-            limit: itemsPerPage,
-            month: selectedMonth,
-            year: selectedYear,
-            status: filterStatus,
-          }),
-        );
+        ).unwrap();
 
+        refreshData();
         setCancelModal({ isOpen: false, id: null });
-        notification.success({
-          message: "Request Cancelled",
-          description:
-            "The request has been successfully cancelled and records reverted.",
-          placement: "topRight",
-          duration: 3,
-        });
+        message.success("Request Cancelled");
       } catch (err: any) {
-        notification.error({
-          message: "Cancellation Failed",
-          description:
-            err.message || "An error occurred while cancelling the request.",
-        });
+        message.error(
+          err.message || "An error occurred while cancelling the request.",
+        );
       } finally {
         setIsCancelling(false);
       }
+    }
+  };
+
+  const handleUndoModification = (request: any) => {
+    setUndoModal({ isOpen: true, request });
+  };
+
+  const handleUndoCancellation = (request: any) => {
+    setUndoModal({ isOpen: true, request });
+  };
+
+  const executeUndoCancellation = async () => {
+    if (!undoModal.request) return;
+
+    setIsUndoing(true);
+    try {
+      const employeeId = undoModal.request.employeeId;
+      const action = await dispatch(
+        undoCancellationRequest({
+          id: undoModal.request.id,
+          employeeId: employeeId,
+        }),
+      );
+
+      if (undoCancellationRequest.fulfilled.match(action)) {
+        refreshData();
+        setUndoModal({ isOpen: false, request: null });
+        message.success("Cancellation Revoked");
+      } else {
+        const payload = action.payload as any;
+        const errorMsg = typeof payload === 'string' ? payload : (payload?.message || payload?.error || "Could not undo cancellation");
+        throw new Error(Array.isArray(errorMsg) ? errorMsg.join(', ') : errorMsg);
+      }
+    } catch (err: any) {
+      message.error(`Undo Failed: ${err.message || "Could not undo cancellation."}`);
+    } finally {
+      setIsUndoing(false);
+    }
+  };
+
+  const executeUndoModification = async () => {
+    if (!undoModal.request) return;
+
+    setIsUndoing(true);
+    try {
+      const employeeId = undoModal.request.employeeId;
+      const action = await dispatch(
+        undoModificationRequest({
+          id: undoModal.request.id,
+          employeeId: employeeId,
+        }),
+      );
+
+      if (undoModificationRequest.fulfilled.match(action)) {
+        // Refresh Data
+        refreshData();
+
+        setUndoModal({ isOpen: false, request: null });
+        message.success("Modification Revoked");
+      } else {
+        const payload = action.payload as any;
+        const errorMsg = typeof payload === 'string' ? payload : (payload?.message || payload?.error || "Could not undo modification");
+        throw new Error(Array.isArray(errorMsg) ? errorMsg.join(', ') : errorMsg);
+      }
+    } catch (err: any) {
+      message.error(`Undo Failed: ${err.message || "Could not undo modification."}`);
+    } finally {
+      setIsUndoing(false);
     }
   };
 
@@ -1360,6 +1349,7 @@ const AdminLeaveManagement = () => {
     setIsViewMode(false);
     setSelectedRequestId(null);
     setSelectedLeaveType("");
+    setUploadedDocumentKeys([]);
     setFormData({
       title: "",
       description: "",
@@ -1367,6 +1357,9 @@ const AdminLeaveManagement = () => {
       endDate: "",
       duration: 0,
     });
+    setCcEmails([]);
+    setCcEmailInput("");
+    setCcEmailError("");
     setErrors({
       title: "",
       description: "",
@@ -1374,14 +1367,61 @@ const AdminLeaveManagement = () => {
       endDate: "",
       employee: "",
     });
-    setLeaveDurationType("Full Day");
+    setLeaveDurationType(HalfDayType.FULL_DAY);
     dispatch(resetSubmitSuccess());
   };
 
+  useEffect(() => {
+    if (isModalOpen && selectedEmployee?.employeeId) {
+      dispatch(getLeaveRequestEmailConfig(selectedEmployee.employeeId))
+        .unwrap()
+        .then((data) =>
+          setEmailConfig({
+            assignedManagerEmail: data?.assignedManagerEmail ?? null,
+            hrEmail: data?.hrEmail ?? null,
+          })
+        )
+        .catch(() =>
+          setEmailConfig({ assignedManagerEmail: null, hrEmail: null })
+        );
+    }
+  }, [isModalOpen, selectedEmployee?.employeeId, dispatch]);
+
+  useEffect(() => {
+    if (modifyModal.isOpen && modifyModal.request?.employeeId) {
+      dispatch(getLeaveRequestEmailConfig(modifyModal.request.employeeId))
+        .unwrap()
+        .then((data) =>
+          setEmailConfig({
+            assignedManagerEmail: data?.assignedManagerEmail ?? null,
+            hrEmail: data?.hrEmail ?? null,
+          })
+        )
+        .catch(() =>
+          setEmailConfig({ assignedManagerEmail: null, hrEmail: null })
+        );
+    }
+  }, [modifyModal.isOpen, modifyModal.request?.employeeId, dispatch]);
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const addCcEmail = (email: string) => {
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed) return;
+    if (!emailRegex.test(trimmed)) {
+      setCcEmailError("Please enter a valid email address.");
+      return;
+    }
+    setCcEmailError("");
+    if (!ccEmails.includes(trimmed)) setCcEmails([...ccEmails, trimmed]);
+    setCcEmailInput("");
+  };
+  const removeCcEmail = (email: string) =>
+    setCcEmails(ccEmails.filter((e) => e !== email));
+
   const applyOptions = [
-    { label: "Leave", icon: Calendar, color: "#4318FF" },
-    { label: "Work From Home", icon: Home, color: "#38A169" },
-    { label: "Client Visit", icon: MapPin, color: "#FFB547" },
+    { label: LeaveRequestType.LEAVE, icon: Calendar, color: "#4318FF" },
+    { label: WorkLocation.WORK_FROM_HOME, icon: Home, color: "#38A169" },
+    { label: WorkLocation.CLIENT_VISIT, icon: MapPin, color: "#FFB547" },
   ];
 
   const hexToRgb = (hex: string) => {
@@ -1397,7 +1437,8 @@ const AdminLeaveManagement = () => {
   const renderCancelButton = (item: any) => {
     // Admins and Managers have more authority to cancel
     const isAdminOrManager =
-      currentUser?.userType === "ADMIN" || currentUser?.userType === "MANAGER";
+      currentUser?.userType === UserType.ADMIN ||
+      currentUser?.userType === UserType.MANAGER;
 
     // Original policy: next day 10am
     const withinDeadline = isCancellationAllowed(
@@ -1461,12 +1502,24 @@ const AdminLeaveManagement = () => {
                   : "Select an employee"}
               </span>
             </div>
-            <ChevronDown
-              size={20}
-              className={`text-gray-400 transition-transform ${
-                isEmployeeDropdownOpen ? "rotate-180" : ""
-              }`}
-            />
+            <div className="flex items-center gap-1">
+              {selectedEmployee && (
+                <span
+                  role="button"
+                  onClick={handleClearEmployee}
+                  className="p-1 rounded-full hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
+                  title="Clear selection"
+                >
+                  <X size={16} />
+                </span>
+              )}
+              <ChevronDown
+                size={20}
+                className={`text-gray-400 transition-transform ${
+                  isEmployeeDropdownOpen ? "rotate-180" : ""
+                }`}
+              />
+            </div>
           </button>
           {errors.employee && (
             <p className="text-red-500 text-xs mt-1 ml-2">{errors.employee}</p>
@@ -1485,7 +1538,7 @@ const AdminLeaveManagement = () => {
                   />
                   <input
                     type="text"
-                    placeholder="Search by name or ID..."
+                    placeholder="Search by employee ID..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-9 pr-4 py-2 bg-[#F4F7FE] rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#4318FF]/20 text-[#2B3674]"
@@ -1601,19 +1654,19 @@ const AdminLeaveManagement = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 mt-4">
           {[
             {
-              label: "Leave",
+              label: LeaveRequestType.LEAVE,
               key: "leave",
               color: "from-[#4318FF] to-[#868CFF]",
               icon: Calendar,
             },
             {
-              label: "Work From Home",
+              label: WorkLocation.WORK_FROM_HOME,
               key: "wfh",
               color: "from-[#38A169] to-[#68D391]",
               icon: Home,
             },
             {
-              label: "Client Visit",
+              label: WorkLocation.CLIENT_VISIT,
               key: "clientVisit",
               color: "from-[#FFB547] to-[#FCCD75]",
               icon: MapPin,
@@ -1754,12 +1807,13 @@ const AdminLeaveManagement = () => {
                 >
                   {[
                     "All",
-                    "Pending",
-                    "Approved",
-                    "Rejected",
-                    "Request Modified",
-                    "Cancellation Approved",
-                    "Cancelled",
+                    LeaveRequestStatus.PENDING,
+                    LeaveRequestStatus.APPROVED,
+                    LeaveRequestStatus.REJECTED,
+                    LeaveRequestStatus.REQUEST_MODIFIED,
+                    LeaveRequestStatus.CANCELLATION_APPROVED,
+                    LeaveRequestStatus.CANCELLED,
+                    LeaveRequestStatus.CANCELLATION_REVERTED,
                   ].map((status) => (
                     <Select.Option key={status} value={status}>
                       {status === "All" ? "All Status" : status}
@@ -1855,16 +1909,23 @@ const AdminLeaveManagement = () => {
                                 {(() => {
                                   // Determine icon based on combined activities
                                   const hasWFH =
-                                    item.firstHalf === "Work From Home" ||
-                                    item.secondHalf === "Work From Home";
+                                    item.firstHalf ===
+                                      WorkLocation.WORK_FROM_HOME ||
+                                    item.secondHalf ===
+                                      WorkLocation.WORK_FROM_HOME;
                                   const hasCV =
-                                    item.firstHalf === "Client Visit" ||
-                                    item.secondHalf === "Client Visit";
+                                    item.firstHalf ===
+                                      WorkLocation.CLIENT_VISIT ||
+                                    item.secondHalf ===
+                                      WorkLocation.CLIENT_VISIT;
                                   const hasLeave =
-                                    item.firstHalf === "Leave" ||
-                                    item.secondHalf === "Leave" ||
-                                    item.firstHalf === "Apply Leave" ||
-                                    item.secondHalf === "Apply Leave";
+                                    item.firstHalf === LeaveRequestType.LEAVE ||
+                                    item.secondHalf ===
+                                      LeaveRequestType.LEAVE ||
+                                    item.firstHalf ===
+                                      LeaveRequestType.APPLY_LEAVE ||
+                                    item.secondHalf ===
+                                      LeaveRequestType.APPLY_LEAVE;
 
                                   if (hasWFH && hasLeave)
                                     return (
@@ -1880,14 +1941,20 @@ const AdminLeaveManagement = () => {
                                         className="text-orange-600"
                                       />
                                     );
-                                  if (item.requestType === "Work From Home")
+                                  if (
+                                    item.requestType ===
+                                    WorkLocation.WORK_FROM_HOME
+                                  )
                                     return (
                                       <Home
                                         size={16}
                                         className="text-green-600"
                                       />
                                     );
-                                  if (item.requestType === "Client Visit")
+                                  if (
+                                    item.requestType ===
+                                    WorkLocation.CLIENT_VISIT
+                                  )
                                     return (
                                       <MapPin
                                         size={16}
@@ -1895,8 +1962,9 @@ const AdminLeaveManagement = () => {
                                       />
                                     );
                                   if (
-                                    item.requestType === "Apply Leave" ||
-                                    item.requestType === "Leave"
+                                    item.requestType ===
+                                      LeaveRequestType.APPLY_LEAVE ||
+                                    item.requestType === LeaveRequestType.LEAVE
                                   )
                                     return (
                                       <Calendar
@@ -1904,7 +1972,10 @@ const AdminLeaveManagement = () => {
                                         className="text-blue-600"
                                       />
                                     );
-                                  if (item.requestType === "Half Day")
+                                  if (
+                                    item.requestType ===
+                                    LeaveRequestType.HALF_DAY
+                                  )
                                     return (
                                       <Calendar
                                         size={16}
@@ -1932,25 +2003,32 @@ const AdminLeaveManagement = () => {
                                       item.secondHalf,
                                     ]
                                       .map((a) =>
-                                        a === "Apply Leave" ? "Leave" : a,
+                                        a === LeaveRequestType.APPLY_LEAVE
+                                          ? LeaveRequestType.LEAVE
+                                          : a,
                                       )
-                                      .filter((a) => a && a !== "Office")
+                                      .filter(
+                                        (a) => a && a !== WorkLocation.OFFICE,
+                                      )
                                       .filter(
                                         (value, index, self) =>
                                           self.indexOf(value) === index,
                                       );
 
                                     if (activities.length > 1) {
-                                      // Replace "Leave" with "Half Day Leave" in combined activities
+                                      // Replace LeaveRequestType.LEAVE with "Half Day Leave" in combined activities
                                       return activities
                                         .map((a) =>
-                                          a === "Leave" ? "Half Day Leave" : a,
+                                          a === LeaveRequestType.LEAVE
+                                            ? "Half Day Leave"
+                                            : a,
                                         )
                                         .join(" + ");
                                     }
                                     if (activities.length === 1) {
-                                      // For single activity that is "Leave", show "Half Day Leave"
-                                      return activities[0] === "Leave"
+                                      // For single activity that is LeaveRequestType.LEAVE, show "Half Day Leave"
+                                      return activities[0] ===
+                                        LeaveRequestType.LEAVE
                                         ? "Half Day Leave"
                                         : activities[0];
                                     }
@@ -1958,14 +2036,18 @@ const AdminLeaveManagement = () => {
 
                                   // Default display
                                   if (
-                                    item.requestType === "Apply Leave" ||
-                                    item.requestType === "Leave"
+                                    item.requestType ===
+                                      LeaveRequestType.APPLY_LEAVE ||
+                                    item.requestType === LeaveRequestType.LEAVE
                                   ) {
                                     return item.isHalfDay
                                       ? "Half Day Leave"
-                                      : "Leave";
+                                      : LeaveRequestType.LEAVE;
                                   }
-                                  if (item.requestType === "Half Day")
+                                  if (
+                                    item.requestType ===
+                                    LeaveRequestType.HALF_DAY
+                                  )
                                     return "Half Day Leave";
                                   return item.requestType;
                                 })()}
@@ -1977,9 +2059,9 @@ const AdminLeaveManagement = () => {
                               </span>
                             </div>
                           </td>
-                          <td className="py-4 px-4 text-center">
+                          <td className="py-4 px-4 text-center whitespace-nowrap">
                             <span
-                              className={`text-xs font-bold px-3 py-1 rounded-full ${(() => {
+                              className={`text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap ${(() => {
                                 if (
                                   item.isHalfDay &&
                                   item.firstHalf &&
@@ -2001,30 +2083,35 @@ const AdminLeaveManagement = () => {
                                   item.secondHalf
                                 ) {
                                   const first =
-                                    item.firstHalf === "Apply Leave"
-                                      ? "Leave"
+                                    item.firstHalf ===
+                                    LeaveRequestType.APPLY_LEAVE
+                                      ? LeaveRequestType.LEAVE
                                       : item.firstHalf;
                                   const second =
-                                    item.secondHalf === "Apply Leave"
-                                      ? "Leave"
+                                    item.secondHalf ===
+                                    LeaveRequestType.APPLY_LEAVE
+                                      ? LeaveRequestType.LEAVE
                                       : item.secondHalf;
 
-                                  if (first === second && first !== "Office") {
-                                    return "Full Day";
+                                  if (
+                                    first === second &&
+                                    first !== WorkLocation.OFFICE
+                                  ) {
+                                    return HalfDayType.FULL_DAY;
                                   }
 
                                   // Filter out Office
                                   const parts = [];
-                                  if (first && first !== "Office")
+                                  if (first && first !== WorkLocation.OFFICE)
                                     parts.push(`First Half = ${first}`);
-                                  if (second && second !== "Office")
+                                  if (second && second !== WorkLocation.OFFICE)
                                     parts.push(`Second Half = ${second}`);
 
                                   if (parts.length > 0)
                                     return parts.join(" & ");
-                                  return "Full Day";
+                                  return HalfDayType.FULL_DAY;
                                 }
-                                return "Full Day";
+                                return HalfDayType.FULL_DAY;
                               })()}
                             </span>
                           </td>
@@ -2035,12 +2122,17 @@ const AdminLeaveManagement = () => {
                           </td>
                           <td className="py-4 px-4 text-center whitespace-nowrap">
                             <span className="text-sm font-bold text-[#2B3674]">
-                              {dayjs(item.fromDate).format("DD MMM")} - {dayjs(item.toDate).format("DD MMM - YYYY")}, TOTAL:{" "}
+                              {dayjs(item.fromDate).format("DD MMM")} -{" "}
+                              {dayjs(item.toDate).format("DD MMM - YYYY")},
+                              TOTAL:{" "}
                               {item.duration ||
-                                (item.requestType === "Client Visit" ||
-                                item.requestType === "Work From Home" ||
-                                item.requestType === "Apply Leave" ||
-                                item.requestType === "Leave"
+                                (item.requestType ===
+                                  WorkLocation.CLIENT_VISIT ||
+                                item.requestType ===
+                                  WorkLocation.WORK_FROM_HOME ||
+                                item.requestType ===
+                                  LeaveRequestType.APPLY_LEAVE ||
+                                item.requestType === LeaveRequestType.LEAVE
                                   ? calculateDurationExcludingWeekends(
                                       item.fromDate,
                                       item.toDate,
@@ -2061,45 +2153,53 @@ const AdminLeaveManagement = () => {
                                 ? dayjs(item.created_at).format("DD MMM - YYYY")
                                 : "-"}
                           </td>
-                          <td className={`py-4 px-4 text-center sticky right-[120px] w-[160px] min-w-[160px] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}>
+                          <td
+                            className={`py-4 px-4 text-center sticky right-[120px] w-[160px] min-w-[160px] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}
+                          >
                             <span
                               className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all whitespace-nowrap
                             ${
-                              item.status === "Approved" ||
-                              item.status === "Cancellation Approved" ||
-                              item.status === "Modification Approved"
+                              item.status === LeaveRequestStatus.APPROVED ||
+                              item.status ===
+                                LeaveRequestStatus.CANCELLATION_APPROVED ||
+                              item.status ===
+                                LeaveRequestStatus.MODIFICATION_APPROVED
                                 ? "bg-green-50 text-green-600 border-green-200"
-                                : item.status === "Pending"
+                                : item.status === LeaveRequestStatus.PENDING
                                   ? "bg-yellow-50 text-yellow-600 border-yellow-200"
-                                  : item.status === "Cancelled"
+                                  : item.status === LeaveRequestStatus.CANCELLED
                                     ? "bg-red-50 text-red-600 border-red-200"
                                     : item.status ===
-                                          "Requesting for Modification" ||
-                                        item.status === "Modification Cancelled"
+                                          LeaveRequestStatus.REQUESTING_FOR_MODIFICATION ||
+                                        item.status ===
+                                          LeaveRequestStatus.MODIFICATION_CANCELLED
                                       ? "bg-orange-100 text-orange-600 border-orange-200"
                                       : item.status ===
-                                          "Requesting for Cancellation"
+                                          LeaveRequestStatus.REQUESTING_FOR_CANCELLATION
                                         ? "bg-orange-100 text-orange-600 border-orange-200"
-                                        : item.status === "Request Modified"
+                                        : item.status ===
+                                            LeaveRequestStatus.REQUEST_MODIFIED
                                           ? "bg-orange-100 text-orange-600 border-orange-200"
                                           : "bg-red-50 text-red-600 border-red-200"
                             }
                           `}
                             >
-                              {(item.status === "Pending" ||
+                              {(item.status === LeaveRequestStatus.PENDING ||
                                 item.status ===
-                                  "Requesting for Modification") && (
+                                  LeaveRequestStatus.REQUESTING_FOR_MODIFICATION) && (
                                 <RotateCcw
                                   size={12}
                                   className="animate-spin-slow"
                                 />
                               )}
                               {item.status}
-                              {item.status === "Request Modified" &&
+                              {item.status ===
+                                LeaveRequestStatus.REQUEST_MODIFIED &&
                                 item.requestModifiedFrom && (
                                   <span className="opacity-70 border-l border-orange-300 pl-1.5 ml-1 text-[9px] font-bold">
                                     (TO{" "}
-                                    {item.requestModifiedFrom === "Apply Leave"
+                                    {item.requestModifiedFrom ===
+                                    LeaveRequestType.APPLY_LEAVE
                                       ? "LEAVE"
                                       : item.requestModifiedFrom.toUpperCase()}
                                     )
@@ -2107,7 +2207,9 @@ const AdminLeaveManagement = () => {
                                 )}
                             </span>
                           </td>
-                          <td className={`py-4 px-4 sticky right-0 w-[120px] min-w-[120px] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}>
+                          <td
+                            className={`py-4 px-4 sticky right-0 w-[120px] min-w-[120px] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}
+                          >
                             <div className="flex items-center justify-center gap-3">
                               <button
                                 onClick={() => handleViewApplication(item)}
@@ -2116,9 +2218,30 @@ const AdminLeaveManagement = () => {
                               >
                                 <Eye size={18} />
                               </button>
-                              {(item.status === "Pending" ||
-                                item.status === "Approved") &&
+                              {(item.status === LeaveRequestStatus.PENDING ||
+                                item.status === LeaveRequestStatus.APPROVED) &&
                                 renderCancelButton(item)}
+                              {item.status ===
+                                LeaveRequestStatus.REQUESTING_FOR_CANCELLATION &&
+                                isUndoable(item) && (
+                                <button
+                                  onClick={() => handleUndoCancellation(item)}
+                                  className="p-2 text-amber-600 bg-amber-50/50 hover:bg-amber-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-amber-200 active:scale-90"
+                                  title="Undo Cancellation"
+                                >
+                                  <RotateCcw size={18} />
+                                </button>
+                              )}
+                              {item.status ===
+                                "Requesting for Modification" && (
+                                <button
+                                  onClick={() => handleUndoModification(item)}
+                                  className="p-2 text-orange-600 bg-orange-50/50 hover:bg-orange-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-orange-200 active:scale-90"
+                                  title="Undo Modification"
+                                >
+                                  <RotateCcw size={18} />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -2187,30 +2310,19 @@ const AdminLeaveManagement = () => {
         open={isModalOpen}
         onCancel={handleCloseModal}
         footer={null}
-        closable={false}
+        closable={true}
         centered
-        width={700}
+        width={980}
         className="application-modal"
       >
         <div className="relative overflow-hidden bg-white rounded-[16px]">
           {/* Modal Header */}
           <div className="pt-2 px-6">
             <div className="flex justify-between items-start">
-              <span className="text-sm font-black uppercase tracking-widest text-[#A3AED0]">
-                {isViewMode ? "Viewing Application" : "Applying For"}
-              </span>
-              <button
-                onClick={handleCloseModal}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <X size={22} className="text-[#2B3674]" />
-              </button>
-            </div>
-            <div className="flex items-center justify-between w-full mt-1">
               <h2 className="text-2xl md:text-3xl font-black text-[#2B3674]">
-                {selectedLeaveType === "Apply Leave"
-                  ? "Leave"
-                  : selectedLeaveType === "Half Day"
+                {selectedLeaveType === LeaveRequestType.APPLY_LEAVE
+                  ? LeaveRequestType.LEAVE
+                  : selectedLeaveType === LeaveRequestType.HALF_DAY
                     ? "Half Day Leave"
                     : selectedLeaveType}
               </h2>
@@ -2218,7 +2330,7 @@ const AdminLeaveManagement = () => {
           </div>
 
           {/* Modal Body */}
-          <div className="p-6 space-y-5 overflow-y-auto custom-scrollbar max-h-[75vh]">
+          <div className="p-6 space-y-5 overflow-y-auto custom-scrollbar max-h-[90vh]">
             {/* Error Message */}
             {error && (
               <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
@@ -2228,6 +2340,132 @@ const AdminLeaveManagement = () => {
                     ? (error as any).message || "An error occurred"
                     : String(error)}
                 </p>
+              </div>
+            )}
+
+            {/* Email recipients + Subject - in card for manager/admin */}
+            {selectedEmployee && (
+              <div className="rounded-2xl border border-[#E0E7FF] bg-[#F8FAFC] p-4 shadow-sm">
+                <div className="space-y-3">
+                  <label className="text-sm font-bold text-[#2B3674] ml-1 block">
+                    Email recipients
+                  </label>
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap gap-4 items-start">
+                      {emailConfig.assignedManagerEmail && (
+                        <div className="min-w-0 flex-1">
+                          <span className="text-xs font-medium text-gray-600 block mb-1 uppercase tracking-wide">
+                            Assigned Manager
+                          </span>
+                          <div className="px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-gray-700 font-bold text-sm">
+                            {emailConfig.assignedManagerEmail}
+                          </div>
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <span className="text-xs font-medium text-gray-600 block mb-1 uppercase tracking-wide">
+                          HR
+                        </span>
+                        <div className="px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-gray-700 font-bold text-sm">
+                          {emailConfig.hrEmail || "Not configured"}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="text-xs font-medium text-gray-600 ml-1 block mb-1 uppercase tracking-wide">
+                        CC
+                      </span>
+                      <div className="flex flex-wrap gap-2 items-center">
+                        {isViewMode ? (
+                          ccEmails.length > 0 ? (
+                            ccEmails.map((email) => (
+                              <span
+                                key={email}
+                                className="px-3 py-1.5 rounded-xl bg-gray-100 text-gray-700 text-sm font-bold"
+                              >
+                                {email}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-sm text-gray-500">—</span>
+                          )
+                        ) : (
+                          <>
+                            {ccEmails.map((email) => (
+                              <span
+                                key={email}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-200 text-gray-700 text-sm font-medium"
+                              >
+                                {email}
+                                <button
+                                  type="button"
+                                  onClick={() => removeCcEmail(email)}
+                                  className="text-gray-500 hover:text-red-600 focus:outline-none"
+                                  aria-label={`Remove ${email}`}
+                                >
+                                  ×
+                                </button>
+                              </span>
+                            ))}
+                            <input
+                              type="text"
+                              value={ccEmailInput}
+                              onChange={(e) => {
+                                setCcEmailInput(e.target.value);
+                                if (ccEmailError) setCcEmailError("");
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === ",") {
+                                  e.preventDefault();
+                                  addCcEmail(ccEmailInput);
+                                }
+                              }}
+                              onBlur={() => addCcEmail(ccEmailInput)}
+                              placeholder="Add email and press Enter"
+                              className="min-w-[200px] flex-1 px-3 py-2 border border-gray-200 rounded-xl bg-white text-gray-700 text-sm placeholder-gray-400 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none"
+                            />
+                            {ccEmailError && (
+                              <p className="text-red-500 text-xs mt-1 ml-1 w-full">{ccEmailError}</p>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Subject - inside card */}
+                  <div className="space-y-2 pt-2 border-t border-[#E0E7FF]" ref={titleRef}>
+                    <label className="text-sm font-bold text-[#2B3674] ml-1">
+                      Subject
+                    </label>
+                    {isViewMode ? (
+                      <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none break-words">
+                        {formData.title}
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="e.g. Annual Vacation"
+                          className={`w-full px-5 py-3 rounded-xl bg-white border ${
+                            errors.title ? "border-red-500" : "border-gray-200"
+                          } text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400`}
+                          value={formData.title}
+                          onChange={(e) => {
+                            setFormData({ ...formData, title: e.target.value });
+                            setErrors((prev) => ({ ...prev, title: "" }));
+                          }}
+                        />
+                        {errors.title && (
+                          <p className="text-red-500 text-xs mt-1 ml-2">
+                            {errors.title}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -2250,11 +2488,11 @@ const AdminLeaveManagement = () => {
 
             {/* Duration Type & Split-Day Selection */}
             {!isViewMode &&
-              (selectedLeaveType === "Apply Leave" ||
-                selectedLeaveType === "Leave" ||
-                selectedLeaveType === "Work From Home" ||
-                selectedLeaveType === "Client Visit" ||
-                selectedLeaveType === "Half Day") && (
+              (selectedLeaveType === LeaveRequestType.APPLY_LEAVE ||
+                selectedLeaveType === LeaveRequestType.LEAVE ||
+                selectedLeaveType === WorkLocation.WORK_FROM_HOME ||
+                selectedLeaveType === WorkLocation.CLIENT_VISIT ||
+                selectedLeaveType === LeaveRequestType.HALF_DAY) && (
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-[#2B3674] ml-1">
@@ -2265,11 +2503,14 @@ const AdminLeaveManagement = () => {
                       onChange={(val) => {
                         setLeaveDurationType(val);
                         const isHalf =
-                          val === "First Half" ||
-                          val === "Second Half" ||
-                          val === "Half Day";
+                          val === HalfDayType.FIRST_HALF ||
+                          val === HalfDayType.SECOND_HALF ||
+                          val === HalfDayType.HALF_DAY;
                         setIsHalfDay(isHalf);
-                        if (val === "First Half" || val === "Second Half") {
+                        if (
+                          val === HalfDayType.FIRST_HALF ||
+                          val === HalfDayType.SECOND_HALF
+                        ) {
                           setHalfDayType(val);
                         } else {
                           setHalfDayType(null);
@@ -2285,20 +2526,22 @@ const AdminLeaveManagement = () => {
                       }}
                       suffixIcon={<ChevronDown className="text-[#4318FF]" />}
                     >
-                      <Select.Option value="Full Day">Full Day</Select.Option>
-                      <Select.Option value="First Half">
+                      <Select.Option value={HalfDayType.FULL_DAY}>
+                        Full Day
+                      </Select.Option>
+                      <Select.Option value={HalfDayType.FIRST_HALF}>
                         First Half
                       </Select.Option>
-                      <Select.Option value="Second Half">
+                      <Select.Option value={HalfDayType.SECOND_HALF}>
                         Second Half
                       </Select.Option>
                     </Select>
                   </div>
 
                   {/* Other Half Activity (Shown if not Full Day) */}
-                  {(leaveDurationType === "First Half" ||
-                    leaveDurationType === "Second Half" ||
-                    leaveDurationType === "Half Day") && (
+                  {(leaveDurationType === HalfDayType.FIRST_HALF ||
+                    leaveDurationType === HalfDayType.SECOND_HALF ||
+                    leaveDurationType === HalfDayType.HALF_DAY) && (
                     <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
                       <label className="text-sm font-bold text-[#2B3674] ml-1">
                         Other Half Activity
@@ -2316,61 +2559,36 @@ const AdminLeaveManagement = () => {
                         }}
                         suffixIcon={<ChevronDown className="text-[#4318FF]" />}
                       >
-                        <Select.Option value="Office">Office</Select.Option>
-                        {selectedLeaveType !== "Work From Home" && (
-                          <Select.Option value="Work From Home">
+                        <Select.Option value={WorkLocation.OFFICE}>
+                          Office
+                        </Select.Option>
+                        {selectedLeaveType !== WorkLocation.WORK_FROM_HOME && (
+                          <Select.Option value={WorkLocation.WORK_FROM_HOME}>
                             Work From Home
                           </Select.Option>
                         )}
-                        {selectedLeaveType !== "Client Visit" && (
-                          <Select.Option value="Client Visit">
+                        {selectedLeaveType !== WorkLocation.CLIENT_VISIT && (
+                          <Select.Option value={WorkLocation.CLIENT_VISIT}>
                             Client Visit
                           </Select.Option>
                         )}
                         {!(
-                          selectedLeaveType === "Apply Leave" ||
-                          selectedLeaveType === "Leave" ||
-                          selectedLeaveType === "Half Day"
-                        ) && <Select.Option value="Leave">Leave</Select.Option>}
+                          selectedLeaveType === LeaveRequestType.APPLY_LEAVE ||
+                          selectedLeaveType === LeaveRequestType.LEAVE ||
+                          selectedLeaveType === LeaveRequestType.HALF_DAY
+                        ) && (
+                          <Select.Option value={LeaveRequestType.LEAVE}>
+                            Leave
+                          </Select.Option>
+                        )}
                       </Select>
                     </div>
                   )}
                 </div>
               )}
 
-            {/* Title Field */}
-            <div className="space-y-2" ref={titleRef}>
-              <label className="text-sm font-bold text-[#2B3674] ml-1">
-                Title
-              </label>
-              {isViewMode ? (
-                <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none break-words">
-                  {formData.title}
-                </div>
-              ) : (
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="e.g. Annual Vacation"
-                    className={`w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] border ${
-                      errors.title ? "border-red-500" : "border-transparent"
-                    } focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400`}
-                    value={formData.title}
-                    onChange={(e) =>
-                      setFormData({ ...formData, title: e.target.value })
-                    }
-                  />
-                  {errors.title && (
-                    <p className="text-red-500 text-xs mt-1 ml-2">
-                      {errors.title}
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Dates Row */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Dates Row + Total Days (same design as employee) */}
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-4 items-end">
               <div className="space-y-2" ref={startDateRef}>
                 <label className="text-sm font-bold text-[#2B3674] ml-1">
                   Start Date
@@ -2409,6 +2627,7 @@ const AdminLeaveManagement = () => {
                             }
                             return newData;
                           });
+                          setErrors((prev) => ({ ...prev, startDate: "" }));
                         }}
                         format="DD-MM-YYYY"
                         placeholder="dd-mm-yyyy"
@@ -2441,12 +2660,13 @@ const AdminLeaveManagement = () => {
                         value={
                           formData.endDate ? dayjs(formData.endDate) : null
                         }
-                        onChange={(date) =>
+                        onChange={(date) => {
                           setFormData({
                             ...formData,
                             endDate: date ? date.format("YYYY-MM-DD") : "",
-                          })
-                        }
+                          });
+                          setErrors((prev) => ({ ...prev, endDate: "" }));
+                        }}
                         format="DD-MM-YYYY"
                         placeholder="dd-mm-yyyy"
                         suffixIcon={null}
@@ -2460,65 +2680,61 @@ const AdminLeaveManagement = () => {
                   </>
                 )}
               </div>
-            </div>
+              <div className="space-y-2 flex flex-col justify-end">
+                <label className="text-sm font-bold text-[#2B3674] ml-1">
+                  Total Days:
+                </label>
+                <div className="px-4 py-3 rounded-2xl bg-[#F4F7FE] font-bold text-[#4318FF] inline-flex items-center gap-2 min-h-[48px]">
+                  <span className="bg-white px-3 py-1.5 rounded-lg shadow-sm border border-blue-100">
+                    {formData.startDate && formData.endDate
+                      ? (() => {
+                          if (isViewMode)
+                            return `${parseFloat(String(formData.duration))} Day(s)`;
 
-            {/* Duration Field */}
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-[#2B3674] ml-1">
-                Duration
-              </label>
-              <div className="w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] font-bold text-[#4318FF] flex items-center justify-between">
-                <span>Total Days:</span>
-                <span className="bg-white px-4 py-1 rounded-lg shadow-sm border border-blue-100">
-                  {formData.startDate && formData.endDate
-                    ? (() => {
-                        if (isViewMode) return `${formData.duration} Day(s)`;
+                          if (
+                            selectedLeaveType === WorkLocation.CLIENT_VISIT ||
+                            selectedLeaveType === WorkLocation.WORK_FROM_HOME ||
+                            selectedLeaveType === LeaveRequestType.APPLY_LEAVE ||
+                            selectedLeaveType === LeaveRequestType.LEAVE ||
+                            selectedLeaveType === LeaveRequestType.HALF_DAY
+                          ) {
+                            const baseDur = calculateDurationExcludingWeekends(
+                              formData.startDate,
+                              formData.endDate,
+                            );
+                            const isHalf =
+                              leaveDurationType === HalfDayType.HALF_DAY ||
+                              leaveDurationType === HalfDayType.FIRST_HALF ||
+                              leaveDurationType === HalfDayType.SECOND_HALF;
 
-                        // For Client Visit, WFH, and Leave, exclude weekends and holidays from duration display
-                        if (
-                          selectedLeaveType === "Client Visit" ||
-                          selectedLeaveType === "Work From Home" ||
-                          selectedLeaveType === "Apply Leave" ||
-                          selectedLeaveType === "Leave" ||
-                          selectedLeaveType === "Half Day"
-                        ) {
-                          const baseDur = calculateDurationExcludingWeekends(
-                            formData.startDate,
-                            formData.endDate,
-                          );
-                          const isHalf =
-                            leaveDurationType === "Half Day" ||
-                            leaveDurationType === "First Half" ||
-                            leaveDurationType === "Second Half";
+                            if (isHalf) {
+                              const mainType =
+                                selectedLeaveType === LeaveRequestType.APPLY_LEAVE
+                                  ? LeaveRequestType.LEAVE
+                                  : selectedLeaveType;
+                              const other = otherHalfType;
 
-                          if (isHalf) {
-                            const mainType =
-                              selectedLeaveType === "Apply Leave"
-                                ? "Leave"
-                                : selectedLeaveType;
-                            const other = otherHalfType;
+                              const isMainRemote =
+                                mainType === WorkLocation.WORK_FROM_HOME ||
+                                mainType === WorkLocation.CLIENT_VISIT;
+                              const isOtherRemote =
+                                other === WorkLocation.WORK_FROM_HOME ||
+                                other === WorkLocation.CLIENT_VISIT;
 
-                            const isMainRemote =
-                              mainType === "Work From Home" ||
-                              mainType === "Client Visit";
-                            const isOtherRemote =
-                              other === "Work From Home" ||
-                              other === "Client Visit";
-
-                            // User Requirement: WFH + CV = 1 Day
-                            if (isMainRemote && isOtherRemote) {
-                              return `${baseDur} Day(s)`;
-                            } else {
-                              return `${baseDur * 0.5} Day(s)`;
+                              if (isMainRemote && isOtherRemote) {
+                                return `${baseDur} Day(s)`;
+                              } else {
+                                return `${baseDur * 0.5} Day(s)`;
+                              }
                             }
+                            return `${baseDur} Day(s)`;
+                          } else {
+                            return `${dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1} Day(s)`;
                           }
-                          return `${baseDur} Day(s)`;
-                        } else {
-                          return `${dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1} Day(s)`;
-                        }
-                      })()
-                    : "0 Days"}
-                </span>
+                        })()
+                      : "0 Days"}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -2593,12 +2809,13 @@ const AdminLeaveManagement = () => {
                         : "border-transparent"
                     } focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium text-[#2B3674] placeholder:font-medium placeholder:text-gray-400 resize-none`}
                     value={formData.description}
-                    onChange={(e) =>
+                    onChange={(e) => {
                       setFormData({
                         ...formData,
                         description: e.target.value,
-                      })
-                    }
+                      });
+                      setErrors((prev) => ({ ...prev, description: "" }));
+                    }}
                   />
                   {errors.description && (
                     <p className="text-red-500 text-xs mt-1 ml-2">
@@ -2638,10 +2855,13 @@ const AdminLeaveManagement = () => {
                   deleteFile={deleteLeaveRequestFile}
                   getFiles={getLeaveRequestFiles}
                   maxFiles={5}
+                  maxFileSize={5 * 1024 * 1024}
                   allowedTypes={["images", "pdf"]}
                   successMessage="Document uploaded successfully"
                   deleteMessage="Document deleted successfully"
                   disabled={isViewMode}
+                  onFileUpload={(file) => setUploadedDocumentKeys((prev) => [...prev, file.key])}
+                  onFileDelete={(fileKey) => setUploadedDocumentKeys((prev) => prev.filter((k) => k !== fileKey))}
                 />
               </div>
             </div>
@@ -2689,8 +2909,15 @@ const AdminLeaveManagement = () => {
 
               <p className="text-gray-500 font-medium leading-relaxed mb-8">
                 Are you sure you want to cancel this request? This action cannot
-                be undone. Alternatively, you can <strong>modify</strong> the
-                request if you just need to correct some details.
+                be undone.
+                {!(entities.find((e: any) => e.id === cancelModal.id)?.status === LeaveRequestStatus.PENDING || 
+                   entities.find((e: any) => e.id === cancelModal.id)?.status === LeaveRequestStatus.REQUESTING_FOR_CANCELLATION || 
+                   entities.find((e: any) => e.id === cancelModal.id)?.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION) && (
+                  <>
+                    {" "}Alternatively, you can <strong>modify</strong> the
+                    request if you just need to correct some details.
+                  </>
+                )}
               </p>
 
               <div className="flex gap-4">
@@ -2702,17 +2929,21 @@ const AdminLeaveManagement = () => {
                 >
                   Cancel
                 </button>
-                <button
-                  onClick={() => {
-                    const req = entities.find(
-                      (e: any) => e.id === cancelModal.id,
-                    );
-                    if (req) handleModifyClick(req);
-                  }}
-                  className="flex-1 py-3.5 rounded-2xl font-bold text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95 transform uppercase tracking-wider flex items-center justify-center gap-2"
-                >
-                  MODIFY INSTEAD
-                </button>
+                {!(entities.find((e: any) => e.id === cancelModal.id)?.status === LeaveRequestStatus.PENDING || 
+                   entities.find((e: any) => e.id === cancelModal.id)?.status === LeaveRequestStatus.REQUESTING_FOR_CANCELLATION || 
+                   entities.find((e: any) => e.id === cancelModal.id)?.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION) && (
+                  <button
+                    onClick={() => {
+                      const req = entities.find(
+                        (e: any) => e.id === cancelModal.id,
+                      );
+                      if (req) handleModifyClick(req);
+                    }}
+                    className="flex-1 py-3.5 rounded-2xl font-bold text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95 transform uppercase tracking-wider flex items-center justify-center gap-2"
+                  >
+                    MODIFY INSTEAD
+                  </button>
+                )}
                 <button
                   onClick={executeCancel}
                   disabled={isCancelling}
@@ -2756,28 +2987,32 @@ const AdminLeaveManagement = () => {
               >
                 Close
               </button>
-              <button
-                key="modify"
-                onClick={() => {
-                  if (requestToCancel) {
-                    setIsCancelDateModalVisible(false);
-                    handleModifyClick(
-                      requestToCancel,
-                      selectedCancelDates.length > 0
-                        ? selectedCancelDates
-                        : undefined,
-                    );
-                  }
-                }}
-                disabled={selectedCancelDates.length === 0}
-                className={`px-6 py-2.5 rounded-2xl font-bold transition-all uppercase tracking-wider flex items-center justify-center gap-2 ${
-                  selectedCancelDates.length === 0
-                    ? "text-gray-400 bg-gray-100 cursor-not-allowed"
-                    : "text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 active:scale-95 transform"
-                }`}
-              >
-                MODIFY INSTEAD
-              </button>
+              {!(requestToCancel?.status === LeaveRequestStatus.PENDING || 
+                 requestToCancel?.status === LeaveRequestStatus.REQUESTING_FOR_CANCELLATION || 
+                 requestToCancel?.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION) && (
+                <button
+                  key="modify"
+                  onClick={() => {
+                    if (requestToCancel) {
+                      setIsCancelDateModalVisible(false);
+                      handleModifyClick(
+                        requestToCancel,
+                        selectedCancelDates.length > 0
+                          ? selectedCancelDates
+                          : undefined,
+                      );
+                    }
+                  }}
+                  disabled={selectedCancelDates.length === 0}
+                  className={`px-6 py-2.5 rounded-2xl font-bold transition-all uppercase tracking-wider flex items-center justify-center gap-2 ${
+                    selectedCancelDates.length === 0
+                      ? "text-gray-400 bg-gray-100 cursor-not-allowed"
+                      : "text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 active:scale-95 transform"
+                  }`}
+                >
+                  MODIFY INSTEAD
+                </button>
+              )}
             </div>
             <button
               key="submit"
@@ -2812,15 +3047,12 @@ const AdminLeaveManagement = () => {
             </div>
           ) : cancellableDates.length === 0 ? (
             <p className="text-gray-500 text-center font-medium">
-              No dates found for this request.
+              All dates are already modified or cancelled, check table for dates.
             </p>
           ) : (
             <div className="space-y-4">
               <div className="text-sm text-[#4318FF] bg-[#4318FF]/5 p-4 rounded-2xl border border-[#4318FF]/10 font-medium leading-relaxed">
-                Select the dates you wish to cancel for this request. <br />
-                <span className="text-xs font-bold opacity-80">
-                  * Note: Cancellation follows standard company policies.
-                </span>
+                Select the dates you wish to cancel for this request.
               </div>
 
               {/* Select All Option */}
@@ -2887,11 +3119,7 @@ const AdminLeaveManagement = () => {
                         </div>
                       </div>
                     </div>
-                    {!dateObj.isCancellable && (
-                      <span className="text-[10px] font-black uppercase tracking-tight text-red-400 bg-red-50 px-2 py-1 rounded-lg">
-                        Deadline Passed
-                      </span>
-                    )}
+                    {/* Deadline restriction removed for Admin/Manager view */}
                   </div>
                 ))}
               </div>
@@ -2946,11 +3174,7 @@ const AdminLeaveManagement = () => {
                   !isTitleChanged &&
                   !isDescriptionChanged
                 ) {
-                  notification.warning({
-                    message: "No Changes Detected",
-                    description: "Please modify at least one field to submit.",
-                    placement: "topRight",
-                  });
+                  message.warning("Please modify at least one field to submit.");
                   return;
                 }
 
@@ -2969,30 +3193,11 @@ const AdminLeaveManagement = () => {
                       },
                     }),
                   ).unwrap();
-                  notification.success({
-                    message: "Request Modified",
-                    description: "The request has been successfully modified.",
-                    placement: "topRight",
-                  });
+                  message.success("Modification Submitted");
                   setModifyModal({ isOpen: false, request: null });
-                  const empId = modifyModal.request.employeeId;
-                  dispatch(getLeaveStats({ employeeId: empId }));
-                  dispatch(
-                    getLeaveHistory({
-                      employeeId: empId,
-                      page: currentPage,
-                      limit: itemsPerPage,
-                      month: selectedMonth,
-                      year: selectedYear,
-                      status: filterStatus,
-                    }),
-                  );
+                  refreshData();
                 } catch (err: any) {
-                  notification.error({
-                    message: "Modification Failed",
-                    description: err.message || "Failed to modify request.",
-                    placement: "topRight",
-                  });
+                  message.error(err.message || "Failed to modify request.");
                 } finally {
                   setIsModifying(false);
                 }
@@ -3018,8 +3223,65 @@ const AdminLeaveManagement = () => {
         centered
         width={600}
       >
-        <div className="py-4 space-y-4">
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+        <div className="py-4 space-y-4 max-h-[80vh] overflow-y-auto custom-scrollbar">
+          {/* Email recipients + Subject card - same as Create / Employee Modify */}
+          <div className="rounded-2xl border border-[#E0E7FF] bg-[#F8FAFC] p-4 shadow-sm">
+            <div className="space-y-3">
+              <label className="text-sm font-bold text-[#2B3674] ml-1 block">
+                Email recipients
+              </label>
+              <div className="space-y-4">
+                <div className="flex flex-wrap gap-4 items-start">
+                  {emailConfig.assignedManagerEmail && (
+                    <div className="min-w-0 flex-1">
+                      <span className="text-xs font-medium text-gray-600 block mb-1 uppercase tracking-wide">Assigned Manager</span>
+                      <div className="px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-gray-700 font-bold text-sm">
+                        {emailConfig.assignedManagerEmail}
+                      </div>
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <span className="text-xs font-medium text-gray-600 block mb-1 uppercase tracking-wide">HR</span>
+                    <div className="px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-gray-700 font-bold text-sm">
+                      {emailConfig.hrEmail || "Not configured"}
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <span className="text-xs font-medium text-gray-600 ml-1 block mb-1 uppercase tracking-wide">CC</span>
+                  <div className="flex flex-wrap gap-2">
+                    {(modifyFormData.ccEmails || []).length > 0 ? (
+                      (modifyFormData.ccEmails || []).map((email: string) => (
+                        <span
+                          key={email}
+                          className="px-3 py-1.5 rounded-xl bg-gray-100 text-gray-700 text-sm font-bold"
+                        >
+                          {email}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-sm text-gray-500">—</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              {/* Subject - inside card */}
+              <div className="space-y-2 pt-2 border-t border-[#E0E7FF]">
+                <label className="text-sm font-bold text-[#2B3674] ml-1">Subject</label>
+                <input
+                  type="text"
+                  value={modifyFormData.title}
+                  onChange={(e) =>
+                    setModifyFormData({ ...modifyFormData, title: e.target.value })
+                  }
+                  className="w-full px-5 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400"
+                  placeholder="e.g. Annual Vacation"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3">
             <p className="text-sm text-yellow-800 font-semibold">
               📅{" "}
               {modifyModal.datesToModify
@@ -3052,21 +3314,6 @@ const AdminLeaveManagement = () => {
 
           <div>
             <label className="block text-sm font-bold text-[#2B3674] mb-2">
-              Title
-            </label>
-            <input
-              type="text"
-              value={modifyFormData.title}
-              onChange={(e) =>
-                setModifyFormData({ ...modifyFormData, title: e.target.value })
-              }
-              className="w-full px-4 py-3 bg-[#F4F7FE] border-none rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4318FF]/20 transition font-bold text-[#2B3674]"
-              placeholder="Request title"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-bold text-[#2B3674] mb-2">
               Description
             </label>
             <textarea
@@ -3078,8 +3325,8 @@ const AdminLeaveManagement = () => {
                 })
               }
               rows={3}
-              className="w-full px-4 py-3 bg-[#F4F7FE] border-none rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4318FF]/20 transition font-bold text-[#2B3674] resize-none"
-              placeholder="Reason for modification"
+              className="w-full px-5 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-medium text-[#2B3674] placeholder:text-gray-400 resize-none"
+              placeholder="Please provide details about your request..."
             />
           </div>
 
@@ -3096,10 +3343,19 @@ const AdminLeaveManagement = () => {
                 className="w-full h-[48px]"
                 size="large"
                 options={[
-                  { label: "Office", value: "Office" },
-                  { label: "Leave", value: "Leave" },
-                  { label: "Work From Home", value: "Work From Home" },
-                  { label: "Client Visit", value: "Client Visit" },
+                  { label: WorkLocation.OFFICE, value: WorkLocation.OFFICE },
+                  {
+                    label: LeaveRequestType.LEAVE,
+                    value: LeaveRequestType.LEAVE,
+                  },
+                  {
+                    label: WorkLocation.WORK_FROM_HOME,
+                    value: WorkLocation.WORK_FROM_HOME,
+                  },
+                  {
+                    label: WorkLocation.CLIENT_VISIT,
+                    value: WorkLocation.CLIENT_VISIT,
+                  },
                 ]}
               />
             </div>
@@ -3116,10 +3372,19 @@ const AdminLeaveManagement = () => {
                 className="w-full h-[48px]"
                 size="large"
                 options={[
-                  { label: "Office", value: "Office" },
-                  { label: "Leave", value: "Leave" },
-                  { label: "Work From Home", value: "Work From Home" },
-                  { label: "Client Visit", value: "Client Visit" },
+                  { label: WorkLocation.OFFICE, value: WorkLocation.OFFICE },
+                  {
+                    label: LeaveRequestType.LEAVE,
+                    value: LeaveRequestType.LEAVE,
+                  },
+                  {
+                    label: WorkLocation.WORK_FROM_HOME,
+                    value: WorkLocation.WORK_FROM_HOME,
+                  },
+                  {
+                    label: WorkLocation.CLIENT_VISIT,
+                    value: WorkLocation.CLIENT_VISIT,
+                  },
                 ]}
               />
             </div>
@@ -3153,8 +3418,68 @@ const AdminLeaveManagement = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Undo Confirmation Modal */}
+      <Modal
+        open={undoModal.isOpen}
+        onCancel={() => setUndoModal({ isOpen: false, request: null })}
+        footer={null}
+        centered
+        width={400}
+        styles={{
+          mask: {
+            backdropFilter: "blur(4px)",
+            backgroundColor: "rgba(43, 54, 116, 0.4)",
+          },
+          body: { padding: 0, borderRadius: "24px" },
+        }}
+      >
+        <div className="p-8 text-center">
+          <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-6 
+            ${undoModal.request?.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION ? "bg-orange-50 text-orange-500" : "bg-amber-50 text-amber-500"}`}
+          >
+            <RotateCcw size={32} />
+          </div>
+
+          <h3 className="text-2xl font-black text-[#2B3674] mb-2">
+            {undoModal.request?.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
+               ? "Undo Modification?"
+               : "Revert Cancellation?"}
+          </h3>
+          <p className="text-gray-500 font-medium leading-relaxed mb-8">
+            Are you sure you want to {undoModal.request?.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION ? "revert this modification request" : "revert this cancellation request"}? This will
+            restore the original request status and cancel the {undoModal.request?.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION ? "modification" : "cancellation"}.
+          </p>
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => setUndoModal({ isOpen: false, request: null })}
+              className="flex-1 py-3 font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all active:scale-95"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={undoModal.request?.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION ? executeUndoModification : executeUndoCancellation}
+              disabled={isUndoing}
+              className={`flex-1 py-3 font-bold text-white shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2
+                ${undoModal.request?.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION ? "bg-orange-500 hover:bg-orange-600 shadow-orange-200" : "bg-amber-500 hover:bg-amber-600 shadow-amber-200"}
+              `}
+            >
+              {isUndoing ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  <span>Undoing...</span>
+                </>
+              ) : (
+                "Yes, Undo"
+              )}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };
 
 export default AdminLeaveManagement;
+

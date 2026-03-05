@@ -37,8 +37,12 @@ const initialState: NotificationState = {
 // Admin: Fetch unread requests
 export const fetchUnreadNotifications = createAsyncThunk(
   "leaveNotification/fetchUnread",
-  async (_, { rejectWithValue }) => {
+  async (_, { rejectWithValue, getState }) => {
     try {
+      const state = getState() as any;
+      if (!state.user?.currentUser) {
+        return rejectWithValue("User not authenticated");
+      }
       const response = await axios.get(`${apiUrl}/notifications/unread`);
       return response.data;
     } catch (error: any) {
@@ -76,8 +80,12 @@ export const markAllAsRead = createAsyncThunk(
 // Employee: Fetch status updates
 export const fetchEmployeeUpdates = createAsyncThunk(
   "leaveNotification/fetchEmployeeUpdates",
-  async (employeeId: string, { rejectWithValue }) => {
+  async (employeeId: string, { rejectWithValue, getState }) => {
     try {
+      const state = getState() as any;
+      if (!state.user?.currentUser) {
+        return rejectWithValue("User not authenticated");
+      }
       const response = await axios.get(`${apiUrl}/employee/${employeeId}/updates`);
       return response.data;
     } catch (error: any) {

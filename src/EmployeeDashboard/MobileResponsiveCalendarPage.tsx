@@ -20,12 +20,13 @@ import {
 } from "../reducers/employeeAttendance.reducer";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import { fetchBlockers } from "../reducers/timesheetBlocker.reducer";
+import { AttendanceStatus, UserType, Department } from "../enums";
 import {
   generateMonthlyEntries,
   generateRangeEntries,
 } from "../utils/attendanceUtils";
 import { saveAs } from "file-saver";
-import { UserType } from "../reducers/user.reducer";
+// Reducer imports remaining
 
 interface MobileResponsiveCalendarPageProps {
   employeeId?: string;
@@ -50,7 +51,8 @@ const MobileResponsiveCalendarPage = ({
   const isAdmin = currentUser?.userType === UserType.ADMIN;
   const isManager =
     currentUser?.userType === UserType.MANAGER ||
-    (currentUser?.role && currentUser.role.toUpperCase().includes("MANAGER"));
+    (currentUser?.role &&
+      currentUser.role.toUpperCase().includes(UserType.MANAGER));
 
   // @ts-ignore
   const { holidays } = useAppSelector(
@@ -311,7 +313,17 @@ const MobileResponsiveCalendarPage = ({
           {monthDays.map((day) => {
             const entry = entries.find((e) => e.date === day);
             const holiday = checkIsHoliday(day);
-            const isBlocked = checkIsBlocked(day);
+            const manualBlocker = getBlocker(day);
+            
+            // Block if manual blocker exists OR (if not admin/manager and status is Leave or Sunday/Holiday)
+            const dObj = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+            const dayOfWeek = dObj.getDay();
+            
+            let isDeptBlocked = false;
+            if (dayOfWeek === 0) isDeptBlocked = true;
+
+            const isBlocked = !!manualBlocker || (!isAdmin && !isManager && (entry?.status === AttendanceStatus.LEAVE || isDeptBlocked || !!holiday));
+            
             const isToday =
               day === now.getDate() &&
               currentDate.getMonth() === now.getMonth() &&
@@ -333,7 +345,8 @@ const MobileResponsiveCalendarPage = ({
               !isBlocked &&
               !holiday &&
               !entry?.isWeekend &&
-              (entry?.status === "Not Updated" || entry?.status === "Pending");
+              (entry?.status === AttendanceStatus.NOT_UPDATED ||
+                entry?.status === AttendanceStatus.PENDING);
 
             // Determine color class
             let colorClass = "bg-white text-gray-600 border border-gray-200"; // Default / Future / Pending
@@ -344,20 +357,23 @@ const MobileResponsiveCalendarPage = ({
             } else if (isBlocked) {
               colorClass =
                 "bg-gray-200 border border-gray-400 text-gray-500 font-bold";
-            } else if (entry?.status === "Full Day") {
+            } else if (entry?.status === AttendanceStatus.FULL_DAY) {
               colorClass =
                 "bg-green-100 border border-green-600 text-black font-bold";
-            } else if (entry?.status === "Half Day" || isPendingUpdate) {
+            } else if (
+              entry?.status === AttendanceStatus.HALF_DAY ||
+              isPendingUpdate
+            ) {
               // Both Half Day and Pending Update (visual only) can be Orange
               // BUT User wants Not Updated white/grey and Half Day Orange.
               // Re-read: "make hald day color orange same as not updated and nake not updated color same as upcong"
               // So Half Day = bg-orange-100 (matching old not updated)
               // And Not Updated = bg-white (matching current/upcoming)
               colorClass =
-                entry?.status === "Half Day"
+                entry?.status === AttendanceStatus.HALF_DAY
                   ? "bg-orange-100 border border-orange-600 text-black font-bold"
                   : "bg-white text-gray-600 border border-gray-200";
-            } else if (entry?.status === "Leave") {
+            } else if (entry?.status === AttendanceStatus.LEAVE) {
               colorClass =
                 "bg-red-200 border border-red-600 text-black font-bold";
             } else if (holiday) {
@@ -406,9 +422,11 @@ const MobileResponsiveCalendarPage = ({
                   <div className="absolute inset-0 z-20 bg-black/40 backdrop-blur-[2px] rounded-xl flex flex-col items-center justify-center p-1 text-center pointer-events-none">
                     <Lock size={12} className="text-white mb-0.5" />
                     <span className="text-[6px] font-black text-white leading-none uppercase tracking-tighter">
-                      {isAdmin || isManager
-                        ? "Unblock"
-                        : `Contact ${getBlocker(day)?.blockedBy || "Admin"}`}
+                      {manualBlocker
+                        ? (isAdmin || isManager
+                          ? "Unblock"
+                          : `Contact ${manualBlocker.blockedBy || "Admin"}`)
+                        : "On Leave"}
                     </span>
                   </div>
                 )}
@@ -422,20 +440,23 @@ const MobileResponsiveCalendarPage = ({
           <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
             {[
               {
-                label: "Full Day",
+                label: AttendanceStatus.FULL_DAY,
                 className: "bg-green-100 border border-green-600",
               },
               {
                 label: "Half Day Leave",
                 className: "bg-orange-100 border border-orange-600",
               },
-              { label: "Leave", className: "bg-red-200 border border-red-600" },
+              {
+                label: AttendanceStatus.LEAVE,
+                className: "bg-red-200 border border-red-600",
+              },
               {
                 label: "Today",
                 className: "bg-white border-2 border-[#4318FF]",
               },
               {
-                label: "Holiday",
+                label: AttendanceStatus.HOLIDAY,
                 className: "bg-blue-100 border border-blue-500",
               },
               {

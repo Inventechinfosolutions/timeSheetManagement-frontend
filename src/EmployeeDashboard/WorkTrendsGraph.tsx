@@ -11,6 +11,7 @@ import {
 } from "recharts";
 import { useAppSelector } from "../hooks";
 import { RootState } from "../store";
+import { WorkLocation } from "../enums";
 
 // Interface for the data structure
 // (Ideally imported from reducer, but can keep here or import)
@@ -50,7 +51,7 @@ const WorkTrendsGraph = ({ currentMonth }: Props) => {
         <h4 className="text-lg font-bold text-[#1B2559]">Work Trend</h4>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-gray-400">
+          <span className="text-s font-bold text-[#1B2559]">
             {currentMonth.toLocaleDateString("en-US", {
               month: "long",
               year: "numeric",
@@ -124,7 +125,7 @@ const WorkTrendsGraph = ({ currentMonth }: Props) => {
 
               <Bar
                 dataKey="totalLeaves"
-                name="Taken Leaves"
+                name="Taken Leave"
                 fill="#F43F5E"
                 radius={[6, 6, 0, 0]}
                 activeBar={{ fill: "#FB7185" }}
@@ -142,7 +143,7 @@ const WorkTrendsGraph = ({ currentMonth }: Props) => {
 
               <Bar
                 dataKey="workFromHome"
-                name="Work From Home"
+                name={WorkLocation.WFH}
                 fill="#06B6D4"
                 radius={[6, 6, 0, 0]}
                 activeBar={{ fill: "#22D3EE" }}
@@ -159,7 +160,7 @@ const WorkTrendsGraph = ({ currentMonth }: Props) => {
               </Bar>
               <Bar
                 dataKey="clientVisits"
-                name="Client Visit"
+                name={WorkLocation.CLIENT_VISIT}
                 fill="#8B5CF6"
                 radius={[6, 6, 0, 0]}
                 activeBar={{ fill: "#A78BFA" }}
@@ -176,7 +177,7 @@ const WorkTrendsGraph = ({ currentMonth }: Props) => {
               </Bar>
               <Bar
                 dataKey="office"
-                name="Office"
+                name={WorkLocation.OFFICE}
                 fill="#10B981"
                 radius={[6, 6, 0, 0]}
                 activeBar={{ fill: "#34D399" }}

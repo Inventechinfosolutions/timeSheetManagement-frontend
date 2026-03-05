@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, useLocation } from "react-router-dom";
-import { Modal } from "antd";
+import { Modal, message } from "antd";
 import {
   ChevronLeft,
   ChevronRight,
@@ -11,7 +11,13 @@ import {
 } from "lucide-react";
 import { TimesheetEntry } from "../types";
 import { useAppDispatch, useAppSelector } from "../hooks";
-import { UserType } from "../reducers/user.reducer";
+import {
+  AttendanceStatus,
+  UserType,
+  WorkLocation as OfficeLocation,
+  HalfDayType,
+  Department,
+} from "../enums";
 import {
   updateAttendanceRecord,
   submitBulkAttendance,
@@ -43,6 +49,27 @@ interface TimesheetProps {
   containerClassName?: string;
 }
 
+const cleanErrorMessage = (msg: string) => {
+  if (typeof msg !== "string") return msg;
+  let cleaned = msg.replace(/^Conflict:\s*/i, "");
+
+  const match = cleaned.match(
+    /Request already exists for (\d{4}-\d{2}-\d{2}) to (\d{4}-\d{2}-\d{2})/,
+  );
+  if (match) {
+    const fromDate = match[1];
+    const toDate = match[2];
+    if (fromDate === toDate) {
+      return `Request already exists for date ${fromDate}`;
+    } else {
+      return `Request already exists for ${fromDate} to ${toDate}`;
+    }
+  }
+
+  cleaned = cleaned.replace(/\s*\(.*?\)/g, "");
+  return cleaned;
+};
+
 const MyTimesheet = ({
   now: propNow,
   employeeId: propEmployeeId,
@@ -59,6 +86,14 @@ const MyTimesheet = ({
   const { entity } = useAppSelector((state) => state.employeeDetails);
   const { currentUser } = useAppSelector((state) => state.user);
 
+  // Configure AntD message position to be below the header
+  useEffect(() => {
+    message.config({
+      top: 70,
+      duration: 3,
+    });
+  }, []);
+
   // @ts-ignore
   const { holidays } = useAppSelector(
     (state) => (state as any).masterHolidays || { holidays: [] },
@@ -69,7 +104,8 @@ const MyTimesheet = ({
   const isAdmin = currentUser?.userType === UserType.ADMIN;
   const isManager = !!(
     currentUser?.userType === UserType.MANAGER ||
-    (currentUser?.role && currentUser.role.toUpperCase().includes("MANAGER"))
+    (currentUser?.role &&
+      currentUser.role.toUpperCase().includes(UserType.MANAGER))
   );
   const isMyRoute =
     location.pathname.includes("my-dashboard") ||
@@ -138,6 +174,10 @@ const MyTimesheet = ({
     number | null
   >(location.state?.timestamp || null);
 
+  // Debounce timer for hours input to prevent premature status/color changes
+  const inputTimerRef = useRef<any>(null);
+
+
   // 3. View/Input state
   const [localEntries, setLocalEntries] = useState<TimesheetEntry[]>([]);
   const [localInputValues, setLocalInputValues] = useState<
@@ -147,12 +187,6 @@ const MyTimesheet = ({
   const [manuallyEditedIndices, setManuallyEditedIndices] = useState<
     Set<number>
   >(new Set());
-  const [toast, setToast] = useState<{
-    show: boolean;
-    message: string;
-    type: "success" | "error" | "info";
-  }>({ show: false, message: "", type: "success" });
-
   const [inputError, setInputError] = useState<{
     index: number;
     message: string;
@@ -166,6 +200,28 @@ const MyTimesheet = ({
   );
   const [autoUpdateCount, setAutoUpdateCount] = useState<number>(0);
   const [isCheckingAutoUpdate, setIsCheckingAutoUpdate] = useState(false);
+  const [autoUpdateTrigger, setAutoUpdateTrigger] = useState(0);
+
+  const refreshDryRun = () => setAutoUpdateTrigger(prev => prev + 1);
+
+  const refreshData = () => {
+    if (!currentEmployeeId || (isAdmin && currentEmployeeId === "Admin"))
+      return;
+    dispatch(
+      fetchMonthlyAttendance({
+        employeeId: currentEmployeeId,
+        month: (now.getMonth() + 1).toString().padStart(2, "0"),
+        year: now.getFullYear().toString(),
+      }),
+    );
+    dispatch(
+      getLeaveHistory({
+        employeeId: currentEmployeeId,
+        page: 1,
+        limit: 500,
+      }),
+    );
+  };
 
   const today = useMemo(() => new Date(), []);
 
@@ -334,8 +390,9 @@ const MyTimesheet = ({
       now.getMonth() === today.getMonth() &&
       now.getFullYear() === today.getFullYear()
     ) {
-      // Create a unique key for the current state
-      const checkKey = `${currentEmployeeId}-${now.getMonth()}-${now.getFullYear()}-${records.length}`;
+      // Create a unique key for the current state. Include autoUpdateTrigger to bypass
+      // duplicate checks when a manual refresh is explicitly requested (e.g. after save).
+      const checkKey = `${currentEmployeeId}-${now.getMonth()}-${now.getFullYear()}-${records.length}-${autoUpdateTrigger}`;
 
       // Prevent duplicate checks if nothing material changed
       if (lastCheckRef.current === checkKey) return;
@@ -368,7 +425,15 @@ const MyTimesheet = ({
       setAutoUpdateCount(0);
       lastCheckRef.current = "";
     }
-  }, [dispatch, currentEmployeeId, now, isAdmin, today, records.length]); // Use records.length instead of records to avoid deep equality issues
+  }, [
+    dispatch,
+    currentEmployeeId,
+    now,
+    isAdmin,
+    today,
+    records.length,
+    autoUpdateTrigger,
+  ]); // Use records.length instead of records to avoid deep equality issues
 
   // Fetch attendance and blockers when month/employee changes
   useEffect(() => {
@@ -457,17 +522,6 @@ const MyTimesheet = ({
     }
   }, [selectedDateId]);
 
-  // Toast Timer
-  useEffect(() => {
-    if (toast.show) {
-      const timer = setTimeout(
-        () => setToast((prev) => ({ ...prev, show: false })),
-        3000,
-      );
-      return () => clearTimeout(timer);
-    }
-  }, [toast.show]);
-
   const isDateBlocked = (date: Date) => {
     const d = new Date(date);
     d.setHours(0, 0, 0, 0);
@@ -497,6 +551,11 @@ const MyTimesheet = ({
       if (entry) {
         const h1 = (entry.firstHalf || "").toLowerCase();
         const h2 = (entry.secondHalf || "").toLowerCase();
+        const s = (entry.status || "").toLowerCase();
+
+        // BLOCK IF STATUS IS LEAVE
+        if (s.includes("leave")) return true;
+
         const isRestricted = (val: string) =>
           val &&
           !val.includes("office") &&
@@ -510,6 +569,15 @@ const MyTimesheet = ({
         if (isRestricted(h1) || isRestricted(h2)) return true;
       }
     }
+
+    // 4. Department Weekend Rules
+    const dayOfWeek = d.getDay(); // 0 = Sun, 6 = Sat
+
+    // BLOCK SUNDAYS ONLY (Saturdays are now open for everyone)
+    if (dayOfWeek === 0) return true;
+
+    // 5. Holiday Blocking (All departments)
+    if (isHoliday(d)) return true;
 
     return false;
   };
@@ -604,47 +672,64 @@ const MyTimesheet = ({
     if (effectiveReadOnly) return;
     if (isDateBlocked(localEntries[entryIndex].fullDate)) return;
 
-    // Prevent typing if currently showing an error for this field
-    if (inputError?.index === entryIndex) return;
-
-    if (!/^\d*\.?\d*$/.test(val)) return;
-
-    const num = parseFloat(val);
-
-    // Validation: Cap hours for Half-Day Leave scenarios
-    const entry = localEntries[entryIndex];
-    const isHalfLeave =
-      (entry.firstHalf as string)?.toLowerCase() === "leave" ||
-      (entry.secondHalf as string)?.toLowerCase() === "leave";
-
-    // Restriction: Employees are capped at 6h for half-day leave dates.
-    // Admin and Managers are NOT restricted.
-    const maxHours = !isAdmin && !isManager && isHalfLeave ? 6 : 9;
-
-    if (num > maxHours) {
-      setInputError({ index: entryIndex, message: `Max: ${maxHours}h` });
-
-      // Clear the invalid value immediately
-      setLocalInputValues((prev) => ({ ...prev, [entryIndex]: "" }));
-
-      // Clear error after 2 seconds
-      setTimeout(() => {
-        setInputError(null);
-      }, 2000);
-
-      return;
-    }
-
+    // A. Update the text value immediately so the UI is responsive
     setLocalInputValues((prev) => ({ ...prev, [entryIndex]: val }));
 
-    const hours = val === "" ? null : isNaN(num) ? 0 : num;
+    // B. Clear any waiting timer
+    if (inputTimerRef.current) clearTimeout(inputTimerRef.current);
 
-    let newStatus: string;
+    const applyUpdate = (currentVal: string) => {
+      // Prevent calculation if currently showing an error for this field
+      if (inputError?.index === entryIndex) return;
 
-    if (val !== "" && hours !== null && hours > 0) {
-      // When hours > 0, calculate based on hours
-      const entryDate = new Date(localEntries[entryIndex].fullDate);
-      const isSaturday = entryDate.getDay() === 6;
+      if (!/^\d*\.?\d*$/.test(currentVal)) return;
+
+      const num = parseFloat(currentVal);
+
+      // Validation: Cap hours for Half-Day Leave scenarios
+      const entry = localEntries[entryIndex];
+      const isHalfLeave =
+        (entry.firstHalf as string)?.toLowerCase() === "leave" ||
+        (entry.secondHalf as string)?.toLowerCase() === "leave";
+
+      // Restriction: Employees are capped at 6h for half-day leave dates.
+      // Admin and Managers are NOT restricted.
+      const maxHours = !isAdmin && !isManager && isHalfLeave ? 6 : 9;
+
+      if (num > maxHours) {
+        setInputError({ index: entryIndex, message: `Max: ${maxHours}h` });
+
+        // Clear the invalid value immediately
+        setLocalInputValues((prev) => ({ ...prev, [entryIndex]: "" }));
+
+        // Clear error after 2 seconds
+        setTimeout(() => {
+          setInputError(null);
+        }, 2000);
+
+        return;
+      }
+
+      // Universal Saturday Rule: 4 to 9 hours for ALL departments
+      const inputDay = localEntries[entryIndex].fullDate.getDay();
+
+      if (inputDay === 6) {
+        if (num < 4 || num > 9) {
+          setInputError({ index: entryIndex, message: "Sat: 4-9h" });
+          setLocalInputValues((prev) => ({ ...prev, [entryIndex]: "" }));
+          setTimeout(() => setInputError(null), 2000);
+          return;
+        }
+      }
+
+      const hours = currentVal === "" ? null : isNaN(num) ? 0 : num;
+
+      let newStatus: string;
+
+      if (currentVal !== "" && hours !== null && hours > 0) {
+        // When hours > 0, calculate based on hours
+        const entryDate = new Date(localEntries[entryIndex].fullDate);
+        const isSaturday = entryDate.getDay() === 6;
 
       if (isSaturday && hours !== null && hours > 3) {
         newStatus = "Full Day";
@@ -658,18 +743,18 @@ const MyTimesheet = ({
         entryDate.getMonth() + 1,
       ).padStart(2, "0")}-${String(entryDate.getDate()).padStart(2, "0")}`;
 
-      const holiday = holidays?.find((h: any) => {
-        const hDate = h.holidayDate || h.date;
-        if (!hDate) return false;
-        const normalizedHDate =
-          typeof hDate === "string"
-            ? hDate.split("T")[0]
-            : new Date(hDate).toISOString().split("T")[0];
-        return normalizedHDate === dateStrLocal;
-      });
+        const holiday = holidays?.find((h: any) => {
+          const hDate = h.holidayDate || h.date;
+          if (!hDate) return false;
+          const normalizedHDate =
+            typeof hDate === "string"
+              ? hDate.split("T")[0]
+              : new Date(hDate).toISOString().split("T")[0];
+          return normalizedHDate === dateStrLocal;
+        });
 
-      const dayNum = entryDate.getDay();
-      const isWeekend = dayNum === 0 || dayNum === 6;
+        const dayNum = entryDate.getDay();
+        const isWeekend = dayNum === 0 || dayNum === 6;
 
       // 1. Explicit 0 means Absent, regardless of Holidays, Weekends, or Future
       if (val !== "" && Number(val) === 0) {
@@ -683,8 +768,8 @@ const MyTimesheet = ({
         const todayZero = new Date();
         todayZero.setHours(0, 0, 0, 0);
 
-        const entryDateZero = new Date(entryDate);
-        entryDateZero.setHours(0, 0, 0, 0);
+          const entryDateZero = new Date(entryDate);
+          entryDateZero.setHours(0, 0, 0, 0);
 
         if (entryDateZero > todayZero) {
           newStatus = "UPCOMING";
@@ -745,9 +830,21 @@ const MyTimesheet = ({
     };
     setLocalEntries(updated);
 
-    // Mark this entry as manually edited to prevent baseEntries from overwriting it
-    setManuallyEditedIndices((prev) => new Set(prev).add(entryIndex));
+      // Mark this entry as manually edited to prevent baseEntries from overwriting it
+      setManuallyEditedIndices((prev) => new Set(prev).add(entryIndex));
+    };
+
+    if (val === "") {
+      // D. Execute immediately for clearing text
+      applyUpdate("");
+    } else {
+      // C. Wait for the user to stop typing before deciding status/color
+      inputTimerRef.current = setTimeout(() => {
+        applyUpdate(val);
+      }, 500);
+    }
   };
+
 
   const handleInputBlur = (entryIndex: number) => {
     setLocalInputValues((prev) => {
@@ -772,7 +869,11 @@ const MyTimesheet = ({
       if (isDateBlocked(entry.fullDate)) return;
 
       // 2. Skip exclusions: Leave, Half Day
-      if (entry.status === "Leave" || entry.status === "Half Day") return;
+      if (
+        entry.status === AttendanceStatus.LEAVE ||
+        entry.status === AttendanceStatus.HALF_DAY
+      )
+        return;
 
       // 3. Skip Holidays
       if (isHoliday(entry.fullDate)) return;
@@ -786,7 +887,7 @@ const MyTimesheet = ({
         updatedEntries[idx] = {
           ...entry,
           totalHours: 9,
-          status: "Full Day",
+          status: AttendanceStatus.FULL_DAY,
         };
         newEditedIndices.add(idx);
 
@@ -803,17 +904,9 @@ const MyTimesheet = ({
       setLocalEntries(updatedEntries);
       setManuallyEditedIndices(newEditedIndices);
       setLocalInputValues(newLocalInputValues);
-      setToast({
-        show: true,
-        message: "Auto-filled working days to 9 hours",
-        type: "success",
-      });
+      message.success("Auto-filled working days to 9 hours");
     } else {
-      setToast({
-        show: true,
-        message: "No eligible days to auto-fill",
-        type: "info",
-      });
+      message.info("No eligible days to auto-fill");
     }
   };
 
@@ -823,7 +916,7 @@ const MyTimesheet = ({
     localEntries.forEach((entry, idx) => {
       if (isDateBlocked(entry.fullDate)) return;
 
-      const currentTotal = entry.totalHours; 
+      const currentTotal = entry.totalHours;
       const originalTotal = baseEntries[idx]?.totalHours;
 
       if (
@@ -855,27 +948,48 @@ const MyTimesheet = ({
 
         let derivedStatus: string;
 
-        // For Sunday: Default status to "Weekend" ONLY if no hours are present
-        if (dayOfWeek === 0 && (!currentTotal || currentTotal === 0) && entry.status !== "Absent") {
-          derivedStatus = "Weekend";
+        // For Sunday: Default status to AttendanceStatus.WEEKEND ONLY if no hours are present
+        if (
+          dayOfWeek === 0 &&
+          (!currentTotal || currentTotal === 0) &&
+          entry.status !== AttendanceStatus.ABSENT
+        ) {
+          derivedStatus = AttendanceStatus.WEEKEND;
         }
-        // For holidays: Always set status to "Holiday" ONLY if hours are NULL (cleared)
+        // For holidays: Always set status to AttendanceStatus.HOLIDAY ONLY if hours are NULL (cleared)
         else if (isHoliday && currentTotal === null) {
-          derivedStatus = "Holiday";
+          derivedStatus = AttendanceStatus.HOLIDAY;
         }
-        // For Saturday: Only set to "Weekend" if there's NO data (no hours AND no workLocation)
+        // For Saturday: Only set to AttendanceStatus.WEEKEND if there's NO data (no hours AND no workLocation)
         // If Saturday has data (Client Visit, WFH, etc.), keep that data
-        else if (dayOfWeek === 6 && (!currentTotal || currentTotal === 0) && !entry.workLocation) {
-          derivedStatus = "Weekend";
+        else if (
+          dayOfWeek === 6 &&
+          (!currentTotal || currentTotal === 0) &&
+          !entry.workLocation
+        ) {
+          derivedStatus = AttendanceStatus.WEEKEND;
         }
         // For other days or for holiday/saturday WITH hours: Calculate status based on hours
         else {
-          if (dayOfWeek === 6 && currentTotal !== null && currentTotal !== undefined && currentTotal > 3) {
-             derivedStatus = "Full Day";
-          } else if (currentTotal !== null && currentTotal !== undefined && currentTotal > 6) {
-             derivedStatus = "Full Day";
-          } else if (currentTotal !== null && currentTotal !== undefined && currentTotal > 0) {
-            derivedStatus = "Half Day";
+          if (
+            dayOfWeek === 6 &&
+            currentTotal !== null &&
+            currentTotal !== undefined &&
+            currentTotal > 3
+          ) {
+            derivedStatus = AttendanceStatus.FULL_DAY;
+          } else if (
+            currentTotal !== null &&
+            currentTotal !== undefined &&
+            currentTotal > 6
+          ) {
+            derivedStatus = AttendanceStatus.FULL_DAY;
+          } else if (
+            currentTotal !== null &&
+            currentTotal !== undefined &&
+            currentTotal > 0
+          ) {
+            derivedStatus = AttendanceStatus.HALF_DAY;
           } else {
             // 0 hours on a weekday: Determine if Absent, Upcoming, or Not Updated
             const todayZero = new Date();
@@ -884,11 +998,14 @@ const MyTimesheet = ({
             entryDateZero.setHours(0, 0, 0, 0);
 
             if (entryDateZero > todayZero) {
-              derivedStatus = "UPCOMING";
+              derivedStatus = AttendanceStatus.UPCOMING;
             } else {
               // Check what the local status was (from handleHoursInput)
               derivedStatus =
-                entry.status === "Not Updated" || currentTotal === null ? "Not Updated" : "Absent";
+                entry.status === AttendanceStatus.NOT_UPDATED ||
+                currentTotal === null
+                  ? AttendanceStatus.NOT_UPDATED
+                  : AttendanceStatus.ABSENT;
             }
           }
         }
@@ -919,25 +1036,17 @@ const MyTimesheet = ({
               : derivedStatus === "Not Updated"
                 ? null
                 : entry.secondHalf,
+          workLocation: entry.workLocation,
           // Explicitly set sourceRequestId to null for Admin/Manager to break leave link on manual save
           ...(isAdmin || isManager ? { sourceRequestId: null } : {}),
         } as any);
       }
     });
 
-    const refreshData = () => {
-      dispatch(
-        fetchMonthlyAttendance({
-          employeeId: currentEmployeeId,
-          month: (now.getMonth() + 1).toString().padStart(2, "0"),
-          year: now.getFullYear().toString(),
-        }),
-      );
-      setManuallyEditedIndices(new Set());
-    };
+
 
     if (payload.length === 0) {
-      setToast({ show: true, message: "No changes to save", type: "success" });
+      message.success("No changes to save");
       return;
     }
 
@@ -947,37 +1056,58 @@ const MyTimesheet = ({
       const itemDate = new Date(item.workingDate);
       const dayOfWeek = itemDate.getDay(); // 0 = Sunday, 6 = Saturday
 
-      // If hours are explicitly 0, allow "Absent" even on weekends
+      // If hours are explicitly 0, allow AttendanceStatus.ABSENT even on weekends
       if (item.totalHours === 0) {
-        item.status = "Absent";
-        return; 
-      }
-
-      // Sunday: Default status to "Weekend" if no hours and not explicitly Absent
-      if (dayOfWeek === 0 && (!item.totalHours || Number(item.totalHours) === 0) && item.status !== "Absent") {
-        item.status = "Weekend";
+        item.status = AttendanceStatus.ABSENT;
         return;
       }
 
-      // Saturday: Only set to "Weekend" if there's NO data (no hours)
+      // Sunday: Default status to AttendanceStatus.WEEKEND if no hours and not explicitly Absent
+      if (
+        dayOfWeek === 0 &&
+        (!item.totalHours || Number(item.totalHours) === 0) &&
+        item.status !== AttendanceStatus.ABSENT
+      ) {
+        item.status = AttendanceStatus.WEEKEND;
+        return;
+      }
+
+      // Saturday: Only set to AttendanceStatus.WEEKEND if there's NO data (no hours)
       if (
         dayOfWeek === 6 &&
         (!item.totalHours || Number(item.totalHours) === 0)
       ) {
-        item.status = "Weekend";
+        item.status = AttendanceStatus.WEEKEND;
       }
-      // Other days: If hours is 0, ALWAYS set status to "Absent" (never Leave)
+      // Other days: If hours is 0, ALWAYS set status to AttendanceStatus.ABSENT (never Leave)
       // If hours is null, it's a "Clear/Reset" action - keep as Not Updated/Upcoming
-      else if (item.totalHours === 0) { // This is covered by the first check now, but keeping safe
-        item.status = "Absent";
+      else if (item.totalHours === 0) {
+        // This is covered by the first check now, but keeping safe
+        item.status = AttendanceStatus.ABSENT;
       }
       // If status is "Leave" but hours > 0, recalculate based on hours
-      else if (item.status === "Leave" && item.totalHours !== null) {
+      else if (
+        item.status === AttendanceStatus.LEAVE &&
+        item.totalHours !== null
+      ) {
         if (item.totalHours >= 6) {
-          item.status = "Full Day";
+          item.status = AttendanceStatus.FULL_DAY;
         } else if (item.totalHours > 0) {
-          item.status = "Half Day";
+          item.status = AttendanceStatus.HALF_DAY;
         }
+      }
+
+      // Final Sync: Ensure splits match the status for "System Default" statuses
+      // (Absent, Weekend, Holiday) to prevent nulls in the database.
+      if (
+        item.status === AttendanceStatus.ABSENT ||
+        item.status === AttendanceStatus.WEEKEND ||
+        item.status === AttendanceStatus.HOLIDAY ||
+        item.status === AttendanceStatus.NOT_UPDATED ||
+        item.status === AttendanceStatus.UPCOMING
+      ) {
+        item.firstHalf = item.status;
+        item.secondHalf = item.status;
       }
     });
 
@@ -985,79 +1115,62 @@ const MyTimesheet = ({
       try {
         await dispatch(submitBulkAttendance(finalPayload)).unwrap();
         refreshData();
-        // Clear manually edited indices after successful save
-        setManuallyEditedIndices(new Set());
-        setToast({
-          show: true,
-          message: "Attendance Submitted Successfully",
-          type: "success",
-        });
-      } catch (error: any) {
-        console.warn(
-          "Bulk API failed, attempting sequential fallback...",
-          error,
+        dispatch(
+          fetchMonthlyAttendance({
+            employeeId: currentEmployeeId,
+            month: (now.getMonth() + 1).toString().padStart(2, "0"),
+            year: now.getFullYear().toString(),
+          }),
         );
-        let successCount = 0;
-        for (const item of finalPayload) {
-          try {
-            if (item.id) {
-              await dispatch(
-                updateAttendanceRecord({
-                  id: item.id,
-                  data: { totalHours: item.totalHours, status: item.status },
-                }),
-              ).unwrap();
-            } else {
-              await dispatch(
-                createAttendanceRecord({
-                  employeeId: item.employeeId,
-                  workingDate: item.workingDate,
-                  totalHours: item.totalHours,
-                  status: item.status,
-                }),
-              ).unwrap();
-            }
-            successCount++;
-          } catch (innerError) {
-            console.error("Failed to save record:", item, innerError);
-          }
-        }
-        if (successCount > 0) {
-          dispatch(
-            fetchMonthlyAttendance({
-              employeeId: currentEmployeeId,
-              month: (now.getMonth() + 1).toString().padStart(2, "0"),
-              year: now.getFullYear().toString(),
-            }),
-          );
-          // Clear manually edited indices after successful save
-          setManuallyEditedIndices(new Set());
-          setToast({ show: true, message: "Data Saved", type: "success" });
-        } else {
-          setToast({
-            show: true,
-            message:
-              error?.response?.data?.message || "Failed to save records.",
-            type: "error",
-          });
-        }
+        // Clear manually edited indices and input values after successful save
+        setManuallyEditedIndices(new Set());
+        setLocalInputValues({});
+        refreshDryRun();
+        refreshDryRun();
+        message.success("Attendance saved successfully");
+      } catch (error: any) {
+        const finalError = cleanErrorMessage(error?.response?.data?.message || error?.message || "Failed to save records.");
+        message.error(finalError);
+        refreshData();
       }
     };
 
-    const halfDayItems = payload.filter(
-      (item) => item.status !== "Full Day" && Number(item.totalHours) > 0 && Number(item.totalHours) <= 6,
-    );
+    const halfDayItems = payload.filter((item) => {
+      const d = new Date(item.workingDate);
+      const isSat = d.getDay() === 6;
+      const hours = Number(item.totalHours);
+
+      // Saturday (4-9h) is Full Day, not Half Day
+      if (isSat && hours >= 4 && hours <= 9) return false;
+
+      return (
+        item.status !== AttendanceStatus.FULL_DAY &&
+        hours > 0 &&
+        hours <= 6
+      );
+    });
 
     const absentItems = payload.filter(
-      (item) => Number(item.totalHours) === 0 && item.status === "Absent",
+      (item) =>
+        Number(item.totalHours) === 0 &&
+        item.status === AttendanceStatus.ABSENT,
     );
 
     const clearedItems = payload.filter(
-      (item) => item.totalHours === null && (item.status === "Not Updated" || item.status === "UPCOMING" || item.status === "Holiday" || item.status === "Weekend")
+      (item) =>
+        item.totalHours === null &&
+        (item.status === AttendanceStatus.NOT_UPDATED ||
+          item.status === AttendanceStatus.UPCOMING ||
+          item.status === AttendanceStatus.HOLIDAY ||
+          item.status === AttendanceStatus.WEEKEND),
     );
 
     if (!isAdmin && !isManager) {
-      if (halfDayItems.length > 0 || absentItems.length > 0 || clearedItems.length > 0) {
+      if (
+        halfDayItems.length > 0 ||
+        absentItems.length > 0 ||
+        clearedItems.length > 0
+      ) {
         const showUnifiedModal = async () => {
           const hasHalfDay = halfDayItems.length > 0;
           const hasAbsent = absentItems.length > 0;
@@ -1155,10 +1268,11 @@ const MyTimesheet = ({
                           }}
                         >
                           <li>
-                            <strong>First Half:</strong> Office
+                            <strong>First Half:</strong> {OfficeLocation.OFFICE}
                           </li>
                           <li>
-                            <strong>Second Half:</strong> Leave
+                            <strong>Second Half:</strong>{" "}
+                            {AttendanceStatus.LEAVE}
                           </li>
                         </ul>
                       </div>
@@ -1235,7 +1349,8 @@ const MyTimesheet = ({
                           marginBottom: "8px",
                         }}
                       >
-                        You are trying to clear save attendance for date(s): <strong>{clearedDates}</strong>.
+                        You are trying to clear save attendance for date(s):{" "}
+                        <strong>{clearedDates}</strong>.
                       </p>
                       <div
                         style={{
@@ -1246,12 +1361,13 @@ const MyTimesheet = ({
                         }}
                       >
                         <p style={{ margin: 0, fontSize: "13px" }}>
-                          This will reset the entry to its default state (Weekend, Holiday, or Not Updated / Upcoming) and set all values to empty.
+                          This will reset the entry to its default state
+                          (Weekend, Holiday, or Not Updated / Upcoming) and set
+                          all values to empty.
                         </p>
                       </div>
                     </div>
                   )}
-
 
                   {hasHalfDay && (
                     <div
@@ -1284,6 +1400,8 @@ const MyTimesheet = ({
                 : "Confirm Updates",
               cancelText: "Cancel",
               onCancel: () => {
+                setManuallyEditedIndices(new Set());
+                setLocalInputValues({});
                 refreshData();
               },
               okButtonProps: {
@@ -1304,20 +1422,42 @@ const MyTimesheet = ({
                           employeeId: currentEmployeeId,
                           fromDate: item.workingDate,
                           toDate: item.workingDate,
-                          requestType: "Half Day",
+                          requestType: AttendanceStatus.HALF_DAY,
                           isHalfDay: true,
-                          halfDayType: "Second Half",
+                          halfDayType: HalfDayType.SECOND_HALF,
                           title: "Half Day (Auto-generated)",
                           description: `Auto-generated from ${item.totalHours} hours timesheet entry`,
-                          firstHalf: "Office",
-                          secondHalf: "Leave",
+                          firstHalf: OfficeLocation.OFFICE,
+                          secondHalf: AttendanceStatus.LEAVE,
                         } as any),
                       ).unwrap();
                     }
                   }
 
-                  // 2. Handle Actual Save for everything else (using handleActualSave which refreshes)
-                  await handleActualSave(payload);
+                  // 2. Save ONLY non-half-day items to attendance immediately.
+                  // Half-day attendance must NOT be written here — it will be
+                  // updated by the backend only after the manager approves the
+                  // leave request. Saving it now would bypass the approval flow.
+                  const nonHalfDayPayload = payload.filter(
+                    (item) =>
+                      !(
+                        item.status !== AttendanceStatus.FULL_DAY &&
+                        Number(item.totalHours) > 0 &&
+                        Number(item.totalHours) <= 6
+                      ),
+                  );
+
+                  if (nonHalfDayPayload.length > 0) {
+                    await handleActualSave(nonHalfDayPayload);
+                  } else {
+                    // Only half-day requests were submitted — just refresh the
+                    // UI so the pending leave requests become visible.
+                    refreshData();
+                    setManuallyEditedIndices(new Set());
+                    setLocalInputValues({});
+                    refreshDryRun();
+                    message.success("Requests submitted successfully");
+                  }
 
                   if (hasHalfDay) {
                     dispatch(
@@ -1325,11 +1465,8 @@ const MyTimesheet = ({
                     );
                   }
                 } catch (err: any) {
-                  setToast({
-                    show: true,
-                    message: "Failed to process requests",
-                    type: "error",
-                  });
+                  const errorMsg = cleanErrorMessage(err?.response?.data?.message || err?.message || "Failed to process requests");
+                  message.error(errorMsg);
                 }
               },
             });
@@ -1342,7 +1479,12 @@ const MyTimesheet = ({
       }
     } else {
       // Admin / Manager Logic
-      if (payload.length > 0) {
+      const hasImportantItems =
+        halfDayItems.length > 0 ||
+        absentItems.length > 0 ||
+        clearedItems.length > 0;
+
+      if (hasImportantItems) {
         Modal.confirm({
           title: null,
           icon: null,
@@ -1392,7 +1534,8 @@ const MyTimesheet = ({
                       const date = new Date(item.workingDate);
                       const isClear = item.totalHours === null;
                       const isUpcoming =
-                        (item.status || "").toUpperCase() === "UPCOMING";
+                        (item.status || "").toUpperCase() ===
+                        AttendanceStatus.UPCOMING;
 
                       // Check for Weekend/Holiday
                       const d_modal = new Date(item.workingDate);
@@ -1414,13 +1557,20 @@ const MyTimesheet = ({
                         return normHDate === dateStr_modal;
                       });
 
-                      const isWeekend = dayOfWeek_modal === 0 || dayOfWeek_modal === 6;
-                      const isNotUpdated = item.status === "Not Updated";
+                      const isWeekend =
+                        dayOfWeek_modal === 0 || dayOfWeek_modal === 6;
+                      const isNotUpdated =
+                        item.status === AttendanceStatus.NOT_UPDATED;
+                      const d_modal_obj = new Date(item.workingDate);
+                      const isSat_modal = d_modal_obj.getDay() === 6;
+                      const modalHours = Number(item.totalHours);
+
                       const isHalf =
                         !isClear &&
-                        Number(item.totalHours) > 0 &&
-                        Number(item.totalHours) <= 6;
-                      const isAbsent = item.status === "Absent";
+                        modalHours > 0 &&
+                        modalHours <= 6 &&
+                        !(isSat_modal && modalHours >= 4);
+                      const isAbsent = item.status === AttendanceStatus.ABSENT;
                       return (
                         <tr
                           key={idx}
@@ -1454,26 +1604,26 @@ const MyTimesheet = ({
                                 }`}
                               >
                                 {isHalf
-                                  ? "Half Day"
+                                  ? AttendanceStatus.HALF_DAY
                                   : isAbsent
-                                    ? "Absent"
+                                    ? AttendanceStatus.ABSENT
                                     : isClear || isNotUpdated || isUpcoming
                                       ? isHoliday_modal
                                         ? (
                                             isHoliday_modal.holidayName ||
                                             isHoliday_modal.name ||
-                                            "Holiday"
+                                            AttendanceStatus.HOLIDAY
                                           ).toUpperCase()
                                         : isWeekend
-                                          ? "Weekend"
+                                          ? AttendanceStatus.WEEKEND
                                           : isUpcoming
-                                            ? "Upcoming"
-                                            : "Not Updated"
-                                      : "Full Day"}
+                                            ? AttendanceStatus.UPCOMING
+                                            : AttendanceStatus.NOT_UPDATED
+                                      : AttendanceStatus.FULL_DAY}
                               </span>
                               <span className="text-[9px] font-bold text-gray-400 whitespace-nowrap">
                                 {isHalf
-                                  ? "First Half: Office | Second Half: Leave"
+                                  ? `First Half: ${OfficeLocation.OFFICE} | Second Half: ${AttendanceStatus.LEAVE}`
                                   : isAbsent
                                     ? "First Half: Absent | Second Half: Absent"
                                     : isClear || isNotUpdated || isUpcoming
@@ -1482,7 +1632,7 @@ const MyTimesheet = ({
                                         : isWeekend
                                           ? "Reverting to Weekend"
                                           : "Reset to system defaults"
-                                      : "First Half: Office | Second Half: Office"}
+                                      : `First Half: ${OfficeLocation.OFFICE} | Second Half: ${OfficeLocation.OFFICE}`}
                               </span>
                             </div>
                           </td>
@@ -1519,6 +1669,8 @@ const MyTimesheet = ({
           okText: "Process All Updates",
           cancelText: "Cancel",
           onCancel: () => {
+            setManuallyEditedIndices(new Set());
+            setLocalInputValues({});
             refreshData();
           },
           okButtonProps: {
@@ -1560,11 +1712,7 @@ const MyTimesheet = ({
       now.getMonth() !== today.getMonth() ||
       now.getFullYear() !== today.getFullYear()
     ) {
-      setToast({
-        show: true,
-        message: "Auto-update is only available for the current month.",
-        type: "error",
-      });
+      message.error("Auto-update is only available for the current month.");
       return;
     }
     setShowAutoUpdateModal(true);
@@ -1601,13 +1749,12 @@ const MyTimesheet = ({
       // Show success modal after data is refreshed so totals/calendar are already updated
       setUpdateResult(result);
       setShowSuccessModal(true);
+      refreshDryRun();
     } catch (err: any) {
       setShowAutoUpdateModal(false);
-      setToast({
-        show: true,
-        message: err?.message || "Failed to auto-update timesheet.",
-        type: "error",
-      });
+      const errorMsg = cleanErrorMessage(err?.response?.data?.message || err?.message || "Failed to auto-update timesheet.");
+      message.error(errorMsg);
+      refreshData();
     } finally {
       setIsAutoUpdating(false);
     }
@@ -1663,6 +1810,7 @@ const MyTimesheet = ({
         }
         autoUpdateCount={autoUpdateCount}
         blockers={blockers}
+        department={entity?.department || entity?.department_name || ""}
       />
     );
   }
@@ -1673,7 +1821,10 @@ const MyTimesheet = ({
     >
       <AutoUpdateModal
         isOpen={showAutoUpdateModal}
-        onClose={() => setShowAutoUpdateModal(false)}
+        onClose={() => {
+          setShowAutoUpdateModal(false);
+          refreshDryRun();
+        }}
         onConfirm={confirmAutoUpdate}
         monthName={now.toLocaleDateString("en-US", { month: "long" })}
         year={now.getFullYear()}
@@ -1681,7 +1832,10 @@ const MyTimesheet = ({
       />
       <AutoUpdateSuccessModal
         isOpen={showSuccessModal}
-        onClose={() => setShowSuccessModal(false)}
+        onClose={() => {
+          setShowSuccessModal(false);
+          refreshDryRun();
+        }}
         count={updateResult?.count || 0}
         monthName={now.toLocaleDateString("en-US", { month: "long" })}
         year={now.getFullYear()}
@@ -1691,26 +1845,7 @@ const MyTimesheet = ({
           <div className="animate-spin rounded-full h-10 w-10 border-b-4 border-[#4318FF]"></div>
         </div>
       )}
-      {toast.show && (
-        <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-50 flex items-center gap-2 animate-in fade-in slide-in-from-top-4 duration-300 px-4 py-2 bg-white rounded-full shadow-2xl border border-gray-100">
-          {toast.type === "success" ? (
-            <div className="p-1 bg-green-100 rounded-full">
-              <Save size={14} className="text-green-600" />
-            </div>
-          ) : (
-            <div className="p-1 bg-red-100 rounded-full">
-              <AlertCircle size={14} className="text-red-600" />
-            </div>
-          )}
-          <span
-            className={`font-bold text-sm ${
-              toast.type === "success" ? "text-green-700" : "text-red-600"
-            }`}
-          >
-            {toast.message}
-          </span>
-        </div>
-      )}
+      
 
       <div className="flex-1 bg-white rounded-[20px] p-4 shadow-[0px_20px_50px_0px_#111c440d] border border-gray-100 overflow-hidden mt-1 flex flex-col">
         {/* Header Controls */}
@@ -1846,7 +1981,7 @@ const MyTimesheet = ({
         <div className="flex items-center gap-x-6 gap-y-2 flex-nowrap overflow-x-auto pb-4 scrollbar-none px-2 mb-2">
           {[
             {
-              label: "Full Day",
+              label: AttendanceStatus.FULL_DAY,
               color: "bg-[#E6FFFA]",
               border: "border-[#01B574]",
             },
@@ -1856,12 +1991,12 @@ const MyTimesheet = ({
               border: "border-[#FFB020]",
             },
             {
-              label: "Absent",
+              label: AttendanceStatus.ABSENT,
               color: "bg-[#FECACA]",
               border: "border-[#DC2626]",
             },
             {
-              label: "Leave",
+              label: AttendanceStatus.LEAVE,
               color: "bg-[#FEE2E2]",
               border: "border-[#EE5D50]",
             },
@@ -1886,12 +2021,12 @@ const MyTimesheet = ({
               border: "border-transparent",
             },
             {
-              label: "Holiday",
+              label: AttendanceStatus.HOLIDAY,
               color: "bg-[#E6F7FF]",
               border: "border-[#00A3C4]",
             },
             {
-              label: "Pending",
+              label: AttendanceStatus.PENDING,
               color: "bg-[#F8FAFC]",
               border: "border-[#64748B]",
             },
@@ -1946,7 +2081,7 @@ const MyTimesheet = ({
             const inputValue =
               localInputValues[idx] !== undefined
                 ? localInputValues[idx]
-                : (day.totalHours === null || day.totalHours === undefined)
+                : day.totalHours === null || day.totalHours === undefined
                   ? ""
                   : day.totalHours.toString();
             const dateStr = `${day.fullDate.getFullYear()}-${String(
@@ -2010,7 +2145,7 @@ const MyTimesheet = ({
                 isManager ||
                 isCurrentOrNextMonth ||
                 isEditableMonth(day.fullDate) ||
-                day.status === "Absent") &&
+                day.status === AttendanceStatus.ABSENT) &&
               !isBlocked;
 
             // Helper to get consistent styles for any status string
@@ -2035,14 +2170,17 @@ const MyTimesheet = ({
                   border: "border-[#1890FF]/20",
                   text: "text-[#1890FF]",
                 };
-              if (s === "weekend" || s === "leave")
+              if (
+                s === AttendanceStatus.WEEKEND.toLowerCase() ||
+                s === AttendanceStatus.LEAVE.toLowerCase()
+              )
                 return {
                   bg: "bg-[#FEE2E2]",
                   badge: "bg-[#EE5D50]/70 text-white font-bold",
                   border: "border-[#EE5D50]/10",
                   text: "text-[#EE5D50]",
                 };
-              if (s === "full day")
+              if (s === AttendanceStatus.FULL_DAY.toLowerCase())
                 return {
                   bg: "bg-[#E6FFFA]",
                   badge: "bg-[#01B574] text-white font-bold",
@@ -2063,7 +2201,7 @@ const MyTimesheet = ({
                   border: "border-[#FFB020]/20",
                   text: "text-[#FFB020]",
                 };
-              if (s === "absent")
+              if (s === AttendanceStatus.ABSENT.toLowerCase())
                 return {
                   bg: "bg-[#FECACA]",
                   badge: "bg-[#DC2626]/70 text-white font-bold",
@@ -2135,23 +2273,43 @@ const MyTimesheet = ({
               isSaturday &&
               !day.workLocation &&
               (!day.status ||
-                ["Weekend", "Pending", "Not Updated"].includes(day.status));
+                [
+                  AttendanceStatus.WEEKEND,
+                  AttendanceStatus.PENDING,
+                  AttendanceStatus.NOT_UPDATED,
+                ].includes(day.status));
 
             // Determine Overall Styles (for border and badge)
             let displayStatus = day.status as string;
-            
+
             // Priority: If explicitly ABSENT, always show Absent
-            if (displayStatus === "Absent") {
-                // Keep it as Absent
-            }
-            else if ((holiday || (displayStatus as any) === "Holiday") && (!day.totalHours || Number(day.totalHours) === 0))
-              displayStatus = "Holiday";
-            else if ((isSunday && (!day.totalHours || Number(day.totalHours) === 0) && displayStatus !== "Absent") || isSaturdayWithNoData)
-              displayStatus = "Weekend";
-            // Check if status is "Weekend" (or potentially "Holiday") but hours exist -> force work status for display
-            else if (day.totalHours && Number(day.totalHours) > 0 && displayStatus !== "Absent" && displayStatus !== "Leave") {
-               const isSatFull = isSaturday && Number(day.totalHours) > 3;
-               displayStatus = (Number(day.totalHours) > 6 || isSatFull) ? "Full Day" : "Half Day";
+            if (displayStatus === AttendanceStatus.ABSENT) {
+              // Keep it as Absent
+            } else if (
+              (holiday ||
+                (displayStatus as any) === AttendanceStatus.HOLIDAY) &&
+              (!day.totalHours || Number(day.totalHours) === 0)
+            )
+              displayStatus = AttendanceStatus.HOLIDAY;
+            else if (
+              (isSunday &&
+                (!day.totalHours || Number(day.totalHours) === 0) &&
+                displayStatus !== AttendanceStatus.ABSENT) ||
+              isSaturdayWithNoData
+            )
+              displayStatus = AttendanceStatus.WEEKEND;
+            // Check if status is AttendanceStatus.WEEKEND (or potentially AttendanceStatus.HOLIDAY) but hours exist -> force work status for display
+            else if (
+              day.totalHours &&
+              Number(day.totalHours) > 0 &&
+              displayStatus !== AttendanceStatus.ABSENT &&
+              displayStatus !== AttendanceStatus.LEAVE
+            ) {
+              const isSatFull = isSaturday && Number(day.totalHours) > 3;
+              displayStatus =
+                Number(day.totalHours) > 6 || isSatFull
+                  ? AttendanceStatus.FULL_DAY
+                  : AttendanceStatus.HALF_DAY;
             }
 
             const overallStyles = getStatusStyles(
@@ -2235,12 +2393,12 @@ const MyTimesheet = ({
                     (!isAdmin &&
                       !isManager &&
                       !isCurrentOrNextMonth &&
-                      !isEditableMonth(day.fullDate))) && 
-                    displayStatus !== "Absent" && (
-                    <div className="p-1 rounded-full bg-red-50 text-red-500 border border-red-100 transition-transform hover:scale-110">
-                      <ShieldBan size={10} strokeWidth={2.5} />
-                    </div>
-                  )}
+                      !isEditableMonth(day.fullDate))) &&
+                    displayStatus !== AttendanceStatus.ABSENT && (
+                      <div className="p-1 rounded-full bg-red-50 text-red-500 border border-red-100 transition-transform hover:scale-110">
+                        <ShieldBan size={10} strokeWidth={2.5} />
+                      </div>
+                    )}
                 </div>
 
                 {/* Middle: Input Area */}
@@ -2273,7 +2431,7 @@ const MyTimesheet = ({
                               : "text-gray-800 text-3xl group-hover:scale-105 focus:scale-105"
                         }`}
                       placeholder={
-                        day.status === "Weekend" ||
+                        day.status === AttendanceStatus.WEEKEND ||
                         (day.status as any) === "WEEKEND" ||
                         holiday
                           ? "-"
@@ -2296,22 +2454,29 @@ const MyTimesheet = ({
                 <div
                   className={`w-full py-1.5 rounded-lg text-center text-[10px] font-black uppercase tracking-wider truncate px-1 shadow-sm z-10 mt-auto ${badgeClass}`}
                 >
-                  {displayStatus === "Absent"
+                  {displayStatus === AttendanceStatus.ABSENT
                     ? "ABSENT"
-                    : (holiday || displayStatus === "Holiday") && (!day.totalHours || Number(day.totalHours) === 0)
+                    : (holiday || displayStatus === AttendanceStatus.HOLIDAY) &&
+                        (!day.totalHours || Number(day.totalHours) === 0)
                       ? holiday?.holidayName || holiday?.name || "HOLIDAY"
-                    : (isSunday && (!day.totalHours || Number(day.totalHours) === 0) && displayStatus !== 'Absent') || (isSaturdayWithNoData && !day.workLocation)
-                      ? "WEEKEND"
-                      : displayStatus === "Leave"
-                        ? "LEAVE"
-                        : day.workLocation && (displayStatus as string) !== "Leave"
-                          ? day.workLocation
-                          : displayStatus === "Half Day" ||
-                              displayStatus === "WFH" ||
-                              displayStatus === "Client Visit" ||
-                              displayStatus === "Full Day"
-                            ? displayStatus
-                            : displayStatus || "UPCOMING"}
+                      : (isSunday &&
+                            (!day.totalHours || Number(day.totalHours) === 0) &&
+                            displayStatus !== AttendanceStatus.ABSENT) ||
+                          (isSaturdayWithNoData && !day.workLocation)
+                        ? "WEEKEND"
+                        : displayStatus === AttendanceStatus.LEAVE
+                          ? "LEAVE"
+                          : day.workLocation &&
+                              (displayStatus as string) !==
+                                AttendanceStatus.LEAVE
+                            ? day.workLocation
+                            : displayStatus === AttendanceStatus.HALF_DAY ||
+                                displayStatus === AttendanceStatus.WFH ||
+                                displayStatus ===
+                                  AttendanceStatus.CLIENT_VISIT ||
+                                displayStatus === AttendanceStatus.FULL_DAY
+                              ? displayStatus
+                              : displayStatus || AttendanceStatus.UPCOMING}
                 </div>
               </div>
             );

@@ -4,7 +4,6 @@ import { useAppDispatch, useAppSelector } from "../hooks";
 import { RootState } from "../store";
 import {
   fetchMonthlyAttendance,
-  AttendanceStatus,
   resetAttendanceState,
 } from "../reducers/employeeAttendance.reducer";
 import {
@@ -25,6 +24,7 @@ import {
   deleteBlocker,
 } from "../reducers/timesheetBlocker.reducer";
 import Toast from "../components/Toast";
+import { AttendanceStatus } from "../enums";
 
 const AdminEmployeeCalenderWrapper = () => {
   const { employeeId } = useParams<{ employeeId: string }>();
@@ -102,16 +102,19 @@ const AdminEmployeeCalenderWrapper = () => {
 
   // Calculate metrics
   const presentDays = records.filter(
-    (r) =>
-      r.status === AttendanceStatus.FULL_DAY ||
-      r.status === AttendanceStatus.HALF_DAY,
+    (r: any) =>
+      (r.status || r.attendance_status) === AttendanceStatus.FULL_DAY ||
+      (r.status || r.attendance_status) === AttendanceStatus.HALF_DAY,
   ).length;
 
   const totalHours = records.reduce(
-    (acc, curr) => acc + (curr.totalHours || 0),
+    (acc, curr: any) => {
+      const hours = curr.totalHours ?? curr.total_hours ?? 0;
+      return acc + Number(hours);
+    },
     0,
   );
-  const avgHours = (typeof totalHours === 'number' && !isNaN(totalHours)) ? totalHours.toFixed(1) : '0.0';
+  const formattedTotalHours = (typeof totalHours === 'number' && !isNaN(totalHours)) ? totalHours.toFixed(1) : '0.0';
 
   const handleBack = () => {
     // Extract month and year to pass back to the list
@@ -235,7 +238,7 @@ const AdminEmployeeCalenderWrapper = () => {
                 </p>
                 <div className="flex items-baseline gap-2">
                   <h3 className="text-xl md:text-3xl font-black text-[#2B3674]">
-                    {avgHours}
+                    {formattedTotalHours}
                   </h3>
                   <span className="text-[10px] font-bold text-[#4318FF] bg-[#F4F7FE] px-2 py-0.5 rounded-full">
                     Hours

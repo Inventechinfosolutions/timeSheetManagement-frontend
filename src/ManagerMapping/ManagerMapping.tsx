@@ -16,6 +16,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { RootState } from "../store";
+import { UserType , UserStatus} from "../enums";
 import {
   getEntities,
   getEntitiesSelect,
@@ -46,7 +47,7 @@ interface ManagerMapping {
   employeeId: string;
   employeeName: string;
   department: string;
-  status: "ACTIVE" | "INACTIVE";
+  status: UserStatus.ACTIVE | "INACTIVE";
   createdDate: string;
 }
 
@@ -123,7 +124,7 @@ const ManagerMapping: React.FC = () => {
       dispatch(
         getEntitiesSelect({
           department: dept,
-          role: "EMPLOYEE",
+          role: UserType.EMPLOYEE,
           search: debouncedSearchText || undefined,
         }),
       );
@@ -200,7 +201,7 @@ const ManagerMapping: React.FC = () => {
     // Fetch employees for selected department to assign
     const dept =
       selectedDepartment === "All Departments" ? undefined : selectedDepartment;
-    dispatch(getEntitiesSelect({ department: dept, role: "EMPLOYEE" }));
+    dispatch(getEntitiesSelect({ department: dept, role: UserType.EMPLOYEE }));
   };
 
   const toggleEmployeeSelection = (employeeId: string) => {
@@ -233,7 +234,7 @@ const ManagerMapping: React.FC = () => {
           employeeId: employee.employeeId,
           employeeName: employee.fullName,
           department: selectedDepartment,
-          status: "ACTIVE",
+          status: UserStatus.ACTIVE,
         }),
       );
     }
@@ -276,10 +277,26 @@ const ManagerMapping: React.FC = () => {
                 className="w-full flex items-center justify-between px-4 py-3 bg-white border border-gray-200 rounded-xl text-[#2B3674] font-medium hover:border-[#4318FF] transition-colors"
               >
                 <span>{selectedDepartment || "Select Department"}</span>
-                <ChevronDown
-                  size={20}
-                  className={`text-[#A3AED0] transition-transform ${isDeptDropdownOpen ? "rotate-180" : ""}`}
-                />
+                <div className="flex items-center gap-1">
+                  {selectedDepartment && (
+                    <span
+                      role="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleClear();
+                        setIsDeptDropdownOpen(false);
+                      }}
+                      className="p-1 rounded-full hover:bg-red-50 text-[#A3AED0] hover:text-red-500 transition-colors"
+                      title="Clear department"
+                    >
+                      <X size={16} />
+                    </span>
+                  )}
+                  <ChevronDown
+                    size={20}
+                    className={`text-[#A3AED0] transition-transform ${isDeptDropdownOpen ? "rotate-180" : ""}`}
+                  />
+                </div>
               </button>
               {isDeptDropdownOpen && (
                 <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50 max-h-64 overflow-y-auto">
@@ -310,24 +327,41 @@ const ManagerMapping: React.FC = () => {
             <label className="block text-sm font-bold text-[#2B3674] mb-2">
               Manager
             </label>
-            <select
-              value={selectedManager?.id || ""}
-              onChange={(e) => {
-                const manager = availableManagers.find(
-                  (m) => String(m.id) === e.target.value,
-                );
-                if (manager) handleManagerSelect(manager);
-              }}
-              disabled={selectedDepartment === "All Departments"}
-              className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-[#2B3674] font-medium hover:border-[#4318FF] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <option value="">Select Manager</option>
-              {availableManagers.map((manager) => (
-                <option key={manager.id} value={manager.id}>
-                  {manager.fullName} ({manager.employeeId})
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                value={selectedManager?.id || ""}
+                onChange={(e) => {
+                  const manager = availableManagers.find(
+                    (m) => String(m.id) === e.target.value,
+                  );
+                  if (manager) handleManagerSelect(manager);
+                }}
+                disabled={selectedDepartment === "All Departments"}
+                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-[#2B3674] font-medium hover:border-[#4318FF] transition-colors disabled:opacity-50 disabled:cursor-not-allowed pr-10"
+              >
+                <option value="">Select Manager</option>
+                {availableManagers.map((manager) => (
+                  <option key={manager.id} value={manager.id}>
+                    {manager.fullName} ({manager.employeeId})
+                  </option>
+                ))}
+              </select>
+              {selectedManager && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedManager(null);
+                    setAssignedEmployees([]);
+                    setSelectedEmployees([]);
+                  }}
+                  className="absolute right-8 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-red-50 text-[#A3AED0] hover:text-red-500 transition-colors"
+                  title="Clear manager"
+                  type="button"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -751,7 +785,7 @@ const ManagerMapping: React.FC = () => {
                       <td className="py-4 px-4 text-center">
                         <span
                           className={`inline-flex px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider border ${
-                            mapping.status === "ACTIVE"
+                            mapping.status === UserStatus.ACTIVE
                               ? "bg-green-50 text-green-500 border-green-100"
                               : "bg-red-50 text-red-500 border-red-100"
                           }`}
@@ -766,14 +800,14 @@ const ManagerMapping: React.FC = () => {
                               `/admin-dashboard/manager-employees/${mapping.managerId}`,
                             )
                           }
-                          disabled={mapping.status === "INACTIVE"}
+                          disabled={mapping.status === UserStatus.INACTIVE}
                           className={`inline-flex items-center gap-2 bg-transparent border-none cursor-pointer text-[#4318FF] text-sm font-bold transition-all ${
-                            mapping.status === "INACTIVE"
+                            mapping.status === UserStatus.INACTIVE
                               ? "opacity-30 cursor-not-allowed"
                               : "hover:underline hover:scale-105 active:scale-95"
                           }`}
                           title={
-                            mapping.status === "INACTIVE"
+                            mapping.status === UserStatus.INACTIVE
                               ? "Cannot view inactive manager team"
                               : "View mapped employees"
                           }

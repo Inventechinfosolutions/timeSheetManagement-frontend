@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Save, Lock, Rocket } from "lucide-react";
 
 import { TimesheetEntry } from "../types";
 import { TimesheetBlocker } from "../reducers/timesheetBlocker.reducer";
+import { AttendanceStatus, Department } from "../enums";
 
 interface MobileMyTimesheetProps {
   currentWeekEntries: { entry: TimesheetEntry; originalIndex: number }[];
@@ -30,6 +31,7 @@ interface MobileMyTimesheetProps {
   selectedDateId: number | null;
   isHighlighted: boolean;
   containerClassName?: string;
+  department?: string;
 }
 
 const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
@@ -58,6 +60,7 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
   selectedDateId,
   isHighlighted,
   containerClassName,
+  department,
 }) => {
   // Sort entries to match Sun-Sat order (0-6)
   const sortedEntries = [...currentWeekEntries].sort((a, b) => {
@@ -158,7 +161,16 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
                 return d >= start && d <= end;
               });
 
-              const isBlocked = !!blocker;
+              const manualBlocker = blocker;
+              const isStatusLeave = entry.status === AttendanceStatus.LEAVE;
+              
+              const dObj = new Date(entry.fullDate);
+              const dayOfWeek = dObj.getDay();
+              
+              let isDeptBlocked = false;
+              if (dayOfWeek === 0) isDeptBlocked = true;
+
+              const isBlocked = !!manualBlocker || (!isAdmin && !isManager && (isStatusLeave || isDeptBlocked || isHoliday(entry.fullDate)));
               
               const isEditable =
                 (isAdmin || !readOnly) &&
@@ -182,18 +194,18 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
               ) {
                 bg =
                   "bg-green-100 border border-green-500 text-black font-bold";
-              } else if (entry.status === "Half Day") {
+              } else if (entry.status === AttendanceStatus.HALF_DAY) {
                 bg =
                   "bg-orange-100 border border-orange-600 text-black font-bold";
-              } else if (entry.status === "Leave") {
+              } else if (entry.status === AttendanceStatus.LEAVE) {
                 bg = "bg-red-200 border border-red-600 text-black font-bold";
-              } else if (isHolidayDate || entry.status === "Holiday") {
+              } else if (isHolidayDate || entry.status === AttendanceStatus.HOLIDAY) {
                 bg = "bg-blue-100 border border-blue-500 text-black font-bold";
               } else if (entry.isWeekend) {
                 bg = "bg-pink-100 border border-pink-400 text-black font-bold";
               } else if (
-                entry.status === "Not Updated" ||
-                entry.status === "Pending"
+                entry.status === AttendanceStatus.NOT_UPDATED ||
+                entry.status === AttendanceStatus.PENDING
               ) {
                 bg = "bg-white border border-gray-300 text-gray-600 font-bold";
               }
@@ -270,7 +282,9 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
                       <div className="absolute inset-0 z-20 bg-black/40 backdrop-blur-[2px] rounded-xl flex flex-col items-center justify-center p-1 text-center pointer-events-none">
                          <Lock size={12} className="text-white mb-0.5" />
                          <span className="text-[7px] font-black text-white leading-none uppercase tracking-tighter">
-                           Contact {blocker?.blockedBy || "Admin"}
+                           {manualBlocker 
+                             ? (isAdmin || isManager ? "Unblock" : `Contact ${manualBlocker.blockedBy || "Admin"}`)
+                             : "On Leave"}
                          </span>
                       </div>
                     )}
@@ -295,10 +309,10 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
           { label: "Present", className: "bg-green-100 border-green-600" },
           { label: "WFH", className: "bg-blue-100 border-blue-600" },
           { label: "Client Visit", className: "bg-blue-100 border-blue-600" },
-          { label: "Half Day Leave", className: "bg-orange-100 border-orange-600" },
-          { label: "Leave", className: "bg-red-200 border-red-600" },
-          { label: "Not Updated", className: "bg-white border-gray-300" },
-          { label: "Holiday", className: "bg-blue-100 border-blue-500" },
+          { label: AttendanceStatus.HALF_DAY, className: "bg-orange-100 border-orange-600" },
+          { label: AttendanceStatus.LEAVE, className: "bg-red-200 border-red-600" },
+          { label: AttendanceStatus.NOT_UPDATED, className: "bg-white border-gray-300" },
+          { label: AttendanceStatus.HOLIDAY, className: "bg-blue-100 border-blue-500" },
           { label: "Today", className: "bg-white border-2 border-[#4318FF]" },
           { label: "Blocked", className: "bg-gray-200 border-gray-400" },
         ].map((item) => (

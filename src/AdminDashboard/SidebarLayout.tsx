@@ -21,6 +21,7 @@ import { useDispatch } from "react-redux";
 import { AppDispatch } from "../store";
 import { getEntities } from "../reducers/employeeDetails.reducer";
 import { logoutUser } from "../reducers/user.reducer";
+import ApiLoadingSpinner from "../components/ApiLoadingSpinner";
 
 interface SidebarLayoutProps {
   children: React.ReactNode;
@@ -463,7 +464,7 @@ const SidebarLayout = ({
           <div className="relative group">
             <button
               onClick={handleLogout}
-              className={`w-full flex items-center p-3 rounded-2xl cursor-pointer transition-all duration-300 relative overflow-hidden group hover:bg-white/10 text-blue-100 hover:text-white
+              className={`w-full flex items-center p-3 rounded-2xl cursor-pointer transition-all duration-300 relative overflow-hidden group bg-white text-red-600 hover:bg-red-50
                         ${
                           isOpen
                             ? "gap-4 px-4"
@@ -471,7 +472,7 @@ const SidebarLayout = ({
                         }
                     `}
             >
-              <div className="shrink-0 relative z-10 transition-transform duration-300">
+              <div className="shrink-0 relative z-10 transition-transform duration-300 text-red-600">
                 <LogOut className="w-5 h-5 transition-colors duration-300 group-hover:scale-110" />
               </div>
               <span
@@ -501,7 +502,10 @@ const SidebarLayout = ({
         ref={mainContentRef}
         className="flex-1 min-h-0 h-full relative no-scrollbar flex flex-col bg-[#F4F7FE] overflow-auto"
       >
-        {children}
+        <div className="relative flex-1 min-h-0 flex flex-col">
+          {children}
+          <ApiLoadingSpinner contained />
+        </div>
       </main>
     </div>
   );

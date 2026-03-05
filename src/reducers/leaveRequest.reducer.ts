@@ -1,5 +1,6 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
+import { LeaveRequestStatus } from "../enums";
 
 const apiUrl = "/api/leave-requests";
 
@@ -12,8 +13,10 @@ export interface LeaveRequest {
   toDate: string;
   title: string;
   description: string;
-  status: "Pending" | "Approved" | "Rejected" | "Cancelled" | "Requesting for Cancellation" | "Cancellation Approved" | "Cancellation Rejected" | "Request Modified" | "Requesting for Modification" | "Modification Approved" | "Modification Cancelled" | "Modification Rejected";
+  status: LeaveRequestStatus;
   created_at?: string;
+  createdAt?: string;
+  updatedAt?: string;
   submittedDate?: string;
   duration?: number;
   department?: string;
@@ -27,6 +30,12 @@ export interface LeaveRequest {
   isModified?: boolean;
   modificationCount?: number;
   lastModifiedDate?: string | null;
+  /** Additional CC emails (from API as array or JSON string) */
+  ccEmails?: string[];
+  /** From GET /leave-requests/:id or email-config */
+  assignedManagerEmail?: string | null;
+  hrEmail?: string | null;
+  documentKeys?: string[];
 }
 
 export interface LeaveBalanceResponse {
@@ -90,15 +99,15 @@ const initialState: LeaveRequestState = {
 export const getAllLeaveRequests = createAsyncThunk(
   "leaveRequest/getAll",
   async (
-    filters: { 
+    filters: {
       employeeId?: string;
-      department?: string; 
-      status?: string; 
-      search?: string; 
+      department?: string;
+      status?: string;
+      search?: string;
       month?: string;
       year?: string;
-      page?: number; 
-      limit?: number 
+      page?: number;
+      limit?: number
     } = {},
     { rejectWithValue }
   ) => {
@@ -112,6 +121,7 @@ export const getAllLeaveRequests = createAsyncThunk(
       if (filters.year) params.append("year", filters.year);
       if (filters.page) params.append("page", filters.page.toString());
       if (filters.limit) params.append("limit", filters.limit.toString());
+      params.append("_t", new Date().getTime().toString()); // Cache buster
 
       const response = await axios.get(`${apiUrl}?${params.toString()}`);
       return response.data;
@@ -135,7 +145,7 @@ export const getLeaveBalance = createAsyncThunk(
     try {
       const year = String(params.year || new Date().getFullYear());
       const response = await axios.get(
-        `${apiUrl}/balance/${params.employeeId}?year=${year}`
+        `${apiUrl}/balance/${params.employeeId}?year=${year}&_t=${new Date().getTime()}`
       );
       return response.data;
     } catch (error: any) {
@@ -154,7 +164,7 @@ export const getMonthlyLeaveBalance = createAsyncThunk(
     try {
       const { employeeId, month, year } = params;
       const response = await axios.get(
-        `${apiUrl}/monthly-balance/${employeeId}?month=${month}&year=${year}`
+        `${apiUrl}/monthly-balance/${employeeId}?month=${month}&year=${year}&_t=${new Date().getTime()}`
       );
       return response.data;
     } catch (error: any) {
@@ -173,6 +183,7 @@ export const getLeaveStats = createAsyncThunk(
       if (month) queryParams.append("month", month);
       if (year) queryParams.append("year", year);
 
+      queryParams.append("_t", new Date().getTime().toString());
       const response = await axios.get(`${apiUrl}/stats/${employeeId}?${queryParams.toString()}`);
       return response.data;
     } catch (error: any) {
@@ -333,6 +344,19 @@ export const getLeaveRequestById = createAsyncThunk(
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data || "Failed to fetch request details");
+    }
+  }
+);
+
+// Async Thunk for Leave Request Email Config (assigned manager + HR for form)
+export const getLeaveRequestEmailConfig = createAsyncThunk(
+  "leaveRequest/getEmailConfig",
+  async (employeeId: string, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`${apiUrl}/email-config?employeeId=${encodeURIComponent(employeeId)}`);
+      return response.data as { assignedManagerEmail: string | null; hrEmail: string | null };
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to fetch email config");
     }
   }
 );
@@ -574,7 +598,7 @@ const leaveRequestSlice = createSlice({
         state.entities[index].status = updatedItem.status;
       }
     });
-    
+
     // Cancel Approved Request
     builder.addCase(cancelApprovedLeaveRequest.fulfilled, (state, action) => {
       const updatedItem = action.payload;

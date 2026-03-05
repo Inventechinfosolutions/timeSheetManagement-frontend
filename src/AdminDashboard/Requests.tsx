@@ -34,18 +34,21 @@ import {
   clearAttendanceForRequest,
   clearRequests,
   LeaveRequest,
+  getLeaveRequestEmailConfig,
 } from "../reducers/leaveRequest.reducer";
 import { getEntity } from "../reducers/employeeDetails.reducer";
 // } from "../reducers/leaveRequest.reducer";
+import { fetchAttendanceByDateRange } from "../reducers/employeeAttendance.reducer";
 import {
+  WorkLocation,
+  LeaveRequestStatus,
   AttendanceStatus,
-  fetchAttendanceByDateRange,
-} from "../reducers/employeeAttendance.reducer";
-import { fetchUnreadNotifications } from "../reducers/leaveNotification.reducer";
+  LeaveRequestType,
+} from "../enums";
 import CommonMultipleUploader from "../EmployeeDashboard/CommonMultipleUploader";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import dayjs from "dayjs";
-import { notification, Select, Modal } from "antd";
+import { message, Select, Modal } from "antd";
 import { fetchDepartments } from "../reducers/masterDepartment.reducer";
 
 const Requests = () => {
@@ -57,6 +60,14 @@ const Requests = () => {
     : "/admin-dashboard";
   const dispatch = useAppDispatch();
   const { entities, loading } = useAppSelector((state) => state.leaveRequest);
+
+  // Configure AntD message position to be below the header
+  useEffect(() => {
+    message.config({
+      top: 70,
+      duration: 3,
+    });
+  }, []);
   const { holidays = [] } = useAppSelector(
     (state: any) => state.masterHolidays || {},
   );
@@ -71,6 +82,11 @@ const Requests = () => {
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [selectedOwnerId, setSelectedOwnerId] = useState<number | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [emailConfig, setEmailConfig] = useState<{
+    assignedManagerEmail: string | null;
+    hrEmail: string | null;
+  }>({ assignedManagerEmail: null, hrEmail: null });
+  const [ccEmails, setCcEmails] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -84,25 +100,25 @@ const Requests = () => {
     isOpen: boolean;
     id: number | null;
     status:
-      | "Approved"
-      | "Rejected"
-      | "Cancellation Approved"
-      | "Reject Cancellation"
-      | "Modification Approved"
-      | "Modification Rejected"
-      | null;
+    | LeaveRequestStatus.APPROVED
+    | LeaveRequestStatus.REJECTED
+    | LeaveRequestStatus.CANCELLATION_APPROVED
+    | LeaveRequestStatus.CANCELLATION_REJECTED
+    | LeaveRequestStatus.MODIFICATION_APPROVED
+    | LeaveRequestStatus.MODIFICATION_REJECTED
+    | null;
     employeeName: string;
   }>({ isOpen: false, id: null, status: null, employeeName: "" });
 
   const handleUpdateStatus = (
     id: number,
     status:
-      | "Approved"
-      | "Rejected"
-      | "Cancellation Approved"
-      | "Reject Cancellation"
-      | "Modification Approved"
-      | "Modification Rejected",
+      | LeaveRequestStatus.APPROVED
+      | LeaveRequestStatus.REJECTED
+      | LeaveRequestStatus.CANCELLATION_APPROVED
+      | LeaveRequestStatus.CANCELLATION_REJECTED
+      | LeaveRequestStatus.MODIFICATION_APPROVED
+      | LeaveRequestStatus.MODIFICATION_REJECTED,
     employeeName: string,
   ) => {
     setConfirmModal({ isOpen: true, id, status, employeeName });
@@ -129,7 +145,7 @@ const Requests = () => {
   const currentYear = dayjs().year();
   const years = [
     "All",
-    ...Array.from({ length: 11 }, (_, i) => (currentYear + 5 - i).toString()),
+    ...Array.from({ length: 6 }, (_, i) => (currentYear + i).toString()),
   ];
 
   // const departments = [
@@ -219,18 +235,28 @@ const Requests = () => {
   const filteredRequests = (entities || []).filter((req) => {
     if (!debouncedSearchTerm) return true;
     const s = debouncedSearchTerm.toLowerCase().trim();
-    // Normalize search for common aliases (e.g. "wfh" -> "work from home")
-    const searchNorm = s === "wfh" ? "work from home" : s;
-    // Match request type and display variants (Half Day Leave, Client Visit, etc.)
+
+    // Normalize request types for searching
     const requestTypeLower = (req.requestType || "").toLowerCase();
-    const halfDayLeave = req.requestType === "Half Day" ? "half day leave" : "";
-    const firstHalf = (req.firstHalf || "").toLowerCase().replace("apply leave", "leave");
-    const secondHalf = (req.secondHalf || "").toLowerCase().replace("apply leave", "leave");
+    const halfDayLeave = req.isHalfDay ? "half day leave" : "";
+    const firstHalf = (req.firstHalf || "")
+      .toLowerCase()
+      .replace("apply leave", "leave");
+    const secondHalf = (req.secondHalf || "")
+      .toLowerCase()
+      .replace("apply leave", "leave");
+
+    // Search normalization for aliases
+    const searchNorm = s
+      .replace("wfh", "work from home")
+      .replace("cv", "client visit");
+
     const matchesRequestType =
       requestTypeLower.includes(searchNorm) ||
       halfDayLeave.includes(searchNorm) ||
       firstHalf.includes(searchNorm) ||
       secondHalf.includes(searchNorm);
+
     return (
       (req.fullName && req.fullName.toLowerCase().includes(s)) ||
       (req.employeeId && req.employeeId.toLowerCase().includes(s)) ||
@@ -274,9 +300,7 @@ const Requests = () => {
       const status = record.status || record.attendance_status;
       return (
         normalizedRecordDate === dateStr &&
-        (status === AttendanceStatus.LEAVE ||
-          status === "Leave" ||
-          status === "LEAVE")
+        (status === AttendanceStatus.LEAVE || status === "LEAVE")
       );
     });
   };
@@ -328,7 +352,7 @@ const Requests = () => {
 
   const executeStatusUpdate = async () => {
     if (!confirmModal.id || !confirmModal.status) return;
-    const { id, status, employeeName } = confirmModal;
+    const { id, status } = confirmModal;
 
     setIsProcessing(true);
     try {
@@ -336,18 +360,13 @@ const Requests = () => {
       if (!request) return;
 
       // HANDLE REJECTION
-      if (status === "Reject Cancellation") {
+      if (status === LeaveRequestStatus.CANCELLATION_REJECTED) {
         if (request.employeeId) {
           await dispatch(
             rejectCancellationRequest({ id, employeeId: request.employeeId }),
           ).unwrap();
 
-          notification.success({
-            message: "Cancellation Rejected",
-            description: `Cancellation request was rejected for ${employeeName}`,
-            placement: "topRight",
-            duration: 3,
-          });
+          message.success("Cancellation Rejected");
         }
         setConfirmModal({
           isOpen: false,
@@ -359,7 +378,7 @@ const Requests = () => {
       }
 
       // --- REFINED: Handle Overlaps for Approval ---
-      if (status === "Approved") {
+      if (status === LeaveRequestStatus.APPROVED) {
         // Define which request types this approval should victimize (modify) if overlapping
         let victimTypes: string[] = [];
         const reqType = (request.requestType || "").toLowerCase();
@@ -386,8 +405,8 @@ const Requests = () => {
           .filter(
             (e) =>
               e.employeeId?.toLowerCase() ===
-                request.employeeId?.toLowerCase() &&
-              e.status === "Approved" &&
+              request.employeeId?.toLowerCase() &&
+              e.status === LeaveRequestStatus.APPROVED &&
               victimTypes.includes((e.requestType || "").toLowerCase()) &&
               e.id !== request.id,
           )
@@ -450,7 +469,7 @@ const Requests = () => {
               await dispatch(
                 updateLeaveRequestStatus({
                   id: victim.id,
-                  status: "Cancelled",
+                  status: LeaveRequestStatus.CANCELLED,
                 }),
               ).unwrap();
             } else {
@@ -502,7 +521,7 @@ const Requests = () => {
                 await dispatch(
                   updateLeaveRequestStatus({
                     id: victim.id,
-                    status: "Cancelled",
+                    status: LeaveRequestStatus.CANCELLED,
                   }),
                 ).unwrap();
 
@@ -517,7 +536,7 @@ const Requests = () => {
                         sourceRequestId: request.id,
                         sourceRequestType: request.requestType,
                         // Use a flag or specific status in backend to mark this as an Approved segment split
-                        overrideStatus: "Approved",
+                        overrideStatus: LeaveRequestStatus.APPROVED,
                       },
                     }),
                   ).unwrap();
@@ -532,7 +551,7 @@ const Requests = () => {
       await dispatch(updateLeaveRequestStatus({ id, status })).unwrap();
 
       // 1.1 Explicit Attendance Clearance for Visibility in Network Logs
-      if (status === "Cancellation Approved") {
+      if (status === LeaveRequestStatus.CANCELLATION_APPROVED) {
         try {
           if (request?.employeeId) {
             await dispatch(
@@ -552,7 +571,7 @@ const Requests = () => {
       }
 
       // 2. Smart Cancellation Logic (Only if Cancellation Approved)
-      if (status === "Cancellation Approved" && request) {
+      if (status === LeaveRequestStatus.CANCELLATION_APPROVED && request) {
         // Find the parent request (Approved, matching employee, covering dates)
         const childRequest = request;
         const childStart = dayjs(childRequest.fromDate);
@@ -561,7 +580,7 @@ const Requests = () => {
         const masterRequest = entities.find(
           (e) =>
             e.employeeId === childRequest.employeeId &&
-            e.status === "Approved" &&
+            e.status === LeaveRequestStatus.APPROVED &&
             e.id !== childRequest.id &&
             (dayjs(e.fromDate).isSame(childStart, "day") ||
               dayjs(e.fromDate).isBefore(childStart, "day")) &&
@@ -575,7 +594,8 @@ const Requests = () => {
           const allCancelledRequests = entities.filter(
             (e) =>
               e.employeeId === masterRequest.employeeId &&
-              (e.status === "Cancellation Approved" || e.id === id) &&
+              (e.status === LeaveRequestStatus.CANCELLATION_APPROVED ||
+                e.id === id) &&
               (dayjs(e.fromDate).isAfter(dayjs(masterRequest.fromDate)) ||
                 dayjs(e.fromDate).isSame(
                   dayjs(masterRequest.fromDate),
@@ -615,27 +635,20 @@ const Requests = () => {
           const validWorkingDates = validDates.filter((d) => {
             const dObj = dayjs(d);
             if (
-              masterRequest.requestType === "Apply Leave" ||
-              masterRequest.requestType === "Leave" ||
-              masterRequest.requestType === "Work From Home" ||
-              masterRequest.requestType === "Client Visit"
+              masterRequest.requestType === WorkLocation.WORK_FROM_HOME ||
+              masterRequest.requestType === LeaveRequestType.WFH ||
+              masterRequest.requestType === WorkLocation.CLIENT_VISIT ||
+              masterRequest.requestType === LeaveRequestType.CLIENT_VISIT ||
+              masterRequest.requestType === LeaveRequestType.APPLY_LEAVE ||
+              masterRequest.requestType === LeaveRequestType.LEAVE
             ) {
-              return (
-                !isWeekend(dObj) && !isHoliday(dObj)
-              );
+              return !isWeekend(dObj) && !isHoliday(dObj);
             }
             return true;
           });
 
           if (validWorkingDates.length === 0) {
-            // CASE: All working dates cancelled -> Set Parent to 'Cancellation Approved'
-            await dispatch(
-              updateLeaveRequestStatus({
-                id: masterRequest.id,
-                status: "Cancellation Approved",
-              }),
-            ).unwrap();
-
+            // CASE: All working dates cancelled -> Do not change parent status to 'Cancellation Approved' (keep as Approved), but set duration to 0
             await dispatch(
               updateParentRequest({
                 parentId: masterRequest.id,
@@ -666,12 +679,17 @@ const Requests = () => {
       // [REMOVED] Redundant frontend attendance updates.
       // Synchronization is now handled exclusively by the backend in LeaveRequestsService.updateStatus.
 
-      notification.success({
-        message: "Status Updated",
-        description: `Request for ${employeeName} has been ${status.toLowerCase()}`,
-        placement: "topRight",
-        duration: 3,
-      });
+      const statusMessages: Record<string, string> = {
+        [LeaveRequestStatus.APPROVED]: "Request Approved",
+        [LeaveRequestStatus.REJECTED]: "Request Rejected",
+        [LeaveRequestStatus.MODIFICATION_APPROVED]: "Modification Approved",
+        [LeaveRequestStatus.MODIFICATION_REJECTED]: "Modification Rejected",
+        [LeaveRequestStatus.CANCELLATION_APPROVED]: "Cancellation Approved",
+        [LeaveRequestStatus.CANCELLATION_REJECTED]: "Cancellation Rejected",
+
+      };
+
+      message.success(statusMessages[status] || `Request ${status}`);
 
       // Close modal
       setConfirmModal({
@@ -694,11 +712,7 @@ const Requests = () => {
         }),
       );
     } catch (err: any) {
-      notification.error({
-        message: "Update Failed",
-        description: err.message || "Failed to update request status",
-        placement: "topRight",
-      });
+      message.error(`Update Failed: ${err.message || "Failed to update request status"}`);
     } finally {
       setIsProcessing(false);
     }
@@ -706,34 +720,39 @@ const Requests = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "Approved":
-      case "Cancellation Approved":
-      case "Modification Approved":
+      case LeaveRequestStatus.APPROVED:
+      case LeaveRequestStatus.CANCELLATION_APPROVED:
+      case LeaveRequestStatus.MODIFICATION_APPROVED:
         return "bg-green-50 text-green-600 border-green-200";
-      case "Modification Cancelled":
+      case LeaveRequestStatus.MODIFICATION_CANCELLED:
         return "bg-orange-100 text-orange-600 border-orange-200";
-      case "Rejected":
-      case "Cancellation Rejected":
-      case "Modification Rejected":
+      case LeaveRequestStatus.REJECTED:
+      case LeaveRequestStatus.CANCELLATION_REJECTED:
+      case LeaveRequestStatus.MODIFICATION_REJECTED:
+      case LeaveRequestStatus.CANCELLED:
         return "bg-red-50 text-red-600 border-red-200";
-      case "Requesting for Cancellation":
+      case LeaveRequestStatus.CANCELLATION_REVERTED:
+        return "bg-yellow-50 text-yellow-600 border-yellow-200";
+      case LeaveRequestStatus.REQUESTING_FOR_CANCELLATION:
         return "bg-orange-100 text-orange-600 border-orange-200";
-      case "Requesting for Modification":
+      case LeaveRequestStatus.REQUESTING_FOR_MODIFICATION:
         return "bg-orange-100 text-orange-600 border-orange-200";
-      case "Request Modified":
+      case LeaveRequestStatus.REQUEST_MODIFIED:
         return "bg-orange-100 text-orange-600 border-orange-200";
       default:
         return "bg-yellow-50 text-yellow-600 border-yellow-200";
     }
   };
 
-  const getIcon = (type: string) => {
+  // Placeholder if needed later, currently logic is inlined in table
+  const _getIcon = (type: string) => {
     switch (type) {
-      case "Work From Home":
+      case WorkLocation.WFH:
+      case WorkLocation.WORK_FROM_HOME:
         return <Home size={18} className="text-green-500" />;
-      case "Client Visit":
+      case WorkLocation.CLIENT_VISIT:
         return <MapPin size={18} className="text-orange-500" />;
-      case "Half Day":
+      case AttendanceStatus.HALF_DAY:
         return <Clock size={18} className="text-[#E31C79]" />;
       default:
         return <Briefcase size={18} className="text-blue-500" />;
@@ -754,16 +773,17 @@ const Requests = () => {
       </div>
 
       {/* Filters Area */}
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
-        <div className="relative flex-1 group">
+      <div className="flex flex-col gap-4 mb-6">
+        {/* Search Bar Row */}
+        <div className="relative w-full md:w-[400px] group">
           <Search
             className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#4318FF] transition-colors"
             size={20}
           />
           <input
             type="text"
-            placeholder="Search by name, ID, title or request type..."
-            className="w-full pl-12 pr-10 py-3 bg-white rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-[#4318FF] transition-all text-[#2B3674] font-medium placeholder:text-gray-300"
+            placeholder="Search by name or employee ID..."
+            className="w-full pl-12 pr-10 py-3 bg-white rounded-2xl border-none outline-none shadow-sm focus:ring-2 focus:ring-[#4318FF] transition-all text-[#2B3674] font-medium placeholder:text-gray-300"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -777,83 +797,82 @@ const Requests = () => {
           )}
         </div>
 
-        {/* Department Filter Dropdown */}
-        {basePath === "/admin-dashboard" && (
-          <div className="relative">
-            <button
-              onClick={() => setIsDeptOpen(!isDeptOpen)}
-              className={`flex items-center gap-3 px-5 py-3 bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all text-sm font-bold ${selectedDept !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
-            >
-              <Filter
-                size={18}
-                className={
-                  selectedDept !== "All" ? "text-[#4318FF]" : "text-gray-400"
-                }
-              />
-              <span>
-                {selectedDept === "All" ? "All Departments" : selectedDept}
-              </span>
-              <ChevronDown
-                size={18}
-                className={`transition-transform duration-300 ${isDeptOpen ? "rotate-180" : ""}`}
-              />
-            </button>
+        {/* Filters Row */}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Department Filter Dropdown */}
+          {basePath === "/admin-dashboard" && (
+            <div className="relative">
+              <button
+                onClick={() => setIsDeptOpen(!isDeptOpen)}
+                className={`flex items-center gap-3 px-5 py-3 bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all text-sm font-bold ${selectedDept !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+              >
+                <Filter
+                  size={18}
+                  className={
+                    selectedDept !== "All" ? "text-[#4318FF]" : "text-gray-400"
+                  }
+                />
+                <span>
+                  {selectedDept === "All" ? "All Departments" : selectedDept}
+                </span>
+                <ChevronDown
+                  size={18}
+                  className={`transition-transform duration-300 ${isDeptOpen ? "rotate-180" : ""}`}
+                />
+              </button>
 
-            {isDeptOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-40"
-                  onClick={() => setIsDeptOpen(false)}
-                ></div>
-                <div className="absolute right-0 mt-3 w-56 bg-white rounded-3xl shadow-2xl border border-blue-50 py-3 z-50 overflow-hidden animate-in fade-in zoom-in duration-200 origin-top-right">
-                  <div className="px-5 py-2 mb-1">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-                      Departments
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setSelectedDept("All");
-                      setIsDeptOpen(false);
-                      setCurrentPage(1);
-                    }}
-                    className={`w-full flex items-center px-5 py-2.5 text-sm font-bold transition-all relative ${
-                      selectedDept === "All"
+              {isDeptOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setIsDeptOpen(false)}
+                  ></div>
+                  <div className="absolute left-0 mt-3 w-56 bg-white rounded-3xl shadow-2xl border border-blue-50 py-3 z-50 overflow-hidden animate-in fade-in zoom-in duration-200 origin-top-left">
+                    <div className="px-5 py-2 mb-1">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                        Departments
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setSelectedDept("All");
+                        setIsDeptOpen(false);
+                        setCurrentPage(1);
+                      }}
+                      className={`w-full flex items-center px-5 py-2.5 text-sm font-bold transition-all relative ${selectedDept === "All"
                         ? "text-[#4318FF] bg-blue-50/50"
                         : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
-                    }`}
-                  >
-                    {selectedDept === "All" && (
-                      <div className="absolute left-0 w-1 h-6 bg-[#4318FF] rounded-r-full"></div>
-                    )}
-                    All Departments
-                  </button>
-                  {departments.map((dept: any) => (
-                    <button
-                      key={dept.id}
-                      onClick={() => {
-                        setSelectedDept(dept.departmentName);
-                        setIsDeptOpen(false);
-                      }}
-                      className={`w-full flex items-center px-5 py-2.5 text-sm font-bold transition-all relative ${
-                        selectedDept === dept.departmentName
-                          ? "text-[#4318FF] bg-blue-50/50"
-                          : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
-                      }`}
+                        }`}
                     >
-                      {selectedDept === dept.departmentName && (
+                      {selectedDept === "All" && (
                         <div className="absolute left-0 w-1 h-6 bg-[#4318FF] rounded-r-full"></div>
                       )}
-                      {dept.departmentName}
+                      All Departments
                     </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        )}
+                    {departments.map((dept: any) => (
+                      <button
+                        key={dept.id}
+                        onClick={() => {
+                          setSelectedDept(dept.departmentName);
+                          setIsDeptOpen(false);
+                        }}
+                        className={`w-full flex items-center px-5 py-2.5 text-sm font-bold transition-all relative ${selectedDept === dept.departmentName
+                          ? "text-[#4318FF] bg-blue-50/50"
+                          : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
+                          }`}
+                      >
+                        {selectedDept === dept.departmentName && (
+                          <div className="absolute left-0 w-1 h-6 bg-[#4318FF] rounded-r-full"></div>
+                        )}
+                        {dept.departmentName}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
 
-        <div className="flex flex-wrap gap-3 items-center">
           <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
             <Select
               value={selectedMonth}
@@ -921,12 +940,13 @@ const Requests = () => {
             >
               {[
                 "All",
-                "Pending",
-                "Approved",
-                "Rejected",
-                "Request Modified",
-                "Cancellation Approved",
-                "Cancelled",
+                LeaveRequestStatus.PENDING,
+                LeaveRequestStatus.APPROVED,
+                LeaveRequestStatus.REJECTED,
+                LeaveRequestStatus.REQUEST_MODIFIED,
+                LeaveRequestStatus.CANCELLATION_APPROVED,
+                LeaveRequestStatus.CANCELLED,
+                LeaveRequestStatus.CANCELLATION_REVERTED,
               ].map((status) => (
                 <Select.Option key={status} value={status}>
                   {status === "All" ? "All Status" : status}
@@ -941,22 +961,22 @@ const Requests = () => {
             selectedMonth !== "All" ||
             selectedYear !== "All" ||
             filterStatus !== "All") && (
-            <button
-              onClick={() => {
-                setSearchTerm("");
-                setSelectedDept("All");
-                setSelectedMonth("All");
-                setSelectedYear("All");
-                setFilterStatus("All");
-                setCurrentPage(1);
-              }}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-gray-700 rounded-full hover:bg-gray-50 active:scale-95 transition-all text-sm font-bold border border-gray-200 whitespace-nowrap"
-              title="Clear all filters"
-            >
-              <X size={16} />
-              <span>Clear All</span>
-            </button>
-          )}
+              <button
+                onClick={() => {
+                  setSearchTerm("");
+                  setSelectedDept("All");
+                  setSelectedMonth("All");
+                  setSelectedYear("All");
+                  setFilterStatus("All");
+                  setCurrentPage(1);
+                }}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-gray-700 rounded-full hover:bg-gray-50 active:scale-95 transition-all text-sm font-bold border border-gray-200 whitespace-nowrap"
+                title="Clear all filters"
+              >
+                <X size={16} />
+                <span>Clear All</span>
+              </button>
+            )}
         </div>
       </div>
 
@@ -1016,13 +1036,29 @@ const Requests = () => {
                 </tr>
               ) : (
                 [...filteredRequests]
-                  .sort((a, b) => (b.id || 0) - (a.id || 0))
+                  .sort((a: any, b: any) => {
+                    const timeA = Math.max(
+                      a.created_at ? new Date(a.created_at).getTime() : 0,
+                      a.updated_at ? new Date(a.updated_at).getTime() : 0,
+                      a.createdAt ? new Date(a.createdAt).getTime() : 0,
+                      a.updatedAt ? new Date(a.updatedAt).getTime() : 0,
+                    );
+                    const timeB = Math.max(
+                      b.created_at ? new Date(b.created_at).getTime() : 0,
+                      b.updated_at ? new Date(b.updated_at).getTime() : 0,
+                      b.createdAt ? new Date(b.createdAt).getTime() : 0,
+                      b.updatedAt ? new Date(b.updatedAt).getTime() : 0,
+                    );
+                    if (timeA === 0 && timeB === 0) {
+                      return (b.id || 0) - (a.id || 0);
+                    }
+                    return timeB - timeA;
+                  })
                   .map((req, index) => (
                     <tr
                       key={req.id}
-                      className={`group transition-all duration-200 ${
-                        index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"
-                      } hover:bg-gray-100`}
+                      className={`group transition-all duration-200 ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"
+                        } hover:bg-gray-100`}
                     >
                       <td className="py-4 pl-10 pr-4">
                         <div className="flex items-center gap-3">
@@ -1049,16 +1085,18 @@ const Requests = () => {
                             {(() => {
                               // Determine icon based on combined activities
                               const hasWFH =
-                                req.firstHalf === "Work From Home" ||
-                                req.secondHalf === "Work From Home";
+                                req.firstHalf === WorkLocation.WORK_FROM_HOME ||
+                                req.secondHalf === WorkLocation.WORK_FROM_HOME;
                               const hasCV =
-                                req.firstHalf === "Client Visit" ||
-                                req.secondHalf === "Client Visit";
+                                req.firstHalf === WorkLocation.CLIENT_VISIT ||
+                                req.secondHalf === WorkLocation.CLIENT_VISIT;
                               const hasLeave =
-                                req.firstHalf === "Leave" ||
-                                req.secondHalf === "Leave" ||
-                                req.firstHalf === "Apply Leave" ||
-                                req.secondHalf === "Apply Leave";
+                                req.firstHalf ===
+                                LeaveRequestType.APPLY_LEAVE ||
+                                req.secondHalf ===
+                                LeaveRequestType.APPLY_LEAVE ||
+                                req.firstHalf === LeaveRequestType.LEAVE ||
+                                req.secondHalf === LeaveRequestType.LEAVE;
 
                               if (hasWFH && hasLeave)
                                 return (
@@ -1071,11 +1109,13 @@ const Requests = () => {
                                     className="text-orange-600"
                                   />
                                 );
-                              if (req.requestType === "Work From Home")
+                              if (
+                                req.requestType === WorkLocation.WORK_FROM_HOME
+                              )
                                 return (
                                   <Home size={16} className="text-green-600" />
                                 );
-                              if (req.requestType === "Client Visit")
+                              if (req.requestType === WorkLocation.CLIENT_VISIT)
                                 return (
                                   <MapPin
                                     size={16}
@@ -1083,8 +1123,9 @@ const Requests = () => {
                                   />
                                 );
                               if (
-                                req.requestType === "Apply Leave" ||
-                                req.requestType === "Leave"
+                                req.requestType ===
+                                LeaveRequestType.APPLY_LEAVE ||
+                                req.requestType === LeaveRequestType.LEAVE
                               )
                                 return (
                                   <Calendar
@@ -1092,7 +1133,7 @@ const Requests = () => {
                                     className="text-blue-600"
                                   />
                                 );
-                              if (req.requestType === "Half Day")
+                              if (req.requestType === AttendanceStatus.HALF_DAY)
                                 return (
                                   <Calendar
                                     size={16}
@@ -1120,9 +1161,11 @@ const Requests = () => {
                                   req.secondHalf,
                                 ]
                                   .map((a) =>
-                                    a === "Apply Leave" ? "Leave" : a,
+                                    a === LeaveRequestType.APPLY_LEAVE
+                                      ? LeaveRequestType.LEAVE
+                                      : a,
                                   )
-                                  .filter((a) => a && a !== "Office")
+                                  .filter((a) => a && a !== WorkLocation.OFFICE)
                                   .filter(
                                     (value, index, self) =>
                                       self.indexOf(value) === index,
@@ -1132,13 +1175,16 @@ const Requests = () => {
                                   // Replace "Leave" with "Half Day Leave" in combined activities
                                   return activities
                                     .map((a) =>
-                                      a === "Leave" ? "Half Day Leave" : a,
+                                      a === LeaveRequestType.LEAVE
+                                        ? "Half Day Leave"
+                                        : a,
                                     )
                                     .join(" + ");
                                 }
                                 if (activities.length === 1) {
                                   // For single activity that is "Leave", show "Half Day Leave"
-                                  return activities[0] === "Leave"
+                                  return activities[0] ===
+                                    LeaveRequestType.LEAVE
                                     ? "Half Day Leave"
                                     : activities[0];
                                 }
@@ -1146,14 +1192,15 @@ const Requests = () => {
 
                               // Default display
                               if (
-                                req.requestType === "Apply Leave" ||
-                                req.requestType === "Leave"
+                                req.requestType ===
+                                LeaveRequestType.APPLY_LEAVE ||
+                                req.requestType === LeaveRequestType.LEAVE
                               ) {
                                 return req.isHalfDay
                                   ? "Half Day Leave"
-                                  : "Leave";
+                                  : LeaveRequestType.LEAVE;
                               }
-                              if (req.requestType === "Half Day")
+                              if (req.requestType === AttendanceStatus.HALF_DAY)
                                 return "Half Day Leave";
                               return req.requestType;
                             })()}
@@ -1187,29 +1234,39 @@ const Requests = () => {
                               req.secondHalf
                             ) {
                               const first =
-                                req.firstHalf === "Apply Leave"
-                                  ? "Leave"
+                                req.firstHalf === LeaveRequestType.APPLY_LEAVE
+                                  ? LeaveRequestType.LEAVE
                                   : req.firstHalf;
                               const second =
-                                req.secondHalf === "Apply Leave"
-                                  ? "Leave"
+                                req.secondHalf === LeaveRequestType.APPLY_LEAVE
+                                  ? LeaveRequestType.LEAVE
                                   : req.secondHalf;
 
-                              if (first === second && first !== "Office") {
-                                return "Full Day";
+                              if (
+                                first === second &&
+                                first !== WorkLocation.OFFICE
+                              ) {
+                                return AttendanceStatus.FULL_DAY;
                               }
 
                               // Filter out Office
+                              const validActivities = [first, second].filter(
+                                (a) => a && a !== WorkLocation.OFFICE,
+                              );
+                              if (validActivities.length === 0) {
+                                return WorkLocation.OFFICE;
+                              }
+
                               const parts = [];
-                              if (first && first !== "Office")
+                              if (first && first !== WorkLocation.OFFICE)
                                 parts.push(`First Half = ${first}`);
-                              if (second && second !== "Office")
+                              if (second && second !== WorkLocation.OFFICE)
                                 parts.push(`Second Half = ${second}`);
 
                               if (parts.length > 0) return parts.join(" & ");
-                              return "Full Day";
+                              return AttendanceStatus.FULL_DAY;
                             }
-                            return "Full Day";
+                            return AttendanceStatus.FULL_DAY;
                           })()}
                         </span>
                       </td>
@@ -1220,21 +1277,25 @@ const Requests = () => {
                       </td>
                       <td className="py-4 px-4 text-center whitespace-nowrap">
                         <span className="text-sm font-bold text-[#2B3674]">
-                          {dayjs(req.fromDate).format("DD MMM")} - {dayjs(req.toDate).format("DD MMM - YYYY")}, TOTAL:{" "}
-                          {req.duration ||
-                            (req.requestType === "Client Visit" ||
-                            req.requestType === "Work From Home" ||
-                            req.requestType === "Apply Leave" ||
-                            req.requestType === "Leave" ||
-                            req.requestType === "Half Day"
+                          {dayjs(req.fromDate).format("DD MMM")} -{" "}
+                          {dayjs(req.toDate).format("DD MMM - YYYY")}, TOTAL:{" "}
+                          {req.duration
+                            ? parseFloat(String(req.duration))
+                            : req.requestType === WorkLocation.CLIENT_VISIT ||
+                              req.requestType ===
+                              WorkLocation.WORK_FROM_HOME ||
+                              req.requestType ===
+                              LeaveRequestType.APPLY_LEAVE ||
+                              req.requestType === LeaveRequestType.LEAVE ||
+                              req.requestType === AttendanceStatus.HALF_DAY
                               ? calculateDurationExcludingWeekends(
-                                  req.fromDate,
-                                  req.toDate,
-                                )
+                                req.fromDate,
+                                req.toDate,
+                              )
                               : dayjs(req.toDate).diff(
-                                  dayjs(req.fromDate),
-                                  "day",
-                                ) + 1)}{" "}
+                                dayjs(req.fromDate),
+                                "day",
+                              ) + 1}{" "}
                           DAY(S)
                         </span>
                       </td>
@@ -1245,31 +1306,36 @@ const Requests = () => {
                             ? dayjs(req.created_at).format("DD MMM - YYYY")
                             : "N/A"}
                       </td>
-                      <td className={`py-4 px-4 text-center sticky right-[120px] w-[160px] min-w-[160px] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}>
+                      <td
+                        className={`py-4 px-4 text-center sticky right-[120px] w-[160px] min-w-[160px] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}
+                      >
                         <span
                           className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all inline-flex items-center gap-1.5 whitespace-nowrap ${getStatusColor(req.status)}`}
                         >
-                          {(req.status === "Pending" ||
-                            req.status === "Requesting for Modification") && (
-                            <RotateCcw
-                              size={12}
-                              className="animate-spin-slow"
-                            />
-                          )}
+                          {(req.status === LeaveRequestStatus.PENDING ||
+                            req.status ===
+                            LeaveRequestStatus.REQUESTING_FOR_MODIFICATION) && (
+                              <RotateCcw
+                                size={12}
+                                className="animate-spin-slow"
+                              />
+                            )}
                           {req.status}
-                          {req.status === "Request Modified" &&
+                          {req.status === LeaveRequestStatus.REQUEST_MODIFIED &&
                             req.requestModifiedFrom && (
                               <span className="opacity-70 border-l border-orange-300 pl-1.5 ml-1 text-[9px] font-bold">
-                                (TO{" "}
-                                {req.requestModifiedFrom === "Apply Leave"
+                                MODIFIED FROM:{" "}
+                                {req.requestModifiedFrom ===
+                                  LeaveRequestType.APPLY_LEAVE
                                   ? "LEAVE"
                                   : req.requestModifiedFrom.toUpperCase()}
-                                )
                               </span>
                             )}
                         </span>
                       </td>
-                      <td className={`py-4 px-4 sticky right-0 w-[120px] min-w-[120px] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}>
+                      <td
+                        className={`py-4 px-4 sticky right-0 w-[120px] min-w-[120px] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}
+                      >
                         <div className="flex items-center justify-center gap-3">
                           <button
                             onClick={async () => {
@@ -1286,14 +1352,38 @@ const Requests = () => {
                                   setSelectedOwnerId(employeeData.id);
                                 }
 
+                                const parsedCc = Array.isArray(data.ccEmails)
+                                  ? data.ccEmails
+                                  : typeof data.ccEmails === "string"
+                                    ? (() => {
+                                      try {
+                                        const p = JSON.parse(data.ccEmails);
+                                        return Array.isArray(p) ? p : [];
+                                      } catch {
+                                        return [];
+                                      }
+                                    })()
+                                    : [];
+                                setCcEmails(parsedCc);
+
+                                if (req.employeeId) {
+                                  dispatch(getLeaveRequestEmailConfig(req.employeeId))
+                                    .unwrap()
+                                    .then((config) => {
+                                      setEmailConfig({
+                                        assignedManagerEmail: config?.assignedManagerEmail ?? null,
+                                        hrEmail: config?.hrEmail ?? null,
+                                      });
+                                    })
+                                    .catch(() => {
+                                      setEmailConfig({ assignedManagerEmail: null, hrEmail: null });
+                                    });
+                                }
+
                                 setSelectedRequest(data);
                                 setIsViewModalOpen(true);
                               } catch (err) {
-                                notification.error({
-                                  message: "Error",
-                                  description:
-                                    "Failed to fetch request details",
-                                });
+                                message.error("Failed to fetch request details");
                               }
                             }}
                             className="p-2 text-blue-600 bg-blue-50/50 hover:bg-blue-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-blue-200 active:scale-90"
@@ -1301,13 +1391,13 @@ const Requests = () => {
                           >
                             <Eye size={20} />
                           </button>
-                          {req.status === "Pending" && (
+                          {req.status === LeaveRequestStatus.PENDING && (
                             <>
                               <button
                                 onClick={() =>
                                   handleUpdateStatus(
                                     req.id,
-                                    "Approved",
+                                    LeaveRequestStatus.APPROVED,
                                     req.fullName || "Employee",
                                   )
                                 }
@@ -1320,7 +1410,7 @@ const Requests = () => {
                                 onClick={() =>
                                   handleUpdateStatus(
                                     req.id,
-                                    "Rejected",
+                                    LeaveRequestStatus.REJECTED,
                                     req.fullName || "Employee",
                                   )
                                 }
@@ -1331,66 +1421,68 @@ const Requests = () => {
                               </button>
                             </>
                           )}
-                          {req.status === "Requesting for Cancellation" && (
-                            <>
-                              <button
-                                onClick={() =>
-                                  handleUpdateStatus(
-                                    req.id,
-                                    "Cancellation Approved",
-                                    req.fullName || "Employee",
-                                  )
-                                }
-                                className="p-2 text-green-600 bg-green-50/50 hover:bg-green-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-green-200 active:scale-90"
-                                title="Approve Cancellation"
-                              >
-                                <CheckCircle size={20} />
-                              </button>
-                              <button
-                                onClick={() =>
-                                  handleUpdateStatus(
-                                    req.id,
-                                    "Reject Cancellation",
-                                    req.fullName || "Employee",
-                                  )
-                                }
-                                className="p-2 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
-                                title="Reject Cancellation"
-                              >
-                                <XCircle size={20} />
-                              </button>
-                            </>
-                          )}
-                          {req.status === "Requesting for Modification" && (
-                            <>
-                              <button
-                                onClick={() =>
-                                  handleUpdateStatus(
-                                    req.id,
-                                    "Modification Approved",
-                                    req.fullName || "Employee",
-                                  )
-                                }
-                                className="p-2 text-green-600 bg-green-50/50 hover:bg-green-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-green-200 active:scale-90"
-                                title="Approve Modification"
-                              >
-                                <CheckCircle size={20} />
-                              </button>
-                              <button
-                                onClick={() =>
-                                  handleUpdateStatus(
-                                    req.id,
-                                    "Modification Rejected",
-                                    req.fullName || "Employee",
-                                  )
-                                }
-                                className="p-2 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
-                                title="Reject Modification"
-                              >
-                                <XCircle size={20} />
-                              </button>
-                            </>
-                          )}
+                          {req.status ===
+                            LeaveRequestStatus.REQUESTING_FOR_CANCELLATION && (
+                              <>
+                                <button
+                                  onClick={() =>
+                                    handleUpdateStatus(
+                                      req.id,
+                                      LeaveRequestStatus.CANCELLATION_APPROVED,
+                                      req.fullName || "Employee",
+                                    )
+                                  }
+                                  className="p-2 text-green-600 bg-green-50/50 hover:bg-green-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-green-200 active:scale-90"
+                                  title="Approve Cancellation"
+                                >
+                                  <CheckCircle size={20} />
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    handleUpdateStatus(
+                                      req.id,
+                                      LeaveRequestStatus.CANCELLATION_REJECTED,
+                                      req.fullName || "Employee",
+                                    )
+                                  }
+                                  className="p-2 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
+                                  title="Reject Cancellation"
+                                >
+                                  <XCircle size={20} />
+                                </button>
+                              </>
+                            )}
+                          {req.status ===
+                            LeaveRequestStatus.REQUESTING_FOR_MODIFICATION && (
+                              <>
+                                <button
+                                  onClick={() =>
+                                    handleUpdateStatus(
+                                      req.id,
+                                      LeaveRequestStatus.MODIFICATION_APPROVED,
+                                      req.fullName || "Employee",
+                                    )
+                                  }
+                                  className="p-2 text-green-600 bg-green-50/50 hover:bg-green-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-green-200 active:scale-90"
+                                  title="Approve Modification"
+                                >
+                                  <CheckCircle size={20} />
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    handleUpdateStatus(
+                                      req.id,
+                                      LeaveRequestStatus.MODIFICATION_REJECTED,
+                                      req.fullName || "Employee",
+                                    )
+                                  }
+                                  className="p-2 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
+                                  title="Reject Modification"
+                                >
+                                  <XCircle size={20} />
+                                </button>
+                              </>
+                            )}
                         </div>
                       </td>
                     </tr>
@@ -1419,11 +1511,10 @@ const Requests = () => {
               onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
               disabled={currentPage === 1}
               className={`p-2 rounded-xl border border-[#E9EDF7] transition-all flex items-center justify-center
-              ${
-                currentPage === 1
+              ${currentPage === 1
                   ? "bg-gray-50 text-gray-300 cursor-not-allowed"
                   : "bg-white text-[#4318FF] hover:bg-[#4318FF]/5 active:scale-90 shadow-sm"
-              }`}
+                }`}
             >
               <ChevronLeft size={18} />
             </button>
@@ -1438,11 +1529,10 @@ const Requests = () => {
               }
               disabled={currentPage === totalPages || totalPages === 0}
               className={`p-2 rounded-xl border border-[#E9EDF7] transition-all flex items-center justify-center
-              ${
-                currentPage === totalPages || totalPages === 0
+              ${currentPage === totalPages || totalPages === 0
                   ? "bg-gray-50 text-gray-300 cursor-not-allowed"
                   : "bg-white text-[#4318FF] hover:bg-[#4318FF]/5 active:scale-90 shadow-sm"
-              }`}
+                }`}
             >
               <ChevronRight size={18} />
             </button>
@@ -1460,19 +1550,20 @@ const Requests = () => {
           <div className="relative w-full max-w-md bg-white rounded-[24px] overflow-hidden shadow-[0px_20px_40px_rgba(0,0,0,0.1)] animate-in fade-in zoom-in duration-200 transform">
             <div className="p-8 text-center">
               <div
-                className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-6 ${
-                  confirmModal.status === "Approved" &&
+                className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-6 ${confirmModal.status === LeaveRequestStatus.APPROVED &&
                   entities.find((e) => e.id === confirmModal.id)?.status ===
-                    "Requesting for Cancellation"
-                    ? "bg-red-50 text-red-500" // Rejecting Cancellation
-                    : confirmModal.status === "Approved" ||
-                        confirmModal.status === "Cancellation Approved"
-                      ? "bg-green-50 text-green-500"
-                      : "bg-red-50 text-red-500"
-                }`}
+                  LeaveRequestStatus.REQUESTING_FOR_CANCELLATION
+                  ? "bg-red-50 text-red-500" // Rejecting Cancellation
+                  : confirmModal.status === LeaveRequestStatus.APPROVED ||
+                    confirmModal.status ===
+                    LeaveRequestStatus.CANCELLATION_APPROVED
+                    ? "bg-green-50 text-green-500"
+                    : "bg-red-50 text-red-500"
+                  }`}
               >
-                {confirmModal.status === "Approved" ||
-                confirmModal.status === "Cancellation Approved" ? (
+                {confirmModal.status === LeaveRequestStatus.APPROVED ||
+                  confirmModal.status ===
+                  LeaveRequestStatus.CANCELLATION_APPROVED ? (
                   <CheckCircle size={32} strokeWidth={2.5} />
                 ) : (
                   <XCircle size={32} strokeWidth={2.5} />
@@ -1480,13 +1571,13 @@ const Requests = () => {
               </div>
 
               <h3 className="text-2xl font-black text-[#2B3674] mb-2">
-                {confirmModal.status === "Approved"
+                {confirmModal.status === LeaveRequestStatus.APPROVED
                   ? entities.find((e) => e.id === confirmModal.id)?.status ===
-                    "Requesting for Cancellation"
+                    LeaveRequestStatus.REQUESTING_FOR_CANCELLATION
                     ? "Reject Request?"
                     : "Approve Request?"
-                  : confirmModal.status === "Rejected" ||
-                      confirmModal.status === "Reject Cancellation"
+                  : confirmModal.status === LeaveRequestStatus.REJECTED ||
+                    confirmModal.status === LeaveRequestStatus.CANCELLATION_REJECTED
                     ? "Reject Request?"
                     : "Approve Request?"}
               </h3>
@@ -1494,24 +1585,24 @@ const Requests = () => {
               <p className="text-gray-500 font-medium leading-relaxed mb-8">
                 Are you sure you want to{" "}
                 <span
-                  className={`font-bold ${
-                    confirmModal.status === "Approved" &&
+                  className={`font-bold ${confirmModal.status === LeaveRequestStatus.APPROVED &&
                     entities.find((e) => e.id === confirmModal.id)?.status ===
-                      "Requesting for Cancellation"
-                      ? "text-red-600"
-                      : confirmModal.status === "Approved" ||
-                          confirmModal.status === "Cancellation Approved"
-                        ? "text-green-600"
-                        : "text-red-600"
-                  }`}
+                    LeaveRequestStatus.REQUESTING_FOR_CANCELLATION
+                    ? "text-red-600"
+                    : confirmModal.status === LeaveRequestStatus.APPROVED ||
+                      confirmModal.status ===
+                      LeaveRequestStatus.CANCELLATION_APPROVED
+                      ? "text-green-600"
+                      : "text-red-600"
+                    }`}
                 >
-                  {confirmModal.status === "Approved"
+                  {confirmModal.status === LeaveRequestStatus.APPROVED
                     ? entities.find((e) => e.id === confirmModal.id)?.status ===
-                      "Requesting for Cancellation"
+                      LeaveRequestStatus.REQUESTING_FOR_CANCELLATION
                       ? "Reject"
                       : "Approve"
-                    : confirmModal.status === "Rejected" ||
-                        confirmModal.status === "Reject Cancellation"
+                    : confirmModal.status === LeaveRequestStatus.REJECTED ||
+                      confirmModal.status === LeaveRequestStatus.CANCELLATION_REJECTED
                       ? "Reject"
                       : "Approve"}
                 </span>{" "}
@@ -1520,13 +1611,14 @@ const Requests = () => {
                   {confirmModal.employeeName}
                 </span>
                 ?
-                {confirmModal.status === "Approved" &&
+                {confirmModal.status === LeaveRequestStatus.APPROVED &&
                   " This will automatically update attendance records."}
-                {confirmModal.status === "Cancellation Approved" &&
+                {confirmModal.status ===
+                  LeaveRequestStatus.CANCELLATION_APPROVED &&
                   " This will revert any associated attendance records."}
-                {confirmModal.status === "Approved" && // This handles the case where we are rejecting the cancellation (reverting locally to Approved)
+                {confirmModal.status === LeaveRequestStatus.APPROVED && // This handles the case where we are rejecting the cancellation (reverting locally to Approved)
                   entities.find((e) => e.id === confirmModal.id)?.status ===
-                    "Requesting for Cancellation" &&
+                  LeaveRequestStatus.REQUESTING_FOR_CANCELLATION &&
                   " This will reject the cancellation request and keep the request as Approved."}
               </p>
 
@@ -1543,21 +1635,21 @@ const Requests = () => {
                 <button
                   onClick={executeStatusUpdate}
                   disabled={isProcessing}
-                  className={`flex-1 py-3.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${
-                    isProcessing
-                      ? "opacity-70 cursor-not-allowed"
-                      : "transform active:scale-95"
-                  } ${
-                    confirmModal.status === "Approved" &&
-                    entities.find((e) => e.id === confirmModal.id)?.status ===
-                      "Requesting for Cancellation"
+                  className={`flex-1 py-3.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${isProcessing
+                    ? "opacity-70 cursor-not-allowed"
+                    : "transform active:scale-95"
+                    } ${confirmModal.status === LeaveRequestStatus.APPROVED &&
+                      entities.find((e) => e.id === confirmModal.id)?.status ===
+                      LeaveRequestStatus.REQUESTING_FOR_CANCELLATION
                       ? "bg-red-500 hover:bg-red-600 shadow-red-200 active:scale-95"
-                      : confirmModal.status === "Approved" ||
-                          confirmModal.status === "Cancellation Approved" ||
-                          confirmModal.status === "Modification Approved"
+                      : confirmModal.status === LeaveRequestStatus.APPROVED ||
+                        confirmModal.status ===
+                        LeaveRequestStatus.CANCELLATION_APPROVED ||
+                        confirmModal.status ===
+                        LeaveRequestStatus.MODIFICATION_APPROVED
                         ? "bg-green-500 hover:bg-green-600 shadow-green-200 active:scale-95"
                         : "bg-red-500 hover:bg-red-600 shadow-red-200 active:scale-95"
-                  }`}
+                    }`}
                 >
                   {isProcessing ? (
                     <>
@@ -1566,15 +1658,18 @@ const Requests = () => {
                     </>
                   ) : (
                     <>
-                      {confirmModal.status === "Approved" ||
-                      confirmModal.status === "Modification Approved"
+                      {confirmModal.status === LeaveRequestStatus.APPROVED ||
+                        confirmModal.status ===
+                        LeaveRequestStatus.MODIFICATION_APPROVED
                         ? entities.find((e) => e.id === confirmModal.id)
-                            ?.status === "Requesting for Cancellation"
+                          ?.status ===
+                          LeaveRequestStatus.REQUESTING_FOR_CANCELLATION
                           ? "Confirm Reject" // Special text for this specific case
                           : "Confirm Approve"
-                        : confirmModal.status === "Rejected" ||
-                            confirmModal.status === "Reject Cancellation" ||
-                            confirmModal.status === "Modification Rejected"
+                        : confirmModal.status === LeaveRequestStatus.REJECTED ||
+                          confirmModal.status === LeaveRequestStatus.CANCELLATION_REJECTED ||
+                          confirmModal.status ===
+                          LeaveRequestStatus.MODIFICATION_REJECTED
                           ? "Confirm Reject"
                           : "Confirm Approve"}
                     </>
@@ -1592,104 +1687,151 @@ const Requests = () => {
         footer={null}
         closable={false}
         centered
-        width={700}
+        width={1092}
         className="application-modal"
       >
         <div className="relative overflow-hidden bg-white rounded-[16px]">
           {/* Modal Header */}
-          <div className="pt-1 px-4 pb-0 shrink-0">
-            <div className="flex justify-between items-start mb-0">
-              <button
-                onClick={() => setIsViewModalOpen(false)}
-                className="p-1 hover:bg-gray-100 rounded-full transition-colors ml-auto"
-              >
-                <X size={20} className="text-gray-700" />
-              </button>
-            </div>
-            <div className="flex justify-between items-center px-1 border-b border-gray-100 pb-3 mb-3">
-              <span className="text-lg font-black uppercase tracking-widest text-gray-400">
-                Viewing Application
-              </span>
-              <h2 className="text-3xl font-black text-[#2B3674]">
+          <div className="pt-6 px-8 pb-4 shrink-0">
+            <div className="flex justify-between items-start">
+              <h2 className="text-[32px] font-black text-[#1B2559] leading-tight">
                 {selectedRequest &&
-                  (selectedRequest.requestType === "Apply Leave"
-                    ? "Leave"
-                    : selectedRequest.requestType === "Half Day"
+                  (selectedRequest.requestType === LeaveRequestType.APPLY_LEAVE
+                    ? AttendanceStatus.LEAVE
+                    : selectedRequest.requestType === AttendanceStatus.HALF_DAY
                       ? "Half Day Leave"
                       : selectedRequest.requestType)}
               </h2>
+              <button
+                onClick={() => setIsViewModalOpen(false)}
+                className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+                style={{ marginTop: '-8px', marginRight: '-8px' }}
+              >
+                <X size={24} className="text-[#8F9BBA]" />
+              </button>
             </div>
           </div>
 
           {/* Modal Body */}
-          <div className="p-6 space-y-5 overflow-y-auto custom-scrollbar max-h-[75vh]">
+          <div className="px-8 pb-8 pt-2 space-y-6 overflow-y-auto custom-scrollbar max-h-[90vh]">
             {selectedRequest && (
               <>
-                {/* Title Field */}
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-[#2B3674] ml-1">
-                    Title
-                  </label>
-                  <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none wrap-break-word">
-                    {selectedRequest.title}
+                {/* Email recipients - in card */}
+                <div className="rounded-[20px] border border-[#E0E7FF] bg-white p-6 shadow-[0px_18px_40px_rgba(112,144,176,0.12)]">
+                  <div className="space-y-4">
+                    <label className="text-sm font-bold text-[#1B2559] block">
+                      Email recipients
+                    </label>
+                    <div className="relative">
+                      <div className="flex items-start">
+                        {emailConfig.assignedManagerEmail && (
+                          <div className="flex-1">
+                            <span className="text-xs font-bold text-[#A3AED0] block mb-2 uppercase tracking-wide">
+                              Assigned Manager
+                            </span>
+                            <div className="text-sm font-bold text-[#1B2559]">
+                              {emailConfig.assignedManagerEmail}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Vertical Divider */}
+                        <div className="w-[1px] bg-[#E0E7FF] self-stretch mx-8 h-auto min-h-[40px]" />
+
+                        <div className="flex-1">
+                          <span className="text-xs font-bold text-[#A3AED0] block mb-2 uppercase tracking-wide">
+                            HR
+                          </span>
+                          <div className="text-sm font-bold text-[#A3AED0]">
+                            {emailConfig.hrEmail || "Not configured"}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-6 pt-6 border-t border-[#F4F7FE]">
+                        <span className="text-xs font-bold text-[#A3AED0] block mb-3 uppercase tracking-wide">
+                          CC
+                        </span>
+                        <div className="flex flex-wrap gap-2">
+                          {ccEmails.length > 0 ? (
+                            ccEmails.map((email) => (
+                              <span
+                                key={email}
+                                className="px-4 py-2 rounded-[12px] bg-[#F4F7FE] text-[#1B2559] text-sm font-bold"
+                              >
+                                {email}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-sm text-[#A3AED0]">—</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Subject - inside card */}
+                  <div className="space-y-2 pt-4 mt-4 border-t border-[#F4F7FE]">
+                    <label className="text-base font-bold text-[#1B2559] ml-1">
+                      Subject
+                    </label>
+                    <div className="w-full px-5 py-4 rounded-[20px] bg-[#F4F7FE] font-bold text-[#1B2559] border-none wrap-break-word">
+                      {selectedRequest.title}
+                    </div>
                   </div>
                 </div>
 
-                {/* Dates Row */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold text-[#2B3674] ml-1">
-                      Start Date
-                    </label>
-                    <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] text-center">
-                      {dayjs(selectedRequest.fromDate).format("DD-MM-YYYY")}
+                {/* Dates & Duration Row */}
+                <div className="flex items-end justify-between gap-6">
+                  <div className="flex gap-4 flex-1">
+                    <div className="flex-1 space-y-2">
+                      <label className="text-base font-bold text-[#1B2559] ml-1">
+                        Start Date
+                      </label>
+                      <div className="w-full px-5 py-4 rounded-[20px] bg-[#F4F7FE] font-bold text-[#1B2559] text-center">
+                        {dayjs(selectedRequest.fromDate).format("DD-MM-YYYY")}
+                      </div>
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <label className="text-base font-bold text-[#1B2559] ml-1">
+                        End Date
+                      </label>
+                      <div className="w-full px-5 py-4 rounded-[20px] bg-[#F4F7FE] font-bold text-[#1B2559] text-center">
+                        {dayjs(selectedRequest.toDate).format("DD-MM-YYYY")}
+                      </div>
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold text-[#2B3674] ml-1">
-                      End Date
-                    </label>
-                    <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] text-center">
-                      {dayjs(selectedRequest.toDate).format("DD-MM-YYYY")}
+
+                  <div className="flex items-center gap-4 mb-3">
+                    <span className="text-sm font-bold text-[#1B2559] whitespace-nowrap">Total Days:</span>
+                    <div className="bg-white px-6 py-3 rounded-[16px] shadow-[0px_10px_20px_rgba(0,0,0,0.05)] border border-[#E0E7FF] min-w-[100px] text-center">
+                      <span className="text-[#4318FF] font-black">
+                        {(() => {
+                          if (
+                            selectedRequest.requestType === WorkLocation.CLIENT_VISIT ||
+                            selectedRequest.requestType === WorkLocation.WORK_FROM_HOME ||
+                            selectedRequest.requestType === LeaveRequestType.WFH ||
+                            selectedRequest.requestType === LeaveRequestType.CLIENT_VISIT ||
+                            selectedRequest.requestType === LeaveRequestType.LEAVE ||
+                            selectedRequest.requestType === LeaveRequestType.APPLY_LEAVE
+                          ) {
+                            return calculateDurationExcludingWeekends(
+                              selectedRequest.fromDate,
+                              selectedRequest.toDate,
+                            );
+                          } else {
+                            return selectedRequest.duration ||
+                              dayjs(selectedRequest.toDate).diff(
+                                dayjs(selectedRequest.fromDate),
+                                "day",
+                              ) + 1;
+                          }
+                        })()}{" "}
+                        Day(s)
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                {/* Duration Field */}
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-[#2B3674] ml-1">
-                    Duration
-                  </label>
-                  <div className="w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] font-bold text-[#4318FF] flex items-center justify-between">
-                    <span>Total Days:</span>
-                    <span className="bg-white px-4 py-1 rounded-lg shadow-sm border border-blue-100">
-                      {(() => {
-                        // For Client Visit, WFH, and Leave, recalculate duration excluding weekends and holidays
-                        if (
-                          selectedRequest.requestType === "Client Visit" ||
-                          selectedRequest.requestType === "Work From Home" ||
-                          selectedRequest.requestType === "Apply Leave" ||
-                          selectedRequest.requestType === "Leave"
-                        ) {
-                          return calculateDurationExcludingWeekends(
-                            selectedRequest.fromDate,
-                            selectedRequest.toDate,
-                          );
-                        } else {
-                          // For other types, use stored duration or calculate including all days
-                          return (
-                            selectedRequest.duration ||
-                            dayjs(selectedRequest.toDate).diff(
-                              dayjs(selectedRequest.fromDate),
-                              "day",
-                            ) + 1
-                          );
-                        }
-                      })()}{" "}
-                      Day(s)
-                    </span>
-                  </div>
-                </div>
 
                 {/* Split-Day Information (View Mode Only) */}
                 {!!selectedRequest?.isHalfDay &&
@@ -1740,17 +1882,19 @@ const Requests = () => {
 
                 {/* Description Field */}
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-[#2B3674] ml-1">
+                  <label className="text-base font-bold text-[#1B2559] ml-1">
                     Description
                   </label>
-                  <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-medium text-[#2B3674] min-h-[60px] whitespace-pre-wrap wrap-break-word leading-relaxed">
+                  <div className="w-full px-5 py-4 rounded-[20px] bg-[#F4F7FE] font-medium text-[#1B2559] min-h-[60px] whitespace-pre-wrap wrap-break-word leading-relaxed">
                     {selectedRequest.description || "No description provided."}
                   </div>
                 </div>
 
                 {/* Supporting Documents (Gallery View) */}
-                <div className="space-y-1">
-                  <label className="text-sm font-bold text-[#2B3674] ml-1">
+                <div className="space-y-3">
+
+
+                  <label className="text-base font-bold text-[#1B2559] ml-1">
                     Supporting Documents
                   </label>
                   <CommonMultipleUploader
