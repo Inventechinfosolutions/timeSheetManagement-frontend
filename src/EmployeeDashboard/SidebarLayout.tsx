@@ -14,6 +14,7 @@ import { useAppSelector, useAppDispatch } from "../hooks";
 import { useParams, useNavigate } from "react-router-dom";
 import { logoutUser } from "../reducers/user.reducer";
 import { UserType } from "../enums";
+import ApiLoadingSpinner from "../components/ApiLoadingSpinner";
 
 interface SidebarLayoutProps {
   children: React.ReactNode;
@@ -309,7 +310,10 @@ const SidebarLayout = ({
       </aside>
 
       <main className="flex-1 min-h-0 h-full relative no-scrollbar flex flex-col bg-[#F4F7FE] overflow-auto">
-        {children}
+        <div className="relative flex-1 min-h-0 flex flex-col">
+          {children}
+          <ApiLoadingSpinner contained />
+        </div>
       </main>
     </div>
   );

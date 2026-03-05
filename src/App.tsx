@@ -4,11 +4,13 @@ import {
   Route,
   Navigate,
   useParams,
+  useLocation,
 } from "react-router-dom";
 import { Suspense } from "react";
 import { Spin } from "antd";
 import { lazy } from "react";
 import Layout from "./components/Layout";
+import ApiLoadingSpinner from "./components/ApiLoadingSpinner";
 import AdminLayout from "./navigation/AdminLayout";
 import { adminComponentConfigs } from "./navigation/adminComponentConfigs";
 import ManagerLayout from "./navigation/ManagerLayout";
@@ -120,9 +122,21 @@ const AdminTabWrapper = () => {
 
 import SessionTimeout from "./components/SessionTimeout";
 
-function App() {
+function AppContent() {
+  const { pathname } = useLocation();
+  const isStandaloneRoute =
+    pathname === "/landing" ||
+    pathname === "/forgot-password" ||
+    pathname.startsWith("/auth") ||
+    pathname === "/activate" ||
+    pathname.startsWith("/timesheet/") ||
+    pathname === "/reset-password" ||
+    pathname === "/set-password";
+  const showFullScreenSpinner = isStandaloneRoute;
+
   return (
-    <Router>
+    <>
+      {showFullScreenSpinner && <ApiLoadingSpinner />}
       <SessionTimeout />
       <Routes>
         {/* Employee Activation Route - handles activation links */}
@@ -403,6 +417,14 @@ function App() {
           }
         />
       </Routes>
+    </>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <AppContent />
     </Router>
   );
 }

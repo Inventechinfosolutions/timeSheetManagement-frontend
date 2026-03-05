@@ -1,22 +1,27 @@
 import axios, { type InternalAxiosRequestConfig, type AxiosResponse } from "axios";
 import { Storage } from "../utils/storage-util";
+import type { AppDispatch } from "../store";
+import { increment, decrement, MIN_SPINNER_DURATION_MS } from "../reducers/apiLoading.reducer";
 
- 
- 
 const TIMEOUT = 1 * 60 * 1000;
 axios.defaults.timeout = TIMEOUT;
 axios.defaults.baseURL = '/';
 //axios.defaults.baseURL = 'http://localhost:3000';
 axios.defaults.withCredentials = true;
- 
-// Placeholder for setLoading
-const setLoading = (loading: boolean) => {
-  // TODO: Connect to your actual loading context
-  console.log('Loading state:', loading);
-};
- 
-const setupAxiosInterceptors = (_onUnauthenticated: () => void) => {
+
+declare module "axios" {
+  interface InternalAxiosRequestConfig {
+    _apiLoadingStartTime?: number;
+  }
+}
+
+const setupAxiosInterceptors = (
+  dispatch: AppDispatch,
+  _onUnauthenticated: () => void
+) => {
   const onRequestSuccess = (config: InternalAxiosRequestConfig) => {
+    config._apiLoadingStartTime = Date.now();
+    dispatch(increment());
     const token =
       Storage.local.get("TimeSheet-authenticationToken") ||
       Storage.session.get("TimeSheet-authenticationToken");
@@ -115,24 +120,28 @@ const setupAxiosInterceptors = (_onUnauthenticated: () => void) => {
   };
 
  
+  const finishWithMinDelay = (config?: InternalAxiosRequestConfig) => {
+    const start = config?._apiLoadingStartTime ?? Date.now();
+    const elapsed = Date.now() - start;
+    const delay = Math.max(0, MIN_SPINNER_DURATION_MS - elapsed);
+    setTimeout(() => dispatch(decrement()), delay);
+  };
+
   axios.interceptors.request.use(
-    (config) => {
-      setLoading(true);
-      return onRequestSuccess(config);
-    },
+    (config) => onRequestSuccess(config),
     (error) => {
-      setLoading(false);
+      dispatch(decrement());
       return Promise.reject(error);
     }
   );
 
   axios.interceptors.response.use(
     (response) => {
-      setLoading(false);
+      finishWithMinDelay(response.config as InternalAxiosRequestConfig);
       return onResponseSuccess(response);
     },
     (error) => {
-      setLoading(false);
+      finishWithMinDelay(error.config as InternalAxiosRequestConfig);
       return onResponseError(error);
     }
   );
