@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, Save, Lock, Rocket } from "lucide-react";
 
 import { TimesheetEntry } from "../types";
 import { TimesheetBlocker } from "../reducers/timesheetBlocker.reducer";
-import { AttendanceStatus } from "../enums";
+import { AttendanceStatus, Department } from "../enums";
 
 interface MobileMyTimesheetProps {
   currentWeekEntries: { entry: TimesheetEntry; originalIndex: number }[];
@@ -31,6 +31,7 @@ interface MobileMyTimesheetProps {
   selectedDateId: number | null;
   isHighlighted: boolean;
   containerClassName?: string;
+  department?: string;
 }
 
 const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
@@ -59,6 +60,7 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
   selectedDateId,
   isHighlighted,
   containerClassName,
+  department,
 }) => {
   // Sort entries to match Sun-Sat order (0-6)
   const sortedEntries = [...currentWeekEntries].sort((a, b) => {
@@ -161,7 +163,14 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
 
               const manualBlocker = blocker;
               const isStatusLeave = entry.status === AttendanceStatus.LEAVE;
-              const isBlocked = !!manualBlocker || (!isAdmin && !isManager && isStatusLeave);
+              
+              const dObj = new Date(entry.fullDate);
+              const dayOfWeek = dObj.getDay();
+              
+              let isDeptBlocked = false;
+              if (dayOfWeek === 0) isDeptBlocked = true;
+
+              const isBlocked = !!manualBlocker || (!isAdmin && !isManager && (isStatusLeave || isDeptBlocked || isHoliday(entry.fullDate)));
               
               const isEditable =
                 (isAdmin || !readOnly) &&

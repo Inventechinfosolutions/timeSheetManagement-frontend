@@ -24,7 +24,7 @@ import {
   autoUpdateTimesheet,
   downloadAttendancePdfReport,
 } from "../reducers/employeeAttendance.reducer";
-import { AttendanceStatus, UserType } from "../enums";
+import { AttendanceStatus, UserType, Department } from "../enums";
 import { fetchBlockers } from "../reducers/timesheetBlocker.reducer";
 import { getLeaveHistory } from "../reducers/leaveRequest.reducer";
 
@@ -317,6 +317,15 @@ const Calendar = ({
         if (isRestricted(h1) || isRestricted(h2)) return true;
       }
     }
+
+    // 4. Department Weekend Rules
+    const dayOfWeek = d.getDay(); // 0 = Sun, 6 = Sat
+
+    // BLOCK SUNDAYS ONLY (Saturdays are now open for everyone)
+    if (dayOfWeek === 0) return true;
+
+    // 5. Holiday Blocking (All departments)
+    if (checkIsHoliday(d.getFullYear(), d.getMonth(), d.getDate())) return true;
 
     return false;
   };

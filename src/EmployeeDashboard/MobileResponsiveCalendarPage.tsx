@@ -20,7 +20,7 @@ import {
 } from "../reducers/employeeAttendance.reducer";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import { fetchBlockers } from "../reducers/timesheetBlocker.reducer";
-import { AttendanceStatus, UserType } from "../enums";
+import { AttendanceStatus, UserType, Department } from "../enums";
 import {
   generateMonthlyEntries,
   generateRangeEntries,
@@ -315,8 +315,14 @@ const MobileResponsiveCalendarPage = ({
             const holiday = checkIsHoliday(day);
             const manualBlocker = getBlocker(day);
             
-            // Block if manual blocker exists OR (if not admin/manager and status is Leave)
-            const isBlocked = !!manualBlocker || (!isAdmin && !isManager && entry?.status === AttendanceStatus.LEAVE);
+            // Block if manual blocker exists OR (if not admin/manager and status is Leave or Sunday/Holiday)
+            const dObj = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+            const dayOfWeek = dObj.getDay();
+            
+            let isDeptBlocked = false;
+            if (dayOfWeek === 0) isDeptBlocked = true;
+
+            const isBlocked = !!manualBlocker || (!isAdmin && !isManager && (entry?.status === AttendanceStatus.LEAVE || isDeptBlocked || !!holiday));
             
             const isToday =
               day === now.getDate() &&
