@@ -1095,11 +1095,12 @@ const MyTimesheet = ({
             year: now.getFullYear().toString(),
           }),
         );
-        // Clear manually edited indices after successful save
+        // Clear manually edited indices and input values after successful save
         setManuallyEditedIndices(new Set());
+        setLocalInputValues({});
         refreshDryRun();
         refreshDryRun();
-        message.success("Att Successfully");
+        message.success("Attendance saved successfully");
       } catch (error: any) {
         const finalError = cleanErrorMessage(error?.response?.data?.message || error?.message || "Failed to save records.");
         message.error(finalError);
@@ -1364,6 +1365,8 @@ const MyTimesheet = ({
                 : "Confirm Updates",
               cancelText: "Cancel",
               onCancel: () => {
+                setManuallyEditedIndices(new Set());
+                setLocalInputValues({});
                 refreshData();
               },
               okButtonProps: {
@@ -1415,6 +1418,10 @@ const MyTimesheet = ({
                     // Only half-day requests were submitted — just refresh the
                     // UI so the pending leave requests become visible.
                     refreshData();
+                    setManuallyEditedIndices(new Set());
+                    setLocalInputValues({});
+                    refreshDryRun();
+                    message.success("Requests submitted successfully");
                   }
 
                   if (hasHalfDay) {
@@ -1617,6 +1624,8 @@ const MyTimesheet = ({
           okText: "Process All Updates",
           cancelText: "Cancel",
           onCancel: () => {
+            setManuallyEditedIndices(new Set());
+            setLocalInputValues({});
             refreshData();
           },
           okButtonProps: {
