@@ -35,6 +35,7 @@ export interface LeaveRequest {
   /** From GET /leave-requests/:id or email-config */
   assignedManagerEmail?: string | null;
   hrEmail?: string | null;
+  documentKeys?: string[];
 }
 
 export interface LeaveBalanceResponse {

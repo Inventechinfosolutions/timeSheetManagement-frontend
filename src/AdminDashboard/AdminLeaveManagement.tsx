@@ -22,6 +22,7 @@ import {
   clearAttendanceForRequest,
   submitRequestModification,
   undoModificationRequest,
+  undoCancellationRequest,
   clearRequests,
   LeaveRequest,
   getLeaveRequestEmailConfig,
@@ -61,6 +62,13 @@ const isCancellationAllowed = (submittedDate: string) => {
   if (!submittedDate) return true;
   const submission = dayjs(submittedDate).startOf("day");
   const deadline = submission.hour(18).minute(30).second(0);
+  return dayjs().isBefore(deadline);
+};
+
+const isUndoable = (req: any) => {
+  // Rule: Next Day 10 AM
+  const submissionTime = dayjs(req.submittedDate || req.created_at);
+  const deadline = submissionTime.add(1, "day").hour(10).minute(0).second(0);
   return dayjs().isBefore(deadline);
 };
 
@@ -154,6 +162,7 @@ const AdminLeaveManagement = () => {
   const [isAutoApproving, setIsAutoApproving] = useState(false);
   const [isModifying, setIsModifying] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [uploadedDocumentKeys, setUploadedDocumentKeys] = useState<string[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string>("All");
   const [selectedYear, setSelectedYear] = useState<string>("All");
   const [filterStatus, setFilterStatus] = useState<string>("All");
@@ -688,6 +697,7 @@ const AdminLeaveManagement = () => {
           secondHalf: isSplitRequest ? otherHalfType : finalRequestType,
           submittedDate: new Date().toISOString().split("T")[0],
           ccEmails: ccEmails && ccEmails.length > 0 ? ccEmails : [],
+          documentKeys: uploadedDocumentKeys,
         }),
       );
 
@@ -918,6 +928,7 @@ const AdminLeaveManagement = () => {
       setSelectedLeaveType("");
       setSelectedRequestId(null);
       setIsViewMode(false);
+      setUploadedDocumentKeys([]);
       dispatch(resetSubmitSuccess());
     } catch (e: any) {
       message.error(e?.message || "Could not define request or update attendance.");
@@ -1224,90 +1235,8 @@ const AdminLeaveManagement = () => {
       );
 
       if (cancelRequestDates.fulfilled.match(action)) {
-        // For PENDING requests, backend already updated the parent request and created CANCELLED sub-requests.
-        // We only perform auto-approval and parent recalc for APPROVED requests being partially cancelled.
-        if (requestToCancel.status !== LeaveRequestStatus.PENDING) {
-          // AUTO-APPROVE the created cancellation request
-          const createdCancellationRequest = action.payload;
-          if (createdCancellationRequest?.id) {
-            await dispatch(
-              updateLeaveRequestStatus({
-                id: createdCancellationRequest.id,
-                status: LeaveRequestStatus.CANCELLATION_APPROVED,
-              }),
-            ).unwrap();
-
-            // Explicit Attendance Clearance
-            try {
-              await dispatch(
-                clearAttendanceForRequest({
-                  id: createdCancellationRequest.id,
-                  employeeId: createdCancellationRequest.employeeId,
-                }),
-              ).unwrap();
-            } catch (err) {
-              console.error("Failed to clear attendance explicitly:", err);
-            }
-          }
-
-          // Update Parent Request (Recalculate Remaining Duration & Range)
-          if (requestToCancel) {
-            const originalStart = dayjs(requestToCancel.fromDate);
-            const originalEnd = dayjs(requestToCancel.toDate);
-            const cancelledSet = new Set(selectedCancelDates);
-            const validDates: string[] = [];
-
-            let curr = originalStart;
-            while (
-              curr.isBefore(originalEnd) ||
-              curr.isSame(originalEnd, "day")
-            ) {
-              const dStr = curr.format("YYYY-MM-DD");
-              if (!cancelledSet.has(dStr)) {
-                if (!isWeekend(curr) && !isHoliday(curr)) {
-                  validDates.push(dStr);
-                }
-              }
-              curr = curr.add(1, "day");
-            }
-
-            if (validDates.length > 0) {
-              const newFrom = validDates[0];
-              const newTo = validDates[validDates.length - 1];
-              const newDuration = validDates.length;
-
-              await dispatch(
-                updateParentRequest({
-                  parentId: requestToCancel.id,
-                  duration: newDuration,
-                  fromDate: newFrom,
-                  toDate: newTo,
-                }),
-              ).unwrap();
-            } else {
-              await dispatch(
-                updateLeaveRequestStatus({
-                  id: requestToCancel.id,
-                  status: LeaveRequestStatus.CANCELLATION_APPROVED,
-                }),
-              ).unwrap();
-
-              await dispatch(
-                updateParentRequest({
-                  parentId: requestToCancel.id,
-                  duration: 0,
-                  fromDate: requestToCancel.fromDate,
-                  toDate: requestToCancel.toDate,
-                }),
-              ).unwrap();
-            }
-          }
-          message.success("Cancellation Approved");
-        } else {
-          message.success("Dates cancelled successfully");
-        }
+        message.success("Cancellation request submitted successfully");
         setIsCancelDateModalVisible(false);
-        // Refresh data
         refreshData();
       } else {
         const payload = action.payload as any;
@@ -1328,44 +1257,16 @@ const AdminLeaveManagement = () => {
     ) {
       setIsCancelling(true);
       try {
-        const item = entities.find((e: any) => e.id === cancelModal.id);
+        await dispatch(
+          updateLeaveRequestStatus({
+            id: cancelModal.id,
+            status: LeaveRequestStatus.CANCELLED,
+          }),
+        ).unwrap();
 
-        if (item?.status === LeaveRequestStatus.APPROVED) {
-          // Update Status to 'Cancellation Approved' for Approved requests
-          await dispatch(
-            updateLeaveRequestStatus({
-              id: cancelModal.id,
-              status: LeaveRequestStatus.CANCELLATION_APPROVED,
-            }),
-          ).unwrap();
-
-          // Explicit Attendance Clearance
-          try {
-            await dispatch(
-              clearAttendanceForRequest({
-                id: cancelModal.id,
-                employeeId: (selectedEmployee?.employeeId ||
-                  selectedEmployee?.id) as string,
-              }),
-            ).unwrap();
-          } catch (err) {
-            console.error("Failed to clear attendance explicitly:", err);
-          }
-        } else {
-          // For Pending requests, just set to Cancelled
-          await dispatch(
-            updateLeaveRequestStatus({
-              id: cancelModal.id,
-              status: LeaveRequestStatus.CANCELLED,
-            }),
-          ).unwrap();
-        }
-
-        // Refresh Data
         refreshData();
-
         setCancelModal({ isOpen: false, id: null });
-        message.success("Cancellation Approved");
+        message.success("Request Cancelled");
       } catch (err: any) {
         message.error(
           err.message || "An error occurred while cancelling the request.",
@@ -1378,6 +1279,39 @@ const AdminLeaveManagement = () => {
 
   const handleUndoModification = (request: any) => {
     setUndoModal({ isOpen: true, request });
+  };
+
+  const handleUndoCancellation = (request: any) => {
+    setUndoModal({ isOpen: true, request });
+  };
+
+  const executeUndoCancellation = async () => {
+    if (!undoModal.request) return;
+
+    setIsUndoing(true);
+    try {
+      const employeeId = undoModal.request.employeeId;
+      const action = await dispatch(
+        undoCancellationRequest({
+          id: undoModal.request.id,
+          employeeId: employeeId,
+        }),
+      );
+
+      if (undoCancellationRequest.fulfilled.match(action)) {
+        refreshData();
+        setUndoModal({ isOpen: false, request: null });
+        message.success("Cancellation Revoked");
+      } else {
+        const payload = action.payload as any;
+        const errorMsg = typeof payload === 'string' ? payload : (payload?.message || payload?.error || "Could not undo cancellation");
+        throw new Error(Array.isArray(errorMsg) ? errorMsg.join(', ') : errorMsg);
+      }
+    } catch (err: any) {
+      message.error(`Undo Failed: ${err.message || "Could not undo cancellation."}`);
+    } finally {
+      setIsUndoing(false);
+    }
   };
 
   const executeUndoModification = async () => {
@@ -1416,6 +1350,7 @@ const AdminLeaveManagement = () => {
     setIsViewMode(false);
     setSelectedRequestId(null);
     setSelectedLeaveType("");
+    setUploadedDocumentKeys([]);
     setFormData({
       title: "",
       description: "",
@@ -2288,6 +2223,17 @@ const AdminLeaveManagement = () => {
                                 item.status === LeaveRequestStatus.APPROVED) &&
                                 renderCancelButton(item)}
                               {item.status ===
+                                LeaveRequestStatus.REQUESTING_FOR_CANCELLATION &&
+                                isUndoable(item) && (
+                                <button
+                                  onClick={() => handleUndoCancellation(item)}
+                                  className="p-2 text-amber-600 bg-amber-50/50 hover:bg-amber-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-amber-200 active:scale-90"
+                                  title="Undo Cancellation"
+                                >
+                                  <RotateCcw size={18} />
+                                </button>
+                              )}
+                              {item.status ===
                                 "Requesting for Modification" && (
                                 <button
                                   onClick={() => handleUndoModification(item)}
@@ -2910,10 +2856,13 @@ const AdminLeaveManagement = () => {
                   deleteFile={deleteLeaveRequestFile}
                   getFiles={getLeaveRequestFiles}
                   maxFiles={5}
+                  maxFileSize={5 * 1024 * 1024}
                   allowedTypes={["images", "pdf"]}
                   successMessage="Document uploaded successfully"
                   deleteMessage="Document deleted successfully"
                   disabled={isViewMode}
+                  onFileUpload={(file) => setUploadedDocumentKeys((prev) => [...prev, file.key])}
+                  onFileDelete={(fileKey) => setUploadedDocumentKeys((prev) => prev.filter((k) => k !== fileKey))}
                 />
               </div>
             </div>
@@ -2961,8 +2910,15 @@ const AdminLeaveManagement = () => {
 
               <p className="text-gray-500 font-medium leading-relaxed mb-8">
                 Are you sure you want to cancel this request? This action cannot
-                be undone. Alternatively, you can <strong>modify</strong> the
-                request if you just need to correct some details.
+                be undone.
+                {!(entities.find((e: any) => e.id === cancelModal.id)?.status === LeaveRequestStatus.PENDING || 
+                   entities.find((e: any) => e.id === cancelModal.id)?.status === LeaveRequestStatus.REQUESTING_FOR_CANCELLATION || 
+                   entities.find((e: any) => e.id === cancelModal.id)?.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION) && (
+                  <>
+                    {" "}Alternatively, you can <strong>modify</strong> the
+                    request if you just need to correct some details.
+                  </>
+                )}
               </p>
 
               <div className="flex gap-4">
@@ -2974,17 +2930,21 @@ const AdminLeaveManagement = () => {
                 >
                   Cancel
                 </button>
-                <button
-                  onClick={() => {
-                    const req = entities.find(
-                      (e: any) => e.id === cancelModal.id,
-                    );
-                    if (req) handleModifyClick(req);
-                  }}
-                  className="flex-1 py-3.5 rounded-2xl font-bold text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95 transform uppercase tracking-wider flex items-center justify-center gap-2"
-                >
-                  MODIFY INSTEAD
-                </button>
+                {!(entities.find((e: any) => e.id === cancelModal.id)?.status === LeaveRequestStatus.PENDING || 
+                   entities.find((e: any) => e.id === cancelModal.id)?.status === LeaveRequestStatus.REQUESTING_FOR_CANCELLATION || 
+                   entities.find((e: any) => e.id === cancelModal.id)?.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION) && (
+                  <button
+                    onClick={() => {
+                      const req = entities.find(
+                        (e: any) => e.id === cancelModal.id,
+                      );
+                      if (req) handleModifyClick(req);
+                    }}
+                    className="flex-1 py-3.5 rounded-2xl font-bold text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95 transform uppercase tracking-wider flex items-center justify-center gap-2"
+                  >
+                    MODIFY INSTEAD
+                  </button>
+                )}
                 <button
                   onClick={executeCancel}
                   disabled={isCancelling}
@@ -3028,28 +2988,32 @@ const AdminLeaveManagement = () => {
               >
                 Close
               </button>
-              <button
-                key="modify"
-                onClick={() => {
-                  if (requestToCancel) {
-                    setIsCancelDateModalVisible(false);
-                    handleModifyClick(
-                      requestToCancel,
-                      selectedCancelDates.length > 0
-                        ? selectedCancelDates
-                        : undefined,
-                    );
-                  }
-                }}
-                disabled={selectedCancelDates.length === 0 || requestToCancel?.status === LeaveRequestStatus.PENDING}
-                className={`px-6 py-2.5 rounded-2xl font-bold transition-all uppercase tracking-wider flex items-center justify-center gap-2 ${
-                  selectedCancelDates.length === 0 || requestToCancel?.status === LeaveRequestStatus.PENDING
-                    ? "text-gray-400 bg-gray-100 cursor-not-allowed"
-                    : "text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 active:scale-95 transform"
-                }`}
-              >
-                MODIFY INSTEAD
-              </button>
+              {!(requestToCancel?.status === LeaveRequestStatus.PENDING || 
+                 requestToCancel?.status === LeaveRequestStatus.REQUESTING_FOR_CANCELLATION || 
+                 requestToCancel?.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION) && (
+                <button
+                  key="modify"
+                  onClick={() => {
+                    if (requestToCancel) {
+                      setIsCancelDateModalVisible(false);
+                      handleModifyClick(
+                        requestToCancel,
+                        selectedCancelDates.length > 0
+                          ? selectedCancelDates
+                          : undefined,
+                      );
+                    }
+                  }}
+                  disabled={selectedCancelDates.length === 0}
+                  className={`px-6 py-2.5 rounded-2xl font-bold transition-all uppercase tracking-wider flex items-center justify-center gap-2 ${
+                    selectedCancelDates.length === 0
+                      ? "text-gray-400 bg-gray-100 cursor-not-allowed"
+                      : "text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 active:scale-95 transform"
+                  }`}
+                >
+                  MODIFY INSTEAD
+                </button>
+              )}
             </div>
             <button
               key="submit"
@@ -3084,7 +3048,7 @@ const AdminLeaveManagement = () => {
             </div>
           ) : cancellableDates.length === 0 ? (
             <p className="text-gray-500 text-center font-medium">
-              No dates found for this request.
+              All dates are already modified or cancelled, check table for dates.
             </p>
           ) : (
             <div className="space-y-4">
@@ -3456,7 +3420,7 @@ const AdminLeaveManagement = () => {
         </div>
       </Modal>
 
-      {/* Undo Modification Confirmation Modal */}
+      {/* Undo Confirmation Modal */}
       <Modal
         open={undoModal.isOpen}
         onCancel={() => setUndoModal({ isOpen: false, request: null })}
@@ -3472,16 +3436,20 @@ const AdminLeaveManagement = () => {
         }}
       >
         <div className="p-8 text-center">
-          <div className="mx-auto w-16 h-16 rounded-full bg-orange-50 flex items-center justify-center mb-6">
-            <RotateCcw size={32} className="text-orange-500" />
+          <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-6 
+            ${undoModal.request?.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION ? "bg-orange-50 text-orange-500" : "bg-amber-50 text-amber-500"}`}
+          >
+            <RotateCcw size={32} />
           </div>
 
           <h3 className="text-2xl font-black text-[#2B3674] mb-2">
-            Undo Modification?
+            {undoModal.request?.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
+               ? "Undo Modification?"
+               : "Revert Cancellation?"}
           </h3>
           <p className="text-gray-500 font-medium leading-relaxed mb-8">
-            Are you sure you want to revert this modification request? This will
-            restore the original request status and cancel the modification.
+            Are you sure you want to {undoModal.request?.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION ? "revert this modification request" : "revert this cancellation request"}? This will
+            restore the original request status and cancel the {undoModal.request?.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION ? "modification" : "cancellation"}.
           </p>
 
           <div className="flex gap-3">
@@ -3492,9 +3460,11 @@ const AdminLeaveManagement = () => {
               Cancel
             </button>
             <button
-              onClick={executeUndoModification}
+              onClick={undoModal.request?.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION ? executeUndoModification : executeUndoCancellation}
               disabled={isUndoing}
-              className="flex-1 py-3 font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-xl shadow-lg shadow-orange-200 transition-all active:scale-95 flex items-center justify-center gap-2"
+              className={`flex-1 py-3 font-bold text-white shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2
+                ${undoModal.request?.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION ? "bg-orange-500 hover:bg-orange-600 shadow-orange-200" : "bg-amber-500 hover:bg-amber-600 shadow-amber-200"}
+              `}
             >
               {isUndoing ? (
                 <>

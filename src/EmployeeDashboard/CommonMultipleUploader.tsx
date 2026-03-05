@@ -361,7 +361,15 @@ const CommonMultipleUploader: React.FC<CommonMultipleUploaderProps> = ({
         );
 
         if (relevantFiles && relevantFiles.length > 0) {
-          const formattedFiles: UploadFile[] = relevantFiles.map(
+          const uniqueMap = new Map();
+          relevantFiles.forEach((f: FileListResponse) => {
+            if (!uniqueMap.has(f.key)) {
+              uniqueMap.set(f.key, f);
+            }
+          });
+          const deduplicatedFiles: FileListResponse[] = Array.from(uniqueMap.values());
+
+          const formattedFiles: UploadFile[] = deduplicatedFiles.map(
             (file: FileListResponse) => ({
               uid: file.key,
               name: file.name,
@@ -370,7 +378,7 @@ const CommonMultipleUploader: React.FC<CommonMultipleUploaderProps> = ({
             }),
           );
           setExistingFiles(formattedFiles);
-          setFileList(relevantFiles);
+          setFileList(deduplicatedFiles);
         } else {
           setExistingFiles([]);
           setFileList([]);
@@ -805,8 +813,8 @@ const CommonMultipleUploader: React.FC<CommonMultipleUploaderProps> = ({
 
       {existingFiles.length > 0 || uploadingFiles.length > 0 ? (
         <StyledGalleryContainer>
-          {uploadingFiles.map((file) => (
-            <StyledImageCard key={file.uid}>
+          {uploadingFiles.map((file, index) => (
+            <StyledImageCard key={`uploading-${file.uid}-${index}`}>
               <StyledImageWrapper
                 style={{ backgroundImage: `url(${file.preview})` }}
               >
@@ -838,9 +846,9 @@ const CommonMultipleUploader: React.FC<CommonMultipleUploaderProps> = ({
             </StyledImageCard>
           ))}
 
-          {existingFiles.map((file) =>
+          {existingFiles.map((file, index) =>
             isImageFile(file.name) ? (
-              <StyledImageCard key={file.uid}>
+              <StyledImageCard key={`existing-img-${file.uid}-${index}`}>
                 {finalShowDelete && (
                   <StyledCloseButton onClick={(e) => handleDelete(file, e)}>
                     <CloseOutlined />
@@ -861,7 +869,7 @@ const CommonMultipleUploader: React.FC<CommonMultipleUploaderProps> = ({
                 })()}
               </StyledImageCard>
             ) : (
-              <StyledNonImageCard key={file.uid}>
+              <StyledNonImageCard key={`existing-nonimg-${file.uid}-${index}`}>
                 {finalShowDelete && (
                   <StyledCloseButton onClick={(e) => handleDelete(file, e)}>
                     <CloseOutlined />

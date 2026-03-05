@@ -23,7 +23,9 @@ import {
 } from "lucide-react";
 import { getManagerMappingByEmployeeId } from "../reducers/managerMapping.reducer";
 import { fetchDepartments } from "../reducers/masterDepartment.reducer";
-import { resetPassword } from "../reducers/employeeDetails.reducer";
+import { 
+  resetPassword,
+} from "../reducers/employeeDetails.reducer";
 import { UserType, EmploymentType } from "../enums";
 
 const EmployeeDetailsView = () => {
@@ -313,6 +315,7 @@ const EmployeeDetailsView = () => {
       setResetError(err?.message || "Failed to reset password");
     }
   };
+
 
   return (
     <div className="px-4 md:px-8 py-2 md:py-8 w-full max-w-[1400px] mx-auto animate-in fade-in duration-500 space-y-3 md:space-y-6">
