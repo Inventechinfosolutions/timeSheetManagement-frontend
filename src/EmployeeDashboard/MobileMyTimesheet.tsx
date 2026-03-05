@@ -159,7 +159,9 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
                 return d >= start && d <= end;
               });
 
-              const isBlocked = !!blocker;
+              const manualBlocker = blocker;
+              const isStatusLeave = entry.status === AttendanceStatus.LEAVE;
+              const isBlocked = !!manualBlocker || (!isAdmin && !isManager && isStatusLeave);
               
               const isEditable =
                 (isAdmin || !readOnly) &&
@@ -271,7 +273,9 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
                       <div className="absolute inset-0 z-20 bg-black/40 backdrop-blur-[2px] rounded-xl flex flex-col items-center justify-center p-1 text-center pointer-events-none">
                          <Lock size={12} className="text-white mb-0.5" />
                          <span className="text-[7px] font-black text-white leading-none uppercase tracking-tighter">
-                           Contact {blocker?.blockedBy || "Admin"}
+                           {manualBlocker 
+                             ? (isAdmin || isManager ? "Unblock" : `Contact ${manualBlocker.blockedBy || "Admin"}`)
+                             : "On Leave"}
                          </span>
                       </div>
                     )}

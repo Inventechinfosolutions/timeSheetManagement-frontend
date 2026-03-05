@@ -300,6 +300,11 @@ const Calendar = ({
       if (entry) {
         const h1 = (entry.firstHalf || "").toLowerCase();
         const h2 = (entry.secondHalf || "").toLowerCase();
+        const s = (entry.status || "").toLowerCase();
+
+        // BLOCK IF STATUS IS LEAVE
+        if (s.includes("leave")) return true;
+
         const isRestricted = (val: string) =>
           val &&
           !val.includes("office") &&
@@ -1156,12 +1161,15 @@ const Calendar = ({
                     type="date"
                     value={downloadDateRange.from}
                     max={new Date().toISOString().split("T")[0]}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      const newFrom = e.target.value;
                       setDownloadDateRange({
                         ...downloadDateRange,
-                        from: e.target.value,
-                      })
-                    }
+                        from: newFrom,
+                        // If TO date is before the new FROM date, reset TO to FROM
+                        to: downloadDateRange.to && downloadDateRange.to < newFrom ? newFrom : downloadDateRange.to,
+                      });
+                    }}
                     className="w-full pl-4 pr-12 py-3 bg-[#F4F7FE] border-transparent rounded-xl text-[#2B3674] font-bold focus:outline-none focus:ring-2 focus:ring-[#4318FF] transition-all cursor-pointer"
                   />
                   <CalendarIcon
@@ -1178,6 +1186,7 @@ const Calendar = ({
                   <input
                     type="date"
                     value={downloadDateRange.to}
+                    min={downloadDateRange.from}
                     max={new Date().toISOString().split("T")[0]}
                     onChange={(e) =>
                       setDownloadDateRange({

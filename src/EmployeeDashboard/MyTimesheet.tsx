@@ -550,6 +550,11 @@ const MyTimesheet = ({
       if (entry) {
         const h1 = (entry.firstHalf || "").toLowerCase();
         const h2 = (entry.secondHalf || "").toLowerCase();
+        const s = (entry.status || "").toLowerCase();
+
+        // BLOCK IF STATUS IS LEAVE
+        if (s.includes("leave")) return true;
+
         const isRestricted = (val: string) =>
           val &&
           !val.includes("office") &&
