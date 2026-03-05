@@ -9,6 +9,7 @@ import { Suspense } from "react";
 import { Spin } from "antd";
 import { lazy } from "react";
 import Layout from "./components/Layout";
+import ApiLoadingSpinner from "./components/ApiLoadingSpinner";
 import AdminLayout from "./navigation/AdminLayout";
 import { adminComponentConfigs } from "./navigation/adminComponentConfigs";
 import ManagerLayout from "./navigation/ManagerLayout";
@@ -123,6 +124,7 @@ import SessionTimeout from "./components/SessionTimeout";
 function App() {
   return (
     <Router>
+      <ApiLoadingSpinner />
       <SessionTimeout />
       <Routes>
         {/* Employee Activation Route - handles activation links */}

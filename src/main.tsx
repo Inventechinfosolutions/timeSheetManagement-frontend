@@ -5,7 +5,7 @@ import App from "./App.tsx";
 import setupAxiosInterceptors from "./config/axios-interceptor";
 import "./index.css";
 
-setupAxiosInterceptors(() => {
+setupAxiosInterceptors(store.dispatch, () => {
   window.location.href = "/login";
 });
 

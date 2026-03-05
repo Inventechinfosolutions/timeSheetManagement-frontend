@@ -11,9 +11,11 @@ import leaveRequestReducer from './reducers/leaveRequest.reducer';
 import leaveNotificationReducer from './reducers/leaveNotification.reducer';
 import managerMappingReducer from './reducers/managerMapping.reducer';
 import masterDepartmentReducer from './reducers/masterDepartment.reducer';
+import apiLoadingReducer from './reducers/apiLoading.reducer';
 
 export const store = configureStore({
   reducer: {
+    apiLoading: apiLoadingReducer,
     attendance: attendanceReducer,
     employeeDetails: employeeDetailsReducer,
     user: userReducer,
