@@ -342,7 +342,11 @@ const AdminEmployeeTimesheetWrapper = () => {
                     <input
                       type="date"
                       value={fromDate}
-                      onChange={(e) => setFromDate(e.target.value)}
+                      onChange={(e) => {
+                        const newFrom = e.target.value;
+                        setFromDate(newFrom);
+                        if (toDate && newFrom && toDate < newFrom) setToDate(newFrom);
+                      }}
                       className="w-full pl-11 pr-4 py-3 bg-[#F4F7FE] border-none rounded-2xl text-sm text-[#2B3674] font-bold focus:ring-2 focus:ring-[#4318FF] transition-all"
                     />
                   </div>
@@ -356,6 +360,7 @@ const AdminEmployeeTimesheetWrapper = () => {
                     <input
                       type="date"
                       value={toDate}
+                      min={fromDate}
                       onChange={(e) => setToDate(e.target.value)}
                       className="w-full pl-11 pr-4 py-3 bg-[#F4F7FE] border-none rounded-2xl text-sm text-[#2B3674] font-bold focus:ring-2 focus:ring-[#4318FF] transition-all"
                     />

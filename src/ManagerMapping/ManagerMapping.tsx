@@ -65,6 +65,8 @@ const ManagerMapping: React.FC = () => {
     mappedEmployeeIds,
     loading: mappingLoading,
   } = useAppSelector((state: RootState) => state.managerMapping);
+  const currentUser = useAppSelector((state: RootState) => state.user.currentUser);
+  const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
   const navigate = useNavigate();
 
   // State management
@@ -255,7 +257,8 @@ const ManagerMapping: React.FC = () => {
 
   return (
     <div className="p-4 md:p-8 bg-[#F4F7FE] min-h-screen font-['DM_Sans',sans-serif]">
-      {/* Header Card */}
+      {/* Header Card - hidden for Receptionist (view only Mapping History) */}
+      {!isReceptionist && (
       <div className="bg-white rounded-[24px] shadow-[0px_18px_40px_rgba(112,144,176,0.12)] p-6 mb-6">
         <h1 className="text-2xl font-bold text-[#2B3674] mb-2">
           Manager Mapping
@@ -365,9 +368,10 @@ const ManagerMapping: React.FC = () => {
           </div>
         </div>
       </div>
+      )}
 
-      {/* Main Content - Only show when department and manager are selected */}
-      {selectedDepartment !== "All Departments" && selectedManager && (
+      {/* Main Content - Only show when department and manager are selected (hidden for Receptionist) */}
+      {!isReceptionist && selectedDepartment !== "All Departments" && selectedManager && (
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] gap-4 mb-6">
           {/* Available Employees */}
           <div className="bg-white rounded-[24px] shadow-[0px_18px_40px_rgba(112,144,176,0.12)] p-6">
@@ -546,7 +550,7 @@ const ManagerMapping: React.FC = () => {
         <div className="flex gap-4 justify-center mt-4 mb-6">
           <button
             onClick={handleClear}
-            className="px-6 py-3 bg-white border-2 border-gray-200 text-[#2B3674] rounded-xl font-bold hover:border-[#4318FF] hover:text-[#4318FF] transition-all"
+            className="px-6 py-3 bg-[#5B4FFF] border-2 border-[#4318FF]/50 text-white rounded-xl font-bold hover:bg-[#4318FF] hover:border-[#4318FF] transition-all"
           >
             Clear All
           </button>
@@ -560,9 +564,9 @@ const ManagerMapping: React.FC = () => {
         </div>
       )}
 
-      {/* Mapping History */}
+      {/* Mapping History - only section visible for Receptionist */}
       <div className="bg-white rounded-[24px] shadow-[0px_18px_40px_rgba(112,144,176,0.12)] p-6">
-        <h3 className="text-lg font-bold text-[#2B3674] mb-4">
+        <h3 className={`font-bold text-[#2B3674] ${isReceptionist ? "text-2xl mb-2" : "text-lg mb-4"}`}>
           Mapping History
         </h3>
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
@@ -676,7 +680,7 @@ const ManagerMapping: React.FC = () => {
                 setHistoryStatus("All");
                 setHistoryPage(1);
               }}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-gray-700 rounded-full hover:bg-gray-50 active:scale-95 transition-all text-sm font-bold border border-gray-200 whitespace-nowrap"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#5B4FFF] text-white rounded-full hover:bg-[#4318FF] active:scale-95 transition-all text-sm font-bold border border-[#4318FF]/50 whitespace-nowrap"
               title="Clear all filters"
             >
               <X size={16} />

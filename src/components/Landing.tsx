@@ -8,10 +8,17 @@ import { UserType } from "../enums";
 import loginVisual from "../assets/login_visual.png";
 import inventLogo from "../assets/invent-logo.svg";
 import LandingMobile from "./LandingMobile";
+import AnimatedInventLogo from "./AnimatedInventLogo";
+
+const SPLASH_HOLD_AFTER_WELCOME_MS = 1000;
+const SPLASH_FADEOUT_MS = 400;
 
 const Landing = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+
+  const [showSplash, setShowSplash] = useState(true);
+  const [splashExiting, setSplashExiting] = useState(false);
 
   // Single State for Login
   const [loginId, setLoginId] = useState("");
@@ -34,7 +41,10 @@ const Landing = () => {
         (currentUser.role && currentUser.role.toUpperCase().includes(UserType.MANAGER))
       ) {
         navigate("/manager-dashboard");
-      } else if (currentUser.userType?.toUpperCase() === UserType.ADMIN) {
+      } else if (
+        currentUser.userType?.toUpperCase() === UserType.ADMIN ||
+        currentUser.userType?.toUpperCase() === UserType.RECEPTIONIST
+      ) {
         navigate("/admin-dashboard");
       } else if (currentUser.userType?.toUpperCase() === UserType.EMPLOYEE) {
         navigate("/employee-dashboard");
@@ -76,13 +86,40 @@ const Landing = () => {
     }
   };
 
+  const handleSplashComplete = () => {
+    setTimeout(() => {
+      setSplashExiting(true);
+      setTimeout(() => setShowSplash(false), SPLASH_FADEOUT_MS);
+    }, SPLASH_HOLD_AFTER_WELCOME_MS);
+  };
+
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-4 bg-[#EFEBF5] relative overflow-hidden font-sans">
       {/* Page Background Shapes from Design */}
       <div className="absolute top-[-5%] left-[5%] w-48 h-48 bg-[#585CE5] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
       <div className="absolute bottom-[-10%] right-[-5%] w-96 h-96 bg-white rounded-full mix-blend-overlay filter blur-3xl opacity-40"></div>
 
-      {/* Main Container */}
+      {/* Login page loader: logo + Welcome to Inventech, then smooth transition to login form */}
+      {showSplash && (
+        <div
+          role="status"
+          aria-busy="true"
+          aria-label="Loading"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#EFEBF5] transition-opacity duration-500 ease-out"
+          style={{ opacity: splashExiting ? 0 : 1 }}
+        >
+          <div className="absolute top-[-5%] left-[5%] w-48 h-48 bg-[#585CE5] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse" />
+          <div className="absolute bottom-[-10%] right-[-5%] w-96 h-96 bg-white rounded-full mix-blend-overlay filter blur-3xl opacity-40" />
+          <AnimatedInventLogo
+            enterFromBottom
+            onComplete={handleSplashComplete}
+          />
+        </div>
+      )}
+
+      {/* Login UI – shown after loader with smooth fade-in */}
+      {!showSplash && (
+        <div className="animate-in fade-in duration-500 w-full flex flex-col items-center">
       <LandingMobile
         loginId={loginId}
         setLoginId={setLoginId}
@@ -102,9 +139,9 @@ const Landing = () => {
             <img
               src={inventLogo}
               alt="Invent Logo"
-              className="h-16 mx-auto mb-5 animate-fade-in-up"
+              className="h-16 mx-auto mb-5"
             />
-            <h1 className="text-3xl font-black text-[#2D3748] mb-2 tracking-tight animate-fade-in-up animation-delay-100">
+            <h1 className="text-3xl font-black text-[#2D3748] mb-2 tracking-tight">
               LOGIN
             </h1>
             <p className="text-gray-400 text-[13px] font-medium tracking-wide animate-fade-in-up animation-delay-200">
@@ -207,6 +244,8 @@ const Landing = () => {
           </div>
         </div>
       </div>
+        </div>
+      )}
     </div>
   );
 };

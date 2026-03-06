@@ -3,6 +3,7 @@ export enum UserType {
     EMPLOYEE = 'EMPLOYEE',
     MANAGER = 'MANAGER',
     TEAMLEAD = 'TEAM LEAD',
+    RECEPTIONIST = 'RECEPTIONIST',
 }
 
 export enum UserStatus {

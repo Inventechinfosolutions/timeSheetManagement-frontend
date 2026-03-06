@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../hooks";
-import { DatePicker, ConfigProvider, Checkbox, Select, Modal } from "antd";
+import { DatePicker, ConfigProvider, Checkbox, Select, Modal, Spin } from "antd";
 import dayjs from "dayjs";
 import {
   getLeaveHistory,
@@ -86,6 +86,7 @@ const datePickerTheme = {
 const AdminLeaveManagement = () => {
   const dispatch = useAppDispatch();
   const { currentUser } = useAppSelector((state) => state.user);
+  const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
   const {
     entities = [] as LeaveRequest[],
     totalItems,
@@ -116,6 +117,7 @@ const AdminLeaveManagement = () => {
     });
   }, []);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [viewDetailsLoading, setViewDetailsLoading] = useState(false);
   const [isViewMode, setIsViewMode] = useState(false);
   const [selectedRequestId, setSelectedRequestId] = useState<number | null>(
     null,
@@ -1043,62 +1045,78 @@ const AdminLeaveManagement = () => {
   };
 
   const handleViewApplication = (item: any) => {
-    dispatch(getLeaveRequestById(item.id)).then((action) => {
-      if (getLeaveRequestById.fulfilled.match(action)) {
-        const fetchedItem = action.payload;
-        setIsViewMode(true);
-        setSelectedRequestId(fetchedItem.id);
-        setSelectedLeaveType(fetchedItem.requestType);
-        setFormData({
-          title: fetchedItem.title,
-          description: fetchedItem.description,
-          startDate: fetchedItem.fromDate,
-          endDate: fetchedItem.toDate,
-          duration: fetchedItem.duration,
-        });
+    setViewDetailsLoading(true);
+    setIsModalOpen(true);
+    setIsViewMode(true);
+    setSelectedRequestId(item.id);
+    setSelectedLeaveType(item.requestType || "");
+    dispatch(getLeaveRequestById(item.id))
+      .then((action) => {
+        if (getLeaveRequestById.fulfilled.match(action)) {
+          const fetchedItem = action.payload;
+          setSelectedRequestId(fetchedItem.id);
+          setSelectedLeaveType(fetchedItem.requestType);
+          setFormData({
+            title: fetchedItem.title,
+            description: fetchedItem.description,
+            startDate: fetchedItem.fromDate,
+            endDate: fetchedItem.toDate,
+            duration: fetchedItem.duration,
+          });
 
-        const parsedCc = Array.isArray(fetchedItem.ccEmails)
-          ? fetchedItem.ccEmails
-          : typeof fetchedItem.ccEmails === "string"
-            ? (() => {
-                try {
-                  const p = JSON.parse(fetchedItem.ccEmails);
-                  return Array.isArray(p) ? p : [];
-                } catch {
-                  return [];
-                }
-              })()
-            : [];
-        setCcEmails(parsedCc);
-        setCcEmailInput("");
-        setCcEmailError("");
+          const parsedCc = Array.isArray(fetchedItem.ccEmails)
+            ? fetchedItem.ccEmails
+            : typeof fetchedItem.ccEmails === "string"
+              ? (() => {
+                  try {
+                    const p = JSON.parse(fetchedItem.ccEmails);
+                    return Array.isArray(p) ? p : [];
+                  } catch {
+                    return [];
+                  }
+                })()
+              : [];
+          setCcEmails(parsedCc);
+          setCcEmailInput("");
+          setCcEmailError("");
 
-        if (fetchedItem.employeeId) {
-          dispatch(getLeaveRequestEmailConfig(fetchedItem.employeeId))
-            .unwrap()
-            .then((data) =>
-              setEmailConfig({
-                assignedManagerEmail: data?.assignedManagerEmail ?? null,
-                hrEmail: data?.hrEmail ?? null,
-              }),
-            )
-            .catch(() =>
-              setEmailConfig({ assignedManagerEmail: null, hrEmail: null }),
-            );
+          if (fetchedItem.employeeId) {
+            dispatch(getLeaveRequestEmailConfig(fetchedItem.employeeId))
+              .unwrap()
+              .then((data) =>
+                setEmailConfig({
+                  assignedManagerEmail: data?.assignedManagerEmail ?? null,
+                  hrEmail: data?.hrEmail ?? null,
+                }),
+              )
+              .catch(() =>
+                setEmailConfig({ assignedManagerEmail: null, hrEmail: null }),
+              );
+          }
+
+          setErrors({
+            title: "",
+            description: "",
+            startDate: "",
+            endDate: "",
+            employee: "",
+          });
+        } else {
+          message.error("Failed to fetch request details");
+          setIsModalOpen(false);
+          setIsViewMode(false);
+          setSelectedRequestId(null);
         }
-
-        setIsModalOpen(true);
-        setErrors({
-          title: "",
-          description: "",
-          startDate: "",
-          endDate: "",
-          employee: "",
-        });
-      } else {
+      })
+      .catch(() => {
         message.error("Failed to fetch request details");
-      }
-    });
+        setIsModalOpen(false);
+        setIsViewMode(false);
+        setSelectedRequestId(null);
+      })
+      .finally(() => {
+        setViewDetailsLoading(false);
+      });
   };
 
   const handleModifyClick = (req: any, datesToModify?: string[]) => {
@@ -1346,6 +1364,7 @@ const AdminLeaveManagement = () => {
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
+    setViewDetailsLoading(false);
     setIsViewMode(false);
     setSelectedRequestId(null);
     setSelectedLeaveType("");
@@ -1435,10 +1454,11 @@ const AdminLeaveManagement = () => {
   };
 
   const renderCancelButton = (item: any) => {
-    // Admins and Managers have more authority to cancel
+    // Receptionist is view-only: no cancel (isReceptionist from component scope)
     const isAdminOrManager =
-      currentUser?.userType === UserType.ADMIN ||
-      currentUser?.userType === UserType.MANAGER;
+      !isReceptionist &&
+      (currentUser?.userType === UserType.ADMIN ||
+        currentUser?.userType === UserType.MANAGER);
 
     // Original policy: next day 10am
     const withinDeadline = isCancellationAllowed(
@@ -1482,7 +1502,8 @@ const AdminLeaveManagement = () => {
         </div>
       </div>
 
-      {/* Employee Selection Dropdown */}
+      {/* Employee Selection Dropdown - hidden for receptionist (view only) */}
+      {!isReceptionist && (
       <div className="mb-6">
         <label className="text-sm font-bold text-[#2B3674] mb-2 block">
           Select Employee
@@ -1591,8 +1612,10 @@ const AdminLeaveManagement = () => {
           )}
         </div>
       </div>
+      )}
 
-      {/* Hero Action Card */}
+      {/* Hero Action Card - hidden for receptionist */}
+      {!isReceptionist && (
       <div className="relative z-30 bg-gradient-to-r from-[#4318FF] to-[#868CFF] rounded-[20px] p-4 md:p-6 mb-8 shadow-xl shadow-blue-500/20 group animate-in fade-in slide-in-from-bottom-4 duration-700">
         <div className="absolute inset-0 overflow-hidden rounded-[20px]">
           <div className="absolute top-[-10%] right-[-5%] w-64 h-64 bg-white/10 rounded-full blur-[60px] group-hover:bg-white/[0.12] transition-all duration-700" />
@@ -1648,9 +1671,10 @@ const AdminLeaveManagement = () => {
           </div>
         </div>
       </div>
+      )}
 
-      {/* Leave Balance Cards - Only show if employee is selected */}
-      {selectedEmployee && (
+      {/* Leave Balance Cards - Only show if employee is selected (hidden for receptionist) */}
+      {!isReceptionist && selectedEmployee && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 mt-4">
           {[
             {
@@ -1833,7 +1857,7 @@ const AdminLeaveManagement = () => {
                     setFilterStatus("All");
                     setCurrentPage(1);
                   }}
-                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-gray-700 rounded-full hover:bg-gray-50 active:scale-95 transition-all text-sm font-bold border border-gray-200 whitespace-nowrap"
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#5B4FFF] text-white rounded-full hover:bg-[#4318FF] active:scale-95 transition-all text-sm font-bold border border-[#4318FF]/50 whitespace-nowrap"
                   title="Clear all filters"
                 >
                   <X size={16} />
@@ -2305,7 +2329,7 @@ const AdminLeaveManagement = () => {
         </>
       )}
 
-      {/* Application Modal */}
+      {/* Application Modal - constrained to viewport with scrollable body */}
       <Modal
         open={isModalOpen}
         onCancel={handleCloseModal}
@@ -2313,11 +2337,20 @@ const AdminLeaveManagement = () => {
         closable={true}
         centered
         width={980}
-        className="application-modal"
+        className="application-modal application-modal--constrained"
+        styles={{ body: { maxHeight: "85vh", overflow: "hidden", display: "flex", flexDirection: "column", padding: 0 } }}
       >
-        <div className="relative overflow-hidden bg-white rounded-[16px]">
+        <div
+          className={`relative overflow-hidden bg-white rounded-[16px] flex flex-col max-h-[85vh] ${viewDetailsLoading ? "min-h-[70vh]" : ""}`}
+        >
+          {/* In-modal loader when fetching view details - covers full modal area */}
+          {viewDetailsLoading && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/95 rounded-[16px] min-h-[70vh]">
+              <Spin size="large" tip="Loading..." />
+            </div>
+          )}
           {/* Modal Header */}
-          <div className="pt-2 px-6">
+          <div className="pt-2 px-6 flex-shrink-0">
             <div className="flex justify-between items-start">
               <h2 className="text-2xl md:text-3xl font-black text-[#2B3674]">
                 {selectedLeaveType === LeaveRequestType.APPLY_LEAVE
@@ -2329,20 +2362,8 @@ const AdminLeaveManagement = () => {
             </div>
           </div>
 
-          {/* Modal Body */}
-          <div className="p-6 space-y-5 overflow-y-auto custom-scrollbar max-h-[90vh]">
-            {/* Error Message */}
-            {error && (
-              <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
-                <XCircle size={20} className="text-red-500 shrink-0" />
-                <p className="text-xs font-bold text-red-600 leading-tight">
-                  {typeof error === "object" && error !== null
-                    ? (error as any).message || "An error occurred"
-                    : String(error)}
-                </p>
-              </div>
-            )}
-
+          {/* Modal Body - scrollable */}
+          <div className="p-6 space-y-5 overflow-y-auto custom-scrollbar flex-1 min-h-0">
             {/* Email recipients + Subject - in card for manager/admin */}
             {selectedEmployee && (
               <div className="rounded-2xl border border-[#E0E7FF] bg-[#F8FAFC] p-4 shadow-sm">
@@ -2437,7 +2458,7 @@ const AdminLeaveManagement = () => {
                   {/* Subject - inside card */}
                   <div className="space-y-2 pt-2 border-t border-[#E0E7FF]" ref={titleRef}>
                     <label className="text-sm font-bold text-[#2B3674] ml-1">
-                      Subject
+                      Subject <span className="text-red-500">*</span>
                     </label>
                     {isViewMode ? (
                       <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none break-words">
@@ -2591,7 +2612,7 @@ const AdminLeaveManagement = () => {
             <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-4 items-end">
               <div className="space-y-2" ref={startDateRef}>
                 <label className="text-sm font-bold text-[#2B3674] ml-1">
-                  Start Date
+                  Start Date <span className="text-red-500">*</span>
                 </label>
                 {isViewMode ? (
                   <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] text-center">
@@ -2644,7 +2665,7 @@ const AdminLeaveManagement = () => {
               </div>
               <div className="space-y-2" ref={endDateRef}>
                 <label className="text-sm font-bold text-[#2B3674] ml-1">
-                  End Date
+                  End Date <span className="text-red-500">*</span>
                 </label>
                 {isViewMode ? (
                   <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] text-center">
@@ -2792,7 +2813,7 @@ const AdminLeaveManagement = () => {
             {/* Description Field */}
             <div className="space-y-2" ref={descriptionRef}>
               <label className="text-sm font-bold text-[#2B3674] ml-1">
-                Description
+                Description <span className="text-red-500">*</span>
               </label>
               {isViewMode ? (
                 <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-medium text-[#2B3674] min-h-[60px] whitespace-pre-wrap break-words leading-relaxed">
@@ -2865,10 +2886,25 @@ const AdminLeaveManagement = () => {
                 />
               </div>
             </div>
+          </div>
+
+          {/* Footer: error + actions - fixed at bottom, no scroll */}
+          <div className="flex-shrink-0 px-6 pb-6 pt-2 border-t border-gray-100 bg-white space-y-3">
+            {/* Error Message - shown above buttons */}
+            {error && (
+              <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+                <XCircle size={20} className="text-red-500 shrink-0" />
+                <p className="text-xs font-bold text-red-600 leading-tight">
+                  {typeof error === "object" && error !== null
+                    ? (error as any).message || "An error occurred"
+                    : String(error)}
+                </p>
+              </div>
+            )}
 
             {/* Actions Footer */}
             {!isViewMode && (
-              <div className="pt-2 flex gap-4">
+              <div className="flex gap-4">
                 <button
                   onClick={handleCloseModal}
                   className="flex-1 py-3 rounded-2xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-200 hover:text-gray-900 transition-colors"
@@ -3267,7 +3303,7 @@ const AdminLeaveManagement = () => {
               </div>
               {/* Subject - inside card */}
               <div className="space-y-2 pt-2 border-t border-[#E0E7FF]">
-                <label className="text-sm font-bold text-[#2B3674] ml-1">Subject</label>
+                <label className="text-sm font-bold text-[#2B3674] ml-1">Subject <span className="text-red-500">*</span></label>
                 <input
                   type="text"
                   value={modifyFormData.title}
@@ -3314,7 +3350,7 @@ const AdminLeaveManagement = () => {
 
           <div>
             <label className="block text-sm font-bold text-[#2B3674] mb-2">
-              Description
+              Description <span className="text-red-500">*</span>
             </label>
             <textarea
               value={modifyFormData.description}

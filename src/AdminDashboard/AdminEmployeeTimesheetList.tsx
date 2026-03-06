@@ -23,11 +23,13 @@ import {
 import EmployeeTimeSheetMobileCard from "./EmployeeTimeSheetMobileCard";
 import Toast from "../components/Toast";
 import { fetchDepartments } from "../reducers/masterDepartment.reducer";
-import { MonthStatus } from "../enums";
+import { MonthStatus, UserType } from "../enums";
 
 const AdminEmployeeTimesheetList = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const currentUser = useAppSelector((state: RootState) => state.user.currentUser);
+  const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
 
   const basePath = location.pathname.startsWith("/manager-dashboard")
     ? "/manager-dashboard"
@@ -446,7 +448,7 @@ const AdminEmployeeTimesheetList = () => {
             selectedYear !== new Date().getFullYear()) && (
             <button
               onClick={handleClearFilters}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-gray-700 rounded-full hover:bg-gray-50 active:scale-95 transition-all text-sm font-bold border border-gray-200 whitespace-nowrap flex-shrink-0"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#5B4FFF] text-white rounded-full hover:bg-[#4318FF] active:scale-95 transition-all text-sm font-bold border border-[#4318FF]/50 whitespace-nowrap flex-shrink-0"
               title="Clear all filters"
             >
               <X size={14} />
@@ -519,13 +521,15 @@ const AdminEmployeeTimesheetList = () => {
                         >
                           <Eye size={16} />
                         </button>
-                        <button
-                          onClick={() => handleViewTimesheet(emp.id)}
-                          className="inline-flex items-center gap-2 bg-transparent border-none cursor-pointer text-[#4318FF] text-sm font-bold hover:underline transition-all hover:scale-105 active:scale-95"
-                          title="Edit Timesheet"
-                        >
-                          <Edit size={16} />
-                        </button>
+                        {!isReceptionist && (
+                          <button
+                            onClick={() => handleViewTimesheet(emp.id)}
+                            className="inline-flex items-center gap-2 bg-transparent border-none cursor-pointer text-[#4318FF] text-sm font-bold hover:underline transition-all hover:scale-105 active:scale-95"
+                            title="Edit Timesheet"
+                          >
+                            <Edit size={16} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -541,6 +545,7 @@ const AdminEmployeeTimesheetList = () => {
                 employees={currentItems}
                 onViewTimesheet={handleViewTimesheet}
                 onViewWorkingDetails={handleViewWorkingDetails}
+                showEditButton={!isReceptionist}
               />
             ) : null}
           </div>

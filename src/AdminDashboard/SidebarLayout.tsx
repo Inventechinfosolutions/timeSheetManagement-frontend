@@ -86,6 +86,15 @@ const SidebarLayout = ({
     [],
   );
 
+  // Receptionist: hide Work Management from sidebar
+  const visibleAdminSidebarItems = useMemo(
+    () =>
+      title === "Receptionist"
+        ? adminSidebarItems.filter((i) => i.name !== "Work Management")
+        : adminSidebarItems,
+    [title, adminSidebarItems],
+  );
+
   // Determine active tab from URL if not explicitly provided
   const derivedActiveTab = useMemo(() => {
     if (activeTab && activeTab !== "Dashboard") return activeTab;
@@ -403,7 +412,7 @@ const SidebarLayout = ({
                   </div>
                 );
               })
-            : adminSidebarItems.map((item) => {
+            : visibleAdminSidebarItems.map((item) => {
                 const isActive = derivedActiveTab === item.name;
                 const Icon = item.icon!;
                 return (
@@ -504,7 +513,7 @@ const SidebarLayout = ({
       >
         <div className="relative flex-1 min-h-0 flex flex-col">
           {children}
-          <ApiLoadingSpinner contained />
+          <ApiLoadingSpinner contained contentAreaRef={mainContentRef} />
         </div>
       </main>
     </div>

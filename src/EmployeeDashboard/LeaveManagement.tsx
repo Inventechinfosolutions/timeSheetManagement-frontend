@@ -124,6 +124,7 @@ const LeaveManagement = () => {
   const [isLoadingDates, setIsLoadingDates] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [viewDetailsLoading, setViewDetailsLoading] = useState(false);
   const [isViewMode, setIsViewMode] = useState(false);
   const [selectedRequestId, setSelectedRequestId] = useState<number | null>(
     null,
@@ -1609,7 +1610,7 @@ const LeaveManagement = () => {
                 setSelectedYear("All");
                 setFilterStatus("All");
               }}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-gray-700 rounded-full hover:bg-gray-50 active:scale-95 transition-all text-sm font-bold border border-gray-200 whitespace-nowrap"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#5B4FFF] text-white rounded-full hover:bg-[#4318FF] active:scale-95 transition-all text-sm font-bold border border-[#4318FF]/50 whitespace-nowrap"
               title="Clear all filters"
             >
               <X size={16} />
@@ -2072,18 +2073,6 @@ const LeaveManagement = () => {
 
           {/* Modal Body */}
           <div className="p-6 space-y-5 overflow-y-auto custom-scrollbar max-h-[90vh]">
-            {/* Error Message */}
-            {error && (
-              <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
-                <XCircle size={20} className="text-red-500 shrink-0" />
-                <p className="text-xs font-bold text-red-600 leading-tight">
-                  {typeof error === "string"
-                    ? error
-                    : (error as any)?.message || JSON.stringify(error)}
-                </p>
-              </div>
-            )}
-
             {/* Email recipients - in card */}
             <div className="rounded-2xl border border-[#E0E7FF] bg-[#F8FAFC] p-4 shadow-sm">
               <div className="space-y-3">
@@ -2178,7 +2167,7 @@ const LeaveManagement = () => {
                 {/* Subject - inside card */}
                 <div className="space-y-2 pt-2" ref={titleRef}>
                   <label className="text-sm font-bold text-[#2B3674] ml-1">
-                    Subject
+                    Subject <span className="text-red-500">*</span>
                   </label>
                   {isViewMode ? (
                     <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none break-words">
@@ -2314,7 +2303,7 @@ const LeaveManagement = () => {
             <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-4 items-end">
               <div className="space-y-2" ref={startDateRef}>
                 <label className="text-sm font-bold text-[#2B3674] ml-1">
-                  Start Date
+                  Start Date <span className="text-red-500">*</span>
                 </label>
                 {isViewMode ? (
                   <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] text-center">
@@ -2371,7 +2360,7 @@ const LeaveManagement = () => {
               </div>
               <div className="space-y-2" ref={endDateRef}>
                 <label className="text-sm font-bold text-[#2B3674] ml-1">
-                  End Date
+                  End Date <span className="text-red-500">*</span>
                 </label>
                 {isViewMode ? (
                   <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] text-center">
@@ -2519,7 +2508,7 @@ const LeaveManagement = () => {
             {/* Description Field */}
             <div className="space-y-2" ref={descriptionRef}>
               <label className="text-sm font-bold text-[#2B3674] ml-1">
-                Description
+                Description <span className="text-red-500">*</span>
               </label>
               {isViewMode ? (
                 <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-medium text-[#2B3674] min-h-[60px] whitespace-pre-wrap break-words leading-relaxed">
@@ -2594,6 +2583,18 @@ const LeaveManagement = () => {
                 />
               </div>
             </div>
+
+            {/* Error Message - shown above buttons */}
+            {error && (
+              <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+                <XCircle size={20} className="text-red-500 shrink-0" />
+                <p className="text-xs font-bold text-red-600 leading-tight">
+                  {typeof error === "string"
+                    ? error
+                    : (error as any)?.message || JSON.stringify(error)}
+                </p>
+              </div>
+            )}
 
             {/* Actions Footer */}
             {!isViewMode && (
@@ -2968,7 +2969,7 @@ const LeaveManagement = () => {
               </div>
               {/* Subject - inside card */}
               <div className="space-y-2 pt-2 border-t border-[#E0E7FF]">
-                <label className="text-sm font-bold text-[#2B3674] ml-1">Subject</label>
+                <label className="text-sm font-bold text-[#2B3674] ml-1">Subject <span className="text-red-500">*</span></label>
                 <input
                   type="text"
                   value={modifyFormData.title}
@@ -3032,7 +3033,7 @@ const LeaveManagement = () => {
 
           <div>
             <label className="block text-sm font-bold text-[#2B3674] mb-2">
-              Description
+              Description <span className="text-red-500">*</span>
             </label>
             <textarea
               value={modifyFormData.description}

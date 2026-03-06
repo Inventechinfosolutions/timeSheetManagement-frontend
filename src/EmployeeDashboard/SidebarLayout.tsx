@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import {
   LayoutGrid,
   Calendar,
@@ -32,6 +32,7 @@ const SidebarLayout = ({
   const [isHovered, setIsHovered] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const mainContentRef = useRef<HTMLElement>(null);
   const { tab } = useParams<{ tab?: string }>();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -309,10 +310,13 @@ const SidebarLayout = ({
         </div>
       </aside>
 
-      <main className="flex-1 min-h-0 h-full relative no-scrollbar flex flex-col bg-[#F4F7FE] overflow-auto">
+      <main
+        ref={mainContentRef}
+        className="flex-1 min-h-0 h-full relative no-scrollbar flex flex-col bg-[#F4F7FE] overflow-auto"
+      >
         <div className="relative flex-1 min-h-0 flex flex-col">
           {children}
-          <ApiLoadingSpinner contained />
+          <ApiLoadingSpinner contained contentAreaRef={mainContentRef} />
         </div>
       </main>
     </div>

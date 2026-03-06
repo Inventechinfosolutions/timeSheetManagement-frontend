@@ -48,6 +48,9 @@ const EmployeeListView = () => {
     : "/admin-dashboard";
 
   const isAdmin = basePath === "/admin-dashboard";
+  const currentUser = useAppSelector((state) => state.user.currentUser);
+  const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
+  const canEdit = isAdmin && !isReceptionist;
 
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -496,7 +499,7 @@ const EmployeeListView = () => {
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
             {/* Modern Custom Dropdown */}
-            {isAdmin && (
+            {canEdit && (
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -578,7 +581,7 @@ ${
               )}
             </div>
 
-            {basePath === "/admin-dashboard" && (
+            {basePath === "/admin-dashboard" && canEdit && (
               <>
                 <button
                   onClick={() => setIsUploadModalOpen(true)}
@@ -608,7 +611,7 @@ ${
                   setCurrentPage(1);
                   setSortConfig({ key: null, direction: "asc" });
                 }}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-gray-700 rounded-full hover:bg-gray-50 active:scale-95 transition-all text-sm font-bold border border-gray-200 whitespace-nowrap"
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#5B4FFF] text-white rounded-full hover:bg-[#4318FF] active:scale-95 transition-all text-sm font-bold border border-[#4318FF]/50 whitespace-nowrap"
                 title="Clear all filters"
               >
                 <X size={16} />
@@ -672,20 +675,20 @@ ${
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (emp.isActive && isAdmin) {
+                          if (emp.isActive && canEdit) {
                             handleToggleStatus(emp.rawId);
                           }
                         }}
-                        disabled={!emp.isActive || !isAdmin}
+                        disabled={!emp.isActive || !canEdit}
                         className={`relative w-20 h-7 rounded-full transition-all duration-300 flex items-center mx-auto ${
                           emp.isActive
-                            ? isAdmin
+                            ? canEdit
                               ? "bg-[#0095FF] cursor-pointer"
                               : "bg-[#0095FF]/60 cursor-not-allowed"
                             : "bg-red-300 cursor-not-allowed"
                         }`}
                         title={
-                          !isAdmin
+                          !canEdit
                             ? "Only admins can change employee status"
                             : !emp.isActive
                               ? "Status cannot be changed once Inactive"
@@ -722,13 +725,15 @@ ${
                           >
                             <Eye size={16} />
                           </button>
-                          <button
-                            onClick={() => handleViewDetails(emp.rawId)}
-                            className="inline-flex items-center gap-2 bg-transparent border-none cursor-pointer text-[#4318FF] text-sm font-bold hover:underline transition-all hover:scale-105 active:scale-95"
-                            title="Edit Details"
-                          >
-                            <Pencil size={16} />
-                          </button>
+                          {canEdit && (
+                            <button
+                              onClick={() => handleViewDetails(emp.rawId)}
+                              className="inline-flex items-center gap-2 bg-transparent border-none cursor-pointer text-[#4318FF] text-sm font-bold hover:underline transition-all hover:scale-105 active:scale-95"
+                              title="Edit Details"
+                            >
+                              <Pencil size={16} />
+                            </button>
+                          )}
                         </div>
 
                         {/* Right side conditional button */}
@@ -739,7 +744,7 @@ ${
                               new Date(emp.createdAt).getTime() <
                               Date.now() - 24 * 60 * 60 * 1000;
                             const shouldShowButton =
-                              emp.isActive && !emp.lastLoggedIn && is24HoursOld;
+                              canEdit && emp.isActive && !emp.lastLoggedIn && is24HoursOld;
 
                             return shouldShowButton ? (
                               <button
@@ -772,7 +777,7 @@ ${
                 onViewDashboard={handleViewDashboard}
                 onResendActivation={handleResendActivation}
                 onToggleStatus={handleToggleStatus}
-                isAdmin={isAdmin}
+                isAdmin={canEdit}
               />
             ) : null}
           </div>
@@ -854,7 +859,7 @@ ${
             <div className="p-6 space-y-4 overflow-y-auto">
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                 <p className="text-sm font-semibold text-blue-900 mb-2">
-                  Required Excel Columns:
+                  Required Excel columns — use these <strong>exact Same </strong> headers (case-sensitive):
                 </p>
                 <ul className="text-xs text-blue-700 space-y-1 list-disc list-inside">
                   <li>fullName</li>
@@ -862,7 +867,22 @@ ${
                   <li>department</li>
                   <li>designation</li>
                   <li>email</li>
-                  <li>password (optional)</li>
+                  <li>employmentType</li>
+                  <li>joiningDate</li>
+                  <li>gender</li>
+                  <li>role</li>
+                </ul>
+              </div>
+
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                <p className="text-sm font-semibold text-amber-900 mb-2">
+                  Rules to follow:
+                </p>
+                <ul className="text-xs text-amber-800 space-y-1.5">
+                  <li><strong>employmentType</strong> — use: FULL_TIMER (full-time) or INTERN (intern).</li>
+                  <li><strong>Date Format</strong> — use: YYYY-MM-DD or dd/mm/yyyy.</li>
+                  <li><strong>gender</strong> — use: MALE or FEMALE (uppercase).</li>
+                  <li><strong>role</strong> —  Employee, Manager, Trainee Intern.</li>
                 </ul>
               </div>
 
@@ -1114,7 +1134,7 @@ ${
                     {/* Full Name */}
                     <div className="space-y-2">
                       <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">
-                        Full Name
+                        Full Name <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
                         <input
@@ -1138,7 +1158,7 @@ ${
                     {/* Employee ID */}
                     <div className="space-y-2">
                       <label className="text-xs font-bold text-gray-600 tracking-wide">
-                        Employee ID
+                        Employee ID <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
                         <input
@@ -1178,7 +1198,7 @@ ${
                     {/* Department */}
                     <div className="space-y-2">
                       <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">
-                        Department
+                        Department <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
                         <select
@@ -1217,7 +1237,7 @@ ${
                     {/* Role */}
                     <div className="space-y-2">
                       <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">
-                        Role
+                        Role <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
                         <select
@@ -1256,7 +1276,7 @@ ${
                     {/* Designation */}
                     <div className="space-y-2">
                       <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">
-                        Designation
+                        Designation <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
                         <input
@@ -1280,7 +1300,7 @@ ${
                     {/* Employment Type (leave balance) */}
                     <div className="space-y-2">
                       <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">
-                        Employment Type
+                        Employment Type <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
                         <select
@@ -1321,7 +1341,7 @@ ${
                     {/* Gender */}
                     <div className="space-y-2">
                       <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">
-                        Gender
+                        Gender <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
                         <select
@@ -1381,7 +1401,7 @@ ${
                   {/* Email - Full Width */}
                   <div className="space-y-2 mt-4">
                     <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">
-                      Email Address
+                      Email Address <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
                       <input

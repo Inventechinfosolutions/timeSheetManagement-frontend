@@ -58,8 +58,10 @@ const Header = ({
   const { currentUser } = useAppSelector((state) => state.user);
   // Permissions
   const isAdmin = currentUser?.userType === UserType.ADMIN;
+  const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
   const isManager = currentUser?.userType === UserType.MANAGER;
   const isApprover = isAdmin || isManager;
+  const isAdminOrReceptionist = isAdmin || isReceptionist;
 
   const {
     notifications,
@@ -198,7 +200,7 @@ const Header = ({
   const handleProfileClick = () => {
     if (currentUser?.userType === UserType.MANAGER) {
       navigate("/manager-dashboard/my-profile");
-    } else if (currentUser?.userType === UserType.ADMIN) {
+    } else if (isAdminOrReceptionist) {
       navigate("/admin-dashboard/my-profile");
     } else {
       navigate("/employee-dashboard/my-profile");
@@ -209,14 +211,16 @@ const Header = ({
   // Get first letter of name for avatar fallback
   const avatarLetter = isAdmin
     ? "A"
-    : currentUser?.aliasLoginName?.charAt(0)?.toUpperCase() ||
-      currentUser?.loginId?.charAt(0)?.toUpperCase() ||
-      "U";
+    : isReceptionist
+      ? "R"
+      : currentUser?.aliasLoginName?.charAt(0)?.toUpperCase() ||
+        currentUser?.loginId?.charAt(0)?.toUpperCase() ||
+        "U";
 
   // Fetch profile image - ONLY for the logged-in user, not the viewed entity (if Admin)
   // Fetch profile image - ONLY for the logged-in user, not the viewed entity (if Admin)
   useEffect(() => {
-    if (isAdmin) return;
+    if (isAdmin || isReceptionist) return;
 
     // Only fetch if we don't have the image yet (e.g. initial load or after upload invalidation)
     // AND if we are not currently fetching or failed previously
@@ -241,6 +245,7 @@ const Header = ({
     currentUser?.loginId,
     currentUser?.id,
     isAdmin,
+    isReceptionist,
     loggedInUserProfileImageUrl,
     loggedInUserImageStatus,
   ]);
@@ -288,7 +293,7 @@ const Header = ({
             alt="InvenTech Logo"
             className="h-8 w-auto object-contain brightness-0 invert"
             onClick={() =>
-              navigate(isAdmin ? "/admin-dashboard" : "/employee-dashboard")
+              navigate(isAdminOrReceptionist ? "/admin-dashboard" : "/employee-dashboard")
             }
           />
         </div>
@@ -951,14 +956,18 @@ const Header = ({
                     <span className="text-[12px] md:text-sm font-bold text-white transition-colors leading-none">
                       {isAdmin
                         ? "Admin"
-                        : currentUser?.aliasLoginName?.split(" ")[0] || "User"}
+                        : isReceptionist
+                          ? "Receptionist"
+                          : currentUser?.aliasLoginName?.split(" ")[0] || "User"}
                     </span>
                     <span className="text-[9.5px] md:text-[11px] text-blue-100/80 leading-none mt-1">
                       {isAdmin
                         ? "Administrator"
-                        : isManager
-                          ? "Manager"
-                          : "Employee"}
+                        : isReceptionist
+                          ? "View only"
+                          : isManager
+                            ? "Manager"
+                            : "Employee"}
                     </span>
                   </div>
                   <ChevronDown
@@ -978,6 +987,13 @@ const Header = ({
                       <p className="text-sm font-bold text-[#1B2559]">Admin</p>
                       <p className="text-xs text-[#667eea] font-medium">
                         Administrator
+                      </p>
+                    </div>
+                  ) : isReceptionist ? (
+                    <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
+                      <p className="text-sm font-bold text-[#1B2559]">Receptionist</p>
+                      <p className="text-xs text-[#667eea] font-medium">
+                        View only · Download &amp; Export allowed
                       </p>
                     </div>
                   ) : (
@@ -1016,8 +1032,8 @@ const Header = ({
                     </div>
                   )}
 
-                  {/* My Profile - Only show for employees */}
-                  {!isAdmin && (
+                  {/* My Profile - Only show for employees (not Admin/Receptionist in this block; Receptionist can use Change Password from sidebar) */}
+                  {!isAdminOrReceptionist && (
                     <button
                       onClick={handleProfileClick}
                       className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left"

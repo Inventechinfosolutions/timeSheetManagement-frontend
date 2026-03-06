@@ -513,13 +513,16 @@ const MobileResponsiveCalendarPage = ({
                   <input
                     type="date"
                     value={downloadDateRange.from}
-                    max={new Date().toISOString().split("T")[0]}
-                    onChange={(e) =>
-                      setDownloadDateRange({
-                        ...downloadDateRange,
-                        from: e.target.value,
-                      })
-                    }
+                    onChange={(e) => {
+                      const newFrom = e.target.value;
+                      setDownloadDateRange((prev) => {
+                        const next = { ...prev, from: newFrom };
+                        if (prev.to && newFrom && prev.to < newFrom) {
+                          next.to = newFrom;
+                        }
+                        return next;
+                      });
+                    }}
                     className="w-full pl-4 pr-12 py-3 bg-[#F4F7FE] border-transparent rounded-xl text-[#2B3674] font-bold focus:outline-none focus:ring-2 focus:ring-[#4318FF] transition-all cursor-pointer"
                   />
                   <CalendarIcon
@@ -536,7 +539,7 @@ const MobileResponsiveCalendarPage = ({
                   <input
                     type="date"
                     value={downloadDateRange.to}
-                    max={new Date().toISOString().split("T")[0]}
+                    min={downloadDateRange.from}
                     onChange={(e) =>
                       setDownloadDateRange({
                         ...downloadDateRange,

@@ -333,15 +333,21 @@ const CommonMultipleUploader: React.FC<CommonMultipleUploaderProps> = ({
         return;
       }
 
-      // If fetchOnMount is false, we should never fetch in this effect.
+      // Cache key must include both entityId and refId so we refetch when opening a different request.
+      // Previously only entityId was used, so same employee's different requests showed the same docs.
+      const cacheKey = `${entityId}_${refId}`;
+
+      // If fetchOnMount is false, we should never fetch in this effect (e.g. new leave form).
       // This allows the component to start with an empty list for new applications.
       if (!fetchOnMount) {
-        lastFetchedIdRef.current = entityId;
+        lastFetchedIdRef.current = cacheKey;
+        setExistingFiles([]);
+        setFileList([]);
         return;
       }
 
-      // Skip if we already fetched for this specific entityId
-      if (lastFetchedIdRef.current === entityId) {
+      // Skip only if we already fetched for this exact entityId + refId combination
+      if (lastFetchedIdRef.current === cacheKey) {
         return;
       }
 
@@ -383,7 +389,7 @@ const CommonMultipleUploader: React.FC<CommonMultipleUploaderProps> = ({
           setExistingFiles([]);
           setFileList([]);
         }
-        lastFetchedIdRef.current = entityId;
+        lastFetchedIdRef.current = cacheKey;
       } catch (error) {
         console.error("Error fetching files:", error);
       }

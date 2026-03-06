@@ -44,6 +44,7 @@ import {
   LeaveRequestStatus,
   AttendanceStatus,
   LeaveRequestType,
+  UserType,
 } from "../enums";
 import CommonMultipleUploader from "../EmployeeDashboard/CommonMultipleUploader";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
@@ -60,6 +61,8 @@ const Requests = () => {
     : "/admin-dashboard";
   const dispatch = useAppDispatch();
   const { entities, loading } = useAppSelector((state) => state.leaveRequest);
+  const currentUser = useAppSelector((state) => state.user.currentUser);
+  const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
 
   // Configure AntD message position to be below the header
   useEffect(() => {
@@ -970,7 +973,7 @@ const Requests = () => {
                   setFilterStatus("All");
                   setCurrentPage(1);
                 }}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-gray-700 rounded-full hover:bg-gray-50 active:scale-95 transition-all text-sm font-bold border border-gray-200 whitespace-nowrap"
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#5B4FFF] text-white rounded-full hover:bg-[#4318FF] active:scale-95 transition-all text-sm font-bold border border-[#4318FF]/50 whitespace-nowrap"
                 title="Clear all filters"
               >
                 <X size={16} />
@@ -1391,7 +1394,7 @@ const Requests = () => {
                           >
                             <Eye size={20} />
                           </button>
-                          {req.status === LeaveRequestStatus.PENDING && (
+                          {!isReceptionist && req.status === LeaveRequestStatus.PENDING && (
                             <>
                               <button
                                 onClick={() =>
@@ -1421,7 +1424,7 @@ const Requests = () => {
                               </button>
                             </>
                           )}
-                          {req.status ===
+                          {!isReceptionist && req.status ===
                             LeaveRequestStatus.REQUESTING_FOR_CANCELLATION && (
                               <>
                                 <button
@@ -1452,7 +1455,7 @@ const Requests = () => {
                                 </button>
                               </>
                             )}
-                          {req.status ===
+                          {!isReceptionist && req.status ===
                             LeaveRequestStatus.REQUESTING_FOR_MODIFICATION && (
                               <>
                                 <button
@@ -1898,6 +1901,7 @@ const Requests = () => {
                     Supporting Documents
                   </label>
                   <CommonMultipleUploader
+                    key={`request-docs-${selectedRequest?.id}`}
                     entityType="LEAVE_REQUEST"
                     entityId={selectedOwnerId || 0}
                     refId={selectedRequest.id}
