@@ -158,7 +158,7 @@ const SidebarLayout = ({
 
   const handleLogout = () => {
     dispatch(logoutUser()).then(() => {
-      navigate("/");
+      navigate("/landing", { state: { skipSplash: true } });
     });
   };
 

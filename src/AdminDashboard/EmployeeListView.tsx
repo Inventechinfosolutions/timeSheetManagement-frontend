@@ -648,7 +648,7 @@ ${
                   <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider w-[15%]">
                     Status
                   </th>
-                  <th className="py-4 pl-4 pr-10 text-[13px] font-bold uppercase tracking-wider text-center w-[20%]">
+                  <th className="py-4 px-4 text-[13px] font-bold uppercase tracking-wider text-center w-[20%]">
                     Actions
                   </th>
                 </tr>
@@ -712,54 +712,40 @@ ${
                       </button>
                     </td>
                     <td className="py-4 px-4 text-center">
-                      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-                        {/* Spacer for left side to balance grid */}
-                        <div></div>
-
-                        {/* Always centered View/Edit buttons */}
-                        <div className="flex items-center justify-center gap-3">
+                      <div className="flex items-center justify-center gap-3">
+                        <button
+                          onClick={() => handleViewDashboard(emp.rawId)}
+                          className="inline-flex items-center justify-center bg-transparent border-none cursor-pointer text-[#4318FF] hover:scale-110 active:scale-95 transition-all"
+                          title="View Dashboard"
+                        >
+                          <Eye size={16} />
+                        </button>
+                        {canEdit && (
                           <button
-                            onClick={() => handleViewDashboard(emp.rawId)}
-                            className="inline-flex items-center gap-2 bg-transparent border-none cursor-pointer text-[#4318FF] text-sm font-bold hover:underline transition-all hover:scale-105 active:scale-95"
-                            title="View Dashboard"
+                            onClick={() => handleViewDetails(emp.rawId)}
+                            className="inline-flex items-center justify-center bg-transparent border-none cursor-pointer text-[#4318FF] hover:scale-110 active:scale-95 transition-all"
+                            title="Edit Details"
                           >
-                            <Eye size={16} />
+                            <Pencil size={16} />
                           </button>
-                          {canEdit && (
+                        )}
+                        {(() => {
+                          const is24HoursOld =
+                            new Date(emp.createdAt).getTime() <
+                            Date.now() - 24 * 60 * 60 * 1000;
+                          const shouldShowButton =
+                            canEdit && emp.isActive && !emp.lastLoggedIn && is24HoursOld;
+                          return shouldShowButton ? (
                             <button
-                              onClick={() => handleViewDetails(emp.rawId)}
-                              className="inline-flex items-center gap-2 bg-transparent border-none cursor-pointer text-[#4318FF] text-sm font-bold hover:underline transition-all hover:scale-105 active:scale-95"
-                              title="Edit Details"
+                              onClick={() => handleResendActivation(emp.rawId)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all text-xs font-bold border bg-amber-50 text-amber-600 hover:bg-amber-100 border-amber-200 whitespace-nowrap"
+                              title="Resend Activation Link"
                             >
-                              <Pencil size={16} />
+                              <RefreshCw size={14} />
+                              Resend
                             </button>
-                          )}
-                        </div>
-
-                        {/* Right side conditional button */}
-                        <div className="flex justify-start w-24">
-                          {(() => {
-                            // Show resend button if employee is active, has never logged in, AND account is older than 24 hours
-                            const is24HoursOld =
-                              new Date(emp.createdAt).getTime() <
-                              Date.now() - 24 * 60 * 60 * 1000;
-                            const shouldShowButton =
-                              canEdit && emp.isActive && !emp.lastLoggedIn && is24HoursOld;
-
-                            return shouldShowButton ? (
-                              <button
-                                onClick={() =>
-                                  handleResendActivation(emp.rawId)
-                                }
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all text-xs font-bold border bg-amber-50 text-amber-600 hover:bg-amber-100 border-amber-200 whitespace-nowrap"
-                                title="Resend Activation Link"
-                              >
-                                <RefreshCw size={14} />
-                                Resend
-                              </button>
-                            ) : null;
-                          })()}
-                        </div>
+                          ) : null;
+                        })()}
                       </div>
                     </td>
                   </tr>

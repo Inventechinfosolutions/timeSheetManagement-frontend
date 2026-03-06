@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { User, Eye, EyeOff, Lock, Zap } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { setCurrentUser } from "../reducers/employeeDetails.reducer";
@@ -14,10 +14,16 @@ const SPLASH_HOLD_AFTER_WELCOME_MS = 1000;
 const SPLASH_FADEOUT_MS = 400;
 
 const Landing = () => {
+  const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
-  const [showSplash, setShowSplash] = useState(true);
+  // Check if splash should be skipped
+  const skipSplashFromState = location.state?.skipSplash;
+  const skipSplashFromQuery = new URLSearchParams(location.search).get("skipSplash") === "true";
+  const shouldSkipSplash = skipSplashFromState || skipSplashFromQuery;
+
+  const [showSplash, setShowSplash] = useState(!shouldSkipSplash);
   const [splashExiting, setSplashExiting] = useState(false);
 
   // Single State for Login
@@ -96,7 +102,7 @@ const Landing = () => {
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-4 bg-[#EFEBF5] relative overflow-hidden font-sans">
       {/* Page Background Shapes from Design */}
-      <div className="absolute top-[-5%] left-[5%] w-48 h-48 bg-[#585CE5] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
+      <div className={`absolute top-[-5%] left-[5%] w-48 h-48 bg-[#585CE5] rounded-full mix-blend-multiply filter blur-3xl opacity-20 ${!shouldSkipSplash ? "animate-pulse" : ""}`}></div>
       <div className="absolute bottom-[-10%] right-[-5%] w-96 h-96 bg-white rounded-full mix-blend-overlay filter blur-3xl opacity-40"></div>
 
       {/* Login page loader: logo + Welcome to Inventech, then smooth transition to login form */}
@@ -119,7 +125,7 @@ const Landing = () => {
 
       {/* Login UI – shown after loader with smooth fade-in */}
       {!showSplash && (
-        <div className="animate-in fade-in duration-500 w-full flex flex-col items-center">
+        <div className={`${!shouldSkipSplash ? "animate-in fade-in duration-500" : ""} w-full flex flex-col items-center`}>
       <LandingMobile
         loginId={loginId}
         setLoginId={setLoginId}
@@ -132,7 +138,7 @@ const Landing = () => {
         loading={loading}
         error={error}
       />
-      <div className="hidden md:flex w-full max-w-[1100px] h-auto min-h-[600px] bg-white rounded-[18px] shadow-2xl overflow-hidden flex-col md:flex-row animate-in fade-in zoom-in-95 duration-500 relative z-10">
+      <div className={`${!shouldSkipSplash ? "animate-in fade-in zoom-in-95 duration-500" : ""} hidden md:flex w-full max-w-[1100px] h-auto min-h-[600px] bg-white rounded-[18px] shadow-2xl overflow-hidden flex-col md:flex-row relative z-10`}>
         {/* LEFT SIDE - LOGIN FORM */}
         <div className="w-full md:w-[45%] p-10 md:p-14 flex flex-col justify-center relative bg-white z-10">
           <div className="mb-10 text-center">
@@ -159,7 +165,7 @@ const Landing = () => {
           <form onSubmit={handleLogin} className="space-y-6">
             <div className="space-y-5">
               {/* Username Input */}
-              <div className="relative group animate-fade-in-up animation-delay-300">
+              <div className={`relative group ${!shouldSkipSplash ? "animate-fade-in-up animation-delay-300" : ""}`}>
                 <input
                   type="text"
                   placeholder="Username"
@@ -174,7 +180,7 @@ const Landing = () => {
               </div>
 
               {/* Password Input */}
-              <div className="relative group animate-fade-in-up animation-delay-400">
+              <div className={`relative group ${!shouldSkipSplash ? "animate-fade-in-up animation-delay-400" : ""}`}>
                 <input
                   type={showPassword ? "text" : "password"}
                   placeholder="Password"
@@ -195,7 +201,7 @@ const Landing = () => {
                 </button>
               </div>
 
-              <div className="flex justify-end animate-fade-in-up animation-delay-500">
+              <div className={`flex justify-end ${!shouldSkipSplash ? "animate-fade-in-up animation-delay-500" : ""}`}>
                 <button
                   type="button"
                   onClick={() => navigate("/forgot-password")}
@@ -209,7 +215,7 @@ const Landing = () => {
             <button
               type="submit"
               disabled={isSubmitting || loading || !loginId || !password}
-              className="w-full bg-[#6C63FF] hover:bg-[#5a52d5] text-white font-bold py-4 rounded-xl shadow-[0_10px_20px_-10px_rgba(108,99,255,0.5)] active:scale-[0.98] transition-all duration-200 mt-4 disabled:opacity-45 disabled:cursor-not-allowed text-sm tracking-wide cursor-pointer animate-fade-in-up animation-delay-600"
+              className={`w-full bg-[#6C63FF] hover:bg-[#5a52d5] text-white font-bold py-4 rounded-xl shadow-[0_10px_20px_-10px_rgba(108,99,255,0.5)] active:scale-[0.98] transition-all duration-200 mt-4 disabled:opacity-45 disabled:cursor-not-allowed text-sm tracking-wide cursor-pointer ${!shouldSkipSplash ? "animate-fade-in-up animation-delay-600" : ""}`}
             >
               {isSubmitting || loading ? "Authenticating..." : "Login Now"}
             </button>
@@ -217,7 +223,7 @@ const Landing = () => {
         </div>
 
         {/* RIGHT SIDE - VISUAL */}
-        <div className="hidden md:flex md:w-[55%] bg-[#6C63FF] relative items-center justify-center p-12 overflow-hidden animate-fade-in-up animation-delay-200">
+        <div className={`hidden md:flex md:w-[55%] bg-[#6C63FF] relative items-center justify-center p-12 overflow-hidden ${!shouldSkipSplash ? "animate-fade-in-up animation-delay-200" : ""}`}>
           {/* Background Patterns for Right Panel */}
           <div className="absolute inset-0">
             <div className="absolute top-[-50%] right-[-50%] w-[100%] h-[100%] border-[60px] border-white/5 rounded-full animate-[spin_120s_linear_infinite]"></div>

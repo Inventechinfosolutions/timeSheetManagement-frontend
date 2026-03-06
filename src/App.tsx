@@ -229,7 +229,7 @@ function AppContent() {
           }
         />
 
-        <Route path="/login" element={<Navigate to="/landing" replace />} />
+        <Route path="/login" element={<Navigate to="/landing?skipSplash=true" replace />} />
 
         <Route path="/welcome" element={<Navigate to="/landing" replace />} />
         <Route path="/portal" element={<Navigate to="/landing" replace />} />

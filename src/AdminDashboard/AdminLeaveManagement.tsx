@@ -54,6 +54,7 @@ import {
   Search,
   Clock,
   Building2,
+  ArrowRightLeft,
 } from "lucide-react";
 import { message } from "antd";
 import CommonMultipleUploader from "../EmployeeDashboard/CommonMultipleUploader";
@@ -254,17 +255,52 @@ const AdminLeaveManagement = () => {
 
 
 
+  const checkDateInReq = (req: any, dateStr: string): boolean => {
+    if (req.availableDates) {
+      try {
+        const ds: string[] = typeof req.availableDates === 'string' ? JSON.parse(req.availableDates) : req.availableDates;
+        if (Array.isArray(ds)) {
+          return ds.includes(dateStr);
+        }
+      } catch (e) {}
+    }
+    const current = dayjs(dateStr).startOf('day');
+    const start = dayjs(req.fromDate).startOf('day');
+    const end = dayjs(req.toDate).startOf('day');
+    return (current.isSame(start) || current.isAfter(start)) && (current.isSame(end) || current.isBefore(end));
+  };
+
   // Disable dates that already have approved/pending leave requests for the selected employee
   const disabledDate = (current: any) => {
     if (!current || !(selectedEmployee?.employeeId || selectedEmployee?.id))
       return false;
 
+    const dateStr = current.format("YYYY-MM-DD");
     const currentDate = current.startOf("day");
 
     // Admin and Manager: all dates (including past) are enabled for Leave, WFH, Client Visit
     // (No past-date restriction for admin/manager)
 
     // Weekends (Saturday, Sunday) are enabled for Leave, WFH, and Client Visit calendar selection.
+
+    // Check if this date is explicitly covered by a Cancellation request (Finalized or Pending)
+    // If so, we enable it (return false), overriding any overlapping LeaveRequestStatus.APPROVED parent request.
+    const isCancelledDate = (entities || []).some((req: any) => {
+      // Only check requests for the selected employee
+      if (
+        req.employeeId !== (selectedEmployee.employeeId || selectedEmployee.id)
+      )
+        return false;
+
+      const isCancelled =
+        req.status === LeaveRequestStatus.CANCELLATION_APPROVED ||
+        req.status === LeaveRequestStatus.REJECTED;
+      if (!isCancelled) return false;
+
+      return checkDateInReq(req, dateStr);
+    });
+
+    if (isCancelledDate) return false;
 
     // Check if this date falls within any existing approved/pending request for the selected employee
     return (entities || []).some((req: any) => {
@@ -274,10 +310,15 @@ const AdminLeaveManagement = () => {
       )
         return false;
 
-      // Exclude rejected and cancelled requests
+      // Exclude terminal / inactive statuses
       if (
         req.status === LeaveRequestStatus.REJECTED ||
-        req.status === LeaveRequestStatus.CANCELLED
+        req.status === LeaveRequestStatus.CANCELLED ||
+        req.status === LeaveRequestStatus.CANCELLATION_APPROVED ||
+        req.status === LeaveRequestStatus.REQUEST_MODIFIED ||
+        req.status === LeaveRequestStatus.MODIFICATION_REJECTED ||
+        req.status === LeaveRequestStatus.CANCELLATION_REJECTED ||
+        req.status === LeaveRequestStatus.MODIFICATION_CANCELLED
       )
         return false;
 
@@ -285,27 +326,40 @@ const AdminLeaveManagement = () => {
       if (isViewMode && selectedRequestId && req.id === selectedRequestId)
         return false;
 
-      const startDate = dayjs(req.fromDate).startOf("day");
-      const endDate = dayjs(req.toDate).startOf("day");
-
-      // Check if current date falls within this request's date range
-      const isDateInRange =
-        (currentDate.isSame(startDate) || currentDate.isAfter(startDate)) &&
-        (currentDate.isSame(endDate) || currentDate.isBefore(endDate));
+      const isDateInRange = checkDateInReq(req, dateStr);
 
       if (!isDateInRange) return false;
 
+      // If request is Pending, block the date completely
+      if (req.status === LeaveRequestStatus.PENDING) {
+        return true;
+      }
+
       const existingRequestType = (req.requestType || "").trim();
 
-      // 1. RULE: If LEAVE already exists, block EVERYTHING (No exceptions)
+      // REFINED CONFLICT RULES
+      // Rule 1: Existing Leave/Half Day blocks EVERYTHING
       if (
         existingRequestType === LeaveRequestType.APPLY_LEAVE ||
-        existingRequestType === AttendanceStatus.LEAVE
+        existingRequestType === AttendanceStatus.LEAVE ||
+        existingRequestType === AttendanceStatus.HALF_DAY
       ) {
         return true;
       }
 
-      // 2. RULE: If WORK FROM HOME already exists
+      // Rule 2: If we are CURRENTLY APPLYING for Leave/Half Day, we are ONLY blocked by other Leaves/Half Days
+      // (This allows applying for Leave even if a CV/WFH exists on that date)
+      const isApplyingForLeave =
+        selectedLeaveType === LeaveRequestType.APPLY_LEAVE ||
+        selectedLeaveType === AttendanceStatus.LEAVE ||
+        selectedLeaveType === WorkLocation.CLIENT_VISIT || // For Admin we allow this overlap
+        selectedLeaveType === AttendanceStatus.HALF_DAY;
+      
+      if (isApplyingForLeave && selectedLeaveType !== WorkLocation.CLIENT_VISIT) {
+        return false;
+      }
+
+      // 3. RULE: If CLIENT VISIT or WFH already exists (from Employee side rules)
       if (existingRequestType === WorkLocation.WORK_FROM_HOME) {
         // Allow if applying for Leave or Client Visit or Half Day
         if (
@@ -319,13 +373,12 @@ const AdminLeaveManagement = () => {
         return true; // Otherwise block (prevents dual WFH)
       }
 
-      // 3. RULE: If CLIENT VISIT already exists
       if (existingRequestType === WorkLocation.CLIENT_VISIT) {
-        // Allow if applying for Leave or Work From Home or Half Day
         if (
           selectedLeaveType === LeaveRequestType.APPLY_LEAVE ||
           selectedLeaveType === AttendanceStatus.LEAVE ||
           selectedLeaveType === WorkLocation.WFH ||
+          selectedLeaveType === WorkLocation.WORK_FROM_HOME ||
           selectedLeaveType === AttendanceStatus.HALF_DAY
         ) {
           return false; // Valid dates, don't disable
@@ -333,8 +386,7 @@ const AdminLeaveManagement = () => {
         return true; // Otherwise block (prevents dual CV)
       }
 
-      // Default: block all overlapping requests
-      return true;
+      return false; // Otherwise allow overlapping (e.g. WFH and CV)
     });
   };
 
@@ -596,6 +648,17 @@ const AdminLeaveManagement = () => {
     return dates;
   };
 
+  // Helper to get effective working dates (respecting availableDates if present)
+  const getEffectiveDates = (req: any): string[] => {
+    if (req.availableDates) {
+      try {
+        const ds: string[] = typeof req.availableDates === 'string' ? JSON.parse(req.availableDates) : req.availableDates;
+        if (Array.isArray(ds)) return ds;
+      } catch (e) {}
+    }
+    return getWorkingDatesInRange(req.fromDate, req.toDate);
+  };
+
   const handleSubmit = async () => {
     if (!validateForm(true) || !selectedEmployee) return;
 
@@ -754,15 +817,13 @@ const AdminLeaveManagement = () => {
                 (selectedEmployee.employeeId || selectedEmployee.id) &&
               e.status === LeaveRequestStatus.APPROVED &&
               victimTypes.includes((e.requestType || "").toLowerCase()) &&
-              e.id !== createdId,
+              e.id !== createdId &&
+              e.status !== LeaveRequestStatus.REQUEST_MODIFIED,
           )
           .sort((a: any, b: any) => b.id - a.id);
 
         for (const victim of overlaps) {
-          const victimWorkingDates = getWorkingDatesInRange(
-            victim.fromDate,
-            victim.toDate,
-          );
+          const victimWorkingDates = getEffectiveDates(victim);
 
           // A victim only overlaps if it claims dates that are in the new request's range
           // AND not already handled by a newer request
@@ -1030,6 +1091,7 @@ const AdminLeaveManagement = () => {
     setCcEmails([]);
     setCcEmailInput("");
     setCcEmailError("");
+    setUploadedDocumentKeys([]);
     setErrors({
       title: "",
       description: "",
@@ -1079,6 +1141,7 @@ const AdminLeaveManagement = () => {
           setCcEmails(parsedCc);
           setCcEmailInput("");
           setCcEmailError("");
+          setUploadedDocumentKeys([]);
 
           if (fetchedItem.employeeId) {
             dispatch(getLeaveRequestEmailConfig(fetchedItem.employeeId))
@@ -1167,9 +1230,6 @@ const AdminLeaveManagement = () => {
       ).unwrap();
       const apiDates = response || [];
 
-      // Only lock dates from in-flight child records belonging to THIS request.
-      // CANCELLED, APPROVED, PENDING, REQUEST_MODIFIED records must NOT block dates
-      // for a new request on the same dates.
       const lockedDates = new Set<string>();
       entities?.forEach((r: any) => {
         if (
@@ -1179,30 +1239,58 @@ const AdminLeaveManagement = () => {
             r.status === "Requesting For Modification" ||
             r.status === LeaveRequestStatus.REQUESTING_FOR_CANCELLATION ||
             r.status === "Requesting For Cancellation" ||
-            r.status === LeaveRequestStatus.MODIFICATION_APPROVED) &&
+            r.status === LeaveRequestStatus.MODIFICATION_APPROVED ||
+            r.status === LeaveRequestStatus.CANCELLATION_APPROVED ||
+            r.status === LeaveRequestStatus.CANCELLED ||
+            r.status === LeaveRequestStatus.REQUEST_MODIFIED) &&
           r.requestModifiedFrom &&
-          Number(r.requestModifiedFrom) === req.id
+          Number(String(r.requestModifiedFrom).split(":")[0]) === req.id
         ) {
-          let start = dayjs(r.fromDate);
-          const end = dayjs(r.toDate);
-          while (start.isBefore(end) || start.isSame(end, "day")) {
-            lockedDates.add(start.format("YYYY-MM-DD"));
-            start = start.add(1, "day");
+          if (r.availableDates) {
+            try {
+              const datesInChild = typeof r.availableDates === 'string' ? JSON.parse(r.availableDates) : r.availableDates;
+              if (Array.isArray(datesInChild)) {
+                datesInChild.forEach(dateStr => lockedDates.add(dateStr));
+              }
+            } catch (e) {
+              // Fallback to range
+              let start = dayjs(r.fromDate);
+              const end = dayjs(r.toDate);
+              while (start.isBefore(end) || start.isSame(end, "day")) {
+                lockedDates.add(start.format("YYYY-MM-DD"));
+                start = start.add(1, "day");
+              }
+            }
+          } else {
+            let start = dayjs(r.fromDate);
+            const end = dayjs(r.toDate);
+            while (start.isBefore(end) || start.isSame(end, "day")) {
+              lockedDates.add(start.format("YYYY-MM-DD"));
+              start = start.add(1, "day");
+            }
           }
         }
       });
 
-      // Filter out dates that are already locked by an active child cancellation/modification
-      const filtered = apiDates.filter(
-        (d: any) => !lockedDates.has(dayjs(d.date).format("YYYY-MM-DD")),
-      );
-
-      // Bypass deadline restriction for Admin/Manager Dashboard
-      filtered.forEach((d: any) => {
-        d.isCancellable = true;
+      // Mark dates as locked if already handled. Admins bypass deadlines, but NOT locks.
+      const processedDates = apiDates.map((d: any) => {
+        const dateStr = dayjs(d.date).format("YYYY-MM-DD");
+        if (lockedDates.has(dateStr)) {
+          return {
+            ...d,
+            isCancellable: false,
+            reason: "Already Modified or Cancelled",
+          };
+        }
+        // Admin Dashboard always bypasses deadlines
+        return {
+          ...d,
+          isCancellable: true,
+          reason: d.reason.includes("Deadline") ? "Admin/Manager Bypass" : d.reason,
+        };
       });
 
-      setCancellableDates(filtered);
+      setCancellableDates(processedDates);
     } catch (err) {
       message.error("Failed to fetch cancellable dates");
     } finally {
@@ -1866,8 +1954,8 @@ const AdminLeaveManagement = () => {
               )}
             </div>
           </div>
-          <div className="bg-white rounded-[20px] shadow-[0px_18px_40px_rgba(112,144,176,0.12)] overflow-hidden border border-gray-100 mb-8">
-            <div className="overflow-x-auto overflow-y-visible no-scrollbar">
+          <div className="bg-white rounded-[20px] shadow-[0px_18px_40px_rgba(112,144,176,0.12)] overflow-hidden border border-gray-100 mb-4">
+            <div className="overflow-x-auto overflow-y-visible custom-scrollbar">
               <table className="w-full min-w-[900px] border-separate border-spacing-0">
                 <thead>
                   <tr className="bg-[#4318FF] text-white">
@@ -2222,10 +2310,10 @@ const AdminLeaveManagement = () => {
                                 item.requestModifiedFrom && (
                                   <span className="opacity-70 border-l border-orange-300 pl-1.5 ml-1 text-[9px] font-bold">
                                     (TO{" "}
-                                    {item.requestModifiedFrom ===
-                                    LeaveRequestType.APPLY_LEAVE
-                                      ? "LEAVE"
-                                      : item.requestModifiedFrom.toUpperCase()}
+                                    {(() => {
+                                      const displayPart = item.requestModifiedFrom.includes(":") ? item.requestModifiedFrom.split(":")[1] : item.requestModifiedFrom;
+                                      return displayPart === LeaveRequestType.APPLY_LEAVE ? "LEAVE" : displayPart.toUpperCase();
+                                    })()}
                                     )
                                   </span>
                                 )}
@@ -2275,8 +2363,16 @@ const AdminLeaveManagement = () => {
               </table>
             </div>
 
+            {/* Horizontal Scroll Indicator */}
+            <div className="flex justify-center items-center py-2 bg-gray-50/30 border-t border-gray-100">
+              <div className="flex items-center gap-2 text-[#A3AED0] opacity-80">
+                <ArrowRightLeft size={14} className="animate-pulse" />
+                <span className="text-[10px] font-black uppercase tracking-widest">Scroll table horizontally to view all columns</span>
+              </div>
+            </div>
+
             {/* Pagination Controls */}
-            <div className="flex flex-col sm:flex-row justify-between items-center mt-6 p-6 lg:px-10 lg:pb-10 gap-6">
+            <div className="flex flex-col sm:flex-row justify-between items-center p-4 lg:px-10 lg:pb-6 gap-4">
               <div className="text-sm font-bold text-[#A3AED0] text-center sm:text-left">
                 Showing{" "}
                 <span className="text-[#2B3674]">
@@ -2622,6 +2718,7 @@ const AdminLeaveManagement = () => {
                   <>
                     <ConfigProvider theme={datePickerTheme}>
                       <DatePicker
+                        inputReadOnly={true}
                         popupClassName="hide-other-months show-weekdays"
                         disabledDate={disabledDate}
                         className={`w-full px-5! py-3! rounded-[20px]! bg-[#F4F7FE]! border-none! focus:bg-white! focus:border-[#4318FF]! transition-all font-bold! text-[#2B3674]! shadow-none`}
@@ -2675,6 +2772,7 @@ const AdminLeaveManagement = () => {
                   <>
                     <ConfigProvider theme={datePickerTheme}>
                       <DatePicker
+                        inputReadOnly={true}
                         popupClassName="hide-other-months show-weekdays"
                         disabledDate={disabledEndDate}
                         className={`w-full px-5! py-3! rounded-[20px]! bg-[#F4F7FE]! border-none! focus:bg-white! focus:border-[#4318FF]! transition-all font-bold! text-[#2B3674]! shadow-none`}

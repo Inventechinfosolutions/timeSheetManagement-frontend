@@ -32,14 +32,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   if (!isAuthenticated || !token) {
-    return <Navigate to="/landing" state={{ from: location }} replace />;
+    return <Navigate to="/landing" state={{ from: location, skipSplash: true }} replace />;
   }
 
   const roles = allowedRoles ?? (allowedRole ? [allowedRole] : undefined);
   if (roles && roles.length > 0 && currentUser?.userType) {
     const allowed = roles.includes(currentUser.userType);
     if (!allowed) {
-      return <Navigate to="/landing" replace />;
+      return <Navigate to="/landing" state={{ skipSplash: true }} replace />;
     }
   }
 

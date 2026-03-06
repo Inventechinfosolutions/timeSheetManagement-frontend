@@ -672,6 +672,9 @@ const MyTimesheet = ({
     if (effectiveReadOnly) return;
     if (isDateBlocked(localEntries[entryIndex].fullDate)) return;
 
+    // Reject non-numeric characters immediately (allows digits and at most one dot)
+    if (val !== "" && !/^\d*\.?\d*$/.test(val)) return;
+
     // A. Update the text value immediately so the UI is responsive
     setLocalInputValues((prev) => ({ ...prev, [entryIndex]: val }));
 

@@ -46,6 +46,7 @@ import {
   ChevronRight,
   ChevronDown,
   Clock,
+  ArrowRightLeft,
 } from "lucide-react";
 import { message } from "antd";
 import CommonMultipleUploader from "./CommonMultipleUploader";
@@ -239,8 +240,24 @@ const LeaveManagement = () => {
     }
   }, [modifyModal.isOpen, modifyModal.request?.employeeId, dispatch]);
 
+  const checkDateInReq = (req: any, dateStr: string): boolean => {
+    if (req.availableDates) {
+      try {
+        const ds: string[] = typeof req.availableDates === 'string' ? JSON.parse(req.availableDates) : req.availableDates;
+        if (Array.isArray(ds)) {
+          return ds.includes(dateStr);
+        }
+      } catch (e) {}
+    }
+    const current = dayjs(dateStr).startOf('day');
+    const start = dayjs(req.fromDate).startOf('day');
+    const end = dayjs(req.toDate).startOf('day');
+    return (current.isSame(start) || current.isAfter(start)) && (current.isSame(end) || current.isBefore(end));
+  };
+
   const disabledDate = (current: any) => {
     if (!current) return false;
+    const dateStr = current.format("YYYY-MM-DD");
 
     // URL: Disable Master Holidays for ALL request types
     if (isHoliday(current)) {
@@ -282,12 +299,7 @@ const LeaveManagement = () => {
         req.status === LeaveRequestStatus.REJECTED;
       if (!isCancelled) return false;
 
-      const startDate = dayjs(req.fromDate).startOf("day");
-      const endDate = dayjs(req.toDate).startOf("day");
-      return (
-        (currentDate.isSame(startDate) || currentDate.isAfter(startDate)) &&
-        (currentDate.isSame(endDate) || currentDate.isBefore(endDate))
-      );
+      return checkDateInReq(req, dateStr);
     });
 
     if (isCancelledDate) return false;
@@ -307,11 +319,7 @@ const LeaveManagement = () => {
       if (isViewMode && selectedRequestId && req.id === selectedRequestId)
         return false;
 
-      const startDate = dayjs(req.fromDate).startOf("day");
-      const endDate = dayjs(req.toDate).startOf("day");
-      const isDateInRange =
-        (currentDate.isSame(startDate) || currentDate.isAfter(startDate)) &&
-        (currentDate.isSame(endDate) || currentDate.isBefore(endDate));
+      const isDateInRange = checkDateInReq(req, dateStr);
 
       if (!isDateInRange) return false;
 
@@ -508,8 +516,7 @@ const LeaveManagement = () => {
       const sourceRequestId =
         record.sourceRequestId ||
         record.source_request_id ||
-        record.requestId ||
-        record.id;
+        record.requestId;
 
       const isLeave =
         status === AttendanceStatus.LEAVE ||
@@ -518,11 +525,12 @@ const LeaveManagement = () => {
         status === AttendanceStatus.HALF_DAY ||
         String(status).toLowerCase() === "half day";
 
-      // A date is a barrier if it's a Full Leave (always a barrier for WFH/CV)
-      // OR a Half Day that is officially linked to a request.
+      // A date is a barrier if it's a Full Leave or Half Day 
+      // AND it is officially linked to an active request.
       if (
         normalizedRecordDate === dateStr &&
-        (isLeave || (isHalfDay && sourceRequestId))
+        (isLeave || isHalfDay) && 
+        sourceRequestId
       ) {
         return true;
       }
@@ -543,12 +551,7 @@ const LeaveManagement = () => {
 
       // Rule: Pending requests prioritize global rules for splitting too
       if (req.status === LeaveRequestStatus.PENDING) {
-        const startDate = dayjs(req.fromDate).startOf("day");
-        const endDate = dayjs(req.toDate).startOf("day");
-        const isInRange =
-          (date.isSame(startDate) || date.isAfter(startDate)) &&
-          (date.isSame(endDate) || date.isBefore(endDate)) &&
-          date.format("YYYY-MM-DD") === dateStr;
+        const isInRange = checkDateInReq(req, dateStr);
 
         if (!isInRange) return false;
 
@@ -593,13 +596,7 @@ const LeaveManagement = () => {
 
       if (!isConflicting) return false;
 
-      const startDate = dayjs(req.fromDate).startOf("day");
-      const endDate = dayjs(req.toDate).startOf("day");
-      return (
-        (date.isSame(startDate) || date.isAfter(startDate)) &&
-        (date.isSame(endDate) || date.isBefore(endDate)) &&
-        date.format("YYYY-MM-DD") === dateStr
-      );
+      return checkDateInReq(req, dateStr);
     });
   };
 
@@ -934,6 +931,7 @@ const LeaveManagement = () => {
       setSelectedLeaveType("");
       setSelectedRequestId(null);
       setIsViewMode(false);
+      setUploadedDocumentKeys([]);
     }
   }, [submitSuccess, dispatch, employeeId]);
 
@@ -957,6 +955,7 @@ const LeaveManagement = () => {
       endDate: "",
       duration: 0,
     }); // Explicitly clear any stale data
+    setUploadedDocumentKeys([]);
     if (label === LeaveRequestType.HALF_DAY) {
       setLeaveDurationType(HalfDayType.FIRST_HALF);
       setIsHalfDay(true);
@@ -1009,6 +1008,7 @@ const LeaveManagement = () => {
       setCcEmails(parsedCc);
       setCcEmailInput("");
       setCcEmailError("");
+      setUploadedDocumentKeys([]);
       if (fetchedItem.employeeId) {
         dispatch(getLeaveRequestEmailConfig(fetchedItem.employeeId))
           .unwrap()
@@ -1092,46 +1092,71 @@ const LeaveManagement = () => {
       if (getLeaveCancellableDates.fulfilled.match(action)) {
         const apiDates = action.payload || [];
 
-        // Identify dates currently under an ACTIVE modification or cancellation child
-        // process (different from the current request).
-        // IMPORTANT: Do NOT include CANCELLED or APPROVED here — those are dead/
-        // separate records and must never block the current request's dates.
         const lockedDates = new Set<string>();
         entities?.forEach((req: any) => {
-          // Only lock dates if the other request is an in-flight child (linked via
-          // requestModifiedFrom) that is actively pending cancellation/modification.
+          // Lock dates if the other request is an in-flight or completed child (linked via
+          // requestModifiedFrom) that has already handled these dates.
           if (
             req.id !== request.id &&
             (req.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION ||
               req.status === "Requesting For Modification" ||
               req.status === LeaveRequestStatus.REQUESTING_FOR_CANCELLATION ||
               req.status === "Requesting For Cancellation" ||
-              req.status === LeaveRequestStatus.MODIFICATION_APPROVED) &&
+              req.status === LeaveRequestStatus.MODIFICATION_APPROVED ||
+              req.status === LeaveRequestStatus.CANCELLATION_APPROVED ||
+              req.status === LeaveRequestStatus.CANCELLED ||
+              req.status === LeaveRequestStatus.REQUEST_MODIFIED) &&
             req.requestModifiedFrom &&
-            Number(req.requestModifiedFrom) === request.id
+            Number(String(req.requestModifiedFrom).split(":")[0]) ===
+              request.id
           ) {
-            let start = dayjs(req.fromDate);
-            const end = dayjs(req.toDate);
-            while (start.isBefore(end) || start.isSame(end, "day")) {
-              lockedDates.add(start.format("YYYY-MM-DD"));
-              start = start.add(1, "day");
+            if (req.availableDates) {
+              try {
+                const datesInChild = JSON.parse(req.availableDates);
+                if (Array.isArray(datesInChild)) {
+                  datesInChild.forEach(dateStr => lockedDates.add(dateStr));
+                }
+              } catch (e) {
+                // Fallback to range
+                let start = dayjs(req.fromDate);
+                const end = dayjs(req.toDate);
+                while (start.isBefore(end) || start.isSame(end, "day")) {
+                  lockedDates.add(start.format("YYYY-MM-DD"));
+                  start = start.add(1, "day");
+                }
+              }
+            } else {
+              let start = dayjs(req.fromDate);
+              const end = dayjs(req.toDate);
+              while (start.isBefore(end) || start.isSame(end, "day")) {
+                lockedDates.add(start.format("YYYY-MM-DD"));
+                start = start.add(1, "day");
+              }
             }
           }
         });
 
-        // Filter out dates that are already locked by an active child cancellation/modification
-        const filtered = apiDates.filter(
-          (d: any) => !lockedDates.has(dayjs(d.date).format("YYYY-MM-DD")),
-        );
+        // Mark dates as locked if already handled. Admins bypass deadlines, but NOT locks.
+        const processedDates = apiDates.map((d: any) => {
+          const dateStr = dayjs(d.date).format("YYYY-MM-DD");
+          if (lockedDates.has(dateStr)) {
+            return {
+              ...d,
+              isCancellable: false,
+              reason: "Already Modified or Cancelled",
+            };
+          }
+          if (isPrivileged) {
+            return {
+              ...d,
+              isCancellable: true,
+              reason: d.reason.includes("Deadline") ? "Admin/Manager Bypass" : d.reason,
+            };
+          }
+          return d;
+        });
 
-        // Bypass deadline restriction for Privileged Users
-        if (isPrivileged) {
-          filtered.forEach((d: any) => {
-            d.isCancellable = true;
-          });
-        }
-
-        setCancellableDates(filtered);
+        setCancellableDates(processedDates);
       } else {
         // Explicitly throw or handle potential error payload
         const payload = action.payload as any;
@@ -1619,8 +1644,8 @@ const LeaveManagement = () => {
           )}
         </div>
       </div>
-      <div className="bg-white rounded-[20px] shadow-[0px_18px_40px_rgba(112,144,176,0.12)] overflow-hidden border border-gray-100 mb-8">
-        <div className="overflow-x-auto overflow-y-visible no-scrollbar">
+      <div className="bg-white rounded-[20px] shadow-[0px_18px_40px_rgba(112,144,176,0.12)] overflow-hidden border border-gray-100 mb-4">
+        <div className="overflow-x-auto overflow-y-visible custom-scrollbar">
           <table className="w-full min-w-[900px] border-separate border-spacing-0">
             <thead>
               <tr className="bg-[#4318FF] text-white">
@@ -1930,10 +1955,10 @@ const LeaveManagement = () => {
                             item.requestModifiedFrom && (
                               <span className="opacity-70 border-l border-orange-300 pl-1.5 ml-1 text-[9px] font-bold">
                                 (TO{" "}
-                                {item.requestModifiedFrom ===
-                                LeaveRequestType.APPLY_LEAVE
-                                  ? "LEAVE"
-                                  : item.requestModifiedFrom.toUpperCase()}
+                                {(() => {
+                                  const displayPart = item.requestModifiedFrom.includes(":") ? item.requestModifiedFrom.split(":")[1] : item.requestModifiedFrom;
+                                  return displayPart === LeaveRequestType.APPLY_LEAVE ? "LEAVE" : displayPart.toUpperCase();
+                                })()}
                                 )
                               </span>
                             )}
@@ -1996,8 +2021,16 @@ const LeaveManagement = () => {
           </table>
         </div>
 
+        {/* Horizontal Scroll Indicator */}
+        <div className="flex justify-center items-center py-2 bg-gray-50/30 border-t border-gray-100">
+          <div className="flex items-center gap-2 text-[#A3AED0] opacity-80">
+            <ArrowRightLeft size={14} className="animate-pulse" />
+            <span className="text-[10px] font-black uppercase tracking-widest">Scroll table horizontally to view all columns</span>
+          </div>
+        </div>
+
         {/* Pagination Controls */}
-        <div className="flex flex-col sm:flex-row justify-between items-center mt-6 p-6 lg:px-10 lg:pb-10 gap-6">
+        <div className="flex flex-col sm:flex-row justify-between items-center p-4 lg:px-10 lg:pb-6 gap-4">
           <div className="text-sm font-bold text-[#A3AED0] text-center sm:text-left">
             Showing{" "}
             <span className="text-[#2B3674]">
@@ -2313,6 +2346,7 @@ const LeaveManagement = () => {
                   <>
                     <ConfigProvider theme={datePickerTheme}>
                       <DatePicker
+                        inputReadOnly={true}
                         classNames={{
                           popup: "hide-other-months show-weekdays",
                         }}
@@ -2370,6 +2404,7 @@ const LeaveManagement = () => {
                   <>
                     <ConfigProvider theme={datePickerTheme}>
                       <DatePicker
+                        inputReadOnly={true}
                         classNames={{
                           popup: "hide-other-months show-weekdays",
                         }}
@@ -2558,12 +2593,7 @@ const LeaveManagement = () => {
                 <CommonMultipleUploader
                   key={isViewMode ? selectedRequestId : uploaderKey}
                   entityType="LEAVE_REQUEST"
-                  entityId={
-                    (entity?.id || currentUser?.id) &&
-                    !isNaN(Number(entity?.id || currentUser?.id))
-                      ? Number(entity?.id || currentUser?.id)
-                      : 0
-                  }
+                  entityId={Number(entity?.id || 0)}
                   refId={isViewMode ? selectedRequestId || 0 : 0}
                   refType="DOCUMENT"
                   fetchOnMount={isViewMode}
@@ -2881,10 +2911,12 @@ const LeaveManagement = () => {
                       updateData: {
                         ...modifyFormData,
                         datesToModify: modifyModal.datesToModify,
+                        documentKeys: uploadedDocumentKeys,
                       },
                     }),
                   ).unwrap();
                   setModifyModal({ isOpen: false, request: null });
+                  setUploadedDocumentKeys([]); // Reset on success
                   if (employeeId) {
                     refreshData();
                   }
@@ -3147,12 +3179,8 @@ const LeaveManagement = () => {
               <CommonMultipleUploader
                 key={`modify-uploader-${modifyModal.request?.id}`}
                 entityType="LEAVE_REQUEST"
-                entityId={
-                  currentUser?.id && !isNaN(Number(currentUser.id))
-                    ? Number(currentUser.id)
-                    : 0
-                }
-                refId={modifyModal.request?.id || 0}
+                entityId={Number(entity?.id || 0)}
+                refId={0}
                 refType="DOCUMENT"
                 disabled={
                   modifyFormData.firstHalf ===
@@ -3162,10 +3190,19 @@ const LeaveManagement = () => {
                     (modifyModal.request?.secondHalf ||
                       modifyModal.request?.requestType)
                 }
-                fetchOnMount={true}
+                fetchOnMount={false}
+                uploadFile={uploadLeaveRequestFile}
+                deleteFile={deleteLeaveRequestFile}
                 getFiles={getLeaveRequestFiles}
                 previewFile={previewLeaveRequestFile}
                 downloadFile={downloadLeaveRequestFile}
+                onFileUpload={(file) => setUploadedDocumentKeys((prev) => [...prev, file.key])}
+                onFileDelete={(fileKey) => setUploadedDocumentKeys((prev) => prev.filter((k) => k !== fileKey))}
+                maxFiles={5}
+                maxFileSize={5 * 1024 * 1024}
+                allowedTypes={["images", "pdf"]}
+                successMessage="Document added successfully"
+                deleteMessage="Document removed successfully"
               />
             </div>
           </div>
@@ -3220,6 +3257,7 @@ const LeaveManagement = () => {
                           requestToCancel.secondHalf || WorkLocation.OFFICE,
                         ccEmails: parsedCc,
                       });
+                      setUploadedDocumentKeys([]); // Reset when opening the modify modal
                       setModifyModal({
                         isOpen: true,
                         request: requestToCancel,

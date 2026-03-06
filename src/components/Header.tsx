@@ -60,7 +60,7 @@ const Header = ({
   const isAdmin = currentUser?.userType === UserType.ADMIN;
   const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
   const isManager = currentUser?.userType === UserType.MANAGER;
-  const isApprover = isAdmin || isManager;
+  const isApprover = isAdmin || isManager || isReceptionist;
   const isAdminOrReceptionist = isAdmin || isReceptionist;
 
   const {
@@ -186,14 +186,14 @@ const Header = ({
       // Clear any local storage
       localStorage.clear();
       sessionStorage.clear();
-      // Navigate to landing page
-      navigate("/landing");
+      // Navigate to landing page without splash
+      navigate("/landing", { state: { skipSplash: true } });
     } catch (error) {
       console.error("Logout failed:", error);
       // Even if logout fails, clear local state and navigate
       localStorage.clear();
       sessionStorage.clear();
-      navigate("/landing");
+      navigate("/landing", { state: { skipSplash: true } });
     }
   };
 
@@ -345,13 +345,15 @@ const Header = ({
                         <h3 className="text-lg font-bold text-[#1B2559]">
                           Notifications
                         </h3>
-                        {/* Show "Mark all as read" for everyone, but handle scoped marks */}
-                        <button
-                          onClick={handleMarkAllAsRead}
-                          className="text-xs font-bold text-[#4318FF] hover:bg-blue-50 px-3 py-1 rounded-lg transition-all active:scale-95"
-                        >
-                          Mark all as read
-                        </button>
+                        {/* Show "Mark all as read" for everyone except Receptionist, but handle scoped marks */}
+                        {!isReceptionist && (
+                          <button
+                            onClick={handleMarkAllAsRead}
+                            className="text-xs font-bold text-[#4318FF] hover:bg-blue-50 px-3 py-1 rounded-lg transition-all active:scale-95"
+                          >
+                            Mark all as read
+                          </button>
+                        )}
                       </div>
 
                       {/* Tabs */}
@@ -462,7 +464,7 @@ const Header = ({
                                   key={notif.id}
                                   onClick={() => {
                                     navigate(
-                                      isAdmin
+                                      isAdminOrReceptionist
                                         ? "/admin-dashboard/requests"
                                         : "/manager-dashboard/requests",
                                     );
@@ -485,15 +487,17 @@ const Header = ({
                                       <p className="text-sm text-[#1B2559] leading-snug font-bold">
                                         {title}
                                       </p>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleMarkAsRead(notif.id);
-                                        }}
-                                        className="text-[10px] text-[#4318FF] hover:underline font-bold"
-                                      >
-                                        Dismiss
-                                      </button>
+                                      {!isReceptionist && (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleMarkAsRead(notif.id);
+                                          }}
+                                          className="text-[10px] text-[#4318FF] hover:underline font-bold"
+                                        >
+                                          Dismiss
+                                        </button>
+                                      )}
                                     </div>
 
                                     <div className="flex flex-col gap-1">
@@ -643,11 +647,8 @@ const Header = ({
                                       update.status ===
                                       LeaveRequestStatus.REQUEST_MODIFIED
                                     ) {
-                                      const source =
-                                        update.requestModifiedFrom ===
-                                        LeaveRequestType.APPLY_LEAVE
-                                          ? LeaveRequestType.LEAVE
-                                          : update.requestModifiedFrom;
+                                      const rawSource = update.requestModifiedFrom && update.requestModifiedFrom.includes(":") ? update.requestModifiedFrom.split(":")[1] : update.requestModifiedFrom;
+                                      const source = rawSource === LeaveRequestType.APPLY_LEAVE ? LeaveRequestType.LEAVE : rawSource;
                                       title = "Request Modified";
                                       message = (
                                         <>
@@ -905,7 +906,7 @@ const Header = ({
                       </div>
 
                       {/* Footer Actions */}
-                      {selectedNotification && !selectedNotification.isRead && (
+                      {selectedNotification && !selectedNotification.isRead && !isReceptionist && (
                         <div className="p-6 border-t border-gray-50 bg-gray-50/50">
                           <button
                             onClick={() =>
