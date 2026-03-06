@@ -18,7 +18,6 @@ import {
 import { saveAs } from "file-saver";
 import {
   downloadAttendanceReport,
-  fetchAllDashboardStats,
 } from "../reducers/employeeAttendance.reducer";
 import EmployeeTimeSheetMobileCard from "./EmployeeTimeSheetMobileCard";
 import Toast from "../components/Toast";
@@ -134,10 +133,6 @@ const AdminEmployeeTimesheetList = () => {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  const { employeeMonthlyStats } = useAppSelector(
-    (state: RootState) => state.attendance,
-  );
-
   useEffect(() => {
     dispatch(
       getTimesheetList({
@@ -167,15 +162,6 @@ const AdminEmployeeTimesheetList = () => {
     selectedYear,
   ]);
 
-  // Fetch status for all employees in bulk
-  useEffect(() => {
-    dispatch(
-      fetchAllDashboardStats({
-        month: selectedMonth.toString(),
-        year: selectedYear.toString(),
-      }),
-    );
-  }, [dispatch, selectedMonth, selectedYear]);
 
   const handleSort = (key: string) => {
     setSortConfig((current) => {
@@ -195,13 +181,7 @@ const AdminEmployeeTimesheetList = () => {
       id: empId,
       name: emp.fullName || emp.name,
       department: emp.department,
-      status:
-        emp.monthStatus ||
-        emp.month_status ||
-        emp.status ||
-        employeeMonthlyStats[empId]?.monthStatus ||
-        (employeeMonthlyStats[empId] as any)?.month_status ||
-        MonthStatus.PENDING,
+      status: emp.monthStatus || emp.status || MonthStatus.PENDING,
     };
   });
 
