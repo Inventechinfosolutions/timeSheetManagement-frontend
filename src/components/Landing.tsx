@@ -8,7 +8,7 @@ import { UserType } from "../enums";
 import loginVisual from "../assets/login_visual.png";
 import inventLogo from "../assets/invent-logo.svg";
 import LandingMobile from "./LandingMobile";
-import AnimatedInventLogo from "./AnimatedInventLogo";
+import SplashVideo from "./SplashVideo";
 
 const SPLASH_HOLD_AFTER_WELCOME_MS = 1000;
 const SPLASH_FADEOUT_MS = 400;
@@ -116,9 +116,8 @@ const Landing = () => {
         >
           <div className="absolute top-[-5%] left-[5%] w-48 h-48 bg-[#585CE5] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse" />
           <div className="absolute bottom-[-10%] right-[-5%] w-96 h-96 bg-white rounded-full mix-blend-overlay filter blur-3xl opacity-40" />
-          <AnimatedInventLogo
-            enterFromBottom
-            onComplete={handleSplashComplete}
+          <SplashVideo
+             onComplete={handleSplashComplete}
           />
         </div>
       )}
