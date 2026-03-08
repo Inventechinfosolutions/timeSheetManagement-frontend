@@ -30,7 +30,7 @@ const SidebarLayout = ({
 }: SidebarLayoutProps) => {
   // State management
   const [isHovered, setIsHovered] = useState(false);
-  const [isLocked, setIsLocked] = useState(false);
+  const [isLocked, setIsLocked] = useState(true);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const mainContentRef = useRef<HTMLElement>(null);
   const { tab } = useParams<{ tab?: string }>();
