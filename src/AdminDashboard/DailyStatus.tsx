@@ -345,7 +345,7 @@ const DailyStatus = () => {
                   setSelectedDept("All");
                   setCurrentPage(1);
                 }}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-gray-700 rounded-full hover:bg-gray-50 active:scale-95 transition-all text-sm font-bold border border-gray-200 whitespace-nowrap"
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#5B4FFF] text-white rounded-full hover:bg-[#4318FF] active:scale-95 transition-all text-sm font-bold border border-[#4318FF]/50 whitespace-nowrap"
                 title="Clear all filters"
               >
                 <X size={16} />
@@ -708,7 +708,13 @@ const DailyStatus = () => {
                       <input
                         type="date"
                         value={exportStartDate}
-                        onChange={(e) => setExportStartDate(e.target.value)}
+                        onChange={(e) => {
+                          const newStart = e.target.value;
+                          setExportStartDate(newStart);
+                          if (exportEndDate && newStart && exportEndDate < newStart) {
+                            setExportEndDate(newStart);
+                          }
+                        }}
                         className="w-full pl-6 pr-12 py-4 bg-[#F4F7FE] border-none rounded-[16px] text-[#2B3674] font-bold outline-none focus:ring-2 ring-blue-100 transition-all cursor-pointer appearance-none"
                       />
                       <Calendar
@@ -727,6 +733,7 @@ const DailyStatus = () => {
                       <input
                         type="date"
                         value={exportEndDate}
+                        min={exportStartDate}
                         onChange={(e) => setExportEndDate(e.target.value)}
                         className="w-full pl-6 pr-12 py-4 bg-[#F4F7FE] border-none rounded-[16px] text-[#2B3674] font-bold outline-none focus:ring-2 ring-blue-100 transition-all cursor-pointer appearance-none"
                       />

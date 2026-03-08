@@ -21,7 +21,8 @@ export interface User {
 export interface CreateUserDto {
   loginId: string;
   name: string;
-  password: string;
+  password?: string;
+  role?: UserType;
 }
 
 export interface UserLoginDto {

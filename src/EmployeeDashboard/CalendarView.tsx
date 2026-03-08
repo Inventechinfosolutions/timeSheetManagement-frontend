@@ -1169,14 +1169,13 @@ const Calendar = ({
                   <input
                     type="date"
                     value={downloadDateRange.from}
-                    max={new Date().toISOString().split("T")[0]}
                     onChange={(e) => {
                       const newFrom = e.target.value;
                       setDownloadDateRange({
                         ...downloadDateRange,
                         from: newFrom,
                         // If TO date is before the new FROM date, reset TO to FROM
-                        to: downloadDateRange.to && downloadDateRange.to < newFrom ? newFrom : downloadDateRange.to,
+                        to: downloadDateRange.to && newFrom && downloadDateRange.to < newFrom ? newFrom : downloadDateRange.to,
                       });
                     }}
                     className="w-full pl-4 pr-12 py-3 bg-[#F4F7FE] border-transparent rounded-xl text-[#2B3674] font-bold focus:outline-none focus:ring-2 focus:ring-[#4318FF] transition-all cursor-pointer"
@@ -1196,7 +1195,6 @@ const Calendar = ({
                     type="date"
                     value={downloadDateRange.to}
                     min={downloadDateRange.from}
-                    max={new Date().toISOString().split("T")[0]}
                     onChange={(e) =>
                       setDownloadDateRange({
                         ...downloadDateRange,

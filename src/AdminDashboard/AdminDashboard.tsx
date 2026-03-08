@@ -809,7 +809,13 @@ const AdminDashboard = () => {
                       <input
                         type="date"
                         value={exportStartDate}
-                        onChange={(e) => setExportStartDate(e.target.value)}
+                        onChange={(e) => {
+                          const newStart = e.target.value;
+                          setExportStartDate(newStart);
+                          if (exportEndDate && newStart && exportEndDate < newStart) {
+                            setExportEndDate(newStart);
+                          }
+                        }}
                         className="w-full pl-6 pr-12 py-4 bg-[#F4F7FE] rounded-[16px] text-[#2B3674] font-bold outline-none cursor-pointer"
                       />
                       <Calendar
@@ -826,6 +832,7 @@ const AdminDashboard = () => {
                       <input
                         type="date"
                         value={exportEndDate}
+                        min={exportStartDate}
                         onChange={(e) => setExportEndDate(e.target.value)}
                         className="w-full pl-6 pr-12 py-4 bg-[#F4F7FE] rounded-[16px] text-[#2B3674] font-bold outline-none cursor-pointer"
                       />

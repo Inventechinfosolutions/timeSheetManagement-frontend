@@ -272,9 +272,12 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
                       disabled={!isEditable}
                       className="w-full h-full bg-transparent text-center text-xl font-bold focus:outline-none placeholder:text-gray-300"
                       value={inputValue}
-                      onChange={(e) =>
-                        onHoursInput(originalIndex, e.target.value)
-                      }
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === "" || /^\d*\.?\d*$/.test(val)) {
+                          onHoursInput(originalIndex, val);
+                        }
+                      }}
                       onBlur={() => onInputBlur(originalIndex)}
                       placeholder="0"
                     />

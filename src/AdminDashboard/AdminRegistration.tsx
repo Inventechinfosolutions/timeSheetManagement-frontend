@@ -107,7 +107,7 @@ const AdminRegistration = () => {
                 {/* Full Name */}
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">
-                    Full Name
+                    Full Name <span className="text-red-500">*</span>
                   </label>
                   <div className="relative group">
                     <input
@@ -126,7 +126,7 @@ const AdminRegistration = () => {
                 {/* Employee ID */}
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">
-                    Employee ID
+                    Employee ID <span className="text-red-500">*</span>
                   </label>
                   <div className="relative group">
                     <input
@@ -145,7 +145,7 @@ const AdminRegistration = () => {
                 {/* Department */}
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">
-                    Department
+                    Department <span className="text-red-500">*</span>
                   </label>
                   <div className="relative group">
                     <input
@@ -164,7 +164,7 @@ const AdminRegistration = () => {
                 {/* Designation */}
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">
-                    Designation
+                    Designation <span className="text-red-500">*</span>
                   </label>
                   <div className="relative group">
                     <input
@@ -183,8 +183,8 @@ const AdminRegistration = () => {
 
               {/* Email */}
               <div className="space-y-1 mb-4">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">
-                  Email Address
+<label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">
+                    Email Address <span className="text-red-500">*</span>
                 </label>
                 <div className="relative group">
                   <input
@@ -204,7 +204,7 @@ const AdminRegistration = () => {
                 {/* Password */}
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">
-                    Password
+                    Password <span className="text-red-500">*</span>
                   </label>
                   <div className="relative group">
                     <input
@@ -223,7 +223,7 @@ const AdminRegistration = () => {
                 {/* Confirm Password */}
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5">
-                    Confirm Password
+                    Confirm Password <span className="text-red-500">*</span>
                   </label>
                   <div className="relative group">
                     <input
