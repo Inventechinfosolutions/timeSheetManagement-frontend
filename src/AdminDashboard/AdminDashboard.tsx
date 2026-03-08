@@ -234,7 +234,7 @@ const AdminDashboard = () => {
       return { totalHours: 0, todayPresent: 0, totalAbsent: 0 };
 
     const totalMinutes = allAttendance.reduce(
-      (acc, curr) => acc + Number(curr.totalHours || 0) * 60,
+      (acc, curr: any) => acc + Number(curr.totalHours || curr.total_hours || 0) * 60,
       0,
     );
 
@@ -246,14 +246,14 @@ const AdminDashboard = () => {
       return rDateStr === todayStr;
     });
 
-    const todayPresent = todayRecords.filter((r) =>
+    const todayPresent = todayRecords.filter((r: any) =>
       [AttendanceStatus.FULL_DAY, AttendanceStatus.HALF_DAY].includes(
-        r.status as AttendanceStatus,
+        (r.status || r.attendance_status) as AttendanceStatus,
       ),
     ).length;
 
     const todayAbsent = todayRecords.filter(
-      (r) => r.status === AttendanceStatus.LEAVE,
+      (r: any) => (r.status || r.attendance_status) === AttendanceStatus.LEAVE,
     ).length;
 
     return {
@@ -283,14 +283,14 @@ const AdminDashboard = () => {
       globalEntities.forEach((emp: any) => {
         const empId = emp.employeeId || emp.id;
         const records = employeeRecords[empId] || [];
-        const dayRecord = records.find((r) => {
+        const dayRecord: any = records.find((r) => {
           const rDate =
             r.workingDate instanceof Date
               ? r.workingDate.toISOString().split("T")[0]
               : String(r.workingDate).split("T")[0];
           return rDate === dateStr;
         });
-        if (dayRecord) totalDayHours += Number(dayRecord.totalHours) || 0;
+        if (dayRecord) totalDayHours += Number(dayRecord.totalHours || dayRecord.total_hours) || 0;
       });
       return parseFloat((Number(totalDayHours) || 0).toFixed(1));
     });
@@ -301,7 +301,7 @@ const AdminDashboard = () => {
         const empId = emp.employeeId || emp.id;
         const records = employeeRecords[empId] || [];
         const total = records.reduce(
-          (sum, r) => sum + Number(r.totalHours || 0),
+          (sum, r: any) => sum + Number(r.totalHours || r.total_hours || 0),
           0,
         );
         return { name: emp.fullName || emp.name || "Unknown", hours: total };
@@ -809,7 +809,13 @@ const AdminDashboard = () => {
                       <input
                         type="date"
                         value={exportStartDate}
-                        onChange={(e) => setExportStartDate(e.target.value)}
+                        onChange={(e) => {
+                          const newStart = e.target.value;
+                          setExportStartDate(newStart);
+                          if (exportEndDate && newStart && exportEndDate < newStart) {
+                            setExportEndDate(newStart);
+                          }
+                        }}
                         className="w-full pl-6 pr-12 py-4 bg-[#F4F7FE] rounded-[16px] text-[#2B3674] font-bold outline-none cursor-pointer"
                       />
                       <Calendar
@@ -826,6 +832,7 @@ const AdminDashboard = () => {
                       <input
                         type="date"
                         value={exportEndDate}
+                        min={exportStartDate}
                         onChange={(e) => setExportEndDate(e.target.value)}
                         className="w-full pl-6 pr-12 py-4 bg-[#F4F7FE] rounded-[16px] text-[#2B3674] font-bold outline-none cursor-pointer"
                       />

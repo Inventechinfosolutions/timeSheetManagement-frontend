@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios";
 
-import { AttendanceStatus, WorkLocation as OfficeLocation, WorkLocationKeyword } from '../enums';
+import { AttendanceStatus, WorkLocation as OfficeLocation } from '../enums';
 
 // INTERFACES
 export interface EmployeeAttendance {
@@ -52,7 +52,6 @@ interface AttendanceState {
     endDate: string;
     workedDays: number;
   } | null;
-  employeeMonthlyStats: Record<string, DashboardStats>; // Keyed by employeeId
 }
 
 const initialState: AttendanceState = {
@@ -66,7 +65,6 @@ const initialState: AttendanceState = {
   currentDayRecord: null,
   yearlyRecords: [],
   workedDaysSummary: null,
-  employeeMonthlyStats: {},
 };
 
 const apiUrl = "/api/employee-attendance";
@@ -285,16 +283,6 @@ export const fetchDashboardStats = createAsyncThunk(
   },
 );
 
-// 10. Fetch All Dashboard Stats: GET /all-dashboard-stats
-export const fetchAllDashboardStats = createAsyncThunk(
-  "attendance/fetchAllDashboardStats",
-  async ({ month, year }: { month?: string; year?: string }) => {
-    const response = await axios.get(`${apiUrl}/all-dashboard-stats`, {
-      params: { month, year },
-    });
-    return response.data; // Expected: { [employeeId]: DashboardStats }
-  },
-);
 
 // 6. Delete Record: DELETE /:id
 export const deleteAttendanceRecord = createAsyncThunk(
@@ -488,21 +476,6 @@ const attendanceSlice = createSlice({
           action: PayloadAction<{ employeeId: string; stats: DashboardStats }>,
         ) => {
           state.stats = action.payload.stats;
-          state.employeeMonthlyStats[action.payload.employeeId] =
-            action.payload.stats;
-        },
-      )
-      .addCase(
-        fetchAllDashboardStats.fulfilled,
-        (
-          state: AttendanceState,
-          action: PayloadAction<Record<string, DashboardStats>>,
-        ) => {
-          state.loading = false;
-          state.employeeMonthlyStats = {
-            ...state.employeeMonthlyStats,
-            ...action.payload,
-          };
         },
       )
       .addCase(

@@ -69,15 +69,14 @@ const ChangePassword = () => {
       setSuccess("Password successfully updated! Redirecting to login...");
       setTimeout(async () => {
         await dispatch(logoutUser()).unwrap();
-        navigate("/landing");
+        navigate("/landing", { state: { skipSplash: true } });
       }, 2000);
-      
     } catch (err: any) {
       // Simulate success as requested by user to bypass errors
       setSuccess("Password successfully updated! Redirecting to login...");
       setTimeout(async () => {
         await dispatch(logoutUser()).unwrap();
-        navigate("/landing");
+        navigate("/landing", { state: { skipSplash: true } });
       }, 2000);
     } finally {
       setIsLoading(false);

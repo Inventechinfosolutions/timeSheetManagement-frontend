@@ -62,6 +62,23 @@ const setupAxiosInterceptors = (
     const originalRequest = error.config;
     const status = error.status || (error.response ? error.response.status : 0);
 
+    // Sanitize HTML error responses (e.g., Nginx 502 Bad Gateway HTML)
+    if (error.response?.data && typeof error.response.data === 'string' && error.response.data.includes('<html')) {
+      let friendlyMessage = "An unexpected server error occurred. Please contact support.";
+      if (status === 502) {
+        friendlyMessage = "Bad Gateway: The server is currently down or unreachable. Please try again later.";
+      } else if (status === 504) {
+        friendlyMessage = "Gateway Timeout: The server took too long to respond.";
+      } else if (status === 503) {
+        friendlyMessage = "Service Unavailable: The server is temporarily overloaded or down.";
+      } else if (status === 404) {
+        friendlyMessage = "Not Found: The requested resource could not be found.";
+      }
+      
+      error.response.data = friendlyMessage;
+      error.message = friendlyMessage;
+    }
+
     // 2. Handle 401: Attempt Refresh
     if (status === 401 && !originalRequest._retry && !originalRequest.url?.includes('/auth/refresh')) {
       const token = Storage.local.get("TimeSheet-authenticationToken") || Storage.session.get("TimeSheet-authenticationToken");

@@ -20,6 +20,7 @@ import {
   ChevronRight,
   Calendar,
   RotateCcw,
+  ArrowRightLeft,
 } from "lucide-react";
 import {
   getAllLeaveRequests,
@@ -44,6 +45,7 @@ import {
   LeaveRequestStatus,
   AttendanceStatus,
   LeaveRequestType,
+  UserType,
 } from "../enums";
 import CommonMultipleUploader from "../EmployeeDashboard/CommonMultipleUploader";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
@@ -60,6 +62,8 @@ const Requests = () => {
     : "/admin-dashboard";
   const dispatch = useAppDispatch();
   const { entities, loading } = useAppSelector((state) => state.leaveRequest);
+  const currentUser = useAppSelector((state) => state.user.currentUser);
+  const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
 
   // Configure AntD message position to be below the header
   useEffect(() => {
@@ -970,7 +974,7 @@ const Requests = () => {
                   setFilterStatus("All");
                   setCurrentPage(1);
                 }}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-gray-700 rounded-full hover:bg-gray-50 active:scale-95 transition-all text-sm font-bold border border-gray-200 whitespace-nowrap"
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#5B4FFF] text-white rounded-full hover:bg-[#4318FF] active:scale-95 transition-all text-sm font-bold border border-[#4318FF]/50 whitespace-nowrap"
                 title="Clear all filters"
               >
                 <X size={16} />
@@ -981,8 +985,8 @@ const Requests = () => {
       </div>
 
       {/* Requests Table - same design as Leave Management: horizontal scroll, no scrollbar, Status & Actions fixed on right */}
-      <div className="bg-white rounded-[20px] shadow-[0px_18px_40px_rgba(112,144,176,0.12)] overflow-hidden border border-gray-100 mb-8">
-        <div className="overflow-x-auto overflow-y-visible no-scrollbar">
+      <div className="bg-white rounded-[20px] shadow-[0px_18px_40px_rgba(112,144,176,0.12)] overflow-hidden border border-gray-100 mb-4">
+        <div className="overflow-x-auto overflow-y-visible custom-scrollbar">
           <table className="w-full min-w-[900px] border-separate border-spacing-0">
             <thead>
               <tr className="bg-[#4318FF] text-white">
@@ -1325,10 +1329,10 @@ const Requests = () => {
                             req.requestModifiedFrom && (
                               <span className="opacity-70 border-l border-orange-300 pl-1.5 ml-1 text-[9px] font-bold">
                                 MODIFIED FROM:{" "}
-                                {req.requestModifiedFrom ===
-                                  LeaveRequestType.APPLY_LEAVE
-                                  ? "LEAVE"
-                                  : req.requestModifiedFrom.toUpperCase()}
+                                {(() => {
+                                  const displayPart = req.requestModifiedFrom.includes(":") ? req.requestModifiedFrom.split(":")[1] : req.requestModifiedFrom;
+                                  return displayPart === LeaveRequestType.APPLY_LEAVE ? "LEAVE" : displayPart.toUpperCase();
+                                })()}
                               </span>
                             )}
                         </span>
@@ -1391,7 +1395,7 @@ const Requests = () => {
                           >
                             <Eye size={20} />
                           </button>
-                          {req.status === LeaveRequestStatus.PENDING && (
+                          {!isReceptionist && req.status === LeaveRequestStatus.PENDING && (
                             <>
                               <button
                                 onClick={() =>
@@ -1421,7 +1425,7 @@ const Requests = () => {
                               </button>
                             </>
                           )}
-                          {req.status ===
+                          {!isReceptionist && req.status ===
                             LeaveRequestStatus.REQUESTING_FOR_CANCELLATION && (
                               <>
                                 <button
@@ -1452,7 +1456,7 @@ const Requests = () => {
                                 </button>
                               </>
                             )}
-                          {req.status ===
+                          {!isReceptionist && req.status ===
                             LeaveRequestStatus.REQUESTING_FOR_MODIFICATION && (
                               <>
                                 <button
@@ -1492,8 +1496,16 @@ const Requests = () => {
           </table>
         </div>
 
+        {/* Horizontal Scroll Indicator */}
+        <div className="flex justify-center items-center py-2 bg-gray-50/30 border-t border-gray-100">
+          <div className="flex items-center gap-2 text-[#A3AED0] opacity-80">
+            <ArrowRightLeft size={14} className="animate-pulse" />
+            <span className="text-[10px] font-black uppercase tracking-widest">Scroll table horizontally to view all columns</span>
+          </div>
+        </div>
+
         {/* Pagination Controls */}
-        <div className="flex flex-col sm:flex-row justify-between items-center mt-6 p-6 lg:px-10 lg:pb-10 gap-6">
+        <div className="flex flex-col sm:flex-row justify-between items-center p-4 lg:px-10 lg:pb-6 gap-4">
           <div className="text-sm font-bold text-[#A3AED0] text-center sm:text-left">
             Showing{" "}
             <span className="text-[#2B3674]">
@@ -1898,6 +1910,7 @@ const Requests = () => {
                     Supporting Documents
                   </label>
                   <CommonMultipleUploader
+                    key={`request-docs-${selectedRequest?.id}`}
                     entityType="LEAVE_REQUEST"
                     entityId={selectedOwnerId || 0}
                     refId={selectedRequest.id}

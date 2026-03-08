@@ -229,7 +229,7 @@ function AppContent() {
           }
         />
 
-        <Route path="/login" element={<Navigate to="/landing" replace />} />
+        <Route path="/login" element={<Navigate to="/landing?skipSplash=true" replace />} />
 
         <Route path="/welcome" element={<Navigate to="/landing" replace />} />
         <Route path="/portal" element={<Navigate to="/landing" replace />} />
@@ -271,7 +271,7 @@ function AppContent() {
                 <Route
                   path="/admin-dashboard"
                   element={
-                    <ProtectedRoute allowedRole={UserType.ADMIN}>
+                    <ProtectedRoute allowedRoles={[UserType.ADMIN, UserType.RECEPTIONIST]}>
                       <AdminLayout />
                     </ProtectedRoute>
                   }

@@ -465,7 +465,7 @@ const EmployeeDetailsView = () => {
           {/* Full Name */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
-              Full Name
+              Full Name <span className="text-red-500">*</span>
             </label>
             <div className="relative group">
               <input
@@ -495,7 +495,7 @@ const EmployeeDetailsView = () => {
           {/* Employee ID */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
-              Employee ID
+              Employee ID <span className="text-red-500">*</span>
             </label>
             <div className="relative group">
               <input
@@ -527,39 +527,19 @@ const EmployeeDetailsView = () => {
             </div>
           </div>
 
-          {/* Department */}
+          {/* Department - disabled in edit for all user types */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
-              Department
+              Department <span className="text-red-500">*</span>
             </label>
-            <div className="relative group">
-              {isEditing ? (
-                <select
-                  value={editedData.department}
-                  onChange={(e) => {
-                    setEditedData({
-                      ...editedData,
-                      department: e.target.value,
-                    });
-                    if (validationError) setValidationError("");
-                  }}
-                  className="w-full pl-11 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white text-[#1B2559] text-sm font-semibold transition-all appearance-none"
-                >
-                  <option value="">Select Department</option>
-                  {departments.map((dept) => (
-                    <option key={dept.id} value={dept.departmentName}>
-                      {dept.departmentName}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  type="text"
-                  disabled
-                  value={employee.department || ""}
-                  className="w-full pl-11 pr-4 py-2.5 border-2 border-gray-100 rounded-xl bg-gray-50/50 text-[#1B2559] text-sm font-semibold transition-all"
-                />
-              )}
+            <div className={`relative group ${isEditing ? "cursor-not-allowed" : ""}`} title={isEditing ? "Department cannot be edited" : undefined}>
+              <input
+                type="text"
+                disabled
+                value={isEditing ? editedData.department : (employee.department || "")}
+                className={`w-full pl-11 pr-4 py-2.5 border-2 border-gray-100 rounded-xl bg-gray-50/50 text-[#1B2559] text-sm font-semibold transition-all ${isEditing ? "cursor-not-allowed" : ""}`}
+                title={isEditing ? "Department cannot be edited" : undefined}
+              />
               <div className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-green-50 flex items-center justify-center">
                 <Building className="text-[#05CD99] w-4 h-4" />
               </div>
@@ -569,7 +549,7 @@ const EmployeeDetailsView = () => {
           {/* Designation */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
-              Designation
+              Designation <span className="text-red-500">*</span>
             </label>
             <div className="relative group">
               <input
@@ -599,34 +579,19 @@ const EmployeeDetailsView = () => {
             </div>
           </div>
 
-          {/* Role */}
+          {/* Role - disabled in edit for all user types */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
-              Role
+              Role <span className="text-red-500">*</span>
             </label>
-            <div className="relative group">
-              {isEditing ? (
-                <select
-                  value={editedData.role}
-                  onChange={(e) => {
-                    setEditedData({ ...editedData, role: e.target.value });
-                    if (validationError) setValidationError("");
-                  }}
-                  className="w-full pl-11 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white text-[#1B2559] text-sm font-semibold transition-all appearance-none"
-                >
-                  <option value="">Select Role</option>
-                  {/* <option value={UserType.ADMIN}>Admin</option> */}
-                  <option value={UserType.MANAGER}>Manager</option>
-                  <option value={UserType.EMPLOYEE}>Employee</option>
-                </select>
-              ) : (
-                <input
-                  type="text"
-                  disabled
-                  value={employee.role || ""}
-                  className="w-full pl-11 pr-4 py-2.5 border-2 border-gray-100 rounded-xl bg-gray-50/50 text-[#1B2559] text-sm font-semibold transition-all"
-                />
-              )}
+            <div className={`relative group ${isEditing ? "cursor-not-allowed" : ""}`} title={isEditing ? "Role cannot be edited" : undefined}>
+              <input
+                type="text"
+                disabled
+                value={isEditing ? editedData.role : (employee.role || "")}
+                className={`w-full pl-11 pr-4 py-2.5 border-2 border-gray-100 rounded-xl bg-gray-50/50 text-[#1B2559] text-sm font-semibold transition-all ${isEditing ? "cursor-not-allowed" : ""}`}
+                title={isEditing ? "Role cannot be edited" : undefined}
+              />
               <div className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center">
                 <User className="text-indigo-500 w-4 h-4" />
               </div>
@@ -654,7 +619,7 @@ const EmployeeDetailsView = () => {
           {/* Employment Type */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
-              Employment Type
+              Employment Type <span className="text-red-500">*</span>
             </label>
             <div className="relative group">
               {isEditing ? (
@@ -696,7 +661,7 @@ const EmployeeDetailsView = () => {
           {/* Gender */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
-              Gender
+              Gender <span className="text-red-500">*</span>
             </label>
             <div className="relative group">
               {isEditing ? (
@@ -738,7 +703,7 @@ const EmployeeDetailsView = () => {
           {/* Joining Date */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
-              Date of Joining
+              Date of Joining <span className="text-red-500">*</span>
             </label>
             <div className="relative group">
               <input
@@ -775,7 +740,7 @@ const EmployeeDetailsView = () => {
           {/* Email */}
           <div className="space-y-1.5 md:col-span-2">
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
-              Email Address
+              Email Address <span className="text-red-500">*</span>
             </label>
             <div className="relative group">
               <input

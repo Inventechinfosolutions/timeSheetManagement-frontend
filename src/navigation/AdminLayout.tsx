@@ -1,12 +1,15 @@
 import { Outlet, useParams, useNavigate, useLocation } from "react-router-dom";
 import SidebarLayout from "../AdminDashboard/SidebarLayout";
-import { useAppDispatch } from "../hooks";
+import { useAppDispatch, useAppSelector } from "../hooks";
 import { fetchUnreadNotifications } from "../reducers/leaveNotification.reducer";
+import { UserType } from "../enums";
 
 const AdminLayout = () => {
   const { tab } = useParams<{ tab: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const currentUser = useAppSelector((state) => state.user.currentUser);
+  const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
 
   // Determine active tab based on path parameter or current URL
   const getActiveTab = () => {
@@ -95,7 +98,7 @@ const AdminLayout = () => {
     <SidebarLayout
       activeTab={getActiveTab()}
       onTabChange={handleTabChange}
-      title="Admin"
+      title={isReceptionist ? "Receptionist" : "Admin"}
     >
       <Outlet />
     </SidebarLayout>

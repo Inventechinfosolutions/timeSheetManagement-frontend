@@ -123,16 +123,19 @@ const AdminEmployeeTimesheetWrapper = () => {
 
   // Calculate metrics for stats cards
   const presentDays = records.filter(
-    (r) =>
-      r.status === AttendanceStatus.FULL_DAY ||
-      r.status === AttendanceStatus.HALF_DAY,
+    (r: any) =>
+      (r.status || r.attendance_status) === AttendanceStatus.FULL_DAY ||
+      (r.status || r.attendance_status) === AttendanceStatus.HALF_DAY,
   ).length;
 
   const totalHours = records.reduce(
-    (acc, curr) => acc + (curr.totalHours || 0),
+    (acc, curr: any) => {
+      const hours = curr.totalHours ?? curr.total_hours ?? 0;
+      return acc + Number(hours);
+    },
     0,
   );
-  const avgHours = (typeof totalHours === 'number' && !isNaN(totalHours)) ? totalHours.toFixed(1) : '0.0';
+  const formattedTotalHours = (typeof totalHours === 'number' && !isNaN(totalHours)) ? totalHours.toFixed(1) : '0.0';
 
   const handleApplyBlock = async () => {
     if (!fromDate || !toDate) {
@@ -280,7 +283,7 @@ const AdminEmployeeTimesheetWrapper = () => {
                 </p>
                 <div className="flex items-baseline gap-2">
                   <h3 className="text-xl md:text-2xl font-black text-[#2B3674]">
-                    {avgHours}
+                    {formattedTotalHours}
                   </h3>
                   <span className="text-[10px] font-bold text-[#4318FF] bg-[#F4F7FE] px-2 py-0.5 rounded-full uppercase">
                     Hours
@@ -339,7 +342,11 @@ const AdminEmployeeTimesheetWrapper = () => {
                     <input
                       type="date"
                       value={fromDate}
-                      onChange={(e) => setFromDate(e.target.value)}
+                      onChange={(e) => {
+                        const newFrom = e.target.value;
+                        setFromDate(newFrom);
+                        if (toDate && newFrom && toDate < newFrom) setToDate(newFrom);
+                      }}
                       className="w-full pl-11 pr-4 py-3 bg-[#F4F7FE] border-none rounded-2xl text-sm text-[#2B3674] font-bold focus:ring-2 focus:ring-[#4318FF] transition-all"
                     />
                   </div>
@@ -353,6 +360,7 @@ const AdminEmployeeTimesheetWrapper = () => {
                     <input
                       type="date"
                       value={toDate}
+                      min={fromDate}
                       onChange={(e) => setToDate(e.target.value)}
                       className="w-full pl-11 pr-4 py-3 bg-[#F4F7FE] border-none rounded-2xl text-sm text-[#2B3674] font-bold focus:ring-2 focus:ring-[#4318FF] transition-all"
                     />

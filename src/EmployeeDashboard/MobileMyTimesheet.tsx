@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, Save, Lock, Rocket } from "lucide-react";
 
 import { TimesheetEntry } from "../types";
 import { TimesheetBlocker } from "../reducers/timesheetBlocker.reducer";
-import { AttendanceStatus } from "../enums";
+import { AttendanceStatus, Department } from "../enums";
 
 interface MobileMyTimesheetProps {
   currentWeekEntries: { entry: TimesheetEntry; originalIndex: number }[];
@@ -31,6 +31,7 @@ interface MobileMyTimesheetProps {
   selectedDateId: number | null;
   isHighlighted: boolean;
   containerClassName?: string;
+  department?: string;
 }
 
 const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
@@ -59,6 +60,7 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
   selectedDateId,
   isHighlighted,
   containerClassName,
+  department,
 }) => {
   // Sort entries to match Sun-Sat order (0-6)
   const sortedEntries = [...currentWeekEntries].sort((a, b) => {
@@ -159,7 +161,16 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
                 return d >= start && d <= end;
               });
 
-              const isBlocked = !!blocker;
+              const manualBlocker = blocker;
+              const isStatusLeave = entry.status === AttendanceStatus.LEAVE;
+              
+              const dObj = new Date(entry.fullDate);
+              const dayOfWeek = dObj.getDay();
+              
+              let isDeptBlocked = false;
+              if (dayOfWeek === 0) isDeptBlocked = true;
+
+              const isBlocked = !!manualBlocker || (!isAdmin && !isManager && (isStatusLeave || isDeptBlocked || isHoliday(entry.fullDate)));
               
               const isEditable =
                 (isAdmin || !readOnly) &&
@@ -261,9 +272,12 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
                       disabled={!isEditable}
                       className="w-full h-full bg-transparent text-center text-xl font-bold focus:outline-none placeholder:text-gray-300"
                       value={inputValue}
-                      onChange={(e) =>
-                        onHoursInput(originalIndex, e.target.value)
-                      }
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === "" || /^\d*\.?\d*$/.test(val)) {
+                          onHoursInput(originalIndex, val);
+                        }
+                      }}
                       onBlur={() => onInputBlur(originalIndex)}
                       placeholder="0"
                     />
@@ -271,7 +285,9 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
                       <div className="absolute inset-0 z-20 bg-black/40 backdrop-blur-[2px] rounded-xl flex flex-col items-center justify-center p-1 text-center pointer-events-none">
                          <Lock size={12} className="text-white mb-0.5" />
                          <span className="text-[7px] font-black text-white leading-none uppercase tracking-tighter">
-                           Contact {blocker?.blockedBy || "Admin"}
+                           {manualBlocker 
+                             ? (isAdmin || isManager ? "Unblock" : `Contact ${manualBlocker.blockedBy || "Admin"}`)
+                             : "On Leave"}
                          </span>
                       </div>
                     )}

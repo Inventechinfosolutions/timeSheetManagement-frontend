@@ -24,7 +24,7 @@ import {
   autoUpdateTimesheet,
   downloadAttendancePdfReport,
 } from "../reducers/employeeAttendance.reducer";
-import { AttendanceStatus, UserType } from "../enums";
+import { AttendanceStatus, UserType, Department } from "../enums";
 import { fetchBlockers } from "../reducers/timesheetBlocker.reducer";
 import { getLeaveHistory } from "../reducers/leaveRequest.reducer";
 
@@ -300,6 +300,11 @@ const Calendar = ({
       if (entry) {
         const h1 = (entry.firstHalf || "").toLowerCase();
         const h2 = (entry.secondHalf || "").toLowerCase();
+        const s = (entry.status || "").toLowerCase();
+
+        // BLOCK IF STATUS IS LEAVE
+        if (s.includes("leave")) return true;
+
         const isRestricted = (val: string) =>
           val &&
           !val.includes("office") &&
@@ -312,6 +317,15 @@ const Calendar = ({
         if (isRestricted(h1) || isRestricted(h2)) return true;
       }
     }
+
+    // 4. Department Weekend Rules
+    const dayOfWeek = d.getDay(); // 0 = Sun, 6 = Sat
+
+    // BLOCK SUNDAYS ONLY (Saturdays are now open for everyone)
+    if (dayOfWeek === 0) return true;
+
+    // 5. Holiday Blocking (All departments)
+    if (checkIsHoliday(d.getFullYear(), d.getMonth(), d.getDate())) return true;
 
     return false;
   };
@@ -1155,13 +1169,15 @@ const Calendar = ({
                   <input
                     type="date"
                     value={downloadDateRange.from}
-                    max={new Date().toISOString().split("T")[0]}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      const newFrom = e.target.value;
                       setDownloadDateRange({
                         ...downloadDateRange,
-                        from: e.target.value,
-                      })
-                    }
+                        from: newFrom,
+                        // If TO date is before the new FROM date, reset TO to FROM
+                        to: downloadDateRange.to && newFrom && downloadDateRange.to < newFrom ? newFrom : downloadDateRange.to,
+                      });
+                    }}
                     className="w-full pl-4 pr-12 py-3 bg-[#F4F7FE] border-transparent rounded-xl text-[#2B3674] font-bold focus:outline-none focus:ring-2 focus:ring-[#4318FF] transition-all cursor-pointer"
                   />
                   <CalendarIcon
@@ -1178,7 +1194,7 @@ const Calendar = ({
                   <input
                     type="date"
                     value={downloadDateRange.to}
-                    max={new Date().toISOString().split("T")[0]}
+                    min={downloadDateRange.from}
                     onChange={(e) =>
                       setDownloadDateRange({
                         ...downloadDateRange,

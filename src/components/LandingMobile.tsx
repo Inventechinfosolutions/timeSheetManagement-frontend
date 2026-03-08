@@ -35,7 +35,7 @@ const LandingMobile = ({
         <img
           src={inventLogo}
           alt="Invent Logo"
-          className="h-16 mx-auto mb-5 animate-fade-in-up animation-delay-100"
+          className="h-16 mx-auto mb-5"
         />
         <h1 className="mb-2 text-3xl font-black tracking-tight text-[#2D3748] animate-fade-in-up animation-delay-200">
           LOGIN

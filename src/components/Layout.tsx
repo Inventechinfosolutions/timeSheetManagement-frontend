@@ -11,9 +11,9 @@ interface LayoutProps {
 }
 
 const isDashboardRoute = (pathname: string) =>
-  pathname.includes('/admin-dashboard') ||
-  pathname.includes('/manager-dashboard') ||
-  pathname.includes('/employee-dashboard')
+  pathname.includes("/admin-dashboard") ||
+  pathname.includes("/manager-dashboard") ||
+  pathname.includes("/employee-dashboard");
 
 const Layout = ({ children }: LayoutProps) => {
   const { pathname } = useLocation()

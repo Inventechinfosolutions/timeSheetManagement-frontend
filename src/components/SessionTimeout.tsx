@@ -38,7 +38,7 @@ const SessionTimeout: React.FC = () => {
     }
     
     setTimeout(() => {
-       navigate('/landing');
+       navigate('/landing', { state: { skipSplash: true } });
        isLoggingOut.current = false;
     }, 2000);
   }, [navigate, dispatch]);

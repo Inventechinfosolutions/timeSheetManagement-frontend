@@ -109,7 +109,7 @@ const EmployeeDashboard = () => {
   const handleLogout = () => {
     dispatch(resetDetails());
     dispatch(resetAttendanceState());
-    navigate("/landing");
+    navigate("/landing", { state: { skipSplash: true } });
   };
 
   return (

@@ -16,6 +16,7 @@ import {
   UserType,
   WorkLocation as OfficeLocation,
   HalfDayType,
+  Department,
 } from "../enums";
 import {
   updateAttendanceRecord,
@@ -550,6 +551,11 @@ const MyTimesheet = ({
       if (entry) {
         const h1 = (entry.firstHalf || "").toLowerCase();
         const h2 = (entry.secondHalf || "").toLowerCase();
+        const s = (entry.status || "").toLowerCase();
+
+        // BLOCK IF STATUS IS LEAVE
+        if (s.includes("leave")) return true;
+
         const isRestricted = (val: string) =>
           val &&
           !val.includes("office") &&
@@ -563,6 +569,15 @@ const MyTimesheet = ({
         if (isRestricted(h1) || isRestricted(h2)) return true;
       }
     }
+
+    // 4. Department Weekend Rules
+    const dayOfWeek = d.getDay(); // 0 = Sun, 6 = Sat
+
+    // BLOCK SUNDAYS ONLY (Saturdays are now open for everyone)
+    if (dayOfWeek === 0) return true;
+
+    // 5. Holiday Blocking (All departments)
+    if (isHoliday(d)) return true;
 
     return false;
   };
@@ -657,6 +672,9 @@ const MyTimesheet = ({
     if (effectiveReadOnly) return;
     if (isDateBlocked(localEntries[entryIndex].fullDate)) return;
 
+    // Reject non-numeric characters immediately (allows digits and at most one dot)
+    if (val !== "" && !/^\d*\.?\d*$/.test(val)) return;
+
     // A. Update the text value immediately so the UI is responsive
     setLocalInputValues((prev) => ({ ...prev, [entryIndex]: val }));
 
@@ -693,6 +711,18 @@ const MyTimesheet = ({
         }, 2000);
 
         return;
+      }
+
+      // Universal Saturday Rule: 4 to 9 hours for ALL departments
+      const inputDay = localEntries[entryIndex].fullDate.getDay();
+
+      if (inputDay === 6) {
+        if (num < 4 || num > 9) {
+          setInputError({ index: entryIndex, message: "Sat: 4-9h" });
+          setLocalInputValues((prev) => ({ ...prev, [entryIndex]: "" }));
+          setTimeout(() => setInputError(null), 2000);
+          return;
+        }
       }
 
       const hours = currentVal === "" ? null : isNaN(num) ? 0 : num;
@@ -1108,12 +1138,20 @@ const MyTimesheet = ({
       }
     };
 
-    const halfDayItems = payload.filter(
-      (item) =>
+    const halfDayItems = payload.filter((item) => {
+      const d = new Date(item.workingDate);
+      const isSat = d.getDay() === 6;
+      const hours = Number(item.totalHours);
+
+      // Saturday (4-9h) is Full Day, not Half Day
+      if (isSat && hours >= 4 && hours <= 9) return false;
+
+      return (
         item.status !== AttendanceStatus.FULL_DAY &&
-        Number(item.totalHours) > 0 &&
-        Number(item.totalHours) <= 6,
-    );
+        hours > 0 &&
+        hours <= 6
+      );
+    });
 
     const absentItems = payload.filter(
       (item) =>
@@ -1444,7 +1482,12 @@ const MyTimesheet = ({
       }
     } else {
       // Admin / Manager Logic
-      if (payload.length > 0) {
+      const hasImportantItems =
+        halfDayItems.length > 0 ||
+        absentItems.length > 0 ||
+        clearedItems.length > 0;
+
+      if (hasImportantItems) {
         Modal.confirm({
           title: null,
           icon: null,
@@ -1521,10 +1564,15 @@ const MyTimesheet = ({
                         dayOfWeek_modal === 0 || dayOfWeek_modal === 6;
                       const isNotUpdated =
                         item.status === AttendanceStatus.NOT_UPDATED;
+                      const d_modal_obj = new Date(item.workingDate);
+                      const isSat_modal = d_modal_obj.getDay() === 6;
+                      const modalHours = Number(item.totalHours);
+
                       const isHalf =
                         !isClear &&
-                        Number(item.totalHours) > 0 &&
-                        Number(item.totalHours) <= 6;
+                        modalHours > 0 &&
+                        modalHours <= 6 &&
+                        !(isSat_modal && modalHours >= 4);
                       const isAbsent = item.status === AttendanceStatus.ABSENT;
                       return (
                         <tr
@@ -1765,6 +1813,7 @@ const MyTimesheet = ({
         }
         autoUpdateCount={autoUpdateCount}
         blockers={blockers}
+        department={entity?.department || entity?.department_name || ""}
       />
     );
   }
