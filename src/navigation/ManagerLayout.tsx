@@ -137,6 +137,8 @@ const ManagerLayout = () => {
       navigate("/manager-dashboard/my-profile");
     } else if (tabName === "Work Management ") {
       navigate("/manager-dashboard/leave-management");
+    } else if (tabName === "Comp Off") {
+      navigate("/manager-dashboard/comp-off");
     }
   };
 

@@ -25,6 +25,9 @@ const AdminLeaveManagement = lazy(
 const AdminEmployeeCalendarView = lazy(
   () => import("../AdminDashboard/AdminEmployeeCalendarView"),
 );
+const CompOffDashboard = lazy(
+  () => import("../EmployeeDashboard/CompOffDashboard"),
+);
 
 export const adminComponentConfigs = [
   {
@@ -71,5 +74,9 @@ export const adminComponentConfigs = [
   {
     path: "/admin-dashboard/work-management",
     Component: AdminLeaveManagement,
+  },
+  {
+    path: "/admin-dashboard/comp-off",
+    Component: CompOffDashboard,
   },
 ];

@@ -126,9 +126,9 @@ const WorkTrendsGraph = ({ currentMonth }: Props) => {
               <Bar
                 dataKey="totalLeaves"
                 name="Taken Leave"
-                fill="#F43F5E"
+                fill="#EF4444"
                 radius={[6, 6, 0, 0]}
-                activeBar={{ fill: "#FB7185" }}
+                activeBar={{ fill: "#F87171" }}
               >
                 <LabelList
                   dataKey="totalLeaves"
@@ -140,6 +140,27 @@ const WorkTrendsGraph = ({ currentMonth }: Props) => {
                   }
                 />
               </Bar>
+
+              {data.some(d => (d.compOffLeaves ?? 0) > 0) && (
+                <Bar
+                  dataKey="compOffLeaves"
+                  name="Comp-Off Leave"
+                  fill="#EF4444"
+                  radius={[6, 6, 0, 0]}
+                  activeBar={{ fill: "#F87171" }}
+                >
+                  <LabelList
+                    dataKey="compOffLeaves"
+                    position="top"
+                    style={{ fill: "#A3AED0", fontSize: 10, fontWeight: 700 }}
+                    offset={8}
+                    formatter={(val: any) =>
+                      val && Number(val) > 0 ? Number(val).toFixed(1) : ""
+                    }
+                  />
+                </Bar>
+              )}
+
 
               <Bar
                 dataKey="workFromHome"

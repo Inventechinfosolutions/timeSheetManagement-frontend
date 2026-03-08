@@ -1646,7 +1646,7 @@ const LeaveManagement = () => {
       </div>
       <div className="bg-white rounded-[20px] shadow-[0px_18px_40px_rgba(112,144,176,0.12)] overflow-hidden border border-gray-100 mb-4">
         <div className="overflow-x-auto overflow-y-visible custom-scrollbar">
-          <table className="w-full min-w-[900px] border-separate border-spacing-0">
+          <table className={`w-full ${entities.length === 0 ? '' : 'min-w-[900px]'} border-separate border-spacing-0`}>
             <thead>
               <tr className="bg-[#4318FF] text-white">
                 <th className="py-4 pl-10 pr-4 text-[13px] font-bold uppercase tracking-wider text-left whitespace-nowrap">
@@ -1879,7 +1879,7 @@ const LeaveManagement = () => {
                         <span className="text-sm font-bold text-[#2B3674]">
                           {dayjs(item.fromDate).format("DD MMM")} -{" "}
                           {dayjs(item.toDate).format("DD MMM - YYYY")}, TOTAL:{" "}
-                          {item.duration ||
+                          {Number(item.duration ||
                             (item.requestType === WorkLocation.CLIENT_VISIT ||
                             item.requestType === WorkLocation.WORK_FROM_HOME ||
                             item.requestType === LeaveRequestType.APPLY_LEAVE ||
@@ -1892,7 +1892,7 @@ const LeaveManagement = () => {
                               : dayjs(item.toDate).diff(
                                   dayjs(item.fromDate),
                                   "day",
-                                ) + 1)}{" "}
+                                ) + 1)).toFixed(1)}{" "}
                           DAY(S)
                         </span>
                       </td>
@@ -2022,12 +2022,14 @@ const LeaveManagement = () => {
         </div>
 
         {/* Horizontal Scroll Indicator */}
-        <div className="flex justify-center items-center py-2 bg-gray-50/30 border-t border-gray-100">
-          <div className="flex items-center gap-2 text-[#A3AED0] opacity-80">
-            <ArrowRightLeft size={14} className="animate-pulse" />
-            <span className="text-[10px] font-black uppercase tracking-widest">Scroll table horizontally to view all columns</span>
+        {entities.length > 0 && (
+          <div className="flex justify-center items-center py-2 bg-gray-50/30 border-t border-gray-100">
+            <div className="flex items-center gap-2 text-[#A3AED0] opacity-80">
+              <ArrowRightLeft size={14} className="animate-pulse" />
+              <span className="text-[10px] font-black uppercase tracking-widest">Scroll table horizontally to view all columns</span>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Pagination Controls */}
         <div className="flex flex-col sm:flex-row justify-between items-center p-4 lg:px-10 lg:pb-6 gap-4">
@@ -2444,7 +2446,7 @@ const LeaveManagement = () => {
                     {formData.startDate && formData.endDate
                         ? (() => {
                             if (isViewMode)
-                              return `${parseFloat(String(formData.duration))} Day(s)`;
+                              return `${Number(formData.duration).toFixed(1)} Day(s)`;
 
                             if (
                               selectedLeaveType === WorkLocation.CLIENT_VISIT ||

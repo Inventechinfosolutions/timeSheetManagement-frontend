@@ -19,7 +19,6 @@ import {
   downloadAttendancePdfReport,
 } from "../reducers/employeeAttendance.reducer";
 import { saveAs } from "file-saver";
-import { generateMonthlyEntries } from "../utils/attendanceUtils";
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import DailyStatusMobileCard from "./DailyStatusMobileCard";
@@ -189,12 +188,8 @@ const DailyStatus = () => {
       const selected = entities.filter((e) =>
         selectedEmps.has(e.employeeId || e.id),
       );
-      const start = new Date(exportStartDate);
+      // const start = new Date(exportStartDate);
 
-      const monthStr = start.toLocaleString("default", {
-        month: "long",
-        year: "numeric",
-      });
 
       for (const emp of selected) {
         const empId = emp.employeeId || emp.id;
@@ -240,6 +235,10 @@ const DailyStatus = () => {
         [AttendanceStatus.HOLIDAY]: "bg-[#DBEAFE] text-[#1890FF]",
         [AttendanceStatus.WEEKEND]: "bg-[#FEE2E2] text-[#EE5D50]",
         [AttendanceStatus.PENDING]: "bg-[#FEF3C7] text-[#FFB020]",
+        [AttendanceStatus.PRESENT]: "bg-[#D1FAE5] text-[#05CD99]",
+        [AttendanceStatus.UPCOMING]: "bg-[#F1F5F9] text-[#475569]",
+        [AttendanceStatus.WFH]: "bg-[#F0FDF4] text-[#166534]",
+        [AttendanceStatus.CLIENT_VISIT]: "bg-[#FFF7ED] text-[#9A3412]",
       };
       return `px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider ${colors[status] || "bg-gray-100 text-gray-700"}`;
     },
@@ -253,7 +252,7 @@ const DailyStatus = () => {
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate(basePath)}
-              className="p-2 hover:bg-gray-100 rounded-full text-gray-500 hover:text-[#4318FF] transition-all flex-shrink-0"
+              className="p-2 hover:bg-gray-100 rounded-full text-gray-500 hover:text-[#4318FF] transition-all shrink-0"
             >
               <ArrowLeft size={24} />
             </button>
@@ -264,7 +263,7 @@ const DailyStatus = () => {
 
           <div className="flex flex-col sm:flex-row gap-4 flex-1">
             {/* Custom Modern Dropdown */}
-            <div className="relative flex-shrink-0" ref={dropdownRef}>
+            <div className="relative shrink-0" ref={dropdownRef}>
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 className="w-full flex items-center justify-between sm:justify-start gap-2 px-5 py-2.5 bg-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] text-[#2B3674] font-bold text-sm hover:bg-gray-50 transition-all border border-transparent focus:border-[#4318FF]/20"
@@ -357,7 +356,7 @@ const DailyStatus = () => {
 
         <button
           onClick={() => setIsExportModalOpen(true)}
-          className="w-full lg:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-[#4318FF] to-[#868CFF] text-white rounded-xl text-[11px] font-black shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 tracking-widest uppercase group flex-shrink-0"
+          className="w-full lg:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-linear-to-r from-[#4318FF] to-[#868CFF] text-white rounded-xl text-[11px] font-black shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 tracking-widest uppercase group shrink-0"
         >
           <Download size={16} className="group-hover:animate-bounce" />
           <span>Export Data</span>
@@ -384,7 +383,7 @@ const DailyStatus = () => {
               >
                 <td className={`${styles.td} pl-10`}>
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#4318FF] to-[#5BC4FF] flex items-center justify-center text-white font-black text-[10px]">
+                    <div className="w-8 h-8 rounded-full bg-linear-to-br from-[#4318FF] to-[#5BC4FF] flex items-center justify-center text-white font-black text-[10px]">
                       {emp.avatar}
                     </div>
                     <span className="font-bold">
@@ -414,9 +413,9 @@ const DailyStatus = () => {
                       <span>{emp.todayHours} / 9 Hrs</span>
                       <Clock size={10} className="text-[#A3AED0]" />
                     </div>
-                    <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-[#4318FF] to-[#5BC4FF] rounded-full"
+                    <div className="bg-[#4318FF] p-6 shrink-0 relative overflow-hidden">
+                        <div
+                          className="h-full bg-linear-to-r from-[#4318FF] to-[#5BC4FF] rounded-full"
                         style={{
                           width: `${Math.min((emp.todayHours / 9) * 100, 100)}%`,
                         }}
@@ -499,7 +498,7 @@ const DailyStatus = () => {
 
       {/* Export Selection Modal */}
       {isExportModalOpen && (
-        <div className="fixed inset-0 z-[10000] flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto pt-10 md:pt-4">
+        <div className="fixed inset-0 bg-[#0b1437]/40 backdrop-blur-sm z-10000 flex items-center justify-center p-4 animate-in fade-in duration-300">
           <div
             className="fixed inset-0 bg-[#2B3674]/20 backdrop-blur-md"
             onClick={() => {
@@ -516,7 +515,7 @@ const DailyStatus = () => {
             }`}
           >
             {/* Modal Header */}
-            <div className="p-4 md:p-8 border-b border-gray-100 flex justify-between items-center bg-white flex-shrink-0">
+            <div className="p-4 md:p-8 border-b border-gray-100 flex justify-between items-center bg-white shrink-0">
               <div className="flex items-center gap-4">
                 {exportStep === "range" && (
                   <button
@@ -527,11 +526,11 @@ const DailyStatus = () => {
                   </button>
                 )}
                 <div>
-                  <h2 className="text-lg md:text-2xl font-black text-[#2B3674] leading-tight">
+                  <h1 className="text-lg md:text-2xl font-black text-[#2B3674] leading-tight">
                     {exportStep === "employees"
                       ? "Select Employees"
                       : "Select Date Range"}
-                  </h2>
+                  </h1>
                   <p className="text-[10px] md:text-sm font-bold text-[#A3AED0]">
                     {exportStep === "employees"
                       ? "Choose employees to include in export"
@@ -656,7 +655,7 @@ const DailyStatus = () => {
                             </td>
                             <td className="p-4 border-b border-gray-50">
                               <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#4318FF] to-[#5BC4FF] flex items-center justify-center text-white font-black text-[10px]">
+                                <div className="w-8 h-8 rounded-full bg-linear-to-br from-[#4318FF] to-[#5BC4FF] flex items-center justify-center text-white font-black text-[10px]">
                                   {emp.fullName?.charAt(0) || "U"}
                                 </div>
                                 <span className="font-bold text-[#2B3674] text-sm">
@@ -682,7 +681,7 @@ const DailyStatus = () => {
                 </div>
 
                 {/* Modal Footer */}
-                <div className="p-4 md:p-8 border-t border-gray-100 flex justify-between items-center bg-[#F8F9FC] flex-shrink-0">
+                <div className="p-4 md:p-8 border-t border-gray-100 flex justify-between items-center bg-[#F8F9FC] shrink-0">
                   <span className="text-sm font-bold text-[#A3AED0]">
                     {selectedEmps.size} employees selected
                   </span>
@@ -763,7 +762,7 @@ const DailyStatus = () => {
                       <button
                         onClick={handleBulkExport}
                         disabled={isExporting}
-                        className="flex items-center gap-4 px-10 py-4 bg-gradient-to-r from-[#4318FF] to-[#868CFF] text-white rounded-[16px] font-black text-[11px] shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:-translate-y-1 active:scale-95 transition-all disabled:opacity-70 flex-shrink-0 tracking-widest uppercase"
+                        className="flex items-center gap-4 px-10 py-4 bg-linear-to-r from-[#4318FF] to-[#868CFF] text-white rounded-[16px] font-black text-[11px] shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:-translate-y-1 active:scale-95 transition-all disabled:opacity-70 shrink-0 tracking-widest uppercase"
                       >
                         <span>
                           {isExporting ? "GENERATING..." : "DOWNLOAD PDF"}

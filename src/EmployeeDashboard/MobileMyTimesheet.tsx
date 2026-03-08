@@ -32,6 +32,7 @@ interface MobileMyTimesheetProps {
   isHighlighted: boolean;
   containerClassName?: string;
   department?: string;
+  employmentType?: string;
 }
 
 const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
@@ -61,6 +62,7 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
   isHighlighted,
   containerClassName,
   department,
+  employmentType,
 }) => {
   // Sort entries to match Sun-Sat order (0-6)
   const sortedEntries = [...currentWeekEntries].sort((a, b) => {
@@ -166,11 +168,15 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
               
               const dObj = new Date(entry.fullDate);
               const dayOfWeek = dObj.getDay();
-              
-              let isDeptBlocked = false;
-              if (dayOfWeek === 0) isDeptBlocked = true;
+              const isIT = department === Department.IT || department === Department.IT_SUPPORT;
+              const isFullTimer = employmentType === "FULL_TIMER" || (employmentType as any) === 1;
 
-              const isBlocked = !!manualBlocker || (!isAdmin && !isManager && (isStatusLeave || isDeptBlocked || isHoliday(entry.fullDate)));
+              let isDeptBlocked = false;
+              if (dayOfWeek === 0 && !(isIT && isFullTimer)) isDeptBlocked = true;
+              if (dayOfWeek === 6 && false) isDeptBlocked = true; // Stay unblocked for Sat (4-9 Rule)
+
+              const isHolidayDate = isHoliday(entry.fullDate);
+              const isBlocked = !!manualBlocker || (!isAdmin && !isManager && (isStatusLeave || isDeptBlocked || (isHolidayDate && !(isIT && isFullTimer))));
               
               const isEditable =
                 (isAdmin || !readOnly) &&
@@ -179,7 +185,6 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
 
               // Styling logic (Matching MobileResponsiveCalendarPage)
               let bg = "bg-white text-gray-600 border-gray-200"; // Default
-              const isHolidayDate = isHoliday(entry.fullDate);
 
               if (entry.isToday) {
                 bg =
@@ -279,7 +284,7 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
                         }
                       }}
                       onBlur={() => onInputBlur(originalIndex)}
-                      placeholder="0"
+                      placeholder="-"
                     />
                     {isBlocked && (
                       <div className="absolute inset-0 z-20 bg-black/40 backdrop-blur-[2px] rounded-xl flex flex-col items-center justify-center p-1 text-center pointer-events-none">

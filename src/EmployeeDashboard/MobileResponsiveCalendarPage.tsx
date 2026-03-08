@@ -316,13 +316,17 @@ const MobileResponsiveCalendarPage = ({
             const manualBlocker = getBlocker(day);
             
             // Block if manual blocker exists OR (if not admin/manager and status is Leave or Sunday/Holiday)
+            const isIT = entity?.department === Department.IT || entity?.department === Department.IT_SUPPORT;
+            
             const dObj = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
             const dayOfWeek = dObj.getDay();
             
             let isDeptBlocked = false;
-            if (dayOfWeek === 0) isDeptBlocked = true;
+            if (dayOfWeek === 0 && !isIT) isDeptBlocked = true;
+            
+            const isHolidayBlocked = !!holiday && !isIT;
 
-            const isBlocked = !!manualBlocker || (!isAdmin && !isManager && (entry?.status === AttendanceStatus.LEAVE || isDeptBlocked || !!holiday));
+            const isBlocked = !!manualBlocker || (!isAdmin && !isManager && (entry?.status === AttendanceStatus.LEAVE || isDeptBlocked || isHolidayBlocked));
             
             const isToday =
               day === now.getDate() &&

@@ -38,6 +38,9 @@ const AdminLayout = () => {
     if (path.includes("/admin-dashboard/leave-balance")) {
       return "Leave Balance";
     }
+    if (path.includes("/admin-dashboard/comp-off")) {
+      return "Comp Off";
+    }
     if (
       path.includes("/admin-dashboard/manager-mapping") ||
       path.includes("/admin-dashboard/manager-employees/")
@@ -89,6 +92,8 @@ const AdminLayout = () => {
       navigate("/admin-dashboard/work-management");
     } else if (tabName === "Leave Balance") {
       navigate("/admin-dashboard/leave-balance");
+    } else if (tabName === "Comp Off") {
+      navigate("/admin-dashboard/comp-off");
     } else if (tabName === "Manager Mapping") {
       navigate("/admin-dashboard/manager-mapping");
     }

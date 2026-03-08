@@ -9,6 +9,7 @@ import {
   Eye,
   Menu,
   LogOut,
+  CalendarClock,
 } from "lucide-react";
 import { useAppSelector, useAppDispatch } from "../hooks";
 import { useParams, useNavigate } from "react-router-dom";
@@ -57,6 +58,8 @@ const SidebarLayout = ({
         return "Work Management";
       case "leave-balance":
         return "Leave Balance";
+      case "comp-off":
+        return "Comp Off";
       default:
         return "Dashboard";
     }
@@ -71,11 +74,14 @@ const SidebarLayout = ({
     });
   };
 
+  const employmentType = entity?.employmentType || (currentUser as any)?.employmentType;
+
   const sidebarItems = [
     { name: "Dashboard", icon: LayoutGrid },
     { name: "My Timesheet", icon: Calendar },
     { name: "Timesheet View", icon: Eye },
     { name: "Work Management", icon: Calendar },
+    ...(employmentType !== "INTERN" ? [{ name: "Comp Off", icon: CalendarClock }] : []),
     { name: "My Profile", icon: User },
     //{ name: 'Change Password', icon: Lock },
   ];

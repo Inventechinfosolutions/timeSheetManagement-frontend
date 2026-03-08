@@ -155,7 +155,7 @@ export const downloadPdf = ({
 
         monthEntries.forEach(entry => {
             const dateStr = new Date(entry.fullDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-            const hours = entry.totalHours ? entry.totalHours.toFixed(2) : "--";
+            const hours = entry.totalHours ? entry.totalHours.toFixed(1) : "--";
             const d = new Date(entry.fullDate);
             const entryDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
             
@@ -176,7 +176,7 @@ export const downloadPdf = ({
             } 
             // 2. Check for Holiday (Priority 2) - Only if not working
             else if (holiday) {
-                status = (holiday.holidayName || holiday.name || "HOLIDAY").toUpperCase();
+                status = (holiday.name || "HOLIDAY").toUpperCase();
             } 
             // 3. Fallbacks (Priority 3)
             else if (!status || status === "NOT UPDATED" || status === "PENDING" || status === "HOLIDAY") {

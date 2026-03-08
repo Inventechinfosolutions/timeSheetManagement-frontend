@@ -36,6 +36,8 @@ export interface LeaveRequest {
   assignedManagerEmail?: string | null;
   hrEmail?: string | null;
   documentKeys?: string[];
+  availableDates?: string;
+  compOffDates?: string;
 }
 
 export interface LeaveBalanceResponse {

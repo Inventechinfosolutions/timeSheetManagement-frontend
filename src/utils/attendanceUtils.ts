@@ -1,4 +1,4 @@
-import { AttendanceStatus, WorkLocation as OfficeLocation, WorkLocationKeyword } from '../enums';
+import { AttendanceStatus, WorkLocation, WorkLocationKeyword } from '../enums';
 import { EmployeeAttendance } from '../reducers/employeeAttendance.reducer';
 import { TimesheetEntry } from '../types';
 
@@ -86,30 +86,30 @@ export const mapStatus = (
 ): TimesheetEntry['status'] => {
 
     if (status) {
-        // Normalize status to string for comparison
-        const statusStr = typeof status === 'string' ? status : (status as AttendanceStatus);
+        // Normalize status to lowercase string for comparison
+        const statusStr = (typeof status === 'string' ? status : String(status)).toLowerCase().trim();
 
-        // Handle Leave with hours
-        if ((statusStr === AttendanceStatus.LEAVE || statusStr === AttendanceStatus.LEAVE) && totalHours && totalHours > 0) {
-            return totalHours > 6 ? AttendanceStatus.FULL_DAY : AttendanceStatus.HALF_DAY;
+        // Handle Leave/Holiday/Weekend with hours
+        if ((statusStr === AttendanceStatus.LEAVE.toLowerCase() || statusStr === AttendanceStatus.HOLIDAY.toLowerCase() || isWeekend) && totalHours && totalHours > 0) {
+            const threshold = (isWeekend || statusStr === AttendanceStatus.HOLIDAY.toLowerCase()) ? 4 : 6;
+            return totalHours >= threshold ? AttendanceStatus.FULL_DAY : AttendanceStatus.HALF_DAY;
         }
 
-        // Direct status mappings (handle both enum and string)
-        if (statusStr === AttendanceStatus.LEAVE) return AttendanceStatus.LEAVE;
-        // @ts-ignore
-        if (statusStr === 'Blocked' || statusStr === AttendanceStatus.BLOCKED) return AttendanceStatus.BLOCKED;
-        if (statusStr === AttendanceStatus.ABSENT) return AttendanceStatus.ABSENT;
-        if (statusStr === AttendanceStatus.FULL_DAY) return AttendanceStatus.FULL_DAY;
-        if (statusStr === AttendanceStatus.HALF_DAY) return AttendanceStatus.HALF_DAY;
-        if (statusStr === AttendanceStatus.NOT_UPDATED || statusStr === AttendanceStatus.NOT_UPDATED) return AttendanceStatus.NOT_UPDATED;
-        if (statusStr === AttendanceStatus.HOLIDAY || statusStr === AttendanceStatus.HOLIDAY) return AttendanceStatus.HOLIDAY;
-        if (statusStr === AttendanceStatus.WEEKEND || statusStr === AttendanceStatus.WEEKEND) return AttendanceStatus.WEEKEND;
-        if (statusStr === AttendanceStatus.WFH) return AttendanceStatus.WFH;
-        if (statusStr === AttendanceStatus.CLIENT_VISIT) return AttendanceStatus.CLIENT_VISIT;
-        if (statusStr === AttendanceStatus.PRESENT) return AttendanceStatus.PRESENT;
+        // Direct status mappings (case-insensitive)
+        if (statusStr === AttendanceStatus.LEAVE.toLowerCase()) return AttendanceStatus.LEAVE;
+        if (statusStr === 'blocked' || statusStr === AttendanceStatus.BLOCKED.toLowerCase()) return AttendanceStatus.BLOCKED;
+        if (statusStr === AttendanceStatus.ABSENT.toLowerCase() || statusStr === 'absent') return AttendanceStatus.ABSENT;
+        if (statusStr === AttendanceStatus.FULL_DAY.toLowerCase()) return AttendanceStatus.FULL_DAY;
+        if (statusStr === AttendanceStatus.HALF_DAY.toLowerCase()) return AttendanceStatus.HALF_DAY;
+        if (statusStr === AttendanceStatus.NOT_UPDATED.toLowerCase()) return AttendanceStatus.NOT_UPDATED;
+        if (statusStr === AttendanceStatus.HOLIDAY.toLowerCase()) return AttendanceStatus.HOLIDAY;
+        if (statusStr === AttendanceStatus.WEEKEND.toLowerCase()) return AttendanceStatus.WEEKEND;
+        if (statusStr === AttendanceStatus.WFH.toLowerCase() || statusStr === 'wfh') return AttendanceStatus.WFH;
+        if (statusStr === AttendanceStatus.CLIENT_VISIT.toLowerCase() || statusStr === 'client visit' || statusStr === 'cv') return AttendanceStatus.CLIENT_VISIT;
+        if (statusStr === AttendanceStatus.PRESENT.toLowerCase() || statusStr === 'present') return AttendanceStatus.PRESENT;
 
         // Handle Pending
-        if (statusStr === AttendanceStatus.PENDING) {
+        if (statusStr === AttendanceStatus.PENDING.toLowerCase()) {
             if (!isToday) return AttendanceStatus.PENDING;
         }
     }
@@ -190,7 +190,7 @@ export const getBadgeLocation = (
 
 
     const isWork = (val: string) =>
-        val.includes(OfficeLocation.OFFICE.toLowerCase()) ||
+        val.includes(WorkLocation.OFFICE.toLowerCase()) ||
         val.includes(WorkLocationKeyword.WFH) ||
         val.includes(WorkLocationKeyword.WORK_FROM_HOME) ||
         val.includes(WorkLocationKeyword.CLIENT_VISIT) ||
@@ -252,7 +252,6 @@ export const generateRangeEntries = (start: Date, end: Date, now: Date, records:
 
         // Sunday should always be Weekend, regardless of any data
         const dayOfWeek = currentLoopDate.getDay();
-        const isSunday = dayOfWeek === 0;
 
         // Find record for this specific day using YYYY-MM-DD comparison
         const loopDateStr = `${currentLoopDate.getFullYear()}-${(currentLoopDate.getMonth() + 1).toString().padStart(2, '0')}-${currentLoopDate.getDate().toString().padStart(2, '0')}`;

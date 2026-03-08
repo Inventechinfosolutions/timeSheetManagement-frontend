@@ -15,7 +15,7 @@ const SplashVideo: React.FC<SplashVideoProps> = ({ onComplete, className = "" })
     // Set a timer to force completion after 3 seconds
     const timer = setTimeout(() => {
       onComplete?.();
-    }, 11000);
+    }, 12000);
 
     if (video) {
       video.play().catch((error) => {

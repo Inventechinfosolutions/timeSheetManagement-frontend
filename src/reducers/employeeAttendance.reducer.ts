@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios";
 
-import { AttendanceStatus, WorkLocation as OfficeLocation } from '../enums';
+import { AttendanceStatus, WorkLocation } from '../enums';
 
 // INTERFACES
 export interface EmployeeAttendance {
@@ -10,7 +10,7 @@ export interface EmployeeAttendance {
   workingDate: string | Date; // Backend accepts Date, transmitted as string
   loginTime?: string;
   logoutTime?: string;
-  location?: OfficeLocation;
+  location?: WorkLocation;
   totalHours?: number | null;
   status?: AttendanceStatus | null;
   sourceRequestId?: number | null; // Track auto-generated records
@@ -23,6 +23,7 @@ export interface WorkTrendData {
   month: string;
   year: number;
   totalLeaves: number;
+  compOffLeaves? : number;
   workFromHome: number;
   clientVisits: number;
   office: number;

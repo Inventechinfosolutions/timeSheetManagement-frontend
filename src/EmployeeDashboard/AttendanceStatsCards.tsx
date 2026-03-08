@@ -109,6 +109,7 @@ const AttendanceStatsCards = ({
             const processHalf = (half: string | null) => {
               if (!half) return 0;
               const h = half.toLowerCase();
+              if (h === "comp-off leave") return 0; // NEW: Don't count Comp-Off as deduction
               if (h.includes("leave") || h.includes("absent")) {
                 return 0.5;
               }

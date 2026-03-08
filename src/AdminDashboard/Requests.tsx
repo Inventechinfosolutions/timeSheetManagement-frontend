@@ -34,7 +34,6 @@ import {
   submitRequestModification,
   clearAttendanceForRequest,
   clearRequests,
-  LeaveRequest,
   getLeaveRequestEmailConfig,
 } from "../reducers/leaveRequest.reducer";
 import { getEntity } from "../reducers/employeeDetails.reducer";
@@ -46,6 +45,7 @@ import {
   AttendanceStatus,
   LeaveRequestType,
   UserType,
+  WorkLocationKeyword,
 } from "../enums";
 import CommonMultipleUploader from "../EmployeeDashboard/CommonMultipleUploader";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
@@ -54,7 +54,6 @@ import { message, Select, Modal } from "antd";
 import { fetchDepartments } from "../reducers/masterDepartment.reducer";
 
 const Requests = () => {
-  const navigate = useNavigate();
   const location = useLocation();
 
   const basePath = location.pathname.startsWith("/manager-dashboard")
@@ -242,18 +241,18 @@ const Requests = () => {
 
     // Normalize request types for searching
     const requestTypeLower = (req.requestType || "").toLowerCase();
-    const halfDayLeave = req.isHalfDay ? "half day leave" : "";
+    const halfDayLeave = req.isHalfDay ? WorkLocationKeyword.HALF_DAY_LEAVE : "";
     const firstHalf = (req.firstHalf || "")
       .toLowerCase()
-      .replace("apply leave", "leave");
+      .replace(WorkLocationKeyword.APPLY_LEAVE, WorkLocationKeyword.LEAVE);
     const secondHalf = (req.secondHalf || "")
       .toLowerCase()
-      .replace("apply leave", "leave");
+      .replace(WorkLocationKeyword.APPLY_LEAVE, WorkLocationKeyword.LEAVE);
 
     // Search normalization for aliases
     const searchNorm = s
-      .replace("wfh", "work from home")
-      .replace("cv", "client visit");
+      .replace(WorkLocationKeyword.WFH, WorkLocationKeyword.WORK_FROM_HOME)
+      .replace(WorkLocationKeyword.CV, WorkLocationKeyword.CLIENT_VISIT);
 
     const matchesRequestType =
       requestTypeLower.includes(searchNorm) ||
@@ -387,13 +386,13 @@ const Requests = () => {
         let victimTypes: string[] = [];
         const reqType = (request.requestType || "").toLowerCase();
 
-        if (reqType === "apply leave" || reqType === "leave") {
-          victimTypes = ["work from home", "client visit"];
-        } else if (reqType === "work from home" || reqType === "wfh") {
-          victimTypes = ["client visit", "work from home"];
-        } else if (reqType === "client visit" || reqType === "cv") {
-          victimTypes = ["work from home", "client visit"];
-        } else if (reqType === "half day") {
+        if (reqType === WorkLocationKeyword.APPLY_LEAVE || reqType === WorkLocationKeyword.LEAVE) {
+          victimTypes = [WorkLocationKeyword.WORK_FROM_HOME, WorkLocationKeyword.CLIENT_VISIT];
+        } else if (reqType === WorkLocationKeyword.WORK_FROM_HOME || reqType === WorkLocationKeyword.WFH) {
+          victimTypes = [WorkLocationKeyword.CLIENT_VISIT, WorkLocationKeyword.WORK_FROM_HOME];
+        } else if (reqType === WorkLocationKeyword.CLIENT_VISIT || reqType === WorkLocationKeyword.CV) {
+          victimTypes = [WorkLocationKeyword.WORK_FROM_HOME, WorkLocationKeyword.CLIENT_VISIT];
+        } else if (reqType === WorkLocationKeyword.HALF_DAY) {
           victimTypes = [];
         }
 
@@ -749,19 +748,6 @@ const Requests = () => {
   };
 
   // Placeholder if needed later, currently logic is inlined in table
-  const _getIcon = (type: string) => {
-    switch (type) {
-      case WorkLocation.WFH:
-      case WorkLocation.WORK_FROM_HOME:
-        return <Home size={18} className="text-green-500" />;
-      case WorkLocation.CLIENT_VISIT:
-        return <MapPin size={18} className="text-orange-500" />;
-      case AttendanceStatus.HALF_DAY:
-        return <Clock size={18} className="text-[#E31C79]" />;
-      default:
-        return <Briefcase size={18} className="text-blue-500" />;
-    }
-  };
 
   return (
     <div className="p-4 md:p-8 bg-[#F4F7FE] min-h-screen font-sans">
@@ -1180,7 +1166,7 @@ const Requests = () => {
                                   return activities
                                     .map((a) =>
                                       a === LeaveRequestType.LEAVE
-                                        ? "Half Day Leave"
+                                        ? LeaveRequestType.HALF_DAY_LEAVE
                                         : a,
                                     )
                                     .join(" + ");
@@ -1189,7 +1175,7 @@ const Requests = () => {
                                   // For single activity that is "Leave", show "Half Day Leave"
                                   return activities[0] ===
                                     LeaveRequestType.LEAVE
-                                    ? "Half Day Leave"
+                                    ? LeaveRequestType.HALF_DAY_LEAVE
                                     : activities[0];
                                 }
                               }
@@ -1201,11 +1187,11 @@ const Requests = () => {
                                 req.requestType === LeaveRequestType.LEAVE
                               ) {
                                 return req.isHalfDay
-                                  ? "Half Day Leave"
+                                  ? LeaveRequestType.HALF_DAY_LEAVE
                                   : LeaveRequestType.LEAVE;
                               }
                               if (req.requestType === AttendanceStatus.HALF_DAY)
-                                return "Half Day Leave";
+                                return LeaveRequestType.HALF_DAY_LEAVE;
                               return req.requestType;
                             })()}
                             {req.isModified && (
@@ -1748,7 +1734,7 @@ const Requests = () => {
                         )}
 
                         {/* Vertical Divider */}
-                        <div className="w-[1px] bg-[#E0E7FF] self-stretch mx-8 h-auto min-h-[40px]" />
+                        <div className="w-px bg-[#E0E7FF] self-stretch mx-8 h-auto min-h-[40px]" />
 
                         <div className="flex-1">
                           <span className="text-xs font-bold text-[#A3AED0] block mb-2 uppercase tracking-wide">
@@ -1852,7 +1838,7 @@ const Requests = () => {
                     const isBothSame =
                       selectedRequest.firstHalf === selectedRequest.secondHalf;
                     return (
-                      <div className="space-y-2 p-4 bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-50 rounded-2xl border-2 border-blue-200">
+                      <div className="space-y-2 p-4 bg-linear-to-br from-blue-50 via-purple-50 to-indigo-50 rounded-2xl border-2 border-blue-200">
                         <div className="flex items-center gap-2 mb-2">
                           <Clock size={18} className="text-blue-600" />
                           <label className="text-sm font-black text-blue-900 uppercase tracking-wider">

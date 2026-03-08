@@ -27,6 +27,10 @@ const DailyStatusMobileCard = ({ employees }: DailyStatusMobileCardProps) => {
       [AttendanceStatus.HOLIDAY]: "bg-[#DBEAFE] text-[#1890FF]",
       [AttendanceStatus.WEEKEND]: "bg-[#FEE2E2] text-[#EE5D50]",
       [AttendanceStatus.PENDING]: "bg-[#FEF3C7] text-[#FFB020]",
+      [AttendanceStatus.PRESENT]: "bg-[#D1FAE5] text-[#05CD99]",
+      [AttendanceStatus.UPCOMING]: "bg-[#F1F5F9] text-[#475569]",
+      [AttendanceStatus.WFH]: "bg-[#F0FDF4] text-[#166534]",
+      [AttendanceStatus.CLIENT_VISIT]: "bg-[#FFF7ED] text-[#9A3412]",
     };
     return `px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${colors[status] || "bg-gray-100 text-gray-700"}`;
   };
@@ -40,7 +44,7 @@ const DailyStatusMobileCard = ({ employees }: DailyStatusMobileCardProps) => {
         >
           <div className="flex justify-between items-start">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#4318FF] to-[#5BC4FF] flex items-center justify-center text-white font-black text-xs shadow-inner">
+              <div className="w-10 h-10 rounded-full bg-linear-to-br from-[#4318FF] to-[#5BC4FF] flex items-center justify-center text-white font-black text-xs shadow-inner">
                 {emp.avatar}
               </div>
               <div className="flex flex-col">
@@ -89,7 +93,7 @@ const DailyStatusMobileCard = ({ employees }: DailyStatusMobileCardProps) => {
                 </div>
                 <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden shadow-inner">
                   <div
-                    className="h-full bg-gradient-to-r from-[#4318FF] to-[#5BC4FF] rounded-full transition-all duration-500"
+                    className="h-full bg-linear-to-r from-[#4318FF] to-[#5BC4FF] rounded-full transition-all duration-500"
                     style={{
                       width: `${Math.min((emp.todayHours / 9) * 100, 100)}%`,
                     }}

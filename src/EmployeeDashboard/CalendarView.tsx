@@ -14,7 +14,6 @@ import { useAppSelector, useAppDispatch } from "../hooks";
 import { RootState } from "../store";
 import {
   generateMonthlyEntries,
-  generateRangeEntries,
   isEditableMonth,
 } from "../utils/attendanceUtils";
 import { TimesheetEntry } from "../types";
@@ -24,7 +23,7 @@ import {
   autoUpdateTimesheet,
   downloadAttendancePdfReport,
 } from "../reducers/employeeAttendance.reducer";
-import { AttendanceStatus, UserType, Department } from "../enums";
+import { AttendanceStatus, UserType, WorkLocation, WorkLocationKeyword, Department, EmploymentType } from "../enums";
 import { fetchBlockers } from "../reducers/timesheetBlocker.reducer";
 import { getLeaveHistory } from "../reducers/leaveRequest.reducer";
 
@@ -90,6 +89,7 @@ const Calendar = ({
 
   // const holidaysFetched = useRef(false);
   const attendanceFetchedKey = useRef<string | null>(null);
+  const [otherHalfType, setOtherHalfType] = useState<string>(WorkLocation.OFFICE);
 
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
   const [internalDisplayDate, setInternalDisplayDate] = useState(now);
@@ -303,15 +303,15 @@ const Calendar = ({
         const s = (entry.status || "").toLowerCase();
 
         // BLOCK IF STATUS IS LEAVE
-        if (s.includes("leave")) return true;
+        if (s.includes(WorkLocationKeyword.LEAVE)) return true;
 
         const isRestricted = (val: string) =>
           val &&
-          !val.includes("office") &&
-          !val.includes("not updated") &&
-          !val.includes("upcoming") &&
-          !val.includes("holiday") &&
-          !val.includes("weekend") &&
+          !val.includes(WorkLocationKeyword.OFFICE) &&
+          !val.includes(AttendanceStatus.NOT_UPDATED.toLowerCase()) &&
+          !val.includes(AttendanceStatus.UPCOMING.toLowerCase()) &&
+          !val.includes(AttendanceStatus.HOLIDAY.toLowerCase()) &&
+          !val.includes(AttendanceStatus.WEEKEND.toLowerCase()) &&
           val.trim() !== "";
 
         if (isRestricted(h1) || isRestricted(h2)) return true;
@@ -319,13 +319,15 @@ const Calendar = ({
     }
 
     // 4. Department Weekend Rules
+    const isIT = entity?.department === Department.IT || entity?.department === Department.IT_SUPPORT;
+    const isFullTimer = entity?.employmentType === EmploymentType.FULL_TIMER;
     const dayOfWeek = d.getDay(); // 0 = Sun, 6 = Sat
 
     // BLOCK SUNDAYS ONLY (Saturdays are now open for everyone)
-    if (dayOfWeek === 0) return true;
+    if (dayOfWeek === 0 && !(isIT && isFullTimer)) return true;
 
-    // 5. Holiday Blocking (All departments)
-    if (checkIsHoliday(d.getFullYear(), d.getMonth(), d.getDate())) return true;
+    // 5. Holiday Blocking (All departments except IT FULL_TIMER)
+    if (checkIsHoliday(d.getFullYear(), d.getMonth(), d.getDate()) && !(isIT && isFullTimer)) return true;
 
     return false;
   };
@@ -365,11 +367,11 @@ const Calendar = ({
         const h2 = (entry.secondHalf || "").toLowerCase();
         const isRestricted = (val: string) =>
           val &&
-          !val.includes("office") &&
-          !val.includes("not updated") &&
-          !val.includes("upcoming") &&
-          !val.includes("holiday") &&
-          !val.includes("weekend") &&
+          !val.includes(WorkLocationKeyword.OFFICE) &&
+          !val.includes(AttendanceStatus.NOT_UPDATED.toLowerCase()) &&
+          !val.includes(AttendanceStatus.UPCOMING.toLowerCase()) &&
+          !val.includes(AttendanceStatus.HOLIDAY.toLowerCase()) &&
+          !val.includes(AttendanceStatus.WEEKEND.toLowerCase()) &&
           val.trim() !== "";
 
         if (isRestricted(h1) || isRestricted(h2))
@@ -701,8 +703,8 @@ const Calendar = ({
                   s.includes("client place") ||
                   loc === "client visit" ||
                   loc === "client place";
-                const isOffice = s === "office" || loc === "office";
-                const isLeave = s === "leave" || s === "weekend";
+                const isOffice = s === WorkLocationKeyword.OFFICE || loc === WorkLocationKeyword.OFFICE;
+                const isLeave = s === WorkLocationKeyword.LEAVE || s === AttendanceStatus.WEEKEND.toLowerCase() || s === WorkLocationKeyword.COMP_OFF_LEAVE;
 
                 if (s === "blocked")
                   return {
@@ -775,25 +777,21 @@ const Calendar = ({
 
               const getShortStatus = (status: string) => {
                 const s = (status || "").toLowerCase();
-                if (s.includes("work from home")) return "WFH";
+                if (s.includes(WorkLocationKeyword.WORK_FROM_HOME)) return WorkLocation.WFH;
                 return status;
               };
 
               const isWorkLoc = (s: string) => {
                 const lower = (s || "").toLowerCase();
                 return [
-                  "wfh",
-                  "work from home",
-                  "client visit",
+                  WorkLocationKeyword.WFH,
+                  WorkLocationKeyword.WORK_FROM_HOME,
+                  WorkLocationKeyword.CLIENT_VISIT,
                   "client place",
-                  "office",
+                  WorkLocationKeyword.OFFICE,
                 ].some((k) => lower.includes(k));
               };
 
-              const useNeutralSplit =
-                isSplitDay &&
-                isWorkLoc((entry as any).firstHalf) &&
-                isWorkLoc((entry as any).secondHalf);
 
               // Status Logic for Styling
               const baseHover =
@@ -802,14 +800,10 @@ const Calendar = ({
               // let textClass = "text-[#2B3674]";
               let statusLabel = entry?.status || "-";
 
-              if (isToday) {
-                cellClass = `bg-white ring-2 ring-[#4318FF] shadow-lg shadow-blue-200 z-10 ${baseHover}`;
-                // textClass = "text-[#4318FF]";
-                if (statusLabel === "-") statusLabel = "";
-              } else if ((entry?.status as any) === AttendanceStatus.ABSENT) {
+              if ((entry?.status as any) === AttendanceStatus.ABSENT) {
                 cellClass = `bg-red-50 border-transparent hover:bg-red-100 ${baseHover}`;
                 // textClass = "text-red-700 font-bold";
-                statusLabel = "ABSENT";
+                statusLabel = AttendanceStatus.ABSENT.toUpperCase();
               } else if (
                 holiday &&
                 (!entry?.totalHours || Number(entry.totalHours) === 0)
@@ -825,7 +819,7 @@ const Calendar = ({
                 // Sunday: Always Weekend. Saturday: Only Weekend if no data
                 cellClass = `bg-red-50 border-transparent text-red-600 hover:bg-red-100 ${baseHover}`;
                 // textClass = "text-red-600 font-bold";
-                statusLabel = "WEEKEND";
+                statusLabel = AttendanceStatus.WEEKEND.toUpperCase();
               } else if (isSplitDay) {
                 // Split Day: No border
                 cellClass = `bg-white border-transparent ${baseHover}`;
@@ -847,19 +841,19 @@ const Calendar = ({
                 // textClass = "text-red-700 font-bold";
                 statusLabel = AttendanceStatus.LEAVE;
               } else if (
-                entry?.workLocation === "Client Visit" ||
-                entry?.status === "Client Visit"
+                entry?.workLocation === WorkLocation.CLIENT_VISIT ||
+                entry?.status === AttendanceStatus.CLIENT_VISIT
               ) {
                 // Client Visit (only if status is NOT Leave)
                 cellClass = `bg-blue-50 border-transparent hover:bg-blue-100 ${baseHover}`;
                 statusLabel =
-                  entry?.workLocation || entry?.status || "Client Visit";
+                  entry?.workLocation || entry?.status || AttendanceStatus.CLIENT_VISIT;
               } else if (
-                entry?.workLocation === "WFH" ||
-                entry?.status === "WFH"
+                entry?.workLocation === WorkLocation.WFH ||
+                entry?.status === AttendanceStatus.WFH
               ) {
                 cellClass = `bg-blue-50 border-transparent hover:bg-blue-100 ${baseHover}`;
-                statusLabel = entry?.workLocation || entry?.status || "WFH";
+                statusLabel = entry?.workLocation || entry?.status || AttendanceStatus.WFH;
               } else if (isIncomplete) {
                 cellClass = `bg-white border-gray-300 hover:bg-gray-50 ${baseHover}`;
                 if (!entry?.totalHours || Number(entry.totalHours) === 0) {
@@ -872,6 +866,11 @@ const Calendar = ({
                 cellClass = `bg-white border-gray-300 hover:bg-gray-50 ${baseHover}`;
                 // textClass = "text-gray-300 font-bold";
                 statusLabel = AttendanceStatus.UPCOMING;
+              }
+
+              if (isToday) {
+                cellClass += ` ring-2 ring-[#4318FF] shadow-lg shadow-blue-200 z-10`;
+                if (statusLabel === "-") statusLabel = "";
               }
 
               // Apply blocked cursor style if blocked
@@ -1058,36 +1057,33 @@ const Calendar = ({
                     className={`text-[10px] font-bold uppercase truncate w-full text-center px-1 py-1 rounded-md mt-1 backdrop-blur-sm z-10                         ${
                       entry?.status === AttendanceStatus.ABSENT
                         ? "text-white bg-[#EE5D50]/70"
-                        : holiday
-                          ? entry?.totalHours && Number(entry.totalHours) > 0
+                        : holiday &&
+                          (!entry?.totalHours || Number(entry.totalHours) === 0)
+                        ? "text-white bg-[#1890FF]/70"
+                        : isSplitDay
+                          ? isWorkLoc((entry as any).firstHalf) &&
+                            isWorkLoc((entry as any).secondHalf)
+                            ? "text-white bg-[#01B574]" // Green for Full Working split
+                            : "text-white bg-[#FFB020]/80" // Orange for Half leave split
+                          : entry?.status === AttendanceStatus.FULL_DAY
                             ? "text-white bg-[#01B574]"
-                            : "text-white bg-[#1890FF]/70"
-                          : isSplitDay
-                            ? isWorkLoc((entry as any).firstHalf) &&
-                              isWorkLoc((entry as any).secondHalf)
-                              ? "text-white bg-[#01B574]" // Green for Full Working split
-                              : "text-white bg-[#FFB020]/80" // Orange for Half leave split
-                            : entry?.status === AttendanceStatus.FULL_DAY &&
-                                statusLabel
-                              ? "text-white bg-[#01B574]"
-                              : entry?.status === AttendanceStatus.HALF_DAY &&
-                                  statusLabel
-                                ? "text-white bg-[#FFB020]/80"
-                                : entry?.status === AttendanceStatus.LEAVE
-                                  ? "text-white bg-red-400/70"
-                                  : entry?.workLocation === "Client Visit" ||
-                                      entry?.status === "Client Visit" ||
-                                      entry?.workLocation === "WFH" ||
-                                      entry?.status === "WFH"
-                                    ? "text-white bg-[#4318FF]/70"
-                                    : isIncomplete && statusLabel
-                                      ? "text-white bg-[#64748B]/90"
-                                      : (entry?.status as any) ===
-                                          AttendanceStatus.ABSENT
-                                        ? "text-white bg-[#EE5D50]/70"
-                                        : entry?.isWeekend
-                                          ? "text-white bg-red-400/70"
-                                          : "text-white bg-[#64748B]/90"
+                            : entry?.status === AttendanceStatus.HALF_DAY
+                              ? "text-white bg-[#FFB020]/80"
+                              : entry?.status === AttendanceStatus.LEAVE
+                                ? "text-white bg-red-400/70"
+                                : entry?.workLocation === WorkLocation.CLIENT_VISIT ||
+                                    entry?.status === AttendanceStatus.CLIENT_VISIT ||
+                                    entry?.workLocation === WorkLocation.WFH ||
+                                    entry?.status === AttendanceStatus.WFH
+                                  ? "text-white bg-[#4318FF]/70"
+                                  : isIncomplete
+                                    ? "text-white bg-[#64748B]/90"
+                                    : (entry?.status as any) ===
+                                        AttendanceStatus.ABSENT
+                                      ? "text-white bg-[#EE5D50]/70"
+                                      : entry?.isWeekend
+                                        ? "text-white bg-red-400/70"
+                                        : "text-white bg-[#64748B]/90"
                     }
                     `}
                   >
@@ -1099,16 +1095,16 @@ const Calendar = ({
                         : isSplitDay
                           ? isWorkLoc((entry as any).firstHalf) &&
                             isWorkLoc((entry as any).secondHalf)
-                            ? "FULL DAY"
-                            : `${(isWorkLoc((entry as any).firstHalf) ? (entry as any).firstHalf : (entry as any).secondHalf)?.toUpperCase()} (HALF DAY)`
+                            ? AttendanceStatus.FULL_DAY.toUpperCase()
+                            : `${(isWorkLoc((entry as any).firstHalf) ? (entry as any).firstHalf : (entry as any).secondHalf)?.toUpperCase()} ${AttendanceStatus.HALF_DAY.toUpperCase()}`
                           : (entry?.status as string) === AttendanceStatus.LEAVE
-                            ? "LEAVE"
+                            ? AttendanceStatus.LEAVE
                             : (entry?.status as string) ===
                                 AttendanceStatus.FULL_DAY
-                              ? `${(entry?.workLocation || "OFFICE")
+                              ? `${(entry?.workLocation || WorkLocation.OFFICE)
                                   .replace(/\(FULL DAY\)/i, "")
                                   .trim()
-                                  .toUpperCase()} (FULL DAY)`
+                                  .toUpperCase()} ${AttendanceStatus.FULL_DAY.toUpperCase()}`
                               : entry?.workLocation &&
                                   (entry?.status as string) !==
                                     AttendanceStatus.LEAVE &&

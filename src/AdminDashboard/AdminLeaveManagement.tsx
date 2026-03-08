@@ -2128,20 +2128,20 @@ const AdminLeaveManagement = () => {
                                       );
 
                                     if (activities.length > 1) {
-                                      // Replace LeaveRequestType.LEAVE with "Half Day Leave" in combined activities
+                                      // Replace LeaveRequestType.LEAVE with LeaveRequestType.HALF_DAY_LEAVE in combined activities
                                       return activities
                                         .map((a) =>
                                           a === LeaveRequestType.LEAVE
-                                            ? "Half Day Leave"
+                                            ? LeaveRequestType.HALF_DAY_LEAVE
                                             : a,
                                         )
                                         .join(" + ");
                                     }
                                     if (activities.length === 1) {
-                                      // For single activity that is LeaveRequestType.LEAVE, show "Half Day Leave"
+                                      // For single activity that is LeaveRequestType.LEAVE, show LeaveRequestType.HALF_DAY_LEAVE
                                       return activities[0] ===
                                         LeaveRequestType.LEAVE
-                                        ? "Half Day Leave"
+                                        ? LeaveRequestType.HALF_DAY_LEAVE
                                         : activities[0];
                                     }
                                   }
@@ -2153,14 +2153,14 @@ const AdminLeaveManagement = () => {
                                     item.requestType === LeaveRequestType.LEAVE
                                   ) {
                                     return item.isHalfDay
-                                      ? "Half Day Leave"
+                                      ? LeaveRequestType.HALF_DAY_LEAVE
                                       : LeaveRequestType.LEAVE;
                                   }
                                   if (
                                     item.requestType ===
                                     LeaveRequestType.HALF_DAY
                                   )
-                                    return "Half Day Leave";
+                                    return LeaveRequestType.HALF_DAY_LEAVE;
                                   return item.requestType;
                                 })()}
                                 {item.isModified && (
@@ -2452,7 +2452,7 @@ const AdminLeaveManagement = () => {
                 {selectedLeaveType === LeaveRequestType.APPLY_LEAVE
                   ? LeaveRequestType.LEAVE
                   : selectedLeaveType === LeaveRequestType.HALF_DAY
-                    ? "Half Day Leave"
+                    ? LeaveRequestType.HALF_DAY_LEAVE
                     : selectedLeaveType}
               </h2>
             </div>
