@@ -805,7 +805,9 @@ const Calendar = ({
               if (isToday) {
                 cellClass = `bg-white ring-2 ring-[#4318FF] shadow-lg shadow-blue-200 z-10 ${baseHover}`;
                 // textClass = "text-[#4318FF]";
-                if (statusLabel === "-") statusLabel = "";
+                if (statusLabel === "-" || !statusLabel || statusLabel === AttendanceStatus.PENDING) {
+                  statusLabel = (isSunday || (isSaturdayWithNoData && entry && !entry.workLocation)) ? "WEEKEND" : "";
+                }
               } else if ((entry?.status as any) === AttendanceStatus.ABSENT) {
                 cellClass = `bg-red-50 border-transparent hover:bg-red-100 ${baseHover}`;
                 // textClass = "text-red-700 font-bold";
@@ -1035,7 +1037,7 @@ const Calendar = ({
                         <span
                           className={`text-2xl font-medium text-gray-800 leading-none`}
                         >
-                          {entry.totalHours}
+                          {entry.totalHours && entry.totalHours > 0 ? entry.totalHours : "-"}
                         </span>
                         <span className="block text-[8px] font-bold text-black uppercase">
                           hrs
