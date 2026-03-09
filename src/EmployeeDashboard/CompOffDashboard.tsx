@@ -16,7 +16,7 @@ import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import CommonMultipleUploader from "./CommonMultipleUploader";
 import { Loader2 } from "lucide-react";
 import { InfoCircleOutlined, CheckCircleFilled, ExclamationCircleFilled } from "@ant-design/icons";
-import { LeaveRequestType, HalfDayType, AttendanceStatus, WorkLocation, CompOffStatus } from "../enums";
+import { LeaveRequestType, HalfDayType, AttendanceStatus, WorkLocation, CompOffStatus, Department, EmploymentType } from "../enums";
 import { 
   ChevronDown, 
   ChevronLeft, 
@@ -59,6 +59,26 @@ const CompOffDashboard: React.FC = () => {
   const { entity } = useAppSelector((state) => state.employeeDetails);
   const currentUser = useAppSelector((state) => state.user.currentUser);
   const dispatch = useAppDispatch();
+
+  // Authorization Check: Only IT & FULL_TIMER get Comp Off
+  const department = entity?.department || (currentUser as any)?.department;
+  const employmentType = entity?.employmentType || (currentUser as any)?.employmentType;
+
+  if (department !== Department.IT || employmentType !== EmploymentType.FULL_TIMER) {
+    return (
+      <div className="p-8 md:p-12 flex flex-col items-center justify-center min-h-[60vh]">
+        <div className="bg-white p-10 rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-gray-100 max-w-md text-center animate-in fade-in zoom-in duration-500">
+          <div className="w-20 h-20 bg-red-50 rounded-3xl flex items-center justify-center mx-auto mb-6">
+            <X className="text-red-500 w-10 h-10" />
+          </div>
+          <h2 className="text-2xl font-black text-[#1B2559] mb-3">Access Restricted</h2>
+          <p className="text-[#A3AED0] font-bold text-sm leading-relaxed">
+            Comp Off benefits are only available for employees in the <span className="text-blue-600">Information Technology</span> department with <span className="text-blue-600">Full Time</span> status.
+          </p>
+        </div>
+      </div>
+    );
+  }
   
   const [compOffs, setCompOffs] = useState<any[]>([]);
   const [availableCompOffs, setAvailableCompOffs] = useState<any[]>([]);

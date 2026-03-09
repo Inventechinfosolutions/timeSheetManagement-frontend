@@ -14,7 +14,7 @@ import {
 import { useAppSelector, useAppDispatch } from "../hooks";
 import { useParams, useNavigate } from "react-router-dom";
 import { logoutUser } from "../reducers/user.reducer";
-import { UserType } from "../enums";
+import { UserType, Department, EmploymentType } from "../enums";
 import ApiLoadingSpinner from "../components/ApiLoadingSpinner";
 
 interface SidebarLayoutProps {
@@ -76,12 +76,14 @@ const SidebarLayout = ({
 
   const employmentType = entity?.employmentType || (currentUser as any)?.employmentType;
 
+  const department = entity?.department || (currentUser as any)?.department;
+
   const sidebarItems = [
     { name: "Dashboard", icon: LayoutGrid },
     { name: "My Timesheet", icon: Calendar },
     { name: "Timesheet View", icon: Eye },
     { name: "Work Management", icon: Calendar },
-    ...(employmentType !== "INTERN" ? [{ name: "Comp Off", icon: CalendarClock }] : []),
+    ...(department === Department.IT && employmentType === EmploymentType.FULL_TIMER ? [{ name: "Comp Off", icon: CalendarClock }] : []),
     { name: "My Profile", icon: User },
     //{ name: 'Change Password', icon: Lock },
   ];
