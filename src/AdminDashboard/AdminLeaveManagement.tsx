@@ -2533,7 +2533,7 @@ const AdminLeaveManagement = () => {
                                 if (ccEmailError) setCcEmailError("");
                               }}
                               onKeyDown={(e) => {
-                                if (e.key === "Enter" || e.key === ",") {
+                                if (e.key === "Enter" || e.key === "," || e.key === " ") {
                                   e.preventDefault();
                                   addCcEmail(ccEmailInput);
                                 }
