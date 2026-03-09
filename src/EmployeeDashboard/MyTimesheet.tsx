@@ -2132,7 +2132,7 @@ const MyTimesheet = ({
             const inputValue =
               localInputValues[idx] !== undefined
                 ? localInputValues[idx]
-                : day.totalHours === null || day.totalHours === undefined
+                : day.totalHours === null || day.totalHours === undefined || day.totalHours === 0
                   ? ""
                   : (Number(day.totalHours) === 0 ? "" : day.totalHours.toString());
             const dateStr = `${day.fullDate.getFullYear()}-${String(
@@ -2483,13 +2483,7 @@ const MyTimesheet = ({
                               ? "text-red-500 text-[10px] font-bold animate-pulse"
                               : "text-gray-800 text-3xl group-hover:scale-105 focus:scale-105"
                         }`}
-                      placeholder={
-                        day.status === AttendanceStatus.WEEKEND ||
-                        (day.status as any) === "WEEKEND" ||
-                        holiday
-                          ? "-"
-                          : "-"
-                      }
+                      placeholder="-"
                       value={isError ? inputError.message : inputValue}
                       onChange={(e) => handleHoursInput(idx, e.target.value)}
                       onBlur={() => handleInputBlur(idx)}
@@ -2498,11 +2492,9 @@ const MyTimesheet = ({
                       <div className="absolute bottom-0 w-12 h-0.5 bg-black/20 rounded-full group-hover/input:bg-black transition-colors"></div>
                     )}
                   </div>
-                  {inputValue && (
-                    <span className="text-[9px] text-black font-semibold uppercase tracking-wider">
-                      hours
-                    </span>
-                  )}
+                  <span className="text-[9px] text-black/50 font-bold uppercase tracking-wider">
+                    hrs
+                  </span>
                 </div>
 
                 {/* Bottom: Status Badge */}

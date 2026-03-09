@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, Save, Lock, Rocket } from "lucide-react";
 
 import { TimesheetEntry } from "../types";
 import { TimesheetBlocker } from "../reducers/timesheetBlocker.reducer";
-import { AttendanceStatus, Department } from "../enums";
+import { AttendanceStatus } from "../enums";
 
 interface MobileMyTimesheetProps {
   currentWeekEntries: { entry: TimesheetEntry; originalIndex: number }[];
@@ -26,12 +26,12 @@ interface MobileMyTimesheetProps {
   isHoliday: (date: Date) => boolean;
 
   onBlockedClick?: () => void;
+  department?: string;
   localInputValues: Record<number, string>;
   onInputBlur: (index: number) => void;
   selectedDateId: number | null;
   isHighlighted: boolean;
   containerClassName?: string;
-  department?: string;
   employmentType?: string;
 }
 
@@ -51,17 +51,17 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
   isManagerView,
   readOnly,
   blockers,
-  // isDateBlocked, // Removed unused prop to fix lint warning
   isEditableMonth,
   isHoliday,
+  isDateBlocked,
 
   onBlockedClick,
+  department,
   localInputValues,
   onInputBlur,
   selectedDateId,
   isHighlighted,
   containerClassName,
-  department,
   employmentType,
 }) => {
   // Sort entries to match Sun-Sat order (0-6)
