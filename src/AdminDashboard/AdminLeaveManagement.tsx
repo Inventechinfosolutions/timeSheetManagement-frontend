@@ -2533,7 +2533,7 @@ const AdminLeaveManagement = () => {
                                 if (ccEmailError) setCcEmailError("");
                               }}
                               onKeyDown={(e) => {
-                                if (e.key === "Enter" || e.key === ",") {
+                                if (e.key === "Enter" || e.key === "," || e.key === " ") {
                                   e.preventDefault();
                                   addCcEmail(ccEmailInput);
                                 }
@@ -2907,7 +2907,6 @@ const AdminLeaveManagement = () => {
                   </div>
                 ) : null;
               })()}
-
 
             {/* Description Field */}
             <div className="space-y-2" ref={descriptionRef}>
@@ -3617,4 +3616,3 @@ const AdminLeaveManagement = () => {
 };
 
 export default AdminLeaveManagement;
-
