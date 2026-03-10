@@ -308,6 +308,22 @@ const Requests = () => {
       );
     });
   };
+
+  // Helper to determine if a request type/half day choice is "Away" (deductible)
+  const isAway = (type: string | null | undefined): boolean => {
+    if (!type) return false;
+    const t = type.toLowerCase();
+    // Things that are NOT away: Office, Present
+    if (t === "office" || t === "present" || t === (WorkLocation.OFFICE as string).toLowerCase() || t === (WorkLocation.PRESENT as string).toLowerCase()) {
+      return false;
+    }
+    return true;
+  };
+
+  const getDurationFactor = (h1: string | null | undefined, h2: string | null | undefined): number => {
+    return isAway(h1) && isAway(h2) ? 1.0 : 0.5;
+  };
+
   // Helper function to calculate duration excluding weekends, holidays, and existing leaves
   const calculateDurationExcludingWeekends = (
     startDate: string,
@@ -354,6 +370,16 @@ const Requests = () => {
     return dates;
   };
 
+  const getEffectiveDates = (req: any): string[] => {
+    if (req.availableDates) {
+      try {
+        const ds: string[] = typeof req.availableDates === "string" ? JSON.parse(req.availableDates) : req.availableDates;
+        if (Array.isArray(ds)) return ds;
+      } catch (e) { }
+    }
+    return getWorkingDatesInRange(req.fromDate, req.toDate);
+  };
+
   const executeStatusUpdate = async () => {
     if (!confirmModal.id || !confirmModal.status) return;
     const { id, status } = confirmModal;
@@ -381,180 +407,10 @@ const Requests = () => {
         return; // Exit early
       }
 
-      // --- REFINED: Handle Overlaps for Approval ---
-      if (status === LeaveRequestStatus.APPROVED) {
-        // Define which request types this approval should victimize (modify) if overlapping
-        let victimTypes: string[] = [];
-        const reqType = (request.requestType || "").toLowerCase();
-
-        if (reqType === "apply leave" || reqType === "leave") {
-          victimTypes = ["work from home", "client visit"];
-        } else if (reqType === "work from home" || reqType === "wfh") {
-          victimTypes = ["client visit", "work from home"];
-        } else if (reqType === "client visit" || reqType === "cv") {
-          victimTypes = ["work from home", "client visit"];
-        } else if (reqType === "half day") {
-          victimTypes = [];
-        }
-
-        const requestWorkingDates = getWorkingDatesInRange(
-          request.fromDate,
-          request.toDate,
-        );
-        let modificationHandledDates: string[] = [];
-
-        // 1. Get potential victims, newest first.
-        // We only modify APPROVED records to avoid creating audit trails from already modified (history) entries.
-        const overlaps = (entities || [])
-          .filter(
-            (e) =>
-              e.employeeId?.toLowerCase() ===
-              request.employeeId?.toLowerCase() &&
-              e.status === LeaveRequestStatus.APPROVED &&
-              victimTypes.includes((e.requestType || "").toLowerCase()) &&
-              e.id !== request.id,
-          )
-          .sort((a, b) => b.id - a.id);
-
-        for (const victim of overlaps) {
-          const victimWorkingDates = getWorkingDatesInRange(
-            victim.fromDate,
-            victim.toDate,
-          );
-
-          // IMPORTANT: A victim only overlaps if it claims dates that are:
-          // 1. In the new request's range
-          // 2. NOT already handled by a more specific (newer) approved request.
-          // This prevents a shrunken parent from being shrunken again for dates it no longer owns.
-          const intersectionDates = victimWorkingDates.filter(
-            (d) =>
-              requestWorkingDates.includes(d) &&
-              !modificationHandledDates.includes(d),
-          );
-
-          if (intersectionDates.length > 0) {
-            // Check if any date in this intersection needs a modification record.
-            // This ensures only the most specific predecessor (higher ID) creates the modification entry.
-            const datesNeedingModification = intersectionDates; // Already filtered above
-
-            if (datesNeedingModification.length > 0) {
-              const iStart = datesNeedingModification[0];
-              const iEnd =
-                datesNeedingModification[datesNeedingModification.length - 1];
-
-              await dispatch(
-                submitRequestModification({
-                  id: victim.id,
-                  payload: {
-                    fromDate: iStart,
-                    toDate: iEnd,
-                    duration: datesNeedingModification.length,
-                    sourceRequestId: request.id,
-                    sourceRequestType: request.requestType,
-                  },
-                }),
-              ).unwrap();
-
-              // Mark these dates as handled
-              modificationHandledDates = [
-                ...new Set([
-                  ...modificationHandledDates,
-                  ...datesNeedingModification,
-                ]),
-              ];
-            }
-
-            // Ensure remaining dates are contiguous to avoid 'stretching'
-            const remainingVictimDates = victimWorkingDates.filter(
-              (d) => !intersectionDates.includes(d),
-            );
-
-            if (remainingVictimDates.length === 0) {
-              await dispatch(
-                updateLeaveRequestStatus({
-                  id: victim.id,
-                  status: LeaveRequestStatus.CANCELLED,
-                }),
-              ).unwrap();
-            } else {
-              // Check for gaps (non-contiguous segments)
-              const segments: string[][] = [];
-              let currentSegment: string[] = [];
-
-              for (let i = 0; i < remainingVictimDates.length; i++) {
-                const date = dayjs(remainingVictimDates[i]);
-                if (currentSegment.length === 0) {
-                  currentSegment.push(remainingVictimDates[i]);
-                } else {
-                  const prevDate = dayjs(
-                    currentSegment[currentSegment.length - 1],
-                  );
-                  // Check if next working day is the next date
-                  let nextWorkingDay = prevDate.add(1, "day");
-                  while (
-                    isWeekend(nextWorkingDay) ||
-                    isHoliday(nextWorkingDay)
-                  ) {
-                    nextWorkingDay = nextWorkingDay.add(1, "day");
-                  }
-
-                  if (date.isSame(nextWorkingDay, "day")) {
-                    currentSegment.push(remainingVictimDates[i]);
-                  } else {
-                    segments.push(currentSegment);
-                    currentSegment = [remainingVictimDates[i]];
-                  }
-                }
-              }
-              segments.push(currentSegment);
-
-              if (segments.length === 1) {
-                // Contiguous -> Just update the original
-                await dispatch(
-                  updateParentRequest({
-                    parentId: victim.id,
-                    duration: remainingVictimDates.length,
-                    fromDate: remainingVictimDates[0],
-                    toDate:
-                      remainingVictimDates[remainingVictimDates.length - 1],
-                  }),
-                ).unwrap();
-              } else {
-                // Split occurred -> Mark original as Cancelled and create new Approved segments
-                // This ensures segments are accurately represented in the DB and attendance table
-                await dispatch(
-                  updateLeaveRequestStatus({
-                    id: victim.id,
-                    status: LeaveRequestStatus.CANCELLED,
-                  }),
-                ).unwrap();
-
-                for (const segment of segments) {
-                  await dispatch(
-                    submitRequestModification({
-                      id: victim.id,
-                      payload: {
-                        fromDate: segment[0],
-                        toDate: segment[segment.length - 1],
-                        duration: segment.length,
-                        sourceRequestId: request.id,
-                        sourceRequestType: request.requestType,
-                        // Use a flag or specific status in backend to mark this as an Approved segment split
-                        overrideStatus: LeaveRequestStatus.APPROVED,
-                      },
-                    }),
-                  ).unwrap();
-                }
-              }
-            }
-          }
-        }
-      }
-
-      // 1. Update Status first
+      // 1. Update Status
       await dispatch(updateLeaveRequestStatus({ id, status })).unwrap();
 
-      // 1.1 Explicit Attendance Clearance for Visibility in Network Logs
+      // 2. Explicit Attendance Clearance for Visibility
       if (status === LeaveRequestStatus.CANCELLATION_APPROVED) {
         try {
           if (request?.employeeId) {
@@ -570,113 +426,6 @@ const Requests = () => {
             `[CLEAR_ATTENDANCE] ❌ Failed to explicitly clear attendance:`,
             err,
           );
-          // Non-blocking error for the UI status update
-        }
-      }
-
-      // 2. Smart Cancellation Logic (Only if Cancellation Approved)
-      if (status === LeaveRequestStatus.CANCELLATION_APPROVED && request) {
-        // Find the parent request (Approved, matching employee, covering dates)
-        const childRequest = request;
-        const childStart = dayjs(childRequest.fromDate);
-        const childEnd = dayjs(childRequest.toDate);
-
-        const masterRequest = entities.find(
-          (e) =>
-            e.employeeId === childRequest.employeeId &&
-            e.status === LeaveRequestStatus.APPROVED &&
-            e.id !== childRequest.id &&
-            (dayjs(e.fromDate).isSame(childStart, "day") ||
-              dayjs(e.fromDate).isBefore(childStart, "day")) &&
-            (dayjs(e.toDate).isSame(childEnd, "day") ||
-              dayjs(e.toDate).isAfter(childEnd, "day")),
-        );
-
-        if (masterRequest) {
-          // --- SMART CANCELLATION LOGIC ---
-          // 1. Gather all 'Cancellation Approved' requests (including current one) related to this master
-          const allCancelledRequests = entities.filter(
-            (e) =>
-              e.employeeId === masterRequest.employeeId &&
-              (e.status === LeaveRequestStatus.CANCELLATION_APPROVED ||
-                e.id === id) &&
-              (dayjs(e.fromDate).isAfter(dayjs(masterRequest.fromDate)) ||
-                dayjs(e.fromDate).isSame(
-                  dayjs(masterRequest.fromDate),
-                  "day",
-                )) &&
-              (dayjs(e.toDate).isBefore(dayjs(masterRequest.toDate)) ||
-                dayjs(e.toDate).isSame(dayjs(masterRequest.toDate), "day")),
-          );
-
-          // 2. Build Set of Cancelled Dates
-          const cancelledSet = new Set<string>();
-          allCancelledRequests.forEach((req) => {
-            let curr = dayjs(req.fromDate);
-            const end = dayjs(req.toDate);
-            while (curr.isBefore(end) || curr.isSame(end, "day")) {
-              cancelledSet.add(curr.format("YYYY-MM-DD"));
-              curr = curr.add(1, "day");
-            }
-          });
-
-          // 3. Scan Master Range for Valid Dates
-          const validDates: string[] = [];
-          let currM = dayjs(masterRequest.fromDate);
-          const endM = dayjs(masterRequest.toDate);
-
-          while (currM.isBefore(endM) || currM.isSame(endM, "day")) {
-            const dateStr = currM.format("YYYY-MM-DD");
-            if (!cancelledSet.has(dateStr)) {
-              validDates.push(dateStr);
-            }
-            currM = currM.add(1, "day");
-          }
-
-          // 4. Update Parent Request
-
-          // Filter validDates to exclude weekends/holidays for boundary calculation
-          const validWorkingDates = validDates.filter((d) => {
-            const dObj = dayjs(d);
-            if (
-              masterRequest.requestType === WorkLocation.WORK_FROM_HOME ||
-              masterRequest.requestType === LeaveRequestType.WFH ||
-              masterRequest.requestType === WorkLocation.CLIENT_VISIT ||
-              masterRequest.requestType === LeaveRequestType.CLIENT_VISIT ||
-              masterRequest.requestType === LeaveRequestType.APPLY_LEAVE ||
-              masterRequest.requestType === LeaveRequestType.LEAVE
-            ) {
-              return !isWeekend(dObj) && !isHoliday(dObj);
-            }
-            return true;
-          });
-
-          if (validWorkingDates.length === 0) {
-            // CASE: All working dates cancelled -> Do not change parent status to 'Cancellation Approved' (keep as Approved), but set duration to 0
-            await dispatch(
-              updateParentRequest({
-                parentId: masterRequest.id,
-                duration: 0,
-                fromDate: masterRequest.fromDate,
-                toDate: masterRequest.toDate,
-              }),
-            ).unwrap();
-          } else {
-            // CASE: Partial -> Update Range and Duration based on WORKING DAYS
-            const newFromDate = validWorkingDates[0];
-            const newToDate = validWorkingDates[validWorkingDates.length - 1];
-            const newDuration = validWorkingDates.length;
-
-            await dispatch(
-              updateParentRequest({
-                parentId: masterRequest.id,
-                duration: newDuration,
-                fromDate: newFromDate,
-                toDate: newToDate,
-              }),
-            ).unwrap();
-          }
-          // --- END SMART CANCELLATION ---
         }
       }
 
@@ -690,8 +439,166 @@ const Requests = () => {
         [LeaveRequestStatus.MODIFICATION_REJECTED]: "Modification Rejected",
         [LeaveRequestStatus.CANCELLATION_APPROVED]: "Cancellation Approved",
         [LeaveRequestStatus.CANCELLATION_REJECTED]: "Cancellation Rejected",
-
       };
+
+      // 3. SMART OVERLAP HANDLING (Victim Logic)
+      if (status === LeaveRequestStatus.APPROVED) {
+        let victimTypes: string[] = [];
+        const reqType = (request.requestType || "").toLowerCase();
+
+        if (reqType === "apply leave" || reqType === "leave") {
+          victimTypes = [
+            "work from home",
+            "client visit",
+            "apply leave",
+            "leave",
+            "wfh",
+            "cv",
+          ];
+        } else if (reqType === "work from home" || reqType === "wfh") {
+          victimTypes = ["client visit", "work from home", "cv", "wfh"];
+        } else if (reqType === "client visit" || reqType === "cv") {
+          victimTypes = ["work from home", "client visit", "wfh", "cv"];
+        } else if (reqType === "half day") {
+          victimTypes = ["apply leave", "leave", "half day"];
+        }
+
+        const requestWorkingDates = getEffectiveDates(request);
+        let modificationHandledDates: string[] = [];
+
+        const overlaps = (entities || [])
+          .filter(
+            (e: any) =>
+              (e.employeeId || e.id) === (request.employeeId || request.id) &&
+              e.status === LeaveRequestStatus.APPROVED &&
+              victimTypes.includes((e.requestType || "").toLowerCase()) &&
+              e.id !== id &&
+              e.status !== LeaveRequestStatus.REQUEST_MODIFIED,
+          )
+          .sort((a: any, b: any) => b.id - a.id);
+
+        for (const victim of overlaps) {
+          const victimWorkingDates = getEffectiveDates(victim);
+          const intersectionDates = victimWorkingDates.filter(
+            (d) =>
+              requestWorkingDates.includes(d) &&
+              !modificationHandledDates.includes(d),
+          );
+
+          if (intersectionDates.length > 0) {
+            const datesNeedingModification = intersectionDates;
+            if (datesNeedingModification.length > 0) {
+              const iStart = datesNeedingModification[0];
+              const iEnd =
+                datesNeedingModification[datesNeedingModification.length - 1];
+
+              await dispatch(
+                submitRequestModification({
+                  id: victim.id,
+                  payload: {
+                    fromDate: iStart,
+                    toDate: iEnd,
+                    duration: datesNeedingModification.length * (victim.isHalfDay ? getDurationFactor(victim.firstHalf, victim.secondHalf) : 1.0),
+                    firstHalf: victim.isHalfDay ? victim.firstHalf : victim.requestType,
+                    secondHalf: victim.isHalfDay ? victim.secondHalf : victim.requestType,
+                    sourceRequestId: id,
+                    sourceRequestType: reqType,
+                  },
+                }),
+              ).unwrap();
+
+              modificationHandledDates = [...new Set([...modificationHandledDates, ...datesNeedingModification])];
+            }
+
+            const remainingVictimDates = victimWorkingDates.filter((d) => !intersectionDates.includes(d));
+
+            if (remainingVictimDates.length === 0) {
+              await dispatch(updateLeaveRequestStatus({ id: victim.id, status: LeaveRequestStatus.CANCELLED })).unwrap();
+            } else {
+              const segments: string[][] = [];
+              let currentSegment: string[] = [];
+
+              for (let i = 0; i < remainingVictimDates.length; i++) {
+                const date = dayjs(remainingVictimDates[i]);
+                if (currentSegment.length === 0) {
+                  currentSegment.push(remainingVictimDates[i]);
+                } else {
+                  const prevDate = dayjs(currentSegment[currentSegment.length - 1]);
+                  let nextWorkingDay = prevDate.add(1, "day");
+                  while (isWeekend(nextWorkingDay) || isHoliday(nextWorkingDay)) {
+                    nextWorkingDay = nextWorkingDay.add(1, "day");
+                  }
+                  if (date.isSame(nextWorkingDay, "day")) {
+                    currentSegment.push(remainingVictimDates[i]);
+                  } else {
+                    segments.push(currentSegment);
+                    currentSegment = [remainingVictimDates[i]];
+                  }
+                }
+              }
+              segments.push(currentSegment);
+
+              if (segments.length === 1) {
+                await dispatch(
+                  updateParentRequest({
+                    parentId: victim.id,
+                    duration: remainingVictimDates.length * (victim.isHalfDay ? getDurationFactor(victim.firstHalf, victim.secondHalf) : 1.0),
+                    fromDate: remainingVictimDates[0],
+                    toDate: remainingVictimDates[remainingVictimDates.length - 1],
+                  }),
+                ).unwrap();
+              } else {
+                await dispatch(updateLeaveRequestStatus({ id: victim.id, status: LeaveRequestStatus.CANCELLED })).unwrap();
+                for (const segment of segments) {
+                  await dispatch(
+                    submitRequestModification({
+                      id: victim.id,
+                      payload: {
+                        fromDate: segment[0],
+                        toDate: segment[segment.length - 1],
+                        duration: segment.length * (victim.isHalfDay ? getDurationFactor(victim.firstHalf, victim.secondHalf) : 1.0),
+                        sourceRequestId: id,
+                        sourceRequestType: reqType,
+                        overrideStatus: LeaveRequestStatus.APPROVED,
+                      },
+                    }),
+                  ).unwrap();
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // 4. SMART CANCELLATION LOGIC (Refining Parent Duration)
+      if (status === LeaveRequestStatus.CANCELLATION_APPROVED || status === LeaveRequestStatus.MODIFICATION_APPROVED) {
+        if (request.requestModifiedFrom) {
+          try {
+            const parentId = Number(String(request.requestModifiedFrom).split(":")[0]);
+            const parent = entities.find((e: any) => e.id === parentId);
+            if (parent) {
+              const cancelledDates = getEffectiveDates(request);
+              const parentDates = getEffectiveDates(parent);
+              const remainingParentDates = parentDates.filter((d: string) => !cancelledDates.includes(d));
+
+              if (remainingParentDates.length === 0) {
+                await dispatch(updateLeaveRequestStatus({ id: parentId, status: LeaveRequestStatus.CANCELLED })).unwrap();
+              } else {
+                await dispatch(
+                  updateParentRequest({
+                    parentId,
+                    duration: remainingParentDates.length * (parent.isHalfDay ? getDurationFactor(parent.firstHalf, parent.secondHalf) : 1.0),
+                    fromDate: remainingParentDates[0],
+                    toDate: remainingParentDates[remainingParentDates.length - 1],
+                  }),
+                ).unwrap();
+              }
+            }
+          } catch (e) {
+            console.error("Failed to automatically shrink parent duration:", e);
+          }
+        }
+      }
 
       message.success(statusMessages[status] || `Request ${status}`);
 
@@ -1283,23 +1190,9 @@ const Requests = () => {
                         <span className="text-sm font-bold text-[#2B3674]">
                           {dayjs(req.fromDate).format("DD MMM")} -{" "}
                           {dayjs(req.toDate).format("DD MMM - YYYY")}, TOTAL:{" "}
-                          {req.duration
+                          {req.duration !== undefined && req.duration !== null
                             ? parseFloat(String(req.duration))
-                            : req.requestType === WorkLocation.CLIENT_VISIT ||
-                              req.requestType ===
-                              WorkLocation.WORK_FROM_HOME ||
-                              req.requestType ===
-                              LeaveRequestType.APPLY_LEAVE ||
-                              req.requestType === LeaveRequestType.LEAVE ||
-                              req.requestType === AttendanceStatus.HALF_DAY
-                              ? calculateDurationExcludingWeekends(
-                                req.fromDate,
-                                req.toDate,
-                              )
-                              : dayjs(req.toDate).diff(
-                                dayjs(req.fromDate),
-                                "day",
-                              ) + 1}{" "}
+                            : 0}{" "}
                           DAY(S)
                         </span>
                       </td>
@@ -1818,25 +1711,8 @@ const Requests = () => {
                     <div className="bg-white px-6 py-3 rounded-[16px] shadow-[0px_10px_20px_rgba(0,0,0,0.05)] border border-[#E0E7FF] min-w-[100px] text-center">
                       <span className="text-[#4318FF] font-black">
                         {(() => {
-                          if (
-                            selectedRequest.requestType === WorkLocation.CLIENT_VISIT ||
-                            selectedRequest.requestType === WorkLocation.WORK_FROM_HOME ||
-                            selectedRequest.requestType === LeaveRequestType.WFH ||
-                            selectedRequest.requestType === LeaveRequestType.CLIENT_VISIT ||
-                            selectedRequest.requestType === LeaveRequestType.LEAVE ||
-                            selectedRequest.requestType === LeaveRequestType.APPLY_LEAVE
-                          ) {
-                            return calculateDurationExcludingWeekends(
-                              selectedRequest.fromDate,
-                              selectedRequest.toDate,
-                            );
-                          } else {
-                            return selectedRequest.duration ||
-                              dayjs(selectedRequest.toDate).diff(
-                                dayjs(selectedRequest.fromDate),
-                                "day",
-                              ) + 1;
-                          }
+                          const dur = parseFloat(String(selectedRequest.duration));
+                          return !isNaN(dur) ? dur : 0;
                         })()}{" "}
                         Day(s)
                       </span>
