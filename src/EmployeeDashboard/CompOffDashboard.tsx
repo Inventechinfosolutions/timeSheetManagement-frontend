@@ -114,6 +114,7 @@ const CompOffDashboard: React.FC = () => {
   const [totalCompOffDays, setTotalCompOffDays] = useState(0);
   const [selectedCompOffBalance, setSelectedCompOffBalance] = useState(0);
   const [otherHalfType, setOtherHalfType] = useState<string>(WorkLocation.OFFICE);
+  const [blockedDates, setBlockedDates] = useState<string[]>([]);
 
   // Validation Refs
   const modalBodyRef = useRef<HTMLDivElement>(null);
@@ -356,8 +357,18 @@ const CompOffDashboard: React.FC = () => {
         .unwrap()
         .then((data: any) => setEmailConfig({ assignedManagerEmail: data?.assignedManagerEmail ?? null, hrEmail: data?.hrEmail ?? null }))
         .catch(() => setEmailConfig({ assignedManagerEmail: null, hrEmail: null }));
+      // Fetch blocked dates to disable them in the calendar picker
+      axios.get(`/api/leave-requests/employee/${employeeId}/blocked-dates`)
+        .then((res) => setBlockedDates(res.data || []))
+        .catch(() => setBlockedDates([]));
     }
   }, [isModalVisible, employeeId, dispatch]);
+
+  const disabledDate = (current: Dayjs): boolean => {
+    if (!current) return false;
+    const str = current.format('YYYY-MM-DD');
+    return isWeekend(current) || isHoliday(current) || blockedDates.includes(str);
+  };
 
   const availableOptions = availableCompOffs
     .filter(c => c.remainingDays > 0)
@@ -928,6 +939,7 @@ const CompOffDashboard: React.FC = () => {
                         setDates(newDates as [any, any]);
                         if (date && dates?.[1] && validationErrors.dates) setValidationErrors(prev => ({ ...prev, dates: false }));
                     }}
+                    disabledDate={disabledDate}
                     format="DD-MM-YYYY"
                     placeholder="dd-mm-yyyy"
                     suffixIcon={null}
@@ -950,6 +962,7 @@ const CompOffDashboard: React.FC = () => {
                         setDates(newDates as [any, any]);
                         if (date && dates?.[0] && validationErrors.dates) setValidationErrors(prev => ({ ...prev, dates: false }));
                     }}
+                    disabledDate={disabledDate}
                     format="DD-MM-YYYY"
                     placeholder="dd-mm-yyyy"
                     suffixIcon={null}

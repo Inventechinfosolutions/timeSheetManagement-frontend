@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import dayjs from "dayjs";
 import { useParams, useLocation } from "react-router-dom";
 import { Modal, message } from "antd";
 import {
@@ -1022,10 +1023,7 @@ const MyTimesheet = ({
         }
 
         const existingRecord = records.find((r) => {
-          const rDate =
-            typeof r.workingDate === "string"
-              ? r.workingDate.split("T")[0]
-              : (r.workingDate as Date).toISOString().split("T")[0];
+          const rDate = dayjs(r.workingDate).format("YYYY-MM-DD");
           return rDate === workingDate;
         });
 
@@ -1104,8 +1102,8 @@ const MyTimesheet = ({
         const isHoliday = holidays?.find((h: any) => {
           const hDate = h.holidayDate || h.date;
           if (!hDate) return false;
-          const normHDate = typeof hDate === 'string' ? hDate.split('T')[0] : new Date(hDate).toISOString().split('T')[0];
-          const itemDateStr = typeof item.workingDate === 'string' ? item.workingDate.split('T')[0] : new Date(item.workingDate).toISOString().split('T')[0];
+          const normHDate = dayjs(hDate).format("YYYY-MM-DD");
+          const itemDateStr = dayjs(item.workingDate).format("YYYY-MM-DD");
           return normHDate === itemDateStr;
         });
 
@@ -1150,6 +1148,8 @@ const MyTimesheet = ({
         refreshDryRun();
         refreshDryRun();
         message.success("Attendance saved successfully");
+
+
       } catch (error: any) {
         const finalError = cleanErrorMessage(error?.response?.data?.message || error?.message || "Failed to save records.");
         message.error(finalError);
@@ -1164,8 +1164,8 @@ const MyTimesheet = ({
       const isHoliday = holidays?.find((h: any) => {
         const hDate = h.holidayDate || h.date;
         if (!hDate) return false;
-        const normHDate = typeof hDate === 'string' ? hDate.split('T')[0] : new Date(hDate).toISOString().split('T')[0];
-        const itemDateStr = typeof item.workingDate === 'string' ? item.workingDate.split('T')[0] : new Date(item.workingDate).toISOString().split('T')[0];
+        const normHDate = dayjs(hDate).format("YYYY-MM-DD");
+        const itemDateStr = dayjs(item.workingDate).format("YYYY-MM-DD");
         return normHDate === itemDateStr;
       });
       const hours = Number(item.totalHours);
@@ -1195,33 +1195,35 @@ const MyTimesheet = ({
           item.status === AttendanceStatus.WEEKEND),
     );
 
-    if (!isAdmin && !isManager) {
-      if (
-        halfDayItems.length > 0 ||
-        absentItems.length > 0 ||
-        clearedItems.length > 0
-      ) {
-        const showUnifiedModal = async () => {
-          const hasHalfDay = halfDayItems.length > 0;
-          const hasAbsent = absentItems.length > 0;
-          const hasCleared = clearedItems.length > 0;
+    // Helper: runs the actual save flow — used both directly and from the comp-off pre-confirm OK handler
+    const proceedWithSave = async () => {
+      if (!isAdmin && !isManager) {
+        if (
+          halfDayItems.length > 0 ||
+          absentItems.length > 0 ||
+          clearedItems.length > 0
+        ) {
+          const showUnifiedModal = async () => {
+            const hasHalfDay = halfDayItems.length > 0;
+            const hasAbsent = absentItems.length > 0;
+            const hasCleared = clearedItems.length > 0;
 
-          const halfDayDates = halfDayItems
-            .map((item) => new Date(item.workingDate).getDate())
-            .sort((a, b) => a - b)
-            .join(", ");
+            const halfDayDates = halfDayItems
+              .map((item) => new Date(item.workingDate).getDate())
+              .sort((a, b) => a - b)
+              .join(", ");
 
-          const absentDates = absentItems
-            .map((item) => new Date(item.workingDate).getDate())
-            .sort((a, b) => a - b)
-            .join(", ");
+            const absentDates = absentItems
+              .map((item) => new Date(item.workingDate).getDate())
+              .sort((a, b) => a - b)
+              .join(", ");
 
-          const clearedDates = clearedItems
-            .map((item) => new Date(item.workingDate).getDate())
-            .sort((a, b) => a - b)
-            .join(", ");
+            const clearedDates = clearedItems
+              .map((item) => new Date(item.workingDate).getDate())
+              .sort((a, b) => a - b)
+              .join(", ");
 
-          return new Promise<void>((resolve, reject) => {
+          return new Promise<void>((resolve) => {
             Modal.confirm({
               title: null,
               icon: null,
@@ -1396,6 +1398,52 @@ const MyTimesheet = ({
                           all values to empty.
                         </p>
                       </div>
+                      {/* Comp-Off Warning: Only for IT Full-Timers clearing a weekend/holiday */}
+                      {(() => {
+                        const isIT = entity?.department === Department.IT;
+                        const isFullTimer = entity?.employmentType === EmploymentType.FULL_TIMER;
+                        if (!isIT || !isFullTimer) return null;
+                        const compOffCleared = clearedItems.filter((item: any) => {
+                          const d = new Date(item.workingDate);
+                          const dayOfWeek = d.getDay();
+                          const isWeekendDay = dayOfWeek === 0 || dayOfWeek === 6;
+                          const isHol = holidays?.some((h: any) => {
+                            const hDate = h.holidayDate || h.date;
+                            if (!hDate) return false;
+                            const norm = typeof hDate === "string" ? hDate.split("T")[0] : new Date(hDate).toISOString().split("T")[0];
+                            const itemStr = typeof item.workingDate === "string" ? item.workingDate.split("T")[0] : new Date(item.workingDate).toISOString().split("T")[0];
+                            return norm === itemStr;
+                          });
+                          return isWeekendDay || isHol;
+                        });
+                        if (compOffCleared.length === 0) return null;
+                        const compOffDates = compOffCleared
+                          .map((item: any) => {
+                            const d = new Date(item.workingDate);
+                            return `${d.getDate()} ${d.toLocaleString('default', { month: 'short' })}`;
+                          })
+                          .join(", ");
+                        return (
+                          <div
+                            style={{
+                              marginTop: "12px",
+                              backgroundColor: "#fff7e6",
+                              padding: "10px 15px",
+                              borderRadius: "8px",
+                              borderLeft: "4px solid #fa8c16",
+                            }}
+                          >
+                            <p style={{ margin: 0, fontSize: "13px", color: "#d46b08", fontWeight: 600 }}>
+                              ⚠️ Comp-Off Warning
+                            </p>
+                            <p style={{ margin: "4px 0 0", fontSize: "13px", color: "#434343" }}>
+                              Clearing attendance on <strong>{compOffDates}</strong> will also{" "}
+                              <strong>delete the linked Comp-Off credit</strong> for that date.
+                              This cannot be undone.
+                            </p>
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
 
@@ -1433,6 +1481,7 @@ const MyTimesheet = ({
                 setManuallyEditedIndices(new Set());
                 setLocalInputValues({});
                 refreshData();
+                resolve();
               },
               okButtonProps: {
                 size: "large",
@@ -1519,15 +1568,92 @@ const MyTimesheet = ({
                   const errorMsg = cleanErrorMessage(err?.response?.data?.message || err?.message || "Failed to process requests");
                   message.error(errorMsg);
                 }
+                resolve();
               },
             });
           });
         };
 
-        await showUnifiedModal();
-      } else {
-        await handleActualSave(payload);
+          await showUnifiedModal();
+        } else {
+          await handleActualSave(payload);
+        }
       }
+    };
+
+    // Comp-Off Pre-Save Confirm: for IT Full-Timers saving on non-working days
+    const isITFT = entity?.department === Department.IT && entity?.employmentType === EmploymentType.FULL_TIMER;
+    const compOffItems = payload.filter((item) => {
+      const d = new Date(item.workingDate);
+      const dayOfWeek = d.getDay();
+      const isWeekendDay = dayOfWeek === 0 || dayOfWeek === 6;
+      const isHoliday = holidays?.some((h: any) => {
+        const hDate = h.holidayDate || h.date;
+        if (!hDate) return false;
+        const norm = dayjs(hDate).format("YYYY-MM-DD");
+        const itemStr = dayjs(item.workingDate).format("YYYY-MM-DD");
+        return norm === itemStr;
+      });
+      const hours = Number(item.totalHours);
+      return isITFT && (isWeekendDay || isHoliday) && hours >= 4 && hours <= 9;
+    });
+
+    if (!isAdmin && !isManager && isITFT && compOffItems.length > 0) {
+      const compOffDates = compOffItems
+        .map((item) => {
+          const d = new Date(item.workingDate);
+          return `${d.getDate()} ${d.toLocaleString("default", { month: "short" })}`;
+        })
+        .join(", ");
+
+      Modal.confirm({
+        title: null,
+        icon: null,
+        width: 480,
+        centered: true,
+        wrapClassName: "attractive-unified-modal",
+        content: (
+          <div style={{ padding: "10px 0" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
+              <div style={{ backgroundColor: "#f6ffed", borderRadius: "50%", padding: "8px", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid #b7eb8f" }}>
+                <Rocket size={28} color="#52c41a" />
+              </div>
+              <h2 style={{ margin: 0, fontSize: "20px", fontWeight: 700 }}>Comp-Off Will Be Earned</h2>
+            </div>
+            <div style={{ backgroundColor: "#f6ffed", padding: "12px 16px", borderRadius: "8px", borderLeft: "4px solid #52c41a", marginBottom: "16px" }}>
+              <p style={{ margin: 0, fontSize: "14px", lineHeight: "1.7", color: "#434343" }}>
+                <strong>{compOffDates}</strong> {compOffItems.length === 1 ? "is a" : "are"} non-working {compOffItems.length === 1 ? "day" : "days"}.<br />
+                Saving will create a <strong>Comp-Off credit</strong> for {compOffItems.length === 1 ? "this date" : "these dates"} that can be viewed in your{" "}
+                <strong>Comp-Off Dashboard</strong>.
+              </p>
+            </div>
+            <p style={{ margin: 0, fontSize: "13px", color: "#8c8c8c" }}>
+              You can use this credit to apply for a Comp-Off Leave whenever you need it.
+            </p>
+          </div>
+        ),
+        okText: "Save",
+        cancelText: "Cancel",
+        okButtonProps: {
+          size: "large",
+          style: { borderRadius: "6px", fontWeight: 600, backgroundColor: "#52c41a", borderColor: "#52c41a" },
+        },
+        cancelButtonProps: {
+          size: "large",
+          style: { borderRadius: "6px" },
+        },
+        onOk: async () => {
+          await proceedWithSave();
+        },
+        onCancel: () => {
+          setManuallyEditedIndices(new Set());
+          setLocalInputValues({});
+          refreshData();
+        },
+      });
+    } else if (!isAdmin && !isManager) {
+      // Non-IT-FT employee or no comp-off eligible items — proceed directly
+      await proceedWithSave();
     } else {
       // Admin / Manager Logic
       const hasImportantItems =
