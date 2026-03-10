@@ -488,6 +488,21 @@ const AdminLeaveManagement = () => {
     };
   }, []);
 
+  // Helper to determine if a request type/half day choice is "Away" (deductible)
+  const isAway = (type: string | null | undefined): boolean => {
+    if (!type) return false;
+    const t = type.toLowerCase();
+    // Things that are NOT away: Office, Present
+    if (t === "office" || t === "present" || t === (WorkLocation.OFFICE as string).toLowerCase() || t === (WorkLocation.PRESENT as string).toLowerCase()) {
+      return false;
+    }
+    return true;
+  };
+
+  const getDurationFactor = (h1: string | null | undefined, h2: string | null | undefined): number => {
+    return isAway(h1) && isAway(h2) ? 1.0 : 0.5;
+  };
+
   const validateForm = (shouldScroll = false) => {
     let isValid = true;
     const newErrors = {
@@ -680,11 +695,11 @@ const AdminLeaveManagement = () => {
       // For Client Visit, WFH, and Leave (including Half Day), fetch attendance records first to check for existing leaves
       let duration: number;
       if (
-        finalRequestType === WorkLocation.CLIENT_VISIT ||
-        finalRequestType === WorkLocation.WORK_FROM_HOME ||
-        finalRequestType === LeaveRequestType.APPLY_LEAVE ||
-        finalRequestType === LeaveRequestType.LEAVE ||
-        finalRequestType === LeaveRequestType.HALF_DAY
+        (finalRequestType as string) === WorkLocation.CLIENT_VISIT ||
+        (finalRequestType as string) === WorkLocation.WORK_FROM_HOME ||
+        (finalRequestType as string) === LeaveRequestType.APPLY_LEAVE ||
+        (finalRequestType as string) === LeaveRequestType.LEAVE ||
+        (finalRequestType as string) === LeaveRequestType.HALF_DAY
       ) {
         // Fetch attendance records synchronously before calculating duration
         const attendanceAction = await dispatch(
@@ -714,22 +729,7 @@ const AdminLeaveManagement = () => {
           leaveDurationType === HalfDayType.FIRST_HALF ||
           leaveDurationType === HalfDayType.SECOND_HALF
         ) {
-          const mainType = finalRequestType; // WorkLocation.WORK_FROM_HOME, WorkLocation.CLIENT_VISIT, LeaveRequestType.HALF_DAY (Leave), etc.
-          const other = otherHalfType; // WorkLocation.OFFICE, WorkLocation.WORK_FROM_HOME, WorkLocation.CLIENT_VISIT, LeaveRequestType.LEAVE
-
-          const isMainRemote =
-            mainType === WorkLocation.WORK_FROM_HOME ||
-            mainType === WorkLocation.CLIENT_VISIT;
-          const isOtherRemote =
-            other === WorkLocation.WORK_FROM_HOME ||
-            other === WorkLocation.CLIENT_VISIT;
-
-          // User Requirement: WFH + CV = 1 Day
-          if (isMainRemote && isOtherRemote) {
-            duration = baseDuration; // 1.0 per day
-          } else {
-            duration = baseDuration * 0.5; // 0.5 per day
-          }
+          duration = baseDuration * getDurationFactor(halfDayType, otherHalfType);
         } else {
           duration = baseDuration;
         }
@@ -780,7 +780,6 @@ const AdminLeaveManagement = () => {
       }
 
       // 2. SMART OVERLAP HANDLING (Victim Logic)
-      // Mirroring logic from Requests.tsx to clean up overlapping WFH/CV/HalfDay requests
       if (createdRequest) {
         let victimTypes: string[] = [];
         const reqType = (finalRequestType || "").toLowerCase();
@@ -809,7 +808,6 @@ const AdminLeaveManagement = () => {
         let modificationHandledDates: string[] = [];
 
         // 1. Get potential victims from the Redux entities (Leave History)
-        // We ensure we are looking at the selected employee's history
         const overlaps = (entities || [])
           .filter(
             (e: any) =>
@@ -824,11 +822,8 @@ const AdminLeaveManagement = () => {
 
         for (const victim of overlaps) {
           const victimWorkingDates = getEffectiveDates(victim);
-
-          // A victim only overlaps if it claims dates that are in the new request's range
-          // AND not already handled by a newer request
           const intersectionDates = victimWorkingDates.filter(
-            (d) =>
+            (d: string) =>
               requestWorkingDates.includes(d) &&
               !modificationHandledDates.includes(d),
           );
@@ -847,42 +842,24 @@ const AdminLeaveManagement = () => {
                   payload: {
                     fromDate: iStart,
                     toDate: iEnd,
-                    duration: datesNeedingModification.length,
-                    // Split request due to gap -> ensure segments carry original half types or LeaveRequestType.LEAVE if generic
-                    firstHalf: victim.isHalfDay
-                      ? victim.firstHalf
-                      : victim.requestType,
-                    secondHalf: victim.isHalfDay
-                      ? victim.secondHalf
-                      : victim.requestType,
+                    duration: datesNeedingModification.length * (victim.isHalfDay ? getDurationFactor(victim.firstHalf, victim.secondHalf) : 1.0),
+                    firstHalf: victim.isHalfDay ? victim.firstHalf : victim.requestType,
+                    secondHalf: victim.isHalfDay ? victim.secondHalf : victim.requestType,
                     sourceRequestId: createdId,
                     sourceRequestType: finalRequestType,
                   },
                 }),
               ).unwrap();
 
-              modificationHandledDates = [
-                ...new Set([
-                  ...modificationHandledDates,
-                  ...datesNeedingModification,
-                ]),
-              ];
+              modificationHandledDates = [...new Set([...modificationHandledDates, ...datesNeedingModification])];
             }
 
             // Handle remaining segments of the victim request
-            const remainingVictimDates = victimWorkingDates.filter(
-              (d) => !intersectionDates.includes(d),
-            );
+            const remainingVictimDates = victimWorkingDates.filter((d: string) => !intersectionDates.includes(d));
 
             if (remainingVictimDates.length === 0) {
-              await dispatch(
-                updateLeaveRequestStatus({
-                  id: victim.id,
-                  status: LeaveRequestStatus.CANCELLED,
-                }),
-              ).unwrap();
+              await dispatch(updateLeaveRequestStatus({ id: victim.id, status: LeaveRequestStatus.CANCELLED })).unwrap();
             } else {
-              // Check for gaps
               const segments: string[][] = [];
               let currentSegment: string[] = [];
 
@@ -891,17 +868,11 @@ const AdminLeaveManagement = () => {
                 if (currentSegment.length === 0) {
                   currentSegment.push(remainingVictimDates[i]);
                 } else {
-                  const prevDate = dayjs(
-                    currentSegment[currentSegment.length - 1],
-                  );
+                  const prevDate = dayjs(currentSegment[currentSegment.length - 1]);
                   let nextWorkingDay = prevDate.add(1, "day");
-                  while (
-                    isWeekend(nextWorkingDay) ||
-                    isHoliday(nextWorkingDay)
-                  ) {
+                  while (isWeekend(nextWorkingDay) || isHoliday(nextWorkingDay)) {
                     nextWorkingDay = nextWorkingDay.add(1, "day");
                   }
-
                   if (date.isSame(nextWorkingDay, "day")) {
                     currentSegment.push(remainingVictimDates[i]);
                   } else {
@@ -913,25 +884,16 @@ const AdminLeaveManagement = () => {
               segments.push(currentSegment);
 
               if (segments.length === 1) {
-                // Contiguous -> Just update parent
                 await dispatch(
                   updateParentRequest({
                     parentId: victim.id,
-                    duration: remainingVictimDates.length,
+                    duration: remainingVictimDates.length * (victim.isHalfDay ? getDurationFactor(victim.firstHalf, victim.secondHalf) : 1.0),
                     fromDate: remainingVictimDates[0],
-                    toDate:
-                      remainingVictimDates[remainingVictimDates.length - 1],
+                    toDate: remainingVictimDates[remainingVictimDates.length - 1],
                   }),
                 ).unwrap();
               } else {
-                // Split occurred -> Cancel original and create new Approved segments
-                await dispatch(
-                  updateLeaveRequestStatus({
-                    id: victim.id,
-                    status: LeaveRequestStatus.CANCELLED,
-                  }),
-                ).unwrap();
-
+                await dispatch(updateLeaveRequestStatus({ id: victim.id, status: LeaveRequestStatus.CANCELLED })).unwrap();
                 for (const segment of segments) {
                   await dispatch(
                     submitRequestModification({
@@ -939,7 +901,7 @@ const AdminLeaveManagement = () => {
                       payload: {
                         fromDate: segment[0],
                         toDate: segment[segment.length - 1],
-                        duration: segment.length,
+                        duration: segment.length * (victim.isHalfDay ? getDurationFactor(victim.firstHalf, victim.secondHalf) : 1.0),
                         sourceRequestId: createdId,
                         sourceRequestType: finalRequestType,
                         overrideStatus: LeaveRequestStatus.APPROVED,
@@ -953,7 +915,7 @@ const AdminLeaveManagement = () => {
         }
       }
 
-      // 3. Approve the New Request
+      // 1. Approve the New Request
       const approveAction = await dispatch(
         updateLeaveRequestStatus({
           id: createdId,
@@ -2237,22 +2199,9 @@ const AdminLeaveManagement = () => {
                               {dayjs(item.fromDate).format("DD MMM")} -{" "}
                               {dayjs(item.toDate).format("DD MMM - YYYY")},
                               TOTAL:{" "}
-                              {item.duration ||
-                                (item.requestType ===
-                                  WorkLocation.CLIENT_VISIT ||
-                                item.requestType ===
-                                  WorkLocation.WORK_FROM_HOME ||
-                                item.requestType ===
-                                  LeaveRequestType.APPLY_LEAVE ||
-                                item.requestType === LeaveRequestType.LEAVE
-                                  ? calculateDurationExcludingWeekends(
-                                      item.fromDate,
-                                      item.toDate,
-                                    )
-                                  : dayjs(item.toDate).diff(
-                                      dayjs(item.fromDate),
-                                      "day",
-                                    ) + 1)}{" "}
+                              {item.duration !== undefined && item.duration !== null
+                                ? parseFloat(String(item.duration))
+                                : 0}{" "}
                               DAY(S)
                             </span>
                           </td>
@@ -2533,7 +2482,7 @@ const AdminLeaveManagement = () => {
                                 if (ccEmailError) setCcEmailError("");
                               }}
                               onKeyDown={(e) => {
-                                if (e.key === "Enter" || e.key === ",") {
+                                if (e.key === "Enter" || e.key === "," || e.key === " ") {
                                   e.preventDefault();
                                   addCcEmail(ccEmailInput);
                                 }
@@ -2807,8 +2756,10 @@ const AdminLeaveManagement = () => {
                   <span className="bg-white px-3 py-1.5 rounded-lg shadow-sm border border-blue-100">
                     {formData.startDate && formData.endDate
                       ? (() => {
-                          if (isViewMode)
-                            return `${parseFloat(String(formData.duration))} Day(s)`;
+                          if (isViewMode) {
+                            const dur = parseFloat(String(formData.duration));
+                            return `${isNaN(dur) ? 0 : dur} Day(s)`;
+                          }
 
                           if (
                             selectedLeaveType === WorkLocation.CLIENT_VISIT ||
@@ -2828,17 +2779,23 @@ const AdminLeaveManagement = () => {
 
                             if (isHalf) {
                               const mainType =
-                                selectedLeaveType === LeaveRequestType.APPLY_LEAVE
-                                  ? LeaveRequestType.LEAVE
-                                  : selectedLeaveType;
-                              const other = otherHalfType;
+                                ((selectedLeaveType as string) === LeaveRequestType.APPLY_LEAVE ||
+                                (selectedLeaveType as string) === LeaveRequestType.HALF_DAY
+                                  ? AttendanceStatus.LEAVE
+                                  : selectedLeaveType) || WorkLocation.OFFICE;
+                              const other = otherHalfType || WorkLocation.OFFICE;
 
                               const isMainRemote =
-                                mainType === WorkLocation.WORK_FROM_HOME ||
-                                mainType === WorkLocation.CLIENT_VISIT;
+                                (mainType as string) === WorkLocation.WORK_FROM_HOME ||
+                                (mainType as string) === WorkLocation.CLIENT_VISIT ||
+                                (mainType as string) === LeaveRequestType.LEAVE ||
+                                (mainType as string) === AttendanceStatus.LEAVE;
+
                               const isOtherRemote =
-                                other === WorkLocation.WORK_FROM_HOME ||
-                                other === WorkLocation.CLIENT_VISIT;
+                                (other as string) === WorkLocation.WORK_FROM_HOME ||
+                                (other as string) === WorkLocation.CLIENT_VISIT ||
+                                (other as string) === LeaveRequestType.LEAVE ||
+                                (other as string) === AttendanceStatus.LEAVE;
 
                               if (isMainRemote && isOtherRemote) {
                                 return `${baseDur} Day(s)`;

@@ -401,6 +401,21 @@ const LeaveManagement = () => {
     return false;
   };
 
+  // Helper to determine if a request type/half day choice is "Away" (deductible)
+  const isAway = (type: string | null | undefined): boolean => {
+    if (!type) return false;
+    const t = type.toLowerCase();
+    // Things that are NOT away: Office, Present
+    if (t === "office" || t === "present" || t === (WorkLocation.OFFICE as string).toLowerCase() || t === (WorkLocation.PRESENT as string).toLowerCase()) {
+      return false;
+    }
+    return true;
+  };
+
+  const getDurationFactor = (h1: string | null | undefined, h2: string | null | undefined): number => {
+    return isAway(h1) && isAway(h2) ? 1.0 : 0.5;
+  };
+
   const validateForm = (shouldScroll = false) => {
     let isValid = true;
     const newErrors = {
@@ -692,11 +707,11 @@ const LeaveManagement = () => {
 
       // For Client Visit, WFH, and Leave (including Half Day), fetch attendance records first to check for existing leaves
       if (
-        finalRequestType === WorkLocation.CLIENT_VISIT ||
-        finalRequestType === WorkLocation.WORK_FROM_HOME ||
-        finalRequestType === LeaveRequestType.APPLY_LEAVE ||
-        finalRequestType === LeaveRequestType.LEAVE ||
-        finalRequestType === LeaveRequestType.HALF_DAY
+        (finalRequestType as string) === WorkLocation.CLIENT_VISIT ||
+        (finalRequestType as string) === WorkLocation.WORK_FROM_HOME ||
+        (finalRequestType as string) === LeaveRequestType.APPLY_LEAVE ||
+        (finalRequestType as string) === LeaveRequestType.LEAVE ||
+        (finalRequestType as string) === LeaveRequestType.HALF_DAY
       ) {
         // Fetch attendance records synchronously before processing
         const attendanceAction = await dispatch(
@@ -736,23 +751,7 @@ const LeaveManagement = () => {
               if (segmentDuration > 0) {
                 let duration = segmentDuration;
                 if (isSplitRequest) {
-                  // Custom Logic: WFH + CV = 1 Day
-                  const mainType = finalRequestType;
-                  const other = otherHalfType;
-                  const isMainRemote =
-                    mainType === WorkLocation.WORK_FROM_HOME ||
-                    mainType === WorkLocation.CLIENT_VISIT;
-                  const isOtherRemote =
-                    other === WorkLocation.WORK_FROM_HOME ||
-                    other === WorkLocation.CLIENT_VISIT;
-
-                  if (isMainRemote && isOtherRemote) {
-                    duration = segmentDuration; // 1.0 per day
-                  } else {
-                    duration = segmentDuration * 0.5; // 0.5 per day
-                  }
-                } else {
-                  duration = segmentDuration;
+                  duration = segmentDuration * getDurationFactor(halfDayType, otherHalfType);
                 }
 
                 await dispatch(
@@ -794,22 +793,7 @@ const LeaveManagement = () => {
 
         let duration = baseDuration;
         if (isSplitRequest) {
-          const mainType = finalRequestType;
-          const other = otherHalfType;
-          const isMainRemote =
-            mainType === WorkLocation.WORK_FROM_HOME ||
-            mainType === WorkLocation.CLIENT_VISIT;
-          const isOtherRemote =
-            other === WorkLocation.WORK_FROM_HOME ||
-            other === WorkLocation.CLIENT_VISIT;
-
-          if (isMainRemote && isOtherRemote) {
-            duration = baseDuration;
-          } else {
-            duration = baseDuration * 0.5;
-          }
-        } else {
-          duration = baseDuration;
+          duration = baseDuration * getDurationFactor(halfDayType, otherHalfType);
         }
 
         dispatch(
@@ -836,7 +820,9 @@ const LeaveManagement = () => {
           formData.startDate && formData.endDate
             ? dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1
             : 0;
-        const duration = isSplitRequest ? baseDuration * 0.5 : baseDuration;
+        const duration = isSplitRequest
+          ? baseDuration * getDurationFactor(halfDayType, otherHalfType)
+          : baseDuration;
 
         dispatch(
           submitLeaveRequest({
@@ -1879,20 +1865,9 @@ const LeaveManagement = () => {
                         <span className="text-sm font-bold text-[#2B3674]">
                           {dayjs(item.fromDate).format("DD MMM")} -{" "}
                           {dayjs(item.toDate).format("DD MMM - YYYY")}, TOTAL:{" "}
-                          {Number(item.duration ||
-                            (item.requestType === WorkLocation.CLIENT_VISIT ||
-                            item.requestType === WorkLocation.WORK_FROM_HOME ||
-                            item.requestType === LeaveRequestType.APPLY_LEAVE ||
-                            item.requestType === LeaveRequestType.LEAVE ||
-                            item.requestType === LeaveRequestType.HALF_DAY
-                              ? calculateDurationExcludingWeekends(
-                                  item.fromDate,
-                                  item.toDate,
-                                )
-                              : dayjs(item.toDate).diff(
-                                  dayjs(item.fromDate),
-                                  "day",
-                                ) + 1)).toFixed(1)}{" "}
+                          {item.duration !== undefined && item.duration !== null
+                            ? parseFloat(String(item.duration))
+                            : 0}{" "}
                           DAY(S)
                         </span>
                       </td>
@@ -2444,47 +2419,39 @@ const LeaveManagement = () => {
                 <div className="px-4 py-3 rounded-2xl bg-[#F4F7FE] font-bold text-[#4318FF] inline-flex items-center gap-2 min-h-[48px]">
                   <span className="bg-white px-3 py-1.5 rounded-lg shadow-sm border border-blue-100">
                     {formData.startDate && formData.endDate
-                        ? (() => {
-                            if (isViewMode)
-                              return `${Number(formData.duration).toFixed(1)} Day(s)`;
-
-                            if (
-                              selectedLeaveType === WorkLocation.CLIENT_VISIT ||
-                              selectedLeaveType === WorkLocation.WORK_FROM_HOME ||
-                              selectedLeaveType === LeaveRequestType.APPLY_LEAVE ||
-                              selectedLeaveType === LeaveRequestType.LEAVE ||
-                              selectedLeaveType === LeaveRequestType.HALF_DAY
-                            ) {
-                              const baseDur = calculateDurationExcludingWeekends(
-                                formData.startDate,
-                                formData.endDate,
-                              );
-                              const isHalf =
-                                leaveDurationType === HalfDayType.HALF_DAY ||
-                                leaveDurationType === HalfDayType.FIRST_HALF ||
-                                leaveDurationType === HalfDayType.SECOND_HALF;
-
-                              if (isHalf) {
-                                const mainType =
-                                  selectedLeaveType === LeaveRequestType.APPLY_LEAVE
-                                    ? LeaveRequestType.LEAVE
-                                    : selectedLeaveType;
-                                const other = otherHalfType;
-
-                                const isMainRemote = mainType === WorkLocation.WORK_FROM_HOME || mainType === WorkLocation.CLIENT_VISIT;
-                                const isOtherRemote = other === WorkLocation.WORK_FROM_HOME || other === WorkLocation.CLIENT_VISIT;
-
-                                if (isMainRemote && isOtherRemote) {
-                                  return `${baseDur} Day(s)`;
-                                } else {
-                                  return `${baseDur * 0.5} Day(s)`;
-                                }
+                          ? (() => {
+                              if (isViewMode) {
+                                const dur = parseFloat(String(formData.duration));
+                                return `${isNaN(dur) ? 0 : dur} Day(s)`;
                               }
-                              return `${baseDur} Day(s)`;
-                            } else {
-                              return `${dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1} Day(s)`;
-                            }
-                          })()
+
+                              if (
+                                selectedLeaveType === WorkLocation.CLIENT_VISIT ||
+                                selectedLeaveType === WorkLocation.WORK_FROM_HOME ||
+                                selectedLeaveType === LeaveRequestType.APPLY_LEAVE ||
+                                selectedLeaveType === LeaveRequestType.LEAVE ||
+                                selectedLeaveType === LeaveRequestType.HALF_DAY
+                              ) {
+                                const baseDur = calculateDurationExcludingWeekends(
+                                  formData.startDate,
+                                  formData.endDate,
+                                );
+                                const isHalf =
+                                  leaveDurationType === HalfDayType.HALF_DAY ||
+                                  leaveDurationType === HalfDayType.FIRST_HALF ||
+                                  leaveDurationType === HalfDayType.SECOND_HALF;
+                                if (isHalf) {
+                                  const factor = getDurationFactor(
+                                    leaveDurationType === HalfDayType.HALF_DAY ? halfDayType : leaveDurationType,
+                                    otherHalfType
+                                  );
+                                  return `${baseDur * factor} Day(s)`;
+                                }
+                                return `${baseDur} Day(s)`;
+                              } else {
+                                return `${dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1} Day(s)`;
+                              }
+                            })()
                       : "0 Days"}
                   </span>
                 </div>
