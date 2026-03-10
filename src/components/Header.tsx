@@ -1,4 +1,5 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
+import dayjs from "dayjs";
 import {
   LogOut,
   Bell,
@@ -505,8 +506,8 @@ const Header = ({
                                         {message}
                                       </span>
                                       <span className="text-[10px] text-gray-400">
-                                        {String(notif.fromDate).split("T")[0]}{" "}
-                                        to {String(notif.toDate).split("T")[0]}
+                                        {dayjs(notif.fromDate).format("YYYY-MM-DD")}{" "}
+                                        to {dayjs(notif.toDate).format("YYYY-MM-DD")}
                                       </span>
                                     </div>
                                   </div>
@@ -762,15 +763,15 @@ const Header = ({
                                           </span>
                                           <span className="text-[10px] text-gray-400">
                                             {
-                                              String(update.fromDate).split(
-                                                "T",
-                                              )[0]
+                                              dayjs(update.fromDate).format(
+                                                "YYYY-MM-DD",
+                                              )
                                             }{" "}
                                             to{" "}
                                             {
-                                              String(update.toDate).split(
-                                                "T",
-                                              )[0]
+                                              dayjs(update.toDate).format(
+                                                "YYYY-MM-DD",
+                                              )
                                             }
                                           </span>
                                         </div>
