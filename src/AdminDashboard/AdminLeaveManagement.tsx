@@ -583,10 +583,7 @@ const AdminLeaveManagement = () => {
     return holidays.some((h: any) => {
       const hDate = h.date || h.holidayDate;
       if (!hDate) return false;
-      const normalizedHDate =
-        typeof hDate === "string"
-          ? hDate.split("T")[0]
-          : new Date(hDate).toISOString().split("T")[0];
+      const normalizedHDate = dayjs(hDate).format("YYYY-MM-DD");
       return normalizedHDate === dateStr;
     });
   };
@@ -600,10 +597,7 @@ const AdminLeaveManagement = () => {
     return records.some((record: any) => {
       const recordDate = record.workingDate || record.working_date;
       if (!recordDate) return false;
-      const normalizedRecordDate =
-        typeof recordDate === "string"
-          ? recordDate.split("T")[0]
-          : new Date(recordDate).toISOString().split("T")[0];
+      const normalizedRecordDate = dayjs(recordDate).format("YYYY-MM-DD");
       // Check if the record has Leave status
       const status = record.status || record.attendance_status;
       return (
@@ -760,7 +754,7 @@ const AdminLeaveManagement = () => {
           otherHalfType: isSplitRequest ? otherHalfType : null,
           firstHalf: isSplitRequest ? halfDayType : finalRequestType,
           secondHalf: isSplitRequest ? otherHalfType : finalRequestType,
-          submittedDate: new Date().toISOString().split("T")[0],
+          submittedDate: dayjs().format("YYYY-MM-DD"),
           ccEmails: ccEmails && ccEmails.length > 0 ? ccEmails : [],
           documentKeys: uploadedDocumentKeys,
         }),

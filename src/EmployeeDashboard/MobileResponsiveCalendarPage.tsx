@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
+import dayjs from "dayjs";
 import { useLocation } from "react-router-dom";
 
 import {
@@ -169,8 +170,7 @@ const MobileResponsiveCalendarPage = ({
     );
 
     const format = (d: Date) => {
-      const offset = d.getTimezoneOffset() * 60000;
-      return new Date(d.getTime() - offset).toISOString().split("T")[0];
+      return dayjs(d).format("YYYY-MM-DD");
     };
 
     setDownloadDateRange({ from: format(start), to: format(end) });
@@ -230,9 +230,9 @@ const MobileResponsiveCalendarPage = ({
     return !!getBlocker(day);
   };
 
-  const checkIsHoliday = (day: number) => {
+    const checkIsHoliday = (day: number) => {
     if (!holidays || holidays.length === 0) return null;
-    const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const dateStr = dayjs(new Date(currentDate.getFullYear(), currentDate.getMonth(), day)).format("YYYY-MM-DD");
     return holidays.find(
       (h: any) => h.holidayDate === dateStr || h.date === dateStr,
     );

@@ -1,4 +1,5 @@
 import { RootState } from "../store";
+import dayjs from "dayjs";
 import { getEntities } from "../reducers/employeeDetails.reducer";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import {
@@ -58,10 +59,10 @@ const DailyStatus = () => {
   const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
   const [exportStartDate, setExportStartDate] = useState(
-    firstDay.toISOString().split("T")[0],
+    dayjs(firstDay).format("YYYY-MM-DD"),
   );
   const [exportEndDate, setExportEndDate] = useState(
-    lastDay.toISOString().split("T")[0],
+    dayjs(lastDay).format("YYYY-MM-DD"),
   );
   const [isExporting, setIsExporting] = useState(false);
 
@@ -132,12 +133,9 @@ const DailyStatus = () => {
     const empRecords = employeeRecords[empId] || [];
 
     // Get hours for today
-    const todayStr = new Date().toISOString().split("T")[0];
+    const todayStr = dayjs().format("YYYY-MM-DD");
     const todayRecord = empRecords.find((r) => {
-      const workingDateStr =
-        r.workingDate instanceof Date
-          ? r.workingDate.toISOString().split("T")[0]
-          : String(r.workingDate).split("T")[0];
+      const workingDateStr = dayjs(r.workingDate).format("YYYY-MM-DD");
       return workingDateStr === todayStr;
     });
     const todayHours = todayRecord?.totalHours || 0;

@@ -1,6 +1,19 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useMemo, useCallback, useState, useEffect, useRef } from "react";
+import dayjs from "dayjs";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
-import { Edit, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Calendar as CalendarIcon,
+  CheckCircle,
+  TrendingUp,
+  Clock,
+  Briefcase,
+  AlertCircle,
+  MapPin,
+  Laptop,
+  Edit,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { AttendanceStatus, UserType } from "../enums";
 import {
@@ -188,9 +201,8 @@ const TodayAttendance = ({
         calendarDate.getMonth() + 1,
         0,
       );
-      const endDateStr = `${selectedYear}-${String(calendarDate.getMonth() + 1).padStart(2, "0")}-${String(lastDayOfMonth.getDate()).padStart(2, "0")}`;
-
-      const startDateStr = `${selectedYear}-${String(calendarDate.getMonth() + 1).padStart(2, "0")}-01`;
+      const endDateStr = dayjs(lastDayOfMonth).format("YYYY-MM-DD");
+      const startDateStr = dayjs(calendarDate).startOf("month").format("YYYY-MM-DD");
 
       dispatch(
         fetchWorkTrendsDetailed({
@@ -226,17 +238,11 @@ const TodayAttendance = ({
 
     // Merge Master Holidays to align with MyTimesheet logic
     return entries.map((day) => {
-      const dateStr = `${day.fullDate.getFullYear()}-${String(
-        day.fullDate.getMonth() + 1,
-      ).padStart(2, "0")}-${String(day.fullDate.getDate()).padStart(2, "0")}`;
+      const dateStr = dayjs(day.fullDate).format("YYYY-MM-DD");
       const isMasterHoliday = holidays.find((h) => {
         const hDate = h.date || (h as any).holidayDate;
         if (!hDate) return false;
-        return (
-          (typeof hDate === "string"
-            ? hDate.split("T")[0]
-            : new Date(hDate).toISOString().split("T")[0]) === dateStr
-        );
+        return dayjs(hDate).format("YYYY-MM-DD") === dateStr;
       });
 
       if (isMasterHoliday) {
@@ -328,10 +334,7 @@ const TodayAttendance = ({
         currentEmployeeId &&
         currentEmployeeId !== currentUser?.employeeId
       ) {
-        const y = targetDate.getFullYear();
-        const m = String(targetDate.getMonth() + 1).padStart(2, "0");
-        const d = String(targetDate.getDate()).padStart(2, "0");
-        const dateStr = `${y}-${m}-${d}`;
+        const dateStr = dayjs(targetDate).format("YYYY-MM-DD");
         const basePath = location.pathname.startsWith("/manager-dashboard")
           ? "/manager-dashboard"
           : "/admin-dashboard";
@@ -359,10 +362,7 @@ const TodayAttendance = ({
       }
 
       const navTarget = `${basePath}/my-timesheet`;
-      const y = targetDate.getFullYear();
-      const m = String(targetDate.getMonth() + 1).padStart(2, "0");
-      const d = String(targetDate.getDate()).padStart(2, "0");
-      const dateStr = `${y}-${m}-${d}`;
+      const dateStr = dayjs(targetDate).format("YYYY-MM-DD");
 
       const state = {
         selectedDate: dateStr,

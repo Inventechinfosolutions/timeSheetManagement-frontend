@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
+import dayjs from "dayjs";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { RootState } from "../store";
 import {
@@ -257,10 +258,7 @@ const AdminEmployeeCalenderWrapper = () => {
               onBlockedClick={() => setIsModalOpen(true)}
               onNavigateToDate={(timestamp) => {
                 const targetDate = new Date(timestamp);
-                const y = targetDate.getFullYear();
-                const m = String(targetDate.getMonth() + 1).padStart(2, '0');
-                const d = String(targetDate.getDate()).padStart(2, '0');
-                const dateStr = `${y}-${m}-${d}`;
+                const dateStr = dayjs(targetDate).format("YYYY-MM-DD");
                 const basePath = location.pathname.startsWith("/manager-dashboard") 
                   ? "/manager-dashboard" 
                   : "/admin-dashboard";
@@ -272,10 +270,7 @@ const AdminEmployeeCalenderWrapper = () => {
                 onBlockedClick={() => setIsModalOpen(true)} 
                 onNavigateToDate={(timestamp) => {
                     const targetDate = new Date(timestamp);
-                    const y = targetDate.getFullYear();
-                    const m = String(targetDate.getMonth() + 1).padStart(2, '0');
-                    const d = String(targetDate.getDate()).padStart(2, '0');
-                    const dateStr = `${y}-${m}-${d}`;
+                    const dateStr = dayjs(targetDate).format("YYYY-MM-DD");
                     const basePath = location.pathname.startsWith("/manager-dashboard") 
                       ? "/manager-dashboard" 
                       : "/admin-dashboard";

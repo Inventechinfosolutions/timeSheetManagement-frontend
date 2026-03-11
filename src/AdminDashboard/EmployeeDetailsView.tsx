@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "../store";
 import { useState, useEffect } from "react";
 import axios from "axios";
+import dayjs from "dayjs";
 import {
   getEntity,
   updateEntity,
@@ -137,7 +138,7 @@ const EmployeeDetailsView = () => {
         employmentType: (employee.employmentType as "" | EmploymentType) || "",
         gender: (employee.gender as "" | "MALE" | "FEMALE") || "",
         joiningDate: employee.joiningDate
-          ? new Date(employee.joiningDate).toISOString().split("T")[0]
+          ? dayjs(employee.joiningDate).format("YYYY-MM-DD")
           : "",
         email: employee.email || "",
       });
@@ -269,7 +270,7 @@ const EmployeeDetailsView = () => {
       employmentType: (employee.employmentType as "" | EmploymentType) || "",
       gender: (employee.gender as "" | "MALE" | "FEMALE") || "",
       joiningDate: employee.joiningDate
-        ? new Date(employee.joiningDate).toISOString().split("T")[0]
+        ? dayjs(employee.joiningDate).format("YYYY-MM-DD")
         : "",
       email: employee.email || "",
     });
@@ -713,9 +714,7 @@ const EmployeeDetailsView = () => {
                   isEditing
                     ? editedData.joiningDate
                     : employee.joiningDate
-                      ? new Date(employee.joiningDate)
-                          .toISOString()
-                          .split("T")[0]
+                      ? dayjs(employee.joiningDate).format("YYYY-MM-DD")
                       : ""
                 }
                 onChange={(e) => {

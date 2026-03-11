@@ -2,6 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { TimesheetEntry } from '../types';
 import inventechLogo from '../assets/inventech-logo.jpg';
+import dayjs from "dayjs";
 
 interface PdfData {
     employeeName: string;
@@ -157,11 +158,11 @@ export const downloadPdf = ({
             const dateStr = new Date(entry.fullDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
             const hours = entry.totalHours ? entry.totalHours.toFixed(2) : "--";
             const d = new Date(entry.fullDate);
-            const entryDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            const entryDateStr = dayjs(entry.fullDate).format("YYYY-MM-DD");
             
             const holiday = holidays.find((h: any) => {
                  const hDate = h.holidayDate || h.date;
-                 return hDate && (String(hDate).split('T')[0]) === entryDateStr;
+                 return hDate && dayjs(hDate).format("YYYY-MM-DD") === entryDateStr;
             });
 
             let status = (entry.status || "").toUpperCase();
