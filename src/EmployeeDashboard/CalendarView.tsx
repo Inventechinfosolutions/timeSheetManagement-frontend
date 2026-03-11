@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
+import dayjs from "dayjs";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   ChevronLeft,
@@ -219,8 +220,7 @@ const Calendar = ({
     );
 
     const format = (d: Date) => {
-      const offset = d.getTimezoneOffset() * 60000;
-      return new Date(d.getTime() - offset).toISOString().split("T")[0];
+      return dayjs(d).format("YYYY-MM-DD");
     };
 
     setDownloadDateRange({ from: format(start), to: format(end) });
@@ -291,10 +291,10 @@ const Calendar = ({
     // 3. Restricted Activity (Mixed Combinations / Leave / WFH)
     // If the record exists and has non-office activity, it's blocked for editing
     if (!isAdmin && !isManager) {
-      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const dateStr = dayjs(d).format("YYYY-MM-DD");
       const entry = records.find((r) => {
         const rDate = new Date(r.workingDate);
-        return rDate.toISOString().split("T")[0] === dateStr;
+        return dayjs(rDate).format("YYYY-MM-DD") === dateStr;
       });
 
       if (entry) {
@@ -312,20 +312,14 @@ const Calendar = ({
           !val.includes("upcoming") &&
           !val.includes("holiday") &&
           !val.includes("weekend") &&
+          !val.includes("absent") &&
           val.trim() !== "";
 
         if (isRestricted(h1) || isRestricted(h2)) return true;
       }
     }
 
-    // 4. Department Weekend Rules
-    const dayOfWeek = d.getDay(); // 0 = Sun, 6 = Sat
 
-    // BLOCK SUNDAYS ONLY (Saturdays are now open for everyone)
-    if (dayOfWeek === 0) return true;
-
-    // 5. Holiday Blocking (All departments)
-    if (checkIsHoliday(d.getFullYear(), d.getMonth(), d.getDate())) return true;
 
     return false;
   };
@@ -354,10 +348,10 @@ const Calendar = ({
 
     // 3. Restricted Activity
     if (!isAdmin && !isManager) {
-      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const dateStr = dayjs(d).format("YYYY-MM-DD");
       const entry = records.find((r) => {
         const rDate = new Date(r.workingDate);
-        return rDate.toISOString().split("T")[0] === dateStr;
+        return dayjs(rDate).format("YYYY-MM-DD") === dateStr;
       });
 
       if (entry) {
@@ -370,6 +364,7 @@ const Calendar = ({
           !val.includes("upcoming") &&
           !val.includes("holiday") &&
           !val.includes("weekend") &&
+          !val.includes("absent") &&
           val.trim() !== "";
 
         if (isRestricted(h1) || isRestricted(h2))
@@ -382,9 +377,7 @@ const Calendar = ({
 
   const checkIsHoliday = (year: number, month: number, day: number) => {
     if (!holidays || holidays.length === 0) return null;
-    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(
-      day,
-    ).padStart(2, "0")}`;
+    const dateStr = dayjs(new Date(year, month, day)).format("YYYY-MM-DD");
     return holidays.find(
       (h: any) => h.holidayDate === dateStr || h.date === dateStr,
     );
@@ -679,7 +672,8 @@ const Calendar = ({
               const isSplitDay =
                 !!(entry as any)?.firstHalf &&
                 !!(entry as any)?.secondHalf &&
-                (entry as any).firstHalf !== (entry as any).secondHalf;
+                (entry as any).firstHalf !== (entry as any).secondHalf &&
+                !( ((isSunday || !!holiday) && Number(entry?.totalHours || 0) >= 1) || (isSaturday && Number(entry?.totalHours || 0) >= 4) );
 
               // Helper to get consistent styles matching MyTimesheet exactly
               const getStatusStyles = (
@@ -813,34 +807,46 @@ const Calendar = ({
                 // textClass = "text-red-700 font-bold";
                 statusLabel = "ABSENT";
               } else if (
-                holiday &&
-                (!entry?.totalHours || Number(entry.totalHours) === 0)
+                holiday
               ) {
                 // Master holidays take priority over everything (Leave, WFH, Client Visit, etc.) ONLY if no work hours
                 cellClass = `bg-blue-50 border-transparent hover:bg-blue-100 ${baseHover}`;
                 // textClass = "text-blue-700 font-bold";
-                statusLabel = holiday.name;
-              } else if (
-                isSunday ||
-                (isSaturdayWithNoData && entry && !entry.workLocation)
-              ) {
-                // Sunday: Always Weekend. Saturday: Only Weekend if no data
+                statusLabel = holiday.name || 'HOLIDAY';
+              } else if (isSunday) {
                 cellClass = `bg-red-50 border-transparent text-red-600 hover:bg-red-100 ${baseHover}`;
-                // textClass = "text-red-600 font-bold";
                 statusLabel = "WEEKEND";
-              } else if (isSplitDay) {
+              } else if (isSaturdayWithNoData) {
+                cellClass = `bg-red-50 border-transparent text-red-600 hover:bg-red-100 ${baseHover}`;
+                statusLabel = "WEEKEND";
+              } else if (entry && Number(entry.totalHours) > 0 && 
+                         entry?.status !== AttendanceStatus.LEAVE) {
+                const h = Number(entry.totalHours);
+                const isNonWorkingFull = ((isSunday || !!holiday) && h >= 1 && h <= 9) || (isSaturday && h >= 4 && h <= 9);
+                if (h > 6 || isNonWorkingFull) {
+                  cellClass = `bg-emerald-50 border-transparent hover:bg-emerald-100 ${baseHover}`;
+                  statusLabel = AttendanceStatus.FULL_DAY;
+                } else {
+                  cellClass = `bg-amber-100 border-amber-300 hover:bg-amber-200 ${baseHover}`;
+                  statusLabel = AttendanceStatus.HALF_DAY;
+                }
+              }
+ else if (isSplitDay) {
                 // Split Day: No border
                 cellClass = `bg-white border-transparent ${baseHover}`;
               } else if (entry?.status === AttendanceStatus.FULL_DAY) {
                 cellClass = `bg-emerald-50 border-transparent hover:bg-emerald-100 ${baseHover}`;
-                // textClass = "text-emerald-700 font-bold";
-                if (!entry?.totalHours || Number(entry.totalHours) === 0) {
+                // If it is a holiday with work, use Full Day label
+                if (holiday && entry && Number(entry.totalHours) > 0) {
+                   statusLabel = AttendanceStatus.FULL_DAY;
+                } else if (!entry?.totalHours || Number(entry.totalHours) === 0) {
                   statusLabel = "";
                 }
               } else if (entry?.status === AttendanceStatus.HALF_DAY) {
                 cellClass = `bg-amber-100 border-amber-300 hover:bg-amber-200 ${baseHover}`;
-                // textClass = "text-amber-700 font-bold";
-                if (!entry?.totalHours || Number(entry.totalHours) === 0) {
+                if (holiday && entry && Number(entry.totalHours) > 0) {
+                   statusLabel = AttendanceStatus.HALF_DAY;
+                } else if (!entry?.totalHours || Number(entry.totalHours) === 0) {
                   statusLabel = "";
                 }
               } else if (entry?.status === AttendanceStatus.LEAVE) {
@@ -867,9 +873,6 @@ const Calendar = ({
                 if (!entry?.totalHours || Number(entry.totalHours) === 0) {
                   statusLabel = AttendanceStatus.NOT_UPDATED;
                 }
-              } else if (entry?.status === AttendanceStatus.ABSENT) {
-                cellClass = `bg-red-50 border-transparent hover:bg-red-100 ${baseHover}`;
-                // textClass = "text-red-700 font-bold";
               } else if (entry?.isFuture) {
                 cellClass = `bg-white border-gray-300 hover:bg-gray-50 ${baseHover}`;
                 // textClass = "text-gray-300 font-bold";
@@ -899,13 +902,7 @@ const Calendar = ({
                     if (onNavigateToDate) {
                       onNavigateToDate(timestamp);
                     } else {
-                      const y = targetDate.getFullYear();
-                      const m = String(targetDate.getMonth() + 1).padStart(
-                        2,
-                        "0",
-                      );
-                      const d = String(targetDate.getDate()).padStart(2, "0");
-                      const dateStr = `${y}-${m}-${d}`;
+                      const dateStr = dayjs(targetDate).format("YYYY-MM-DD");
                       const isPrivilegedUser =
                         currentUser?.userType === UserType.ADMIN ||
                         currentUser?.userType === UserType.MANAGER ||
@@ -1003,7 +1000,7 @@ const Calendar = ({
                   </span>
 
                   {isBlocked &&
-                    (entry?.status as any) !== AttendanceStatus.ABSENT && (
+                    entry?.status !== AttendanceStatus.ABSENT && (
                       <div className="absolute top-2 right-2 z-10 transition-transform hover:scale-110">
                         <ShieldBan
                           size={14}
@@ -1037,7 +1034,7 @@ const Calendar = ({
                         <span
                           className={`text-2xl font-medium text-gray-800 leading-none`}
                         >
-                          {entry.totalHours && entry.totalHours > 0 ? entry.totalHours : "-"}
+                          {entry.totalHours || entry.totalHours === 0 ? entry.totalHours : "-"}
                         </span>
                         <span className="block text-[8px] font-bold text-black uppercase">
                           hrs
@@ -1058,12 +1055,12 @@ const Calendar = ({
 
                   <div
                     className={`text-[10px] font-bold uppercase truncate w-full text-center px-1 py-1 rounded-md mt-1 backdrop-blur-sm z-10                         ${
-                      entry?.status === AttendanceStatus.ABSENT
+                      (entry?.status as any) === AttendanceStatus.ABSENT
                         ? "text-white bg-[#EE5D50]/70"
                         : holiday
-                          ? entry?.totalHours && Number(entry.totalHours) > 0
-                            ? "text-white bg-[#01B574]"
-                            : "text-white bg-[#1890FF]/70"
+                          ? "text-white bg-[#1890FF]/70"
+                        : isSunday
+                          ? "text-white bg-red-400/70"
                           : isSplitDay
                             ? isWorkLoc((entry as any).firstHalf) &&
                               isWorkLoc((entry as any).secondHalf)
@@ -1082,11 +1079,8 @@ const Calendar = ({
                                       entry?.workLocation === "WFH" ||
                                       entry?.status === "WFH"
                                     ? "text-white bg-[#4318FF]/70"
-                                    : isIncomplete && statusLabel
-                                      ? "text-white bg-[#64748B]/90"
-                                      : (entry?.status as any) ===
-                                          AttendanceStatus.ABSENT
-                                        ? "text-white bg-[#EE5D50]/70"
+                                      : isIncomplete && statusLabel
+                                        ? "text-white bg-[#64748B]/90"
                                         : entry?.isWeekend
                                           ? "text-white bg-red-400/70"
                                           : "text-white bg-[#64748B]/90"
@@ -1095,9 +1089,10 @@ const Calendar = ({
                   >
                     {(entry?.status as any) === AttendanceStatus.ABSENT
                       ? "ABSENT"
-                      : holiday &&
-                          (!entry?.totalHours || Number(entry.totalHours) === 0)
-                        ? holiday.name
+                      : holiday
+                        ? holiday.name || 'HOLIDAY'
+                      : (isSunday || (isSaturdayWithNoData && !entry?.workLocation))
+                        ? "WEEKEND"
                         : isSplitDay
                           ? isWorkLoc((entry as any).firstHalf) &&
                             isWorkLoc((entry as any).secondHalf)

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import dayjs from "dayjs";
 import Chart from "react-apexcharts";
 import { useNavigate, useLocation } from "react-router-dom";
 import { RootState } from "../store";
@@ -100,10 +101,10 @@ const AdminDashboard = () => {
   const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
   const [exportStartDate, setExportStartDate] = useState(
-    firstDay.toISOString().split("T")[0],
+    dayjs(firstDay).format("YYYY-MM-DD"),
   );
   const [exportEndDate, setExportEndDate] = useState(
-    lastDay.toISOString().split("T")[0],
+    dayjs(lastDay).format("YYYY-MM-DD"),
   );
   const [isExporting, setIsExporting] = useState(false);
 
@@ -228,7 +229,7 @@ const AdminDashboard = () => {
   // Memoized Stats & Chart Data
   const stats = useMemo(() => {
     const allAttendance = Object.values(employeeRecords).flat();
-    const todayStr = new Date().toISOString().split("T")[0];
+    const todayStr = dayjs().format("YYYY-MM-DD");
 
     if (!allAttendance.length)
       return { totalHours: 0, todayPresent: 0, totalAbsent: 0 };
@@ -239,10 +240,7 @@ const AdminDashboard = () => {
     );
 
     const todayRecords = allAttendance.filter((r) => {
-      const rDateStr =
-        r.workingDate instanceof Date
-          ? r.workingDate.toISOString().split("T")[0]
-          : String(r.workingDate).split("T")[0];
+      const rDateStr = dayjs(r.workingDate).format("YYYY-MM-DD");
       return rDateStr === todayStr;
     });
 
@@ -278,16 +276,13 @@ const AdminDashboard = () => {
 
     // 1. Trend (Monthly Cumulative)
     const trendDailyHours = days.map((day) => {
-      const dateStr = `${currentYear}-${currentMonth}-${day.toString().padStart(2, "0")}`;
+      const dateStr = dayjs(new Date(Number(currentYear), Number(currentMonth) - 1, day)).format("YYYY-MM-DD");
       let totalDayHours = 0;
       globalEntities.forEach((emp: any) => {
         const empId = emp.employeeId || emp.id;
         const records = employeeRecords[empId] || [];
         const dayRecord: any = records.find((r) => {
-          const rDate =
-            r.workingDate instanceof Date
-              ? r.workingDate.toISOString().split("T")[0]
-              : String(r.workingDate).split("T")[0];
+          const rDate = dayjs(r.workingDate).format("YYYY-MM-DD");
           return rDate === dateStr;
         });
         if (dayRecord) totalDayHours += Number(dayRecord.totalHours || dayRecord.total_hours) || 0;

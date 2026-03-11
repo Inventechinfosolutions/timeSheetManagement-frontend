@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import dayjs from "dayjs";
 import {
   Calendar as CalendarIcon,
   TrendingUp,
@@ -9,6 +10,7 @@ import {
 } from "lucide-react";
 import { WorkTrendData } from "../reducers/employeeAttendance.reducer";
 import { LeaveRequestStatus } from "../enums";
+import { useAppSelector } from "../hooks";
 
 interface Props {
   year: number;
@@ -46,6 +48,11 @@ const AttendanceStatsCards = ({
   monthlyLeaveBalance,
   loading = false,
 }: Props) => {
+  // @ts-ignore
+  const { holidays } = useAppSelector(
+    (state) => (state as any).masterHolidays || { holidays: [] },
+  );
+
   const currentYearMonth = `${year}-${month.toString().padStart(2, "0")}`;
 
   // Calculate Recursive Stats based on User Rules
@@ -93,15 +100,28 @@ const AttendanceStatsCards = ({
       if (!Array.isArray(attendanceRecords)) return 0;
       return attendanceRecords
         .filter((r) => {
-          // Use string parsing to avoid timezone shifts
-          const dateStr =
-            typeof r.workingDate === "string"
-              ? r.workingDate.split("T")[0]
-              : new Date(r.workingDate).toISOString().split("T")[0];
+          // Robust local date formatting to avoid timezone-shifting ISO conversions
+          const dateStr = dayjs(r.workingDate).format("YYYY-MM-DD");
           const [y, mStr] = dateStr.split("-");
           return parseInt(y) === year && parseInt(mStr) === m;
         })
         .reduce((acc, r) => {
+          // Rule: Skip Holidays and Weekends for Absent/Leave usage calculations
+          const dateObj = new Date(r.workingDate);
+          const day = dateObj.getDay();
+          const isWeekend = day === 0 || day === 6;
+
+          const dateStrLocal = dayjs(r.workingDate).format("YYYY-MM-DD");
+
+          const isHoliday = holidays?.some((h: any) => {
+            const hDateStr = dayjs(h.holidayDate || h.date).format("YYYY-MM-DD");
+            return hDateStr === dateStrLocal;
+          });
+
+          if (isWeekend || isHoliday) {
+            return acc; // completely ignore weekends & holidays for LOP/usage count
+          }
+
           let dailyUsage = 0;
           const status = (r.status || "").toLowerCase();
 
@@ -193,7 +213,7 @@ const AttendanceStatsCards = ({
       monthlyOpening: finalOpening,
       totalLOP_YTD,
     };
-  }, [attendanceRecords, year, month, isIntern, leaveBalance, joiningDate]);
+  }, [attendanceRecords, year, month, isIntern, leaveBalance, joiningDate, holidays]);
 
   // Use trends data for accurate monthly used count
   const trendForMonth = useMemo(() => {
