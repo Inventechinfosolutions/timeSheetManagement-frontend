@@ -36,4 +36,5 @@ export enum LeaveRequestType {
     WFH = 'WFH',
     CLIENT_VISIT = 'Client Visit',
     HALF_DAY = 'Half Day',
+    COMP_OFF = 'Comp Off',
 }
