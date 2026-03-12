@@ -1,5 +1,6 @@
 import { ActionReducerMapBuilder, createAsyncThunk, createSlice, isFulfilled, isPending, PayloadAction } from '@reduxjs/toolkit';
 import axios from 'axios';
+import { logoutUser } from './user.reducer';
 
 const apiUrl = '/api/employee-details';
 
@@ -25,9 +26,10 @@ interface EmployeeDetailsState {
   profileImageUrl: string | null;
   uploadLoading: boolean;
   uploadResult: any | null;
-  departments: string[];
   roles: string[];
   managers: any[];
+  loggedInUserProfileImageUrl: string | null;
+  loggedInUserImageStatus?: 'idle' | 'loading' | 'succeeded' | 'failed';
 }
 
 const initialState: EmployeeDetailsState = {
@@ -41,9 +43,10 @@ const initialState: EmployeeDetailsState = {
   profileImageUrl: null,
   uploadLoading: false,
   uploadResult: null,
-  departments: [],
   roles: [],
   managers: [],
+  loggedInUserProfileImageUrl: null,
+  loggedInUserImageStatus: 'idle',
 };
 
 
@@ -62,11 +65,13 @@ export const getEntities = createAsyncThunk<
     limit?: number;
     sort?: string;
     order?: string;
+    includeSelf?: boolean;
+    userStatus?: string;
   },
   ThunkConfig
 >(
   'employeeDetails/fetch_entity_list',
-  async ({ search, department, page, limit, sort, order }, { rejectWithValue }) => {
+  async ({ search, department, page, limit, sort, order, includeSelf, userStatus }, { rejectWithValue }) => {
     try {
       const params: any = {
         search: search || '',
@@ -80,6 +85,8 @@ export const getEntities = createAsyncThunk<
       if (limit) params.limit = limit;
       if (sort) params.sort = sort;
       if (order) params.order = order;
+      if (includeSelf) params.includeSelf = includeSelf;
+      if (userStatus) params.userStatus = userStatus;
 
       const queryParams = new URLSearchParams(params);
       const response = await axios.get(`${apiUrl}?${queryParams.toString()}`);
@@ -95,11 +102,12 @@ export const getEntitiesSelect = createAsyncThunk<
   {
     department?: string;
     role?: string;
+    search?: string;
   },
   ThunkConfig
 >(
   'employeeDetails/fetch_entity_list_select',
-  async ({ department, role }, { rejectWithValue }) => {
+  async ({ department, role, search }, { rejectWithValue }) => {
     try {
       const params: any = {};
       if (department && department !== 'All') {
@@ -107,6 +115,9 @@ export const getEntitiesSelect = createAsyncThunk<
       }
       if (role) {
         params.role = role;
+      }
+      if (search) {
+        params.search = search;
       }
 
       const queryParams = new URLSearchParams(params);
@@ -155,21 +166,22 @@ export const getTimesheetList = createAsyncThunk<
     limit?: number;
     sort?: string;
     order?: string;
+    includeSelf?: boolean;
   },
   ThunkConfig
 >(
   'employeeDetails/fetch_timesheet_list',
-  async ({ search, department, status, month, year, page, limit, sort, order }, { rejectWithValue }) => {
+  async ({ search, department, status, month, year, page, limit, sort, order, includeSelf }, { rejectWithValue }) => {
     try {
       const params: any = {
         search: search || '',
       };
 
-      if (department && department !== 'All') {
+      if (department && department !== "All Departments" && department !== "All") {
         params.department = department;
       }
 
-      if (status && status !== 'All') {
+      if (status && status !== "All Status" && status !== "All") {
         params.status = status;
       }
       
@@ -180,9 +192,11 @@ export const getTimesheetList = createAsyncThunk<
       if (limit) params.limit = limit;
       if (sort) params.sort = sort;
       if (order) params.order = order;
+      if (includeSelf) params.includeSelf = includeSelf;
 
       const queryParams = new URLSearchParams(params);
       const response = await axios.get(`${apiUrl}/timesheet-list?${queryParams.toString()}`);
+      
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || error.message || 'Request failed');
@@ -298,6 +312,18 @@ export const uploadProfileImage = createAsyncThunk<any, { employeeId: string; fi
   }
 );
 
+export const removeProfileImage = createAsyncThunk<any, string, ThunkConfig>(
+  'employeeDetails/remove_profile_image',
+  async (employeeId, { rejectWithValue }) => {
+    try {
+      const response = await axios.delete(`${apiUrl}/profile-image/${employeeId}`);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || error.message || 'Removal failed');
+    }
+  }
+);
+
 export const fetchProfileImage = createAsyncThunk<string, string, ThunkConfig>(
   'employeeDetails/fetch_profile_image',
   async (employeeId, { rejectWithValue }) => {
@@ -305,7 +331,33 @@ export const fetchProfileImage = createAsyncThunk<string, string, ThunkConfig>(
       // Use the view endpoint but fetch as blob to handle auth
       const response = await axios.get(`${apiUrl}/profile-image/${employeeId}/view`, {
         responseType: 'blob',
+        validateStatus: (status) => status < 500, // Resolve 404/204 as well to handle manually
       });
+
+      if (response.status === 204 || response.data.size === 0) {
+        return rejectWithValue('No image found');
+      }
+
+      return URL.createObjectURL(response.data);
+    } catch (error: any) {
+      return rejectWithValue('No image found');
+    }
+  }
+);
+
+export const fetchLoggedInUserProfileImage = createAsyncThunk<string, string, ThunkConfig>(
+  'employeeDetails/fetch_logged_in_profile_image',
+  async (employeeId, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`${apiUrl}/profile-image/${employeeId}/view`, {
+        responseType: 'blob',
+        validateStatus: (status) => status < 500, // Resolve 404/204 as well to handle manually
+      });
+
+      if (response.status === 204 || response.data.size === 0) {
+        return rejectWithValue('No image found');
+      }
+
       return URL.createObjectURL(response.data);
     } catch (error: any) {
       return rejectWithValue('No image found');
@@ -351,17 +403,7 @@ export const resendActivationLink = createAsyncThunk<any, string, ThunkConfig>(
   }
 );
 
-export const fetchDepartments = createAsyncThunk<any, void, ThunkConfig>(
-  'employeeDetails/fetch_departments',
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await axios.get(`${apiUrl}/departments`);
-      return response.data;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || error.message || 'Request failed');
-    }
-  }
-);
+
 
 export const fetchRoles = createAsyncThunk<any, void, ThunkConfig>(
   'employeeDetails/fetch_roles',
@@ -387,6 +429,9 @@ export const EmployeeDetailsSlice = createSlice({
       state.uploadResult = null;
       state.uploadLoading = false;
     },
+    clearErrorMessage: (state) => {
+      state.errorMessage = null;
+    },
   },
   extraReducers: (builder: ActionReducerMapBuilder<EmployeeDetailsState>) => {
     builder
@@ -404,6 +449,24 @@ export const EmployeeDetailsSlice = createSlice({
       })
       .addCase(uploadProfileImage.fulfilled, (state: EmployeeDetailsState) => {
         state.profileImageUrl = null; // Trigger re-fetch or state update
+        state.loggedInUserProfileImageUrl = null;
+        state.loggedInUserImageStatus = 'idle'; // Reset status to allow re-fetch
+      })
+      .addCase(removeProfileImage.fulfilled, (state: EmployeeDetailsState) => {
+        state.profileImageUrl = null;
+        state.loggedInUserProfileImageUrl = null;
+        state.loggedInUserImageStatus = 'idle';
+      })
+      .addCase(fetchLoggedInUserProfileImage.pending, (state) => {
+        state.loggedInUserImageStatus = 'loading';
+      })
+      .addCase(fetchLoggedInUserProfileImage.fulfilled, (state: EmployeeDetailsState, action: PayloadAction<string>) => {
+        state.loggedInUserProfileImageUrl = action.payload;
+        state.loggedInUserImageStatus = 'succeeded';
+      })
+      .addCase(fetchLoggedInUserProfileImage.rejected, (state) => {
+        state.loggedInUserImageStatus = 'failed';
+        // Note: Global rejected matcher below might also run, setting loading=false
       })
       .addCase(bulkUploadEmployees.pending, (state) => {
         state.uploadLoading = true;
@@ -423,9 +486,7 @@ export const EmployeeDetailsSlice = createSlice({
         state.uploadLoading = false;
         state.updateSuccess = true;
       })
-      .addCase(fetchDepartments.fulfilled, (state, action) => {
-        state.departments = action.payload;
-      })
+
       .addCase(fetchRoles.fulfilled, (state, action) => {
         state.roles = action.payload;
       })
@@ -433,6 +494,10 @@ export const EmployeeDetailsSlice = createSlice({
         state.loading = false;
         state.managers = action.payload;
       })
+      // Reset state on logout
+      .addCase(logoutUser.fulfilled, () => initialState)
+      .addCase(logoutUser.rejected, () => initialState)
+
       .addMatcher(isFulfilled(getEntities, getTimesheetList, getEntitiesSelect), (state: EmployeeDetailsState, action: PayloadAction<any>) => {
         const response = action.payload;
         state.loading = false;
@@ -462,11 +527,18 @@ export const EmployeeDetailsSlice = createSlice({
         (state: EmployeeDetailsState, action: any) => {
           state.updating = false;
           state.loading = false;
-          state.errorMessage = action.payload?.message || action.error?.message || 'Operation failed';
+          // Check if payload is string (from rejectWithValue) or object with message
+          if (typeof action.payload === 'string') {
+            state.errorMessage = action.payload;
+          } else if (action.payload?.message) {
+            state.errorMessage = action.payload.message;
+          } else {
+            state.errorMessage = action.error?.message || 'Operation failed';
+          }
         });
   },
 });
 
-export const { reset, setCurrentUser, clearUploadResult } = EmployeeDetailsSlice.actions;
+export const { reset, setCurrentUser, clearUploadResult, clearErrorMessage } = EmployeeDetailsSlice.actions;
 
 export default EmployeeDetailsSlice.reducer;

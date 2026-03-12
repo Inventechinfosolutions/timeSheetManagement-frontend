@@ -3,9 +3,15 @@ import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "../store";
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { getEntity } from "../reducers/employeeDetails.reducer";
+import dayjs from "dayjs";
+import {
+  getEntity,
+  updateEntity,
+  clearErrorMessage,
+} from "../reducers/employeeDetails.reducer";
 import {
   User,
+  Users,
   Mail,
   Briefcase,
   Building,
@@ -14,15 +20,27 @@ import {
   CheckCircle,
   X,
   AlertCircle,
+  Calendar,
 } from "lucide-react";
-import { resetPassword } from "../reducers/employeeDetails.reducer";
+import { getManagerMappingByEmployeeId } from "../reducers/managerMapping.reducer";
+import { fetchDepartments } from "../reducers/masterDepartment.reducer";
+import { 
+  resetPassword,
+} from "../reducers/employeeDetails.reducer";
+import { UserType, EmploymentType } from "../enums";
 
 const EmployeeDetailsView = () => {
   const { employeeId } = useParams<{ employeeId: string }>();
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
-  const { entities, entity, loading } = useSelector(
+  const { entities, entity, loading, errorMessage } = useSelector(
     (state: RootState) => state.employeeDetails,
+  );
+  const { entity: managerMapping } = useSelector(
+    (state: RootState) => state.managerMapping,
+  );
+  const { departments } = useSelector(
+    (state: RootState) => state.masterDepartments,
   );
   const [viewedProfileImage, setViewedProfileImage] = useState<string | null>(
     null,
@@ -40,10 +58,15 @@ const EmployeeDetailsView = () => {
     employeeId: "",
     department: "",
     designation: "",
+    role: "",
+    employmentType: "" as "" | EmploymentType,
+    gender: "" as "" | "MALE" | "FEMALE",
+    joiningDate: "",
     email: "",
   });
   const [showConfirm, setShowConfirm] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState(false);
+  const [validationError, setValidationError] = useState("");
 
   useEffect(() => {
     if (
@@ -78,6 +101,26 @@ const EmployeeDetailsView = () => {
     (e: any) => e.employeeId === employeeId || e.id === Number(employeeId),
   );
 
+  // Resolve manager name from API (camelCase, snake_case, or array response)
+  const mappedManagerName = (() => {
+    if (
+      !managerMapping ||
+      (typeof managerMapping === "object" &&
+        Object.keys(managerMapping).length === 0)
+    )
+      return null;
+    const item = Array.isArray(managerMapping)
+      ? managerMapping[0]
+      : managerMapping;
+    return (
+      (item?.managerName ??
+        item?.manager_name ??
+        item?.manager?.fullName ??
+        item?.manager?.name) ||
+      null
+    );
+  })();
+
   const employee =
     entity &&
     (entity.employeeId === employeeId || entity.id === Number(employeeId))
@@ -91,10 +134,29 @@ const EmployeeDetailsView = () => {
         employeeId: employee.employeeId || employee.id || "",
         department: employee.department || "",
         designation: employee.designation || "",
+        role: employee.role || "",
+        employmentType: (employee.employmentType as "" | EmploymentType) || "",
+        gender: (employee.gender as "" | "MALE" | "FEMALE") || "",
+        joiningDate: employee.joiningDate
+          ? dayjs(employee.joiningDate).format("YYYY-MM-DD")
+          : "",
         email: employee.email || "",
       });
     }
   }, [employee]);
+
+  // Fetch manager mapping (use canonical employeeId once employee is loaded)
+  useEffect(() => {
+    const id = employee?.employeeId ?? employee?.id ?? employeeId;
+    if (id) {
+      dispatch(getManagerMappingByEmployeeId(String(id)));
+    }
+  }, [dispatch, employeeId, employee?.employeeId, employee?.id]);
+
+  // Fetch departments on mount
+  useEffect(() => {
+    dispatch(fetchDepartments());
+  }, [dispatch]);
 
   if (loading && !employee) {
     return (
@@ -119,36 +181,75 @@ const EmployeeDetailsView = () => {
   }
 
   const handleEdit = () => {
+    dispatch(clearErrorMessage());
     setIsEditing(true);
   };
 
   const handleSave = () => {
+    setValidationError("");
+
+    // Validate required fields
+    const requiredFields = [
+      { field: "fullName", label: "Full Name" },
+      { field: "employeeId", label: "Employee ID" },
+      { field: "department", label: "Department" },
+      { field: "designation", label: "Designation" },
+      { field: "role", label: "Role" },
+      { field: "employmentType", label: "Employment Type" },
+      { field: "gender", label: "Gender" },
+      { field: "email", label: "Email" },
+    ];
+
+    for (const { field, label } of requiredFields) {
+      if (!editedData[field as keyof typeof editedData]) {
+        setValidationError(`${label} is required`);
+        return;
+      }
+    }
+
+    // Validate Employee ID pattern (letters, numbers, hyphens only)
+    const employeeIdPattern = /^[A-Z0-9-]+$/;
+    if (!employeeIdPattern.test(editedData.employeeId)) {
+      setValidationError(
+        "Employee ID should contain only uppercase letters, numbers, and hyphens",
+      );
+      return;
+    }
+
+    // Validate email format
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(editedData.email)) {
+      setValidationError("Please enter a valid email address");
+      return;
+    }
+
     setShowConfirm(true);
   };
 
   const confirmSave = async () => {
     try {
       const oldEmployeeId = employee.employeeId || employee.id;
-      await axios.put(
-        `/api/employee-details/${oldEmployeeId}`,
-        editedData,
-      );
+      await dispatch(
+        updateEntity({ employeeId: oldEmployeeId, entity: editedData }),
+      ).unwrap();
       setIsEditing(false);
       setShowConfirm(false);
       setUpdateSuccess(true);
-      
+
       // If employee ID changed, navigate to new employee ID and fetch with new ID
       const newEmployeeId = editedData.employeeId;
       if (newEmployeeId && newEmployeeId !== oldEmployeeId) {
         // Navigate to new employee ID URL
-        navigate(`/admin-dashboard/employees/${newEmployeeId}`, { replace: true });
+        navigate(`/admin-dashboard/employees/${newEmployeeId}`, {
+          replace: true,
+        });
         // Fetch entity with new employee ID
         dispatch(getEntity(newEmployeeId));
       } else {
         // Refresh the entity with current employee ID
         dispatch(getEntity(employeeId!));
       }
-      
+
       // Hide success message after 3 seconds
       setTimeout(() => {
         setUpdateSuccess(false);
@@ -165,8 +266,16 @@ const EmployeeDetailsView = () => {
       employeeId: employee.employeeId || employee.id || "",
       department: employee.department || "",
       designation: employee.designation || "",
+      role: employee.role || "",
+      employmentType: (employee.employmentType as "" | EmploymentType) || "",
+      gender: (employee.gender as "" | "MALE" | "FEMALE") || "",
+      joiningDate: employee.joiningDate
+        ? dayjs(employee.joiningDate).format("YYYY-MM-DD")
+        : "",
       email: employee.email || "",
     });
+    setValidationError("");
+    dispatch(clearErrorMessage());
     setIsEditing(false);
   };
 
@@ -208,11 +317,12 @@ const EmployeeDetailsView = () => {
     }
   };
 
+
   return (
     <div className="px-4 md:px-8 py-2 md:py-8 w-full max-w-[1400px] mx-auto animate-in fade-in duration-500 space-y-3 md:space-y-6">
       {/* Success Message */}
       {updateSuccess && (
-        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 flex items-center gap-2 animate-in fade-in slide-in-from-top-4 duration-300 px-4 py-3 bg-white rounded-full shadow-2xl border border-green-200">
+        <div className="fixed top-24 left-1/2 transform -translate-x-1/2 z-50 flex items-center gap-2 animate-in fade-in slide-in-from-top-4 duration-300 px-4 py-3 bg-white rounded-full shadow-2xl border border-green-200">
           <div className="p-1 bg-green-100 rounded-full">
             <CheckCircle size={16} className="text-green-600" />
           </div>
@@ -258,6 +368,7 @@ const EmployeeDetailsView = () => {
                   src={viewedProfileImage}
                   alt="Profile"
                   className="w-14 h-14 sm:w-20 md:w-24 rounded-full object-cover"
+                  onError={() => setViewedProfileImage(null)}
                 />
               ) : (
                 <div className="w-14 h-14 sm:w-20 md:w-24 rounded-full bg-gradient-to-br from-[#4318FF] to-[#00A3C4] flex items-center justify-center text-white text-xl sm:text-2xl md:text-3xl font-black shadow-inner">
@@ -338,11 +449,24 @@ const EmployeeDetailsView = () => {
           )}
         </div>
 
+        {/* Validation Error Message */}
+        {validationError && (
+          <div className="mb-5 p-4 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm animate-in fade-in slide-in-from-top-2 duration-300">
+            {validationError}
+          </div>
+        )}
+
+        {errorMessage && (
+          <div className="mb-5 p-4 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm animate-in fade-in slide-in-from-top-2 duration-300">
+            {errorMessage}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-7">
           {/* Full Name */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
-              Full Name
+              Full Name <span className="text-red-500">*</span>
             </label>
             <div className="relative group">
               <input
@@ -353,9 +477,10 @@ const EmployeeDetailsView = () => {
                     ? editedData.fullName
                     : employee.fullName || employee.name || ""
                 }
-                onChange={(e) =>
-                  setEditedData({ ...editedData, fullName: e.target.value })
-                }
+                onChange={(e) => {
+                  setEditedData({ ...editedData, fullName: e.target.value });
+                  if (validationError) setValidationError("");
+                }}
                 className={`w-full pl-11 pr-4 py-2.5 border-2 rounded-xl text-[#1B2559] text-sm font-semibold transition-all ${
                   isEditing
                     ? "border-gray-200 focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white"
@@ -371,7 +496,7 @@ const EmployeeDetailsView = () => {
           {/* Employee ID */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
-              Employee ID
+              Employee ID <span className="text-red-500">*</span>
             </label>
             <div className="relative group">
               <input
@@ -382,9 +507,15 @@ const EmployeeDetailsView = () => {
                     ? editedData.employeeId
                     : employee.employeeId || employee.id || ""
                 }
-                onChange={(e) =>
-                  setEditedData({ ...editedData, employeeId: e.target.value })
-                }
+                onChange={(e) => {
+                  setEditedData({
+                    ...editedData,
+                    employeeId: e.target.value.toUpperCase(),
+                  });
+                  if (validationError) setValidationError("");
+                }}
+                pattern="[A-Z0-9-]*"
+                title="Employee ID should contain only uppercase letters, numbers, and hyphens"
                 className={`w-full pl-11 pr-4 py-2.5 border-2 rounded-xl text-[#1B2559] text-sm font-semibold transition-all ${
                   isEditing
                     ? "border-gray-200 focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white"
@@ -397,35 +528,19 @@ const EmployeeDetailsView = () => {
             </div>
           </div>
 
-          {/* Department */}
+          {/* Department - disabled in edit for all user types */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
-              Department
+              Department <span className="text-red-500">*</span>
             </label>
-            <div className="relative group">
-              {isEditing ? (
-                <select
-                  value={editedData.department}
-                  onChange={(e) =>
-                    setEditedData({ ...editedData, department: e.target.value })
-                  }
-                  className="w-full pl-11 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white text-[#1B2559] text-sm font-semibold transition-all appearance-none"
-                >
-                  <option value="HR">HR</option>
-                  <option value="IT">IT</option>
-                  <option value="Finance">Finance</option>
-                  <option value="Admin">Admin</option>
-                  <option value="Designer">Designer</option>
-                  <option value="Business Analyst">Business Analyst</option>
-                </select>
-              ) : (
-                <input
-                  type="text"
-                  disabled
-                  value={employee.department || "IT"}
-                  className="w-full pl-11 pr-4 py-2.5 border-2 border-gray-100 rounded-xl bg-gray-50/50 text-[#1B2559] text-sm font-semibold transition-all"
-                />
-              )}
+            <div className={`relative group ${isEditing ? "cursor-not-allowed" : ""}`} title={isEditing ? "Department cannot be edited" : undefined}>
+              <input
+                type="text"
+                disabled
+                value={isEditing ? editedData.department : (employee.department || "")}
+                className={`w-full pl-11 pr-4 py-2.5 border-2 border-gray-100 rounded-xl bg-gray-50/50 text-[#1B2559] text-sm font-semibold transition-all ${isEditing ? "cursor-not-allowed" : ""}`}
+                title={isEditing ? "Department cannot be edited" : undefined}
+              />
               <div className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-green-50 flex items-center justify-center">
                 <Building className="text-[#05CD99] w-4 h-4" />
               </div>
@@ -435,7 +550,7 @@ const EmployeeDetailsView = () => {
           {/* Designation */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
-              Designation
+              Designation <span className="text-red-500">*</span>
             </label>
             <div className="relative group">
               <input
@@ -446,9 +561,13 @@ const EmployeeDetailsView = () => {
                     ? editedData.designation
                     : employee.designation || ""
                 }
-                onChange={(e) =>
-                  setEditedData({ ...editedData, designation: e.target.value })
-                }
+                onChange={(e) => {
+                  setEditedData({
+                    ...editedData,
+                    designation: e.target.value,
+                  });
+                  if (validationError) setValidationError("");
+                }}
                 className={`w-full pl-11 pr-4 py-2.5 border-2 rounded-xl text-[#1B2559] text-sm font-semibold transition-all ${
                   isEditing
                     ? "border-gray-200 focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white"
@@ -461,19 +580,176 @@ const EmployeeDetailsView = () => {
             </div>
           </div>
 
+          {/* Role - disabled in edit for all user types */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
+              Role <span className="text-red-500">*</span>
+            </label>
+            <div className={`relative group ${isEditing ? "cursor-not-allowed" : ""}`} title={isEditing ? "Role cannot be edited" : undefined}>
+              <input
+                type="text"
+                disabled
+                value={isEditing ? editedData.role : (employee.role || "")}
+                className={`w-full pl-11 pr-4 py-2.5 border-2 border-gray-100 rounded-xl bg-gray-50/50 text-[#1B2559] text-sm font-semibold transition-all ${isEditing ? "cursor-not-allowed" : ""}`}
+                title={isEditing ? "Role cannot be edited" : undefined}
+              />
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center">
+                <User className="text-indigo-500 w-4 h-4" />
+              </div>
+            </div>
+          </div>
+
+          {/* Mapped Manager */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
+              Mapped Manager
+            </label>
+            <div className="relative group">
+              <input
+                type="text"
+                disabled
+                value={mappedManagerName ?? "Not Assigned"}
+                className="w-full pl-11 pr-4 py-2.5 border-2 border-gray-100 rounded-xl bg-gray-50/50 text-[#1B2559] text-sm font-semibold transition-all"
+              />
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
+                <Users className="text-[#667eea] w-4 h-4" />
+              </div>
+            </div>
+          </div>
+
+          {/* Employment Type */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
+              Employment Type <span className="text-red-500">*</span>
+            </label>
+            <div className="relative group">
+              {isEditing ? (
+                <select
+                  value={editedData.employmentType}
+                  onChange={(e) => {
+                    setEditedData({
+                      ...editedData,
+                      employmentType: e.target.value as "" | EmploymentType,
+                    });
+                    if (validationError) setValidationError("");
+                  }}
+                  className="w-full pl-11 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white text-[#1B2559] text-sm font-semibold transition-all appearance-none"
+                >
+                  <option value="">Select Employment Type</option>
+                  <option value="FULL_TIMER">Full Time Employee</option>
+                  <option value="INTERN">Intern</option>
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  disabled
+                  value={
+                    employee.employmentType === "FULL_TIMER"
+                      ? "Full Time Employee"
+                      : employee.employmentType === "INTERN"
+                        ? "Intern"
+                        : ""
+                  }
+                  className="w-full pl-11 pr-4 py-2.5 border-2 border-gray-100 rounded-xl bg-gray-50/50 text-[#1B2559] text-sm font-semibold transition-all"
+                />
+              )}
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-purple-50 flex items-center justify-center">
+                <Briefcase className="text-purple-500 w-4 h-4" />
+              </div>
+            </div>
+          </div>
+
+          {/* Gender */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
+              Gender <span className="text-red-500">*</span>
+            </label>
+            <div className="relative group">
+              {isEditing ? (
+                <select
+                  value={editedData.gender}
+                  onChange={(e) => {
+                    setEditedData({
+                      ...editedData,
+                      gender: e.target.value as "" | "MALE" | "FEMALE",
+                    });
+                    if (validationError) setValidationError("");
+                  }}
+                  className="w-full pl-11 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white text-[#1B2559] text-sm font-semibold transition-all appearance-none"
+                >
+                  <option value="">Select Gender</option>
+                  <option value="MALE">Male</option>
+                  <option value="FEMALE">Female</option>
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  disabled
+                  value={
+                    employee.gender === "MALE"
+                      ? "Male"
+                      : employee.gender === "FEMALE"
+                        ? "Female"
+                        : ""
+                  }
+                  className="w-full pl-11 pr-4 py-2.5 border-2 border-gray-100 rounded-xl bg-gray-50/50 text-[#1B2559] text-sm font-semibold transition-all"
+                />
+              )}
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
+                <User className="text-[#4318FF] w-4 h-4" />
+              </div>
+            </div>
+          </div>
+
+          {/* Joining Date */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
+              Date of Joining <span className="text-red-500">*</span>
+            </label>
+            <div className="relative group">
+              <input
+                type="date"
+                disabled={!isEditing}
+                value={
+                  isEditing
+                    ? editedData.joiningDate
+                    : employee.joiningDate
+                      ? dayjs(employee.joiningDate).format("YYYY-MM-DD")
+                      : ""
+                }
+                onChange={(e) => {
+                  setEditedData({
+                    ...editedData,
+                    joiningDate: e.target.value,
+                  });
+                  if (validationError) setValidationError("");
+                }}
+                className={`w-full pl-11 pr-4 py-2.5 border-2 rounded-xl text-[#1B2559] text-sm font-semibold transition-all ${
+                  isEditing
+                    ? "border-gray-200 focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white"
+                    : "border-gray-100 bg-gray-50/50"
+                }`}
+              />
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
+                <Calendar className="text-blue-500 w-4 h-4" />
+              </div>
+            </div>
+          </div>
+
           {/* Email */}
           <div className="space-y-1.5 md:col-span-2">
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
-              Email Address
+              Email Address <span className="text-red-500">*</span>
             </label>
             <div className="relative group">
               <input
                 type="email"
                 disabled={!isEditing}
                 value={isEditing ? editedData.email : employee.email || ""}
-                onChange={(e) =>
-                  setEditedData({ ...editedData, email: e.target.value })
-                }
+                onChange={(e) => {
+                  setEditedData({ ...editedData, email: e.target.value });
+                  if (validationError) setValidationError("");
+                }}
                 className={`w-full pl-11 pr-4 py-2.5 border-2 rounded-xl text-[#1B2559] text-sm font-semibold transition-all ${
                   isEditing
                     ? "border-gray-200 focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white"

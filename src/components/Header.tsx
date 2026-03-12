@@ -1,4 +1,5 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
+import dayjs from "dayjs";
 import {
   LogOut,
   Bell,
@@ -11,7 +12,10 @@ import {
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { logoutUser } from "../reducers/user.reducer";
-import { fetchProfileImage } from "../reducers/employeeDetails.reducer";
+import {
+  fetchProfileImage,
+  fetchLoggedInUserProfileImage,
+} from "../reducers/employeeDetails.reducer";
 import {
   fetchNotifications,
   markNotificationRead,
@@ -29,6 +33,12 @@ import {
   markAllEmployeeUpdatesRead,
   LeaveNotification,
 } from "../reducers/leaveNotification.reducer";
+import {
+  LeaveRequestStatus,
+  WorkLocation,
+  LeaveRequestType,
+  UserType,
+} from "../enums";
 import "./Header.css";
 import InventLogo from "../assets/invent-logo.svg";
 
@@ -44,12 +54,15 @@ const Header = ({
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useAppDispatch();
-  const { entity, profileImageUrl } = useAppSelector(
-    (state) => state.employeeDetails,
-  );
+  const { entity, loggedInUserProfileImageUrl, loggedInUserImageStatus } =
+    useAppSelector((state) => state.employeeDetails);
   const { currentUser } = useAppSelector((state) => state.user);
-  // Check if user is admin
-  const isAdmin = currentUser?.userType === "ADMIN";
+  // Permissions
+  const isAdmin = currentUser?.userType === UserType.ADMIN;
+  const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
+  const isManager = currentUser?.userType === UserType.MANAGER;
+  const isApprover = isAdmin || isManager || isReceptionist;
+  const isAdminOrReceptionist = isAdmin || isReceptionist;
 
   const {
     notifications,
@@ -61,12 +74,13 @@ const Header = ({
     (state) => state.leaveNotification,
   );
 
-  // Filter out Cancelled requests from Admin notifications
+  // Filter out Cancelled requests from Approver notifications
   const leaveNotifications = rawLeaveNotifications.filter(
-    (n) => n.status !== "Cancelled",
+    (n) => n.status !== LeaveRequestStatus.CANCELLED,
   );
 
-  const unreadCount = isAdmin
+  // Total count for the bell bubble
+  const unreadCount = isApprover
     ? leaveNotifications.length
     : attendanceUnreadCount + employeeUpdates.length;
 
@@ -74,18 +88,59 @@ const Header = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [imageError, setImageError] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "detail">("list");
   const notificationRef = useRef<HTMLDivElement>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  // Helper to format split-day request types
+  const formatRequestTypeLabel = (notification: LeaveNotification) => {
+    const { firstHalf, secondHalf, requestType } = notification;
+
+    if (firstHalf && secondHalf) {
+      if (firstHalf === secondHalf) {
+        return firstHalf === LeaveRequestType.APPLY_LEAVE ||
+          firstHalf === LeaveRequestType.LEAVE
+          ? LeaveRequestType.LEAVE
+          : firstHalf;
+      }
+
+      const f =
+        firstHalf === LeaveRequestType.APPLY_LEAVE ||
+        firstHalf === LeaveRequestType.LEAVE
+          ? LeaveRequestType.LEAVE
+          : firstHalf;
+      const s =
+        secondHalf === LeaveRequestType.APPLY_LEAVE ||
+        secondHalf === LeaveRequestType.LEAVE
+          ? LeaveRequestType.LEAVE
+          : secondHalf;
+
+      if (f === WorkLocation.OFFICE) return s;
+      if (s === WorkLocation.OFFICE) return f;
+
+      return `${f} + ${s}`;
+    }
+
+    return requestType === LeaveRequestType.APPLY_LEAVE
+      ? LeaveRequestType.LEAVE
+      : requestType;
+  };
 
   // Fetch notifications on mount
   useEffect(() => {
-    if (isAdmin) {
+    if (isApprover) {
       dispatch(fetchUnreadNotifications());
-    } else if (entity?.employeeId) {
-      dispatch(fetchNotifications(entity?.employeeId));
-      dispatch(fetchEmployeeUpdates(entity?.employeeId));
     }
-  }, [dispatch, isAdmin, entity?.employeeId]);
+
+    // Employee updates apply to anyone with an employee record (including Managers viewing their own)
+    if (entity?.employeeId && currentUser) {
+      if (!isAdmin) {
+        dispatch(fetchNotifications(entity?.employeeId));
+        dispatch(fetchEmployeeUpdates(entity?.employeeId));
+      }
+    }
+  }, [dispatch, isApprover, isAdmin, entity?.employeeId]);
 
   const handleNotificationClick = (id: number) => {
     dispatch(fetchNotificationDetails(id));
@@ -101,7 +156,7 @@ const Header = ({
     id: number,
     type?: "leave" | "attendance" | "status_update",
   ) => {
-    if (isAdmin) {
+    if (isApprover && type !== "status_update" && type !== "attendance") {
       dispatch(markLeaveNotifRead(id));
       setViewMode("list");
     } else {
@@ -114,19 +169,14 @@ const Header = ({
   };
 
   const handleMarkAllAsRead = () => {
-    const notificationId = isAdmin
-      ? currentUser?.employeeId
-      : entity?.employeeId;
-    if (notificationId) {
-      // 1. Mark Generic Notifications as Read
-      dispatch(markAllNotificationsRead(notificationId));
+    if (isApprover) {
+      dispatch(markAllLeaveRequestsRead());
+    }
 
-      // 2. Mark Leave Notifications as Read
-      if (isAdmin) {
-        dispatch(markAllLeaveRequestsRead());
-      } else {
-        dispatch(markAllEmployeeUpdatesRead(notificationId));
-      }
+    // Also mark own notifications as read if not only an admin
+    if (!isAdmin && entity?.employeeId) {
+      dispatch(markAllNotificationsRead(entity.employeeId));
+      dispatch(markAllEmployeeUpdatesRead(entity.employeeId));
     }
   };
 
@@ -137,37 +187,69 @@ const Header = ({
       // Clear any local storage
       localStorage.clear();
       sessionStorage.clear();
-      // Navigate to landing page
-      navigate("/landing");
+      // Navigate to landing page without splash
+      navigate("/landing", { state: { skipSplash: true } });
     } catch (error) {
       console.error("Logout failed:", error);
       // Even if logout fails, clear local state and navigate
       localStorage.clear();
       sessionStorage.clear();
-      navigate("/landing");
+      navigate("/landing", { state: { skipSplash: true } });
     }
   };
 
   const handleProfileClick = () => {
-    navigate("/employee-dashboard/my-profile");
+    if (currentUser?.userType === UserType.MANAGER) {
+      navigate("/manager-dashboard/my-profile");
+    } else if (isAdminOrReceptionist) {
+      navigate("/admin-dashboard/my-profile");
+    } else {
+      navigate("/employee-dashboard/my-profile");
+    }
     setIsDropdownOpen(false);
   };
 
   // Get first letter of name for avatar fallback
   const avatarLetter = isAdmin
     ? "A"
-    : entity?.fullName?.charAt(0)?.toUpperCase() ||
-      entity?.name?.charAt(0)?.toUpperCase() ||
-      "U";
+    : isReceptionist
+      ? "R"
+      : currentUser?.aliasLoginName?.charAt(0)?.toUpperCase() ||
+        currentUser?.loginId?.charAt(0)?.toUpperCase() ||
+        "U";
 
   // Fetch profile image - ONLY for the logged-in user, not the viewed entity (if Admin)
+  // Fetch profile image - ONLY for the logged-in user, not the viewed entity (if Admin)
   useEffect(() => {
-    if (isAdmin) return;
-    const profileId = entity?.employeeId || entity?.id;
-    if (profileId) {
-      dispatch(fetchProfileImage(String(profileId)));
+    if (isAdmin || isReceptionist) return;
+
+    // Only fetch if we don't have the image yet (e.g. initial load or after upload invalidation)
+    // AND if we are not currently fetching or failed previously
+    if (loggedInUserProfileImageUrl) return;
+
+    // Use loginId (alphanumeric) as reliable fallback if employeeId is missing.
+    // The backend endpoint /profile-image/:id/view expects the alphanumeric EmployeeID (e.g. "ITE123"), NOT the user UUID.
+    const profileId =
+      currentUser?.employeeId || currentUser?.loginId || currentUser?.id;
+
+    const shouldFetch =
+      !loggedInUserProfileImageUrl &&
+      (loggedInUserImageStatus === "idle" ||
+        loggedInUserImageStatus === undefined);
+
+    if (profileId && shouldFetch) {
+      dispatch(fetchLoggedInUserProfileImage(String(profileId)));
     }
-  }, [dispatch, entity?.employeeId, entity?.id, isAdmin]);
+  }, [
+    dispatch,
+    currentUser?.employeeId,
+    currentUser?.loginId,
+    currentUser?.id,
+    isAdmin,
+    isReceptionist,
+    loggedInUserProfileImageUrl,
+    loggedInUserImageStatus,
+  ]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -212,7 +294,7 @@ const Header = ({
             alt="InvenTech Logo"
             className="h-8 w-auto object-contain brightness-0 invert"
             onClick={() =>
-              navigate(isAdmin ? "/admin-dashboard" : "/employee-dashboard")
+              navigate(isAdminOrReceptionist ? "/admin-dashboard" : "/employee-dashboard")
             }
           />
         </div>
@@ -264,7 +346,8 @@ const Header = ({
                         <h3 className="text-lg font-bold text-[#1B2559]">
                           Notifications
                         </h3>
-                        {!isAdmin && (
+                        {/* Show "Mark all as read" for everyone except Receptionist, but handle scoped marks */}
+                        {!isReceptionist && (
                           <button
                             onClick={handleMarkAllAsRead}
                             className="text-xs font-bold text-[#4318FF] hover:bg-blue-50 px-3 py-1 rounded-lg transition-all active:scale-95"
@@ -286,91 +369,126 @@ const Header = ({
 
                       {/* Notification List */}
                       <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
-                        {isAdmin ? (
+                        {isApprover ? (
                           leaveNotifications.length > 0 ? (
-                              leaveNotifications.map((notif) => {
-                                const getNotificationContent = (
-                                  notif: LeaveNotification,
-                                ) => {
-                                  let title = `${notif.requestType} Request`;
-                                  let message = (
+                            leaveNotifications.map((notif) => {
+                              const getNotificationContent = (
+                                notif: LeaveNotification,
+                              ) => {
+                                const formattedType =
+                                  formatRequestTypeLabel(notif);
+                                let title = `${formattedType} Request`;
+                                let message = (
+                                  <>
+                                    <span className="font-bold text-[#2B3674]">
+                                      {notif.employeeName}
+                                    </span>{" "}
+                                    applied for {formattedType}.
+                                  </>
+                                );
+                                let iconColorClass =
+                                  "bg-blue-100 text-[#4318FF]"; // Default
+
+                                // Logic for Cancellations & Modifications
+                                if (
+                                  notif.status ===
+                                  LeaveRequestStatus.REQUESTING_FOR_CANCELLATION
+                                ) {
+                                  title = `Cancellation Request`;
+                                  message = (
                                     <>
                                       <span className="font-bold text-[#2B3674]">
                                         {notif.employeeName}
                                       </span>{" "}
-                                      applied for {notif.requestType}.
+                                      requested to{" "}
+                                      <span className="font-bold text-red-600">
+                                        Cancel
+                                      </span>{" "}
+                                      an approved{" "}
+                                      <span className="font-bold">
+                                        {formattedType}
+                                      </span>
+                                      .
                                     </>
                                   );
-                                  let iconColorClass =
-                                    "bg-blue-100 text-[#4318FF]"; // Default
+                                  iconColorClass = "bg-red-100 text-red-600";
+                                } else if (
+                                  notif.status ===
+                                  LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
+                                ) {
+                                  title = `Modification Request`;
+                                  message = (
+                                    <>
+                                      <span className="font-bold text-[#2B3674]">
+                                        {notif.employeeName}
+                                      </span>{" "}
+                                      requested to{" "}
+                                      <span className="font-bold text-orange-600">
+                                        Modify
+                                      </span>{" "}
+                                      an approved{" "}
+                                      <span className="font-bold">
+                                        {formattedType}
+                                      </span>
+                                      .
+                                    </>
+                                  );
+                                  iconColorClass =
+                                    "bg-orange-100 text-orange-600";
+                                } else if (
+                                  notif.status === LeaveRequestStatus.CANCELLED
+                                ) {
+                                  title = `Request Cancelled`;
+                                  message = (
+                                    <>
+                                      <span className="font-bold text-[#2B3674]">
+                                        {notif.employeeName}
+                                      </span>{" "}
+                                      cancelled their pending{" "}
+                                      <span className="font-bold">
+                                        {formattedType}
+                                      </span>{" "}
+                                      request.
+                                    </>
+                                  );
+                                  iconColorClass = "bg-red-50 text-red-500";
+                                }
 
-                                  // Logic for Cancellations
-                                  if (
-                                    notif.status ===
-                                    "Requesting for Cancellation"
-                                  ) {
-                                    title = `Cancellation Request`;
-                                    message = (
-                                      <>
-                                        <span className="font-bold text-[#2B3674]">
-                                          {notif.employeeName}
-                                        </span>{" "}
-                                        requested to cancel an approved{" "}
-                                        <span className="font-bold">
-                                          {notif.requestType}
-                                        </span>
-                                        .
-                                      </>
+                                return { title, message, iconColorClass };
+                              };
+
+                              const { title, message, iconColorClass } =
+                                getNotificationContent(notif);
+
+                              return (
+                                <div
+                                  key={notif.id}
+                                  onClick={() => {
+                                    navigate(
+                                      isAdminOrReceptionist
+                                        ? "/admin-dashboard/requests"
+                                        : "/manager-dashboard/requests",
                                     );
-                                    iconColorClass =
-                                      "bg-orange-100 text-orange-600";
-                                  } else if (notif.status === "Cancelled") {
-                                    title = `Request Cancelled`;
-                                    message = (
-                                      <>
-                                        <span className="font-bold text-[#2B3674]">
-                                          {notif.employeeName}
-                                        </span>{" "}
-                                        cancelled their pending{" "}
-                                        <span className="font-bold">
-                                          {notif.requestType}
-                                        </span>{" "}
-                                        request.
-                                      </>
-                                    );
-                                    iconColorClass = "bg-red-50 text-red-500";
-                                  }
-
-                                  return { title, message, iconColorClass };
-                                };
-
-                                const { title, message, iconColorClass } =
-                                  getNotificationContent(notif);
-
-                                return (
-                                  <div
-                                    key={notif.id}
-                                    onClick={() => {
-                                      navigate("/admin-dashboard/requests");
-                                      setIsNotificationOpen(false);
-                                    }}
-                                    className={`flex gap-4 p-5 hover:bg-gray-50/80 transition-colors border-b border-gray-50 last:border-0 group cursor-pointer relative bg-blue-50/30`}
-                                  >
-                                    {/* Avatar */}
-                                    <div className="relative shrink-0">
-                                      <div
-                                        className={`w-10 h-10 rounded-full flex items-center justify-center ${iconColorClass}`}
-                                      >
-                                        <Bell size={18} />
-                                      </div>
+                                    setIsNotificationOpen(false);
+                                  }}
+                                  className={`flex gap-4 p-5 hover:bg-gray-50/80 transition-colors border-b border-gray-50 last:border-0 group cursor-pointer relative bg-blue-50/30`}
+                                >
+                                  {/* Avatar */}
+                                  <div className="relative shrink-0">
+                                    <div
+                                      className={`w-10 h-10 rounded-full flex items-center justify-center ${iconColorClass}`}
+                                    >
+                                      <Bell size={18} />
                                     </div>
+                                  </div>
 
-                                    {/* Content */}
-                                    <div className="flex-1 space-y-1">
-                                      <div className="flex justify-between items-start">
-                                        <p className="text-sm text-[#1B2559] leading-snug font-bold">
-                                          {title}
-                                        </p>
+                                  {/* Content */}
+                                  <div className="flex-1 space-y-1">
+                                    <div className="flex justify-between items-start">
+                                      <p className="text-sm text-[#1B2559] leading-snug font-bold">
+                                        {title}
+                                      </p>
+                                      {!isReceptionist && (
                                         <button
                                           onClick={(e) => {
                                             e.stopPropagation();
@@ -380,22 +498,22 @@ const Header = ({
                                         >
                                           Dismiss
                                         </button>
-                                      </div>
+                                      )}
+                                    </div>
 
-                                      <div className="flex flex-col gap-1">
-                                        <span className="text-xs text-gray-500 font-medium">
-                                          {message}
-                                        </span>
-                                        <span className="text-[10px] text-gray-400">
-                                          {String(notif.fromDate).split("T")[0]}{" "}
-                                          to{" "}
-                                          {String(notif.toDate).split("T")[0]}
-                                        </span>
-                                      </div>
+                                    <div className="flex flex-col gap-1">
+                                      <span className="text-xs text-gray-500 font-medium">
+                                        {message}
+                                      </span>
+                                      <span className="text-[10px] text-gray-400">
+                                        {dayjs(notif.fromDate).format("YYYY-MM-DD")}{" "}
+                                        to {dayjs(notif.toDate).format("YYYY-MM-DD")}
+                                      </span>
                                     </div>
                                   </div>
-                                );
-                              })
+                                </div>
+                              );
+                            })
                           ) : (
                             <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
                               <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-3">
@@ -422,16 +540,18 @@ const Header = ({
                                   const getEmployeeNotificationContent = (
                                     update: LeaveNotification,
                                   ) => {
+                                    const formattedType =
+                                      formatRequestTypeLabel(update);
                                     let title = `Request ${update.status}`;
                                     let message = (
                                       <>
                                         Your{" "}
                                         <span className="font-bold text-[#2B3674]">
-                                          {update.requestType}
+                                          {formattedType}
                                         </span>{" "}
                                         request has been{" "}
                                         <span
-                                          className={`font-bold ${update.status === "Approved" ? "text-green-600" : "text-red-600"}`}
+                                          className={`font-bold ${update.status === LeaveRequestStatus.APPROVED ? "text-green-600" : "text-red-600"}`}
                                         >
                                           {update.status}
                                         </span>
@@ -446,14 +566,14 @@ const Header = ({
                                     // Case 1: Cancellation Approved
                                     if (
                                       update.status ===
-                                      "Cancellation Approved"
+                                      LeaveRequestStatus.CANCELLATION_APPROVED
                                     ) {
                                       title = "Cancellation Approved";
                                       message = (
                                         <>
                                           Your request to cancel{" "}
                                           <span className="font-bold text-[#2B3674]">
-                                            {update.requestType}
+                                            {formattedType}
                                           </span>{" "}
                                           has been{" "}
                                           <span className="font-bold text-green-600">
@@ -467,14 +587,15 @@ const Header = ({
                                     }
                                     // Case 2: Cancellation Rejected
                                     else if (
-                                      update.status === "Cancellation Rejected"
+                                      update.status ===
+                                      LeaveRequestStatus.CANCELLATION_REJECTED
                                     ) {
                                       title = "Cancellation Rejected";
                                       message = (
                                         <>
                                           Your request to cancel{" "}
                                           <span className="font-bold text-[#2B3674]">
-                                            {update.requestType}
+                                            {formattedType}
                                           </span>{" "}
                                           has been{" "}
                                           <span className="font-bold text-red-600">
@@ -492,19 +613,25 @@ const Header = ({
                                       iconBg = "bg-red-500";
                                     }
                                     // Case 3: Standard Approval
-                                    else if (update.status === "Approved") {
+                                    else if (
+                                      update.status ===
+                                      LeaveRequestStatus.APPROVED
+                                    ) {
                                       title = "Request Approved";
                                       icon = <Check size={18} />;
                                       iconBg = "bg-green-500";
                                     }
                                     // Case 4: Standard Rejection
-                                    else if (update.status === "Rejected") {
+                                    else if (
+                                      update.status ===
+                                      LeaveRequestStatus.REJECTED
+                                    ) {
                                       title = "Request Rejected";
                                       message = (
                                         <>
                                           Your request for{" "}
                                           <span className="font-bold text-[#2B3674]">
-                                            {update.requestType}
+                                            {formattedType}
                                           </span>{" "}
                                           has been{" "}
                                           <span className="font-bold text-red-600">
@@ -513,35 +640,80 @@ const Header = ({
                                           .
                                         </>
                                       );
-                                      icon = (
-                                        <X
-                                          size={18}
-                                        />
-                                      );
+                                      icon = <X size={18} />;
                                       iconBg = "bg-red-500";
                                     }
                                     // Case 5: Request Modified
-                                    else if (update.status === "Request Modified") {
-                                      const source = update.requestModifiedFrom === "Apply Leave" ? "Leave" : update.requestModifiedFrom;
+                                    else if (
+                                      update.status ===
+                                      LeaveRequestStatus.REQUEST_MODIFIED
+                                    ) {
+                                      const rawSource = update.requestModifiedFrom && update.requestModifiedFrom.includes(":") ? update.requestModifiedFrom.split(":")[1] : update.requestModifiedFrom;
+                                      const source = rawSource === LeaveRequestType.APPLY_LEAVE ? LeaveRequestType.LEAVE : rawSource;
                                       title = "Request Modified";
                                       message = (
                                         <>
                                           Your{" "}
                                           <span className="font-bold text-[#2B3674]">
-                                            {update.requestType}
+                                            {formattedType}
                                           </span>{" "}
                                           request has been{" "}
                                           <span className="font-bold text-orange-600">
                                             Modified
                                           </span>{" "}
-                                          due to new request on same date {source}.
+                                          due to new request on same date{" "}
+                                          {source}.
                                         </>
                                       );
                                       icon = <RotateCcw size={18} />;
                                       iconBg = "bg-orange-500";
                                     }
-                                    // Case 4: Cancellation Rejected (If we can detect it, usually status is just Rejected)
-                                    // If we rely on title or just generic rejection, generic is fine for now.
+                                    // Case 6: Modification Approved
+                                    else if (
+                                      update.status ===
+                                      LeaveRequestStatus.MODIFICATION_APPROVED
+                                    ) {
+                                      title = "Modification Approved";
+                                      message = (
+                                        <>
+                                          Your request to modify{" "}
+                                          <span className="font-bold text-[#2B3674]">
+                                            {formattedType}
+                                          </span>{" "}
+                                          has been{" "}
+                                          <span className="font-bold text-green-600">
+                                            Approved
+                                          </span>
+                                          .
+                                        </>
+                                      );
+                                      icon = <Check size={18} />;
+                                      iconBg = "bg-green-500";
+                                    }
+                                    // Case 7: Modification Rejected or Cancelled
+                                    else if (
+                                      update.status ===
+                                        LeaveRequestStatus.MODIFICATION_REJECTED ||
+                                      update.status ===
+                                        LeaveRequestStatus.MODIFICATION_CANCELLED
+                                    ) {
+                                      title = "Modification Rejected";
+                                      message = (
+                                        <>
+                                          Your request to modify{" "}
+                                          <span className="font-bold text-[#2B3674]">
+                                            {formattedType}
+                                          </span>{" "}
+                                          has been{" "}
+                                          <span className="font-bold text-red-600">
+                                            Rejected
+                                          </span>
+                                          .
+                                        </>
+                                      );
+                                      icon = <X size={18} />;
+                                      iconBg = "bg-red-500";
+                                    }
 
                                     return { title, message, icon, iconBg };
                                   };
@@ -590,13 +762,17 @@ const Header = ({
                                             {message}
                                           </span>
                                           <span className="text-[10px] text-gray-400">
-                                            {String(update.fromDate).split(
-                                              "T",
-                                            )[0]}{" "}
+                                            {
+                                              dayjs(update.fromDate).format(
+                                                "YYYY-MM-DD",
+                                              )
+                                            }{" "}
                                             to{" "}
-                                            {String(update.toDate).split(
-                                              "T",
-                                            )[0]}
+                                            {
+                                              dayjs(update.toDate).format(
+                                                "YYYY-MM-DD",
+                                              )
+                                            }
                                           </span>
                                         </div>
                                       </div>
@@ -731,7 +907,7 @@ const Header = ({
                       </div>
 
                       {/* Footer Actions */}
-                      {selectedNotification && !selectedNotification.isRead && (
+                      {selectedNotification && !selectedNotification.isRead && !isReceptionist && (
                         <div className="p-6 border-t border-gray-50 bg-gray-50/50">
                           <button
                             onClick={() =>
@@ -767,11 +943,12 @@ const Header = ({
               >
                 <div className="flex items-center gap-1.5 md:gap-2">
                   <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white font-bold text-sm shadow-inner ring-1 ring-white/30 overflow-hidden">
-                    {profileImageUrl ? (
+                    {loggedInUserProfileImageUrl && !imageError ? (
                       <img
-                        src={profileImageUrl}
+                        src={loggedInUserProfileImageUrl}
                         alt="Avatar"
                         className="w-full h-full object-cover"
+                        onError={() => setImageError(true)}
                       />
                     ) : (
                       <span>{avatarLetter}</span>
@@ -781,14 +958,18 @@ const Header = ({
                     <span className="text-[12px] md:text-sm font-bold text-white transition-colors leading-none">
                       {isAdmin
                         ? "Admin"
-                        : entity?.firstName ||
-                          entity?.fullName?.split(" ")[0] ||
-                          "User"}
+                        : isReceptionist
+                          ? "Receptionist"
+                          : currentUser?.aliasLoginName?.split(" ")[0] || "User"}
                     </span>
                     <span className="text-[9.5px] md:text-[11px] text-blue-100/80 leading-none mt-1">
                       {isAdmin
                         ? "Administrator"
-                        : entity?.employeeId || "Employee"}
+                        : isReceptionist
+                          ? "View only"
+                          : isManager
+                            ? "Manager"
+                            : "Employee"}
                     </span>
                   </div>
                   <ChevronDown
@@ -810,19 +991,51 @@ const Header = ({
                         Administrator
                       </p>
                     </div>
+                  ) : isReceptionist ? (
+                    <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
+                      <p className="text-sm font-bold text-[#1B2559]">Receptionist</p>
+                      <p className="text-xs text-[#667eea] font-medium">
+                        View only · Download &amp; Export allowed
+                      </p>
+                    </div>
                   ) : (
                     <div className="px-4 py-3 border-b border-gray-100">
                       <p className="text-sm font-bold text-[#1B2559]">
-                        {entity?.fullName || entity?.name || "User"}
+                        {location.pathname.includes("/employee-dashboard") ||
+                        location.pathname.includes(
+                          "/manager-dashboard/leave-management",
+                        ) ||
+                        location.pathname.includes("/manager-dashboard/my") ||
+                        location.pathname.includes(
+                          "/admin-dashboard/my-profile",
+                        ) ||
+                        location.pathname === "/manager-dashboard" ||
+                        location.pathname === "/admin-dashboard"
+                          ? currentUser?.aliasLoginName || "User"
+                          : entity?.fullName ||
+                            entity?.name ||
+                            currentUser?.aliasLoginName ||
+                            "User"}
                       </p>
                       <p className="text-xs text-gray-400 mt-0.5">
-                        {entity?.email || ""}
+                        {location.pathname.includes("/employee-dashboard") ||
+                        location.pathname.includes(
+                          "/manager-dashboard/leave-management",
+                        ) ||
+                        location.pathname.includes("/manager-dashboard/my") ||
+                        location.pathname.includes(
+                          "/admin-dashboard/my-profile",
+                        ) ||
+                        location.pathname === "/manager-dashboard" ||
+                        location.pathname === "/admin-dashboard"
+                          ? currentUser?.loginId || ""
+                          : entity?.email || currentUser?.loginId || ""}
                       </p>
                     </div>
                   )}
 
-                  {/* My Profile - Only show for employees */}
-                  {!isAdmin && (
+                  {/* My Profile - Only show for employees (not Admin/Receptionist in this block; Receptionist can use Change Password from sidebar) */}
+                  {!isAdminOrReceptionist && (
                     <button
                       onClick={handleProfileClick}
                       className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left"

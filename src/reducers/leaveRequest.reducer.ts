@@ -1,5 +1,6 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
+import { LeaveRequestStatus } from "../enums";
 
 const apiUrl = "/api/leave-requests";
 
@@ -12,13 +13,39 @@ export interface LeaveRequest {
   toDate: string;
   title: string;
   description: string;
-  status: "Pending" | "Approved" | "Rejected" | "Cancelled" | "Requesting for Cancellation" | "Cancellation Approved" | "Request Modified";
+  status: LeaveRequestStatus;
   created_at?: string;
+  createdAt?: string;
+  updatedAt?: string;
   submittedDate?: string;
   duration?: number;
   department?: string;
   fullName?: string;
   requestModifiedFrom?: string;
+  isHalfDay?: boolean;
+  halfDayType?: string | null;
+  otherHalfType?: string | null;
+  firstHalf?: string | null;
+  secondHalf?: string | null;
+  isModified?: boolean;
+  modificationCount?: number;
+  lastModifiedDate?: string | null;
+  /** Additional CC emails (from API as array or JSON string) */
+  ccEmails?: string[];
+  /** From GET /leave-requests/:id or email-config */
+  assignedManagerEmail?: string | null;
+  hrEmail?: string | null;
+  documentKeys?: string[];
+}
+
+export interface LeaveBalanceResponse {
+  employeeId: string;
+  year: number;
+  entitlement: number;
+  used: number;
+  pending: number;
+  balance: number;
+  carryOver?: number;
 }
 
 interface LeaveRequestState {
@@ -31,12 +58,24 @@ interface LeaveRequestState {
     leave: { applied: number; approved: number; rejected: number; total: number };
     wfh: { applied: number; approved: number; rejected: number; total: number };
     clientVisit: { applied: number; approved: number; rejected: number; total: number };
+    halfDay: { applied: number; approved: number; rejected: number; total: number };
+  } | null;
+  leaveBalance: LeaveBalanceResponse | null;
+  monthlyLeaveBalance: {
+    carryOver: number;
+    monthlyAccrual: number;
+    leavesTaken: number;
+    lop: number;
+    balance: number;
+    ytdUsed: number;
+    ytdLop: number;
   } | null;
   loading: boolean;
   error: string | null;
   submitSuccess: boolean;
   uploadedFiles: any[];
   fileLoading: boolean;
+  leaveTypes: { label: string; value: string }[];
 }
 
 const initialState: LeaveRequestState = {
@@ -46,26 +85,29 @@ const initialState: LeaveRequestState = {
   currentPage: 1,
   limit: 10,
   stats: null,
+  leaveBalance: null,
+  monthlyLeaveBalance: null,
   loading: false,
   error: null,
   submitSuccess: false,
   uploadedFiles: [],
   fileLoading: false,
+  leaveTypes: [],
 };
 
 // Async Thunk for Getting All Leave Requests (Unified)
 export const getAllLeaveRequests = createAsyncThunk(
   "leaveRequest/getAll",
   async (
-    filters: { 
+    filters: {
       employeeId?: string;
-      department?: string; 
-      status?: string; 
-      search?: string; 
+      department?: string;
+      status?: string;
+      search?: string;
       month?: string;
       year?: string;
-      page?: number; 
-      limit?: number 
+      page?: number;
+      limit?: number
     } = {},
     { rejectWithValue }
   ) => {
@@ -79,6 +121,7 @@ export const getAllLeaveRequests = createAsyncThunk(
       if (filters.year) params.append("year", filters.year);
       if (filters.page) params.append("page", filters.page.toString());
       if (filters.limit) params.append("limit", filters.limit.toString());
+      params.append("_t", new Date().getTime().toString()); // Cache buster
 
       const response = await axios.get(`${apiUrl}?${params.toString()}`);
       return response.data;
@@ -92,6 +135,44 @@ export const getAllLeaveRequests = createAsyncThunk(
 export const getLeaveHistory = getAllLeaveRequests;
 export const getMonthlyLeaveRequests = getAllLeaveRequests;
 
+// Async Thunk for Getting Leave Balance (entitlement, used, pending, balance)
+export const getLeaveBalance = createAsyncThunk(
+  "leaveRequest/getBalance",
+  async (
+    params: { employeeId: string; year: string | number },
+    { rejectWithValue }
+  ) => {
+    try {
+      const year = String(params.year || new Date().getFullYear());
+      const response = await axios.get(
+        `${apiUrl}/balance/${params.employeeId}?year=${year}&_t=${new Date().getTime()}`
+      );
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to fetch leave balance");
+    }
+  }
+);
+
+// Async Thunk for Getting Monthly Leave Balance (carryover, accrual, usage, lop, balance)
+export const getMonthlyLeaveBalance = createAsyncThunk(
+  "leaveRequest/getMonthlyBalance",
+  async (
+    params: { employeeId: string; month: string | number; year: string | number },
+    { rejectWithValue }
+  ) => {
+    try {
+      const { employeeId, month, year } = params;
+      const response = await axios.get(
+        `${apiUrl}/monthly-balance/${employeeId}?month=${month}&year=${year}&_t=${new Date().getTime()}`
+      );
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to fetch monthly leave balance");
+    }
+  }
+);
+
 // Async Thunk for Getting Leave Statistics
 export const getLeaveStats = createAsyncThunk(
   "leaveRequest/getStats",
@@ -102,6 +183,7 @@ export const getLeaveStats = createAsyncThunk(
       if (month) queryParams.append("month", month);
       if (year) queryParams.append("year", year);
 
+      queryParams.append("_t", new Date().getTime().toString());
       const response = await axios.get(`${apiUrl}/stats/${employeeId}?${queryParams.toString()}`);
       return response.data;
     } catch (error: any) {
@@ -139,12 +221,38 @@ export const deleteLeaveRequest = createAsyncThunk(
 // Async Thunk for Updating Request Status (Admin)
 export const updateLeaveRequestStatus = createAsyncThunk(
   "leaveRequest/updateStatus",
-  async ({ id, status }: { id: number; status: "Approved" | "Rejected" | "Cancelled" | "Cancellation Approved" }, { rejectWithValue }) => {
+  async ({ id, status }: { id: number; status: LeaveRequest["status"] }, { rejectWithValue }) => {
     try {
       const response = await axios.post(`${apiUrl}/${id}/update-status`, { status });
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data || `Failed to ${status.toLowerCase()} request`);
+    }
+  }
+);
+
+// Async Thunk for Explicit Attendance Clearance
+export const clearAttendanceForRequest = createAsyncThunk(
+  "leaveRequest/clearAttendance",
+  async ({ id, employeeId }: { id: number; employeeId: string }, { rejectWithValue }) => {
+    try {
+      const response = await axios.patch(`${apiUrl}/${id}/${employeeId}/clear-attendance`);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to clear attendance");
+    }
+  }
+);
+
+// Async Thunk for Modifying Leave Request
+export const modifyLeaveRequest = createAsyncThunk(
+  "leaveRequest/modify",
+  async ({ id, employeeId, updateData }: { id: number; employeeId: string; updateData: any }, { rejectWithValue }) => {
+    try {
+      const response = await axios.patch(`${apiUrl}/${id}/modify`, { ...updateData, employeeId });
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to modify request");
     }
   }
 );
@@ -201,6 +309,19 @@ export const undoCancellationRequest = createAsyncThunk(
   }
 );
 
+// Async Thunk for Undoing Modification
+export const undoModificationRequest = createAsyncThunk(
+  "leaveRequest/undoModification",
+  async ({ id, employeeId }: { id: number; employeeId: string }, { rejectWithValue }) => {
+    try {
+      const response = await axios.patch(`${apiUrl}/${id}/undo-modification`, { employeeId });
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to undo modification");
+    }
+  }
+);
+
 // Async Thunk for Rejecting Cancellation (Admin)
 export const rejectCancellationRequest = createAsyncThunk(
   "leaveRequest/rejectCancellation",
@@ -223,6 +344,19 @@ export const getLeaveRequestById = createAsyncThunk(
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data || "Failed to fetch request details");
+    }
+  }
+);
+
+// Async Thunk for Leave Request Email Config (assigned manager + HR for form)
+export const getLeaveRequestEmailConfig = createAsyncThunk(
+  "leaveRequest/getEmailConfig",
+  async (employeeId: string, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`${apiUrl}/email-config?employeeId=${encodeURIComponent(employeeId)}`);
+      return response.data as { assignedManagerEmail: string | null; hrEmail: string | null };
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to fetch email config");
     }
   }
 );
@@ -348,12 +482,33 @@ export const getLeaveRequestFiles = createAsyncThunk(
   }
 );
 
+// Async Thunk for Getting Leave Duration Types
+export const getLeaveDurationTypes = createAsyncThunk(
+  "leaveRequest/getDurationTypes",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`${apiUrl}/duration-types`);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to fetch leave duration types");
+    }
+  }
+);
+
 const leaveRequestSlice = createSlice({
   name: "leaveRequest",
   initialState,
   reducers: {
     resetSubmitSuccess: (state) => {
       state.submitSuccess = false;
+      state.error = null;
+    },
+    clearRequests: (state) => {
+      state.entities = [];
+      state.totalItems = 0;
+      state.totalPages = 1;
+      state.currentPage = 1;
+      state.stats = null;
     },
   },
   extraReducers: (builder) => {
@@ -394,6 +549,22 @@ const leaveRequestSlice = createSlice({
       state.stats = action.payload.data || action.payload;
     });
 
+    // Get Leave Balance
+    builder.addCase(getLeaveBalance.rejected, (state) => {
+      state.leaveBalance = null;
+    });
+
+    // Get Monthly Leave Balance
+    builder.addCase(getMonthlyLeaveBalance.pending, (state) => {
+      state.monthlyLeaveBalance = null;
+    });
+    builder.addCase(getMonthlyLeaveBalance.fulfilled, (state, action) => {
+      state.monthlyLeaveBalance = action.payload;
+    });
+    builder.addCase(getMonthlyLeaveBalance.rejected, (state) => {
+      state.monthlyLeaveBalance = null;
+    });
+
     // Submit Request
     builder.addCase(submitLeaveRequest.pending, (state) => {
       state.loading = true;
@@ -421,13 +592,13 @@ const leaveRequestSlice = createSlice({
 
     // Update Status
     builder.addCase(updateLeaveRequestStatus.fulfilled, (state, action) => {
-      const updatedItem = action.payload;
+      const updatedItem = action.payload.request || action.payload; // Handle both old and new response structure
       const index = state.entities.findIndex((item) => item.id === updatedItem.id);
       if (index !== -1) {
         state.entities[index].status = updatedItem.status;
       }
     });
-    
+
     // Cancel Approved Request
     builder.addCase(cancelApprovedLeaveRequest.fulfilled, (state, action) => {
       const updatedItem = action.payload;
@@ -472,8 +643,13 @@ const leaveRequestSlice = createSlice({
     builder.addCase(deleteLeaveRequestFile.fulfilled, (state, action) => {
       state.uploadedFiles = state.uploadedFiles.filter((f) => f.key !== action.payload);
     });
+
+    // Get Leave Duration Types
+    builder.addCase(getLeaveDurationTypes.fulfilled, (state, action) => {
+      state.leaveTypes = action.payload;
+    });
   },
 });
 
-export const { resetSubmitSuccess } = leaveRequestSlice.actions;
+export const { resetSubmitSuccess, clearRequests } = leaveRequestSlice.actions;
 export default leaveRequestSlice.reducer;

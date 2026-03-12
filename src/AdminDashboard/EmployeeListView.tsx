@@ -9,9 +9,9 @@ import {
   createEntity,
   resendActivationLink,
   updateEmployeeStatus,
-  fetchDepartments,
   fetchRoles,
 } from "../reducers/employeeDetails.reducer";
+import { fetchDepartments } from "../reducers/masterDepartment.reducer";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import {
   Pencil,
@@ -33,8 +33,11 @@ import {
   CheckCircle,
   CreditCard,
   Eye,
+  Calendar,
 } from "lucide-react";
 import EmployeeListMobileCard from "./EmployeeListMobileCard";
+import Toast from "../components/Toast";
+import { UserType, EmploymentType , UserStatus} from "../enums";
 
 const EmployeeListView = () => {
   const navigate = useNavigate();
@@ -45,6 +48,9 @@ const EmployeeListView = () => {
     : "/admin-dashboard";
 
   const isAdmin = basePath === "/admin-dashboard";
+  const currentUser = useAppSelector((state) => state.user.currentUser);
+  const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
+  const canEdit = isAdmin && !isReceptionist;
 
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -69,6 +75,9 @@ const EmployeeListView = () => {
     designation: "",
     email: "",
     role: "",
+    employmentType: "" as "" | EmploymentType,
+    gender: "" as "" | "MALE" | "FEMALE",
+    joiningDate: "",
   });
   const [fieldErrors, setFieldErrors] = useState({
     fullName: "",
@@ -77,6 +86,9 @@ const EmployeeListView = () => {
     designation: "",
     email: "",
     role: "",
+    employmentType: "",
+    gender: "",
+    joiningDate: "",
   });
   const [generalError, setGeneralError] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
@@ -91,6 +103,10 @@ const EmployeeListView = () => {
     loginId?: string;
     password?: string;
   } | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error" | "info";
+  } | null>(null);
   // const [copySuccess, setCopySuccess] = useState<string>("");
 
   // const [copySuccess, setCopySuccess] = useState<string>("");
@@ -102,9 +118,12 @@ const EmployeeListView = () => {
     uploadLoading,
     uploadResult,
     loading,
-    departments,
     roles,
+    errorMessage,
   } = useAppSelector((state: RootState) => state.employeeDetails);
+  const { departments } = useAppSelector(
+    (state: RootState) => state.masterDepartments,
+  );
 
   useEffect(() => {
     dispatch(fetchDepartments());
@@ -143,6 +162,7 @@ const EmployeeListView = () => {
         order: sortConfig.key ? sortConfig.direction.toUpperCase() : undefined,
         department:
           selectedDepartment === "All" ? undefined : selectedDepartment,
+        includeSelf: !isAdmin,
       }),
     );
   }, [
@@ -169,12 +189,14 @@ const EmployeeListView = () => {
     id: emp.employeeId || emp.id,
     name: emp.fullName || emp.name,
     department: emp.department,
+    role: emp.role,
     userStatus: emp.userStatus,
     resetRequired: emp.resetRequired,
     rawId: emp.employeeId, // Store employeeId string for API calls
     createdAt: emp.createdAt,
     lastLoggedIn: emp.lastLoggedIn,
     isActive: emp.userStatus !== "INACTIVE",
+    isAdmin: emp.userType === UserType.ADMIN, // Or similar logic. Actually, we have `isAdmin` in the component scope. Let me just set it to false for now, it's just a UI model.
   }));
 
   const currentItems = employees.filter((emp) => {
@@ -217,7 +239,10 @@ const EmployeeListView = () => {
         "application/vnd.ms-excel",
       ];
       if (!validTypes.includes(file.type)) {
-        alert("Please upload a valid Excel file (.xlsx or .xls)");
+        setToast({
+          message: "Please upload a valid Excel file (.xlsx or .xls)",
+          type: "error",
+        });
         return;
       }
       setSelectedFile(file);
@@ -252,7 +277,12 @@ const EmployeeListView = () => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
-      [name]: value,
+      [name]:
+        name === "employmentType"
+          ? (value as "" | EmploymentType)
+          : name === "gender"
+            ? (value as "" | "MALE" | "FEMALE")
+            : value,
     });
     // Validation
     let error = "";
@@ -263,8 +293,9 @@ const EmployeeListView = () => {
         }
         break;
       case "employeeId":
-        if (value && !/^(?=.*[A-Za-z])[A-Za-z0-9-]+$/.test(value)) {
-          error = "Employee ID should be alphanumeric";
+        if (value && !/^[A-Z0-9-]+$/.test(value)) {
+          error =
+            "Employee ID should contain only uppercase letters, numbers, and hyphens";
         }
         break;
       case "designation":
@@ -293,17 +324,29 @@ const EmployeeListView = () => {
     if (hasErrors) {
       return;
     }
-    // Check if all fields filled
-    if (Object.values(formData).some((val) => !val)) {
-      setGeneralError("Please fill in all fields");
+    const requiredKeys = [
+      "fullName",
+      "employeeId",
+      "department",
+      "role",
+      "designation",
+      "employmentType",
+      "gender",
+      "email",
+      "joiningDate",
+    ];
+    if (requiredKeys.some((k) => !(formData as Record<string, unknown>)[k])) {
+      setGeneralError("Please fill in all required fields");
       return;
     }
 
     setGeneralError("");
     setShowSuccess(false);
 
+    const submitData = { ...formData };
+
     try {
-      const resultAction = await dispatch(createEntity(formData));
+      const resultAction = await dispatch(createEntity(submitData));
 
       if (createEntity.fulfilled.match(resultAction)) {
         setShowSuccess(true);
@@ -337,14 +380,16 @@ const EmployeeListView = () => {
 
   const handleCloseCreateModal = () => {
     setIsCreateModalOpen(false);
-    // Don't reset the entire Redux state - it clears the employee list
-    // Only reset local form state
     setFormData({
       fullName: "",
       employeeId: "",
       department: "",
       designation: "",
       email: "",
+      role: "",
+      employmentType: "",
+      gender: "",
+      joiningDate: "",
     });
     setFieldErrors({
       fullName: "",
@@ -352,6 +397,10 @@ const EmployeeListView = () => {
       department: "",
       designation: "",
       email: "",
+      role: "",
+      employmentType: "",
+      gender: "",
+      joiningDate: "",
     });
     setGeneralError("");
     setShowSuccess(false);
@@ -393,7 +442,10 @@ const EmployeeListView = () => {
       );
     } catch (error: any) {
       console.error("Failed to toggle status:", error);
-      alert("Failed to update status: " + (error.message || error));
+      setToast({
+        message: "Failed to update status: " + (error.message || error),
+        type: "error",
+      });
       setShowToggleConfirm(false);
       setSelectedEmployeeForToggle(null);
     }
@@ -420,19 +472,21 @@ const EmployeeListView = () => {
           }),
         );
       } else {
-        alert(
-          "Failed to send activation link: " +
+        setToast({
+          message:
+            "Failed to send activation link: " +
             (result.payload || "Unknown error"),
-        );
+          type: "error",
+        });
       }
     });
   };
 
   // Handle success after employee creation - REMOVED to avoid conflict with direct handling
   // useEffect(() => {
-  //   if (updateSuccess && isCreateModalOpen) {
-  //     // ... Logic moved to handleCreateSubmit ...
-  //   }
+  // if (updateSuccess && isCreateModalOpen) {
+  // // ... Logic moved to handleCreateSubmit ...
+  // }
   // }, ...);
 
   return (
@@ -445,79 +499,89 @@ const EmployeeListView = () => {
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
             {/* Modern Custom Dropdown */}
-            <div className="relative" ref={dropdownRef}>
-              <button
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-2 px-5 py-2.5 bg-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] text-[#2B3674] font-bold text-sm hover:bg-gray-50 transition-all border border-transparent focus:border-[#4318FF]/20"
-              >
-                <div className="flex items-center gap-2">
-                  <Filter size={16} className="text-[#4318FF]" />
-                  <span>{selectedDepartment}</span>
-                </div>
-                <ChevronDown
-                  size={16}
-                  className={`text-[#A3AED0] transition-transform duration-300 ${isDropdownOpen ? "rotate-180" : ""}`}
-                />
-              </button>
-
-              {isDropdownOpen && (
-                <div className="absolute top-full left-0 mt-2 w-full sm:w-48 bg-white/80 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-white/20 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <div className="px-3 py-1 mb-1">
-                    <span className="text-[10px] font-black text-[#A3AED0] uppercase tracking-widest pl-2">
-                      Departments
-                    </span>
+            {canEdit && (
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-2 px-5 py-2.5 bg-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] text-[#2B3674] font-bold text-sm hover:bg-gray-50 transition-all border border-transparent focus:border-[#4318FF]/20"
+                >
+                  <div className="flex items-center gap-2">
+                    <Filter size={16} className="text-[#4318FF]" />
+                    <span>{selectedDepartment}</span>
                   </div>
-                  <button
-                    key="All"
-                    onClick={() => {
-                      setSelectedDepartment("All");
-                      setIsDropdownOpen(false);
-                      setCurrentPage(1);
-                    }}
-                    className={`w-full text-left px-5 py-2 text-sm font-semibold transition-colors
-                    ${
-                      selectedDepartment === "All"
-                        ? "text-[#4318FF] bg-[#4318FF]/5"
-                        : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
-                    }`}
-                  >
-                    All
-                  </button>
-                  {departments.map((dept) => (
+                  <ChevronDown
+                    size={16}
+                    className={`text-[#A3AED0] transition-transform duration-300 ${isDropdownOpen ? "rotate-180" : ""}`}
+                  />
+                </button>
+
+                {isDropdownOpen && (
+                  <div className="absolute top-full left-0 mt-2 w-full sm:w-48 bg-white/80 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-white/20 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="px-3 py-1 mb-1">
+                      <span className="text-[10px] font-black text-[#A3AED0] uppercase tracking-widest pl-2">
+                        Departments
+                      </span>
+                    </div>
                     <button
-                      key={dept}
+                      key="All"
                       onClick={() => {
-                        setSelectedDepartment(dept);
+                        setSelectedDepartment("All");
                         setIsDropdownOpen(false);
                         setCurrentPage(1);
                       }}
                       className={`w-full text-left px-5 py-2 text-sm font-semibold transition-colors
-                      ${
-                        selectedDepartment === dept
-                          ? "text-[#4318FF] bg-[#4318FF]/5"
-                          : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
-                      }`}
+${
+  selectedDepartment === "All"
+    ? "text-[#4318FF] bg-[#4318FF]/5"
+    : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
+}`}
                     >
-                      {dept}
+                      All
                     </button>
-                  ))}
-                </div>
-              )}
-            </div>
+                    {departments.map((dept) => (
+                      <button
+                        key={dept.id}
+                        onClick={() => {
+                          setSelectedDepartment(dept.departmentName);
+                          setIsDropdownOpen(false);
+                          setCurrentPage(1);
+                        }}
+                        className={`w-full text-left px-5 py-2 text-sm font-semibold transition-colors
+${
+  selectedDepartment === dept.departmentName
+    ? "text-[#4318FF] bg-[#4318FF]/5"
+    : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
+}`}
+                      >
+                        {dept.departmentName}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Search Box */}
             <div className="flex items-center bg-white rounded-full px-5 py-2.5 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] min-w-0 sm:min-w-[250px] flex-1 border border-transparent focus-within:border-[#4318FF]/20 transition-all">
               <Search size={18} className="text-[#A3AED0] mr-2" />
               <input
                 type="text"
-                placeholder="Search..."
+                placeholder="Search by name or employee ID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="border-none outline-none bg-transparent text-[#2B3674] w-full text-sm font-semibold placeholder:text-[#A3AED0]/60"
               />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm("")}
+                  className="ml-2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              )}
             </div>
 
-            {basePath === "/admin-dashboard" && (
+            {basePath === "/admin-dashboard" && canEdit && (
               <>
                 <button
                   onClick={() => setIsUploadModalOpen(true)}
@@ -535,6 +599,24 @@ const EmployeeListView = () => {
                   <span className="hidden sm:inline">Create Employee</span>
                 </button>
               </>
+            )}
+
+            {/* Clear Filters Button */}
+            {(searchTerm || selectedDepartment !== "All") && (
+              <button
+                onClick={() => {
+                  setSearchTerm("");
+                  setDebouncedSearchTerm("");
+                  setSelectedDepartment("All");
+                  setCurrentPage(1);
+                  setSortConfig({ key: null, direction: "asc" });
+                }}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#5B4FFF] text-white rounded-full hover:bg-[#4318FF] active:scale-95 transition-all text-sm font-bold border border-[#4318FF]/50 whitespace-nowrap"
+                title="Clear all filters"
+              >
+                <X size={16} />
+                <span>Clear All</span>
+              </button>
             )}
           </div>
         </div>
@@ -561,9 +643,12 @@ const EmployeeListView = () => {
                     Department
                   </th>
                   <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider w-[15%]">
+                    Role
+                  </th>
+                  <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider w-[15%]">
                     Status
                   </th>
-                  <th className="py-4 pl-4 pr-10 text-[13px] font-bold uppercase tracking-wider text-center w-[20%]">
+                  <th className="py-4 px-4 text-[13px] font-bold uppercase tracking-wider text-center w-[20%]">
                     Actions
                   </th>
                 </tr>
@@ -583,24 +668,27 @@ const EmployeeListView = () => {
                     <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
                       {emp.department || "General"}
                     </td>
+                    <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
+                      {emp.role || "-"}
+                    </td>
                     <td className="py-4 px-4 text-center">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (emp.isActive && isAdmin) {
+                          if (emp.isActive && canEdit) {
                             handleToggleStatus(emp.rawId);
                           }
                         }}
-                        disabled={!emp.isActive || !isAdmin}
+                        disabled={!emp.isActive || !canEdit}
                         className={`relative w-20 h-7 rounded-full transition-all duration-300 flex items-center mx-auto ${
                           emp.isActive
-                            ? isAdmin
+                            ? canEdit
                               ? "bg-[#0095FF] cursor-pointer"
                               : "bg-[#0095FF]/60 cursor-not-allowed"
                             : "bg-red-300 cursor-not-allowed"
                         }`}
                         title={
-                          !isAdmin
+                          !canEdit
                             ? "Only admins can change employee status"
                             : !emp.isActive
                               ? "Status cannot be changed once Inactive"
@@ -624,52 +712,40 @@ const EmployeeListView = () => {
                       </button>
                     </td>
                     <td className="py-4 px-4 text-center">
-                      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-                        {/* Spacer for left side to balance grid */}
-                        <div></div>
-
-                        {/* Always centered View/Edit buttons */}
-                        <div className="flex items-center justify-center gap-3">
-                          <button
-                            onClick={() => handleViewDashboard(emp.rawId)}
-                            className="inline-flex items-center gap-2 bg-transparent border-none cursor-pointer text-[#4318FF] text-sm font-bold hover:underline transition-all hover:scale-105 active:scale-95"
-                            title="View Dashboard"
-                          >
-                            <Eye size={16} />
-                          </button>
+                      <div className="flex items-center justify-center gap-3">
+                        <button
+                          onClick={() => handleViewDashboard(emp.rawId)}
+                          className="inline-flex items-center justify-center bg-transparent border-none cursor-pointer text-[#4318FF] hover:scale-110 active:scale-95 transition-all"
+                          title="View Dashboard"
+                        >
+                          <Eye size={16} />
+                        </button>
+                        {canEdit && (
                           <button
                             onClick={() => handleViewDetails(emp.rawId)}
-                            className="inline-flex items-center gap-2 bg-transparent border-none cursor-pointer text-[#4318FF] text-sm font-bold hover:underline transition-all hover:scale-105 active:scale-95"
+                            className="inline-flex items-center justify-center bg-transparent border-none cursor-pointer text-[#4318FF] hover:scale-110 active:scale-95 transition-all"
                             title="Edit Details"
                           >
                             <Pencil size={16} />
                           </button>
-                        </div>
-
-                        {/* Right side conditional button */}
-                        <div className="flex justify-start w-24">
-                          {(() => {
-                            // Show resend button if employee is active, has never logged in, AND account is older than 24 hours
-                            const is24HoursOld =
-                              new Date(emp.createdAt).getTime() <
-                              Date.now() - 24 * 60 * 60 * 1000;
-                            const shouldShowButton =
-                              emp.isActive && !emp.lastLoggedIn && is24HoursOld;
-
-                            return shouldShowButton ? (
-                              <button
-                                onClick={() =>
-                                  handleResendActivation(emp.rawId)
-                                }
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all text-xs font-bold border bg-amber-50 text-amber-600 hover:bg-amber-100 border-amber-200 whitespace-nowrap"
-                                title="Resend Activation Link"
-                              >
-                                <RefreshCw size={14} />
-                                Resend
-                              </button>
-                            ) : null;
-                          })()}
-                        </div>
+                        )}
+                        {(() => {
+                          const is24HoursOld =
+                            new Date(emp.createdAt).getTime() <
+                            Date.now() - 24 * 60 * 60 * 1000;
+                          const shouldShowButton =
+                            canEdit && emp.isActive && !emp.lastLoggedIn && is24HoursOld;
+                          return shouldShowButton ? (
+                            <button
+                              onClick={() => handleResendActivation(emp.rawId)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all text-xs font-bold border bg-amber-50 text-amber-600 hover:bg-amber-100 border-amber-200 whitespace-nowrap"
+                              title="Resend Activation Link"
+                            >
+                              <RefreshCw size={14} />
+                              Resend
+                            </button>
+                          ) : null;
+                        })()}
                       </div>
                     </td>
                   </tr>
@@ -687,7 +763,7 @@ const EmployeeListView = () => {
                 onViewDashboard={handleViewDashboard}
                 onResendActivation={handleResendActivation}
                 onToggleStatus={handleToggleStatus}
-                isAdmin={isAdmin}
+                isAdmin={canEdit}
               />
             ) : null}
           </div>
@@ -720,11 +796,11 @@ const EmployeeListView = () => {
                 onClick={handlePrevPage}
                 disabled={currentPage === 1}
                 className={`p-2 rounded-xl border border-[#E9EDF7] transition-all flex items-center justify-center
-                ${
-                  currentPage === 1
-                    ? "bg-gray-50 text-gray-300 cursor-not-allowed"
-                    : "bg-white text-[#4318FF] hover:bg-[#4318FF]/5 active:scale-90 shadow-sm"
-                }`}
+${
+  currentPage === 1
+    ? "bg-gray-50 text-gray-300 cursor-not-allowed"
+    : "bg-white text-[#4318FF] hover:bg-[#4318FF]/5 active:scale-90 shadow-sm"
+}`}
               >
                 <ChevronLeft size={18} />
               </button>
@@ -737,11 +813,11 @@ const EmployeeListView = () => {
                 onClick={handleNextPage}
                 disabled={currentPage === totalPages || totalPages === 0}
                 className={`p-2 rounded-xl border border-[#E9EDF7] transition-all flex items-center justify-center
-                ${
-                  currentPage === totalPages || totalPages === 0
-                    ? "bg-gray-50 text-gray-300 cursor-not-allowed"
-                    : "bg-white text-[#4318FF] hover:bg-[#4318FF]/5 active:scale-90 shadow-sm"
-                }`}
+${
+  currentPage === totalPages || totalPages === 0
+    ? "bg-gray-50 text-gray-300 cursor-not-allowed"
+    : "bg-white text-[#4318FF] hover:bg-[#4318FF]/5 active:scale-90 shadow-sm"
+}`}
               >
                 <ChevronRight size={18} />
               </button>
@@ -753,7 +829,7 @@ const EmployeeListView = () => {
       {/* Upload Modal */}
       {isUploadModalOpen && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-gray-100 animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl border border-gray-100 animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
             <div className="flex-none flex items-center justify-between p-6 border-b border-gray-100">
               <h3 className="text-xl font-bold text-[#2B3674]">
                 Bulk Upload Employees
@@ -767,18 +843,35 @@ const EmployeeListView = () => {
             </div>
 
             <div className="p-6 space-y-4 overflow-y-auto">
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                <p className="text-sm font-semibold text-blue-900 mb-2">
-                  Required Excel Columns:
-                </p>
-                <ul className="text-xs text-blue-700 space-y-1 list-disc list-inside">
-                  <li>fullName</li>
-                  <li>employeeId</li>
-                  <li>department</li>
-                  <li>designation</li>
-                  <li>email</li>
-                  <li>password (optional)</li>
-                </ul>
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 md:flex-1">
+                  <p className="text-sm font-semibold text-blue-900 mb-2">
+                    Required Excel columns — use these <strong>exact Same </strong> headers (case-sensitive):
+                  </p>
+                  <ul className="text-xs text-blue-700 space-y-1 list-disc list-inside">
+                    <li>fullName</li>
+                    <li>employeeId</li>
+                    <li>department</li>
+                    <li>designation</li>
+                    <li>email</li>
+                    <li>employmentType</li>
+                    <li>joiningDate</li>
+                    <li>gender</li>
+                    <li>role</li>
+                  </ul>
+                </div>
+
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 md:flex-1">
+                  <p className="text-sm font-semibold text-amber-900 mb-2">
+                    Rules to follow:
+                  </p>
+                  <ul className="text-xs text-amber-800 space-y-1.5">
+                    <li><strong>employmentType</strong> — use: FULL_TIMER (full-time) or INTERN (intern).</li>
+                    <li><strong>Date Format</strong> — use: YYYY-MM-DD or dd/mm/yyyy.</li>
+                    <li><strong>gender</strong> — use: MALE or FEMALE (uppercase).</li>
+                    <li><strong>role</strong> —  Employee, Manager, Trainee Intern.</li>
+                  </ul>
+                </div>
               </div>
 
               <div className="space-y-3">
@@ -1029,7 +1122,7 @@ const EmployeeListView = () => {
                     {/* Full Name */}
                     <div className="space-y-2">
                       <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">
-                        Full Name
+                        Full Name <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
                         <input
@@ -1053,7 +1146,7 @@ const EmployeeListView = () => {
                     {/* Employee ID */}
                     <div className="space-y-2">
                       <label className="text-xs font-bold text-gray-600 tracking-wide">
-                        Employee ID
+                        Employee ID <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
                         <input
@@ -1062,7 +1155,23 @@ const EmployeeListView = () => {
                           placeholder="Employee ID"
                           className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none transition-all text-sm"
                           value={formData.employeeId}
-                          onChange={handleFormChange}
+                          onChange={(e) => {
+                            const event = {
+                              ...e,
+                              target: {
+                                ...e.target,
+                                name: "employeeId",
+                                value: e.target.value.toUpperCase(),
+                              },
+                            };
+                            handleFormChange(
+                              event as React.ChangeEvent<HTMLInputElement>,
+                            );
+                          }}
+                          onInput={(e) => {
+                            e.currentTarget.value =
+                              e.currentTarget.value.toUpperCase();
+                          }}
                           required
                         />
                         <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -1077,7 +1186,7 @@ const EmployeeListView = () => {
                     {/* Department */}
                     <div className="space-y-2">
                       <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">
-                        Department
+                        Department <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
                         <select
@@ -1089,8 +1198,8 @@ const EmployeeListView = () => {
                         >
                           <option value="">Select Department</option>
                           {departments.map((dept) => (
-                            <option key={dept} value={dept}>
-                              {dept}
+                            <option key={dept.id} value={dept.departmentName}>
+                              {dept.departmentName}
                             </option>
                           ))}
                         </select>
@@ -1116,7 +1225,7 @@ const EmployeeListView = () => {
                     {/* Role */}
                     <div className="space-y-2">
                       <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">
-                        Role
+                        Role <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
                         <select
@@ -1155,7 +1264,7 @@ const EmployeeListView = () => {
                     {/* Designation */}
                     <div className="space-y-2">
                       <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">
-                        Designation
+                        Designation <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
                         <input
@@ -1175,12 +1284,112 @@ const EmployeeListView = () => {
                         </p>
                       )}
                     </div>
+
+                    {/* Employment Type (leave balance) */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">
+                        Employment Type <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <select
+                          name="employmentType"
+                          value={formData.employmentType}
+                          onChange={handleFormChange}
+                          className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none transition-all text-sm appearance-none bg-white"
+                          required
+                        >
+                          <option value="">Select Employment Type</option>
+                          <option value="FULL_TIMER">
+                            Full-time employee{" "}
+                          </option>
+                          <option value="INTERN">Intern </option>
+                        </select>
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                          <svg
+                            className="w-4 h-4 text-gray-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M19 9l-7 7-7-7"
+                            />
+                          </svg>
+                        </div>
+                      </div>
+                      <p className="text-gray-400 text-xs mt-0.5">
+                        {/* Used for leave balance: Full timer = 18, Intern = 12 leaves/year */}
+                      </p>
+                    </div>
+
+                    {/* Gender */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">
+                        Gender <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <select
+                          name="gender"
+                          value={formData.gender}
+                          onChange={handleFormChange}
+                          className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none transition-all text-sm appearance-none bg-white"
+                          required
+                        >
+                          <option value="">Select Gender</option>
+                          <option value="MALE">Male</option>
+                          <option value="FEMALE">Female</option>
+                        </select>
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                          <svg
+                            className="w-4 h-4 text-gray-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M19 9l-7 7-7-7"
+                            />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Date of Joining */}
+                  <div className="space-y-2 mt-4">
+                    <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">
+                      Date of Joining <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="date"
+                        name="joiningDate"
+                        className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none transition-all text-sm appearance-none bg-white"
+                        value={formData.joiningDate}
+                        onChange={handleFormChange}
+                        required
+                      />
+                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+                    </div>
+                    {fieldErrors.joiningDate && (
+                      <p className="text-red-500 text-xs mt-1">
+                        {fieldErrors.joiningDate}
+                      </p>
+                    )}
                   </div>
 
                   {/* Email - Full Width */}
                   <div className="space-y-2 mt-4">
                     <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">
-                      Email Address
+                      Email Address <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
                       <input
@@ -1306,6 +1515,15 @@ const EmployeeListView = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
       )}
     </div>
   );

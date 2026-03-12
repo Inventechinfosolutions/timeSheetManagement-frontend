@@ -1,10 +1,15 @@
 import { Outlet, useParams, useNavigate, useLocation } from "react-router-dom";
 import SidebarLayout from "../AdminDashboard/SidebarLayout";
+import { useAppDispatch, useAppSelector } from "../hooks";
+import { fetchUnreadNotifications } from "../reducers/leaveNotification.reducer";
+import { UserType } from "../enums";
 
 const AdminLayout = () => {
   const { tab } = useParams<{ tab: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const currentUser = useAppSelector((state) => state.user.currentUser);
+  const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
 
   // Determine active tab based on path parameter or current URL
   const getActiveTab = () => {
@@ -22,7 +27,7 @@ const AdminLayout = () => {
       path.includes("/admin-dashboard/timesheet-view/") ||
       path.includes("/admin-dashboard/working-details/")
     ) {
-      return "Timesheet";
+      return "Employee Timesheet";
     }
     if (path.includes("/admin-dashboard/working-details/")) {
       return "Working Details";
@@ -38,6 +43,10 @@ const AdminLayout = () => {
     }
     if (path.includes("/admin-dashboard/projects")) {
       return "Projects";
+    }
+    if (path.includes("/admin-dashboard/leave-balance")) {
+      return "Leave Balance";
+    }
     if (
       path.includes("/admin-dashboard/manager-mapping") ||
       path.includes("/admin-dashboard/manager-employees/")
@@ -56,9 +65,11 @@ const AdminLayout = () => {
       case "timesheet-list":
       case "timesheet-view":
       case "working-details":
-        return "Timesheet";
+        return "Employee Timesheet";
       case "work-management":
         return "Work Management";
+      case "leave-balance":
+        return "Leave Balance";
       case "manager-mapping":
         return "Manager Mapping";
       default:
@@ -66,11 +77,17 @@ const AdminLayout = () => {
     }
   };
 
+  const dispatch = useAppDispatch();
   const handleTabChange = (tabName: string) => {
-    if (tabName === "User & Role Management") {
+    if (tabName === "System Dashboard") {
+      dispatch(fetchUnreadNotifications());
+      navigate("/admin-dashboard");
+    } else if (tabName === "User & Role Management") {
       navigate("/admin-dashboard/registration");
     } else if (tabName === "Employee Details") {
       navigate("/admin-dashboard/employees");
+    } else if (tabName === "Employee Timesheet") {
+      navigate("/admin-dashboard/timesheet-list");
     } else if (tabName === "Timesheet") {
       navigate("/admin-dashboard/timesheet-list");
     } else if (tabName === "Working Details") {
@@ -81,10 +98,10 @@ const AdminLayout = () => {
       navigate("/admin-dashboard/work-management");
     } else if (tabName === "Projects") {
       navigate("/admin-dashboard/projects");
+    } else if (tabName === "Leave Balance") {
+      navigate("/admin-dashboard/leave-balance");
     } else if (tabName === "Manager Mapping") {
       navigate("/admin-dashboard/manager-mapping");
-    } else if (tabName === "System Dashboard") {
-      navigate("/admin-dashboard");
     }
   };
 
@@ -92,7 +109,7 @@ const AdminLayout = () => {
     <SidebarLayout
       activeTab={getActiveTab()}
       onTabChange={handleTabChange}
-      title="Admin"
+      title={isReceptionist ? "Receptionist" : "Admin"}
     >
       <Outlet />
     </SidebarLayout>

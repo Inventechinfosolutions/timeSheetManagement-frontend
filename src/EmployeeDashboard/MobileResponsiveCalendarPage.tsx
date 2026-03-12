@@ -1,4 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
+import dayjs from "dayjs";
+import { useLocation } from "react-router-dom";
+
 import {
   ChevronLeft,
   ChevronRight,
@@ -7,26 +10,35 @@ import {
   Loader2,
   Calendar as CalendarIcon,
   AlertCircle,
+  Lock,
 } from "lucide-react";
+
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { RootState } from "../store";
-import { fetchMonthlyAttendance } from "../reducers/employeeAttendance.reducer";
+import {
+  fetchMonthlyAttendance,
+  downloadAttendancePdfReport,
+} from "../reducers/employeeAttendance.reducer";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import { fetchBlockers } from "../reducers/timesheetBlocker.reducer";
+import { AttendanceStatus, UserType, Department } from "../enums";
 import {
   generateMonthlyEntries,
   generateRangeEntries,
 } from "../utils/attendanceUtils";
-import { downloadPdf } from "../utils/downloadPdf";
+import { saveAs } from "file-saver";
+// Reducer imports remaining
 
 interface MobileResponsiveCalendarPageProps {
   employeeId?: string;
-  onNavigateToDate?: (day: number) => void;
+  onNavigateToDate?: (timestamp: number) => void;
+  onBlockedClick?: () => void;
 }
 
 const MobileResponsiveCalendarPage = ({
   employeeId: propEmployeeId,
   onNavigateToDate,
+  onBlockedClick,
 }: MobileResponsiveCalendarPageProps) => {
   const dispatch = useAppDispatch();
 
@@ -36,6 +48,13 @@ const MobileResponsiveCalendarPage = ({
     (state: RootState) => state.employeeDetails,
   );
   const { currentUser } = useAppSelector((state: RootState) => state.user);
+
+  const isAdmin = currentUser?.userType === UserType.ADMIN;
+  const isManager =
+    currentUser?.userType === UserType.MANAGER ||
+    (currentUser?.role &&
+      currentUser.role.toUpperCase().includes(UserType.MANAGER));
+
   // @ts-ignore
   const { holidays } = useAppSelector(
     (state: RootState) => state.masterHolidays || { holidays: [] },
@@ -44,8 +63,19 @@ const MobileResponsiveCalendarPage = ({
     (state: RootState) => state.timesheetBlocker || { blockers: [] },
   );
 
+  const location = useLocation();
+  const isMyRoute =
+    location.pathname.includes("my-dashboard") ||
+    location.pathname.includes("my-timesheet") ||
+    location.pathname === "/employee-dashboard" ||
+    location.pathname === "/employee-dashboard/";
+
   const currentEmployeeId =
-    propEmployeeId || entity?.employeeId || currentUser?.employeeId;
+    propEmployeeId ||
+    (isMyRoute
+      ? currentUser?.employeeId || currentUser?.loginId
+      : entity?.employeeId || currentUser?.employeeId || currentUser?.loginId);
+
   const attendanceFetchedKey = useRef<string | null>(null);
 
   // Local State
@@ -140,54 +170,34 @@ const MobileResponsiveCalendarPage = ({
     );
 
     const format = (d: Date) => {
-      const offset = d.getTimezoneOffset() * 60000;
-      return new Date(d.getTime() - offset).toISOString().split("T")[0];
+      return dayjs(d).format("YYYY-MM-DD");
     };
 
     setDownloadDateRange({ from: format(start), to: format(end) });
     setIsDownloadModalOpen(true);
   };
 
-  const handleConfirmDownload = () => {
+  const handleConfirmDownload = async () => {
     if (!currentEmployeeId) return;
 
     try {
       setIsDownloading(true);
       const fromDateStr = downloadDateRange.from;
-      const toDateStr = downloadDateRange.to;
+      const monthStr = fromDateStr.split("-")[1];
+      const yearStr = fromDateStr.split("-")[0];
 
-      const filteredRecords = records.filter((record) => {
-        const recordDate = new Date(record.workingDate)
-          .toISOString()
-          .split("T")[0];
-        return recordDate >= fromDateStr && recordDate <= toDateStr;
-      });
-
-      const start = new Date(fromDateStr);
-      const end = new Date(toDateStr);
-
-      const rangeEntries = generateRangeEntries(
-        start,
-        end,
-        now,
-        filteredRecords,
-      );
-      const totalHours = rangeEntries.reduce(
-        (sum, entry) => sum + (entry.totalHours || 0),
-        0,
+      const blob = await downloadAttendancePdfReport(
+        parseInt(monthStr),
+        parseInt(yearStr),
+        currentEmployeeId,
+        downloadDateRange.from,
+        downloadDateRange.to,
       );
 
-      downloadPdf({
-        employeeName:
-          entity?.fullName || currentUser?.aliasLoginName || "Employee",
-        employeeId: currentEmployeeId,
-        designation: entity?.designation,
-        department: entity?.department,
-        month: `${fromDateStr} to ${toDateStr}`,
-        entries: rangeEntries,
-        totalHours: totalHours,
-        holidays: holidays || [],
-      });
+      saveAs(
+        blob,
+        `Attendance_${currentEmployeeId}_${downloadDateRange.from}_to_${downloadDateRange.to}.pdf`,
+      );
 
       setIsDownloadModalOpen(false);
     } catch (error) {
@@ -198,8 +208,8 @@ const MobileResponsiveCalendarPage = ({
   };
 
   // 4. Helper: Check Holiday
-  const checkIsBlocked = (day: number) => {
-    if (!blockers || blockers.length === 0) return false;
+  const getBlocker = (day: number) => {
+    if (!blockers || blockers.length === 0) return null;
     const targetDate = new Date(
       currentDate.getFullYear(),
       currentDate.getMonth(),
@@ -207,7 +217,7 @@ const MobileResponsiveCalendarPage = ({
     );
     targetDate.setHours(0, 0, 0, 0);
 
-    return blockers.some((b: any) => {
+    return blockers.find((b: any) => {
       const start = new Date(b.blockedFrom);
       start.setHours(0, 0, 0, 0);
       const end = new Date(b.blockedTo);
@@ -216,9 +226,13 @@ const MobileResponsiveCalendarPage = ({
     });
   };
 
-  const checkIsHoliday = (day: number) => {
+  const checkIsBlocked = (day: number) => {
+    return !!getBlocker(day);
+  };
+
+    const checkIsHoliday = (day: number) => {
     if (!holidays || holidays.length === 0) return null;
-    const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const dateStr = dayjs(new Date(currentDate.getFullYear(), currentDate.getMonth(), day)).format("YYYY-MM-DD");
     return holidays.find(
       (h: any) => h.holidayDate === dateStr || h.date === dateStr,
     );
@@ -299,7 +313,17 @@ const MobileResponsiveCalendarPage = ({
           {monthDays.map((day) => {
             const entry = entries.find((e) => e.date === day);
             const holiday = checkIsHoliday(day);
-            const isBlocked = checkIsBlocked(day);
+            const manualBlocker = getBlocker(day);
+            
+            // Block if manual blocker exists OR (if not admin/manager and status is Leave or Sunday/Holiday)
+            const dObj = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+            const dayOfWeek = dObj.getDay();
+            
+            let isDeptBlocked = false;
+            if (dayOfWeek === 0) isDeptBlocked = true;
+
+            const isBlocked = !!manualBlocker || (!isAdmin && !isManager && (entry?.status === AttendanceStatus.LEAVE || isDeptBlocked || !!holiday));
+            
             const isToday =
               day === now.getDate() &&
               currentDate.getMonth() === now.getMonth() &&
@@ -321,7 +345,8 @@ const MobileResponsiveCalendarPage = ({
               !isBlocked &&
               !holiday &&
               !entry?.isWeekend &&
-              (entry?.status === "Not Updated" || entry?.status === "Pending");
+              (entry?.status === AttendanceStatus.NOT_UPDATED ||
+                entry?.status === AttendanceStatus.PENDING);
 
             // Determine color class
             let colorClass = "bg-white text-gray-600 border border-gray-200"; // Default / Future / Pending
@@ -332,13 +357,23 @@ const MobileResponsiveCalendarPage = ({
             } else if (isBlocked) {
               colorClass =
                 "bg-gray-200 border border-gray-400 text-gray-500 font-bold";
-            } else if (
-              entry?.status === "Full Day" ||
-              entry?.status === "Half Day"
-            ) {
+            } else if (entry?.status === AttendanceStatus.FULL_DAY) {
               colorClass =
                 "bg-green-100 border border-green-600 text-black font-bold";
-            } else if (entry?.status === "Leave") {
+            } else if (
+              entry?.status === AttendanceStatus.HALF_DAY ||
+              isPendingUpdate
+            ) {
+              // Both Half Day and Pending Update (visual only) can be Orange
+              // BUT User wants Not Updated white/grey and Half Day Orange.
+              // Re-read: "make hald day color orange same as not updated and nake not updated color same as upcong"
+              // So Half Day = bg-orange-100 (matching old not updated)
+              // And Not Updated = bg-white (matching current/upcoming)
+              colorClass =
+                entry?.status === AttendanceStatus.HALF_DAY
+                  ? "bg-orange-100 border border-orange-600 text-black font-bold"
+                  : "bg-white text-gray-600 border border-gray-200";
+            } else if (entry?.status === AttendanceStatus.LEAVE) {
               colorClass =
                 "bg-red-200 border border-red-600 text-black font-bold";
             } else if (holiday) {
@@ -352,13 +387,26 @@ const MobileResponsiveCalendarPage = ({
             return (
               <div
                 key={day}
-                onClick={() => onNavigateToDate?.(day)}
+                onClick={() => {
+                  if (isBlocked && (isAdmin || isManager) && onBlockedClick) {
+                    onBlockedClick();
+                    return;
+                  }
+                  if (onNavigateToDate) {
+                    const targetDate = new Date(
+                      currentDate.getFullYear(),
+                      currentDate.getMonth(),
+                      day,
+                    );
+                    onNavigateToDate(targetDate.getTime());
+                  }
+                }}
                 className={`
                     aspect-[4/5] sm:aspect-square
                     rounded-xl relative
                     flex flex-col items-center justify-center
                     shadow-sm
-                    ${onNavigateToDate ? "cursor-pointer transition-all active:scale-95" : ""}
+                    ${onNavigateToDate || (isBlocked && (isAdmin || isManager) && onBlockedClick) ? "cursor-pointer transition-all active:scale-95" : ""}
                     ${colorClass}
                  `}
               >
@@ -370,6 +418,18 @@ const MobileResponsiveCalendarPage = ({
                   </div>
                 )}
                 <span className="text-sm sm:text-lg">{day}</span>
+                {isBlocked && (
+                  <div className="absolute inset-0 z-20 bg-black/40 backdrop-blur-[2px] rounded-xl flex flex-col items-center justify-center p-1 text-center pointer-events-none">
+                    <Lock size={12} className="text-white mb-0.5" />
+                    <span className="text-[6px] font-black text-white leading-none uppercase tracking-tighter">
+                      {manualBlocker
+                        ? (isAdmin || isManager
+                          ? "Unblock"
+                          : `Contact ${manualBlocker.blockedBy || "Admin"}`)
+                        : "On Leave"}
+                    </span>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -380,20 +440,23 @@ const MobileResponsiveCalendarPage = ({
           <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
             {[
               {
-                label: "Full Day",
+                label: AttendanceStatus.FULL_DAY,
                 className: "bg-green-100 border border-green-600",
               },
               {
-                label: "Half Day",
-                className: "bg-green-100 border border-green-600",
+                label: "Half Day Leave",
+                className: "bg-orange-100 border border-orange-600",
               },
-              { label: "Leave", className: "bg-red-200 border border-red-600" },
+              {
+                label: AttendanceStatus.LEAVE,
+                className: "bg-red-200 border border-red-600",
+              },
               {
                 label: "Today",
                 className: "bg-white border-2 border-[#4318FF]",
               },
               {
-                label: "Holiday",
+                label: AttendanceStatus.HOLIDAY,
                 className: "bg-blue-100 border border-blue-500",
               },
               {
@@ -402,7 +465,7 @@ const MobileResponsiveCalendarPage = ({
               },
               {
                 label: "Pending Update",
-                className: "bg-white border border-slate-300",
+                className: "bg-white border border-gray-300",
                 icon: true,
               },
             ].map((item) => (
@@ -450,13 +513,16 @@ const MobileResponsiveCalendarPage = ({
                   <input
                     type="date"
                     value={downloadDateRange.from}
-                    max={new Date().toISOString().split("T")[0]}
-                    onChange={(e) =>
-                      setDownloadDateRange({
-                        ...downloadDateRange,
-                        from: e.target.value,
-                      })
-                    }
+                    onChange={(e) => {
+                      const newFrom = e.target.value;
+                      setDownloadDateRange((prev) => {
+                        const next = { ...prev, from: newFrom };
+                        if (prev.to && newFrom && prev.to < newFrom) {
+                          next.to = newFrom;
+                        }
+                        return next;
+                      });
+                    }}
                     className="w-full pl-4 pr-12 py-3 bg-[#F4F7FE] border-transparent rounded-xl text-[#2B3674] font-bold focus:outline-none focus:ring-2 focus:ring-[#4318FF] transition-all cursor-pointer"
                   />
                   <CalendarIcon
@@ -473,7 +539,7 @@ const MobileResponsiveCalendarPage = ({
                   <input
                     type="date"
                     value={downloadDateRange.to}
-                    max={new Date().toISOString().split("T")[0]}
+                    min={downloadDateRange.from}
                     onChange={(e) =>
                       setDownloadDateRange({
                         ...downloadDateRange,

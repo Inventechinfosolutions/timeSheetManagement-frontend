@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import dayjs from "dayjs";
 import {
   BarChart,
   Bar,
@@ -33,11 +34,11 @@ const WeeklyHoursChart = ({ data, currentDate }: Props) => {
     }
 
     return weekDays.map((day) => {
-      const dateStr = day.toISOString().split("T")[0]; // YYYY-MM-DD
+      const dateStr = dayjs(day).format("YYYY-MM-DD"); // YYYY-MM-DD
       const record = data.find((r) => {
         const rDate = r.workingDate || (r as any).working_date;
         if (!rDate) return false;
-        return new Date(rDate).toISOString().split("T")[0] === dateStr;
+        return dayjs(rDate).format("YYYY-MM-DD") === dateStr;
       });
 
       return {

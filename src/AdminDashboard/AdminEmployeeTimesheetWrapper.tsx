@@ -9,22 +9,38 @@ import {
   X,
   Calendar as CalendarIcon,
   ShieldAlert,
+  Clock,
 } from "lucide-react";
 import MyTimesheet from "../EmployeeDashboard/MyTimesheet";
+import {
+  fetchMonthlyAttendance,
+  resetAttendanceState,
+} from "../reducers/employeeAttendance.reducer";
 import {
   applyBlocker,
   fetchBlockers,
   deleteBlocker,
 } from "../reducers/timesheetBlocker.reducer";
+import Toast from "../components/Toast";
+import { UserType, AttendanceStatus } from "../enums";
 
 const AdminEmployeeTimesheetWrapper = () => {
-  const { employeeId } = useParams<{ employeeId: string }>();
+  const { employeeId, date: urlDate } = useParams<{ employeeId: string; date?: string }>();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const location = useLocation();
+
+  // Reset attendance state on unmount to prevent data leakage between views
+  useEffect(() => {
+    return () => {
+      dispatch(resetAttendanceState());
+    };
+  }, [dispatch]);
+
   const { entities, entity, loading } = useAppSelector(
     (state) => state.employeeDetails,
   );
+  const { records } = useAppSelector((state) => state.attendance);
   const { blockers } = useAppSelector((state) => state.timesheetBlocker);
   const { currentUser } = useAppSelector((state) => state.user);
 
@@ -33,14 +49,29 @@ const AdminEmployeeTimesheetWrapper = () => {
   const [toDate, setToDate] = useState("");
   const [reason, setReason] = useState("");
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [blockerToDelete, setBlockerToDelete] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
   // Read month and year from URL query parameters
   const queryParams = new URLSearchParams(location.search);
   const monthParam = queryParams.get("month");
   const yearParam = queryParams.get("year");
 
-  // Initialize date based on query params or default to current date
+  // Initialize date based on URL param, query params or default to current date
   const initialDate = useMemo(() => {
+    if (urlDate) {
+      const parts = urlDate.split("-");
+      if (parts.length === 3) {
+        const d = new Date(
+          parseInt(parts[0]),
+          parseInt(parts[1]) - 1,
+          parseInt(parts[2])
+        );
+        if (!isNaN(d.getTime())) return d;
+      }
+    }
     if (monthParam && yearParam) {
       const month = parseInt(monthParam, 10);
       const year = parseInt(yearParam, 10);
@@ -49,7 +80,7 @@ const AdminEmployeeTimesheetWrapper = () => {
       }
     }
     return new Date();
-  }, [monthParam, yearParam]);
+  }, [urlDate, monthParam, yearParam]);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -62,8 +93,15 @@ const AdminEmployeeTimesheetWrapper = () => {
       if (!entity || (entity.employeeId || entity.id) !== employeeId) {
         dispatch(getEntity(employeeId));
       }
+      dispatch(
+        fetchMonthlyAttendance({
+          employeeId,
+          month: (initialDate.getMonth() + 1).toString().padStart(2, "0"),
+          year: initialDate.getFullYear().toString(),
+        }),
+      );
     }
-  }, [dispatch, employeeId]);
+  }, [dispatch, employeeId, initialDate]);
 
   const employee =
     entity && (entity.employeeId || entity.id) === employeeId
@@ -74,14 +112,34 @@ const AdminEmployeeTimesheetWrapper = () => {
     // Extract month and year to pass back to the list
     const month = initialDate.getMonth() + 1;
     const year = initialDate.getFullYear();
-    navigate(`/admin-dashboard/timesheet-list`, {
+    const basePath = location.pathname.startsWith("/manager-dashboard") 
+      ? "/manager-dashboard" 
+      : "/admin-dashboard";
+
+    navigate(`${basePath}/timesheet-list`, {
       state: { selectedMonth: month, selectedYear: year },
     });
   };
 
+  // Calculate metrics for stats cards
+  const presentDays = records.filter(
+    (r: any) =>
+      (r.status || r.attendance_status) === AttendanceStatus.FULL_DAY ||
+      (r.status || r.attendance_status) === AttendanceStatus.HALF_DAY,
+  ).length;
+
+  const totalHours = records.reduce(
+    (acc, curr: any) => {
+      const hours = curr.totalHours ?? curr.total_hours ?? 0;
+      return acc + Number(hours);
+    },
+    0,
+  );
+  const formattedTotalHours = (typeof totalHours === 'number' && !isNaN(totalHours)) ? totalHours.toFixed(1) : '0.0';
+
   const handleApplyBlock = async () => {
     if (!fromDate || !toDate) {
-      alert("Please select both dates");
+      setToast({ message: "Please select both dates", type: "error" });
       return;
     }
 
@@ -91,8 +149,8 @@ const AdminEmployeeTimesheetWrapper = () => {
           employeeId: employeeId!,
           blockedFrom: fromDate,
           blockedTo: toDate,
-          reason: reason || "Admin Blocked",
-          blockedBy: currentUser?.employeeId || "Admin",
+          reason: reason || "Timesheet Locked",
+          blockedBy: currentUser?.userType === UserType.ADMIN ? "Admin" : "Manager",
         }),
       ).unwrap();
 
@@ -102,19 +160,28 @@ const AdminEmployeeTimesheetWrapper = () => {
       setReason("");
       dispatch(fetchBlockers(employeeId!));
     } catch (error) {
-      alert("Failed to apply blocker");
+      setToast({ message: "Failed to apply blocker", type: "error" });
     }
   };
 
   const handleDeleteBlock = async (id: number) => {
-    if (window.confirm("Are you sure you want to remove this blocker?")) {
-      try {
-        await dispatch(deleteBlocker(id)).unwrap();
-        dispatch(fetchBlockers(employeeId!));
-        setIsModalOpen(false); // Return to timesheet view
-      } catch (error) {
-        alert("Failed to remove blocker");
-      }
+    setBlockerToDelete(id);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDeleteBlock = async () => {
+    if (blockerToDelete === null) return;
+    
+    setIsDeleting(true);
+    try {
+      await dispatch(deleteBlocker(blockerToDelete)).unwrap();
+      dispatch(fetchBlockers(employeeId!));
+      setIsDeleteModalOpen(false);
+      setBlockerToDelete(null);
+    } catch (error) {
+      setToast({ message: "Failed to remove blocker", type: "error" });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -183,13 +250,57 @@ const AdminEmployeeTimesheetWrapper = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden min-h-0">
+      <div className="flex-1 overflow-y-auto no-scrollbar min-h-0">
+        {/* Summary Stats Section - Matching img 1 */}
+        <div className="px-1 pt-2 pb-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 md:p-5 shadow-sm border border-white/50 flex items-center gap-4 hover:shadow-md transition-all">
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-[#01B574] shrink-0 border border-emerald-100/50">
+                <ShieldAlert size={20} className="text-[#01B574]" />
+              </div>
+              <div>
+                <p className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-0.5">
+                  Total Present Days
+                </p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-xl md:text-2xl font-black text-[#2B3674]">
+                    {presentDays}
+                  </h3>
+                  <span className="text-[10px] font-bold text-[#01B574] bg-[#E6FFFA] px-2 py-0.5 rounded-full uppercase">
+                    Days
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 md:p-5 shadow-sm border border-white/50 flex items-center gap-4 hover:shadow-md transition-all">
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-[#F4F7FE] flex items-center justify-center text-[#4318FF] shrink-0 border border-gray-100/50">
+                <Clock size={20} />
+              </div>
+              <div>
+                <p className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-0.5">
+                  Total Working Hours
+                </p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-xl md:text-2xl font-black text-[#2B3674]">
+                    {formattedTotalHours}
+                  </h3>
+                  <span className="text-[10px] font-bold text-[#4318FF] bg-[#F4F7FE] px-2 py-0.5 rounded-full uppercase">
+                    Hours
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <MyTimesheet
           employeeId={employeeId!}
           readOnly={false}
           now={initialDate}
+          selectedDateId={urlDate ? initialDate.getTime() : (location.state?.timestamp || null)}
           onBlockedClick={() => setIsModalOpen(true)}
-          containerClassName="h-full overflow-hidden shadow-none border-none bg-transparent"
+          containerClassName="h-full overflow-visible shadow-none border-none bg-transparent"
         />
       </div>
 
@@ -231,7 +342,11 @@ const AdminEmployeeTimesheetWrapper = () => {
                     <input
                       type="date"
                       value={fromDate}
-                      onChange={(e) => setFromDate(e.target.value)}
+                      onChange={(e) => {
+                        const newFrom = e.target.value;
+                        setFromDate(newFrom);
+                        if (toDate && newFrom && toDate < newFrom) setToDate(newFrom);
+                      }}
                       className="w-full pl-11 pr-4 py-3 bg-[#F4F7FE] border-none rounded-2xl text-sm text-[#2B3674] font-bold focus:ring-2 focus:ring-[#4318FF] transition-all"
                     />
                   </div>
@@ -245,6 +360,7 @@ const AdminEmployeeTimesheetWrapper = () => {
                     <input
                       type="date"
                       value={toDate}
+                      min={fromDate}
                       onChange={(e) => setToDate(e.target.value)}
                       className="w-full pl-11 pr-4 py-3 bg-[#F4F7FE] border-none rounded-2xl text-sm text-[#2B3674] font-bold focus:ring-2 focus:ring-[#4318FF] transition-all"
                     />
@@ -308,6 +424,64 @@ const AdminEmployeeTimesheetWrapper = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 z-[2001] flex items-center justify-center bg-[#1B254B]/40 backdrop-blur-sm animate-in fade-in duration-300 p-4">
+          <div className="w-full max-w-md bg-white rounded-3xl p-8 shadow-2xl border border-gray-100 animate-in zoom-in-95 duration-300">
+            <div className="flex flex-col items-center gap-4">
+              <div className="p-4 bg-red-50 rounded-2xl">
+                <ShieldAlert className="w-10 h-10 text-red-500" />
+              </div>
+              
+              <div className="text-center">
+                <h3 className="text-xl font-bold text-[#2B3674] mb-2">
+                  Remove Blocker?
+                </h3>
+                <p className="text-sm text-gray-500 font-medium">
+                  Are you sure you want to remove this blocker?
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3 w-full mt-2">
+                <button
+                  onClick={() => {
+                    setIsDeleteModalOpen(false);
+                    setBlockerToDelete(null);
+                  }}
+                  disabled={isDeleting}
+                  className="flex-1 py-3 bg-gray-100 text-[#2B3674] rounded-2xl font-bold hover:bg-gray-200 active:scale-95 transition-all text-sm uppercase tracking-wider disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDeleteBlock}
+                  disabled={isDeleting}
+                  className="flex-1 py-3 bg-red-500 text-white rounded-2xl font-bold shadow-lg shadow-red-500/20 hover:shadow-red-500/40 hover:-translate-y-0.5 active:scale-95 transition-all text-sm uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {isDeleting ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    "Remove"
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
       )}
     </div>
   );

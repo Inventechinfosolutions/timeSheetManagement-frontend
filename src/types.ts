@@ -1,3 +1,5 @@
+import { AttendanceStatus, WorkLocation, EmploymentType, Gender } from './enums';
+
 export interface TimesheetEntry {
     loginTime: any;
     logoutTime: any;
@@ -11,12 +13,13 @@ export interface TimesheetEntry {
     isFuture: boolean;
 
     // Editable Fields
-    // location, loginTime, logoutTime removed as per DB schema changes
-    status: 'Full Day' | 'Half Day' | 'WFH' | 'Client Visit' | 'Pending' | 'Leave' | 'Absent' | 'Not Updated' | 'Holiday' | 'Weekend' |'Blocked' | undefined;
+    status: AttendanceStatus | undefined;
     attendanceType?: 'login' | 'logout' | null;
     isEditing: boolean;
     isSaved: boolean;
-    totalHours?: number;
-    workLocation?: string;
+    totalHours?: number | null;
+    workLocation?: WorkLocation | string;
+    sourceRequestId?: number; // Track auto-generated records
+    firstHalf?: string | WorkLocation | null;
+    secondHalf?: string | WorkLocation | null;
 }
-   

@@ -333,15 +333,21 @@ const CommonMultipleUploader: React.FC<CommonMultipleUploaderProps> = ({
         return;
       }
 
-      // If fetchOnMount is false, we should never fetch in this effect.
+      // Cache key must include both entityId and refId so we refetch when opening a different request.
+      // Previously only entityId was used, so same employee's different requests showed the same docs.
+      const cacheKey = `${entityId}_${refId}`;
+
+      // If fetchOnMount is false, we should never fetch in this effect (e.g. new leave form).
       // This allows the component to start with an empty list for new applications.
       if (!fetchOnMount) {
-        lastFetchedIdRef.current = entityId;
+        lastFetchedIdRef.current = cacheKey;
+        setExistingFiles([]);
+        setFileList([]);
         return;
       }
 
-      // Skip if we already fetched for this specific entityId
-      if (lastFetchedIdRef.current === entityId) {
+      // Skip only if we already fetched for this exact entityId + refId combination
+      if (lastFetchedIdRef.current === cacheKey) {
         return;
       }
 
@@ -361,7 +367,15 @@ const CommonMultipleUploader: React.FC<CommonMultipleUploaderProps> = ({
         );
 
         if (relevantFiles && relevantFiles.length > 0) {
-          const formattedFiles: UploadFile[] = relevantFiles.map(
+          const uniqueMap = new Map();
+          relevantFiles.forEach((f: FileListResponse) => {
+            if (!uniqueMap.has(f.key)) {
+              uniqueMap.set(f.key, f);
+            }
+          });
+          const deduplicatedFiles: FileListResponse[] = Array.from(uniqueMap.values());
+
+          const formattedFiles: UploadFile[] = deduplicatedFiles.map(
             (file: FileListResponse) => ({
               uid: file.key,
               name: file.name,
@@ -370,12 +384,12 @@ const CommonMultipleUploader: React.FC<CommonMultipleUploaderProps> = ({
             }),
           );
           setExistingFiles(formattedFiles);
-          setFileList(relevantFiles);
+          setFileList(deduplicatedFiles);
         } else {
           setExistingFiles([]);
           setFileList([]);
         }
-        lastFetchedIdRef.current = entityId;
+        lastFetchedIdRef.current = cacheKey;
       } catch (error) {
         console.error("Error fetching files:", error);
       }
@@ -805,8 +819,8 @@ const CommonMultipleUploader: React.FC<CommonMultipleUploaderProps> = ({
 
       {existingFiles.length > 0 || uploadingFiles.length > 0 ? (
         <StyledGalleryContainer>
-          {uploadingFiles.map((file) => (
-            <StyledImageCard key={file.uid}>
+          {uploadingFiles.map((file, index) => (
+            <StyledImageCard key={`uploading-${file.uid}-${index}`}>
               <StyledImageWrapper
                 style={{ backgroundImage: `url(${file.preview})` }}
               >
@@ -838,9 +852,9 @@ const CommonMultipleUploader: React.FC<CommonMultipleUploaderProps> = ({
             </StyledImageCard>
           ))}
 
-          {existingFiles.map((file) =>
+          {existingFiles.map((file, index) =>
             isImageFile(file.name) ? (
-              <StyledImageCard key={file.uid}>
+              <StyledImageCard key={`existing-img-${file.uid}-${index}`}>
                 {finalShowDelete && (
                   <StyledCloseButton onClick={(e) => handleDelete(file, e)}>
                     <CloseOutlined />
@@ -861,7 +875,7 @@ const CommonMultipleUploader: React.FC<CommonMultipleUploaderProps> = ({
                 })()}
               </StyledImageCard>
             ) : (
-              <StyledNonImageCard key={file.uid}>
+              <StyledNonImageCard key={`existing-nonimg-${file.uid}-${index}`}>
                 {finalShowDelete && (
                   <StyledCloseButton onClick={(e) => handleDelete(file, e)}>
                     <CloseOutlined />

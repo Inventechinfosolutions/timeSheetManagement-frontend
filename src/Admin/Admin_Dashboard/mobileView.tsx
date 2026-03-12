@@ -1,5 +1,6 @@
 import { UserOutlined } from "@ant-design/icons";
 import { Eye, Clock } from "lucide-react";
+import { AttendanceStatus } from "../../enums";
 
 interface Employee {
   id: string;
@@ -45,9 +46,9 @@ const MobileView = ({
             <span
               className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider
                 ${
-                  emp.status === "Full Day"
+                  emp.status === AttendanceStatus.FULL_DAY
                     ? "bg-[#E6FFFA] text-[#01B574]"
-                    : emp.status === "Half Day"
+                    : emp.status === AttendanceStatus.HALF_DAY
                     ? "bg-[#FFF9E5] text-[#FFB547]"
                     : "bg-[#FFF5F5] text-[#EE5D50]"
                 }

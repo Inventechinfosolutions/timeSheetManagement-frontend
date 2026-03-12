@@ -14,18 +14,21 @@ import {
   Download,
   X,
   Loader2,
-  RotateCcw,
 } from "lucide-react";
 import { saveAs } from "file-saver";
 import {
   downloadAttendanceReport,
-  fetchAllDashboardStats,
 } from "../reducers/employeeAttendance.reducer";
 import EmployeeTimeSheetMobileCard from "./EmployeeTimeSheetMobileCard";
+import Toast from "../components/Toast";
+import { fetchDepartments } from "../reducers/masterDepartment.reducer";
+import { MonthStatus, UserType } from "../enums";
 
 const AdminEmployeeTimesheetList = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const currentUser = useAppSelector((state: RootState) => state.user.currentUser);
+  const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
 
   const basePath = location.pathname.startsWith("/manager-dashboard")
     ? "/manager-dashboard"
@@ -61,6 +64,10 @@ const AdminEmployeeTimesheetList = () => {
   const [downloadMonth, setDownloadMonth] = useState(selectedMonth);
   const [downloadYear, setDownloadYear] = useState(selectedYear);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error" | "info";
+  } | null>(null);
 
   // Handler to open download modal with current selected month/year
   const handleOpenDownloadModal = () => {
@@ -77,28 +84,26 @@ const AdminEmployeeTimesheetList = () => {
       setShowDownloadModal(false);
     } catch (error) {
       console.error("Download failed", error);
-      alert("Failed to download report");
+      setToast({ message: "Failed to download report", type: "error" });
     } finally {
       setIsDownloading(false);
     }
   };
 
-  const departments = [
-    "All Departments",
-    "HR",
-    "IT",
-    "Sales",
-    "Marketing",
-    "Finance",
-    "Admin",
-  ];
+  const { departments } = useAppSelector(
+    (state: RootState) => state.masterDepartments,
+  );
 
-  const statuses = ["All Status", "Submitted", "Pending"];
+  const statuses = ["All Status", MonthStatus.SUBMITTED, MonthStatus.PENDING];
 
   const dispatch = useAppDispatch();
   const { entities, totalItems } = useAppSelector(
     (state: RootState) => state.employeeDetails,
   );
+
+  useEffect(() => {
+    dispatch(fetchDepartments());
+  }, [dispatch]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -128,10 +133,6 @@ const AdminEmployeeTimesheetList = () => {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  const { employeeMonthlyStats } = useAppSelector(
-    (state: RootState) => state.attendance,
-  );
-
   useEffect(() => {
     dispatch(
       getTimesheetList({
@@ -147,6 +148,7 @@ const AdminEmployeeTimesheetList = () => {
         status: selectedStatus === "All Status" ? undefined : selectedStatus,
         month: selectedMonth,
         year: selectedYear,
+        includeSelf: basePath !== "/admin-dashboard",
       }),
     );
   }, [
@@ -160,15 +162,6 @@ const AdminEmployeeTimesheetList = () => {
     selectedYear,
   ]);
 
-  // Fetch status for all employees in bulk
-  useEffect(() => {
-    dispatch(
-      fetchAllDashboardStats({
-        month: selectedMonth.toString(),
-        year: selectedYear.toString(),
-      }),
-    );
-  }, [dispatch, selectedMonth, selectedYear]);
 
   const handleSort = (key: string) => {
     setSortConfig((current) => {
@@ -188,10 +181,7 @@ const AdminEmployeeTimesheetList = () => {
       id: empId,
       name: emp.fullName || emp.name,
       department: emp.department,
-      status:
-        emp.monthStatus ||
-        employeeMonthlyStats[empId]?.monthStatus ||
-        "Pending",
+      status: emp.monthStatus || emp.status || MonthStatus.PENDING,
     };
   });
 
@@ -269,56 +259,56 @@ const AdminEmployeeTimesheetList = () => {
   };
 
   return (
-    <div className="p-5 bg-[#F4F7FE] min-h-screen font-sans">
+    <div className="p-4 md:p-6 bg-[#F4F7FE] min-h-screen font-sans">
       <div className="max-w-[1600px] mx-auto">
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
-          <h1 className="text-xl md:text-2xl font-bold text-[#2B3674] m-0">
-            Employee Timesheet
-          </h1>
+        <h1 className="text-xl md:text-2xl font-bold text-[#2B3674] m-0 mb-5">
+          Employee Timesheet
+        </h1>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
-            {/* Month/Year Selector */}
-            <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] border border-transparent">
-              <button
-                onClick={handlePreviousMonth}
-                className="p-1.5 rounded-lg hover:bg-gray-50 transition-all active:scale-95"
-                title="Previous Month"
-              >
-                <ChevronLeft size={18} className="text-[#2B3674]" />
-              </button>
-              <div className="min-w-[120px] text-center">
-                <span className="text-sm font-bold text-[#2B3674]">
-                  {getMonthYearDisplay()}
-                </span>
-              </div>
-              <button
-                onClick={handleNextMonth}
-                className="p-1.5 rounded-lg hover:bg-gray-50 transition-all active:scale-95"
-                title="Next Month"
-              >
-                <ChevronRight size={18} className="text-[#2B3674]" />
-              </button>
-            </div>
-
+        {/* Filters Row */}
+        <div className="flex flex-wrap items-center gap-3 mb-6">
+          {/* Month/Year Selector */}
+          <div className="flex items-center gap-1.5 bg-white px-3 py-2 rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] border border-transparent">
             <button
-              onClick={handleOpenDownloadModal}
-              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-[#01B574] text-white rounded-full shadow-lg shadow-green-500/20 hover:shadow-green-500/40 hover:-translate-y-0.5 active:scale-95 transition-all text-sm font-bold"
+              onClick={handlePreviousMonth}
+              className="p-1.5 rounded-lg hover:bg-gray-50 transition-all active:scale-95"
+              title="Previous Month"
             >
-              <Download size={18} />
-              <span className="whitespace-nowrap">Export Excel</span>
+              <ChevronLeft size={16} className="text-[#2B3674]" />
             </button>
-            {/* Modern Custom Dropdown */}
+            <div className="min-w-[110px] text-center">
+              <span className="text-sm font-bold text-[#2B3674]">
+                {getMonthYearDisplay()}
+              </span>
+            </div>
+            <button
+              onClick={handleNextMonth}
+              className="p-1.5 rounded-lg hover:bg-gray-50 transition-all active:scale-95"
+              title="Next Month"
+            >
+              <ChevronRight size={16} className="text-[#2B3674]" />
+            </button>
+          </div>
+
+          <button
+            onClick={handleOpenDownloadModal}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#01B574] text-white rounded-full shadow-lg shadow-green-500/20 hover:shadow-green-500/40 hover:-translate-y-0.5 active:scale-95 transition-all text-sm font-bold"
+          >
+            <Download size={16} />
+            <span className="whitespace-nowrap">Export Excel</span>
+          </button>
+
+          {/* Department Dropdown */}
+          {basePath === "/admin-dashboard" && (
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-2 px-5 py-2.5 bg-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] text-[#2B3674] font-bold text-sm hover:bg-gray-50 transition-all border border-transparent focus:border-[#4318FF]/20"
+                className={`flex items-center gap-2 px-4 py-2.5 bg-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] font-bold text-sm hover:bg-gray-50 transition-all border border-transparent focus:border-[#4318FF]/20 whitespace-nowrap ${selectedDepartment !== "All Departments" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
               >
-                <div className="flex items-center gap-2">
-                  <Filter size={16} className="text-[#4318FF]" />
-                  <span>{selectedDepartment}</span>
-                </div>
+                <Filter size={14} className="text-[#4318FF]" />
+                <span>{selectedDepartment}</span>
                 <ChevronDown
-                  size={16}
+                  size={14}
                   className={`text-[#A3AED0] transition-transform duration-300 ${isDropdownOpen ? "rotate-180" : ""}`}
                 />
               </button>
@@ -330,94 +320,121 @@ const AdminEmployeeTimesheetList = () => {
                       Departments
                     </span>
                   </div>
+                  <button
+                    onClick={() => {
+                      setSelectedDepartment("All Departments");
+                      setIsDropdownOpen(false);
+                      setCurrentPage(1);
+                    }}
+                    className={`w-full text-left px-5 py-2 text-sm font-semibold transition-colors
+                    ${
+                      selectedDepartment === "All Departments"
+                        ? "text-[#4318FF] bg-[#4318FF]/5"
+                        : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
+                    }`}
+                  >
+                    All Departments
+                  </button>
                   {departments.map((dept) => (
                     <button
-                      key={dept}
+                      key={dept.id}
                       onClick={() => {
-                        setSelectedDepartment(dept);
+                        setSelectedDepartment(dept.departmentName);
                         setIsDropdownOpen(false);
                         setCurrentPage(1);
                       }}
                       className={`w-full text-left px-5 py-2 text-sm font-semibold transition-colors
                       ${
-                        selectedDepartment === dept
+                        selectedDepartment === dept.departmentName
                           ? "text-[#4318FF] bg-[#4318FF]/5"
                           : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
                       }`}
                     >
-                      {dept}
+                      {dept.departmentName}
                     </button>
                   ))}
                 </div>
               )}
             </div>
+          )}
 
-            {/* Status Dropdown */}
-            <div className="relative" ref={statusDropdownRef}>
-              <button
-                onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
-                className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-2 px-5 py-2.5 bg-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] text-[#2B3674] font-bold text-sm hover:bg-gray-50 transition-all border border-transparent focus:border-[#4318FF]/20"
-              >
-                <div className="flex items-center gap-2">
-                  <Filter size={16} className="text-[#4318FF]" />
-                  <span>{selectedStatus}</span>
-                </div>
-                <ChevronDown
-                  size={16}
-                  className={`text-[#A3AED0] transition-transform duration-300 ${isStatusDropdownOpen ? "rotate-180" : ""}`}
-                />
-              </button>
-
-              {isStatusDropdownOpen && (
-                <div className="absolute top-full left-0 mt-2 w-full sm:w-48 bg-white/80 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-white/20 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <div className="px-3 py-1 mb-1">
-                    <span className="text-[10px] font-black text-[#A3AED0] uppercase tracking-widest pl-2">
-                      Status
-                    </span>
-                  </div>
-                  {statuses.map((status) => (
-                    <button
-                      key={status}
-                      onClick={() => {
-                        setSelectedStatus(status);
-                        setIsStatusDropdownOpen(false);
-                        setCurrentPage(1);
-                      }}
-                      className={`w-full text-left px-5 py-2 text-sm font-semibold transition-colors
-                      ${
-                        selectedStatus === status
-                          ? "text-[#4318FF] bg-[#4318FF]/5"
-                          : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
-                      }`}
-                    >
-                      {status}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Search Box */}
-            <div className="flex items-center bg-white rounded-full px-5 py-2.5 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] min-w-0 sm:min-w-[250px] flex-1 border border-transparent focus-within:border-[#4318FF]/20 transition-all">
-              <Search size={18} className="text-[#A3AED0] mr-2" />
-              <input
-                type="text"
-                placeholder="Search..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="border-none outline-none bg-transparent text-[#2B3674] w-full text-sm font-semibold placeholder:text-[#A3AED0]/60"
+          {/* Status Dropdown */}
+          <div className="relative" ref={statusDropdownRef}>
+            <button
+              onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
+              className={`flex items-center gap-2 px-4 py-2.5 bg-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] font-bold text-sm hover:bg-gray-50 transition-all border border-transparent focus:border-[#4318FF]/20 whitespace-nowrap ${selectedStatus !== "All Status" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+            >
+              <Filter size={14} className="text-[#4318FF]" />
+              <span>{selectedStatus}</span>
+              <ChevronDown
+                size={14}
+                className={`text-[#A3AED0] transition-transform duration-300 ${isStatusDropdownOpen ? "rotate-180" : ""}`}
               />
-            </div>
+            </button>
 
+            {isStatusDropdownOpen && (
+              <div className="absolute top-full left-0 mt-2 w-full sm:w-48 bg-white/80 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-white/20 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="px-3 py-1 mb-1">
+                  <span className="text-[10px] font-black text-[#A3AED0] uppercase tracking-widest pl-2">
+                    Status
+                  </span>
+                </div>
+                {statuses.map((status) => (
+                  <button
+                    key={status}
+                    onClick={() => {
+                      setSelectedStatus(status);
+                      setIsStatusDropdownOpen(false);
+                      setCurrentPage(1);
+                    }}
+                    className={`w-full text-left px-5 py-2 text-sm font-semibold transition-colors
+                    ${
+                      selectedStatus === status
+                        ? "text-[#4318FF] bg-[#4318FF]/5"
+                        : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
+                    }`}
+                  >
+                    {status}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Search Box */}
+          <div className="flex items-center bg-white rounded-full px-4 py-2.5 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] min-w-[180px] border border-transparent focus-within:border-[#4318FF]/20 transition-all">
+            <Search size={16} className="text-[#A3AED0] mr-2 flex-shrink-0" />
+            <input
+              type="text"
+              placeholder="Search by name or employee ID..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="border-none outline-none bg-transparent text-[#2B3674] w-full text-sm font-semibold placeholder:text-[#A3AED0]/60"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="ml-2 text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
+          {(searchTerm ||
+            selectedDepartment !== "All Departments" ||
+            selectedStatus !== "All Status" ||
+            selectedMonth !== new Date().getMonth() + 1 ||
+            selectedYear !== new Date().getFullYear()) && (
             <button
               onClick={handleClearFilters}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#E9EDF7]/50 text-[#2B3674] rounded-full hover:bg-[#E9EDF7] active:scale-95 transition-all text-sm font-bold border border-transparent whitespace-nowrap"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#5B4FFF] text-white rounded-full hover:bg-[#4318FF] active:scale-95 transition-all text-sm font-bold border border-[#4318FF]/50 whitespace-nowrap flex-shrink-0"
               title="Clear all filters"
             >
-              <RotateCcw size={16} className="text-[#4318FF]" />
+              <X size={14} />
               <span>Clear All</span>
             </button>
-          </div>
+          )}
         </div>
 
         <div className="bg-white rounded-[20px] p-0 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] overflow-hidden border border-gray-100">
@@ -467,12 +484,12 @@ const AdminEmployeeTimesheetList = () => {
                     <td className="py-4 px-4 text-center">
                       <span
                         className={`inline-flex px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider border ${
-                          emp.status === "Completed"
+                          (emp.status || "").toLowerCase() === "submitted"
                             ? "bg-green-50 text-green-500 border-green-100"
                             : "bg-amber-50 text-amber-500 border-amber-100"
                         }`}
                       >
-                        {emp.status === "Completed" ? "Submitted" : "Pending"}
+                        {emp.status}
                       </span>
                     </td>
                     <td className="py-4 pl-4 pr-10 text-center">
@@ -484,13 +501,15 @@ const AdminEmployeeTimesheetList = () => {
                         >
                           <Eye size={16} />
                         </button>
-                        <button
-                          onClick={() => handleViewTimesheet(emp.id)}
-                          className="inline-flex items-center gap-2 bg-transparent border-none cursor-pointer text-[#4318FF] text-sm font-bold hover:underline transition-all hover:scale-105 active:scale-95"
-                          title="Edit Timesheet"
-                        >
-                          <Edit size={16} />
-                        </button>
+                        {!isReceptionist && (
+                          <button
+                            onClick={() => handleViewTimesheet(emp.id)}
+                            className="inline-flex items-center gap-2 bg-transparent border-none cursor-pointer text-[#4318FF] text-sm font-bold hover:underline transition-all hover:scale-105 active:scale-95"
+                            title="Edit Timesheet"
+                          >
+                            <Edit size={16} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -506,6 +525,7 @@ const AdminEmployeeTimesheetList = () => {
                 employees={currentItems}
                 onViewTimesheet={handleViewTimesheet}
                 onViewWorkingDetails={handleViewWorkingDetails}
+                showEditButton={!isReceptionist}
               />
             ) : null}
           </div>
@@ -644,6 +664,15 @@ const AdminEmployeeTimesheetList = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
       )}
     </div>
   );

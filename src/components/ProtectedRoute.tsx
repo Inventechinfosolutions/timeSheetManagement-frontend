@@ -1,36 +1,46 @@
-import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
-import { useAppSelector } from '../hooks';
-import { UserType } from '../reducers/user.reducer';
-import { Storage } from '../utils/storage-util';
+import React from "react";
+import { Navigate, useLocation } from "react-router-dom";
+import { useAppSelector } from "../hooks";
+import { UserType } from "../enums";
+import { Storage } from "../utils/storage-util";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  /** Single role allowed (legacy). */
   allowedRole?: UserType;
+  /** Multiple roles allowed (e.g. [ADMIN, RECEPTIONIST] for admin dashboard). */
+  allowedRoles?: UserType[];
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRole }) => {
-  const { isAuthenticated, currentUser, loading } = useAppSelector((state) => state.user);
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  children,
+  allowedRole,
+  allowedRoles,
+}) => {
+  const { isAuthenticated, currentUser, loading } = useAppSelector(
+    (state) => state.user,
+  );
   const location = useLocation();
-  const token = Storage.session.get('TimeSheet-authenticationToken');
+  const token = Storage.session.get("TimeSheet-authenticationToken");
 
-  // If we are still loading the initial auth state, we might want to show a loader
-  // but for now, we'll rely on the checked state
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        Loading...
+      </div>
+    );
   }
 
-  // 1. Check if authenticated
   if (!isAuthenticated || !token) {
-    // Redirect to landing page, but save the current location they were trying to go to
-    return <Navigate to="/landing" state={{ from: location }} replace />;
+    return <Navigate to="/landing" state={{ from: location, skipSplash: true }} replace />;
   }
 
-  // 2. Check Role if specified
-  if (allowedRole && currentUser?.userType !== allowedRole) {
-    // If they are logged in but don't have the right role, send to landing
-    // Or we could send them to their respective dashboard
-    return <Navigate to="/landing" replace />;
+  const roles = allowedRoles ?? (allowedRole ? [allowedRole] : undefined);
+  if (roles && roles.length > 0 && currentUser?.userType) {
+    const allowed = roles.includes(currentUser.userType);
+    if (!allowed) {
+      return <Navigate to="/landing" state={{ skipSplash: true }} replace />;
+    }
   }
 
   return <>{children}</>;

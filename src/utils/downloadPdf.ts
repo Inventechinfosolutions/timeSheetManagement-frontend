@@ -2,6 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { TimesheetEntry } from '../types';
 import inventechLogo from '../assets/inventech-logo.jpg';
+import dayjs from "dayjs";
 
 interface PdfData {
     employeeName: string;
@@ -157,11 +158,11 @@ export const downloadPdf = ({
             const dateStr = new Date(entry.fullDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
             const hours = entry.totalHours ? entry.totalHours.toFixed(2) : "--";
             const d = new Date(entry.fullDate);
-            const entryDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            const entryDateStr = dayjs(entry.fullDate).format("YYYY-MM-DD");
             
             const holiday = holidays.find((h: any) => {
                  const hDate = h.holidayDate || h.date;
-                 return hDate && (String(hDate).split('T')[0]) === entryDateStr;
+                 return hDate && dayjs(hDate).format("YYYY-MM-DD") === entryDateStr;
             });
 
             let status = (entry.status || "").toUpperCase();
@@ -189,7 +190,7 @@ export const downloadPdf = ({
             else if (status.includes("HALF DAY")) mHalfDays++;
             else if (status.includes("LEAVE") || status === "ABSENT") mLeaves++;
             else if (status === "NOT UPDATED") mNotUpdated++;
-            mTotalHours += (entry.totalHours || 0);
+            mTotalHours += Number(entry.totalHours || 0);
 
             tableRows.push([dateStr, entry.dayName, hours, status]);
         });
@@ -253,7 +254,7 @@ export const downloadPdf = ({
         
         const summaryY = currentY + 7.5;
         doc.text(`Full Days: ${mFullDays}`, 18, summaryY);
-        doc.text(`Half Days: ${mHalfDays}`, 54, summaryY);
+        doc.text(`Half Day Leave: ${mHalfDays}`, 54, summaryY);
         doc.text(`Leaves: ${mLeaves}`, 90, summaryY);
         doc.text(`Not Updated: ${mNotUpdated}`, 126, summaryY);
         doc.text(`Total Hours: ${mTotalHours.toFixed(1)}`, 165, summaryY);

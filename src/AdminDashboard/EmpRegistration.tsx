@@ -13,17 +13,28 @@ import {
 import {
   createEntity,
   reset,
-  fetchDepartments,
   fetchRoles,
 } from "../reducers/employeeDetails.reducer";
+import { fetchDepartments } from "../reducers/masterDepartment.reducer";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { RootState } from "../store";
+import { createUser } from "../reducers/user.reducer";
+import { UserType } from "../enums";
+import { Shield } from "lucide-react";
 
 const Registration = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const { loading, updateSuccess, errorMessage, entity, departments, roles } =
+  const { loading, updateSuccess, errorMessage, entity, roles } =
     useAppSelector((state: RootState) => state.employeeDetails);
+  const { departments } = useAppSelector(
+    (state: RootState) => state.masterDepartments,
+  );
+  const currentUser = useAppSelector((state: RootState) => state.user.currentUser);
+  const isAdmin = currentUser?.userType === UserType.ADMIN;
+  const { loading: userCreateLoading, error: userCreateError } = useAppSelector(
+    (state: RootState) => state.user,
+  );
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -31,15 +42,28 @@ const Registration = () => {
     department: "",
     role: "",
     designation: "",
+    employmentType: "" as "" | "FULL_TIMER" | "INTERN",
+    gender: "" as "" | "MALE" | "FEMALE",
     email: "",
   });
   const [error, setError] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
+  const [receptionistForm, setReceptionistForm] = useState({
+    name: "",
+    loginId: "",
+    password: "",
+  });
+  const [receptionistSuccess, setReceptionistSuccess] = useState(false);
+  const [receptionistError, setReceptionistError] = useState("");
 
   useEffect(() => {
     dispatch(fetchDepartments());
     dispatch(fetchRoles());
   }, [dispatch]);
+
+  useEffect(() => {
+    console.log("Departments loaded:", departments);
+  }, [departments]);
 
   useEffect(() => {
     if (updateSuccess) {
@@ -60,6 +84,8 @@ const Registration = () => {
           department: "",
           role: "",
           designation: "",
+          employmentType: "",
+          gender: "",
           email: "",
         });
         navigate("/admin-dashboard/activation-success", {
@@ -79,7 +105,14 @@ const Registration = () => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
-      [name]: name === "employeeId" ? value.toUpperCase() : value,
+      [name]:
+        name === "employeeId"
+          ? value.toUpperCase()
+          : name === "employmentType"
+            ? (value as "" | "FULL_TIMER" | "INTERN")
+            : name === "gender"
+              ? (value as "" | "MALE" | "FEMALE")
+              : value,
     });
   };
 
@@ -87,16 +120,73 @@ const Registration = () => {
     e.preventDefault();
     setError("");
 
-    if (Object.values(formData).some((val) => !val)) {
-      setError("Please fill in all fields");
+    console.log("Form data on submit:", formData);
+
+    const requiredKeys = [
+      "fullName",
+      "employeeId",
+      "department",
+      "role",
+      "designation",
+      "employmentType",
+      "gender",
+      "email",
+    ];
+
+    // Check for empty required fields
+    const emptyField = requiredKeys.find(
+      (k) => !formData[k as keyof typeof formData],
+    );
+
+    console.log("Empty field found:", emptyField);
+
+    if (emptyField) {
+      const fieldLabels: Record<string, string> = {
+        fullName: "Full Name",
+        employeeId: "Employee ID",
+        department: "Department",
+        role: "Role",
+        designation: "Designation",
+        employmentType: "Employment Type",
+        gender: "Gender",
+        email: "Email",
+      };
+      const errorMsg = `${fieldLabels[emptyField]} is required`;
+      console.log("Setting error:", errorMsg);
+      setError(errorMsg);
       return;
     }
 
-    const submissionData = {
+    const submissionData: Record<string, unknown> = {
       ...formData,
     };
-    console.log("Submitting Registration Data:", submissionData);
+    console.log("Department value being submitted:", formData.department);
+    console.log("Full submission data:", submissionData);
     dispatch(createEntity(submissionData));
+  };
+
+  const handleCreateReceptionist = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setReceptionistError("");
+    if (!receptionistForm.name.trim() || !receptionistForm.loginId.trim()) {
+      setReceptionistError("Name and Login ID are required.");
+      return;
+    }
+    try {
+      await dispatch(
+        createUser({
+          name: receptionistForm.name.trim(),
+          loginId: receptionistForm.loginId.trim(),
+          password: receptionistForm.password || undefined,
+          role: UserType.RECEPTIONIST,
+        }),
+      ).unwrap();
+      setReceptionistSuccess(true);
+      setReceptionistForm({ name: "", loginId: "", password: "" });
+      setTimeout(() => setReceptionistSuccess(false), 3000);
+    } catch (err: any) {
+      setReceptionistError(err?.message || "Failed to create receptionist user.");
+    }
   };
 
   return (
@@ -159,7 +249,7 @@ const Registration = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-0.5">
-                    Full Name
+                    Full Name <span className="text-red-500">*</span>
                   </label>
                   <div className="relative group">
                     <input
@@ -178,7 +268,7 @@ const Registration = () => {
 
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-0.5">
-                    Employee ID
+                    Employee ID <span className="text-red-500">*</span>
                   </label>
                   <div className="relative group">
                     <input
@@ -188,10 +278,10 @@ const Registration = () => {
                       className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#4318FF]/20 focus:border-[#4318FF] outline-none transition-all placeholder-gray-300 text-gray-700 text-sm font-medium"
                       value={formData.employeeId}
                       onChange={handleChange}
-                      onInput={(e) =>
-                        (e.currentTarget.value =
-                          e.currentTarget.value.toUpperCase())
-                      }
+                      onInput={(e) => {
+                        e.currentTarget.value =
+                          e.currentTarget.value.toUpperCase();
+                      }}
                       pattern="[A-Z0-9-]*"
                       title="Employee ID should contain only uppercase letters, numbers, and hyphens"
                       autoComplete="nope"
@@ -203,7 +293,7 @@ const Registration = () => {
 
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-0.5">
-                    Department
+                    Department <span className="text-red-500">*</span>
                   </label>
                   <div className="relative group">
                     <select
@@ -215,8 +305,8 @@ const Registration = () => {
                     >
                       <option value="">Select Department</option>
                       {departments.map((dept) => (
-                        <option key={dept} value={dept}>
-                          {dept}
+                        <option key={dept.id} value={dept.departmentCode}>
+                          {dept.departmentName}
                         </option>
                       ))}
                     </select>
@@ -241,7 +331,7 @@ const Registration = () => {
 
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-0.5">
-                    Role
+                    Role <span className="text-red-500">*</span>
                   </label>
                   <div className="relative group">
                     <select
@@ -279,7 +369,7 @@ const Registration = () => {
 
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-0.5">
-                    Designation
+                    Designation <span className="text-red-500">*</span>
                   </label>
                   <div className="relative group">
                     <input
@@ -294,12 +384,82 @@ const Registration = () => {
                     <Briefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                   </div>
                 </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-0.5">
+                    Employment type <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative group">
+                    <select
+                      name="employmentType"
+                      value={formData.employmentType}
+                      onChange={handleChange}
+                      className="w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#4318FF]/20 focus:border-[#4318FF] outline-none transition-all text-gray-700 text-sm font-medium appearance-none bg-white"
+                      required
+                    >
+                      <option value="">Select Employment type</option>
+                      <option value="FULL_TIMER">Full time Employee</option>
+                      <option value="INTERN">Intern</option>
+                    </select>
+                    <Briefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <svg
+                        className="w-4 h-4 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-0.5">
+                    Gender <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative group">
+                    <select
+                      name="gender"
+                      value={formData.gender}
+                      onChange={handleChange}
+                      className="w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#4318FF]/20 focus:border-[#4318FF] outline-none transition-all text-gray-700 text-sm font-medium appearance-none bg-white"
+                      required
+                    >
+                      <option value="">Select Gender</option>
+                      <option value="MALE">Male</option>
+                      <option value="FEMALE">Female</option>
+                    </select>
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <svg
+                        className="w-4 h-4 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Email */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-0.5">
-                  Email Address
+<label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-0.5">
+                    Email Address <span className="text-red-500">*</span>
                 </label>
                 <div className="relative group">
                   <input
@@ -351,6 +511,75 @@ const Registration = () => {
           </form>
         </div>
       </div>
+
+      {/* Create Receptionist User - Admin only; default password Invent123, reset on first login */}
+      {isAdmin && (
+        <div className="w-full max-w-4xl mt-8 bg-white rounded-2xl shadow-xl overflow-visible">
+          <div className="w-full bg-white px-5 py-8 sm:px-8 sm:py-10 lg:px-12 lg:py-12 flex flex-col justify-center border-t border-gray-100">
+            <div className="mb-6 flex items-center gap-2">
+              <Shield className="w-6 h-6 text-[#4318FF]" />
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-0">
+                Create Receptionist Account
+              </h2>
+            </div>
+            <p className="text-gray-500 text-xs sm:text-sm mb-6">
+              Receptionist can view all data and download/export Excel and PDF. They cannot create, edit, or delete. Default password is Invent123; user must reset on first login (same as Admin).
+            </p>
+            {receptionistError && (
+              <div className="mb-4 p-4 bg-red-50 border border-red-100 rounded-xl text-red-600 text-xs sm:text-sm">
+                {receptionistError}
+              </div>
+            )}
+            {receptionistSuccess && (
+              <div className="mb-4 p-4 bg-emerald-50 border border-emerald-100 rounded-xl text-emerald-700 text-sm flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 shrink-0" />
+                Receptionist account created. They can log in with the Login ID and default password Invent123, then will be prompted to reset password.
+              </div>
+            )}
+            <form onSubmit={handleCreateReceptionist} className="space-y-4 max-w-md">
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5 block mb-1">Name <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  placeholder="e.g. Receptionist"
+                  value={receptionistForm.name}
+                  onChange={(e) => setReceptionistForm((f) => ({ ...f, name: e.target.value }))}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-[#4318FF]/20 focus:border-[#4318FF] outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5 block mb-1">Login ID <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  placeholder="e.g. Invent"
+                  value={receptionistForm.loginId}
+                  onChange={(e) => setReceptionistForm((f) => ({ ...f, loginId: e.target.value }))}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-[#4318FF]/20 focus:border-[#4318FF] outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-0.5 block mb-1">Password (optional)</label>
+                <input
+                  type="password"
+                  placeholder="Leave empty for default Invent123"
+                  value={receptionistForm.password}
+                  onChange={(e) => setReceptionistForm((f) => ({ ...f, password: e.target.value }))}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-[#4318FF]/20 focus:border-[#4318FF] outline-none"
+                />
+                <p className="text-[11px] text-gray-400 mt-1">Default: Invent123; user must reset on first login.</p>
+              </div>
+              <button
+                type="submit"
+                disabled={userCreateLoading}
+                className="px-6 py-2.5 bg-[#4318FF] text-white font-bold rounded-xl hover:bg-[#3710e6] transition-colors disabled:opacity-60 flex items-center gap-2"
+              >
+                {userCreateLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                {userCreateLoading ? "Creating..." : "Create Receptionist"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

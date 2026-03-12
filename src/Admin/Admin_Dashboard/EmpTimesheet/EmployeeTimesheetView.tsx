@@ -11,6 +11,7 @@ import {
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { TimesheetEntry } from "../../../types";
+import { AttendanceStatus } from "../../../enums";
 
 interface FullTimesheetProps {
   entries: TimesheetEntry[];
@@ -29,7 +30,7 @@ const EmployeeTimesheetView = ({
 }: FullTimesheetProps) => {
   // Calculate summary statistics
   const presentDays = entries.filter(
-    (e) => e.status === "Full Day" || e.status === "Half Day",
+    (e) => e.status === AttendanceStatus.FULL_DAY || e.status === AttendanceStatus.HALF_DAY,
   ).length;
 
   const totalHours = Math.round(
@@ -41,9 +42,9 @@ const EmployeeTimesheetView = ({
       !day.isFuture &&
       !day.isToday &&
       !day.isWeekend &&
-      (day.status === "Pending" ||
-        day.status === "Not Updated" ||
-        (!day.totalHours && day.status !== "Leave")),
+      (day.status === AttendanceStatus.PENDING ||
+        day.status === AttendanceStatus.NOT_UPDATED ||
+        (!day.totalHours && day.status !== AttendanceStatus.LEAVE)),
   ).length;
 
   // PDF Download State
@@ -260,7 +261,7 @@ const EmployeeTimesheetView = ({
                 !day.isFuture &&
                 !day.isToday &&
                 !day.totalHours &&
-                day.status !== "Leave"
+                day.status !== AttendanceStatus.LEAVE
               ) {
                 return (
                   <div key={day.date}>
@@ -406,11 +407,11 @@ const EmployeeTimesheetView = ({
                       <span
                         className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider
                                             ${
-                                              day.status === "Full Day"
+                                              day.status === AttendanceStatus.FULL_DAY
                                                 ? "bg-[#01B574] text-white shadow-[0_2px_10px_-2px_rgba(1,181,116,0.4)]"
-                                                : day.status === "Leave"
+                                                : day.status === AttendanceStatus.LEAVE
                                                   ? "bg-[#EE5D50] text-white shadow-[0_2px_10px_-2px_rgba(238,93,80,0.4)]"
-                                                  : day.status === "Half Day"
+                                                  : day.status === AttendanceStatus.HALF_DAY
                                                     ? "bg-[#FFB547] text-white shadow-[0_2px_10px_-2px_rgba(255,181,71,0.4)]"
                                                     : "text-gray-400"
                                             }
@@ -443,11 +444,11 @@ const EmployeeTimesheetView = ({
                       <span
                         className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider
                                             ${
-                                              day.status === "Full Day"
+                                              day.status === AttendanceStatus.FULL_DAY
                                                 ? "bg-[#01B574] text-white shadow-[0_2px_10px_-2px_rgba(1,181,116,0.4)]"
-                                                : day.status === "Leave"
+                                                : day.status === AttendanceStatus.LEAVE
                                                   ? "bg-[#EE5D50] text-white shadow-[0_2px_10px_-2px_rgba(238,93,80,0.4)]"
-                                                  : day.status === "Half Day"
+                                                  : day.status === AttendanceStatus.HALF_DAY
                                                     ? "bg-[#FFB547] text-white shadow-[0_2px_10px_-2px_rgba(255,181,71,0.4)]"
                                                     : "text-gray-400"
                                             }
