@@ -1205,18 +1205,15 @@ const MyTimesheet = ({
           const hasCleared = clearedItems.length > 0;
 
           const halfDayDates = halfDayItems
-            .map((item) => new Date(item.workingDate).getDate())
-            .sort((a, b) => a - b)
+            .map((item) => dayjs(item.workingDate).format("MMM D"))
             .join(", ");
 
           const absentDates = absentItems
-            .map((item) => new Date(item.workingDate).getDate())
-            .sort((a, b) => a - b)
+            .map((item) => dayjs(item.workingDate).format("MMM D"))
             .join(", ");
 
           const clearedDates = clearedItems
-            .map((item) => new Date(item.workingDate).getDate())
-            .sort((a, b) => a - b)
+            .map((item) => dayjs(item.workingDate).format("MMM D"))
             .join(", ");
 
           return new Promise<void>((resolve, reject) => {
@@ -1367,7 +1364,7 @@ const MyTimesheet = ({
                           marginBottom: "8px",
                         }}
                       >
-                        Clear Attendance (Dates: {clearedDates})
+                        Clear Saved Attendance
                       </h3>
                       <p
                         style={{
@@ -1377,7 +1374,7 @@ const MyTimesheet = ({
                           marginBottom: "8px",
                         }}
                       >
-                        You are trying to clear save attendance for date(s):{" "}
+                        You are about to clear the saved attendance for date(s):{" "}
                         <strong>{clearedDates}</strong>.
                       </p>
                       <div
@@ -1389,9 +1386,9 @@ const MyTimesheet = ({
                         }}
                       >
                         <p style={{ margin: 0, fontSize: "13px" }}>
-                          This will reset the entry to its default state
-                          (Weekend, Holiday, or Not Updated / Upcoming) and set
-                          all values to empty.
+                          This will remove all recorded hours and reset the
+                          entry to its original default status (Not Updated,
+                          Weekend, or Holiday) as appropriate for that date.
                         </p>
                       </div>
                     </div>
