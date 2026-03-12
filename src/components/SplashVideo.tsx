@@ -15,7 +15,7 @@ const SplashVideo: React.FC<SplashVideoProps> = ({ onComplete, className = "" })
     // Force completion at exactly 7 seconds if video hasn't ended naturally
     const timer = setTimeout(() => {
       onComplete?.();
-    }, 7100);
+    }, 7200);
 
     if (video) {
       video.play().catch((error) => {
