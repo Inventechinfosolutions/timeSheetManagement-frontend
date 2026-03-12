@@ -16,12 +16,13 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { RootState } from "../store";
+import { UserType , UserStatus} from "../enums";
 import {
   getEntities,
   getEntitiesSelect,
-  fetchDepartments,
   fetchManagers,
 } from "../reducers/employeeDetails.reducer";
+import { fetchDepartments } from "../reducers/masterDepartment.reducer";
 import {
   createManagerMapping,
   getManagerMappingHistory,
@@ -46,23 +47,26 @@ interface ManagerMapping {
   employeeId: string;
   employeeName: string;
   department: string;
-  status: "ACTIVE" | "INACTIVE";
+  status: UserStatus.ACTIVE | "INACTIVE";
   createdDate: string;
 }
 
 const ManagerMapping: React.FC = () => {
   const dispatch = useAppDispatch();
-  const {
-    entities: employees,
-    departments,
-    managers,
-  } = useAppSelector((state: RootState) => state.employeeDetails);
+  const { entities: employees, managers } = useAppSelector(
+    (state: RootState) => state.employeeDetails,
+  );
+  const { departments } = useAppSelector(
+    (state: RootState) => state.masterDepartments,
+  );
   const {
     historyEntities: groupedMappings,
     historyTotalItems,
     mappedEmployeeIds,
     loading: mappingLoading,
   } = useAppSelector((state: RootState) => state.managerMapping);
+  const currentUser = useAppSelector((state: RootState) => state.user.currentUser);
+  const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
   const navigate = useNavigate();
 
   // State management
@@ -87,6 +91,7 @@ const ManagerMapping: React.FC = () => {
   const [isHistoryStatusOpen, setIsHistoryStatusOpen] = useState(false);
   const historyItemsPerPage = 10;
   const [debouncedHistorySearch, setDebouncedHistorySearch] = useState("");
+  const [debouncedSearchText, setDebouncedSearchText] = useState("");
 
   // Fetch initial data
   useEffect(() => {
@@ -102,6 +107,31 @@ const ManagerMapping: React.FC = () => {
     }, 500);
     return () => clearTimeout(timer);
   }, [historySearch]);
+
+  // Debounce employee search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchText(searchText);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchText]);
+
+  // Fetch employees when search changes
+  useEffect(() => {
+    if (selectedManager && selectedDepartment) {
+      const dept =
+        selectedDepartment === "All Departments"
+          ? undefined
+          : selectedDepartment;
+      dispatch(
+        getEntitiesSelect({
+          department: dept,
+          role: UserType.EMPLOYEE,
+          search: debouncedSearchText || undefined,
+        }),
+      );
+    }
+  }, [debouncedSearchText, selectedManager, selectedDepartment, dispatch]);
 
   // Fetch history when params change
   useEffect(() => {
@@ -137,39 +167,17 @@ const ManagerMapping: React.FC = () => {
     });
   }, [managers, selectedDepartment]);
 
-  // Filter available employees
+  // Filter available employees (server handles search, we just filter assigned)
   const availableEmployees = useMemo(() => {
     return employees.filter((emp: Employee) => {
-      // If we are strictly fetching employees now, this check confirms it
-      const isEmployee = emp.role === "EMPLOYEE";
-      const matchesDept =
-        selectedDepartment === "All Departments" ||
-        emp.department === selectedDepartment;
-      const matchesSearch =
-        emp.fullName?.toLowerCase().includes(searchText.toLowerCase()) ||
-        emp.employeeId?.toLowerCase().includes(searchText.toLowerCase());
+      // Server already filters by: role=EMPLOYEE, department, search, ACTIVE status, not mapped
+      // We only need to filter out currently assigned employees (UI state)
       const notAssigned = !assignedEmployees.some(
         (assigned) => assigned.id === emp.id,
       );
-      // Check if employee is already mapped in the database
-      const isAlreadyMapped = mappedEmployeeIds.includes(emp.employeeId);
-
-      return (
-        isEmployee &&
-        matchesDept &&
-        matchesSearch &&
-        notAssigned &&
-        !isAlreadyMapped &&
-        emp.userStatus === "ACTIVE"
-      );
+      return notAssigned;
     });
-  }, [
-    employees,
-    selectedDepartment,
-    searchText,
-    assignedEmployees,
-    mappedEmployeeIds,
-  ]);
+  }, [employees, assignedEmployees]);
 
   // Handlers
   const handleDepartmentChange = (dept: string) => {
@@ -195,7 +203,7 @@ const ManagerMapping: React.FC = () => {
     // Fetch employees for selected department to assign
     const dept =
       selectedDepartment === "All Departments" ? undefined : selectedDepartment;
-    dispatch(getEntitiesSelect({ department: dept, role: "EMPLOYEE" }));
+    dispatch(getEntitiesSelect({ department: dept, role: UserType.EMPLOYEE }));
   };
 
   const toggleEmployeeSelection = (employeeId: string) => {
@@ -228,7 +236,7 @@ const ManagerMapping: React.FC = () => {
           employeeId: employee.employeeId,
           employeeName: employee.fullName,
           department: selectedDepartment,
-          status: "ACTIVE",
+          status: UserStatus.ACTIVE,
         }),
       );
     }
@@ -249,7 +257,8 @@ const ManagerMapping: React.FC = () => {
 
   return (
     <div className="p-4 md:p-8 bg-[#F4F7FE] min-h-screen font-['DM_Sans',sans-serif]">
-      {/* Header Card */}
+      {/* Header Card - hidden for Receptionist (view only Mapping History) */}
+      {!isReceptionist && (
       <div className="bg-white rounded-[24px] shadow-[0px_18px_40px_rgba(112,144,176,0.12)] p-6 mb-6">
         <h1 className="text-2xl font-bold text-[#2B3674] mb-2">
           Manager Mapping
@@ -271,10 +280,26 @@ const ManagerMapping: React.FC = () => {
                 className="w-full flex items-center justify-between px-4 py-3 bg-white border border-gray-200 rounded-xl text-[#2B3674] font-medium hover:border-[#4318FF] transition-colors"
               >
                 <span>{selectedDepartment || "Select Department"}</span>
-                <ChevronDown
-                  size={20}
-                  className={`text-[#A3AED0] transition-transform ${isDeptDropdownOpen ? "rotate-180" : ""}`}
-                />
+                <div className="flex items-center gap-1">
+                  {selectedDepartment && (
+                    <span
+                      role="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleClear();
+                        setIsDeptDropdownOpen(false);
+                      }}
+                      className="p-1 rounded-full hover:bg-red-50 text-[#A3AED0] hover:text-red-500 transition-colors"
+                      title="Clear department"
+                    >
+                      <X size={16} />
+                    </span>
+                  )}
+                  <ChevronDown
+                    size={20}
+                    className={`text-[#A3AED0] transition-transform ${isDeptDropdownOpen ? "rotate-180" : ""}`}
+                  />
+                </div>
               </button>
               {isDeptDropdownOpen && (
                 <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50 max-h-64 overflow-y-auto">
@@ -286,11 +311,13 @@ const ManagerMapping: React.FC = () => {
                   </button>
                   {departments.map((dept) => (
                     <button
-                      key={dept}
-                      onClick={() => handleDepartmentChange(dept)}
-                      className={`w-full text-left px-4 py-2 text-sm font-medium hover:bg-[#F4F7FE] ${selectedDepartment === dept ? "text-[#4318FF] bg-[#4318FF]/5" : "text-[#2B3674]"}`}
+                      key={dept.id}
+                      onClick={() =>
+                        handleDepartmentChange(dept.departmentName)
+                      }
+                      className={`w-full text-left px-4 py-2 text-sm font-medium hover:bg-[#F4F7FE] ${selectedDepartment === dept.departmentName ? "text-[#4318FF] bg-[#4318FF]/5" : "text-[#2B3674]"}`}
                     >
-                      {dept}
+                      {dept.departmentName}
                     </button>
                   ))}
                 </div>
@@ -303,30 +330,48 @@ const ManagerMapping: React.FC = () => {
             <label className="block text-sm font-bold text-[#2B3674] mb-2">
               Manager
             </label>
-            <select
-              value={selectedManager?.id || ""}
-              onChange={(e) => {
-                const manager = availableManagers.find(
-                  (m) => String(m.id) === e.target.value,
-                );
-                if (manager) handleManagerSelect(manager);
-              }}
-              disabled={selectedDepartment === "All Departments"}
-              className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-[#2B3674] font-medium hover:border-[#4318FF] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <option value="">Select Manager</option>
-              {availableManagers.map((manager) => (
-                <option key={manager.id} value={manager.id}>
-                  {manager.fullName} ({manager.employeeId})
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                value={selectedManager?.id || ""}
+                onChange={(e) => {
+                  const manager = availableManagers.find(
+                    (m) => String(m.id) === e.target.value,
+                  );
+                  if (manager) handleManagerSelect(manager);
+                }}
+                disabled={selectedDepartment === "All Departments"}
+                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-[#2B3674] font-medium hover:border-[#4318FF] transition-colors disabled:opacity-50 disabled:cursor-not-allowed pr-10"
+              >
+                <option value="">Select Manager</option>
+                {availableManagers.map((manager) => (
+                  <option key={manager.id} value={manager.id}>
+                    {manager.fullName} ({manager.employeeId})
+                  </option>
+                ))}
+              </select>
+              {selectedManager && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedManager(null);
+                    setAssignedEmployees([]);
+                    setSelectedEmployees([]);
+                  }}
+                  className="absolute right-8 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-red-50 text-[#A3AED0] hover:text-red-500 transition-colors"
+                  title="Clear manager"
+                  type="button"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
+      )}
 
-      {/* Main Content - Only show when department and manager are selected */}
-      {selectedDepartment !== "All Departments" && selectedManager && (
+      {/* Main Content - Only show when department and manager are selected (hidden for Receptionist) */}
+      {!isReceptionist && selectedDepartment !== "All Departments" && selectedManager && (
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] gap-4 mb-6">
           {/* Available Employees */}
           <div className="bg-white rounded-[24px] shadow-[0px_18px_40px_rgba(112,144,176,0.12)] p-6">
@@ -379,8 +424,16 @@ const ManagerMapping: React.FC = () => {
                 placeholder="Search employees..."
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-[#F4F7FE] border border-transparent rounded-xl text-sm font-medium outline-none focus:border-[#4318FF] transition-colors"
+                className="w-full pl-10 pr-8 py-2.5 bg-[#F4F7FE] border border-transparent rounded-xl text-sm font-medium outline-none focus:border-[#4318FF] transition-colors"
               />
+              {searchText && (
+                <button
+                  onClick={() => setSearchText("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X size={14} />
+                </button>
+              )}
             </div>
 
             {/* Employee List */}
@@ -494,10 +547,10 @@ const ManagerMapping: React.FC = () => {
 
       {/* Action Buttons */}
       {selectedDepartment && selectedManager && (
-        <div className="flex gap-4 justify-center mt-4">
+        <div className="flex gap-4 justify-center mt-4 mb-6">
           <button
             onClick={handleClear}
-            className="px-6 py-3 bg-white border-2 border-gray-200 text-[#2B3674] rounded-xl font-bold hover:border-[#4318FF] hover:text-[#4318FF] transition-all"
+            className="px-6 py-3 bg-[#5B4FFF] border-2 border-[#4318FF]/50 text-white rounded-xl font-bold hover:bg-[#4318FF] hover:border-[#4318FF] transition-all"
           >
             Clear All
           </button>
@@ -511,9 +564,9 @@ const ManagerMapping: React.FC = () => {
         </div>
       )}
 
-      {/* Mapping History */}
+      {/* Mapping History - only section visible for Receptionist */}
       <div className="bg-white rounded-[24px] shadow-[0px_18px_40px_rgba(112,144,176,0.12)] p-6">
-        <h3 className="text-lg font-bold text-[#2B3674] mb-4">
+        <h3 className={`font-bold text-[#2B3674] ${isReceptionist ? "text-2xl mb-2" : "text-lg mb-4"}`}>
           Mapping History
         </h3>
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
@@ -544,15 +597,15 @@ const ManagerMapping: React.FC = () => {
                   </button>
                   {departments.map((dept) => (
                     <button
-                      key={dept}
+                      key={dept.id}
                       onClick={() => {
-                        setHistoryDepartment(dept);
+                        setHistoryDepartment(dept.departmentName);
                         setIsHistoryDeptOpen(false);
                         setHistoryPage(1);
                       }}
-                      className={`w-full text-left px-4 py-2 text-sm font-semibold hover:bg-gray-50 ${historyDepartment === dept ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+                      className={`w-full text-left px-4 py-2 text-sm font-semibold hover:bg-gray-50 ${historyDepartment === dept.departmentName ? "text-[#4318FF]" : "text-[#2B3674]"}`}
                     >
-                      {dept}
+                      {dept.departmentName}
                     </button>
                   ))}
                 </div>
@@ -606,7 +659,34 @@ const ManagerMapping: React.FC = () => {
               onChange={(e) => setHistorySearch(e.target.value)}
               className="border-none outline-none bg-transparent text-[#2B3674] w-full text-sm font-semibold placeholder:text-[#A3AED0]/60"
             />
+            {historySearch && (
+              <button
+                onClick={() => setHistorySearch("")}
+                className="ml-2 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X size={16} />
+              </button>
+            )}
           </div>
+
+          {/* Clear All Button */}
+          {(historySearch ||
+            historyDepartment !== "All" ||
+            historyStatus !== "All") && (
+            <button
+              onClick={() => {
+                setHistorySearch("");
+                setHistoryDepartment("All");
+                setHistoryStatus("All");
+                setHistoryPage(1);
+              }}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#5B4FFF] text-white rounded-full hover:bg-[#4318FF] active:scale-95 transition-all text-sm font-bold border border-[#4318FF]/50 whitespace-nowrap"
+              title="Clear all filters"
+            >
+              <X size={16} />
+              <span>Clear All</span>
+            </button>
+          )}
         </div>
 
         {mappingLoading ? (
@@ -709,7 +789,7 @@ const ManagerMapping: React.FC = () => {
                       <td className="py-4 px-4 text-center">
                         <span
                           className={`inline-flex px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider border ${
-                            mapping.status === "ACTIVE"
+                            mapping.status === UserStatus.ACTIVE
                               ? "bg-green-50 text-green-500 border-green-100"
                               : "bg-red-50 text-red-500 border-red-100"
                           }`}
@@ -724,14 +804,14 @@ const ManagerMapping: React.FC = () => {
                               `/admin-dashboard/manager-employees/${mapping.managerId}`,
                             )
                           }
-                          disabled={mapping.status === "INACTIVE"}
+                          disabled={mapping.status === UserStatus.INACTIVE}
                           className={`inline-flex items-center gap-2 bg-transparent border-none cursor-pointer text-[#4318FF] text-sm font-bold transition-all ${
-                            mapping.status === "INACTIVE"
+                            mapping.status === UserStatus.INACTIVE
                               ? "opacity-30 cursor-not-allowed"
                               : "hover:underline hover:scale-105 active:scale-95"
                           }`}
                           title={
-                            mapping.status === "INACTIVE"
+                            mapping.status === UserStatus.INACTIVE
                               ? "Cannot view inactive manager team"
                               : "View mapped employees"
                           }

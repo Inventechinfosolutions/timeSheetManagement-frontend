@@ -2,18 +2,7 @@ import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import axios from 'axios';
 import { Storage } from '../utils/storage-util';
 
-// ENUMS
-export enum UserStatus {
-  ACTIVE = 'ACTIVE',
-  INACTIVE = 'INACTIVE',
-}
-
-export enum UserType {
-  ADMIN = 'ADMIN',
-  EMPLOYEE = 'EMPLOYEE',
-  MANAGER = 'MANAGER',
-  TEAM_LEAD = 'TEAM_LEAD',
-}
+import { UserStatus, UserType } from '../enums';
 
 // INTERFACES
 export interface User {
@@ -32,7 +21,8 @@ export interface User {
 export interface CreateUserDto {
   loginId: string;
   name: string;
-  password: string;
+  password?: string;
+  role?: UserType;
 }
 
 export interface UserLoginDto {
@@ -86,7 +76,7 @@ const initialState: UserState = {
   passwordChangeSuccess: false,
 };
 
-const apiUrl = '/api/user'; 
+const apiUrl = '/api/user';
 
 // 1. Create User: POST /user/create
 export const createUser = createAsyncThunk(
@@ -109,32 +99,32 @@ export const loginUser = createAsyncThunk(
       const response = await axios.post(`${apiUrl}/login`, userLoginDto, {
         withCredentials: true, // Important: Send/receive cookies
       });
-      
+
       const data = response.data.data as LoginResponse;
-      
+
       // If userType is missing, fetch it
       if (!data.userType) {
-         try {
-             // We prioritize the token from the response
-             const token = data.accessToken;
-             const meResponse = await axios.get(`${apiUrl}/auth/me`, {
-                withCredentials: true,
-                headers: { Authorization: `Bearer ${token}` }
-             });
-             // Merge the userType and resetRequired from meResponse
-             if (meResponse.data.data) {
-                 return { 
-                    ...data, 
-                    userType: meResponse.data.data.userType,
-                    resetRequired: meResponse.data.data.resetRequired
-                 };
-             }
-         } catch (e) {
-             console.warn("Failed to fetch user type after login", e);
-             // Proceed without userType if fetch fails, or handle as needed
-         }
+        try {
+          // We prioritize the token from the response
+          const token = data.accessToken;
+          const meResponse = await axios.get(`${apiUrl}/auth/me`, {
+            withCredentials: true,
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          // Merge the userType and resetRequired from meResponse
+          if (meResponse.data.data) {
+            return {
+              ...data,
+              userType: meResponse.data.data.userType,
+              resetRequired: meResponse.data.data.resetRequired
+            };
+          }
+        } catch (e) {
+          console.warn("Failed to fetch user type after login", e);
+          // Proceed without userType if fetch fails, or handle as needed
+        }
       }
-      
+
       return data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Login failed');
@@ -253,7 +243,7 @@ const userSlice = createSlice({
           role: action.payload.role,
         };
         state.error = null;
-        
+
         // Store access token in sessionStorage for persistence
         Storage.session.set('TimeSheet-authenticationToken', action.payload.accessToken);
         // Clean up old localStorage token if exists
@@ -286,7 +276,7 @@ const userSlice = createSlice({
           role: action.payload.role,
         };
         state.error = null;
-        
+
         // Update access token in sessionStorage
         Storage.session.set('TimeSheet-authenticationToken', action.payload.accessToken);
         // Clean up old localStorage token if exists
@@ -298,7 +288,7 @@ const userSlice = createSlice({
         state.accessToken = null;
         state.currentUser = null;
         state.error = action.payload as string || 'Authentication failed';
-        
+
         // Clear stored token on auth failure
         Storage.session.remove('TimeSheet-authenticationToken');
         localStorage.removeItem('userLoginId');
@@ -317,7 +307,7 @@ const userSlice = createSlice({
         state.currentUser = null;
         state.error = null;
         state.passwordChangeSuccess = false;
-        
+
         // Clear stored token
         Storage.session.remove('TimeSheet-authenticationToken');
         localStorage.removeItem('userLoginId');
@@ -325,7 +315,7 @@ const userSlice = createSlice({
       .addCase(logoutUser.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string || 'Logout failed';
-        
+
         // Even if logout fails on server, clear local state
         state.isAuthenticated = false;
         state.accessToken = null;
@@ -357,10 +347,10 @@ const userSlice = createSlice({
   },
 });
 
-export const { 
-  clearError, 
-  clearPasswordChangeSuccess, 
-  setAccessToken, 
+export const {
+  clearError,
+  clearPasswordChangeSuccess,
+  setAccessToken,
   resetUserState,
   setResetRequired
 } = userSlice.actions;

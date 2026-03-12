@@ -1,4 +1,5 @@
 import { Edit, Eye } from "lucide-react";
+import { MonthStatus } from "../enums";
 
 interface Employee {
   id: string;
@@ -11,12 +12,14 @@ interface EmployeeTimeSheetMobileCardProps {
   employees: Employee[];
   onViewTimesheet: (empId: string) => void;
   onViewWorkingDetails: (empId: string) => void;
+  showEditButton?: boolean;
 }
 
 const EmployeeTimeSheetMobileCard = ({
   employees,
   onViewTimesheet,
   onViewWorkingDetails,
+  showEditButton = true,
 }: EmployeeTimeSheetMobileCardProps) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -36,12 +39,12 @@ const EmployeeTimeSheetMobileCard = ({
             </div>
             <span
               className={`inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${
-                emp.status === "Completed"
+                (emp.status || "").toLowerCase() === "submitted"
                   ? "bg-green-50 text-green-500 border-green-100"
                   : "bg-amber-50 text-amber-500 border-amber-100"
               }`}
             >
-              {emp.status === "Completed" ? "Submitted" : "Pending"}
+              {emp.status}
             </span>
           </div>
 
@@ -65,13 +68,15 @@ const EmployeeTimeSheetMobileCard = ({
               >
                 <Eye size={16} />
               </button>
-              <button
-                onClick={() => onViewTimesheet(emp.id)}
-                className="flex items-center justify-center p-2 rounded-xl bg-[#4318FF]/5 text-[#4318FF] hover:bg-[#4318FF] hover:text-white transition-all active:scale-95 shadow-sm"
-                title="Edit Timesheet"
-              >
-                <Edit size={16} />
-              </button>
+              {showEditButton && (
+                <button
+                  onClick={() => onViewTimesheet(emp.id)}
+                  className="flex items-center justify-center p-2 rounded-xl bg-[#4318FF]/5 text-[#4318FF] hover:bg-[#4318FF] hover:text-white transition-all active:scale-95 shadow-sm"
+                  title="Edit Timesheet"
+                >
+                  <Edit size={16} />
+                </button>
+              )}
             </div>
           </div>
         </div>

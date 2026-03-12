@@ -2,17 +2,15 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Mail, ArrowLeft, Loader2, CheckCircle, User } from "lucide-react";
 import { message } from "antd";
+import { unwrapResult } from "@reduxjs/toolkit";
 import inventLogo from "../assets/invent-logo.svg";
 import { useAppSelector, useAppDispatch } from "../hooks";
-import {
-  getEntities,
-  setCurrentUser,
-} from "../reducers/employeeDetails.reducer";
 import {
   forgotPasswordOtp,
   clearAllPublicState,
   clearOtpState,
 } from "../reducers/public.reducer";
+import { getEntity } from "../reducers/employeeDetails.reducer";
 
 type ResetStep = "ID" | "EMAIL" | "SUCCESS";
 
@@ -65,26 +63,20 @@ const ForgotPassword: React.FC = () => {
     }
 
     setIsIdentifying(true);
-    setError(null);
     try {
-      const response: any = await dispatch(
-        getEntities({ search: searchId.trim() }),
-      ).unwrap();
-      const list = Array.isArray(response) ? response : response.data || [];
-      const foundUser = list.length > 0 ? list[0] : null;
+      const result = await dispatch(getEntity(searchId.trim()));
+      const employee = unwrapResult(result);
 
-      if (foundUser) {
-        dispatch(setCurrentUser(foundUser));
-        setEmail(foundUser.email || "");
-        setLoginId(foundUser.employeeId || searchId.trim());
+      if (employee && employee.email) {
+        setLoginId(employee.loginId || employee.employeeId);
+        setEmail(employee.email);
         setStep("EMAIL");
       } else {
-        setError("No employee found with this ID");
-        //message.error("No employee found with this ID");
+        message.error("Employee found but no email is registered");
       }
-    } catch (err) {
-      setError("Error searching for employee");
-      //message.error("Error searching for employee");
+    } catch (error: any) {
+      console.error("Identification error:", error);
+      message.error(error || "Employee not found. Please check your ID.");
     } finally {
       setIsIdentifying(false);
     }
@@ -192,7 +184,6 @@ const ForgotPassword: React.FC = () => {
                   className="w-full pl-12 pr-4 py-4 bg-[#F0F2F5] border-none rounded-2xl text-[#2D3748] placeholder-gray-400 text-sm focus:ring-2 focus:ring-[#6C63FF]/20 focus:bg-[#E8EAED] transition-all duration-200 font-semibold"
                   value={searchId}
                   onChange={(e) => setSearchId(e.target.value)}
-                  disabled={isIdentifying}
                   autoFocus
                 />
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -203,14 +194,11 @@ const ForgotPassword: React.FC = () => {
 
             <button
               type="submit"
-              disabled={isIdentifying || !searchId.trim()}
+              disabled={!searchId.trim() || isIdentifying}
               className="w-full bg-[#6C63FF] hover:bg-[#5a52d5] text-white font-bold py-4 rounded-xl shadow-[0_10px_20px_-10px_rgba(108,99,255,0.5)] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-45 disabled:cursor-not-allowed disabled:shadow-none"
             >
               {isIdentifying ? (
-                <>
-                  <Loader2 className="animate-spin w-5 h-5" />
-                  <span className="text-sm tracking-wide">Searching...</span>
-                </>
+                <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
                 <span className="text-sm tracking-wide">CONTINUE</span>
               )}
@@ -227,10 +215,12 @@ const ForgotPassword: React.FC = () => {
               </label>
               <div className="relative">
                 <input
-                  type="text"
+                  type="email"
                   value={email}
                   readOnly
-                  className="w-full pl-12 pr-4 py-4 bg-[#F0F2F5] border-none rounded-2xl text-[#2D3748] text-sm font-semibold cursor-not-allowed opacity-80"
+                  placeholder="Employee Email"
+                  required
+                  className="w-full pl-12 pr-4 py-4 bg-[#F0F2F5] border-none rounded-2xl text-[#2D3748] text-sm font-semibold focus:ring-2 focus:ring-[#6C63FF]/20 focus:bg-[#E8EAED] transition-all duration-200"
                 />
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
                   <Mail className="text-gray-400 h-5 w-5" />

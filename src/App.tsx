@@ -4,18 +4,20 @@ import {
   Route,
   Navigate,
   useParams,
+  useLocation,
 } from "react-router-dom";
 import { Suspense } from "react";
 import { Spin } from "antd";
 import { lazy } from "react";
 import Layout from "./components/Layout";
+import ApiLoadingSpinner from "./components/ApiLoadingSpinner";
 import AdminLayout from "./navigation/AdminLayout";
 import { adminComponentConfigs } from "./navigation/adminComponentConfigs";
 import ManagerLayout from "./navigation/ManagerLayout";
 import { mainComponentConfigs } from "./mainComponentConfigs";
 import EmployeeLayout from "./navigation/EmployeeLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
-import { UserType } from "./reducers/user.reducer";
+import { UserType } from "./enums";
 
 // Lazy load authentication components
 const EmployeeActivation = lazy(() => import("./Login/EmployeeActivation"));
@@ -115,14 +117,31 @@ const AdminTabWrapper = () => {
       return <AttendanceViewWrapper />;
     case "my-profile":
       return <MyProfile />;
+    case "leave-management":
+      return <LeaveManagement />;
     default:
       return <Navigate to="/admin-dashboard" replace />;
   }
 };
 
-function App() {
+import SessionTimeout from "./components/SessionTimeout";
+
+function AppContent() {
+  const { pathname } = useLocation();
+  const isStandaloneRoute =
+    pathname === "/landing" ||
+    pathname === "/forgot-password" ||
+    pathname.startsWith("/auth") ||
+    pathname === "/activate" ||
+    pathname.startsWith("/timesheet/") ||
+    pathname === "/reset-password" ||
+    pathname === "/set-password";
+  const showFullScreenSpinner = isStandaloneRoute;
+
   return (
-    <Router>
+    <>
+      {showFullScreenSpinner && <ApiLoadingSpinner />}
+      <SessionTimeout />
       <Routes>
         {/* Employee Activation Route - handles activation links */}
         <Route
@@ -214,7 +233,7 @@ function App() {
           }
         />
 
-        <Route path="/login" element={<Navigate to="/landing" replace />} />
+        <Route path="/login" element={<Navigate to="/landing?skipSplash=true" replace />} />
 
         <Route path="/welcome" element={<Navigate to="/landing" replace />} />
         <Route path="/portal" element={<Navigate to="/landing" replace />} />
@@ -256,7 +275,7 @@ function App() {
                 <Route
                   path="/admin-dashboard"
                   element={
-                    <ProtectedRoute allowedRole={UserType.ADMIN}>
+                    <ProtectedRoute allowedRoles={[UserType.ADMIN, UserType.RECEPTIONIST]}>
                       <AdminLayout />
                     </ProtectedRoute>
                   }
@@ -450,6 +469,14 @@ function App() {
           }
         />
       </Routes>
+    </>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <AppContent />
     </Router>
   );
 }

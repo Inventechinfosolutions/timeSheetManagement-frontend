@@ -1,4 +1,5 @@
 import { RootState } from "../store";
+import dayjs from "dayjs";
 import { getEntities } from "../reducers/employeeDetails.reducer";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import {
@@ -16,13 +17,15 @@ import {
 } from "lucide-react";
 import {
   fetchAllEmployeesMonthlyAttendance,
-  AttendanceStatus,
+  downloadAttendancePdfReport,
 } from "../reducers/employeeAttendance.reducer";
-import { downloadPdf } from "../utils/downloadPdf";
+import { saveAs } from "file-saver";
 import { generateMonthlyEntries } from "../utils/attendanceUtils";
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import DailyStatusMobileCard from "./DailyStatusMobileCard";
+import { fetchDepartments } from "../reducers/masterDepartment.reducer";
+import { AttendanceStatus } from "../enums";
 
 const DailyStatus = () => {
   const navigate = useNavigate();
@@ -56,24 +59,16 @@ const DailyStatus = () => {
   const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
   const [exportStartDate, setExportStartDate] = useState(
-    firstDay.toISOString().split("T")[0],
+    dayjs(firstDay).format("YYYY-MM-DD"),
   );
   const [exportEndDate, setExportEndDate] = useState(
-    lastDay.toISOString().split("T")[0],
+    dayjs(lastDay).format("YYYY-MM-DD"),
   );
   const [isExporting, setIsExporting] = useState(false);
 
-  const departments = [
-    "All",
-    "HR",
-    "IT",
-    "Sales",
-    "Marketing",
-    "Finance",
-    "Engineering",
-    "Design",
-    "Admin",
-  ];
+  const { departments } = useAppSelector(
+    (state: RootState) => state.masterDepartments,
+  );
 
   const { entities, totalItems } = useAppSelector(
     (state: RootState) => state.employeeDetails,
@@ -114,6 +109,7 @@ const DailyStatus = () => {
         year: currentYear,
       }),
     );
+    dispatch(fetchDepartments());
   }, [dispatch, currentMonth, currentYear]);
 
   useEffect(() => {
@@ -137,12 +133,9 @@ const DailyStatus = () => {
     const empRecords = employeeRecords[empId] || [];
 
     // Get hours for today
-    const todayStr = new Date().toISOString().split("T")[0];
+    const todayStr = dayjs().format("YYYY-MM-DD");
     const todayRecord = empRecords.find((r) => {
-      const workingDateStr =
-        r.workingDate instanceof Date
-          ? r.workingDate.toISOString().split("T")[0]
-          : String(r.workingDate).split("T")[0];
+      const workingDateStr = dayjs(r.workingDate).format("YYYY-MM-DD");
       return workingDateStr === todayStr;
     });
     const todayHours = todayRecord?.totalHours || 0;
@@ -203,22 +196,19 @@ const DailyStatus = () => {
 
       for (const emp of selected) {
         const empId = emp.employeeId || emp.id;
-        let records = employeeRecords[empId] || [];
-        const entries = generateMonthlyEntries(start, new Date(), records);
-        const totalHours = entries.reduce(
-          (acc, curr) => acc + (curr.totalHours || 0),
-          0,
+
+        const blob = await downloadAttendancePdfReport(
+          parseInt(currentMonth),
+          parseInt(currentYear),
+          empId,
+          exportStartDate,
+          exportEndDate,
         );
 
-        downloadPdf({
-          employeeName: emp.fullName || emp.name,
-          employeeId: empId,
-          department: emp.department,
-          month: monthStr,
-          entries: entries,
-          totalHours: totalHours,
-          holidays: [],
-        });
+        saveAs(
+          blob,
+          `Attendance_${empId}_${exportStartDate}_to_${exportEndDate}.pdf`,
+        );
 
         await new Promise((r) => setTimeout(r, 300));
       }
@@ -296,22 +286,37 @@ const DailyStatus = () => {
                       Departments
                     </span>
                   </div>
+                  <button
+                    onClick={() => {
+                      setSelectedDept("All");
+                      setIsDropdownOpen(false);
+                      setCurrentPage(1);
+                    }}
+                    className={`w-full text-left px-5 py-2 text-sm font-semibold transition-colors
+                      ${
+                        selectedDept === "All"
+                          ? "text-[#4318FF] bg-[#4318FF]/5"
+                          : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
+                      }`}
+                  >
+                    All Departments
+                  </button>
                   {departments.map((dept) => (
                     <button
-                      key={dept}
+                      key={dept.id}
                       onClick={() => {
-                        setSelectedDept(dept);
+                        setSelectedDept(dept.departmentName);
                         setIsDropdownOpen(false);
                         setCurrentPage(1);
                       }}
                       className={`w-full text-left px-5 py-2 text-sm font-semibold transition-colors
                         ${
-                          selectedDept === dept
+                          selectedDept === dept.departmentName
                             ? "text-[#4318FF] bg-[#4318FF]/5"
                             : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
                         }`}
                     >
-                      {dept === "All" ? "All Departments" : dept}
+                      {dept.departmentName}
                     </button>
                   ))}
                 </div>
@@ -329,6 +334,22 @@ const DailyStatus = () => {
                 className="border-none outline-none bg-transparent text-[#2B3674] w-full text-sm font-semibold placeholder:text-[#A3AED0]/60"
               />
             </div>
+
+            {/* Clear All Button */}
+            {(searchTerm !== "" || selectedDept !== "All") && (
+              <button
+                onClick={() => {
+                  setSearchTerm("");
+                  setSelectedDept("All");
+                  setCurrentPage(1);
+                }}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#5B4FFF] text-white rounded-full hover:bg-[#4318FF] active:scale-95 transition-all text-sm font-bold border border-[#4318FF]/50 whitespace-nowrap"
+                title="Clear all filters"
+              >
+                <X size={16} />
+                <span>Clear All</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -549,16 +570,25 @@ const DailyStatus = () => {
                     </button>
                     {isModalDeptOpen && (
                       <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-[110]">
+                        <button
+                          onClick={() => {
+                            setModalDept("All");
+                            setIsModalDeptOpen(false);
+                          }}
+                          className={`w-full text-left px-5 py-2 text-sm font-semibold hover:bg-gray-50 ${modalDept === "All" ? "text-[#4318FF] bg-[#4318FF]/5" : "text-[#2B3674]"}`}
+                        >
+                          All Departments
+                        </button>
                         {departments.map((d) => (
                           <button
-                            key={d}
+                            key={d.id}
                             onClick={() => {
-                              setModalDept(d);
+                              setModalDept(d.departmentName);
                               setIsModalDeptOpen(false);
                             }}
-                            className={`w-full text-left px-5 py-2 text-sm font-semibold hover:bg-gray-50 ${modalDept === d ? "text-[#4318FF] bg-[#4318FF]/5" : "text-[#2B3674]"}`}
+                            className={`w-full text-left px-5 py-2 text-sm font-semibold hover:bg-gray-50 ${modalDept === d.departmentName ? "text-[#4318FF] bg-[#4318FF]/5" : "text-[#2B3674]"}`}
                           >
-                            {d === "All" ? "All Departments" : d}
+                            {d.departmentName}
                           </button>
                         ))}
                       </div>
@@ -676,7 +706,13 @@ const DailyStatus = () => {
                       <input
                         type="date"
                         value={exportStartDate}
-                        onChange={(e) => setExportStartDate(e.target.value)}
+                        onChange={(e) => {
+                          const newStart = e.target.value;
+                          setExportStartDate(newStart);
+                          if (exportEndDate && newStart && exportEndDate < newStart) {
+                            setExportEndDate(newStart);
+                          }
+                        }}
                         className="w-full pl-6 pr-12 py-4 bg-[#F4F7FE] border-none rounded-[16px] text-[#2B3674] font-bold outline-none focus:ring-2 ring-blue-100 transition-all cursor-pointer appearance-none"
                       />
                       <Calendar
@@ -695,6 +731,7 @@ const DailyStatus = () => {
                       <input
                         type="date"
                         value={exportEndDate}
+                        min={exportStartDate}
                         onChange={(e) => setExportEndDate(e.target.value)}
                         className="w-full pl-6 pr-12 py-4 bg-[#F4F7FE] border-none rounded-[16px] text-[#2B3674] font-bold outline-none focus:ring-2 ring-blue-100 transition-all cursor-pointer appearance-none"
                       />

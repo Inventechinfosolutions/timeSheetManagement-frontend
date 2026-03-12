@@ -1,10 +1,16 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useAppSelector, useAppDispatch } from "../hooks";
+import { useLocation } from "react-router-dom";
 import {
   getLeaveBalance,
   getLeaveStats,
   getAllLeaveRequests,
 } from "../reducers/leaveRequest.reducer";
+import {
+  LeaveRequestStatus,
+  AttendanceStatus,
+  LeaveRequestType,
+} from "../enums";
 import { Calendar, CheckCircle, Clock, TrendingUp, Ban } from "lucide-react";
 import { Select } from "antd";
 import { ChevronDown } from "lucide-react";
@@ -27,15 +33,27 @@ const LeaveBalance = () => {
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [balanceLoading, setBalanceLoading] = useState(false);
 
-  const employeeId = useMemo(
-    () =>
-      currentUser?.loginId ||
+  const location = useLocation();
+  const isMyRoute =
+    location.pathname.includes("/employee-dashboard") ||
+    location.pathname.includes("/manager-dashboard/leave-balance") ||
+    location.pathname.includes("/admin-dashboard/leave-balance") ||
+    location.pathname.includes("my-dashboard") ||
+    location.pathname.includes("my-timesheet");
+
+  const employeeId = useMemo(() => {
+    if (isMyRoute) {
+      return currentUser?.employeeId || currentUser?.loginId || "";
+    }
+    return (
       entity?.employeeId ||
       entity?.id ||
+      currentUser?.employeeId ||
+      currentUser?.loginId ||
       localStorage.getItem("userLoginId") ||
-      "",
-    [currentUser?.loginId, entity?.employeeId, entity?.id],
-  );
+      ""
+    );
+  }, [currentUser, entity, isMyRoute]);
 
   // Prefer backend balance API; fallback to stats + designation
   useEffect(() => {
@@ -66,8 +84,11 @@ const LeaveBalance = () => {
     const designation = (entity?.designation ?? entity?.designation_name ?? "")
       .toString()
       .toLowerCase();
-    return designation.includes("intern");
-  }, [entity?.designation, entity?.designation_name]);
+    const employmentType = (entity?.employmentType ?? "")
+      .toString()
+      .toUpperCase();
+    return designation.includes("intern") || employmentType === "INTERN";
+  }, [entity?.designation, entity?.designation_name, entity?.employmentType]);
   const entitlementLabel = isIntern
     ? "Intern (1 per month)"
     : "Full timer (1.5 per month)";
@@ -90,15 +111,20 @@ const LeaveBalance = () => {
 
     const approvedLeaves = entities.filter(
       (e: any) =>
-        (e.requestType === "Apply Leave" || e.requestType === "Leave") &&
-        e.status === "Approved",
+        (e.requestType === LeaveRequestType.APPLY_LEAVE ||
+          e.requestType === AttendanceStatus.LEAVE) &&
+        e.status === LeaveRequestStatus.APPROVED,
     );
 
     if (!isIntern) {
+      const totalDuration = approvedLeaves.reduce(
+        (acc, e) => acc + (Number(e.duration) || 0),
+        0,
+      );
       return {
-        paidUsed: approvedLeaves.length,
+        paidUsed: totalDuration,
         lopUsed: 0,
-        approvedUsed: approvedLeaves.length,
+        approvedUsed: totalDuration,
       };
     }
 
@@ -107,7 +133,8 @@ const LeaveBalance = () => {
     approvedLeaves.forEach((e: any) => {
       if (e.fromDate) {
         const month = e.fromDate.substring(0, 7);
-        monthlyLeaves[month] = (monthlyLeaves[month] || 0) + 1;
+        monthlyLeaves[month] =
+          (monthlyLeaves[month] || 0) + (Number(e.duration) || 0);
       }
     });
 
@@ -121,18 +148,25 @@ const LeaveBalance = () => {
     return {
       paidUsed: paid,
       lopUsed: lop,
-      approvedUsed: approvedLeaves.length,
+      approvedUsed: approvedLeaves.reduce(
+        (acc, e) => acc + (Number(e.duration) || 0),
+        0,
+      ),
     };
   }, [entities, isIntern]);
 
   const used = fromBackend ? leaveBalance.used : approvedUsed;
   const pendingFromEntities = useMemo(() => {
     if (!Array.isArray(entities)) return 0;
-    return entities.filter(
-      (e: any) =>
-        (e.requestType === "Apply Leave" || e.requestType === "Leave") &&
-        (e.status === "Pending" || e.status === "pending"),
-    ).length;
+    return entities
+      .filter(
+        (e: any) =>
+          (e.requestType === LeaveRequestType.APPLY_LEAVE ||
+            e.requestType === AttendanceStatus.LEAVE) &&
+          (e.status === LeaveRequestStatus.PENDING ||
+            e.status === LeaveRequestStatus.PENDING),
+      )
+      .reduce((acc, e) => acc + (Number(e.duration) || 0), 0);
   }, [entities]);
   const pendingCount = fromBackend ? leaveBalance.pending : pendingFromEntities;
   const balance = fromBackend
@@ -279,10 +313,10 @@ const LeaveBalance = () => {
         <h3 className="text-lg font-bold text-[#2B3674] mb-2">Policy</h3>
         <ul className="text-sm text-[#2B3674] space-y-1.5">
           <li>
-            <strong>Full timer:</strong> 18 leaves per year (1.5 per month)
+            <strong>Full time Employee:</strong>
           </li>
           <li>
-            <strong>Intern:</strong> 12 leaves per year (1 per month)
+            <strong>Intern:</strong>
           </li>
         </ul>
       </div>

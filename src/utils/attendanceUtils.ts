@@ -1,4 +1,5 @@
-import { EmployeeAttendance, AttendanceStatus } from '../reducers/employeeAttendance.reducer';
+import { AttendanceStatus, WorkLocation as OfficeLocation, WorkLocationKeyword } from '../enums';
+import { EmployeeAttendance } from '../reducers/employeeAttendance.reducer';
 import { TimesheetEntry } from '../types';
 
 /**
@@ -9,9 +10,9 @@ import { TimesheetEntry } from '../types';
 export const isEditableWeek = (date: Date | string): boolean => {
     const today = new Date();
     const checkDate = new Date(date);
-    
+
     // Normalize Check Date
-    checkDate.setHours(0,0,0,0);
+    checkDate.setHours(0, 0, 0, 0);
 
     // 1. Block Weekends Always
     const day = checkDate.getDay();
@@ -19,16 +20,16 @@ export const isEditableWeek = (date: Date | string): boolean => {
 
     // 2. Define Current Week Range (Mon-Fri)
     const todayDay = today.getDay(); // 0=Sun, 1=Mon...
-    
+
     const currentMon = new Date(today);
     // If today is Sun(0), go back 6 days. If Mon(1), go back 0. If Sat(6), go back 5.
     const diffToMon = todayDay === 0 ? -6 : 1 - todayDay;
     currentMon.setDate(today.getDate() + diffToMon);
-    currentMon.setHours(0,0,0,0);
+    currentMon.setHours(0, 0, 0, 0);
 
     const currentFri = new Date(currentMon);
     currentFri.setDate(currentMon.getDate() + 4);
-    currentFri.setHours(23,59,59,999);
+    currentFri.setHours(23, 59, 59, 999);
 
 
     return checkDate >= currentMon && checkDate <= currentFri;
@@ -44,29 +45,29 @@ export const isEditableWeek = (date: Date | string): boolean => {
 export const isEditableMonth = (date: Date | string): boolean => {
     const today = new Date();
     const workDate = new Date(date);
-    
+
     // Normalize to compare months
     const todayYear = today.getFullYear();
     const todayMonth = today.getMonth();
-    
+
     const workYear = workDate.getFullYear();
     const workMonth = workDate.getMonth();
-    
+
     // Calculate month difference
     const monthDiff = (todayYear - workYear) * 12 + (todayMonth - workMonth);
-    
+
     // 1. Current Month or Future -> ALWAYS Editable
     if (monthDiff <= 0) {
         return true;
     }
-    
+
     // 2. Previous Month -> Editable ONLY if Today is 1st of month AND Time < 6 PM
     if (monthDiff === 1) {
         if (today.getDate() === 1 && today.getHours() < 18) {
             return true;
         }
     }
-    
+
     // 3. Any other past month -> LOCKED
     return false;
 };
@@ -77,35 +78,46 @@ export const isEditableMonth = (date: Date | string): boolean => {
  */
 // Map Backend Status enum to Frontend UI strings
 export const mapStatus = (
-    status: AttendanceStatus | string | undefined, 
-    isFuture: boolean, 
-    isToday: boolean, 
+    status: AttendanceStatus | string | null | undefined,
+    isFuture: boolean,
+    isToday: boolean,
     isWeekend: boolean,
     totalHours?: number
 ): TimesheetEntry['status'] => {
-    
+
     if (status) {
         // Normalize status to string for comparison
         const statusStr = typeof status === 'string' ? status : (status as AttendanceStatus);
-        
-        // Handle Leave with hours
-        if ((statusStr === AttendanceStatus.LEAVE || statusStr === 'Leave') && totalHours && totalHours > 0) {
-             return totalHours >= 6 ? 'Full Day' : 'Half Day';
+
+        // Map Non-Working Days (Sat, Sun, Holiday) with hours to Full/Half Day
+        const isNonWorking = statusStr === AttendanceStatus.WEEKEND || statusStr === AttendanceStatus.HOLIDAY;
+        if (isNonWorking && totalHours && totalHours > 0) {
+            // Rule: 1-9h on Weekend/Holiday is Full Day
+            return totalHours >= 1 && totalHours <= 9 ? AttendanceStatus.FULL_DAY : AttendanceStatus.HALF_DAY;
         }
-        
+
+        // Handle Leave with hours
+        if (statusStr === AttendanceStatus.LEAVE && totalHours && totalHours > 0) {
+            return totalHours > 6 ? AttendanceStatus.FULL_DAY : AttendanceStatus.HALF_DAY;
+        }
+
         // Direct status mappings (handle both enum and string)
-        if (statusStr === AttendanceStatus.LEAVE || statusStr === 'Leave') return 'Leave';
-        if (statusStr === AttendanceStatus.BLOCKED || statusStr === 'Blocked') return 'Blocked';
-        if (statusStr === AttendanceStatus.ABSENT || statusStr === 'Absent') return 'Absent';
-        if (statusStr === AttendanceStatus.FULL_DAY || statusStr === 'Full Day') return 'Full Day';
-        if (statusStr === AttendanceStatus.HALF_DAY || statusStr === 'Half Day') return 'Half Day';
-        if (statusStr === AttendanceStatus.NOT_UPDATED || statusStr === 'Not Updated') return 'Not Updated';
-        if (statusStr === AttendanceStatus.HOLIDAY || statusStr === 'Holiday') return 'Holiday';
-        if (statusStr === AttendanceStatus.WEEKEND || statusStr === 'Weekend') return 'Weekend';
-        
+        if (statusStr === AttendanceStatus.LEAVE) return AttendanceStatus.LEAVE;
+        // @ts-ignore
+        if (statusStr === 'Blocked') return AttendanceStatus.BLOCKED;
+        if (statusStr === AttendanceStatus.ABSENT) return AttendanceStatus.ABSENT;
+        if (statusStr === AttendanceStatus.FULL_DAY) return AttendanceStatus.FULL_DAY;
+        if (statusStr === AttendanceStatus.HALF_DAY) return AttendanceStatus.HALF_DAY;
+        if (statusStr === AttendanceStatus.NOT_UPDATED) return AttendanceStatus.NOT_UPDATED;
+        if (statusStr === AttendanceStatus.HOLIDAY) return AttendanceStatus.HOLIDAY;
+        if (statusStr === AttendanceStatus.WEEKEND) return AttendanceStatus.WEEKEND;
+        if (statusStr === AttendanceStatus.WFH) return AttendanceStatus.WFH;
+        if (statusStr === AttendanceStatus.CLIENT_VISIT) return AttendanceStatus.CLIENT_VISIT;
+        if (statusStr === AttendanceStatus.PRESENT) return AttendanceStatus.PRESENT;
+
         // Handle Pending
-        if (statusStr === AttendanceStatus.PENDING || statusStr === 'Pending') {
-            if (!isToday) return 'Pending';
+        if (statusStr === AttendanceStatus.PENDING) {
+            if (!isToday) return AttendanceStatus.PENDING;
         }
     }
 
@@ -114,7 +126,7 @@ export const mapStatus = (
     if (isWeekend) return undefined;
 
     // 3. For Past/Today weekdays with no explicit status -> Not Updated
-    return isToday ? 'Pending' : 'Not Updated';
+    return isToday ? AttendanceStatus.PENDING : AttendanceStatus.NOT_UPDATED;
 };
 
 /**
@@ -122,32 +134,31 @@ export const mapStatus = (
  * This ensures the components can still use the helper flags like isToday, isWeekend, etc.
  */
 export const mapAttendanceToEntry = (
-    date: Date, 
-    now: Date, 
+    date: Date,
+    now: Date,
     attendance?: EmployeeAttendance
 ): TimesheetEntry => {
     const i = date.getDate();
     const isToday = i === now.getDate() && date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
-    
+
     const checkNow = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const checkDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    
+
     const isFuture = checkDate > checkNow;
     const isWeekend = date.getDay() === 0 || date.getDay() === 6;
 
     // Handle potential snake_case from backend
-    const totalHours = attendance?.totalHours ?? (attendance as any)?.total_hours;
+    const rawHours = attendance?.totalHours ?? (attendance as any)?.total_hours;
+    const totalHours = (rawHours !== undefined && rawHours !== null) ? Number(rawHours) : undefined;
 
     // Determine Status
     const status = mapStatus(attendance?.status, isFuture, isToday, isWeekend, totalHours);
 
-    // Determine Work Location
-    let workLocation = attendance?.location || (attendance as any)?.workLocation || (attendance as any)?.work_location;
-    
-    // Append (Half Day) if applicable
-    if (status === 'Half Day' && workLocation && !workLocation.includes('(Half Day)') && workLocation !== 'Half Day') {
-        workLocation = `${workLocation} (Half Day)`;
-    }
+    // Determine Work Location (Badge Text) derived from splits
+    const firstHalf = attendance?.firstHalf || (attendance as any)?.first_half;
+    const secondHalf = attendance?.secondHalf || (attendance as any)?.second_half;
+
+    const workLocation = getBadgeLocation(status, firstHalf, secondHalf);
 
     return {
         date: i,
@@ -161,10 +172,94 @@ export const mapAttendanceToEntry = (
         status,
         isEditing: false,
         isSaved: !!attendance?.id,
-        workLocation, // Map workLocation
+        workLocation, // Display value derived from splits
         sourceRequestId: attendance?.sourceRequestId, // Track auto-generated records
+        firstHalf,
+        secondHalf,
         isSavedLogout: !!attendance?.logoutTime && attendance.logoutTime !== "00:00:00" && !attendance.logoutTime.includes("NaN"),
     } as TimesheetEntry;
+};
+
+export const getBadgeLocation = (
+    statusStr: string | undefined,
+    h1: string | null | undefined,
+    h2: string | null | undefined
+): string | undefined => {
+    if (!statusStr) return undefined;
+    
+    // Only return undefined if there are NO work splits (splits like Weekend/Holiday/Absent/Not Updated/Blocked/Upcoming)
+    const isStationaryStatus = (s: any) => {
+        const val = (s || '').toLowerCase().trim();
+        return val === AttendanceStatus.WEEKEND.toLowerCase() || 
+               val === AttendanceStatus.HOLIDAY.toLowerCase() || 
+               val === AttendanceStatus.ABSENT.toLowerCase() || 
+               val === AttendanceStatus.NOT_UPDATED.toLowerCase() || 
+               val === 'blocked' || 
+               val === AttendanceStatus.UPCOMING.toLowerCase() ||
+               val === 'upcoming';
+    };
+    
+    // If status is stationary, but we have work splits (h1/h2), we continue. 
+    // Otherwise return undefined as before.
+    if (isStationaryStatus(statusStr) && (!h1 || isStationaryStatus(h1)) && (!h2 || isStationaryStatus(h2))) {
+        return undefined;
+    }
+
+    const h1Lower = (h1 || '').toLowerCase().trim();
+    const h2Lower = (h2 || '').toLowerCase().trim();
+
+    const isWork = (val: string) => {
+        const lower = val.toLowerCase().trim();
+        if (isStationaryStatus(lower)) return false;
+        if (lower.includes(AttendanceStatus.LEAVE.toLowerCase())) return false;
+        
+        return lower.includes(OfficeLocation.OFFICE.toLowerCase()) ||
+               lower.includes(WorkLocationKeyword.WFH) ||
+               lower.includes(WorkLocationKeyword.WORK_FROM_HOME) ||
+               lower.includes(WorkLocationKeyword.CLIENT_VISIT) ||
+               lower.includes(WorkLocationKeyword.PRESENT);
+    };
+
+    const isLeave = (val: string) => val.includes(AttendanceStatus.LEAVE.toLowerCase());
+    
+    // Priority Override: If the Status is already determined as Full Day, 
+    // force the badge to reflect Full Day even if splits are inconsistent (stale data).
+    if (statusStr === AttendanceStatus.FULL_DAY) {
+        if (h1Lower === h2Lower && isWork(h1Lower)) return `${h1!.toUpperCase()} (FULL DAY)`;
+        if (isWork(h1Lower) && isWork(h2Lower) && h1Lower !== h2Lower) return AttendanceStatus.FULL_DAY;
+        
+        // If one is work and other is leave/stationary, but status is FULL_DAY (Weekend rule), force Full Day
+        if (isWork(h1Lower)) return `${h1!.toUpperCase()} (FULL DAY)`;
+        if (isWork(h2Lower)) return `${h2!.toUpperCase()} (FULL DAY)`;
+        
+        return AttendanceStatus.FULL_DAY;
+    }
+
+    // Both same work activity
+    if (h1Lower === h2Lower && isWork(h1Lower)) {
+        return `${h1!.toUpperCase()} (FULL DAY)`;
+    }
+
+    // Half Day case: One work + one leave
+    if (isWork(h1Lower) && isLeave(h2Lower)) {
+        return `${h1!.toUpperCase()} (HALF DAY)`;
+    }
+    if (isLeave(h1Lower) && isWork(h2Lower)) {
+        return `${h2!.toUpperCase()} (HALF DAY)`;
+    }
+
+    // Both Leave
+    if (isLeave(h1Lower) && isLeave(h2Lower)) {
+        return AttendanceStatus.LEAVE;
+    }
+
+    // Two different work activities (Mixed Day)
+    if (isWork(h1Lower) && isWork(h2Lower) && h1Lower !== h2Lower) {
+        return AttendanceStatus.FULL_DAY; // Mixed location, so just status
+    }
+
+    // Default to status only if it's already a descriptive status
+    return statusStr;
 };
 
 /**
@@ -189,14 +284,10 @@ export const generateRangeEntries = (start: Date, end: Date, now: Date, records:
 
     while (current <= endNorm) {
         const currentLoopDate = new Date(current);
-        
-        // Sunday should always be Weekend, regardless of any data
-        const dayOfWeek = currentLoopDate.getDay();
-        const isSunday = dayOfWeek === 0;
-        
+
         // Find record for this specific day using YYYY-MM-DD comparison
         const loopDateStr = `${currentLoopDate.getFullYear()}-${(currentLoopDate.getMonth() + 1).toString().padStart(2, '0')}-${currentLoopDate.getDate().toString().padStart(2, '0')}`;
-        
+
         const actualRecord = records.find(r => {
             const rawDate = r.workingDate || (r as any).working_date;
             if (!rawDate) return false;
@@ -204,15 +295,15 @@ export const generateRangeEntries = (start: Date, end: Date, now: Date, records:
             let rYear, rMonth, rDay;
             if (typeof rawDate === 'string') {
                 if (rawDate.includes('T')) {
-                     const d = new Date(rawDate);
-                     rYear = d.getFullYear();
-                     rMonth = d.getMonth() + 1;
-                     rDay = d.getDate();
+                    const d = new Date(rawDate);
+                    rYear = d.getFullYear();
+                    rMonth = d.getMonth() + 1;
+                    rDay = d.getDate();
                 } else {
-                     const parts = rawDate.split('-');
-                     rYear = parseInt(parts[0]);
-                     rMonth = parseInt(parts[1]);
-                     rDay = parseInt(parts[2]);
+                    const parts = rawDate.split('-');
+                    rYear = parseInt(parts[0]);
+                    rMonth = parseInt(parts[1]);
+                    rDay = parseInt(parts[2]);
                 }
             } else {
                 const d = new Date(rawDate);
@@ -226,23 +317,20 @@ export const generateRangeEntries = (start: Date, end: Date, now: Date, records:
         });
 
         const entry = mapAttendanceToEntry(currentLoopDate, now, actualRecord);
-        
-        // Sunday should always be Weekend, regardless of any data (Client Visit, WFH, etc.)
-        if (isSunday) {
-            entry.status = 'Weekend';
-            entry.workLocation = undefined; // Clear workLocation for Sunday
-        }
+
+        // Sunday: No longer forced to Weekend here, let mapAttendanceToEntry 
+        // handle it based on actualRecord status or default behavior.
         // Saturday: Only show as Weekend if there's NO data (no record, no workLocation, no status)
         // If Saturday has data (Client Visit, WFH, etc.), show that data instead
-        else if (dayOfWeek === 6) {
+        const dayOfWeek = currentLoopDate.getDay();
+        if (dayOfWeek === 6) {
             // If there's no record OR no meaningful data, show as Weekend
             if (!actualRecord || (!actualRecord.location && !(actualRecord as any).workLocation && !actualRecord.status && (!actualRecord.totalHours || actualRecord.totalHours === 0))) {
-                entry.status = 'Weekend';
+                entry.status = AttendanceStatus.WEEKEND;
                 entry.workLocation = undefined;
             }
-            // Otherwise, keep the actual data (Client Visit, WFH, etc.)
         }
-        
+
         entries.push(entry);
         current.setDate(current.getDate() + 1);
     }
@@ -274,7 +362,7 @@ export const calculateTotal = (login: string | null | undefined, logout: string 
     try {
         const loginMinutes = parseTime(login);
         const logoutMinutes = parseTime(logout);
-        
+
         let diff = logoutMinutes - loginMinutes;
 
         // If logout is before login, assume it's the next day or invalid
@@ -293,7 +381,7 @@ export const calculateTotal = (login: string | null | undefined, logout: string 
  */
 export const formatTo12H = (time24: string | null | undefined): string => {
     if (!time24 || time24 === '--:--' || time24.includes('--')) return "";
-    
+
     // If it's already in 12H format (contains AM/PM), return it
     if (time24.toUpperCase().includes("AM") || time24.toUpperCase().includes("PM")) {
         return time24;
@@ -302,15 +390,15 @@ export const formatTo12H = (time24: string | null | undefined): string => {
     const [hoursStr, minutesStr] = time24.split(":");
     let hours = parseInt(hoursStr);
     const minutes = parseInt(minutesStr);
-    
+
     if (isNaN(hours) || isNaN(minutes)) return "";
 
     const modifier = hours >= 12 ? "PM" : "AM";
     hours = hours % 12;
     hours = hours ? hours : 12; // 0 becomes 12
-    
+
     const formattedHours = hours.toString().padStart(2, '0');
     const formattedMinutes = minutes.toString().padStart(2, '0');
-    
+
     return `${formattedHours}:${formattedMinutes} ${modifier}`;
 };

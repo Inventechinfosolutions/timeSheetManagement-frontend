@@ -7,9 +7,8 @@ import {
   Legend,
   Sector,
 } from "recharts";
-import {
-  PieChart as PieChartIcon,
-} from "lucide-react";
+import { PieChart as PieChartIcon } from "lucide-react";
+import { AttendanceStatus, WorkLocation } from "../enums";
 
 interface Props {
   data: any[];
@@ -20,14 +19,14 @@ const AttendancePieChart = ({ data, currentMonth }: Props) => {
   const chartData = useMemo(() => {
     // Group records by broad status categories for cleaner chart
     const counts = {
-      Present: 0,
-      "Half Day": 0,
-      Absent: 0,
-      Leave: 0,
-      Holiday: 0,
-      Weekend: 0,
-      "Not Updated": 0,
-      Pending: 0,
+      [AttendanceStatus.PRESENT]: 0,
+      [AttendanceStatus.HALF_DAY]: 0,
+      [AttendanceStatus.ABSENT]: 0,
+      [AttendanceStatus.LEAVE]: 0,
+      [AttendanceStatus.HOLIDAY]: 0,
+      [AttendanceStatus.WEEKEND]: 0,
+      [AttendanceStatus.NOT_UPDATED]: 0,
+      [AttendanceStatus.PENDING]: 0,
     };
 
     data.forEach((record) => {
@@ -45,35 +44,61 @@ const AttendancePieChart = ({ data, currentMonth }: Props) => {
       // Skip future dates to keep the chart focused on historical attendance
       if (isFuture) return;
 
-      if (
-        status === "FULL DAY" ||
-        status === "HALF DAY" ||
-        status === "WFH" ||
-        status === "CLIENT VISIT"
+      if (status === AttendanceStatus.HALF_DAY.toUpperCase()) {
+        const h1 = (record.firstHalf || "").toUpperCase();
+        const h2 = (record.secondHalf || "").toUpperCase();
+
+        [h1, h2].forEach((half) => {
+          if (half.includes(AttendanceStatus.LEAVE.toUpperCase())) {
+            counts[AttendanceStatus.LEAVE] += 0.5;
+          } else if (
+            half.includes(WorkLocation.OFFICE.toUpperCase()) ||
+            half.includes(WorkLocation.WFH.toUpperCase()) ||
+            half.includes("CLIENT") ||
+            half.includes("PRESENT") ||
+            half.includes(AttendanceStatus.FULL_DAY.toUpperCase())
+          ) {
+            counts[AttendanceStatus.PRESENT] += 0.5;
+          } else if (half.includes(AttendanceStatus.ABSENT.toUpperCase())) {
+            counts[AttendanceStatus.ABSENT] += 0.5;
+          } else {
+            // Fallback for unidentified halves in a Half Day record
+            counts[AttendanceStatus.NOT_UPDATED] += 0.5;
+          }
+        });
+      } else if (
+        status === AttendanceStatus.FULL_DAY.toUpperCase() ||
+        status === AttendanceStatus.WFH.toUpperCase() ||
+        status === AttendanceStatus.CLIENT_VISIT.toUpperCase()
       ) {
-        counts["Present"]++;
-      } else if (status === "ABSENT") {
-        counts["Absent"]++;
-      } else if (status === "LEAVE") {
-        counts["Leave"]++;
-      } else if (status === "HOLIDAY") {
-        counts["Holiday"]++;
-      } else if (status === "WEEKEND" || record.isWeekend) {
-        counts["Weekend"]++;
+        counts[AttendanceStatus.PRESENT]++;
+      } else if (status === AttendanceStatus.ABSENT.toUpperCase()) {
+        counts[AttendanceStatus.ABSENT]++;
+      } else if (status === AttendanceStatus.LEAVE.toUpperCase()) {
+        counts[AttendanceStatus.LEAVE]++;
+      } else if (status === AttendanceStatus.HOLIDAY.toUpperCase()) {
+        counts[AttendanceStatus.HOLIDAY]++;
+      } else if (status === AttendanceStatus.WEEKEND.toUpperCase() || record.isWeekend) {
+        counts[AttendanceStatus.WEEKEND]++;
       } else {
         // Fallback for Not Updated, Pending, or any other past dates
-        counts["Not Updated"]++;
+        counts[AttendanceStatus.NOT_UPDATED]++;
       }
     });
 
     return [
-      { name: "Present", value: counts["Present"], color: "#10B981" },
-      { name: "Absent", value: counts["Absent"], color: "#E11D48" },
-      { name: "Leave", value: counts["Leave"], color: "#EE5D50" },
-      { name: "Holiday", value: counts["Holiday"], color: "#2563EB" },
-      { name: "Weekend", value: counts["Weekend"], color: "#38BDF8" },
-      { name: "Not Updated", value: counts["Not Updated"], color: "#F97316" },
-    ].filter((item) => item.value > 0);
+      { name: AttendanceStatus.PRESENT, value: counts[AttendanceStatus.PRESENT], color: "#10B981" },
+      { name: AttendanceStatus.ABSENT, value: counts[AttendanceStatus.ABSENT], color: "#E11D48" },
+      { name: AttendanceStatus.LEAVE, value: counts[AttendanceStatus.LEAVE], color: "#EE5D50" },
+      { name: AttendanceStatus.HOLIDAY, value: counts[AttendanceStatus.HOLIDAY], color: "#2563EB" },
+      { name: AttendanceStatus.WEEKEND, value: counts[AttendanceStatus.WEEKEND], color: "#38BDF8" },
+      { name: AttendanceStatus.NOT_UPDATED, value: counts[AttendanceStatus.NOT_UPDATED], color: "#F97316" },
+    ]
+      .map((item) => ({
+        ...item,
+        value: Number(item.value.toFixed(1)), // Ensure no floating point artifacts
+      }))
+      .filter((item) => item.value > 0);
   }, [data]);
 
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
@@ -165,12 +190,13 @@ const AttendancePieChart = ({ data, currentMonth }: Props) => {
   const renderHeader = () => (
     <div className="w-full flex items-center justify-between mb-6">
       <h4 className="text-lg font-bold text-[#1B2559]">
-        Attendance Distribution
+        Attendance Distribution (Live Data)
       </h4>
 
       <div className="flex items-center gap-2">
-        <span className="text-xs font-medium text-gray-400">
+        <span className="text-s font-bold text-[#1B2559]">
           {currentMonth.toLocaleDateString("en-US", {
+            day: "numeric",
             month: "long",
             year: "numeric",
           })}
@@ -253,12 +279,12 @@ const AttendancePieChart = ({ data, currentMonth }: Props) => {
             >
               {chartData.map((entry, index) => {
                 let fillUrl = "url(#gradWeekend)";
-                if (entry.name === "Present") fillUrl = "url(#gradPresent)";
-                else if (entry.name === "Absent") fillUrl = "url(#gradAbsent)";
-                else if (entry.name === "Leave") fillUrl = "url(#gradLeave)";
-                else if (entry.name === "Holiday")
+                if (entry.name === AttendanceStatus.PRESENT) fillUrl = "url(#gradPresent)";
+                else if (entry.name === AttendanceStatus.ABSENT) fillUrl = "url(#gradAbsent)";
+                else if (entry.name === AttendanceStatus.LEAVE) fillUrl = "url(#gradLeave)";
+                else if (entry.name === AttendanceStatus.HOLIDAY)
                   fillUrl = "url(#gradHoliday)";
-                else if (entry.name === "Not Updated")
+                else if (entry.name === AttendanceStatus.NOT_UPDATED)
                   fillUrl = "url(#gradNotUpdated)";
 
                 return (

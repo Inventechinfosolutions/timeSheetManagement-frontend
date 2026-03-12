@@ -2,7 +2,11 @@ import { Outlet, useParams, useNavigate, useLocation } from "react-router-dom";
 import SidebarLayout from "../AdminDashboard/SidebarLayout";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { fetchNotifications } from "../reducers/notification.reducer";
-import { fetchEmployeeUpdates, fetchUnreadNotifications } from "../reducers/leaveNotification.reducer";
+import {
+  fetchEmployeeUpdates,
+  fetchUnreadNotifications,
+} from "../reducers/leaveNotification.reducer";
+import { UserType } from "../enums";
 
 const ManagerLayout = () => {
   const { tab } = useParams<{ tab: string }>();
@@ -54,6 +58,9 @@ const ManagerLayout = () => {
     if (path.includes("/manager-dashboard/my-profile")) {
       return "My Profile";
     }
+    if (path.includes("/manager-dashboard/leave-management")) {
+      return "Work Management ";
+    }
 
     switch (tab) {
       case "employees":
@@ -79,6 +86,8 @@ const ManagerLayout = () => {
         return "My Timesheet View";
       case "my-profile":
         return "My Profile";
+      case "leave-management":
+        return "Work Management ";
       default:
         return "Employee Dashboard";
     }
@@ -87,7 +96,7 @@ const ManagerLayout = () => {
   const dispatch = useAppDispatch();
   const { entity } = useAppSelector((state) => state.employeeDetails);
   const { currentUser } = useAppSelector((state) => state.user);
-  const isAdmin = currentUser?.userType === "ADMIN";
+  const isAdmin = currentUser?.userType === UserType.ADMIN;
 
   const handleTabChange = (tabName: string) => {
     // Refresh notifications when switching to primary dashboards
@@ -126,6 +135,8 @@ const ManagerLayout = () => {
       navigate("/manager-dashboard/my-timesheet-view");
     } else if (tabName === "My Profile") {
       navigate("/manager-dashboard/my-profile");
+    } else if (tabName === "Work Management ") {
+      navigate("/manager-dashboard/leave-management");
     }
   };
 

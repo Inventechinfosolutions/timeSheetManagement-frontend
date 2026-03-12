@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import {
   BarChart,
   Bar,
@@ -10,10 +9,9 @@ import {
   ResponsiveContainer,
   LabelList,
 } from "recharts";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useAppDispatch, useAppSelector } from "../hooks";
-import { fetchWorkTrends } from "../reducers/employeeAttendance.reducer";
+import { useAppSelector } from "../hooks";
 import { RootState } from "../store";
+import { WorkLocation } from "../enums";
 
 // Interface for the data structure
 // (Ideally imported from reducer, but can keep here or import)
@@ -23,32 +21,14 @@ interface Props {
   currentMonth: Date;
 }
 
-const WorkTrendsGraph = ({ employeeId, currentMonth }: Props) => {
-  const dispatch = useAppDispatch();
+const WorkTrendsGraph = ({ currentMonth }: Props) => {
   // Using selector to get data from Redux store, using separate loading state!
   const { trends, trendsLoading } = useAppSelector(
     (state: RootState) => state.attendance,
   );
 
-  useEffect(() => {
-    if (employeeId && employeeId !== "Admin") {
-      // Calculate first and last day of the selected month
-      const start = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-      const end = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
-      
-      const startDateStr = start.toISOString().split("T")[0];
-      const dateStr = end.toISOString().split("T")[0];
-
-      // Dispatch the thunk to fetch data via Redux
-      dispatch(
-        fetchWorkTrends({
-          employeeId,
-          endDate: dateStr,
-          startDate: startDateStr,
-        }),
-      );
-    }
-  }, [dispatch, employeeId, currentMonth]);
+  // No need to fetch trends here, as the parent (TodayAttendance) already dispatches it!
+  // This avoids duplicate/conflicting requests.
 
   // Use local variable for data to avoid refactoring render code too much,
   // or just use 'trends' directly in JSX.
@@ -71,8 +51,11 @@ const WorkTrendsGraph = ({ employeeId, currentMonth }: Props) => {
         <h4 className="text-lg font-bold text-[#1B2559]">Work Trend</h4>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-gray-400">
-            {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+          <span className="text-s font-bold text-[#1B2559]">
+            {currentMonth.toLocaleDateString("en-US", {
+              month: "long",
+              year: "numeric",
+            })}
           </span>
         </div>
       </div>
@@ -119,7 +102,7 @@ const WorkTrendsGraph = ({ employeeId, currentMonth }: Props) => {
 
               <Tooltip
                 shared={false}
-                cursor={{ fill: 'rgba(0, 0, 0, 0.04)', radius: 10 }}
+                cursor={{ fill: "rgba(0, 0, 0, 0.04)", radius: 10 }}
                 contentStyle={{
                   backgroundColor: "#fff",
                   borderRadius: "10px",
@@ -132,46 +115,82 @@ const WorkTrendsGraph = ({ employeeId, currentMonth }: Props) => {
                   fontWeight: 700,
                   color: "#1B2559",
                 }}
-                labelStyle={{ display: 'none' }}
+                labelStyle={{ display: "none" }}
                 separator=": "
-                formatter={(value, name) => [value, name]}
+                formatter={(value: any, name: any) => [
+                  Number(value).toFixed(1),
+                  name,
+                ]}
               />
 
               <Bar
                 dataKey="totalLeaves"
-                name="Taken Leaves"
+                name="Taken Leave"
                 fill="#F43F5E"
                 radius={[6, 6, 0, 0]}
-                activeBar={{ fill: '#FB7185' }}
+                activeBar={{ fill: "#FB7185" }}
               >
-                <LabelList dataKey="totalLeaves" position="top" style={{ fill: '#A3AED0', fontSize: 10, fontWeight: 700 }} offset={8} />
+                <LabelList
+                  dataKey="totalLeaves"
+                  position="top"
+                  style={{ fill: "#A3AED0", fontSize: 10, fontWeight: 700 }}
+                  offset={8}
+                  formatter={(val: any) =>
+                    val && Number(val) > 0 ? Number(val).toFixed(1) : ""
+                  }
+                />
               </Bar>
-              <Bar
-                dataKey="halfDays"
-                name="Half Day"
-                fill="#F59E0B"
-                radius={[6, 6, 0, 0]}
-                activeBar={{ fill: '#FBBF24' }}
-              >
-                <LabelList dataKey="halfDays" position="top" style={{ fill: '#A3AED0', fontSize: 10, fontWeight: 700 }} offset={8} />
-              </Bar>
+
               <Bar
                 dataKey="workFromHome"
-                name="Work From Home"
+                name={WorkLocation.WFH}
                 fill="#06B6D4"
                 radius={[6, 6, 0, 0]}
-                activeBar={{ fill: '#22D3EE' }}
+                activeBar={{ fill: "#22D3EE" }}
               >
-                <LabelList dataKey="workFromHome" position="top" style={{ fill: '#A3AED0', fontSize: 10, fontWeight: 700 }} offset={8} />
+                <LabelList
+                  dataKey="workFromHome"
+                  position="top"
+                  style={{ fill: "#A3AED0", fontSize: 10, fontWeight: 700 }}
+                  offset={8}
+                  formatter={(val: any) =>
+                    val && Number(val) > 0 ? Number(val).toFixed(1) : ""
+                  }
+                />
               </Bar>
               <Bar
                 dataKey="clientVisits"
-                name="Client Visit"
+                name={WorkLocation.CLIENT_VISIT}
                 fill="#8B5CF6"
                 radius={[6, 6, 0, 0]}
-                activeBar={{ fill: '#A78BFA' }}
+                activeBar={{ fill: "#A78BFA" }}
               >
-                <LabelList dataKey="clientVisits" position="top" style={{ fill: '#A3AED0', fontSize: 10, fontWeight: 700 }} offset={8} />
+                <LabelList
+                  dataKey="clientVisits"
+                  position="top"
+                  style={{ fill: "#A3AED0", fontSize: 10, fontWeight: 700 }}
+                  offset={8}
+                  formatter={(val: any) =>
+                    val && Number(val) > 0 ? Number(val).toFixed(1) : ""
+                  }
+                />
+              </Bar>
+              <Bar
+                dataKey="office"
+                name={WorkLocation.OFFICE}
+                fill="#10B981"
+                radius={[6, 6, 0, 0]}
+                activeBar={{ fill: "#34D399" }}
+              >
+                <LabelList
+                  dataKey="office"
+                  position="top"
+                  style={{ fill: "#A3AED0", fontSize: 10, fontWeight: 700 }}
+                  offset={8}
+                  formatter={(val: any) =>
+                    val && Number(val) > 0 ? Number(val).toFixed(1) : ""
+                  }
+                />
               </Bar>
             </BarChart>
           </ResponsiveContainer>

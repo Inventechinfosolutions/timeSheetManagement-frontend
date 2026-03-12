@@ -1,7 +1,9 @@
 import React from "react";
-import { ChevronLeft, ChevronRight, Save, Lock } from "lucide-react";
+import { ChevronLeft, ChevronRight, Save, Lock, Rocket } from "lucide-react";
 
 import { TimesheetEntry } from "../types";
+import { TimesheetBlocker } from "../reducers/timesheetBlocker.reducer";
+import { AttendanceStatus } from "../enums";
 
 interface MobileMyTimesheetProps {
   currentWeekEntries: { entry: TimesheetEntry; originalIndex: number }[];
@@ -9,16 +11,22 @@ interface MobileMyTimesheetProps {
   onNextWeek: () => void;
   onHoursInput: (index: number, value: string) => void;
   onSave: () => void;
+  onAutoUpdate?: () => void;
+  autoUpdateCount?: number;
   monthTotalHours: number;
   currentMonthName: string;
   loading: boolean;
   isAdmin: boolean;
+  isManager: boolean;
+  isManagerView: boolean;
   readOnly: boolean;
+  blockers: TimesheetBlocker[];
   isDateBlocked: (date: Date) => boolean;
   isEditableMonth: (date: Date) => boolean;
   isHoliday: (date: Date) => boolean;
 
   onBlockedClick?: () => void;
+  department?: string;
   localInputValues: Record<number, string>;
   onInputBlur: (index: number) => void;
   selectedDateId: number | null;
@@ -32,16 +40,22 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
   onNextWeek,
   onHoursInput,
   onSave,
+  onAutoUpdate,
+  autoUpdateCount = 0,
   monthTotalHours,
   currentMonthName,
   loading,
   isAdmin,
+  isManager,
+  isManagerView,
   readOnly,
-  isDateBlocked,
+  blockers,
   isEditableMonth,
   isHoliday,
+  isDateBlocked,
 
   onBlockedClick,
+  department,
   localInputValues,
   onInputBlur,
   selectedDateId,
@@ -77,21 +91,40 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
               Total:
             </span>
             <span className="text-xl font-black text-[#4318FF]">
-              {monthTotalHours.toFixed(1)}{" "}
+              {(Number(monthTotalHours) || 0).toFixed(1)}{" "}
               <span className="text-[10px]">hrs</span>
             </span>
           </div>
         </div>
-        {(!readOnly || isAdmin) && (
-          <button
-            onClick={onSave}
-            className="flex items-center gap-2 px-4 py-3 bg-linear-to-br from-[#4318FF] to-[#5D38FF] text-white rounded-2xl shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
-          >
-            <Save size={18} strokeWidth={2.5} />
-            <span className="text-xs font-bold uppercase tracking-wider">
-              Save
-            </span>
-          </button>
+      {(!readOnly || isAdmin || (isManager && !isManagerView)) && (
+          <div className="flex gap-2">
+             {onAutoUpdate && (
+              <button
+                onClick={onAutoUpdate}
+                disabled={autoUpdateCount === 0}
+                className={`flex items-center justify-center p-3 bg-white text-[#4318FF] border border-[#4318FF]/20 rounded-2xl shadow-sm active:scale-95 transition-all ${autoUpdateCount === 0 ? "opacity-30 grayscale cursor-not-allowed" : ""}`}
+                title={autoUpdateCount > 0 ? `Auto Fill ${autoUpdateCount} days` : "No eligible days"}
+              >
+                <div className="relative">
+                  <Rocket size={18} strokeWidth={2.5} className={autoUpdateCount > 0 ? "animate-pulse" : ""} />
+                  {autoUpdateCount > 0 && (
+                    <span className="absolute -top-3 -right-3 bg-red-500 text-white text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center border-2 border-white">
+                      {autoUpdateCount}
+                    </span>
+                  )}
+                </div>
+              </button>
+            )}
+            <button
+              onClick={onSave}
+              className="flex items-center gap-2 px-4 py-3 bg-linear-to-br from-[#4318FF] to-[#5D38FF] text-white rounded-2xl shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
+            >
+              <Save size={18} strokeWidth={2.5} />
+              <span className="text-xs font-bold uppercase tracking-wider">
+                Save
+              </span>
+            </button>
+          </div>
         )}
       </div>
 
@@ -118,9 +151,28 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
                     ? ""
                     : displayVal.toString();
 
-              const isBlocked = isDateBlocked(entry.fullDate);
+              const blocker = blockers.find((b) => {
+                const d = new Date(entry.fullDate);
+                d.setHours(0, 0, 0, 0);
+                const start = new Date(b.blockedFrom);
+                start.setHours(0, 0, 0, 0);
+                const end = new Date(b.blockedTo);
+                end.setHours(0, 0, 0, 0);
+                return d >= start && d <= end;
+              });
+
+              const manualBlocker = blocker;
+              const isStatusLeave = entry.status === AttendanceStatus.LEAVE;
+              
+              // Dept Block list usually blocks Sundays entirely. 
+              // We need to allow Sunday if it's a workday now.
+              let isDeptBlocked = false;
+              // if (dayOfWeek === 0) isDeptBlocked = true; // REMOVED: Allow Sunday editing
+
+              const isBlocked = !!manualBlocker || (!isAdmin && !isManager && (isStatusLeave || isDeptBlocked));
+              
               const isEditable =
-                !readOnly &&
+                (isAdmin || !readOnly) &&
                 (isAdmin || isEditableMonth(entry.fullDate)) &&
                 !isBlocked;
 
@@ -135,23 +187,24 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
                 bg =
                   "bg-gray-200 border border-gray-400 text-gray-500 font-bold";
               } else if (
-                entry.status === "Full Day" ||
-                entry.status === "WFH"
+                (entry.status || "").toLowerCase().includes("wfh") || 
+                (entry.status || "").toLowerCase().includes("work from home") ||
+                (entry.status || "").toLowerCase().includes("full day")
               ) {
                 bg =
                   "bg-green-100 border border-green-500 text-black font-bold";
-              } else if (entry.status === "Half Day") {
+              } else if (entry.status === AttendanceStatus.HALF_DAY) {
                 bg =
                   "bg-orange-100 border border-orange-600 text-black font-bold";
-              } else if (entry.status === "Leave") {
+              } else if (entry.status === AttendanceStatus.LEAVE) {
                 bg = "bg-red-200 border border-red-600 text-black font-bold";
-              } else if (isHolidayDate || entry.status === "Holiday") {
+              } else if (isHolidayDate || entry.status === AttendanceStatus.HOLIDAY) {
                 bg = "bg-blue-100 border border-blue-500 text-black font-bold";
               } else if (entry.isWeekend) {
                 bg = "bg-pink-100 border border-pink-400 text-black font-bold";
               } else if (
-                entry.status === "Not Updated" ||
-                entry.status === "Pending"
+                entry.status === AttendanceStatus.NOT_UPDATED ||
+                entry.status === AttendanceStatus.PENDING
               ) {
                 bg = "bg-white border border-gray-300 text-gray-600 font-bold";
               }
@@ -189,7 +242,7 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
                       ${entry.isToday ? "ring-2 ring-[#4318FF] shadow-md" : ""}
                       ${
                         isDateHighlighted
-                          ? "ring-4 ring-[#4318FF] ring-offset-2 scale-110 animate-pulse shadow-xl"
+                          ? "date-highlight ring-4 ring-[#4318FF] ring-offset-2 scale-110 shadow-xl"
                           : ""
                       }
                     `}
@@ -206,20 +259,35 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
                       {entry.date}
                     </div>
 
+                    {/* Lock Icon for Admin Blockers or Month-end Locks */}
+                    {(isBlocked || (!isAdmin && !isEditableMonth(entry.fullDate))) && (
+                        <div className="absolute -top-1 -left-1 p-1 rounded-full bg-red-50 text-red-500 border border-red-100 z-10">
+                            <Lock size={8} strokeWidth={3} />
+                        </div>
+                    )}
+
                     <input
                       type="text"
                       disabled={!isEditable}
                       className="w-full h-full bg-transparent text-center text-xl font-bold focus:outline-none placeholder:text-gray-300"
                       value={inputValue}
-                      onChange={(e) =>
-                        onHoursInput(originalIndex, e.target.value)
-                      }
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === "" || /^\d*\.?\d*$/.test(val)) {
+                          onHoursInput(originalIndex, val);
+                        }
+                      }}
                       onBlur={() => onInputBlur(originalIndex)}
-                      placeholder="0"
+                      placeholder="-"
                     />
                     {isBlocked && (
-                      <div className="absolute bottom-1 right-1">
-                        <Lock size={8} className="text-gray-500" />
+                      <div className="absolute inset-0 z-20 bg-black/40 backdrop-blur-[2px] rounded-xl flex flex-col items-center justify-center p-1 text-center pointer-events-none">
+                         <Lock size={12} className="text-white mb-0.5" />
+                         <span className="text-[7px] font-black text-white leading-none uppercase tracking-tighter">
+                           {manualBlocker 
+                             ? (isAdmin || isManager ? "Unblock" : `Contact ${manualBlocker.blockedBy || "Admin"}`)
+                             : "On Leave"}
+                         </span>
                       </div>
                     )}
                   </div>
@@ -238,14 +306,15 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
         </div>
       </div>
 
-      {/* Legend - Minimized for mobile */}
       <div className="pt-4 flex flex-wrap justify-center gap-x-3 gap-y-2 mb-2">
         {[
           { label: "Present", className: "bg-green-100 border-green-600" },
-          { label: "Half Day", className: "bg-orange-100 border-orange-600" },
-          { label: "Leave", className: "bg-red-200 border-red-600" },
-          { label: "Not Updated", className: "bg-white border-gray-300" },
-          { label: "Holiday", className: "bg-blue-100 border-blue-500" },
+          { label: "WFH", className: "bg-blue-100 border-blue-600" },
+          { label: "Client Visit", className: "bg-blue-100 border-blue-600" },
+          { label: AttendanceStatus.HALF_DAY, className: "bg-orange-100 border-orange-600" },
+          { label: AttendanceStatus.LEAVE, className: "bg-red-200 border-red-600" },
+          { label: AttendanceStatus.NOT_UPDATED, className: "bg-white border-gray-300" },
+          { label: AttendanceStatus.HOLIDAY, className: "bg-blue-100 border-blue-500" },
           { label: "Today", className: "bg-white border-2 border-[#4318FF]" },
           { label: "Blocked", className: "bg-gray-200 border-gray-400" },
         ].map((item) => (

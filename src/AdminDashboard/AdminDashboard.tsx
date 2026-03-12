@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import dayjs from "dayjs";
 import Chart from "react-apexcharts";
 import { useNavigate, useLocation } from "react-router-dom";
 import { RootState } from "../store";
@@ -20,16 +21,21 @@ import {
   ArrowLeft,
   ChevronLeft,
 } from "lucide-react";
+import { AttendanceStatus , UserStatus} from "../enums";
 import {
   fetchAllEmployeesMonthlyAttendance,
   fetchMonthlyAttendance,
-  AttendanceStatus,
+  downloadAttendancePdfReport,
 } from "../reducers/employeeAttendance.reducer";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
-import { downloadPdf } from "../utils/downloadPdf";
+import { saveAs } from "file-saver";
 import { generateRangeEntries } from "../utils/attendanceUtils";
-import { fetchUnreadNotifications, fetchEmployeeUpdates } from "../reducers/leaveNotification.reducer";
+import {
+  fetchUnreadNotifications,
+  fetchEmployeeUpdates,
+} from "../reducers/leaveNotification.reducer";
 import { fetchNotifications } from "../reducers/notification.reducer";
+import { fetchDepartments } from "../reducers/masterDepartment.reducer";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -51,6 +57,9 @@ const AdminDashboard = () => {
   // @ts-ignore
   const { holidays } = useAppSelector(
     (state: RootState) => state.masterHolidays || { holidays: [] },
+  );
+  const { departments } = useAppSelector(
+    (state: RootState) => state.masterDepartments,
   );
 
   // Time-related constants
@@ -92,10 +101,10 @@ const AdminDashboard = () => {
   const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
   const [exportStartDate, setExportStartDate] = useState(
-    firstDay.toISOString().split("T")[0],
+    dayjs(firstDay).format("YYYY-MM-DD"),
   );
   const [exportEndDate, setExportEndDate] = useState(
-    lastDay.toISOString().split("T")[0],
+    dayjs(lastDay).format("YYYY-MM-DD"),
   );
   const [isExporting, setIsExporting] = useState(false);
 
@@ -109,26 +118,33 @@ const AdminDashboard = () => {
       }),
     );
     // Initial fetch for global statistics cache
-    dispatch(getEntities({ page: 1, limit: 1000 })).then((action: any) => {
-      if (action.payload) {
-        const data = action.payload;
-        const entitiesList = Array.isArray(data) ? data : data.data || [];
-        const totalCount = data.totalItems || data.total || entitiesList.length;
-        setGlobalStatsCache({
-          entities: entitiesList,
-          totalItems: totalCount,
-        });
-      }
-    });
+    dispatch(getEntities({ page: 1, limit: 1000, userStatus: "ACTIVE" })).then(
+      (action: any) => {
+        if (action.payload) {
+          const data = action.payload;
+          const entitiesList = Array.isArray(data) ? data : data.data || [];
+          const totalCount =
+            data.totalItems || data.total || entitiesList.length;
+          setGlobalStatsCache({
+            entities: entitiesList,
+            totalItems: totalCount,
+          });
+        }
+      },
+    );
     // Fetch holidays for PDF export
     dispatch(fetchHolidays());
+    // Fetch departments
+    dispatch(fetchDepartments());
   }, [dispatch, currentMonth, currentYear]);
 
   // Refresh admin notifications on load
   useEffect(() => {
     dispatch(fetchUnreadNotifications());
 
-    const employeeId = currentUser?.employeeId || (entities.length > 0 ? entities[0].employeeId : null);
+    const employeeId =
+      currentUser?.employeeId ||
+      (entities.length > 0 ? entities[0].employeeId : null);
     if (employeeId && employeeId !== "Admin") {
       dispatch(fetchNotifications(employeeId));
       dispatch(fetchEmployeeUpdates(employeeId));
@@ -181,64 +197,21 @@ const AdminDashboard = () => {
 
       const rangeStr = `${start.toLocaleDateString("en-US", { month: "short", year: "numeric", day: "numeric" })} to ${end.toLocaleDateString("en-US", { month: "short", year: "numeric", day: "numeric" })}`;
 
-      // Calculate months in range
-      const monthsToFetch: { month: string; year: string }[] = [];
-      const temp = new Date(start);
-      temp.setDate(1);
-      while (temp <= end) {
-        monthsToFetch.push({
-          month: (temp.getMonth() + 1).toString().padStart(2, "0"),
-          year: temp.getFullYear().toString(),
-        });
-        temp.setMonth(temp.getMonth() + 1);
-      }
-
-      const endMonth = (end.getMonth() + 1).toString().padStart(2, "0");
-      const endYear = end.getFullYear().toString();
-      if (
-        !monthsToFetch.some((m) => m.month === endMonth && m.year === endYear)
-      ) {
-        monthsToFetch.push({ month: endMonth, year: endYear });
-      }
-
       for (const emp of selectedEntities) {
         const empId = emp.employeeId || emp.id;
-        let allRecords: any[] = [];
 
-        for (const { month, year } of monthsToFetch) {
-          try {
-            const result = await dispatch(
-              fetchMonthlyAttendance({ employeeId: empId, month, year }),
-            ).unwrap();
-            if (result) allRecords = [...allRecords, ...result];
-          } catch (e) {
-            console.warn(
-              `Failed to fetch records for ${empId} at ${month}/${year}`,
-            );
-          }
-        }
-
-        const entries = generateRangeEntries(
-          start,
-          end,
-          new Date(),
-          allRecords,
-        );
-        const totalHours = entries.reduce(
-          (acc, curr) => acc + (curr.totalHours || 0),
-          0,
+        const blob = await downloadAttendancePdfReport(
+          parseInt(currentMonth),
+          parseInt(currentYear),
+          empId,
+          exportStartDate,
+          exportEndDate,
         );
 
-        downloadPdf({
-          employeeName: emp.fullName || emp.name,
-          employeeId: empId,
-          department: emp.department,
-          designation: emp.designation,
-          month: rangeStr,
-          entries: entries,
-          totalHours: totalHours,
-          holidays: holidays || [],
-        });
+        saveAs(
+          blob,
+          `Attendance_${empId}_${exportStartDate}_to_${exportEndDate}.pdf`,
+        );
 
         await new Promise((r) => setTimeout(r, 500));
       }
@@ -256,32 +229,29 @@ const AdminDashboard = () => {
   // Memoized Stats & Chart Data
   const stats = useMemo(() => {
     const allAttendance = Object.values(employeeRecords).flat();
-    const todayStr = new Date().toISOString().split("T")[0];
+    const todayStr = dayjs().format("YYYY-MM-DD");
 
     if (!allAttendance.length)
       return { totalHours: 0, todayPresent: 0, totalAbsent: 0 };
 
     const totalMinutes = allAttendance.reduce(
-      (acc, curr) => acc + (curr.totalHours || 0) * 60,
+      (acc, curr: any) => acc + Number(curr.totalHours || curr.total_hours || 0) * 60,
       0,
     );
 
     const todayRecords = allAttendance.filter((r) => {
-      const rDateStr =
-        r.workingDate instanceof Date
-          ? r.workingDate.toISOString().split("T")[0]
-          : String(r.workingDate).split("T")[0];
+      const rDateStr = dayjs(r.workingDate).format("YYYY-MM-DD");
       return rDateStr === todayStr;
     });
 
-    const todayPresent = todayRecords.filter((r) =>
+    const todayPresent = todayRecords.filter((r: any) =>
       [AttendanceStatus.FULL_DAY, AttendanceStatus.HALF_DAY].includes(
-        r.status as AttendanceStatus,
+        (r.status || r.attendance_status) as AttendanceStatus,
       ),
     ).length;
 
     const todayAbsent = todayRecords.filter(
-      (r) => r.status === AttendanceStatus.LEAVE,
+      (r: any) => (r.status || r.attendance_status) === AttendanceStatus.LEAVE,
     ).length;
 
     return {
@@ -306,21 +276,18 @@ const AdminDashboard = () => {
 
     // 1. Trend (Monthly Cumulative)
     const trendDailyHours = days.map((day) => {
-      const dateStr = `${currentYear}-${currentMonth}-${day.toString().padStart(2, "0")}`;
+      const dateStr = dayjs(new Date(Number(currentYear), Number(currentMonth) - 1, day)).format("YYYY-MM-DD");
       let totalDayHours = 0;
       globalEntities.forEach((emp: any) => {
         const empId = emp.employeeId || emp.id;
         const records = employeeRecords[empId] || [];
-        const dayRecord = records.find((r) => {
-          const rDate =
-            r.workingDate instanceof Date
-              ? r.workingDate.toISOString().split("T")[0]
-              : String(r.workingDate).split("T")[0];
+        const dayRecord: any = records.find((r) => {
+          const rDate = dayjs(r.workingDate).format("YYYY-MM-DD");
           return rDate === dateStr;
         });
-        if (dayRecord) totalDayHours += dayRecord.totalHours || 0;
+        if (dayRecord) totalDayHours += Number(dayRecord.totalHours || dayRecord.total_hours) || 0;
       });
-      return parseFloat(totalDayHours.toFixed(1));
+      return parseFloat((Number(totalDayHours) || 0).toFixed(1));
     });
 
     // 2. Employee Hours Comparison (Filtered)
@@ -328,7 +295,10 @@ const AdminDashboard = () => {
       .map((emp) => {
         const empId = emp.employeeId || emp.id;
         const records = employeeRecords[empId] || [];
-        const total = records.reduce((sum, r) => sum + (r.totalHours || 0), 0);
+        const total = records.reduce(
+          (sum, r: any) => sum + Number(r.totalHours || r.total_hours || 0),
+          0,
+        );
         return { name: emp.fullName || emp.name || "Unknown", hours: total };
       })
       .sort((a, b) => {
@@ -338,16 +308,16 @@ const AdminDashboard = () => {
       });
 
     // 3. Donut (Global Distribution)
-    const departmentsList = [
-      "HR",
-      "IT",
-      "Sales",
-      "Marketing",
-      "Finance",
-      "Engineering",
-      "Design",
-      "Admin",
-    ];
+    let departmentsList = departments.map((d) => d.departmentName);
+
+    // If manager dashboard, only show departments that actually have employees in the current view
+    const isManagerView = basePath === "/manager-dashboard";
+    if (isManagerView) {
+      const activeDepts = new Set(
+        globalEntities.map((e: any) => e.department).filter(Boolean),
+      );
+      departmentsList = departmentsList.filter((d) => activeDepts.has(d));
+    }
 
     return {
       trend: {
@@ -444,7 +414,10 @@ const AdminDashboard = () => {
                   total: {
                     show: true,
                     showAlways: true,
-                    label: "Total Employees",
+                    label:
+                      isManagerView && departmentsList.length === 1
+                        ? departmentsList[0]
+                        : "Total Employees",
                     fontSize: "14px",
                     fontWeight: 600,
                     color: "#A3AED0",
@@ -546,7 +519,7 @@ const AdminDashboard = () => {
           />
         </div>
 
-        <div
+        {/* <div
           className={styles.statCard(
             "bg-linear-to-br from-[#868CFF] to-[#4318FF]",
           )}
@@ -564,9 +537,9 @@ const AdminDashboard = () => {
             className="absolute bottom-4 right-4 text-white/20"
             size={48}
           />
-        </div>
+        </div> */}
 
-        <div
+        {/* <div
           className={styles.statCard(
             "bg-linear-to-br from-[#05CD99] to-[#48BB78]",
           )}
@@ -582,9 +555,9 @@ const AdminDashboard = () => {
             className="absolute bottom-4 right-4 text-white/20"
             size={48}
           />
-        </div>
+        </div> */}
 
-        <div
+        {/* <div
           className={styles.statCard(
             "bg-linear-to-br from-[#FF9060] to-[#FF5C00]",
           )}
@@ -600,7 +573,7 @@ const AdminDashboard = () => {
             className="absolute bottom-4 right-4 text-white/20"
             size={48}
           />
-        </div>
+        </div> */}
       </div>
 
       {/* Analytics Section */}
@@ -608,7 +581,7 @@ const AdminDashboard = () => {
         <h3 className="text-xl font-bold text-[#2B3674]">
           Attendance Analytics
         </h3>
-        <div className="flex items-center gap-4">
+        {/* <div className="flex items-center gap-4">
           <button
             onClick={() => navigate(`${basePath}/daily-attendance`)}
             className="flex items-center gap-2 px-6 py-2.5 bg-linear-to-r from-[#4318FF] to-[#868CFF] text-white rounded-xl text-xs font-black shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all duration-300 transform hover:-translate-y-0.5"
@@ -616,7 +589,7 @@ const AdminDashboard = () => {
             <TrendingUp size={16} />
             <span>View Daily Status</span>
           </button>
-        </div>
+        </div> */}
       </div>
 
       <div className="flex justify-center mb-20">
@@ -709,26 +682,25 @@ const AdminDashboard = () => {
                     </button>
                     {isModalDeptOpen && (
                       <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 z-110 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                        {[
-                          "All",
-                          "HR",
-                          "IT",
-                          "Sales",
-                          "Marketing",
-                          "Finance",
-                          "Engineering",
-                          "Design",
-                          "Admin",
-                        ].map((d) => (
+                        <button
+                          onClick={() => {
+                            setModalDept("All");
+                            setIsModalDeptOpen(false);
+                          }}
+                          className={`w-full text-left px-5 py-2 text-sm font-semibold hover:bg-gray-50 ${modalDept === "All" ? "text-[#4318FF] bg-[#4318FF]/5" : "text-[#2B3674]"}`}
+                        >
+                          All
+                        </button>
+                        {departments.map((d) => (
                           <button
-                            key={d}
+                            key={d.id}
                             onClick={() => {
-                              setModalDept(d);
+                              setModalDept(d.departmentName);
                               setIsModalDeptOpen(false);
                             }}
-                            className={`w-full text-left px-5 py-2 text-sm font-semibold hover:bg-gray-50 ${modalDept === d ? "text-[#4318FF] bg-[#4318FF]/5" : "text-[#2B3674]"}`}
+                            className={`w-full text-left px-5 py-2 text-sm font-semibold hover:bg-gray-50 ${modalDept === d.departmentName ? "text-[#4318FF] bg-[#4318FF]/5" : "text-[#2B3674]"}`}
                           >
-                            {d === "All" ? "All" : d}
+                            {d.departmentName}
                           </button>
                         ))}
                       </div>
@@ -832,7 +804,13 @@ const AdminDashboard = () => {
                       <input
                         type="date"
                         value={exportStartDate}
-                        onChange={(e) => setExportStartDate(e.target.value)}
+                        onChange={(e) => {
+                          const newStart = e.target.value;
+                          setExportStartDate(newStart);
+                          if (exportEndDate && newStart && exportEndDate < newStart) {
+                            setExportEndDate(newStart);
+                          }
+                        }}
                         className="w-full pl-6 pr-12 py-4 bg-[#F4F7FE] rounded-[16px] text-[#2B3674] font-bold outline-none cursor-pointer"
                       />
                       <Calendar
@@ -849,6 +827,7 @@ const AdminDashboard = () => {
                       <input
                         type="date"
                         value={exportEndDate}
+                        min={exportStartDate}
                         onChange={(e) => setExportEndDate(e.target.value)}
                         className="w-full pl-6 pr-12 py-4 bg-[#F4F7FE] rounded-[16px] text-[#2B3674] font-bold outline-none cursor-pointer"
                       />

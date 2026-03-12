@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { getEntity, reset } from "../reducers/employeeDetails.reducer";
+import { resetAttendanceState } from "../reducers/employeeAttendance.reducer";
 import TodayAttendance from "../EmployeeDashboard/TodayAttendance";
 import { ChevronLeft } from "lucide-react";
 
@@ -18,6 +19,7 @@ const AdminViewEmployeeDashboard = () => {
         }
         return () => {
             dispatch(reset());
+            dispatch(resetAttendanceState());
         }
     }, [dispatch, employeeId]);
 
