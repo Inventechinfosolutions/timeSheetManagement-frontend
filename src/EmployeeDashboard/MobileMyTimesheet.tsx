@@ -166,17 +166,12 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
               const manualBlocker = blocker;
               const isStatusLeave = entry.status === AttendanceStatus.LEAVE;
               
-              const dObj = new Date(entry.fullDate);
-              const dayOfWeek = dObj.getDay();
-              const isIT = department === Department.IT || department === Department.IT_SUPPORT;
-              const isFullTimer = employmentType === "FULL_TIMER" || (employmentType as any) === 1;
-
+              // Dept Block list usually blocks Sundays entirely. 
+              // We need to allow Sunday if it's a workday now.
               let isDeptBlocked = false;
-              if (dayOfWeek === 0 && !(isIT && isFullTimer)) isDeptBlocked = true;
-              if (dayOfWeek === 6 && false) isDeptBlocked = true; // Stay unblocked for Sat (4-9 Rule)
+              // if (dayOfWeek === 0) isDeptBlocked = true; // REMOVED: Allow Sunday editing
 
-              const isHolidayDate = isHoliday(entry.fullDate);
-              const isBlocked = !!manualBlocker || (!isAdmin && !isManager && (isStatusLeave || isDeptBlocked || (isHolidayDate && !(isIT && isFullTimer))));
+              const isBlocked = !!manualBlocker || (!isAdmin && !isManager && (isStatusLeave || isDeptBlocked));
               
               const isEditable =
                 (isAdmin || !readOnly) &&

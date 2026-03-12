@@ -86,27 +86,34 @@ export const mapStatus = (
 ): TimesheetEntry['status'] => {
 
     if (status) {
-        // Normalize status to lowercase string for comparison
-        const statusStr = (typeof status === 'string' ? status : String(status)).toLowerCase().trim();
+        // Normalize status to string for comparison
+        const statusStr = typeof status === 'string' ? status : (status as AttendanceStatus);
 
-        // Handle Leave/Holiday/Weekend with hours
-        if ((statusStr === AttendanceStatus.LEAVE.toLowerCase() || statusStr === AttendanceStatus.HOLIDAY.toLowerCase() || isWeekend) && totalHours && totalHours > 0) {
-            const threshold = (isWeekend || statusStr === AttendanceStatus.HOLIDAY.toLowerCase()) ? 4 : 6;
-            return totalHours >= threshold ? AttendanceStatus.FULL_DAY : AttendanceStatus.HALF_DAY;
+        // Map Non-Working Days (Sat, Sun, Holiday) with hours to Full/Half Day
+        const isNonWorking = statusStr === AttendanceStatus.WEEKEND || statusStr === AttendanceStatus.HOLIDAY;
+        if (isNonWorking && totalHours && totalHours > 0) {
+            // Rule: 1-9h on Weekend/Holiday is Full Day
+            return totalHours >= 1 && totalHours <= 9 ? AttendanceStatus.FULL_DAY : AttendanceStatus.HALF_DAY;
         }
 
-        // Direct status mappings (case-insensitive)
-        if (statusStr === AttendanceStatus.LEAVE.toLowerCase()) return AttendanceStatus.LEAVE;
-        if (statusStr === 'blocked' || statusStr === AttendanceStatus.BLOCKED.toLowerCase()) return AttendanceStatus.BLOCKED;
-        if (statusStr === AttendanceStatus.ABSENT.toLowerCase() || statusStr === 'absent') return AttendanceStatus.ABSENT;
-        if (statusStr === AttendanceStatus.FULL_DAY.toLowerCase()) return AttendanceStatus.FULL_DAY;
-        if (statusStr === AttendanceStatus.HALF_DAY.toLowerCase()) return AttendanceStatus.HALF_DAY;
-        if (statusStr === AttendanceStatus.NOT_UPDATED.toLowerCase()) return AttendanceStatus.NOT_UPDATED;
-        if (statusStr === AttendanceStatus.HOLIDAY.toLowerCase()) return AttendanceStatus.HOLIDAY;
-        if (statusStr === AttendanceStatus.WEEKEND.toLowerCase()) return AttendanceStatus.WEEKEND;
-        if (statusStr === AttendanceStatus.WFH.toLowerCase() || statusStr === 'wfh') return AttendanceStatus.WFH;
-        if (statusStr === AttendanceStatus.CLIENT_VISIT.toLowerCase() || statusStr === 'client visit' || statusStr === 'cv') return AttendanceStatus.CLIENT_VISIT;
-        if (statusStr === AttendanceStatus.PRESENT.toLowerCase() || statusStr === 'present') return AttendanceStatus.PRESENT;
+        // Handle Leave with hours
+        if (statusStr === AttendanceStatus.LEAVE && totalHours && totalHours > 0) {
+            return totalHours > 6 ? AttendanceStatus.FULL_DAY : AttendanceStatus.HALF_DAY;
+        }
+
+        // Direct status mappings (handle both enum and string)
+        if (statusStr === AttendanceStatus.LEAVE) return AttendanceStatus.LEAVE;
+        // @ts-ignore
+        if (statusStr === 'Blocked') return AttendanceStatus.BLOCKED;
+        if (statusStr === AttendanceStatus.ABSENT) return AttendanceStatus.ABSENT;
+        if (statusStr === AttendanceStatus.FULL_DAY) return AttendanceStatus.FULL_DAY;
+        if (statusStr === AttendanceStatus.HALF_DAY) return AttendanceStatus.HALF_DAY;
+        if (statusStr === AttendanceStatus.NOT_UPDATED) return AttendanceStatus.NOT_UPDATED;
+        if (statusStr === AttendanceStatus.HOLIDAY) return AttendanceStatus.HOLIDAY;
+        if (statusStr === AttendanceStatus.WEEKEND) return AttendanceStatus.WEEKEND;
+        if (statusStr === AttendanceStatus.WFH) return AttendanceStatus.WFH;
+        if (statusStr === AttendanceStatus.CLIENT_VISIT) return AttendanceStatus.CLIENT_VISIT;
+        if (statusStr === AttendanceStatus.PRESENT) return AttendanceStatus.PRESENT;
 
         // Handle Pending
         if (statusStr === AttendanceStatus.PENDING.toLowerCase()) {
@@ -179,32 +186,60 @@ export const getBadgeLocation = (
     h2: string | null | undefined
 ): string | undefined => {
     if (!statusStr) return undefined;
-    // @ts-ignore
-    if (statusStr === AttendanceStatus.WEEKEND || statusStr === AttendanceStatus.HOLIDAY || statusStr === AttendanceStatus.ABSENT || statusStr === AttendanceStatus.NOT_UPDATED || statusStr === 'Blocked' || statusStr === AttendanceStatus.BLOCKED) {
+    
+    // Only return undefined if there are NO work splits (splits like Weekend/Holiday/Absent/Not Updated/Blocked/Upcoming)
+    const isStationaryStatus = (s: any) => {
+        const val = (s || '').toLowerCase().trim();
+        return val === AttendanceStatus.WEEKEND.toLowerCase() || 
+               val === AttendanceStatus.HOLIDAY.toLowerCase() || 
+               val === AttendanceStatus.ABSENT.toLowerCase() || 
+               val === AttendanceStatus.NOT_UPDATED.toLowerCase() || 
+               val === 'blocked' || 
+               val === AttendanceStatus.UPCOMING.toLowerCase() ||
+               val === 'upcoming';
+    };
+    
+    // If status is stationary, but we have work splits (h1/h2), we continue. 
+    // Otherwise return undefined as before.
+    if (isStationaryStatus(statusStr) && (!h1 || isStationaryStatus(h1)) && (!h2 || isStationaryStatus(h2))) {
         return undefined;
     }
 
     const h1Lower = (h1 || '').toLowerCase().trim();
     const h2Lower = (h2 || '').toLowerCase().trim();
 
-
-
-    const isWork = (val: string) =>
-        val.includes(WorkLocation.OFFICE.toLowerCase()) ||
-        val.includes(WorkLocationKeyword.WFH) ||
-        val.includes(WorkLocationKeyword.WORK_FROM_HOME) ||
-        val.includes(WorkLocationKeyword.CLIENT_VISIT) ||
-        val.includes(WorkLocationKeyword.PRESENT);
+    const isWork = (val: string) => {
+        const lower = val.toLowerCase().trim();
+        if (isStationaryStatus(lower)) return false;
+        if (lower.includes(AttendanceStatus.LEAVE.toLowerCase())) return false;
+        
+        return lower.includes(OfficeLocation.OFFICE.toLowerCase()) ||
+               lower.includes(WorkLocationKeyword.WFH) ||
+               lower.includes(WorkLocationKeyword.WORK_FROM_HOME) ||
+               lower.includes(WorkLocationKeyword.CLIENT_VISIT) ||
+               lower.includes(WorkLocationKeyword.PRESENT);
+    };
 
     const isLeave = (val: string) => val.includes(AttendanceStatus.LEAVE.toLowerCase());
+    
+    // Priority Override: If the Status is already determined as Full Day, 
+    // force the badge to reflect Full Day even if splits are inconsistent (stale data).
+    if (statusStr === AttendanceStatus.FULL_DAY) {
+        if (h1Lower === h2Lower && isWork(h1Lower)) return `${h1!.toUpperCase()} (FULL DAY)`;
+        if (isWork(h1Lower) && isWork(h2Lower) && h1Lower !== h2Lower) return AttendanceStatus.FULL_DAY;
+        
+        // If one is work and other is leave/stationary, but status is FULL_DAY (Weekend rule), force Full Day
+        if (isWork(h1Lower)) return `${h1!.toUpperCase()} (FULL DAY)`;
+        if (isWork(h2Lower)) return `${h2!.toUpperCase()} (FULL DAY)`;
+        
+        return AttendanceStatus.FULL_DAY;
+    }
 
     // Both same work activity
     if (h1Lower === h2Lower && isWork(h1Lower)) {
         return `${h1!.toUpperCase()} (FULL DAY)`;
     }
 
-    // Half Day case: One work + one leave
-    // Half Day case: One work + one leave
     // Half Day case: One work + one leave
     if (isWork(h1Lower) && isLeave(h2Lower)) {
         return `${h1!.toUpperCase()} (HALF DAY)`;
@@ -250,9 +285,6 @@ export const generateRangeEntries = (start: Date, end: Date, now: Date, records:
     while (current <= endNorm) {
         const currentLoopDate = new Date(current);
 
-        // Sunday should always be Weekend, regardless of any data
-        const dayOfWeek = currentLoopDate.getDay();
-
         // Find record for this specific day using YYYY-MM-DD comparison
         const loopDateStr = `${currentLoopDate.getFullYear()}-${(currentLoopDate.getMonth() + 1).toString().padStart(2, '0')}-${currentLoopDate.getDate().toString().padStart(2, '0')}`;
 
@@ -290,13 +322,13 @@ export const generateRangeEntries = (start: Date, end: Date, now: Date, records:
         // handle it based on actualRecord status or default behavior.
         // Saturday: Only show as Weekend if there's NO data (no record, no workLocation, no status)
         // If Saturday has data (Client Visit, WFH, etc.), show that data instead
+        const dayOfWeek = currentLoopDate.getDay();
         if (dayOfWeek === 6) {
             // If there's no record OR no meaningful data, show as Weekend
             if (!actualRecord || (!actualRecord.location && !(actualRecord as any).workLocation && !actualRecord.status && (!actualRecord.totalHours || actualRecord.totalHours === 0))) {
                 entry.status = AttendanceStatus.WEEKEND;
                 entry.workLocation = undefined;
             }
-            // Otherwise, keep the actual data (Client Visit, WFH, etc.)
         }
 
         entries.push(entry);

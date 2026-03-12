@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { RootState } from "../store";
+import dayjs from "dayjs";
 import {
   CheckCircle,
   XCircle,
@@ -49,7 +50,6 @@ import {
 } from "../enums";
 import CommonMultipleUploader from "../EmployeeDashboard/CommonMultipleUploader";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
-import dayjs from "dayjs";
 import { message, Select, Modal } from "antd";
 import { fetchDepartments } from "../reducers/masterDepartment.reducer";
 
@@ -281,10 +281,7 @@ const Requests = () => {
     return holidays.some((h: any) => {
       const hDate = h.date || h.holidayDate;
       if (!hDate) return false;
-      const normalizedHDate =
-        typeof hDate === "string"
-          ? hDate.split("T")[0]
-          : new Date(hDate).toISOString().split("T")[0];
+          const normalizedHDate = dayjs(hDate).format("YYYY-MM-DD");
       return normalizedHDate === dateStr;
     });
   };
@@ -295,10 +292,7 @@ const Requests = () => {
     return dateRangeAttendanceRecords.some((record: any) => {
       const recordDate = record.workingDate || record.working_date;
       if (!recordDate) return false;
-      const normalizedRecordDate =
-        typeof recordDate === "string"
-          ? recordDate.split("T")[0]
-          : new Date(recordDate).toISOString().split("T")[0];
+        const normalizedRecordDate = dayjs(recordDate).format("YYYY-MM-DD");
       // Check if the record has Leave status
       const status = record.status || record.attendance_status;
       return (
