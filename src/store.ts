@@ -12,6 +12,7 @@ import leaveNotificationReducer from './reducers/leaveNotification.reducer';
 import managerMappingReducer from './reducers/managerMapping.reducer';
 import masterDepartmentReducer from './reducers/masterDepartment.reducer';
 import apiLoadingReducer from './reducers/apiLoading.reducer';
+import projectsReducer from './reducers/projects.reducer';
 
 export const store = configureStore({
   reducer: {
@@ -28,6 +29,7 @@ export const store = configureStore({
     leaveNotification: leaveNotificationReducer,
     managerMapping: managerMappingReducer,
     masterDepartments: masterDepartmentReducer,
+    projects: projectsReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

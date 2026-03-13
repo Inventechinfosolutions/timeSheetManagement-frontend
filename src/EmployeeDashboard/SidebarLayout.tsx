@@ -9,6 +9,7 @@ import {
   Eye,
   Menu,
   LogOut,
+  ClipboardList,
 } from "lucide-react";
 import { useAppSelector, useAppDispatch } from "../hooks";
 import { useParams, useNavigate } from "react-router-dom";
@@ -76,6 +77,7 @@ const SidebarLayout = ({
     { name: "My Timesheet", icon: Calendar },
     { name: "Timesheet View", icon: Eye },
     { name: "Work Management", icon: Calendar },
+    { name: "Project Document", icon: ClipboardList },
     { name: "My Profile", icon: User },
     //{ name: 'Change Password', icon: Lock },
   ];
@@ -147,7 +149,11 @@ const SidebarLayout = ({
             <AlarmClock className="w-6 h-6 text-white" />
           </div>
           <span className="text-xl font-bold text-white tracking-tight">
-            {currentUser?.userType === UserType.ADMIN ? "Admin" : currentUser?.userType === UserType.MANAGER ? "Manager" : "Employee"}
+            {currentUser?.userType === UserType.ADMIN
+              ? "Admin"
+              : currentUser?.userType === UserType.MANAGER
+                ? "Manager"
+                : "Employee"}
           </span>
         </div>
         {/* Branding & Lock Toggle - Desktop Only */}
@@ -179,7 +185,11 @@ const SidebarLayout = ({
                 {entity?.employeeId || "EMP001"}
               </span>
               <span className="text-[10px] font-medium text-blue-100 uppercase tracking-widest whitespace-nowrap">
-                {currentUser?.userType === UserType.ADMIN ? "Admin" : currentUser?.userType === UserType.MANAGER ? "Manager" : "Employee"}
+                {currentUser?.userType === UserType.ADMIN
+                  ? "Admin"
+                  : currentUser?.userType === UserType.MANAGER
+                    ? "Manager"
+                    : "Employee"}
               </span>
             </div>
           </div>

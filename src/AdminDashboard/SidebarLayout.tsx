@@ -80,6 +80,7 @@ const SidebarLayout = ({
       { name: "Employee Details", icon: Users },
       { name: "Employee Timesheet", icon: AlarmClock },
       { name: "Work Management", icon: Calendar },
+      { name: "Project Document", icon: ClipboardList },
       { name: "Manager Mapping", icon: Users },
       { name: "Notification", icon: Bell },
     ],

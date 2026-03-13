@@ -63,6 +63,8 @@ const AdminLayout = () => {
         return "Leave Balance";
       case "manager-mapping":
         return "Manager Mapping";
+      case "project-document":
+        return "Project Document";
       default:
         return "System Dashboard";
     }
@@ -91,6 +93,8 @@ const AdminLayout = () => {
       navigate("/admin-dashboard/leave-balance");
     } else if (tabName === "Manager Mapping") {
       navigate("/admin-dashboard/manager-mapping");
+    } else if (tabName === "Project Document") {
+      navigate("/admin-dashboard/project-document");
     }
   };
 
