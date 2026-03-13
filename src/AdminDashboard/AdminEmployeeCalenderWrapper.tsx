@@ -30,6 +30,7 @@ import { AttendanceStatus } from "../enums";
 const AdminEmployeeCalenderWrapper = () => {
   const { employeeId } = useParams<{ employeeId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useAppDispatch();
 
   // Reset attendance state on unmount to prevent data leakage between views
@@ -121,7 +122,11 @@ const AdminEmployeeCalenderWrapper = () => {
     // Extract month and year to pass back to the list
     const month = initialDate.getMonth() + 1;
     const year = initialDate.getFullYear();
-    navigate(`/admin-dashboard/timesheet-list`, {
+    const basePath = location.pathname.startsWith("/manager-dashboard") 
+      ? "/manager-dashboard" 
+      : "/admin-dashboard";
+
+    navigate(`${basePath}/timesheet-list`, {
       state: { selectedMonth: month, selectedYear: year },
     });
   };
