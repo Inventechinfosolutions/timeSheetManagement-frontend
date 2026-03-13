@@ -10,8 +10,12 @@ ShieldCheck,
 Calendar,
 Users,
 Trash2,
+Eye,
+ArrowLeft,
+ChevronDown,
 } from "lucide-react";
-import { Popconfirm } from "antd";
+import { Modal } from "antd";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAppSelector, useAppDispatch } from "../hooks";
 import {
 getEntity,
@@ -24,6 +28,8 @@ import { getManagerMappingByEmployeeId } from "../reducers/managerMapping.reduce
 import defaultAvatar from "../assets/default-avatar.jpg";
 
 const MyProfile = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
 const dispatch = useAppDispatch();
 const { entity, profileImageUrl } = useAppSelector(
 (state) => state.employeeDetails,
@@ -107,9 +113,10 @@ useEffect(() => {
 }, [profileImageUrl]);
 
 const [uploadStatus, setUploadStatus] = useState<
-"idle" | "success" | "error"
+  "idle" | "success" | "error" | "deleted"
 >("idle");
 const [imageError, setImageError] = useState(false);
+const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
 const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 const file = e.target.files?.[0];
@@ -153,7 +160,9 @@ setTimeout(() => setUploadStatus("idle"), 3000);
       .unwrap()
       .then(() => {
         console.log("Profile image removed successfully");
+        setUploadStatus("deleted");
         dispatch(fetchProfileImage(idToUse));
+        setTimeout(() => setUploadStatus("idle"), 3000);
       })
       .catch((err: any) => {
         console.error("Failed to remove profile photo:", err);
@@ -165,9 +174,38 @@ fileInputRef.current?.click();
 };
 
 return (
-<div className="overflow-y-auto custom-scrollbar px-5 md:px-8 pt-6 pb-0 w-full max-w-[1000px] mx-auto animate-in fade-in duration-500 space-y-6 md:space-y-8">
+<div className="overflow-y-auto no-scrollbar px-5 md:px-8 pt-4 pb-0 w-full max-w-[1000px] mx-auto animate-in fade-in duration-500 space-y-3 md:space-y-4">
+{/* Back Button */}
+<button 
+  onClick={() => {
+    const path = location.pathname;
+    if (path.includes('/manager-dashboard')) {
+      if (path.includes('/timesheet/') || path.includes('/working-details/')) {
+        navigate('/manager-dashboard/timesheet-list');
+      } else if (path.includes('/employee-details/') || path.includes('/view-attendance/')) {
+        navigate('/manager-dashboard/employees');
+      } else {
+        navigate('/manager-dashboard/my-dashboard');
+      }
+    } else if (path.includes('/admin-dashboard')) {
+      if (path.includes('/timesheet/') || path.includes('/working-details/')) {
+        navigate('/admin-dashboard/timesheet-list');
+      } else if (path.includes('/employee-details/') || path.includes('/view-attendance/')) {
+        navigate('/admin-dashboard/employees');
+      } else {
+        navigate('/admin-dashboard');
+      }
+    } else {
+      navigate('/employee-dashboard');
+    }
+  }}
+  className="group flex items-center gap-2 text-[#A3AED0] hover:text-[#4318FF] transition-all mb-2 w-fit"
+>
+  <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+  <span className="text-[11px] font-black uppercase tracking-widest pl-1">Back</span>
+</button>
 {/* Top Card - User Header with Gradient */}
-<div className="relative overflow-hidden rounded-[20px] md:rounded-[32px] shadow-[0px_20px_50px_0px_#111c440d] border border-gray-100">
+<div className="relative overflow-hidden rounded-[16px] md:rounded-[24px] shadow-[0px_20px_50px_0px_#111c440d] border border-gray-100">
 {/* Gradient Background */}
 <div
 className="absolute inset-0 opacity-100"
@@ -177,60 +215,50 @@ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
 ></div>
 
 {/* Content */}
-<div className="relative z-10 p-4 md:p-5 flex flex-col md:flex-row items-center md:items-start gap-4 md:gap-5">
+<div className="relative z-10 p-1.5 md:p-2 flex flex-col md:flex-row items-center md:items-start gap-2.5 md:gap-3">
 <div className="flex flex-col items-center gap-2">
-<div
-className="relative group cursor-pointer"
-onClick={handleCameraClick}
->
-<input
-type="file"
-ref={fileInputRef}
-onChange={handleImageChange}
-className="hidden"
-accept="image/*"
-/>
-<div className="p-1 rounded-full bg-white shadow-2xl overflow-hidden border-4 border-white/20">
-<img
-src={imageError ? defaultImage : (profileImageUrl || defaultImage)}
-alt="Profile"
-className="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover"
-onError={() => setImageError(true)}
-/>
-</div>
-            <div className="absolute bottom-0 right-0 md:bottom-1 md:right-1 bg-white text-[#667eea] p-1.5 md:p-2 rounded-full shadow-lg transition-transform group-hover:scale-110 border-2 border-transparent group-hover:border-[#667eea]/10">
-              <Camera size={14} />
+            <div className="relative group">
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleImageChange}
+                className="hidden"
+                accept="image/*"
+              />
+              <div className="p-1 rounded-full bg-white shadow-2xl overflow-hidden border-4 border-white/20">
+                <img
+                  src={imageError ? defaultImage : (profileImageUrl || defaultImage)}
+                  alt="Profile"
+                  className="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover"
+                  onError={() => setImageError(true)}
+                />
+              </div>
+              {profileImageUrl && !imageError ? (
+                <div 
+                  className="absolute bottom-0 right-0 md:bottom-1 md:right-1 bg-white text-[#667eea] p-1.5 md:p-2 rounded-full shadow-lg transition-transform group-hover:scale-110 border-2 border-transparent group-hover:border-[#667eea]/10 cursor-pointer"
+                  onClick={() => setIsImageModalOpen(true)}
+                >
+                  <Eye size={14} />
+                </div>
+              ) : (
+                <div 
+                  className="absolute bottom-0 right-0 md:bottom-1 md:right-1 bg-white text-[#667eea] p-1.5 md:p-2 rounded-full shadow-lg transition-transform group-hover:scale-110 border-2 border-transparent group-hover:border-[#667eea]/10 cursor-pointer"
+                  onClick={handleCameraClick}
+                >
+                  <Camera size={14} />
+                </div>
+              )}
             </div>
 
-            {profileImageUrl && !imageError && (
-              <div 
-                className="absolute top-0 right-0 md:top-0 md:right-0 z-30 opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Popconfirm
-                  title="Remove photo"
-                  description="Are you sure you want to remove your profile photo?"
-                  onConfirm={handleConfirmRemove}
-                  okText="Yes"
-                  cancelText="No"
-                  placement="rightTop"
-                >
-                  <button
-                    type="button"
-                    className="bg-red-500 text-white p-1.5 md:p-2 rounded-full shadow-lg hover:bg-red-600 transition-all scale-90 hover:scale-110"
-                    title="Remove profile image"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </Popconfirm>
-              </div>
-            )}
-          </div>
-
-          <div className="h-4 flex items-center justify-center mt-1">
+          <div className="h-3 flex items-center justify-center mt-0.5">
             {uploadStatus === "success" && (
               <span className="text-white text-[10px] font-bold animate-in fade-in slide-in-from-top-1 px-2 py-0.5 bg-white/20 backdrop-blur-sm rounded-full">
                 ✓ Updated
+              </span>
+            )}
+            {uploadStatus === "deleted" && (
+              <span className="text-white text-[10px] font-bold animate-in fade-in slide-in-from-top-1 px-2 py-0.5 bg-white/20 backdrop-blur-sm rounded-full">
+                ✓ Deleted
               </span>
             )}
             {uploadStatus === "error" && (
@@ -241,7 +269,7 @@ onError={() => setImageError(true)}
           </div>
         </div>
 
-    <div className="text-center md:text-left flex-1 space-y-2">
+    <div className="text-center md:text-left flex-1 space-y-1">
       <div className="space-y-0">
         <h1 className="text-xl md:text-2xl font-black text-white leading-tight">
           {fullName}
@@ -250,7 +278,7 @@ onError={() => setImageError(true)}
           {designation}
         </p>
       </div>
-      <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
+      <div className="flex flex-wrap items-center justify-center md:justify-start gap-1.5">
         <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 backdrop-blur-md rounded-xl border border-white/10 text-white text-[11px] font-bold">
           <Building size={14} />
           <span>InvenTech</span>
@@ -460,6 +488,49 @@ className="w-full pl-12 pr-4 py-3.5 border-2 border-gray-100 rounded-2xl bg-gray
 
 </div>
 </div>
+
+  <Modal
+    open={isImageModalOpen}
+    onCancel={() => setIsImageModalOpen(false)}
+    footer={null}
+    centered
+    width={480}
+    className="profile-modal"
+  >
+    <div className="flex flex-col items-center gap-6 py-4 px-2">
+      <div className="w-72 h-72 md:w-80 md:h-80 rounded-3xl overflow-hidden shadow-2xl border-4 border-gray-50">
+        <img
+          src={profileImageUrl || defaultImage}
+          alt="Profile Preview"
+          className="w-full h-full object-cover"
+        />
+      </div>
+      
+      <div className="flex items-center gap-4 w-full justify-center">
+        <button
+          onClick={() => {
+            setIsImageModalOpen(false);
+            setTimeout(() => handleCameraClick(), 100);
+          }}
+          className="flex items-center gap-2 px-5 py-2.5 bg-linear-to-r from-[#667eea] to-[#764ba2] text-white rounded-2xl shadow-lg hover:shadow-xl transition-all font-bold text-sm"
+        >
+          <Camera size={18} />
+          <span>Change</span>
+        </button>
+
+        <button
+          onClick={() => {
+            handleConfirmRemove();
+            setIsImageModalOpen(false);
+          }}
+          className="flex items-center gap-2 px-5 py-2.5 bg-red-50 text-red-500 rounded-2xl border border-red-100 shadow-md hover:bg-red-100 transition-all font-bold text-sm"
+        >
+          <Trash2 size={18} />
+          <span>Remove</span>
+        </button>
+      </div>
+    </div>
+  </Modal>
 </div>
 );
 };
