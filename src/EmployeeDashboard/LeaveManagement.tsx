@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useAppDispatch, useAppSelector } from "../hooks";
-import { useLocation, useParams } from "react-router-dom";
+import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { DatePicker, ConfigProvider, Checkbox, Modal, Select } from "antd";
 import dayjs from "dayjs";
 import {
@@ -32,6 +32,8 @@ import {
   UserType,
   LeaveRequestType,
   HalfDayType,
+  Department,
+  EmploymentType,
 } from "../enums";
 import {
   Home,
@@ -39,6 +41,7 @@ import {
   X,
   XCircle,
   Calendar,
+  CalendarPlus,
   Eye,
   RotateCcw,
   Loader2,
@@ -79,6 +82,7 @@ const LeaveManagement = () => {
     (state: any) => state.masterHolidays || {},
   );
   const location = useLocation();
+  const navigate = useNavigate();
   const { employeeId: urlEmployeeId } = useParams<{ employeeId: string }>();
 
   const isMyRoute =
@@ -1357,6 +1361,14 @@ const LeaveManagement = () => {
     { label: WorkLocation.CLIENT_VISIT, icon: MapPin, color: "#FFB547" },
   ];
 
+  if (entity?.department === Department.IT && entity?.employmentType === EmploymentType.FULL_TIMER) {
+    applyOptions.push({
+      label: "Comp-Off",
+      icon: CalendarPlus,
+      color: "#8b5cf6"
+    } as any);
+  }
+
   const hexToRgb = (hex: string) => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result
@@ -1410,7 +1422,13 @@ const LeaveManagement = () => {
                   {applyOptions.map((option, idx) => (
                     <button
                       key={`${i}-${idx}`}
-                      onClick={() => handleOpenModal(option.label)}
+                      onClick={() => {
+                        if (String(option.label) === "Comp-Off") {
+                          navigate("/employee-dashboard/comp-off");
+                        } else {
+                          handleOpenModal(option.label);
+                        }
+                      }}
                       className="group relative bg-white/10 backdrop-blur-md border border-white/20 p-2 rounded-2xl hover:bg-white transition-all duration-300 flex flex-col items-center justify-center gap-2 w-28 h-28 hover:shadow-2xl hover:-translate-y-1 cursor-pointer"
                     >
                       <div
