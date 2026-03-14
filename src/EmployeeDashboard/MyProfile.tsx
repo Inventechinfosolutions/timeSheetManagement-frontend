@@ -174,7 +174,7 @@ fileInputRef.current?.click();
 };
 
 return (
-<div className="overflow-y-auto no-scrollbar px-5 md:px-8 pt-4 pb-0 w-full max-w-[1000px] mx-auto animate-in fade-in duration-500 space-y-3 md:space-y-4">
+<div className="overflow-y-auto no-scrollbar px-5 md:px-8 pt-4 pb-0 w-full max-w-[1200px] mx-auto animate-in fade-in duration-500 space-y-3 md:space-y-4">
 {/* Back Button */}
 <button 
   onClick={() => {
@@ -215,8 +215,8 @@ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
 ></div>
 
 {/* Content */}
-<div className="relative z-10 p-1.5 md:p-2 flex flex-col md:flex-row items-center md:items-start gap-2.5 md:gap-3">
-<div className="flex flex-col items-center gap-2">
+ <div className="relative z-10 p-4 md:p-5 flex flex-col md:flex-row items-center md:items-start gap-2.5 md:gap-5 h-[80%]">
+  <div className="flex flex-col items-center gap-2">
             <div className="relative group">
               <input
                 type="file"
