@@ -28,6 +28,7 @@ import {
   resetPassword,
 } from "../reducers/employeeDetails.reducer";
 import { UserType, EmploymentType } from "../enums";
+import defaultAvatar from "../assets/default-avatar.jpg";
 
 const EmployeeDetailsView = () => {
   const { employeeId } = useParams<{ employeeId: string }>();
@@ -63,6 +64,7 @@ const EmployeeDetailsView = () => {
     gender: "" as "" | "MALE" | "FEMALE",
     joiningDate: "",
     email: "",
+    status: "",
   });
   const [showConfirm, setShowConfirm] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState(false);
@@ -141,6 +143,7 @@ const EmployeeDetailsView = () => {
           ? dayjs(employee.joiningDate).format("YYYY-MM-DD")
           : "",
         email: employee.email || "",
+        status: employee.status || "",
       });
     }
   }, [employee]);
@@ -273,6 +276,7 @@ const EmployeeDetailsView = () => {
         ? dayjs(employee.joiningDate).format("YYYY-MM-DD")
         : "",
       email: employee.email || "",
+      status: employee.status || "",
     });
     setValidationError("");
     dispatch(clearErrorMessage());
@@ -359,22 +363,16 @@ const EmployeeDetailsView = () => {
         ></div>
 
         {/* Content */}
-        <div className="relative z-10 p-4 md:p-10 flex flex-col md:flex-row items-center md:items-start gap-3 md:gap-6">
+        <div className="relative z-10 p-4 md:p-5 flex flex-col md:flex-row items-center md:items-start gap-2.5 md:gap-5 h-[80%]">
           {/* Avatar Area */}
           <div className="flex flex-col items-center gap-2">
-            <div className="p-0.5 md:p-1 rounded-full bg-white shadow-xl overflow-hidden">
-              {viewedProfileImage ? (
-                <img
-                  src={viewedProfileImage}
-                  alt="Profile"
-                  className="w-14 h-14 sm:w-20 md:w-24 rounded-full object-cover"
-                  onError={() => setViewedProfileImage(null)}
-                />
-              ) : (
-                <div className="w-14 h-14 sm:w-20 md:w-24 rounded-full bg-gradient-to-br from-[#4318FF] to-[#00A3C4] flex items-center justify-center text-white text-xl sm:text-2xl md:text-3xl font-black shadow-inner">
-                  {avatarLetter}
-                </div>
-              )}
+            <div className="p-1 rounded-full bg-white shadow-2xl overflow-hidden border-4 border-white/20">
+              <img
+                src={viewedProfileImage || defaultAvatar}
+                alt="Profile"
+                className="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover"
+                onError={() => setViewedProfileImage(null)}
+              />
             </div>
           </div>
 
@@ -388,7 +386,7 @@ const EmployeeDetailsView = () => {
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-1.5 text-[9px] sm:text-xs md:text-sm text-white/80">
               <div className="flex items-center gap-1.5 px-2 py-1 bg-white/10 backdrop-blur-sm rounded-full border border-white/10">
                 <Building size={12} className="md:w-3.5 md:h-3.5" />
-                <span className="font-medium">InvenTech Info Solutions</span>
+                <span className="font-medium">InvenTech</span>
               </div>
               <div className="flex items-center gap-1.5 px-2 py-1 bg-white/10 backdrop-blur-sm rounded-full border border-white/10">
                 <CreditCard size={12} className="md:w-3.5 md:h-3.5" />
@@ -737,7 +735,7 @@ const EmployeeDetailsView = () => {
           </div>
 
           {/* Email */}
-          <div className="space-y-1.5 md:col-span-2">
+          <div className="space-y-1.5">
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
               Email Address <span className="text-red-500">*</span>
             </label>

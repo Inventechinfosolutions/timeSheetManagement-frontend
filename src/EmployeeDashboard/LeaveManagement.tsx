@@ -50,6 +50,7 @@ import {
   ChevronDown,
   Clock,
   ArrowRightLeft,
+  ArrowLeft,
 } from "lucide-react";
 import { message } from "antd";
 import CommonMultipleUploader from "./CommonMultipleUploader";
@@ -66,6 +67,7 @@ const datePickerTheme = {
 };
 
 const LeaveManagement = () => {
+  const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const {
     entities = [],
@@ -1381,6 +1383,35 @@ const LeaveManagement = () => {
 
   return (
     <div className="p-4 md:px-8 md:pb-8 md:pt-0 bg-[#F4F7FE] min-h-screen font-sans text-[#2B3674]">
+      {/* Back Button */}
+      <button 
+        onClick={() => {
+          const path = location.pathname;
+          if (path.includes('/manager-dashboard')) {
+            if (path.includes('/timesheet/') || path.includes('/working-details/')) {
+              navigate('/manager-dashboard/timesheet-list');
+            } else if (path.includes('/employee-details/') || path.includes('/view-attendance/')) {
+              navigate('/manager-dashboard/employees');
+            } else {
+              navigate('/manager-dashboard/my-dashboard');
+            }
+          } else if (path.includes('/admin-dashboard')) {
+            if (path.includes('/timesheet/') || path.includes('/working-details/')) {
+              navigate('/admin-dashboard/timesheet-list');
+            } else if (path.includes('/employee-details/') || path.includes('/view-attendance/')) {
+              navigate('/admin-dashboard/employees');
+            } else {
+              navigate('/admin-dashboard');
+            }
+          } else {
+            navigate('/employee-dashboard');
+          }
+        }}
+        className="group flex items-center gap-2 text-[#A3AED0] hover:text-[#4318FF] transition-all mb-2 w-fit mt-4"
+      >
+        <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+        <span className="text-[11px] font-black uppercase tracking-widest pl-1">Back</span>
+      </button>
       {/* AntD message context handled via global config */}
       {/* Header */}
       <div className="sticky top-0 z-40 bg-[#F4F7FE] -mx-4 px-4 py-2 mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all">
