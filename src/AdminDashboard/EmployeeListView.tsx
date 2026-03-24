@@ -672,44 +672,52 @@ ${
                       {emp.role || "-"}
                     </td>
                     <td className="py-4 px-4 text-center">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (emp.isActive && canEdit) {
-                            handleToggleStatus(emp.rawId);
-                          }
-                        }}
-                        disabled={!emp.isActive || !canEdit}
-                        className={`relative w-20 h-7 rounded-full transition-all duration-300 flex items-center mx-auto ${
-                          emp.isActive
-                            ? canEdit
-                              ? "bg-[#0095FF] cursor-pointer"
-                              : "bg-[#0095FF]/60 cursor-not-allowed"
-                            : "bg-red-300 cursor-not-allowed"
-                        }`}
-                        title={
-                          !canEdit
-                            ? "Only admins can change employee status"
-                            : !emp.isActive
-                              ? "Status cannot be changed once Inactive"
-                              : "Toggle Status"
-                        }
-                      >
-                        <span
-                          className={`absolute text-[10px] font-bold text-white uppercase transition-all duration-300 ${
-                            emp.isActive ? "left-2" : "right-2"
-                          }`}
-                        >
-                          {emp.isActive ? "Active" : "Inactive"}
+                      {emp.userStatus === "DRAFT" ? (
+                        <span className="inline-flex px-3 py-1 rounded-full text-xs font-bold bg-gray-200 text-gray-700 border border-gray-300">
+                          Draft
                         </span>
-                        <div
-                          className={`absolute w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-300 ${
+                      ) : (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if ((emp.userStatus === "ACTIVE" || emp.userStatus === "INACTIVE") && canEdit) {
+                              handleToggleStatus(emp.rawId);
+                            }
+                          }}
+                          disabled={!canEdit || emp.userStatus === "DRAFT"}
+                          className={`relative w-20 h-7 rounded-full transition-all duration-300 flex items-center mx-auto ${
                             emp.isActive
-                              ? "translate-x-[54px]"
-                              : "translate-x-1"
+                              ? canEdit
+                                ? "bg-[#0095FF] cursor-pointer"
+                                : "bg-[#0095FF]/60 cursor-not-allowed"
+                              : "bg-red-300 cursor-not-allowed"
                           }`}
-                        />
-                      </button>
+                          title={
+                            emp.userStatus === "DRAFT"
+                              ? "Activate first to change status"
+                              : !canEdit
+                                ? "Only admins can change employee status"
+                                : !emp.isActive
+                                  ? "Status cannot be changed once Inactive"
+                                  : "Toggle Status"
+                          }
+                        >
+                          <span
+                            className={`absolute text-[10px] font-bold text-white uppercase transition-all duration-300 ${
+                              emp.isActive ? "left-2" : "right-2"
+                            }`}
+                          >
+                            {emp.isActive ? "Active" : "Inactive"}
+                          </span>
+                          <div
+                            className={`absolute w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-300 ${
+                              emp.isActive
+                                ? "translate-x-[54px]"
+                                : "translate-x-1"
+                            }`}
+                          />
+                        </button>
+                      )}
                     </td>
                     <td className="py-4 px-4 text-center">
                       <div className="flex items-center justify-center gap-3">
@@ -734,7 +742,7 @@ ${
                             new Date(emp.createdAt).getTime() <
                             Date.now() - 24 * 60 * 60 * 1000;
                           const shouldShowButton =
-                            canEdit && emp.isActive && !emp.lastLoggedIn && is24HoursOld;
+                            canEdit && (emp.userStatus === "DRAFT" || (emp.isActive && !emp.lastLoggedIn && is24HoursOld));
                           return shouldShowButton ? (
                             <button
                               onClick={() => handleResendActivation(emp.rawId)}

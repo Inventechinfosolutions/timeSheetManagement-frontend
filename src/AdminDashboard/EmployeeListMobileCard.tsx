@@ -7,6 +7,7 @@ interface Employee {
   rawId: string;
   resetRequired: boolean;
   isActive: boolean;
+  userStatus?: string;
   createdAt: string;
   lastLoggedIn?: string | null;
   isAdmin: boolean;
@@ -38,7 +39,7 @@ const EmployeeListMobileCard = ({
         const is24HoursOld =
           new Date(emp.createdAt).getTime() < Date.now() - 24 * 60 * 60 * 1000;
         const shouldShowResendButton =
-          emp.isActive && !emp.lastLoggedIn && is24HoursOld;
+          isAdmin && (emp.userStatus === "DRAFT" || (emp.isActive && !emp.lastLoggedIn && is24HoursOld));
 
         return (
           <div
@@ -73,42 +74,50 @@ const EmployeeListMobileCard = ({
                 <p className="text-[#A3AED0] text-xs font-bold uppercase tracking-widest mb-1">
                   Status
                 </p>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (emp.isActive && isAdmin) {
-                      onToggleStatus(emp.rawId);
-                    }
-                  }}
-                  disabled={!emp.isActive || !isAdmin}
-                  className={`relative w-20 h-7 rounded-full transition-all duration-300 flex items-center ${
-                    emp.isActive
-                      ? isAdmin
-                        ? "bg-[#0095FF] cursor-pointer"
-                        : "bg-[#0095FF]/60 cursor-not-allowed"
-                      : "bg-red-300 cursor-not-allowed"
-                  }`}
-                  title={
-                    !isAdmin
-                      ? "Only admins can change employee status"
-                      : !emp.isActive
-                        ? "Status cannot be changed once Inactive"
-                        : "Toggle Status"
-                  }
-                >
-                  <span
-                    className={`absolute text-[10px] font-bold text-white uppercase transition-all duration-300 ${
-                      emp.isActive ? "left-2" : "right-2"
-                    }`}
-                  >
-                    {emp.isActive ? "Active" : "Inactive"}
+                {emp.userStatus === "DRAFT" ? (
+                  <span className="inline-flex px-3 py-1 rounded-full text-xs font-bold bg-gray-200 text-gray-700 border border-gray-300">
+                    Draft
                   </span>
-                  <div
-                    className={`absolute w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-300 ${
-                      emp.isActive ? "translate-x-[54px]" : "translate-x-1"
+                ) : (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if ((emp.userStatus === "ACTIVE" || emp.userStatus === "INACTIVE") && isAdmin) {
+                        onToggleStatus(emp.rawId);
+                      }
+                    }}
+                    disabled={!isAdmin || emp.userStatus === "DRAFT"}
+                    className={`relative w-20 h-7 rounded-full transition-all duration-300 flex items-center ${
+                      emp.isActive
+                        ? isAdmin
+                          ? "bg-[#0095FF] cursor-pointer"
+                          : "bg-[#0095FF]/60 cursor-not-allowed"
+                        : "bg-red-300 cursor-not-allowed"
                     }`}
-                  />
-                </button>
+                    title={
+                      emp.userStatus === "DRAFT"
+                        ? "Activate first to change status"
+                        : !isAdmin
+                          ? "Only admins can change employee status"
+                          : !emp.isActive
+                            ? "Status cannot be changed once Inactive"
+                            : "Toggle Status"
+                    }
+                  >
+                    <span
+                      className={`absolute text-[10px] font-bold text-white uppercase transition-all duration-300 ${
+                        emp.isActive ? "left-2" : "right-2"
+                      }`}
+                    >
+                      {emp.isActive ? "Active" : "Inactive"}
+                    </span>
+                    <div
+                      className={`absolute w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-300 ${
+                        emp.isActive ? "translate-x-[54px]" : "translate-x-1"
+                      }`}
+                    />
+                  </button>
+                )}
               </div>
 
               <div className="flex items-center gap-2">
