@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from "react";
-import splashVideo from "../assets/Final animation logo.mp4";
+import splashVideo from "../assets/SplashVedio_7sec.mp4";
 
 interface SplashVideoProps {
   onComplete?: () => void;
@@ -12,10 +12,10 @@ const SplashVideo: React.FC<SplashVideoProps> = ({ onComplete, className = "" })
   useEffect(() => {
     const video = videoRef.current;
     
-    // Set a timer to force completion after 3 seconds
+    // Force completion at exactly 7 seconds if video hasn't ended naturally
     const timer = setTimeout(() => {
       onComplete?.();
-    }, 11000);
+    }, 7200);
 
     if (video) {
       video.play().catch((error) => {
@@ -28,9 +28,6 @@ const SplashVideo: React.FC<SplashVideoProps> = ({ onComplete, className = "" })
   }, [onComplete]);
 
   const handleEnded = () => {
-    // If video ends before 3s, we can complete early or wait. 
-    // Usually, the user wants "make splash 3s", so we'll let the timer handle it.
-    // But if the video is shorter than 3s, it's better to end it.
     onComplete?.();
   };
 

@@ -9,6 +9,7 @@ import {
   Calendar as CalendarIcon,
   Loader2,
   ShieldBan,
+  ArrowLeft,
 } from "lucide-react";
 import { saveAs } from "file-saver";
 import { useAppSelector, useAppDispatch } from "../hooks";
@@ -413,6 +414,37 @@ const Calendar = ({
         scrollable ? "h-full flex-1 min-h-0" : ""
       } ${!isSmall && !isSidebar ? "p-4 md:p-6" : ""}`}
     >
+      {/* Back Button */}
+      {!isSmall && !isSidebar && (
+        <button 
+          onClick={() => {
+            const path = location.pathname;
+            if (path.includes('/manager-dashboard')) {
+              if (path.includes('/timesheet/') || path.includes('/working-details/')) {
+                navigate('/manager-dashboard/timesheet-list');
+              } else if (path.includes('/employee-details/') || path.includes('/view-attendance/')) {
+                navigate('/manager-dashboard/employees');
+              } else {
+                navigate('/manager-dashboard/my-dashboard');
+              }
+            } else if (path.includes('/admin-dashboard')) {
+              if (path.includes('/timesheet/') || path.includes('/working-details/')) {
+                navigate('/admin-dashboard/timesheet-list');
+              } else if (path.includes('/employee-details/') || path.includes('/view-attendance/')) {
+                navigate('/admin-dashboard/employees');
+              } else {
+                navigate('/admin-dashboard');
+              }
+            } else {
+              navigate('/employee-dashboard');
+            }
+          }}
+          className="group flex items-center gap-2 text-[#A3AED0] hover:text-[#4318FF] transition-all mb-2 w-fit"
+        >
+          <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+          <span className="text-[11px] font-black uppercase tracking-widest pl-1">Back</span>
+        </button>
+      )}
       <div
         className={`bg-white shadow-[0px_20px_50px_0px_#111c440d] border border-gray-100 flex flex-col ${
           isSmall

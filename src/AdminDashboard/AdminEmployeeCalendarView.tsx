@@ -69,7 +69,11 @@ const AdminEmployeeCalendarView = ({ onBlockedClick, onNavigateToDate }: AdminEm
     // Extract month and year to pass back to the list
     const month = initialDate.getMonth() + 1;
     const year = initialDate.getFullYear();
-    navigate(`/admin-dashboard/timesheet-list`, {
+    const basePath = location.pathname.startsWith("/manager-dashboard") 
+      ? "/manager-dashboard" 
+      : "/admin-dashboard";
+
+    navigate(`${basePath}/timesheet-list`, {
       state: { selectedMonth: month, selectedYear: year },
     });
   };

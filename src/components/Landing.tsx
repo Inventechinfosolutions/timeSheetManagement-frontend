@@ -10,7 +10,7 @@ import inventLogo from "../assets/invent-logo.svg";
 import LandingMobile from "./LandingMobile";
 import SplashVideo from "./SplashVideo";
 
-const SPLASH_HOLD_AFTER_WELCOME_MS = 1000;
+const SPLASH_HOLD_AFTER_WELCOME_MS = 0;
 const SPLASH_FADEOUT_MS = 400;
 
 const Landing = () => {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import dayjs from "dayjs";
-import { useParams, useLocation } from "react-router-dom";
+import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { Modal, message } from "antd";
 import {
   ChevronLeft,
@@ -9,6 +9,7 @@ import {
   AlertCircle,
   Rocket,
   ShieldBan,
+  ArrowLeft,
 } from "lucide-react";
 import { TimesheetEntry } from "../types";
 import { useAppDispatch, useAppSelector } from "../hooks";
@@ -81,6 +82,7 @@ const MyTimesheet = ({
 }: TimesheetProps) => {
   const { date } = useParams<{ date?: string }>();
   const location = useLocation();
+  const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
   const { records, loading } = useAppSelector((state) => state.attendance);
@@ -1205,18 +1207,15 @@ const MyTimesheet = ({
           const hasCleared = clearedItems.length > 0;
 
           const halfDayDates = halfDayItems
-            .map((item) => new Date(item.workingDate).getDate())
-            .sort((a, b) => a - b)
+            .map((item) => dayjs(item.workingDate).format("MMM D"))
             .join(", ");
 
           const absentDates = absentItems
-            .map((item) => new Date(item.workingDate).getDate())
-            .sort((a, b) => a - b)
+            .map((item) => dayjs(item.workingDate).format("MMM D"))
             .join(", ");
 
           const clearedDates = clearedItems
-            .map((item) => new Date(item.workingDate).getDate())
-            .sort((a, b) => a - b)
+            .map((item) => dayjs(item.workingDate).format("MMM D"))
             .join(", ");
 
           return new Promise<void>((resolve, reject) => {
@@ -1367,7 +1366,7 @@ const MyTimesheet = ({
                           marginBottom: "8px",
                         }}
                       >
-                        Clear Attendance (Dates: {clearedDates})
+                        Clear Saved Attendance
                       </h3>
                       <p
                         style={{
@@ -1377,7 +1376,7 @@ const MyTimesheet = ({
                           marginBottom: "8px",
                         }}
                       >
-                        You are trying to clear save attendance for date(s):{" "}
+                        You are about to clear the saved attendance for date(s):{" "}
                         <strong>{clearedDates}</strong>.
                       </p>
                       <div
@@ -1389,9 +1388,9 @@ const MyTimesheet = ({
                         }}
                       >
                         <p style={{ margin: 0, fontSize: "13px" }}>
-                          This will reset the entry to its default state
-                          (Weekend, Holiday, or Not Updated / Upcoming) and set
-                          all values to empty.
+                          This will remove all recorded hours and reset the
+                          entry to its original default status (Not Updated,
+                          Weekend, or Holiday) as appropriate for that date.
                         </p>
                       </div>
                     </div>
@@ -1844,6 +1843,37 @@ const MyTimesheet = ({
     <div
       className={`flex flex-col ${containerClassName || "h-full max-h-full overflow-hidden bg-[#F4F7FE] py-2 px-1 md:px-6 md:pt-4 md:pb-0 relative"}`}
     >
+      {/* Back Button */}
+      {!isMobile && (
+        <button 
+          onClick={() => {
+            const path = location.pathname;
+            if (path.includes('/manager-dashboard')) {
+              if (path.includes('/timesheet/') || path.includes('/working-details/')) {
+                navigate('/manager-dashboard/timesheet-list');
+              } else if (path.includes('/employee-details/') || path.includes('/view-attendance/')) {
+                navigate('/manager-dashboard/employees');
+              } else {
+                navigate('/manager-dashboard/my-dashboard');
+              }
+            } else if (path.includes('/admin-dashboard')) {
+              if (path.includes('/timesheet/') || path.includes('/working-details/')) {
+                navigate('/admin-dashboard/timesheet-list');
+              } else if (path.includes('/employee-details/') || path.includes('/view-attendance/')) {
+                navigate('/admin-dashboard/employees');
+              } else {
+                navigate('/admin-dashboard');
+              }
+            } else {
+              navigate('/employee-dashboard');
+            }
+          }}
+          className="group flex items-center gap-2 text-[#A3AED0] hover:text-[#4318FF] transition-all mb-2 w-fit mt-2 ml-1"
+        >
+          <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+          <span className="text-[11px] font-black uppercase tracking-widest pl-1">Back</span>
+        </button>
+      )}
       <AutoUpdateModal
         isOpen={showAutoUpdateModal}
         onClose={() => {
