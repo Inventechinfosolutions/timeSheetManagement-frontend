@@ -31,6 +31,11 @@ const setupAxiosInterceptors = (
       config.headers?.["Content-Type"] || config.headers?.["content-type"];
    
     config.headers.Accept = "application/json";
+    // Avoid browser caching of API GET responses (no-store = don't store, no-cache = revalidate)
+    if (config.method === "get" || config.method === "GET") {
+      config.headers["Cache-Control"] = "no-store, no-cache, must-revalidate";
+      config.headers.Pragma = "no-cache";
+    }
     if (!existingContentType) {
         config.headers["Content-Type"] = "application/json";
     }

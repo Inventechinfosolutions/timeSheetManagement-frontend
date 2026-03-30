@@ -53,6 +53,8 @@ import DailyStatus from "./AdminDashboard/DailyStatus";
 import Requests from "./AdminDashboard/Requests";
 import AdminViewEmployeeDashboard from "./AdminDashboard/AdminViewEmployeeDashboard";
 import AdminLeaveManagement from "./AdminDashboard/AdminLeaveManagement";
+import AdminResignation from "./AdminDashboard/AdminResignation";
+import Resignation from "./EmployeeDashboard/Resignation";
 import ManagerMapping from "./ManagerMapping/ManagerMapping";
 import ManagerEmployeesView from "./AdminDashboard/ManagerEmployeesView";
 
@@ -74,6 +76,8 @@ const EmployeeTabWrapper = () => {
       return <LeaveManagement />;
     case "leave-balance":
       return <LeaveBalance />;
+    case "resignations":
+      return <Resignation />;
     default:
       return <Navigate to="/employee-dashboard" replace />;
   }
@@ -115,6 +119,8 @@ const AdminTabWrapper = () => {
       return <MyProfile />;
     case "leave-management":
       return <LeaveManagement />;
+    case "resignations":
+      return <AdminResignation />;
     default:
       return <Navigate to="/admin-dashboard" replace />;
   }
@@ -311,6 +317,7 @@ function AppContent() {
                     path="manager-employees/:managerId"
                     element={<ManagerEmployeesView />}
                   />
+                  <Route path="resignations" element={<AdminResignation />} />
                   <Route path=":tab/:date?" element={<AdminTabWrapper />} />
                 </Route>
 
@@ -357,6 +364,8 @@ function AppContent() {
                     path="manager-employees/:managerId"
                     element={<ManagerEmployeesView />}
                   />
+                  <Route path="resignations" element={<AdminResignation />} />
+                  <Route path="my-resignation" element={<Resignation />} />
                   <Route path=":tab/:date?" element={<AdminTabWrapper />} />
                 </Route>
 
@@ -369,6 +378,7 @@ function AppContent() {
                   }
                 >
                   <Route index element={<TodayAttendance />} />
+                  <Route path="resignations" element={<Resignation />} />
                   <Route path=":tab/:date?" element={<EmployeeTabWrapper />} />
                 </Route>
 

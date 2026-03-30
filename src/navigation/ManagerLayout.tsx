@@ -46,6 +46,12 @@ const ManagerLayout = () => {
     if (path.includes("/manager-dashboard/work-management")) {
       return "Work Management";
     }
+    if (path.includes("/manager-dashboard/resignations")) {
+      return "Resignations";
+    }
+    if (path.includes("/manager-dashboard/my-resignation")) {
+      return "My Resignation";
+    }
     if (path.includes("/manager-dashboard/leave-balance")) {
       return "Leave Balance";
     }
@@ -74,6 +80,10 @@ const ManagerLayout = () => {
         return "Employee Timesheet";
       case "work-management":
         return "Work Management";
+      case "resignations":
+        return "Resignations";
+      case "my-resignation":
+        return "My Resignation";
       case "leave-balance":
         return "Leave Balance";
       case "manager-mapping":
@@ -121,6 +131,10 @@ const ManagerLayout = () => {
       navigate("/manager-dashboard/requests");
     } else if (tabName === "Work Management") {
       navigate("/manager-dashboard/work-management");
+    } else if (tabName === "Resignations") {
+      navigate("/manager-dashboard/resignations");
+    } else if (tabName === "My Resignation") {
+      navigate("/manager-dashboard/my-resignation");
     } else if (tabName === "Leave Balance") {
       navigate("/manager-dashboard/leave-balance");
     } else if (tabName === "Manager Mapping") {

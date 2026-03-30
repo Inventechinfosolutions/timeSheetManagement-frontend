@@ -57,6 +57,7 @@ const SidebarLayout = ({
           { name: "My Timesheet", icon: Calendar },
           { name: "My Timesheet View", icon: Eye },
           { name: "Work Management ", icon: Calendar },
+          { name: "My Resignation", icon: ClipboardList },
           { name: "My Profile", icon: User },
         ],
       },
@@ -67,6 +68,7 @@ const SidebarLayout = ({
           { name: "Employee Details", icon: Users },
           { name: "Employee Timesheet", icon: AlarmClock },
           { name: "Work Management", icon: Calendar },
+          { name: "Resignations", icon: ClipboardList },
           { name: "Notification", icon: Bell },
         ],
       },
@@ -80,6 +82,7 @@ const SidebarLayout = ({
       { name: "Employee Details", icon: Users },
       { name: "Employee Timesheet", icon: AlarmClock },
       { name: "Work Management", icon: Calendar },
+      { name: "Resignations", icon: ClipboardList },
       { name: "Manager Mapping", icon: Users },
       { name: "Notification", icon: Bell },
     ],
@@ -114,6 +117,10 @@ const SidebarLayout = ({
         return "Leave Balance";
       case "work-management":
         return "Work Management";
+      case "resignations":
+        return "Resignations";
+      case "my-resignation":
+        return "My Resignation";
       case "my-dashboard":
         return "My Dashboard";
       case "my-timesheet":
