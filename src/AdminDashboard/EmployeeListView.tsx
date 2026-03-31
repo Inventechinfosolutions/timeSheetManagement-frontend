@@ -6,6 +6,7 @@ import {
   getEntity,
   bulkUploadEmployees,
   clearUploadResult,
+  downloadBulkTemplate,
   createEntity,
   resendActivationLink,
   updateEmployeeStatus,
@@ -34,6 +35,7 @@ import {
   CreditCard,
   Eye,
   Calendar,
+  Download,
 } from "lucide-react";
 import EmployeeListMobileCard from "./EmployeeListMobileCard";
 import Toast from "../components/Toast";
@@ -107,6 +109,7 @@ const EmployeeListView = () => {
     message: string;
     type: "success" | "error" | "info";
   } | null>(null);
+  const [showDownloadConfirm, setShowDownloadConfirm] = useState(false);
   // const [copySuccess, setCopySuccess] = useState<string>("");
 
   // const [copySuccess, setCopySuccess] = useState<string>("");
@@ -451,6 +454,28 @@ const EmployeeListView = () => {
       setSelectedEmployeeForToggle(null);
     }
   };
+  const handleDownloadClick = () => {
+    setShowDownloadConfirm(true);
+  };
+
+  const confirmDownload = async () => {
+    try {
+      await dispatch(downloadBulkTemplate()).unwrap();
+      setShowDownloadConfirm(false);
+      setToast({
+        message: "Template downloaded successfully!",
+        type: "success",
+      });
+    } catch (error: any) {
+      console.error("Failed to download template:", error);
+      setToast({
+        message: "Failed to download template: " + (error.message || error),
+        type: "error",
+      });
+      setShowDownloadConfirm(false);
+    }
+  };
+
   const handleResendActivation = (employeeId: string) => {
     dispatch(resendActivationLink(employeeId)).then((result: any) => {
       if (!result.error) {
@@ -584,6 +609,15 @@ ${
 
             {basePath === "/admin-dashboard" && canEdit && (
               <>
+                <button
+                  onClick={handleDownloadClick}
+                  className="flex items-center justify-center gap-2 px-6 py-2.5 bg-linear-to-r from-[#4318FF] to-[#868CFF] text-white rounded-xl font-black text-xs transition-all shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transform hover:-translate-y-0.5 active:scale-95 tracking-widest uppercase"
+                  title="Download Excel Template"
+                >
+                  <Download size={18} />
+                  <span className="hidden sm:inline">Download Template</span>
+                </button>
+
                 <button
                   onClick={() => setIsUploadModalOpen(true)}
                   className="flex items-center justify-center gap-2 px-6 py-2.5 bg-white text-[#4318FF] border-2 border-[#4318FF] rounded-xl font-black text-xs transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 active:scale-95 tracking-widest uppercase"
@@ -871,9 +905,18 @@ ${
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl border border-gray-100 animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
             <div className="flex-none flex items-center justify-between p-6 border-b border-gray-100">
-              <h3 className="text-xl font-bold text-[#2B3674]">
-                Bulk Upload Employees
-              </h3>
+              <div className="flex flex-col">
+                <h3 className="text-xl font-bold text-[#2B3674]">
+                  Bulk Upload Employees
+                </h3>
+                <button
+                  onClick={handleDownloadClick}
+                  className="mt-1 text-xs font-bold text-[#4318FF] hover:underline flex items-center gap-1 w-fit"
+                >
+                  <Download size={14} />
+                  Download Excel Template
+                </button>
+              </div>
               <button
                 onClick={handleCloseUploadModal}
                 className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
@@ -919,7 +962,7 @@ ${
                       <strong>gender</strong> — use: MALE or FEMALE (uppercase).
                     </li>
                     <li>
-                      <strong>role</strong> — Employee, Manager, Trainee Intern.
+                      <strong>role</strong> — Employee, Manager
                     </li>
                   </ul>
                 </div>
@@ -1526,6 +1569,41 @@ ${
           </div>
         </div>
       )}
+      {/* Download Template Confirmation Modal */}
+      {showDownloadConfirm && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm border border-gray-100 animate-in zoom-in-95 duration-200">
+            <div className="p-6">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Download size={32} className="text-blue-600" />
+                </div>
+                <h3 className="text-xl font-bold text-[#2B3674] mb-2">
+                  Download Template
+                </h3>
+                <p className="text-gray-600 text-sm mb-6">
+                  Do you want to download the employee bulk upload template?
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowDownloadConfirm(false)}
+                    className="flex-1 px-4 py-3 text-sm font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-all"
+                  >
+                    No
+                  </button>
+                  <button
+                    onClick={confirmDownload}
+                    className="flex-1 px-4 py-3 text-sm font-bold text-white bg-gradient-to-r from-[#4318FF] to-[#868CFF] rounded-xl shadow-lg hover:shadow-xl transition-all"
+                  >
+                    Yes
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Toggle Status Confirmation Modal */}
       {showToggleConfirm && selectedEmployeeForToggle && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
