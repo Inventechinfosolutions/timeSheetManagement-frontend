@@ -37,7 +37,7 @@ import {
 } from "lucide-react";
 import EmployeeListMobileCard from "./EmployeeListMobileCard";
 import Toast from "../components/Toast";
-import { UserType, EmploymentType , UserStatus} from "../enums";
+import { UserType, EmploymentType, UserStatus } from "../enums";
 
 const EmployeeListView = () => {
   const navigate = useNavigate();
@@ -195,8 +195,9 @@ const EmployeeListView = () => {
     rawId: emp.employeeId, // Store employeeId string for API calls
     createdAt: emp.createdAt,
     lastLoggedIn: emp.lastLoggedIn,
-    isActive: emp.userStatus !== "INACTIVE",
-    isAdmin: emp.userType === UserType.ADMIN, // Or similar logic. Actually, we have `isAdmin` in the component scope. Let me just set it to false for now, it's just a UI model.
+    lastLinkSentAt: emp.lastLinkSentAt,
+    isActive: emp.userStatus !== UserStatus.INACTIVE,
+    isAdmin: emp.userType === UserType.ADMIN,
   }));
 
   const currentItems = employees.filter((emp) => {
@@ -648,6 +649,9 @@ ${
                   <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider w-[15%]">
                     Status
                   </th>
+                  <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider w-[15%]">
+                    Activation
+                  </th>
                   <th className="py-4 px-4 text-[13px] font-bold uppercase tracking-wider text-center w-[20%]">
                     Actions
                   </th>
@@ -672,7 +676,7 @@ ${
                       {emp.role || "-"}
                     </td>
                     <td className="py-4 px-4 text-center">
-                      {emp.userStatus === "DRAFT" ? (
+                      {emp.userStatus === UserStatus.DRAFT ? (
                         <span className="inline-flex px-3 py-1 rounded-full text-xs font-bold bg-gray-200 text-gray-700 border border-gray-300">
                           Draft
                         </span>
@@ -680,26 +684,30 @@ ${
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            if ((emp.userStatus === "ACTIVE" || emp.userStatus === "INACTIVE") && canEdit) {
+                            if (
+                              (emp.userStatus === UserStatus.ACTIVE ||
+                                emp.userStatus === UserStatus.INACTIVE) &&
+                              canEdit
+                            ) {
                               handleToggleStatus(emp.rawId);
                             }
                           }}
-                          disabled={!canEdit || emp.userStatus === "DRAFT"}
+                          disabled={!canEdit || emp.userStatus === UserStatus.DRAFT}
                           className={`relative w-20 h-7 rounded-full transition-all duration-300 flex items-center mx-auto ${
                             emp.isActive
                               ? canEdit
                                 ? "bg-[#0095FF] cursor-pointer"
                                 : "bg-[#0095FF]/60 cursor-not-allowed"
-                              : "bg-red-300 cursor-not-allowed"
+                              : canEdit
+                                ? "bg-red-500 cursor-pointer"
+                                : "bg-red-300 cursor-not-allowed"
                           }`}
                           title={
-                            emp.userStatus === "DRAFT"
+                            emp.userStatus === UserStatus.DRAFT
                               ? "Activate first to change status"
                               : !canEdit
                                 ? "Only admins can change employee status"
-                                : !emp.isActive
-                                  ? "Status cannot be changed once Inactive"
-                                  : "Toggle Status"
+                                : "Toggle Status"
                           }
                         >
                           <span
@@ -717,6 +725,47 @@ ${
                             }`}
                           />
                         </button>
+                      )}
+                    </td>
+                    {/* Activation Column - Shows "Send Link" (first) or "Resend Link" (after 24h) */}
+                    <td className="py-4 px-4 text-center">
+                      {canEdit &&
+                      emp.userStatus === UserStatus.DRAFT &&
+                      (() => {
+                        if (!emp.lastLinkSentAt) return true;
+                        const lastSent = new Date(emp.lastLinkSentAt);
+                        const now = new Date();
+                        const hours =
+                          (now.getTime() - lastSent.getTime()) / (1000 * 60 * 60);
+                        return hours >= 24;
+                      })() ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleResendActivation(emp.rawId);
+                          }}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all text-xs font-bold border mx-auto whitespace-nowrap ${
+                            !emp.lastLinkSentAt
+                              ? "bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200"
+                              : "bg-amber-50 text-amber-600 hover:bg-amber-100 border-amber-200"
+                          }`}
+                          title={
+                            !emp.lastLinkSentAt
+                              ? "Send Activation Link"
+                              : "Resend Activation Link"
+                          }
+                        >
+                          {!emp.lastLinkSentAt ? (
+                            <Mail size={14} />
+                          ) : (
+                            <RefreshCw size={14} />
+                          )}
+                          {!emp.lastLinkSentAt ? "Send Link" : "Resend Link"}
+                        </button>
+                      ) : (
+                        <span className="text-[#A3AED0] text-xs font-bold uppercase tracking-widest">
+                          —
+                        </span>
                       )}
                     </td>
                     <td className="py-4 px-4 text-center">
@@ -737,23 +786,6 @@ ${
                             <Pencil size={16} />
                           </button>
                         )}
-                        {(() => {
-                          const is24HoursOld =
-                            new Date(emp.createdAt).getTime() <
-                            Date.now() - 24 * 60 * 60 * 1000;
-                          const shouldShowButton =
-                            canEdit && (emp.userStatus === "DRAFT" || (emp.isActive && !emp.lastLoggedIn && is24HoursOld));
-                          return shouldShowButton ? (
-                            <button
-                              onClick={() => handleResendActivation(emp.rawId)}
-                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all text-xs font-bold border bg-amber-50 text-amber-600 hover:bg-amber-100 border-amber-200 whitespace-nowrap"
-                              title="Resend Activation Link"
-                            >
-                              <RefreshCw size={14} />
-                              Resend
-                            </button>
-                          ) : null;
-                        })()}
                       </div>
                     </td>
                   </tr>
@@ -854,7 +886,8 @@ ${
               <div className="flex flex-col md:flex-row gap-4">
                 <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 md:flex-1">
                   <p className="text-sm font-semibold text-blue-900 mb-2">
-                    Required Excel columns — use these <strong>exact Same </strong> headers (case-sensitive):
+                    Required Excel columns — use these{" "}
+                    <strong>exact Same </strong> headers (case-sensitive):
                   </p>
                   <ul className="text-xs text-blue-700 space-y-1 list-disc list-inside">
                     <li>fullName</li>
@@ -874,10 +907,20 @@ ${
                     Rules to follow:
                   </p>
                   <ul className="text-xs text-amber-800 space-y-1.5">
-                    <li><strong>employmentType</strong> — use: FULL_TIMER (full-time) or INTERN (intern).</li>
-                    <li><strong>Date Format</strong> — use: YYYY-MM-DD or dd/mm/yyyy.</li>
-                    <li><strong>gender</strong> — use: MALE or FEMALE (uppercase).</li>
-                    <li><strong>role</strong> —  Employee, Manager, Trainee Intern.</li>
+                    <li>
+                      <strong>employmentType</strong> — use: FULL_TIMER
+                      (full-time) or INTERN (intern).
+                    </li>
+                    <li>
+                      <strong>Date Format</strong> — use: YYYY-MM-DD or
+                      dd/mm/yyyy.
+                    </li>
+                    <li>
+                      <strong>gender</strong> — use: MALE or FEMALE (uppercase).
+                    </li>
+                    <li>
+                      <strong>role</strong> — Employee, Manager, Trainee Intern.
+                    </li>
                   </ul>
                 </div>
               </div>
