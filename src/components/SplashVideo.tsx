@@ -11,12 +11,12 @@ const SplashVideo: React.FC<SplashVideoProps> = ({ onComplete, className = "" })
 
   useEffect(() => {
     const video = videoRef.current;
-    const playbackRate = 1.5;
+    const playbackRate = 1.4;
     
     // Force completion at adjusted duration if video hasn't ended naturally
     const timer = setTimeout(() => {
       onComplete?.();
-    }, 7200 / playbackRate);
+    }, 5000);
 
     if (video) {
       video.playbackRate = playbackRate;
