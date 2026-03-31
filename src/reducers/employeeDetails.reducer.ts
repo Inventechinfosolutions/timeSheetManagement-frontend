@@ -403,6 +403,28 @@ export const resendActivationLink = createAsyncThunk<any, string, ThunkConfig>(
   }
 );
 
+export const downloadBulkTemplate = createAsyncThunk<void, void, ThunkConfig>(
+  'employeeDetails/download_template',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`${apiUrl}/bulk-template`, {
+        responseType: 'blob',
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'employee_bulk_upload_template.xlsx');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || error.message || 'Download failed');
+    }
+  }
+);
+
 
 
 export const fetchRoles = createAsyncThunk<any, void, ThunkConfig>(
