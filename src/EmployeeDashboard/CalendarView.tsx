@@ -44,6 +44,58 @@ interface CalendarProps {
   hideMonthNavigation?: boolean;
 }
 
+/** Matches half-day text like "Work From Home" (badge uses "WORK FROM HOME (FULL DAY)", not literal "WFH"). */
+function isRemoteWorkHalf(val: string | null | undefined): boolean {
+  const v = (val || "").toLowerCase();
+  return (
+    v.includes("work from home") ||
+    v.includes("wfh") ||
+    v.includes("client visit") ||
+    v.includes("client place")
+  );
+}
+
+/** For edit-blocking: WFH / client visit are valid work — do not treat as restricted like unknown splits. */
+function isRestrictedActivityHalf(val: string | null | undefined): boolean {
+  const v = (val || "").toLowerCase().trim();
+  if (!v) return false;
+  if (v.includes("office")) return false;
+  if (v.includes("not updated")) return false;
+  if (v.includes("upcoming")) return false;
+  if (v.includes("holiday")) return false;
+  if (v.includes("weekend")) return false;
+  if (v.includes("absent")) return false;
+  if (isRemoteWorkHalf(v)) return false;
+  return true;
+}
+
+function calendarEntryIsClientVisit(entry: TimesheetEntry | undefined): boolean {
+  if (!entry) return false;
+  if (entry.status === AttendanceStatus.CLIENT_VISIT) return true;
+  const st = (entry.status || "").toLowerCase();
+  const wl = (entry.workLocation || "").toLowerCase();
+  if (st.includes("client visit") || st.includes("client place")) return true;
+  if (wl.includes("client visit") || wl.includes("client place")) return true;
+  return false;
+}
+
+function calendarEntryIsWFH(entry: TimesheetEntry | undefined): boolean {
+  if (!entry) return false;
+  if (entry.status === AttendanceStatus.WFH) return true;
+  const st = (entry.status || "").toLowerCase();
+  if (st.includes("wfh") || st.includes("work from home")) return true;
+  const wl = (entry.workLocation || "").toLowerCase();
+  if (wl.includes("wfh") || wl.includes("work from home")) return true;
+  const h1 = ((entry as any).firstHalf || "").toLowerCase();
+  const h2 = ((entry as any).secondHalf || "").toLowerCase();
+  return (
+    h1.includes("wfh") ||
+    h1.includes("work from home") ||
+    h2.includes("wfh") ||
+    h2.includes("work from home")
+  );
+}
+
 const Calendar = ({
   now = new Date(),
   onNavigateToDate,
@@ -303,20 +355,10 @@ const Calendar = ({
         const h2 = (entry.secondHalf || "").toLowerCase();
         const s = (entry.status || "").toLowerCase();
 
-        // BLOCK IF STATUS IS LEAVE
+        // BLOCK IF STATUS IS LEAVE (WFH uses status/workLocation strings without this branch)
         if (s.includes("leave")) return true;
 
-        const isRestricted = (val: string) =>
-          val &&
-          !val.includes("office") &&
-          !val.includes("not updated") &&
-          !val.includes("upcoming") &&
-          !val.includes("holiday") &&
-          !val.includes("weekend") &&
-          !val.includes("absent") &&
-          val.trim() !== "";
-
-        if (isRestricted(h1) || isRestricted(h2)) return true;
+        if (isRestrictedActivityHalf(h1) || isRestrictedActivityHalf(h2)) return true;
       }
     }
 
@@ -356,19 +398,9 @@ const Calendar = ({
       });
 
       if (entry) {
-        const h1 = (entry.firstHalf || "").toLowerCase();
-        const h2 = (entry.secondHalf || "").toLowerCase();
-        const isRestricted = (val: string) =>
-          val &&
-          !val.includes("office") &&
-          !val.includes("not updated") &&
-          !val.includes("upcoming") &&
-          !val.includes("holiday") &&
-          !val.includes("weekend") &&
-          !val.includes("absent") &&
-          val.trim() !== "";
-
-        if (isRestricted(h1) || isRestricted(h2))
+        const h1 = entry.firstHalf || "";
+        const h2 = entry.secondHalf || "";
+        if (isRestrictedActivityHalf(h1) || isRestrictedActivityHalf(h2))
           return "Restricted Activity (Leave/WFH)";
       }
     }
@@ -698,7 +730,9 @@ const Calendar = ({
                 !holiday &&
                 !entry.totalHours &&
                 entry.status !== AttendanceStatus.LEAVE &&
-                entry.status !== AttendanceStatus.ABSENT;
+                entry.status !== AttendanceStatus.ABSENT &&
+                !calendarEntryIsWFH(entry) &&
+                !calendarEntryIsClientVisit(entry);
 
               // Detect split days (when firstHalf and secondHalf differ)
               const isSplitDay =
@@ -886,20 +920,14 @@ const Calendar = ({
                 cellClass = `bg-red-50 border-transparent hover:bg-red-100 ${baseHover}`;
                 // textClass = "text-red-700 font-bold";
                 statusLabel = AttendanceStatus.LEAVE;
-              } else if (
-                entry?.workLocation === "Client Visit" ||
-                entry?.status === "Client Visit"
-              ) {
+              } else if (calendarEntryIsClientVisit(entry)) {
                 // Client Visit (only if status is NOT Leave)
                 cellClass = `bg-blue-50 border-transparent hover:bg-blue-100 ${baseHover}`;
                 statusLabel =
                   entry?.workLocation || entry?.status || "Client Visit";
-              } else if (
-                entry?.workLocation === "WFH" ||
-                entry?.status === "WFH"
-              ) {
+              } else if (calendarEntryIsWFH(entry)) {
                 cellClass = `bg-blue-50 border-transparent hover:bg-blue-100 ${baseHover}`;
-                statusLabel = entry?.workLocation || entry?.status || "WFH";
+                statusLabel = entry?.workLocation || entry?.status || AttendanceStatus.WFH;
               } else if (isIncomplete) {
                 cellClass = `bg-white border-gray-300 hover:bg-gray-50 ${baseHover}`;
                 if (!entry?.totalHours || Number(entry.totalHours) === 0) {
@@ -1106,10 +1134,8 @@ const Calendar = ({
                                 ? "text-white bg-[#FFB020]/80"
                                 : entry?.status === AttendanceStatus.LEAVE
                                   ? "text-white bg-red-400/70"
-                                  : entry?.workLocation === "Client Visit" ||
-                                      entry?.status === "Client Visit" ||
-                                      entry?.workLocation === "WFH" ||
-                                      entry?.status === "WFH"
+                                  : calendarEntryIsClientVisit(entry) ||
+                                      calendarEntryIsWFH(entry)
                                     ? "text-white bg-[#4318FF]/70"
                                       : isIncomplete && statusLabel
                                         ? "text-white bg-[#64748B]/90"
