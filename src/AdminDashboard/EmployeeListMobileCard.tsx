@@ -1,4 +1,5 @@
-import { Pencil, RefreshCw, Eye } from "lucide-react";
+import { Pencil, RefreshCw, Eye, Mail } from "lucide-react";
+import { UserStatus } from "../enums";
 
 interface Employee {
   id: string;
@@ -10,6 +11,7 @@ interface Employee {
   userStatus?: string;
   createdAt: string;
   lastLoggedIn?: string | null;
+  lastLinkSentAt?: string | null;
   isAdmin: boolean;
 }
 
@@ -30,17 +32,9 @@ const EmployeeListMobileCard = ({
   onToggleStatus,
   isAdmin,
 }: EmployeeListMobileCardProps) => {
-  // ... existing body ...
-  // ... around line 113 inside the actions div ...
-
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {employees.map((emp) => {
-        const is24HoursOld =
-          new Date(emp.createdAt).getTime() < Date.now() - 24 * 60 * 60 * 1000;
-        const shouldShowResendButton =
-          isAdmin && (emp.userStatus === "DRAFT" || (emp.isActive && !emp.lastLoggedIn && is24HoursOld));
-
         return (
           <div
             key={emp.id}
@@ -74,7 +68,7 @@ const EmployeeListMobileCard = ({
                 <p className="text-[#A3AED0] text-xs font-bold uppercase tracking-widest mb-1">
                   Status
                 </p>
-                {emp.userStatus === "DRAFT" ? (
+                {emp.userStatus === UserStatus.DRAFT ? (
                   <span className="inline-flex px-3 py-1 rounded-full text-xs font-bold bg-gray-200 text-gray-700 border border-gray-300">
                     Draft
                   </span>
@@ -82,26 +76,30 @@ const EmployeeListMobileCard = ({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      if ((emp.userStatus === "ACTIVE" || emp.userStatus === "INACTIVE") && isAdmin) {
+                      if (
+                        (emp.userStatus === UserStatus.ACTIVE ||
+                          emp.userStatus === UserStatus.INACTIVE) &&
+                        isAdmin
+                      ) {
                         onToggleStatus(emp.rawId);
                       }
                     }}
-                    disabled={!isAdmin || emp.userStatus === "DRAFT"}
+                    disabled={!isAdmin || emp.userStatus === UserStatus.DRAFT}
                     className={`relative w-20 h-7 rounded-full transition-all duration-300 flex items-center ${
                       emp.isActive
                         ? isAdmin
                           ? "bg-[#0095FF] cursor-pointer"
                           : "bg-[#0095FF]/60 cursor-not-allowed"
-                        : "bg-red-300 cursor-not-allowed"
+                        : isAdmin
+                          ? "bg-red-500 cursor-pointer"
+                          : "bg-red-300 cursor-not-allowed"
                     }`}
                     title={
-                      emp.userStatus === "DRAFT"
+                      emp.userStatus === UserStatus.DRAFT
                         ? "Activate first to change status"
                         : !isAdmin
                           ? "Only admins can change employee status"
-                          : !emp.isActive
-                            ? "Status cannot be changed once Inactive"
-                            : "Toggle Status"
+                          : "Toggle Status"
                     }
                   >
                     <span
@@ -121,16 +119,39 @@ const EmployeeListMobileCard = ({
               </div>
 
               <div className="flex items-center gap-2">
-                {shouldShowResendButton && (
-                  <button
-                    onClick={() => onResendActivation(emp.rawId)}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 text-amber-600 font-bold text-xs hover:bg-amber-100 border border-amber-200 transition-all active:scale-95"
-                    title="Resend Activation Link"
-                  >
-                    <RefreshCw size={14} />
-                    {/* Resend */}
-                  </button>
-                )}
+                {isAdmin &&
+                  emp.userStatus === UserStatus.DRAFT &&
+                  (() => {
+                    if (!emp.lastLinkSentAt) return true;
+                    const lastSent = new Date(emp.lastLinkSentAt);
+                    const now = new Date();
+                    const hours =
+                      (now.getTime() - lastSent.getTime()) / (1000 * 60 * 60);
+                    return hours >= 24;
+                  })() && (
+                    <button
+                      onClick={() => onResendActivation(emp.rawId)}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold text-xs border transition-all active:scale-95 ${
+                        !emp.lastLinkSentAt
+                          ? "bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100"
+                          : "bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100"
+                      }`}
+                      title={
+                        !emp.lastLinkSentAt
+                          ? "Send Activation Link"
+                          : "Resend Activation Link"
+                      }
+                    >
+                      {!emp.lastLinkSentAt ? (
+                        <Mail size={14} />
+                      ) : (
+                        <RefreshCw size={14} />
+                      )}
+                      <span className="ml-1">
+                        {!emp.lastLinkSentAt ? "Send Link" : "Resend Link"}
+                      </span>
+                    </button>
+                  )}
                 <button
                   onClick={() => onViewDashboard(emp.rawId)}
                   className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#4318FF]/5 text-[#4318FF] font-bold text-sm hover:bg-[#4318FF] hover:text-white transition-all active:scale-95 shadow-sm"
