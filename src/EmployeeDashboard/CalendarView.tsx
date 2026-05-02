@@ -1088,8 +1088,7 @@ const Calendar = ({
                       </div>
                     )}
 
-                    {!isBlocked &&
-                    (entry?.totalHours || entry?.totalHours === 0) ? (
+                    {(entry?.totalHours || entry?.totalHours === 0) ? (
                       <div className="text-center">
                         <span
                           className={`text-2xl font-medium text-gray-800 leading-none`}
