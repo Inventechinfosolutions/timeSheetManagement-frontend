@@ -104,11 +104,36 @@ const TodayAttendance = ({
   }, [location.pathname, currentUser, currentEmployeeId, isMyRoute]);
 
   const detailsFetched = useRef(false);
-  const attendanceFetchedKey = useRef<string | null>(null);
 
   const [now] = useState(() => new Date());
   const [calendarDate, setCalendarDate] = useState(new Date());
   const selectedYear = calendarDate.getFullYear();
+
+
+  const fetchAttendanceData = useCallback(
+    (date: Date) => {
+      if (!currentEmployeeId || currentEmployeeId === "Admin") return;
+
+      dispatch(
+        fetchMonthlyAttendance({
+          employeeId: currentEmployeeId,
+          month: (date.getMonth() + 1).toString().padStart(2, "0"),
+          year: date.getFullYear().toString(),
+        }),
+      );
+
+      // Trigger auto-update for the month
+      dispatch(
+        autoUpdateTimesheet({
+          employeeId: currentEmployeeId,
+          month: (date.getMonth() + 1).toString().padStart(2, "0"),
+          year: date.getFullYear().toString(),
+          dryRun: true,
+        }),
+      );
+    },
+    [dispatch, currentEmployeeId],
+  );
 
   useEffect(() => {
     if (viewOnly) return;
@@ -211,8 +236,11 @@ const TodayAttendance = ({
           startDate: startDateStr,
         }),
       );
+
+      // Centralized Attendance Fetch for the selected month
+      fetchAttendanceData(calendarDate);
     }
-  }, [dispatch, currentEmployeeId, calendarDate, selectedYear]);
+  }, [dispatch, currentEmployeeId, calendarDate, selectedYear, fetchAttendanceData]);
 
   // Leave Balance Logic
   const isIntern = useMemo(() => {
@@ -224,6 +252,11 @@ const TodayAttendance = ({
       .toUpperCase();
     return designation.includes("intern") || employmentType === "INTERN";
   }, [entity?.designation, entity?.designation_name, entity?.employmentType]);
+
+  // Whether we are viewing the current real-time month
+  const isViewingCurrentMonth =
+    calendarDate.getMonth() === now.getMonth() &&
+    calendarDate.getFullYear() === now.getFullYear();
 
   // 1. Separate "Today's" Data - ALWAYS based on current real-time Month
   const todayStatsEntry = useMemo(() => {
@@ -268,40 +301,6 @@ const TodayAttendance = ({
       isToday: true,
     } as any);
 
-  const fetchAttendanceData = useCallback(
-    (date: Date) => {
-      if (!currentEmployeeId || currentEmployeeId === "Admin") return;
-
-      const fetchKey = `${currentEmployeeId}-${
-        date.getMonth() + 1
-      }-${date.getFullYear()}`;
-      if (attendanceFetchedKey.current === fetchKey) return;
-      attendanceFetchedKey.current = fetchKey;
-
-      dispatch(
-        fetchMonthlyAttendance({
-          employeeId: currentEmployeeId,
-          month: (date.getMonth() + 1).toString().padStart(2, "0"),
-          year: date.getFullYear().toString(),
-        }),
-      );
-
-      // Trigger auto-update for the month
-      dispatch(
-        autoUpdateTimesheet({
-          employeeId: currentEmployeeId,
-          month: (date.getMonth() + 1).toString().padStart(2, "0"),
-          year: date.getFullYear().toString(),
-          dryRun: true,
-        }),
-      );
-    },
-    [dispatch, currentEmployeeId],
-  );
-
-  useEffect(() => {
-    fetchAttendanceData(now);
-  }, [fetchAttendanceData, now]);
 
   const handleDateNavigator = useCallback(
     (timestamp: number) => {
@@ -394,14 +393,19 @@ const TodayAttendance = ({
     }
   };
 
-  if (!todayStatsEntry && loading)
+  // Only block rendering on the very first load (when we have NO records at all).
+  // When viewing a past month, records exist for that month but todayStatsEntry will
+  // be null (no 'today' entry) — we must NOT block rendering in that case.
+  const isInitialLoad = records.length === 0;
+
+  if (isInitialLoad && loading)
     return (
       <div className="flex items-center justify-center p-20">
         <div className="w-12 h-12 border-4 border-[#00A3C4]/20 border-t-[#00A3C4] rounded-full animate-spin"></div>
       </div>
     );
 
-  if (!todayStatsEntry && !loading && records.length === 0)
+  if (isInitialLoad && !loading)
     return (
       <div className="p-8 text-center text-gray-500">Initializing entry...</div>
     );
@@ -450,16 +454,6 @@ const TodayAttendance = ({
                 const prev = new Date(calendarDate);
                 prev.setMonth(prev.getMonth() - 1);
                 setCalendarDate(prev);
-                if (currentEmployeeId && currentEmployeeId !== "Admin") {
-                  dispatch(
-                    autoUpdateTimesheet({
-                      employeeId: currentEmployeeId,
-                      month: (prev.getMonth() + 1).toString().padStart(2, "0"),
-                      year: prev.getFullYear().toString(),
-                      dryRun: true,
-                    }),
-                  );
-                }
               }}
               className="p-1.5 hover:bg-gray-50 rounded-full transition-colors text-[#4318FF] hover:scale-110 active:scale-95"
             >
@@ -478,16 +472,6 @@ const TodayAttendance = ({
                 const next = new Date(calendarDate);
                 next.setMonth(next.getMonth() + 1);
                 setCalendarDate(next);
-                if (currentEmployeeId && currentEmployeeId !== "Admin") {
-                  dispatch(
-                    autoUpdateTimesheet({
-                      employeeId: currentEmployeeId,
-                      month: (next.getMonth() + 1).toString().padStart(2, "0"),
-                      year: next.getFullYear().toString(),
-                      dryRun: true,
-                    }),
-                  );
-                }
               }}
               className="p-1.5 hover:bg-gray-50 rounded-full transition-colors text-[#4318FF] hover:scale-110 active:scale-95"
             >
