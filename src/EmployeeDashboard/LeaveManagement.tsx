@@ -103,6 +103,12 @@ const LeaveManagement = () => {
     (currentUser?.role &&
       currentUser.role.toUpperCase().includes(UserType.MANAGER));
   const isPrivileged = isAdmin || isManager;
+  
+  const isCancellationAllowed = (toDate: string) => {
+    if (isPrivileged) return true;
+    const cutoff = dayjs(toDate).hour(18).minute(30).second(0);
+    return dayjs().isBefore(cutoff);
+  };
 
   const [dateRangeAttendanceRecords, setDateRangeAttendanceRecords] = useState<
     any[]
@@ -1127,6 +1133,11 @@ const LeaveManagement = () => {
         // Mark dates as locked if already handled. Admins bypass deadlines, but NOT locks.
         const processedDates = apiDates.map((d: any) => {
           const dateStr = dayjs(d.date).format("YYYY-MM-DD");
+          
+          // Check for 6:30 PM cutoff for regular users
+          const cutoff = dayjs(d.date).hour(18).minute(30).second(0);
+          const isTimePassed = dayjs().isAfter(cutoff);
+
           if (lockedDates.has(dateStr)) {
             return {
               ...d,
@@ -1134,6 +1145,7 @@ const LeaveManagement = () => {
               reason: "Already Modified or Cancelled",
             };
           }
+
           if (isPrivileged) {
             return {
               ...d,
@@ -1141,6 +1153,15 @@ const LeaveManagement = () => {
               reason: d.reason.includes("Deadline") ? "Admin/Manager Bypass" : d.reason,
             };
           }
+
+          if (isTimePassed) {
+            return {
+              ...d,
+              isCancellable: false,
+              reason: "Deadline Passed (6:30 PM)",
+            };
+          }
+
           return d;
         });
 
@@ -1981,8 +2002,9 @@ const LeaveManagement = () => {
                           >
                             <Eye size={20} />
                           </button>
-                          {item.status === LeaveRequestStatus.PENDING ||
-                          item.status === LeaveRequestStatus.APPROVED ? (
+                          {(item.status === LeaveRequestStatus.PENDING ||
+                            item.status === LeaveRequestStatus.APPROVED) &&
+                          isCancellationAllowed(item.toDate) ? (
                             <button
                               onClick={() => handleCancel(item.id)}
                               className="p-2 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
@@ -2667,8 +2689,7 @@ const LeaveManagement = () => {
             >
               No, Keep It
             </button>
-            {!(entities.find((e: any) => e.id === cancelModal.id)?.status === LeaveRequestStatus.PENDING || 
-               entities.find((e: any) => e.id === cancelModal.id)?.status === LeaveRequestStatus.REQUESTING_FOR_CANCELLATION ||
+            {!(entities.find((e: any) => e.id === cancelModal.id)?.status === LeaveRequestStatus.REQUESTING_FOR_CANCELLATION ||
                entities.find((e: any) => e.id === cancelModal.id)?.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION) && (
               <button
                 key="modify"
@@ -2893,9 +2914,9 @@ const LeaveManagement = () => {
                   modifyFormData.description !==
                   (modifyModal.request.description || "");
 
-                if (!isFirstHalfChanged && !isSecondHalfChanged) {
+                if (!isFirstHalfChanged && !isSecondHalfChanged && !isTitleChanged && !isDescriptionChanged && JSON.stringify(modifyFormData.ccEmails || []) === JSON.stringify(modifyModal.request.ccEmails || [])) {
                   message.warning(
-                    "You must change the First Half or Second Half to submit a modification.",
+                    "No changes detected. Please modify at least one field to submit.",
                   );
                   return;
                 }
@@ -3226,8 +3247,7 @@ const LeaveManagement = () => {
               >
                 Close
               </button>
-              {!(requestToCancel?.status === LeaveRequestStatus.PENDING || 
-                 requestToCancel?.status === LeaveRequestStatus.REQUESTING_FOR_CANCELLATION || 
+              {!(requestToCancel?.status === LeaveRequestStatus.REQUESTING_FOR_CANCELLATION || 
                  requestToCancel?.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION) && (
                 <button
                   key="modify"
@@ -3311,8 +3331,7 @@ const LeaveManagement = () => {
             <div className="space-y-4">
               <p className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-100">
                 Select the dates you wish to cancel.
-                {!(requestToCancel?.status === LeaveRequestStatus.PENDING || 
-                   requestToCancel?.status === LeaveRequestStatus.REQUESTING_FOR_CANCELLATION || 
+                {!(requestToCancel?.status === LeaveRequestStatus.REQUESTING_FOR_CANCELLATION || 
                    requestToCancel?.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION) && (
                   <>
                     <br />
