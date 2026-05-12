@@ -122,15 +122,23 @@ const TodayAttendance = ({
         }),
       );
 
-      // Trigger auto-update for the month
-      dispatch(
-        autoUpdateTimesheet({
-          employeeId: currentEmployeeId,
-          month: (date.getMonth() + 1).toString().padStart(2, "0"),
-          year: date.getFullYear().toString(),
-          dryRun: true,
-        }),
-      );
+      // Trigger auto-update dry-run only for current or past months (not future)
+      const today = new Date();
+      const isFutureMonth =
+        date.getFullYear() > today.getFullYear() ||
+        (date.getFullYear() === today.getFullYear() &&
+          date.getMonth() > today.getMonth());
+
+      if (!isFutureMonth) {
+        dispatch(
+          autoUpdateTimesheet({
+            employeeId: currentEmployeeId,
+            month: (date.getMonth() + 1).toString().padStart(2, "0"),
+            year: date.getFullYear().toString(),
+            dryRun: true,
+          }),
+        );
+      }
     },
     [dispatch, currentEmployeeId],
   );
@@ -391,21 +399,13 @@ const TodayAttendance = ({
     }
   };
 
-  // Only block rendering on the very first load (when we have NO records at all).
-  // When viewing a past month, records exist for that month but todayStatsEntry will
-  // be null (no 'today' entry) — we must NOT block rendering in that case.
-  const isInitialLoad = records.length === 0;
-
-  if (isInitialLoad && loading)
+  // Only block rendering while actively loading with no data (genuine first fetch).
+  // Do NOT block if loading is done — even if records are empty (e.g. future month).
+  if (records.length === 0 && loading)
     return (
       <div className="flex items-center justify-center p-20">
         <div className="w-12 h-12 border-4 border-[#00A3C4]/20 border-t-[#00A3C4] rounded-full animate-spin"></div>
       </div>
-    );
-
-  if (isInitialLoad && !loading)
-    return (
-      <div className="p-8 text-center text-gray-500">Initializing entry...</div>
     );
 
   return (

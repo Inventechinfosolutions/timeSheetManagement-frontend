@@ -380,19 +380,22 @@ const MyTimesheet = ({
     dispatch(fetchHolidays());
   }, [dispatch]);
 
-  // Check for eligible auto-updates when month/employee changes (Current Month Only)
+  // Check for eligible auto-updates when month/employee changes (current or past months)
   // Ref to track the last checked employee/month/records-length combination
   const lastCheckRef = useRef<string>("");
+
+  // Helper: is the viewed month a past or current month (not future)?
+  const isViewedMonthEligible =
+    now.getFullYear() < today.getFullYear() ||
+    (now.getFullYear() === today.getFullYear() &&
+      now.getMonth() <= today.getMonth());
 
   useEffect(() => {
     if (!currentEmployeeId || (isAdmin && currentEmployeeId === "Admin"))
       return;
 
-    // Only check if it's the current month
-    if (
-      now.getMonth() === today.getMonth() &&
-      now.getFullYear() === today.getFullYear()
-    ) {
+    // Only check for current or past months — not future months
+    if (isViewedMonthEligible) {
       // Create a unique key for the current state. Include autoUpdateTrigger to bypass
       // duplicate checks when a manual refresh is explicitly requested (e.g. after save).
       const checkKey = `${currentEmployeeId}-${now.getMonth()}-${now.getFullYear()}-${records.length}-${autoUpdateTrigger}`;
@@ -424,7 +427,7 @@ const MyTimesheet = ({
 
       checkAutoUpdate();
     } else {
-      // Reset if not current month to ensure it re-checks when returning
+      // Reset for future months
       setAutoUpdateCount(0);
       lastCheckRef.current = "";
     }
@@ -1731,12 +1734,13 @@ const MyTimesheet = ({
   const paddingDays = firstDayOfMonth;
 
   const handleAutoUpdateClick = () => {
-    // Only allow for current month
+    // Block future months (past and current months are allowed)
     if (
-      now.getMonth() !== today.getMonth() ||
-      now.getFullYear() !== today.getFullYear()
+      now.getFullYear() > today.getFullYear() ||
+      (now.getFullYear() === today.getFullYear() &&
+        now.getMonth() > today.getMonth())
     ) {
-      message.error("Auto-update is only available for the current month.");
+      message.error("Auto-update is not available for future months.");
       return;
     }
     setShowAutoUpdateModal(true);
@@ -1827,10 +1831,7 @@ const MyTimesheet = ({
         isHighlighted={isHighlighted}
         containerClassName={containerClassName}
         onAutoUpdate={
-          now.getMonth() === today.getMonth() &&
-          now.getFullYear() === today.getFullYear()
-            ? handleAutoUpdateClick
-            : undefined
+          isViewedMonthEligible ? handleAutoUpdateClick : undefined
         }
         autoUpdateCount={autoUpdateCount}
         blockers={blockers}
@@ -1979,8 +1980,7 @@ const MyTimesheet = ({
             {(!effectiveReadOnly ||
               (isAdmin && !isAdminView) ||
               (isManager && !isManagerView)) &&
-              now.getMonth() === today.getMonth() &&
-              now.getFullYear() === today.getFullYear() && (
+              isViewedMonthEligible && (
                 <button
                   onClick={handleAutoUpdateClick}
                   disabled={autoUpdateCount === 0 || isCheckingAutoUpdate}
