@@ -2066,7 +2066,7 @@ const MyTimesheet = ({
               border: "border-[#4318FF]/20",
             },
             {
-              label: "Pending Update",
+              label: AttendanceStatus.NOT_UPDATED,
               color: "bg-[#F8FAFC]",
               border: "border-[#64748B]",
             },
@@ -2079,11 +2079,6 @@ const MyTimesheet = ({
               label: AttendanceStatus.HOLIDAY,
               color: "bg-[#E6F7FF]",
               border: "border-[#00A3C4]",
-            },
-            {
-              label: AttendanceStatus.PENDING,
-              color: "bg-[#F8FAFC]",
-              border: "border-[#64748B]",
             },
             {
               label: "Upcoming",

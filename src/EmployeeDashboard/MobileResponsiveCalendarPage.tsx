@@ -464,7 +464,7 @@ const MobileResponsiveCalendarPage = ({
                 className: "bg-gray-200 border border-gray-400",
               },
               {
-                label: "Pending Update",
+                label: AttendanceStatus.NOT_UPDATED,
                 className: "bg-white border border-gray-300",
                 icon: true,
               },
