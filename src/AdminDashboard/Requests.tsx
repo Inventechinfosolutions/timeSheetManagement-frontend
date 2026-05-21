@@ -848,10 +848,16 @@ const Requests = () => {
                 LeaveRequestStatus.PENDING,
                 LeaveRequestStatus.APPROVED,
                 LeaveRequestStatus.REJECTED,
-                LeaveRequestStatus.REQUEST_MODIFIED,
+                LeaveRequestStatus.REQUESTING_FOR_CANCELLATION,
                 LeaveRequestStatus.CANCELLATION_APPROVED,
-                LeaveRequestStatus.CANCELLED,
+                LeaveRequestStatus.CANCELLATION_REJECTED,
+                LeaveRequestStatus.REQUESTING_FOR_MODIFICATION,
+                LeaveRequestStatus.REQUEST_MODIFIED,
+                LeaveRequestStatus.MODIFICATION_APPROVED,
+                LeaveRequestStatus.MODIFICATION_CANCELLED,
+                LeaveRequestStatus.MODIFICATION_REJECTED,
                 LeaveRequestStatus.CANCELLATION_REVERTED,
+                LeaveRequestStatus.CANCELLED,
               ].map((status) => (
                 <Select.Option key={status} value={status}>
                   {status === "All" ? "All Status" : status}

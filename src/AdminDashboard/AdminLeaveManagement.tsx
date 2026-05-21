@@ -195,6 +195,13 @@ const AdminLeaveManagement = () => {
   const [ccEmails, setCcEmails] = useState<string[]>([]);
   const [ccEmailInput, setCcEmailInput] = useState("");
   const [ccEmailError, setCcEmailError] = useState("");
+  const [modifyErrors, setModifyErrors] = useState<{
+    title: string;
+    description: string;
+  }>({
+    title: "",
+    description: "",
+  });
   const [undoModal, setUndoModal] = useState<{
     isOpen: boolean;
     request: any;
@@ -1878,10 +1885,16 @@ const AdminLeaveManagement = () => {
                     LeaveRequestStatus.PENDING,
                     LeaveRequestStatus.APPROVED,
                     LeaveRequestStatus.REJECTED,
-                    LeaveRequestStatus.REQUEST_MODIFIED,
+                    LeaveRequestStatus.REQUESTING_FOR_CANCELLATION,
                     LeaveRequestStatus.CANCELLATION_APPROVED,
-                    LeaveRequestStatus.CANCELLED,
+                    LeaveRequestStatus.CANCELLATION_REJECTED,
+                    LeaveRequestStatus.REQUESTING_FOR_MODIFICATION,
+                    LeaveRequestStatus.REQUEST_MODIFIED,
+                    LeaveRequestStatus.MODIFICATION_APPROVED,
+                    LeaveRequestStatus.MODIFICATION_CANCELLED,
+                    LeaveRequestStatus.MODIFICATION_REJECTED,
                     LeaveRequestStatus.CANCELLATION_REVERTED,
+                    LeaveRequestStatus.CANCELLED,
                   ].map((status) => (
                     <Select.Option key={status} value={status}>
                       {status === "All" ? "All Status" : status}
@@ -3219,7 +3232,10 @@ const AdminLeaveManagement = () => {
           <div className="text-xl font-bold text-[#2B3674]">Modify Request</div>
         }
         open={modifyModal.isOpen}
-        onCancel={() => setModifyModal({ isOpen: false, request: null })}
+        onCancel={() => {
+          setModifyModal({ isOpen: false, request: null });
+          setModifyErrors({ title: "", description: "" });
+        }}
         footer={
           <div className="flex justify-end gap-3 pt-4">
             <button
@@ -3234,6 +3250,24 @@ const AdminLeaveManagement = () => {
               key="submit"
               onClick={async () => {
                 if (!modifyModal.request) return;
+
+                // Validation: Check if title and description are not empty
+                const newErrors = { title: "", description: "" };
+                let isValid = true;
+
+                if (!modifyFormData.title.trim()) {
+                  newErrors.title = "Subject is required";
+                  isValid = false;
+                }
+                if (!modifyFormData.description.trim()) {
+                  newErrors.description = "Description is required";
+                  isValid = false;
+                }
+
+                if (!isValid) {
+                  setModifyErrors(newErrors);
+                  return;
+                }
 
                 // Validation: Check if any change was made
                 const originalFirstHalf =
@@ -3356,12 +3390,18 @@ const AdminLeaveManagement = () => {
                 <input
                   type="text"
                   value={modifyFormData.title}
-                  onChange={(e) =>
-                    setModifyFormData({ ...modifyFormData, title: e.target.value })
-                  }
-                  className="w-full px-5 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400"
+                  onChange={(e) => {
+                    setModifyFormData({ ...modifyFormData, title: e.target.value });
+                    setModifyErrors({ ...modifyErrors, title: "" });
+                  }}
+                  className={`w-full px-5 py-3 rounded-xl bg-white border text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400 ${
+                    modifyErrors.title ? "border-red-500" : "border-gray-200"
+                  }`}
                   placeholder="e.g. Annual Vacation"
                 />
+                {modifyErrors.title && (
+                  <p className="text-red-500 text-xs mt-1 ml-1">{modifyErrors.title}</p>
+                )}
               </div>
             </div>
           </div>
@@ -3403,16 +3443,22 @@ const AdminLeaveManagement = () => {
             </label>
             <textarea
               value={modifyFormData.description}
-              onChange={(e) =>
+              onChange={(e) => {
                 setModifyFormData({
                   ...modifyFormData,
                   description: e.target.value,
-                })
-              }
+                });
+                setModifyErrors({ ...modifyErrors, description: "" });
+              }}
               rows={3}
-              className="w-full px-5 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-medium text-[#2B3674] placeholder:text-gray-400 resize-none"
+              className={`w-full px-5 py-3 rounded-xl bg-white border text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-medium text-[#2B3674] placeholder:text-gray-400 resize-none ${
+                modifyErrors.description ? "border-red-500" : "border-gray-200"
+              }`}
               placeholder="Please provide details about your request..."
             />
+            {modifyErrors.description && (
+              <p className="text-red-500 text-xs mt-1 ml-1">{modifyErrors.description}</p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
