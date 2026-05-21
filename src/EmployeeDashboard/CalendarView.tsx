@@ -623,7 +623,7 @@ const Calendar = ({
                 text: "text-blue-700",
               },
               {
-                label: "Pending Update",
+                label: AttendanceStatus.NOT_UPDATED,
                 color: "bg-white",
                 border: "border-gray-200",
                 text: "text-gray-500",
