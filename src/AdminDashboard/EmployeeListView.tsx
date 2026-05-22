@@ -66,6 +66,9 @@ const EmployeeListView = () => {
   const [selectedDepartment, setSelectedDepartment] = useState("All");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [selectedStatus, setSelectedStatus] = useState("All");
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
+  const statusDropdownRef = useRef<HTMLDivElement>(null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -142,6 +145,12 @@ const EmployeeListView = () => {
       ) {
         setIsDropdownOpen(false);
       }
+      if (
+        statusDropdownRef.current &&
+        !statusDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsStatusDropdownOpen(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -166,6 +175,7 @@ const EmployeeListView = () => {
         department:
           selectedDepartment === "All" ? undefined : selectedDepartment,
         includeSelf: !isAdmin,
+        userStatus: selectedStatus === "All" ? undefined : selectedStatus,
       }),
     );
   }, [
@@ -174,6 +184,7 @@ const EmployeeListView = () => {
     debouncedSearchTerm,
     sortConfig,
     selectedDepartment,
+    selectedStatus,
   ]);
 
   const handleSort = (key: string) => {
@@ -365,6 +376,7 @@ const EmployeeListView = () => {
               search: debouncedSearchTerm,
               department:
                 selectedDepartment === "All" ? undefined : selectedDepartment,
+              userStatus: selectedStatus === "All" ? undefined : selectedStatus,
             }),
           );
         }, 2000);
@@ -442,6 +454,7 @@ const EmployeeListView = () => {
           search: debouncedSearchTerm,
           department:
             selectedDepartment === "All" ? undefined : selectedDepartment,
+          userStatus: selectedStatus === "All" ? undefined : selectedStatus,
         }),
       );
     } catch (error: any) {
@@ -495,6 +508,7 @@ const EmployeeListView = () => {
             search: debouncedSearchTerm,
             department:
               selectedDepartment === "All" ? undefined : selectedDepartment,
+            userStatus: selectedStatus === "All" ? undefined : selectedStatus,
           }),
         );
       } else {
@@ -587,6 +601,53 @@ ${
               </div>
             )}
 
+            {/* Modern Status Dropdown */}
+            {canEdit && (
+              <div className="relative" ref={statusDropdownRef}>
+                <button
+                  onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
+                  className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-2 px-5 py-2.5 bg-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] text-[#2B3674] font-bold text-sm hover:bg-gray-50 transition-all border border-transparent focus:border-[#4318FF]/20"
+                >
+                  <div className="flex items-center gap-2">
+                    <Filter size={16} className="text-[#4318FF]" />
+                    <span>{selectedStatus === "All" ? "All Statuses" : selectedStatus.charAt(0) + selectedStatus.slice(1).toLowerCase()}</span>
+                  </div>
+                  <ChevronDown
+                    size={16}
+                    className={`text-[#A3AED0] transition-transform duration-300 ${isStatusDropdownOpen ? "rotate-180" : ""}`}
+                  />
+                </button>
+
+                {isStatusDropdownOpen && (
+                  <div className="absolute top-full left-0 mt-2 w-full sm:w-48 bg-white/80 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-white/20 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="px-3 py-1 mb-1">
+                      <span className="text-[10px] font-black text-[#A3AED0] uppercase tracking-widest pl-2">
+                        Status
+                      </span>
+                    </div>
+                    {["All", "DRAFT", "ACTIVE", "INACTIVE"].map((status) => (
+                      <button
+                        key={status}
+                        onClick={() => {
+                          setSelectedStatus(status);
+                          setIsStatusDropdownOpen(false);
+                          setCurrentPage(1);
+                        }}
+                        className={`w-full text-left px-5 py-2 text-sm font-semibold transition-colors
+${
+  selectedStatus === status
+    ? "text-[#4318FF] bg-[#4318FF]/5"
+    : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
+}`}
+                      >
+                        {status === "All" ? "All" : status.charAt(0) + status.slice(1).toLowerCase()}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Search Box */}
             <div className="flex items-center bg-white rounded-full px-5 py-2.5 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] min-w-0 sm:min-w-[250px] flex-1 border border-transparent focus-within:border-[#4318FF]/20 transition-all">
               <Search size={18} className="text-[#A3AED0] mr-2" />
@@ -637,12 +698,13 @@ ${
             )}
 
             {/* Clear Filters Button */}
-            {(searchTerm || selectedDepartment !== "All") && (
+            {(searchTerm || selectedDepartment !== "All" || selectedStatus !== "All") && (
               <button
                 onClick={() => {
                   setSearchTerm("");
                   setDebouncedSearchTerm("");
                   setSelectedDepartment("All");
+                  setSelectedStatus("All");
                   setCurrentPage(1);
                   setSortConfig({ key: null, direction: "asc" });
                 }}

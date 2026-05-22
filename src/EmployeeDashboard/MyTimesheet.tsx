@@ -933,12 +933,26 @@ const MyTimesheet = ({
       const currentTotal = entry.totalHours;
       const originalTotal = baseEntries[idx]?.totalHours;
 
-      if (
-        currentTotal !== originalTotal ||
-        entry.status !== baseEntries[idx]?.status ||
-        entry.firstHalf !== baseEntries[idx]?.firstHalf ||
-        entry.secondHalf !== baseEntries[idx]?.secondHalf
-      ) {
+      const normalizeTotal = (val: any) => (val === undefined || val === null || val === "") ? null : Number(val);
+      const normalizeStatus = (val: any) => {
+        if (val === undefined || val === null || val === "") return null;
+        const lower = String(val).toLowerCase().trim();
+        if (
+          lower === "not updated" ||
+          lower === "upcoming" ||
+          lower === "weekend" ||
+          lower === "holiday" ||
+          lower === "pending"
+        ) return null;
+        return lower;
+      };
+
+      const isTotalChanged = normalizeTotal(currentTotal) !== normalizeTotal(originalTotal);
+      const isStatusChanged = normalizeStatus(entry.status) !== normalizeStatus(baseEntries[idx]?.status);
+      const isFirstHalfChanged = normalizeStatus(entry.firstHalf) !== normalizeStatus(baseEntries[idx]?.firstHalf);
+      const isSecondHalfChanged = normalizeStatus(entry.secondHalf) !== normalizeStatus(baseEntries[idx]?.secondHalf);
+
+      if (isTotalChanged || isStatusChanged || isFirstHalfChanged || isSecondHalfChanged) {
         const d = entry.fullDate;
         const dayOfWeek = d.getDay(); // 0 = Sunday, 6 = Saturday
 
