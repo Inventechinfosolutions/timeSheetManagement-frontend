@@ -55,7 +55,7 @@ const TimesheetActivation: React.FC = () => {
     <div className="min-h-screen w-full flex items-center justify-center p-6 bg-[#f8f9fc] relative overflow-hidden font-sans">
       <WatermarkBackground />
 
-      <div className="w-full max-w-[480px] bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-50 p-16 text-center relative z-10 animate-in fade-in zoom-in-95 duration-700">
+      <div className="w-full max-w-[540px] bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-50 py-10 px-8 sm:px-12 text-center relative z-10 animate-in fade-in zoom-in-95 duration-700">
         {activationLoading ? (
           <div className="py-10">
             <div className="w-20 h-20 mx-auto mb-8 flex items-center justify-center bg-blue-50 rounded-full">

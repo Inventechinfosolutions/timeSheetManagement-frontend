@@ -29,9 +29,9 @@ const StartingTimesheetResetPassword: React.FC = () => {
   const isForgotMode = !!token;
 
   // State from Public Slice
-  const { 
-    resetPasswordLoading, 
-    resetPasswordError, 
+  const {
+    resetPasswordLoading,
+    resetPasswordError,
     resetPasswordResponse,
     tokenVerified,
     tokenVerificationLoading,
@@ -155,13 +155,13 @@ const StartingTimesheetResetPassword: React.FC = () => {
 
   const isLoading = isForgotMode ? resetPasswordLoading : userLoading;
   const isVerifying = isForgotMode && tokenVerificationLoading;
-  
+
   // Determine error message - prioritize token verification error
-  const errorMessage = 
-    (isForgotMode && tokenVerificationError) 
-      ? tokenVerificationError 
+  const errorMessage =
+    (isForgotMode && tokenVerificationError)
+      ? tokenVerificationError
       : localError || (isForgotMode ? resetPasswordError : userError);
-  
+
   // Check if form should be disabled (token expired or invalid)
   const isTokenInvalid = isForgotMode && !tokenVerificationLoading && !tokenVerified && !!tokenVerificationError;
 
@@ -173,7 +173,7 @@ const StartingTimesheetResetPassword: React.FC = () => {
       <div className="flex flex-1">
         {/* Main Content Area */}
         <main className="flex-1 p-4 md:p-12 lg:p-20 flex items-start justify-center">
-          <div className="w-full max-w-lg">
+          <div className="w-full max-w-[540px]">
             {success ? (
               <div className="bg-white rounded-[2rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.06)] p-12 text-center animate-in zoom-in-95 duration-500">
                 <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-8 border-4 border-white shadow-sm">
@@ -285,15 +285,14 @@ const StartingTimesheetResetPassword: React.FC = () => {
                     type="submit"
                     disabled={isLoading || isVerifying || isTokenInvalid || !password || !confirmPassword}
                     className={`w-full font-black text-sm tracking-widest py-5 rounded-2xl transition-all shadow-lg active:scale-[0.98] flex items-center justify-center gap-2 uppercase overflow-hidden relative group/btn
-                                            ${
-                                              isLoading ||
-                                              isVerifying ||
-                                              isTokenInvalid ||
-                                              !password ||
-                                              !confirmPassword
-                                                ? "bg-gray-100 text-[#A3AED0] cursor-not-allowed opacity-80 shadow-none"
-                                                : "bg-[#00a3c4] text-white hover:bg-[#0081dd] shadow-[#00a3c4]/20 hover:shadow-[#00a3c4]/40 cursor-pointer"
-                                            }
+                                            ${isLoading ||
+                        isVerifying ||
+                        isTokenInvalid ||
+                        !password ||
+                        !confirmPassword
+                        ? "bg-gray-100 text-[#A3AED0] cursor-not-allowed opacity-80 shadow-none"
+                        : "bg-[#00a3c4] text-white hover:bg-[#0081dd] shadow-[#00a3c4]/20 hover:shadow-[#00a3c4]/40 cursor-pointer"
+                      }
                                         `}
                   >
                     <div className="absolute inset-0 bg-white/10 opacity-0 group-hover/btn:opacity-100 transition-opacity"></div>
@@ -319,13 +318,12 @@ const StartingTimesheetResetPassword: React.FC = () => {
                       {requirements.map((req, index) => (
                         <li
                           key={index}
-                          className={`text-[12px] font-bold flex items-start gap-2 transition-all ${
-                            password
-                              ? req.met
-                                ? "text-green-600"
-                                : "text-red-500"
-                              : "text-gray-400"
-                          }`}
+                          className={`text-[12px] font-bold flex items-start gap-2 transition-all ${password
+                            ? req.met
+                              ? "text-green-600"
+                              : "text-red-500"
+                            : "text-gray-400"
+                            }`}
                         >
                           <span className="mt-0.5 opacity-80">
                             {index + 1}.
@@ -351,7 +349,14 @@ const StartingTimesheetResetPassword: React.FC = () => {
           className="h-4 grayscale opacity-50"
         />
         Karnataka State Electronics Development Corporation Limited | Designed
-        and Developed by <span>Inventech Info Solutions</span>
+        and Developed by  <a
+          href="https://inventechinfo.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-500 hover:underline"
+        >
+          Inventech Info SolutionsSDFSADASD
+        </a>
       </footer>
     </div>
   );

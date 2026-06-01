@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Mail, ArrowLeft, Loader2, CheckCircle, User } from "lucide-react";
 import { message } from "antd";
 import { unwrapResult } from "@reduxjs/toolkit";
-import inventLogo from "../assets/invent-logo.svg";
+// import inventLogo from "../assets/invent-logo.svg";
+import worksphereLogo from "../assets/worksphere_white.svg";
 import { useAppSelector, useAppDispatch } from "../hooks";
 import {
   forgotPasswordOtp,
@@ -101,7 +102,7 @@ const ForgotPassword: React.FC = () => {
       <div className="absolute bottom-[-10%] right-[-5%] w-96 h-96 bg-white rounded-full mix-blend-overlay filter blur-3xl opacity-40"></div>
 
       {/* Main Card */}
-      <div className="w-full max-w-[480px] bg-white rounded-[24px] shadow-2xl p-8 sm:p-12 relative z-10 animate-in fade-in zoom-in-95 duration-500 border border-white/40">
+      <div className="w-full max-w-[540px] bg-white rounded-[24px] shadow-2xl p-6 sm:p-10 relative z-10 animate-in fade-in zoom-in-95 duration-500 border border-white/40">
         {/* Back Button */}
         {step !== "SUCCESS" && (
           <button
@@ -120,7 +121,7 @@ const ForgotPassword: React.FC = () => {
 
         {/* LOGO Header */}
         <div className="text-center mb-8 mt-4">
-          <img src={inventLogo} alt="Logo" className="h-12 mx-auto mb-6" />
+          <img src={worksphereLogo} alt="Logo" className="h-12 mx-auto mb-6" />
 
           {step === "ID" && (
             <>

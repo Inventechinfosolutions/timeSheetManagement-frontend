@@ -267,15 +267,16 @@ const AttendancePieChart = ({ data, currentMonth }: Props) => {
               data={chartData}
               cx="50%"
               cy="50%"
-              innerRadius="60%"
-              outerRadius="90%"
-              paddingAngle={5}
+              innerRadius={0}
+              outerRadius="70%"
+              paddingAngle={1}
               dataKey="value"
               onMouseEnter={(_: any, index: number) => setActiveIndex(index)}
               onMouseLeave={() => setActiveIndex(null)}
               onClick={onPieClick}
               stroke="none"
               style={{ cursor: "pointer", outline: "none" }}
+              label={({ name, value }) => `${name}: ${value}`}
             >
               {chartData.map((entry, index) => {
                 let fillUrl = "url(#gradWeekend)";
@@ -298,6 +299,10 @@ const AttendancePieChart = ({ data, currentMonth }: Props) => {
               height={60}
               iconType="circle"
               wrapperStyle={{ fontSize: "12px", paddingTop: "20px" }}
+              formatter={(value, entry: any) => {
+                const count = entry?.payload?.value ?? 0;
+                return `${value}: ${count}`;
+              }}
             />
           </PieChart>
         </ResponsiveContainer>

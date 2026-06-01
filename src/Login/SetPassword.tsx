@@ -90,7 +90,7 @@ const SetPassword: React.FC = () => {
   if (success) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center p-4 bg-gradient-to-br from-green-50 to-emerald-50">
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 text-center">
+        <div className="w-full max-w-[540px] bg-white rounded-2xl shadow-xl p-8 text-center">
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <CheckCircle className="w-12 h-12 text-green-500" />
           </div>
@@ -104,7 +104,7 @@ const SetPassword: React.FC = () => {
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-4 bg-gradient-to-br from-gray-50 to-blue-50">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+      <div className="w-full max-w-[540px] bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
         {/* Logo */}
         <div className="w-16 h-16 bg-gray-50 rounded-xl p-2 mx-auto mb-6 border border-gray-100 shadow-sm flex items-center justify-center">
           <img

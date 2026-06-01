@@ -152,7 +152,7 @@ const TimesheetResetPassword: React.FC = () => {
     return (
       <div className="min-h-screen w-full flex items-center justify-center p-4 bg-[#EFEBF5] relative overflow-hidden font-sans">
         <div className="absolute top-[-5%] left-[5%] w-48 h-48 bg-[#585CE5] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
-        <div className="bg-white rounded-[2rem] shadow-2xl p-12 text-center max-w-md w-full animate-in zoom-in-95 duration-500 relative z-10 border border-white/50">
+        <div className="bg-white rounded-[2rem] shadow-2xl p-12 text-center max-w-[540px] w-full animate-in zoom-in-95 duration-500 relative z-10 border border-white/50">
           <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-green-100/50 shadow-sm">
             <CheckCircle className="w-12 h-12 text-green-500" />
           </div>
@@ -183,7 +183,7 @@ const TimesheetResetPassword: React.FC = () => {
       <div className="absolute bottom-[-10%] right-[-5%] w-96 h-96 bg-white rounded-full mix-blend-overlay filter blur-3xl opacity-40"></div>
 
       {/* Main Single Card - Removed Right Side Visual */}
-      <div className="w-full max-w-md bg-white rounded-[18px] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-500 relative z-10 p-8 md:p-12">
+      <div className="w-full max-w-[540px] bg-white rounded-[18px] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-500 relative z-10 p-8 md:p-12">
         <div className="mb-8 text-center">
           <img
             src={inventLogo}
