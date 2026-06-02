@@ -235,7 +235,7 @@ const StartingTimesheetResetPassword: React.FC = () => {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="New Password"
-                        className="w-full px-6 py-4 bg-white border-2 border-gray-100 rounded-2xl focus:border-[#01B574] focus:ring-0 transition-all outline-none text-[#2B3674] font-medium pr-14 group-hover/field:border-gray-200"
+                        className="w-full px-6 py-4 bg-white border-2 border-gray-100 rounded-2xl focus:border-[#006CF1] focus:ring-0 transition-all outline-none text-[#2B3674] font-medium pr-14 group-hover/field:border-gray-200"
                         required
                       />
                       <button
@@ -262,7 +262,7 @@ const StartingTimesheetResetPassword: React.FC = () => {
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         placeholder="Confirm New Password"
-                        className="w-full px-6 py-4 bg-white border-2 border-gray-100 rounded-2xl focus:border-[#01B574] focus:ring-0 transition-all outline-none text-[#2B3674] font-medium pr-14 group-hover/field:border-gray-200"
+                        className="w-full px-6 py-4 bg-white border-2 border-gray-100 rounded-2xl focus:border-[#006CF1] focus:ring-0 transition-all outline-none text-[#2B3674] font-medium pr-14 group-hover/field:border-gray-200"
                         required
                       />
                       <button
@@ -291,7 +291,7 @@ const StartingTimesheetResetPassword: React.FC = () => {
                         !password ||
                         !confirmPassword
                         ? "bg-gray-100 text-[#A3AED0] cursor-not-allowed opacity-80 shadow-none"
-                        : "bg-[#00a3c4] text-white hover:bg-[#0081dd] shadow-[#00a3c4]/20 hover:shadow-[#00a3c4]/40 cursor-pointer"
+                        : "bg-[#006CF1] text-white hover:bg-[#0051B8] shadow-[#006CF1]/20 hover:shadow-[#006CF1]/40 cursor-pointer"
                       }
                                         `}
                   >

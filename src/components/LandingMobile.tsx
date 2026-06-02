@@ -59,7 +59,7 @@ const LandingMobile = ({
             <input
               type="text"
               placeholder="Username"
-              className="w-full rounded-2xl border-none bg-[#F0F2F5] py-4 pl-12 pr-4 text-sm font-semibold text-[#4A5568] placeholder-gray-400 transition-all duration-200 focus:bg-[#E8EAED] focus:ring-2 focus:ring-[#6C63FF]/20"
+              className="w-full rounded-2xl border-none bg-[#F0F2F5] py-4 pl-12 pr-4 text-sm font-semibold text-[#4A5568] placeholder-gray-400 transition-all duration-200 focus:bg-[#E8EAED] focus:ring-2 focus:ring-[#006CF1]/20"
               value={loginId}
               onChange={(e) => setLoginId(e.target.value)}
               required
@@ -74,7 +74,7 @@ const LandingMobile = ({
             <input
               type={showPassword ? "text" : "password"}
               placeholder="Password"
-              className="w-full rounded-2xl border-none bg-[#F0F2F5] py-4 pl-12 pr-12 text-sm font-semibold text-[#4A5568] placeholder-gray-400 transition-all duration-200 focus:bg-[#E8EAED] focus:ring-2 focus:ring-[#6C63FF]/20"
+              className="w-full rounded-2xl border-none bg-[#F0F2F5] py-4 pl-12 pr-12 text-sm font-semibold text-[#4A5568] placeholder-gray-400 transition-all duration-200 focus:bg-[#E8EAED] focus:ring-2 focus:ring-[#006CF1]/20"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -96,7 +96,7 @@ const LandingMobile = ({
             <button
               type="button"
               onClick={() => navigate("/forgot-password")}
-              className="cursor-pointer text-xs font-bold text-[#A0AEC0] transition-colors hover:text-[#6C63FF] mt-1"
+              className="cursor-pointer text-xs font-bold text-[#A0AEC0] transition-colors hover:text-[#006CF1] mt-1"
             >
               Forgot Password?
             </button>
@@ -106,7 +106,7 @@ const LandingMobile = ({
         <button
           type="submit"
           disabled={isSubmitting || loading || !loginId || !password}
-          className="mt-4 w-full rounded-xl bg-[#6C63FF] py-4 text-sm font-bold tracking-wide text-white shadow-[0_10px_20px_-10px_rgba(108,99,255,0.5)] transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45 cursor-pointer animate-fade-in-up animation-delay-600"
+          className="mt-4 w-full rounded-xl bg-[#006CF1] py-4 text-sm font-bold tracking-wide text-white shadow-[0_10px_20px_-10px_rgba(0,108,241,0.5)] transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45 cursor-pointer animate-fade-in-up animation-delay-600"
         >
           {isSubmitting || loading ? "Authenticating..." : "Login Now"}
         </button>

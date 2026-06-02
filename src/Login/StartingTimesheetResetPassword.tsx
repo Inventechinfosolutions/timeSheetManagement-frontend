@@ -150,8 +150,8 @@ const TimesheetResetPassword: React.FC = () => {
 
   if (success) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center p-4 bg-[#EFEBF5] relative overflow-hidden font-sans">
-        <div className="absolute top-[-5%] left-[5%] w-48 h-48 bg-[#585CE5] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
+      <div className="min-h-screen w-full flex items-center justify-center p-4 bg-[#F3F4F6] relative overflow-hidden font-sans">
+        <div className="absolute top-[-5%] left-[5%] w-48 h-48 bg-[#006CF1] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
         <div className="bg-white rounded-[2rem] shadow-2xl p-12 text-center max-w-[540px] w-full animate-in zoom-in-95 duration-500 relative z-10 border border-white/50">
           <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-green-100/50 shadow-sm">
             <CheckCircle className="w-12 h-12 text-green-500" />
@@ -164,7 +164,7 @@ const TimesheetResetPassword: React.FC = () => {
           </p>
           <button
             onClick={() => navigate("/landing")}
-            className="w-full bg-[#6C63FF] hover:bg-[#5a52d5] text-white px-8 py-4 rounded-xl font-bold transition-all shadow-lg active:scale-95 mb-4"
+            className="w-full bg-[#006CF1] hover:bg-[#0051B8] text-white px-8 py-4 rounded-xl font-bold transition-all shadow-lg active:scale-95 mb-4"
           >
             Go to Login
           </button>
@@ -177,9 +177,9 @@ const TimesheetResetPassword: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-[#EFEBF5] relative overflow-y-auto overflow-x-hidden font-sans">
+    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-[#F3F4F6] relative overflow-y-auto overflow-x-hidden font-sans">
       {/* Background Shapes */}
-      <div className="absolute top-[-5%] left-[5%] w-48 h-48 bg-[#585CE5] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
+      <div className="absolute top-[-5%] left-[5%] w-48 h-48 bg-[#006CF1] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
       <div className="absolute bottom-[-10%] right-[-5%] w-96 h-96 bg-white rounded-full mix-blend-overlay filter blur-3xl opacity-40"></div>
 
       {/* Main Single Card - Removed Right Side Visual */}
@@ -221,11 +221,11 @@ const TimesheetResetPassword: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter new password"
-                  className="w-full pl-12 pr-12 py-4 bg-[#F0F2F5] border-2 border-transparent focus:border-[#6C63FF]/30 rounded-2xl text-[#4A5568] placeholder-gray-400 text-sm focus:bg-[#E8EAED] transition-all duration-200 font-semibold outline-none"
+                  className="w-full pl-12 pr-12 py-4 bg-[#F0F2F5] border-2 border-transparent focus:border-[#006CF1]/30 rounded-2xl text-[#4A5568] placeholder-gray-400 text-sm focus:bg-[#E8EAED] transition-all duration-200 font-semibold outline-none"
                   required
                 />
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                  <Lock className="text-gray-400 h-5 w-5 group-focus-within:text-[#6C63FF] transition-colors" />
+                  <Lock className="text-gray-400 h-5 w-5 group-focus-within:text-[#006CF1] transition-colors" />
                 </div>
                 <button
                   type="button"
@@ -248,11 +248,11 @@ const TimesheetResetPassword: React.FC = () => {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Re-enter password"
-                  className="w-full pl-12 pr-12 py-4 bg-[#F0F2F5] border-2 border-transparent focus:border-[#6C63FF]/30 rounded-2xl text-[#4A5568] placeholder-gray-400 text-sm focus:bg-[#E8EAED] transition-all duration-200 font-semibold outline-none"
+                  className="w-full pl-12 pr-12 py-4 bg-[#F0F2F5] border-2 border-transparent focus:border-[#006CF1]/30 rounded-2xl text-[#4A5568] placeholder-gray-400 text-sm focus:bg-[#E8EAED] transition-all duration-200 font-semibold outline-none"
                   required
                 />
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                  <ShieldCheck className="text-gray-400 h-5 w-5 group-focus-within:text-[#6C63FF] transition-colors" />
+                  <ShieldCheck className="text-gray-400 h-5 w-5 group-focus-within:text-[#006CF1] transition-colors" />
                 </div>
                 <button
                   type="button"
@@ -302,7 +302,7 @@ const TimesheetResetPassword: React.FC = () => {
           <button
             type="submit"
             disabled={isLoading || !password || !confirmPassword}
-            className="w-full bg-[#6C63FF] hover:bg-[#5a52d5] text-white font-bold py-4 rounded-xl shadow-[0_10px_20px_-10px_rgba(108,99,255,0.5)] active:scale-[0.98] transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed text-sm tracking-widest uppercase flex items-center justify-center gap-2"
+            className="w-full bg-[#006CF1] hover:bg-[#0051B8] text-white font-bold py-4 rounded-xl shadow-[0_10px_20px_-10px_rgba(0,108,241,0.5)] active:scale-[0.98] transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed text-sm tracking-widest uppercase flex items-center justify-center gap-2"
           >
             {isLoading ? (
               <>
