@@ -463,19 +463,19 @@ const AdminDashboard = () => {
     >
       {/* Month Selector Section */}
       <div className="flex justify-center md:justify-end mb-6">
-        <div className="inline-flex items-center bg-white rounded-full px-6 py-2 shadow-sm border border-gray-100/50 gap-6">
+        <div className="inline-flex items-center bg-white rounded-full px-3 py-1 shadow-sm border border-gray-100/50 gap-2">
           <button
             onClick={() => {
               const prev = new Date(selectedDate);
               prev.setMonth(prev.getMonth() - 1);
               setSelectedDate(prev);
             }}
-            className="p-1.5 hover:bg-gray-50 rounded-full transition-colors text-[#4318FF] hover:scale-110 active:scale-95"
+            className="p-1 hover:bg-gray-50 rounded-full transition-colors text-[#4318FF] hover:scale-110 active:scale-95"
           >
-            <ChevronLeft size={20} strokeWidth={2.5} />
+            <ChevronLeft size={16} strokeWidth={2.5} />
           </button>
 
-          <span className="text-[#1B2559] font-bold min-w-[140px] text-center text-sm md:text-base selection:bg-none tracking-tight">
+          <span className="text-[#1B2559] font-bold min-w-[90px] text-center text-xs md:text-sm selection:bg-none tracking-tight">
             {selectedDate.toLocaleString("default", {
               month: "long",
               year: "numeric",
@@ -488,9 +488,9 @@ const AdminDashboard = () => {
               next.setMonth(next.getMonth() + 1);
               setSelectedDate(next);
             }}
-            className="p-1.5 hover:bg-gray-50 rounded-full transition-colors text-[#4318FF] hover:scale-110 active:scale-95"
+            className="p-1 hover:bg-gray-50 rounded-full transition-colors text-[#4318FF] hover:scale-110 active:scale-95"
           >
-            <ChevronRight size={20} strokeWidth={2.5} />
+            <ChevronRight size={16} strokeWidth={2.5} />
           </button>
         </div>
       </div>
