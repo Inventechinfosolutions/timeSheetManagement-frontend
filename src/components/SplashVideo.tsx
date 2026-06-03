@@ -1,6 +1,5 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import splashVideo from "../assets/download.mp4";
-import SplashScreen from "./SpalashScreen";
 
 interface SplashVideoProps {
   onComplete?: () => void;
@@ -9,6 +8,7 @@ interface SplashVideoProps {
 
 const SplashVideo: React.FC<SplashVideoProps> = ({ onComplete, className = "" }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [isVideoReady, setIsVideoReady] = useState(false);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -21,6 +21,9 @@ const SplashVideo: React.FC<SplashVideoProps> = ({ onComplete, className = "" })
 
     if (video) {
       video.playbackRate = playbackRate;
+      if (video.readyState >= 3) {
+        setIsVideoReady(true);
+      }
       video.play().catch((error) => {
         console.error("Error playing splash video:", error);
         onComplete?.();
@@ -34,9 +37,13 @@ const SplashVideo: React.FC<SplashVideoProps> = ({ onComplete, className = "" })
     onComplete?.();
   };
 
+  const handlePlay = () => {
+    setIsVideoReady(true);
+  };
+
   return (
-    <div className={`fixed inset-0 z-100 flex items-center justify-center bg-[#e0e0e0] pointer-events-none ${className}`}>
-      <div className="w-full h-full flex items-center justify-center overflow-hidden">
+    <div className={`fixed inset-0 z-100 flex items-center justify-center bg-[#DDDEDD] pointer-events-none ${className}`}>
+      <div className="w-[80%] h-[80%] md:w-[50%] md:h-[50%] flex items-center justify-center overflow-hidden relative">
         <video
           ref={videoRef}
           src={splashVideo}
@@ -44,6 +51,22 @@ const SplashVideo: React.FC<SplashVideoProps> = ({ onComplete, className = "" })
           muted
           playsInline
           onEnded={handleEnded}
+          onPlay={handlePlay}
+          onLoadedData={handlePlay}
+          style={{ 
+            opacity: isVideoReady ? 1 : 0,
+            transition: 'opacity 0.3s ease-in',
+            backgroundColor: 'transparent', 
+            outline: 'none', 
+            border: 'none' 
+          }}
+        />
+        {/* Radial mask overlay to blend the video edges seamlessly into the background */}
+        <div 
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: 'radial-gradient(circle, transparent 40%, #DDDEDD 75%)'
+          }}
         />
       </div>
       {/* Subtle overlay if needed to match design */}
