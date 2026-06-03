@@ -246,7 +246,7 @@ const Landing = () => {
                 <button
                   type="submit"
                   disabled={isSubmitting || loading || !loginId || !password}
-                  className="w-[410px] mx-auto bg-[#006CF1] hover:bg-[#0051B8] text-white font-bold py-3.5 rounded-xl shadow-[0_8px_20px_-4px_rgba(0,108,241,0.4)] transition-all duration-200 active:scale-[0.98] mt-6 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none text-xs tracking-wider cursor-pointer flex items-center justify-center gap-1.5"
+                  className="w-full max-w-[410px] mx-auto bg-[#006CF1] hover:bg-[#0051B8] text-white font-bold py-3.5 rounded-xl shadow-[0_8px_20px_-4px_rgba(0,108,241,0.4)] transition-all duration-200 active:scale-[0.98] mt-6 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none text-xs tracking-wider cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   {isSubmitting || loading ? "Authorizing..." : "Login"}
                   {!isSubmitting && !loading && <ArrowRight size={13} />}

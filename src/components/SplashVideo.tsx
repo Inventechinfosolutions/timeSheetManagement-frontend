@@ -35,12 +35,12 @@ const SplashVideo: React.FC<SplashVideoProps> = ({ onComplete, className = "" })
   };
 
   return (
-    <div className={`fixed inset-0 z-100 flex items-center justify-center bg-white pointer-events-none ${className}`}>
+    <div className={`fixed inset-0 z-100 flex items-center justify-center bg-[#e0e0e0] pointer-events-none ${className}`}>
       <div className="w-full h-full flex items-center justify-center overflow-hidden">
         <video
           ref={videoRef}
           src={splashVideo}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-contain"
           muted
           playsInline
           onEnded={handleEnded}
