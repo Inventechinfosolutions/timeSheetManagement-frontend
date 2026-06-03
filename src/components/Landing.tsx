@@ -152,9 +152,6 @@ const Landing = () => {
           <div className="hidden md:flex md:w-[45%] flex-col justify-between p-6 sm:p-8 md:p-10 text-white relative min-h-[340px] md:h-full md:self-stretch bg-transparent z-10">
             <div className="relative z-10"></div>
             <div className="my-auto py-4 sm:py-6 relative z-10 flex flex-col items-start justify-center text-left w-full">
-              <span className="text-[10px] sm:text-xs font-black tracking-[0.25em] text-white/80 uppercase mb-1">
-                WELCOME
-              </span>
               <h1 className="text-3xl sm:text-4xl font-extrabold tracking-wide text-white uppercase mb-4 font-sans">
                 WorkSphere
               </h1>
@@ -164,30 +161,22 @@ const Landing = () => {
               </p>
             </div>
 
-            <div className="relative z-10 text-[8px] font-black tracking-[0.2em] uppercase text-white/50 flex justify-center md:justify-start gap-4">
+            <div className="relative z-10 text-[8px] font-black tracking-[0.2em] uppercase text-white/70 flex justify-center md:justify-start gap-4">
               <span>POWERED BY INVENTECH INFO SOLUTIONS</span>
             </div>
           </div>
 
           <div className="w-full md:w-[55%] bg-[#FCFCFE] md:rounded-l-[60px] lg:rounded-l-[80px] flex flex-col justify-center p-6 sm:p-10 md:p-12 relative z-20 min-h-[340px] md:h-[calc(100%+2px)] md:self-stretch md:-mt-[1px] md:-mb-[1px]">
             <div className="mb-8 relative flex flex-col items-center text-center">
-              <div className="mb-6 bg-[#006CF1]/10 backdrop-blur-md px-5 py-2 rounded-full border border-[#006CF1]/25 inline-flex items-center gap-3 hover:scale-[1.02] transition-all duration-300">
+              <div className="mb-6  backdrop-blur-md px-5 py-2 inline-flex items-center gap-3 hover:scale-[1.02] transition-all duration-300">
                 <img
                   src={workspherelogo}
                   alt="WorkSphere"
-                  className="h-5 w-auto"
+                  className="h-20 w-auto"
                 />
-                <div className="h-3.5 w-[1px] bg-[#006CF1]/30"></div>
-                <span className="text-[10px] font-black tracking-widest text-[#006CF1] uppercase">
-                  INVENTECH
-                </span>
               </div>
-
-              <h2 className="font-serif text-3xl sm:text-4xl text-[#1E1E2F] tracking-tight font-medium mb-2">
-                Welcome back.
-              </h2>
               <p className="text-gray-400 text-xs sm:text-sm font-medium">
-                Enter your credentials to access your timesheet dashboard.
+                Enter your credentials to access your dashboard.
               </p>
             </div>
 
@@ -228,7 +217,7 @@ const Landing = () => {
                       onClick={() => navigate("/forgot-password")}
                       className="cursor-pointer text-xs font-bold text-[#006CF1] hover:text-[#0051B8] transition-colors"
                     >
-                      Forgot?
+                      Forgot Password?
                     </button>
                   </div>
                   <div className="relative group">
@@ -257,7 +246,7 @@ const Landing = () => {
                 <button
                   type="submit"
                   disabled={isSubmitting || loading || !loginId || !password}
-                  className="w-[140px] bg-[#006CF1] hover:bg-[#0051B8] text-white font-bold py-3.5 rounded-xl shadow-[0_8px_20px_-4px_rgba(0,108,241,0.4)] transition-all duration-200 active:scale-[0.98] mt-6 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none text-xs tracking-wider cursor-pointer flex items-center justify-center gap-1.5"
+                  className="w-[410px] mx-auto bg-[#006CF1] hover:bg-[#0051B8] text-white font-bold py-3.5 rounded-xl shadow-[0_8px_20px_-4px_rgba(0,108,241,0.4)] transition-all duration-200 active:scale-[0.98] mt-6 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none text-xs tracking-wider cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   {isSubmitting || loading ? "Authorizing..." : "Login"}
                   {!isSubmitting && !loading && <ArrowRight size={13} />}
