@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from "react";
-import splashVideo from "../assets/SplashVedio_7sec.mp4";
+import splashVideo from "../assets/download.mp4";
+import SplashScreen from "./SpalashScreen";
 
 interface SplashVideoProps {
   onComplete?: () => void;
@@ -35,11 +36,11 @@ const SplashVideo: React.FC<SplashVideoProps> = ({ onComplete, className = "" })
 
   return (
     <div className={`fixed inset-0 z-100 flex items-center justify-center bg-white pointer-events-none ${className}`}>
-      <div className="w-[70%] h-[70%] flex items-center justify-center overflow-hidden">
+      <div className="w-full h-full flex items-center justify-center overflow-hidden">
         <video
           ref={videoRef}
           src={splashVideo}
-          className="w-full h-full object-contain"
+          className="w-full h-full object-cover"
           muted
           playsInline
           onEnded={handleEnded}
