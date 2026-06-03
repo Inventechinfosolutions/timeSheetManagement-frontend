@@ -1,13 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { User, Eye, EyeOff, Lock, Zap } from "lucide-react";
+import { User, Eye, EyeOff, Lock, ShieldCheck, ArrowRight } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { setCurrentUser } from "../reducers/employeeDetails.reducer";
 import { loginUser, clearError } from "../reducers/user.reducer";
 import { UserType } from "../enums";
-import loginVisual from "../assets/login_visual.png";
-import inventLogo from "../assets/invent-logo.svg";
-import LandingMobile from "./LandingMobile";
+import workspherelogo from "../assets/worksphere_white.svg";
 import SplashVideo from "./SplashVideo";
 
 const SPLASH_HOLD_AFTER_WELCOME_MS = 0;
@@ -20,13 +18,14 @@ const Landing = () => {
 
   // Check if splash should be skipped
   const skipSplashFromState = location.state?.skipSplash;
-  const skipSplashFromQuery = new URLSearchParams(location.search).get("skipSplash") === "true";
+  const skipSplashFromQuery =
+    new URLSearchParams(location.search).get("skipSplash") === "true";
   const shouldSkipSplash = skipSplashFromState || skipSplashFromQuery;
 
   const [showSplash, setShowSplash] = useState(!shouldSkipSplash);
   const [splashExiting, setSplashExiting] = useState(false);
 
-  // Single State for Login
+  // Single State for Login (Functional)
   const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -37,6 +36,18 @@ const Landing = () => {
     (state) => state.user,
   );
 
+  // Load Google Fonts
+  useEffect(() => {
+    const link = document.createElement("link");
+    link.href =
+      "https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap";
+    link.rel = "stylesheet";
+    document.head.appendChild(link);
+    return () => {
+      document.head.removeChild(link);
+    };
+  }, []);
+
   // Effect for Redirect
   useEffect(() => {
     if (isAuthenticated && currentUser) {
@@ -44,7 +55,8 @@ const Landing = () => {
         navigate("/timesheet/reset-password");
       } else if (
         currentUser.userType?.toUpperCase() === UserType.MANAGER ||
-        (currentUser.role && currentUser.role.toUpperCase().includes(UserType.MANAGER))
+        (currentUser.role &&
+          currentUser.role.toUpperCase().includes(UserType.MANAGER))
       ) {
         navigate("/manager-dashboard");
       } else if (
@@ -73,15 +85,12 @@ const Landing = () => {
     try {
       const resultAction = await dispatch(loginUser({ loginId, password }));
       if (loginUser.fulfilled.match(resultAction)) {
-        // Success!
         localStorage.setItem("userLoginId", loginId);
         dispatch(setCurrentUser({ employeeId: loginId }));
-        // Effect will handle redirect
       } else {
         console.log(
           "Admin login failed or user is not admin. Proceeding as Employee.",
         );
-        // Set employee context for dashboard components
         localStorage.setItem("userLoginId", loginId);
         dispatch(setCurrentUser({ employeeId: loginId }));
       }
@@ -100,155 +109,157 @@ const Landing = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-[#EFEBF5] relative overflow-hidden font-sans">
-      {/* Page Background Shapes from Design */}
-      <div className={`absolute top-[-5%] left-[5%] w-48 h-48 bg-[#585CE5] rounded-full mix-blend-multiply filter blur-3xl opacity-20 ${!shouldSkipSplash ? "animate-pulse" : ""}`}></div>
-      <div className="absolute bottom-[-10%] right-[-5%] w-96 h-96 bg-white rounded-full mix-blend-overlay filter blur-3xl opacity-40"></div>
+    <div className="min-h-screen w-full flex items-center justify-center bg-[#F3F4F6] relative overflow-hidden font-sans p-2 sm:p-4 select-none">
+      {/* Self-contained Font Styling */}
+      <style>{`
+        .font-serif {
+          font-family: 'Playfair Display', Georgia, serif;
+        }
+        .font-sans {
+          font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+        }
+      `}</style>
 
-      {/* Login page loader: logo + Welcome to Inventech, then smooth transition to login form */}
+      {/* Decorative background gradients */}
+      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-purple-200/40 filter blur-[100px] pointer-events-none"></div>
+      <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] rounded-full bg-indigo-200/40 filter blur-[120px] pointer-events-none"></div>
+
+      {/* Loader Splash Screen */}
       {showSplash && (
         <div
           role="status"
           aria-busy="true"
           aria-label="Loading"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[#EFEBF5] transition-opacity duration-500 ease-out"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-white transition-opacity duration-500 ease-out"
           style={{ opacity: splashExiting ? 0 : 1 }}
         >
-          <div className="absolute top-[-5%] left-[5%] w-48 h-48 bg-[#585CE5] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse" />
-          <div className="absolute bottom-[-10%] right-[-5%] w-96 h-96 bg-white rounded-full mix-blend-overlay filter blur-3xl opacity-40" />
-          <SplashVideo
-             onComplete={handleSplashComplete}
-          />
+          <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-indigo-500/5 filter blur-[120px] animate-pulse" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] rounded-full bg-purple-500/5 filter blur-[120px] animate-pulse" />
+          <SplashVideo onComplete={handleSplashComplete} />
         </div>
       )}
 
-      {/* Login UI – shown after loader with smooth fade-in */}
       {!showSplash && (
-        <div className={`${!shouldSkipSplash ? "animate-in fade-in duration-500" : ""} w-full flex flex-col items-center`}>
-      <LandingMobile
-        loginId={loginId}
-        setLoginId={setLoginId}
-        password={password}
-        setPassword={setPassword}
-        showPassword={showPassword}
-        setShowPassword={setShowPassword}
-        handleLogin={handleLogin}
-        isSubmitting={isSubmitting}
-        loading={loading}
-        error={error}
-      />
-      <div className={`${!shouldSkipSplash ? "animate-in fade-in zoom-in-95 duration-500" : ""} hidden md:flex w-full max-w-[1100px] h-auto min-h-[600px] bg-white rounded-[18px] shadow-2xl overflow-hidden flex-col md:flex-row relative z-10`}>
-        {/* LEFT SIDE - LOGIN FORM */}
-        <div className="w-full md:w-[45%] p-10 md:p-14 flex flex-col justify-center relative bg-white z-10">
-          <div className="mb-10 text-center">
-            <img
-              src={inventLogo}
-              alt="Invent Logo"
-              className="h-16 mx-auto mb-5"
-            />
-            <h1 className="text-3xl font-black text-[#2D3748] mb-2 tracking-tight">
-              LOGIN
-            </h1>
-            <p className="text-gray-400 text-[13px] font-medium tracking-wide animate-fade-in-up animation-delay-200">
-              Enter your credentials to access the dashboard
-            </p>
+        <div className="w-full max-w-[420px] md:max-w-[960px] h-auto md:h-[580px] bg-[#FCFCFE] md:bg-gradient-to-br md:from-[#006CF1] md:to-[#0051B8] rounded-[24px] sm:rounded-[32px] flex flex-col md:flex-row overflow-hidden relative z-10 md:items-stretch shadow-[0_15px_50px_rgba(0,0,0,0.05)] md:shadow-none">
+          
+          <div className="hidden md:block absolute inset-0 overflow-hidden pointer-events-none z-0">
+            <div className="absolute left-[188px] -top-24 w-[340px] h-[340px] rounded-full bg-gradient-to-br from-[#005ECF] to-[#003B8C] shadow-2xl opacity-80"></div>
+            <div className="absolute left-[184px] -bottom-24 w-[240px] h-[240px] rounded-full bg-gradient-to-br from-[#0058C4] to-[#00357F] shadow-2xl opacity-90"></div>
+            <div className="absolute -left-20 -bottom-20 w-[200px] h-[200px] rounded-full bg-gradient-to-br from-[#0052B8] to-[#002F73] shadow-2xl opacity-90"></div>
           </div>
 
-          {/* Error Message */}
-          {error && (
-            <div className="mb-6 p-3 bg-red-50 text-red-600 rounded-lg text-xs font-bold border border-red-100 animate-fade-in-up animation-delay-300">
-              {error}
+          {/* LEFT SIDE: New Abstract Blue Layered Spheres Design */}
+          <div className="hidden md:flex md:w-[45%] flex-col justify-between p-6 sm:p-8 md:p-10 text-white relative min-h-[340px] md:h-full md:self-stretch bg-transparent z-10">
+            <div className="relative z-10"></div>
+            <div className="my-auto py-4 sm:py-6 relative z-10 flex flex-col items-start justify-center text-left w-full">
+              <h1 className="text-3xl sm:text-4xl font-extrabold tracking-wide text-white uppercase mb-4 font-sans">
+                WorkSphere
+              </h1>
+              <p className="text-white/80 font-sans text-xs sm:text-sm max-w-[280px] sm:max-w-xs leading-relaxed">
+                Streamline your time management, log daily tasks, and track
+                attendance seamlessly with our modern enterprise platform.
+              </p>
             </div>
-          )}
 
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div className="space-y-5">
-              {/* Username Input */}
-              <div className={`relative group ${!shouldSkipSplash ? "animate-fade-in-up animation-delay-300" : ""}`}>
-                <input
-                  type="text"
-                  placeholder="Username"
-                  className="w-full pl-12 pr-4 py-4 bg-[#F0F2F5] border-none rounded-2xl text-[#4A5568] placeholder-gray-400 text-sm focus:ring-2 focus:ring-[#6C63FF]/20 focus:bg-[#E8EAED] transition-all duration-200 font-semibold"
-                  value={loginId}
-                  onChange={(e) => setLoginId(e.target.value)}
-                  required
+            <div className="relative z-10 text-[8px] font-black tracking-[0.2em] uppercase text-white/70 flex justify-center md:justify-start gap-4">
+              <span>POWERED BY INVENTECH INFO SOLUTIONS</span>
+            </div>
+          </div>
+
+          <div className="w-full md:w-[55%] bg-[#FCFCFE] md:rounded-l-[60px] lg:rounded-l-[80px] flex flex-col justify-center p-6 sm:p-10 md:p-12 relative z-20 min-h-[340px] md:h-[calc(100%+2px)] md:self-stretch md:-mt-[1px] md:-mb-[1px]">
+            <div className="mb-8 relative flex flex-col items-center text-center">
+              <div className="mb-6  backdrop-blur-md px-5 py-2 inline-flex items-center gap-3 hover:scale-[1.02] transition-all duration-300">
+                <img
+                  src={workspherelogo}
+                  alt="WorkSphere"
+                  className="h-20 w-auto"
                 />
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                  <User className="text-gray-400 h-5 w-5" />
-                </div>
               </div>
-
-              {/* Password Input */}
-              <div className={`relative group ${!shouldSkipSplash ? "animate-fade-in-up animation-delay-400" : ""}`}>
-                <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Password"
-                  className="w-full pl-12 pr-12 py-4 bg-[#F0F2F5] border-none rounded-2xl text-[#4A5568] placeholder-gray-400 text-sm focus:ring-2 focus:ring-[#6C63FF]/20 focus:bg-[#E8EAED] transition-all duration-200 font-semibold"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                  <Lock className="text-gray-400 h-5 w-5" />
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none p-1 transition-colors"
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-
-              <div className={`flex justify-end ${!shouldSkipSplash ? "animate-fade-in-up animation-delay-500" : ""}`}>
-                <button
-                  type="button"
-                  onClick={() => navigate("/forgot-password")}
-                  className="cursor-pointer text-xs font-bold text-[#A0AEC0] hover:text-[#6C63FF] transition-colors mt-1"
-                >
-                  Forgot Password?
-                </button>
-              </div>
+              <p className="text-gray-400 text-xs sm:text-sm font-medium">
+                Enter your credentials to access your dashboard.
+              </p>
             </div>
 
-            <button
-              type="submit"
-              disabled={isSubmitting || loading || !loginId || !password}
-              className={`w-full bg-[#6C63FF] hover:bg-[#5a52d5] text-white font-bold py-4 rounded-xl shadow-[0_10px_20px_-10px_rgba(108,99,255,0.5)] active:scale-[0.98] transition-all duration-200 mt-4 disabled:opacity-45 disabled:cursor-not-allowed text-sm tracking-wide cursor-pointer ${!shouldSkipSplash ? "animate-fade-in-up animation-delay-600" : ""}`}
-            >
-              {isSubmitting || loading ? "Authenticating..." : "Login Now"}
-            </button>
-          </form>
-        </div>
+            {/* Error notifications */}
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-2xl text-xs font-semibold w-full text-center animate-in fade-in duration-200">
+                {error}
+              </div>
+            )}
 
-        {/* RIGHT SIDE - VISUAL */}
-        <div className={`hidden md:flex md:w-[55%] bg-[#6C63FF] relative items-center justify-center p-12 overflow-hidden ${!shouldSkipSplash ? "animate-fade-in-up animation-delay-200" : ""}`}>
-          {/* Background Patterns for Right Panel */}
-          <div className="absolute inset-0">
-            <div className="absolute top-[-50%] right-[-50%] w-[100%] h-[100%] border-[60px] border-white/5 rounded-full animate-[spin_120s_linear_infinite]"></div>
-            <div className="absolute bottom-[-20%] left-[-20%] w-[80%] h-[80%] border-[40px] border-white/5 rounded-full animate-[spin_80s_linear_infinite_reverse]"></div>
-          </div>
+            <div className="w-full max-w-[420px] mx-auto relative">
+              <form onSubmit={handleLogin} className="space-y-5">
+                <div className="space-y-1.5 group">
+                  <label className="text-xs font-bold text-gray-500 tracking-wide ml-0.5">
+                    Username
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Enter corporate ID"
+                      className="w-full pl-11 pr-4 py-3.5 bg-[#F9F9FB] border border-gray-200/80 rounded-xl focus:bg-white focus:border-[#006CF1] focus:ring-4 focus:ring-[#006CF1]/10 transition-all text-gray-800 placeholder-gray-400/80 text-xs font-semibold focus:outline-none"
+                      value={loginId}
+                      onChange={(e) => setLoginId(e.target.value)}
+                      required
+                    />
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#006CF1] transition-colors">
+                      <User size={16} />
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center px-0.5">
+                    <label className="text-xs font-bold text-gray-500 tracking-wide">
+                      Password
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => navigate("/forgot-password")}
+                      className="cursor-pointer text-xs font-bold text-[#006CF1] hover:text-[#0051B8] transition-colors"
+                    >
+                      Forgot Password?
+                    </button>
+                  </div>
+                  <div className="relative group">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter security password"
+                      className="w-full pl-11 pr-10 py-3.5 bg-[#F9F9FB] border border-gray-200/80 rounded-xl focus:bg-white focus:border-[#006CF1] focus:ring-4 focus:ring-[#006CF1]/10 transition-all text-gray-800 placeholder-gray-400/80 text-xs font-semibold focus:outline-none"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#006CF1] transition-colors">
+                      <Lock size={16} />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none p-1 transition-colors"
+                    >
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
 
-          {/* Glass Card Container for Image */}
-          <div className="relative z-10 w-[320px] h-[440px] rounded-[32px] border border-white/20 bg-white/10 backdrop-blur-md shadow-2xl flex items-center justify-center overflow-hidden transform hover:scale-105 transition-transform duration-700">
-            {/* Actual Image */}
-            <div className="absolute inset-3 rounded-[24px] overflow-hidden shadow-inner">
-              <img
-                src={loginVisual}
-                alt="Login Visual"
-                className="w-full h-full object-cover transform scale-110"
-              />
+                {/* Sign In Button */}
+                <button
+                  type="submit"
+                  disabled={isSubmitting || loading || !loginId || !password}
+                  className="w-[410px] mx-auto bg-[#006CF1] hover:bg-[#0051B8] text-white font-bold py-3.5 rounded-xl shadow-[0_8px_20px_-4px_rgba(0,108,241,0.4)] transition-all duration-200 active:scale-[0.98] mt-6 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none text-xs tracking-wider cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  {isSubmitting || loading ? "Authorizing..." : "Login"}
+                  {!isSubmitting && !loading && <ArrowRight size={13} />}
+                </button>
+              </form>
             </div>
-            {/* Gradient Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-[#6C63FF]/50 via-transparent to-transparent pointer-events-none"></div>
-          </div>
 
-          {/* Floating 'Zap' Icon */}
-          <div className="absolute bottom-[20%] right-[20%] w-16 h-16 bg-white rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.12)] flex items-center justify-center animate-bounce duration-[3000ms] z-20">
-            <Zap className="text-[#F6AD55] h-7 w-7 fill-current drop-shadow-sm" />
+            {/* Portal security footer */}
+            <div className="pt-8 border-t border-gray-100 flex items-center justify-center lg:justify-start gap-2 text-[9px] text-gray-400 font-extrabold uppercase tracking-widest mt-8">
+              <ShieldCheck size={14} className="text-gray-300" />
+              <span>Authorized personnel only</span>
+            </div>
           </div>
-        </div>
-      </div>
         </div>
       )}
     </div>

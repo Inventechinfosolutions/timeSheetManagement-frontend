@@ -46,7 +46,7 @@ const SplashVideo: React.FC<SplashVideoProps> = ({ onComplete, className = "" })
         />
       </div>
       {/* Subtle overlay if needed to match design */}
-      <div className="absolute inset-0 bg-linear-to-t from-[#6C63FF]/5 via-transparent to-transparent pointer-events-none"></div>
+      <div className="absolute inset-0 bg-linear-to-t from-[#006CF1]/5 via-transparent to-transparent pointer-events-none"></div>
     </div>
   );
 };

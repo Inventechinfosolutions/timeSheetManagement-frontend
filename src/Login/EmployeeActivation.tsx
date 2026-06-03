@@ -38,7 +38,7 @@ const EmployeeActivation: React.FC = () => {
   if (activationLoading) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center p-4 bg-gradient-to-br from-blue-50 to-cyan-50">
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 text-center">
+        <div className="w-full max-w-[540px] bg-white rounded-2xl shadow-xl p-8 text-center">
           <div className="w-16 h-16 mx-auto mb-6 flex items-center justify-center">
             <Loader2 className="w-12 h-12 text-[#1c9cc0] animate-spin" />
           </div>
@@ -53,7 +53,7 @@ const EmployeeActivation: React.FC = () => {
   if (activationError || !token) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center p-4 bg-gradient-to-br from-red-50 to-orange-50">
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 text-center">
+        <div className="w-full max-w-[540px] bg-white rounded-2xl shadow-xl p-8 text-center">
           <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <XCircle className="w-12 h-12 text-red-500" />
           </div>
@@ -80,7 +80,7 @@ const EmployeeActivation: React.FC = () => {
         <div className="absolute top-1/2 left-1/4 w-24 h-24 bg-teal-200 rounded-full blur-2xl"></div>
       </div>
 
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8 text-center relative z-10 border border-gray-100">
+      <div className="w-full max-w-[540px] bg-white rounded-2xl shadow-2xl p-8 text-center relative z-10 border border-gray-100">
         {/* Logo */}
         <div className="w-16 h-16 bg-gray-50 rounded-xl p-2 mx-auto mb-4 border border-gray-100 shadow-sm flex items-center justify-center">
           <img

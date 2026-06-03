@@ -21,7 +21,7 @@
 }
 
 .footer-logo {
-  height: 22px;
+  height: 30px;
   width: auto;
   filter: brightness(1.05) contrast(1.1) saturate(1.2);
   display: block;
@@ -36,8 +36,9 @@
 }
 
 .footer-brand {
-  color: #00a3c4;
+  color: blue;
   font-weight: 700;
+  cursor: pointer;
 }
 
 @media (max-width: 768px) {

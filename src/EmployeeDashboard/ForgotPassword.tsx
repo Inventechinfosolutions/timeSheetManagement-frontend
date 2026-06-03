@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Mail, ArrowLeft, Loader2, CheckCircle, User } from "lucide-react";
 import { message } from "antd";
 import { unwrapResult } from "@reduxjs/toolkit";
-import inventLogo from "../assets/invent-logo.svg";
+// import inventLogo from "../assets/invent-logo.svg";
+import worksphereLogo from "../assets/worksphere_white.svg";
 import { useAppSelector, useAppDispatch } from "../hooks";
 import {
   forgotPasswordOtp,
@@ -95,20 +96,20 @@ const ForgotPassword: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-[#EFEBF5] relative overflow-hidden font-sans">
+    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-[#F3F4F6] relative overflow-hidden font-sans">
       {/* Page Background Shapes */}
-      <div className="absolute top-[-5%] left-[5%] w-48 h-48 bg-[#585CE5] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
+      <div className="absolute top-[-5%] left-[5%] w-48 h-48 bg-[#006CF1] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
       <div className="absolute bottom-[-10%] right-[-5%] w-96 h-96 bg-white rounded-full mix-blend-overlay filter blur-3xl opacity-40"></div>
 
       {/* Main Card */}
-      <div className="w-full max-w-[480px] bg-white rounded-[24px] shadow-2xl p-8 sm:p-12 relative z-10 animate-in fade-in zoom-in-95 duration-500 border border-white/40">
+      <div className="w-full max-w-[540px] bg-white rounded-[24px] shadow-2xl p-6 sm:p-10 relative z-10 animate-in fade-in zoom-in-95 duration-500 border border-white/40">
         {/* Back Button */}
         {step !== "SUCCESS" && (
           <button
             onClick={() =>
               step === "EMAIL" ? setStep("ID") : navigate("/landing")
             }
-            className="absolute left-8 top-8 text-gray-400 hover:text-[#6C63FF] transition-colors flex items-center gap-2 text-xs font-bold tracking-wide group"
+            className="absolute left-8 top-8 text-gray-400 hover:text-[#006CF1] transition-colors flex items-center gap-2 text-xs font-bold tracking-wide group"
           >
             <ArrowLeft
               size={16}
@@ -120,7 +121,7 @@ const ForgotPassword: React.FC = () => {
 
         {/* LOGO Header */}
         <div className="text-center mb-8 mt-4">
-          <img src={inventLogo} alt="Logo" className="h-12 mx-auto mb-6" />
+          <img src={worksphereLogo} alt="Logo" className="h-12 mx-auto mb-6" />
 
           {step === "ID" && (
             <>
@@ -154,7 +155,7 @@ const ForgotPassword: React.FC = () => {
               </h1>
               <p className="text-gray-500 text-[14px] font-medium leading-relaxed mb-6">
                 We've sent a password reset link to <br />{" "}
-                <span className="text-[#6C63FF] font-semibold">{email}</span>
+                <span className="text-[#006CF1] font-semibold">{email}</span>
               </p>
             </div>
           )}
@@ -181,13 +182,13 @@ const ForgotPassword: React.FC = () => {
                 <input
                   type="text"
                   placeholder="e.g. EMP123"
-                  className="w-full pl-12 pr-4 py-4 bg-[#F0F2F5] border-none rounded-2xl text-[#2D3748] placeholder-gray-400 text-sm focus:ring-2 focus:ring-[#6C63FF]/20 focus:bg-[#E8EAED] transition-all duration-200 font-semibold"
+                  className="w-full pl-12 pr-4 py-4 bg-[#F0F2F5] border-none rounded-2xl text-[#2D3748] placeholder-gray-400 text-sm focus:ring-2 focus:ring-[#006CF1]/20 focus:bg-[#E8EAED] transition-all duration-200 font-semibold"
                   value={searchId}
                   onChange={(e) => setSearchId(e.target.value)}
                   autoFocus
                 />
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                  <User className="text-gray-400 h-5 w-5 group-focus-within:text-[#6C63FF] transition-colors" />
+                  <User className="text-gray-400 h-5 w-5 group-focus-within:text-[#006CF1] transition-colors" />
                 </div>
               </div>
             </div>
@@ -195,7 +196,7 @@ const ForgotPassword: React.FC = () => {
             <button
               type="submit"
               disabled={!searchId.trim() || isIdentifying}
-              className="w-full bg-[#6C63FF] hover:bg-[#5a52d5] text-white font-bold py-4 rounded-xl shadow-[0_10px_20px_-10px_rgba(108,99,255,0.5)] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-45 disabled:cursor-not-allowed disabled:shadow-none"
+              className="w-full bg-[#006CF1] hover:bg-[#0051B8] text-white font-bold py-4 rounded-xl shadow-[0_10px_20px_-10px_rgba(0,108,241,0.5)] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-45 disabled:cursor-not-allowed disabled:shadow-none"
             >
               {isIdentifying ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -220,7 +221,7 @@ const ForgotPassword: React.FC = () => {
                   readOnly
                   placeholder="Employee Email"
                   required
-                  className="w-full pl-12 pr-4 py-4 bg-[#F0F2F5] border-none rounded-2xl text-[#2D3748] text-sm font-semibold focus:ring-2 focus:ring-[#6C63FF]/20 focus:bg-[#E8EAED] transition-all duration-200"
+                  className="w-full pl-12 pr-4 py-4 bg-[#F0F2F5] border-none rounded-2xl text-[#2D3748] text-sm font-semibold focus:ring-2 focus:ring-[#006CF1]/20 focus:bg-[#E8EAED] transition-all duration-200"
                 />
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
                   <Mail className="text-gray-400 h-5 w-5" />
@@ -234,7 +235,7 @@ const ForgotPassword: React.FC = () => {
             <button
               type="submit"
               disabled={otpLoading}
-              className="w-full bg-[#6C63FF] hover:bg-[#5a52d5] text-white font-bold py-4 rounded-xl shadow-[0_10px_20px_-10px_rgba(108,99,255,0.5)] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+              className="w-full bg-[#006CF1] hover:bg-[#0051B8] text-white font-bold py-4 rounded-xl shadow-[0_10px_20px_-10px_rgba(0,108,241,0.5)] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {otpLoading ? (
                 <>

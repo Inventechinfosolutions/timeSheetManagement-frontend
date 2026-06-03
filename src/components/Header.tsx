@@ -41,6 +41,7 @@ import {
 } from "../enums";
 import "./Header.css";
 import InventLogo from "../assets/invent-logo.svg";
+import workspherelogo from "../assets/worksphere_white.svg";
 
 interface HeaderProps {
   hideNotifications?: boolean;
@@ -288,15 +289,19 @@ const Header = ({
       }}
     >
       <div className="header-container relative">
-        <div className="bg-white/10 backdrop-blur-md border border-white/20 px-3 py-1 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:bg-white/20 cursor-pointer">
-          <img
-            src={InventLogo}
-            alt="InvenTech Logo"
-            className="h-8 w-auto object-contain brightness-0 invert"
-            onClick={() =>
-              navigate(isAdminOrReceptionist ? "/admin-dashboard" : "/employee-dashboard")
-            }
-          />
+        <div
+          className="p-[1px] bg-gradient-to-tr from-cyan-400 to-indigo-500 rounded-2xl shadow-[0_8px_30px_rgba(59,130,246,0.15)] inline-flex cursor-pointer hover:scale-[1.02] transition-all duration-300"
+          onClick={() =>
+            navigate(isAdminOrReceptionist ? "/admin-dashboard" : "/employee-dashboard")
+          }
+        >
+          <div className="px-4 py-1 bg-white rounded-[12px]">
+            <img
+              src={workspherelogo}
+              alt="WorkSphere Logo"
+              className="h-7 w-auto object-contain"
+            />
+          </div>
         </div>
 
         <div className="flex items-center gap-1.5 md:gap-3 ml-auto">
