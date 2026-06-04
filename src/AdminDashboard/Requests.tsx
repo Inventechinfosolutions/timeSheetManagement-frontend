@@ -665,7 +665,7 @@ const Requests = () => {
   };
 
   return (
-    <div className="p-4 md:p-8 bg-[#F4F7FE] min-h-screen font-sans">
+    <div className="p-4 md:p-8 bg-[#F4F7FE] font-sans">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
           <h1 className="text-2xl font-bold text-[#2B3674]">
@@ -897,7 +897,7 @@ const Requests = () => {
           <table className="w-full min-w-[900px] border-separate border-spacing-0">
             <thead>
               <tr className="bg-[#4318FF] text-white">
-                <th className="py-4 pl-10 pr-4 text-[13px] font-bold uppercase tracking-wider text-left whitespace-nowrap">
+                <th className="py-4 pl-6 pr-4 text-[13px] font-bold uppercase tracking-wider text-left whitespace-nowrap min-w-[200px]">
                   Employee
                 </th>
                 <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
@@ -971,7 +971,7 @@ const Requests = () => {
                       className={`group transition-all duration-200 ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"
                         } hover:bg-gray-100`}
                     >
-                      <td className="py-4 pl-10 pr-4">
+                      <td className="py-3 pl-6 pr-4 align-middle">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-[#4318FF] font-bold text-xs ring-2 ring-blue-50">
                             {req.fullName ? (
@@ -1592,14 +1592,16 @@ const Requests = () => {
         footer={null}
         closable={false}
         centered
-        width={1092}
+        width={720}
+        style={{ maxWidth: '95vw' }}
+        styles={{ content: { padding: 0, borderRadius: '16px', overflow: 'hidden' } }}
         className="application-modal"
       >
-        <div className="relative overflow-hidden bg-white rounded-[16px]">
+        <div className="relative flex flex-col bg-white rounded-[16px] max-h-[85vh]">
           {/* Modal Header */}
-          <div className="pt-6 px-8 pb-4 shrink-0">
-            <div className="flex justify-between items-start">
-              <h2 className="text-[32px] font-black text-[#1B2559] leading-tight">
+          <div className="pt-5 px-6 pb-3 shrink-0 border-b border-gray-100">
+            <div className="flex justify-between items-center">
+              <h2 className="text-[26px] font-black text-[#1B2559] leading-tight">
                 {selectedRequest &&
                   (selectedRequest.requestType === LeaveRequestType.APPLY_LEAVE
                     ? AttendanceStatus.LEAVE
@@ -1610,19 +1612,18 @@ const Requests = () => {
               <button
                 onClick={() => setIsViewModalOpen(false)}
                 className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
-                style={{ marginTop: '-8px', marginRight: '-8px' }}
               >
-                <X size={24} className="text-[#8F9BBA]" />
+                <X size={22} className="text-[#8F9BBA]" />
               </button>
             </div>
           </div>
 
           {/* Modal Body */}
-          <div className="px-8 pb-8 pt-2 space-y-6 overflow-y-auto custom-scrollbar max-h-[90vh]">
+          <div className="px-6 pb-6 pt-4 space-y-5 overflow-y-auto custom-scrollbar flex-1 min-h-0">
             {selectedRequest && (
               <>
                 {/* Email recipients - in card */}
-                <div className="rounded-[20px] border border-[#E0E7FF] bg-white p-6 shadow-[0px_18px_40px_rgba(112,144,176,0.12)]">
+                <div className="rounded-[20px] border border-[#E0E7FF] bg-white p-6">
                   <div className="space-y-4">
                     <label className="text-sm font-bold text-[#1B2559] block">
                       Email recipients
@@ -1686,9 +1687,9 @@ const Requests = () => {
                 </div>
 
                 {/* Dates & Duration Row */}
-                <div className="flex items-end justify-between gap-6">
-                  <div className="flex gap-4 flex-1">
-                    <div className="flex-1 space-y-2">
+                <div className="flex flex-wrap items-end justify-between gap-4">
+                  <div className="flex flex-wrap gap-4 flex-1 min-w-0">
+                    <div className="flex-1 min-w-[130px] space-y-2">
                       <label className="text-base font-bold text-[#1B2559] ml-1">
                         Start Date
                       </label>
@@ -1696,7 +1697,7 @@ const Requests = () => {
                         {dayjs(selectedRequest.fromDate).format("DD-MM-YYYY")}
                       </div>
                     </div>
-                    <div className="flex-1 space-y-2">
+                    <div className="flex-1 min-w-[130px] space-y-2">
                       <label className="text-base font-bold text-[#1B2559] ml-1">
                         End Date
                       </label>
@@ -1708,7 +1709,7 @@ const Requests = () => {
 
                   <div className="flex items-center gap-4 mb-3">
                     <span className="text-sm font-bold text-[#1B2559] whitespace-nowrap">Total Days:</span>
-                    <div className="bg-white px-6 py-3 rounded-[16px] shadow-[0px_10px_20px_rgba(0,0,0,0.05)] border border-[#E0E7FF] min-w-[100px] text-center">
+                    <div className="bg-white px-6 py-3 rounded-[16px] border border-[#E0E7FF] min-w-[100px] text-center">
                       <span className="text-[#4318FF] font-black">
                         {(() => {
                           const dur = parseFloat(String(selectedRequest.duration));

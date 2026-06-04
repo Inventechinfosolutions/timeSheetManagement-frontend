@@ -448,8 +448,7 @@ const AdminDashboard = () => {
   ]);
 
   const styles = {
-    container:
-      "p-4 md:p-8 bg-[#F4F7FE] min-h-screen font-['DM_Sans',sans-serif]",
+    container: "p-4 md:p-8 bg-[#F4F7FE] font-['DM_Sans',sans-serif]",
     cardGrid: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8",
     statCard: (gradient: string) =>
       `relative overflow-hidden p-6 rounded-[24px] text-white shadow-xl ${gradient} transition-transform hover:-translate-y-1 duration-300`,

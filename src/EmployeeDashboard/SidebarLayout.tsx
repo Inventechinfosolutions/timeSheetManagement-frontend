@@ -15,6 +15,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { logoutUser } from "../reducers/user.reducer";
 import { UserType } from "../enums";
 import ApiLoadingSpinner from "../components/ApiLoadingSpinner";
+import Header from "../components/Header";
+import Footer from "../components/Footer";
 
 interface SidebarLayoutProps {
   children: React.ReactNode;
@@ -147,7 +149,11 @@ const SidebarLayout = ({
             <AlarmClock className="w-6 h-6 text-white" />
           </div>
           <span className="text-xl font-bold text-white tracking-tight">
-            {currentUser?.userType === UserType.ADMIN ? "Admin" : currentUser?.userType === UserType.MANAGER ? "Manager" : "Employee"}
+            {currentUser?.userType === UserType.ADMIN
+              ? "Admin"
+              : currentUser?.userType === UserType.MANAGER
+                ? "Manager"
+                : "Employee"}
           </span>
         </div>
         {/* Branding & Lock Toggle - Desktop Only */}
@@ -179,7 +185,11 @@ const SidebarLayout = ({
                 {entity?.employeeId || "EMP001"}
               </span>
               <span className="text-[10px] font-medium text-blue-100 uppercase tracking-widest whitespace-nowrap">
-                {currentUser?.userType === UserType.ADMIN ? "Admin" : currentUser?.userType === UserType.MANAGER ? "Manager" : "Employee"}
+                {currentUser?.userType === UserType.ADMIN
+                  ? "Admin"
+                  : currentUser?.userType === UserType.MANAGER
+                    ? "Manager"
+                    : "Employee"}
               </span>
             </div>
           </div>
@@ -312,12 +322,14 @@ const SidebarLayout = ({
 
       <main
         ref={mainContentRef}
-        className="flex-1 min-h-0 h-full relative no-scrollbar flex flex-col bg-[#F4F7FE] overflow-auto"
+        className="flex-1 min-h-0 h-full relative custom-scrollbar flex flex-col bg-[#F4F7FE] overflow-y-auto overflow-x-hidden"
       >
-        <div className="relative flex-1 min-h-0 flex flex-col">
+        <Header />
+        <div className="relative grow shrink-0 flex flex-col">
           {children}
           <ApiLoadingSpinner contained contentAreaRef={mainContentRef} />
         </div>
+        <Footer />
       </main>
     </div>
   );

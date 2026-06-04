@@ -103,7 +103,7 @@ const LeaveManagement = () => {
     (currentUser?.role &&
       currentUser.role.toUpperCase().includes(UserType.MANAGER));
   const isPrivileged = isAdmin || isManager;
-  
+
   const isCancellationAllowed = (toDate: string) => {
     if (isPrivileged) return true;
     const cutoff = dayjs(toDate).hour(18).minute(30).second(0);
@@ -195,7 +195,9 @@ const LeaveManagement = () => {
   const [halfDayType, setHalfDayType] = useState<string | null>(null);
   const [otherHalfType, setOtherHalfType] = useState<string | null>(null);
   const [isHalfDay, setIsHalfDay] = useState<boolean>(false);
-  const [uploadedDocumentKeys, setUploadedDocumentKeys] = useState<string[]>([]);
+  const [uploadedDocumentKeys, setUploadedDocumentKeys] = useState<string[]>(
+    [],
+  );
   const [isCancelling, setIsCancelling] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [filterStatus, setFilterStatus] = useState("All");
@@ -250,24 +252,37 @@ const LeaveManagement = () => {
     if (modifyModal.isOpen && modifyModal.request?.employeeId) {
       dispatch(getLeaveRequestEmailConfig(modifyModal.request.employeeId))
         .unwrap()
-        .then((data) => setEmailConfig({ assignedManagerEmail: data?.assignedManagerEmail ?? null, hrEmail: data?.hrEmail ?? null }))
-        .catch(() => setEmailConfig({ assignedManagerEmail: null, hrEmail: null }));
+        .then((data) =>
+          setEmailConfig({
+            assignedManagerEmail: data?.assignedManagerEmail ?? null,
+            hrEmail: data?.hrEmail ?? null,
+          }),
+        )
+        .catch(() =>
+          setEmailConfig({ assignedManagerEmail: null, hrEmail: null }),
+        );
     }
   }, [modifyModal.isOpen, modifyModal.request?.employeeId, dispatch]);
 
   const checkDateInReq = (req: any, dateStr: string): boolean => {
     if (req.availableDates) {
       try {
-        const ds: string[] = typeof req.availableDates === 'string' ? JSON.parse(req.availableDates) : req.availableDates;
+        const ds: string[] =
+          typeof req.availableDates === "string"
+            ? JSON.parse(req.availableDates)
+            : req.availableDates;
         if (Array.isArray(ds)) {
           return ds.includes(dateStr);
         }
       } catch (e) {}
     }
-    const current = dayjs(dateStr).startOf('day');
-    const start = dayjs(req.fromDate).startOf('day');
-    const end = dayjs(req.toDate).startOf('day');
-    return (current.isSame(start) || current.isAfter(start)) && (current.isSame(end) || current.isBefore(end));
+    const current = dayjs(dateStr).startOf("day");
+    const start = dayjs(req.fromDate).startOf("day");
+    const end = dayjs(req.toDate).startOf("day");
+    return (
+      (current.isSame(start) || current.isAfter(start)) &&
+      (current.isSame(end) || current.isBefore(end))
+    );
   };
 
   const disabledDate = (current: any) => {
@@ -421,13 +436,21 @@ const LeaveManagement = () => {
     if (!type) return false;
     const t = type.toLowerCase();
     // Things that are NOT away: Office, Present
-    if (t === "office" || t === "present" || t === (WorkLocation.OFFICE as string).toLowerCase() || t === (WorkLocation.PRESENT as string).toLowerCase()) {
+    if (
+      t === "office" ||
+      t === "present" ||
+      t === (WorkLocation.OFFICE as string).toLowerCase() ||
+      t === (WorkLocation.PRESENT as string).toLowerCase()
+    ) {
       return false;
     }
     return true;
   };
 
-  const getDurationFactor = (h1: string | null | undefined, h2: string | null | undefined): number => {
+  const getDurationFactor = (
+    h1: string | null | undefined,
+    h2: string | null | undefined,
+  ): number => {
     return isAway(h1) && isAway(h2) ? 1.0 : 0.5;
   };
 
@@ -544,9 +567,7 @@ const LeaveManagement = () => {
 
       const status = record.status || record.attendance_status;
       const sourceRequestId =
-        record.sourceRequestId ||
-        record.source_request_id ||
-        record.requestId;
+        record.sourceRequestId || record.source_request_id || record.requestId;
 
       const isLeave =
         status === AttendanceStatus.LEAVE ||
@@ -555,11 +576,11 @@ const LeaveManagement = () => {
         status === AttendanceStatus.HALF_DAY ||
         String(status).toLowerCase() === "half day";
 
-      // A date is a barrier if it's a Full Leave or Half Day 
+      // A date is a barrier if it's a Full Leave or Half Day
       // AND it is officially linked to an active request.
       if (
         normalizedRecordDate === dateStr &&
-        (isLeave || isHalfDay) && 
+        (isLeave || isHalfDay) &&
         sourceRequestId
       ) {
         return true;
@@ -766,7 +787,9 @@ const LeaveManagement = () => {
               if (segmentDuration > 0) {
                 let duration = segmentDuration;
                 if (isSplitRequest) {
-                  duration = segmentDuration * getDurationFactor(halfDayType, otherHalfType);
+                  duration =
+                    segmentDuration *
+                    getDurationFactor(halfDayType, otherHalfType);
                 }
 
                 await dispatch(
@@ -808,7 +831,8 @@ const LeaveManagement = () => {
 
         let duration = baseDuration;
         if (isSplitRequest) {
-          duration = baseDuration * getDurationFactor(halfDayType, otherHalfType);
+          duration =
+            baseDuration * getDurationFactor(halfDayType, otherHalfType);
         }
 
         dispatch(
@@ -975,8 +999,15 @@ const LeaveManagement = () => {
     if (employeeId) {
       dispatch(getLeaveRequestEmailConfig(employeeId))
         .unwrap()
-        .then((data) => setEmailConfig({ assignedManagerEmail: data?.assignedManagerEmail ?? null, hrEmail: data?.hrEmail ?? null }))
-        .catch(() => setEmailConfig({ assignedManagerEmail: null, hrEmail: null }));
+        .then((data) =>
+          setEmailConfig({
+            assignedManagerEmail: data?.assignedManagerEmail ?? null,
+            hrEmail: data?.hrEmail ?? null,
+          }),
+        )
+        .catch(() =>
+          setEmailConfig({ assignedManagerEmail: null, hrEmail: null }),
+        );
     }
   };
 
@@ -1013,8 +1044,15 @@ const LeaveManagement = () => {
       if (fetchedItem.employeeId) {
         dispatch(getLeaveRequestEmailConfig(fetchedItem.employeeId))
           .unwrap()
-          .then((data) => setEmailConfig({ assignedManagerEmail: data?.assignedManagerEmail ?? null, hrEmail: data?.hrEmail ?? null }))
-          .catch(() => setEmailConfig({ assignedManagerEmail: null, hrEmail: null }));
+          .then((data) =>
+            setEmailConfig({
+              assignedManagerEmail: data?.assignedManagerEmail ?? null,
+              hrEmail: data?.hrEmail ?? null,
+            }),
+          )
+          .catch(() =>
+            setEmailConfig({ assignedManagerEmail: null, hrEmail: null }),
+          );
       }
       setIsModalOpen(true);
       setErrors({ title: "", description: "", startDate: "", endDate: "" });
@@ -1055,7 +1093,8 @@ const LeaveManagement = () => {
     if (!ccEmails.includes(trimmed)) setCcEmails([...ccEmails, trimmed]);
     setCcEmailInput("");
   };
-  const removeCcEmail = (email: string) => setCcEmails(ccEmails.filter((e) => e !== email));
+  const removeCcEmail = (email: string) =>
+    setCcEmails(ccEmails.filter((e) => e !== email));
 
   const addModifyCcEmail = (email: string) => {
     const trimmed = email.trim().toLowerCase();
@@ -1066,7 +1105,8 @@ const LeaveManagement = () => {
     }
     setModifyCcError("");
     const current = modifyFormData.ccEmails || [];
-    if (!current.includes(trimmed)) setModifyFormData({ ...modifyFormData, ccEmails: [...current, trimmed] });
+    if (!current.includes(trimmed))
+      setModifyFormData({ ...modifyFormData, ccEmails: [...current, trimmed] });
     setModifyCcInput("");
   };
   const removeModifyCcEmail = (email: string) => {
@@ -1108,14 +1148,13 @@ const LeaveManagement = () => {
               req.status === LeaveRequestStatus.CANCELLED ||
               req.status === LeaveRequestStatus.REQUEST_MODIFIED) &&
             req.requestModifiedFrom &&
-            Number(String(req.requestModifiedFrom).split(":")[0]) ===
-              request.id
+            Number(String(req.requestModifiedFrom).split(":")[0]) === request.id
           ) {
             if (req.availableDates) {
               try {
                 const datesInChild = JSON.parse(req.availableDates);
                 if (Array.isArray(datesInChild)) {
-                  datesInChild.forEach(dateStr => lockedDates.add(dateStr));
+                  datesInChild.forEach((dateStr) => lockedDates.add(dateStr));
                 }
               } catch (e) {
                 // Fallback to range
@@ -1140,7 +1179,7 @@ const LeaveManagement = () => {
         // Mark dates as locked if already handled. Admins bypass deadlines, but NOT locks.
         const processedDates = apiDates.map((d: any) => {
           const dateStr = dayjs(d.date).format("YYYY-MM-DD");
-          
+
           // Check for 6:30 PM cutoff for regular users
           const cutoff = dayjs(d.date).hour(18).minute(30).second(0);
           const isTimePassed = dayjs().isAfter(cutoff);
@@ -1157,7 +1196,9 @@ const LeaveManagement = () => {
             return {
               ...d,
               isCancellable: true,
-              reason: d.reason.includes("Deadline") ? "Admin/Manager Bypass" : d.reason,
+              reason: d.reason.includes("Deadline")
+                ? "Admin/Manager Bypass"
+                : d.reason,
             };
           }
 
@@ -1176,8 +1217,13 @@ const LeaveManagement = () => {
       } else {
         // Explicitly throw or handle potential error payload
         const payload = action.payload as any;
-        const errorMsg = typeof payload === 'string' ? payload : (payload?.message || payload?.error || "Failed to fetch");
-        throw new Error(Array.isArray(errorMsg) ? errorMsg.join(', ') : errorMsg);
+        const errorMsg =
+          typeof payload === "string"
+            ? payload
+            : payload?.message || payload?.error || "Failed to fetch";
+        throw new Error(
+          Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg,
+        );
       }
     } catch (err) {
       message.error("Failed to fetch cancellable dates");
@@ -1205,16 +1251,22 @@ const LeaveManagement = () => {
       );
 
       if (cancelRequestDates.fulfilled.match(action)) {
-        const msg = requestToCancel?.status === LeaveRequestStatus.PENDING
-          ? "Dates cancelled successfully"
-          : "Cancellation request submitted successfully";
+        const msg =
+          requestToCancel?.status === LeaveRequestStatus.PENDING
+            ? "Dates cancelled successfully"
+            : "Cancellation request submitted successfully";
         message.success(msg);
         setIsCancelDateModalVisible(false);
         refreshData(1, 10);
       } else {
         const payload = action.payload as any;
-        const errorMsg = typeof payload === 'string' ? payload : (payload?.message || payload?.error || "Cancellation failed");
-        throw new Error(Array.isArray(errorMsg) ? errorMsg.join(', ') : errorMsg);
+        const errorMsg =
+          typeof payload === "string"
+            ? payload
+            : payload?.message || payload?.error || "Cancellation failed";
+        throw new Error(
+          Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg,
+        );
       }
     } catch (err: any) {
       message.error(err.message || "Cancellation failed");
@@ -1255,7 +1307,10 @@ const LeaveManagement = () => {
   // Modified handleCancel to use the date-picker cancellation flow for both Approved and Pending requests
   const handleCancel = (id: number) => {
     const req = entities.find((e: any) => e.id === id);
-    if (req?.status === LeaveRequestStatus.APPROVED || req?.status === LeaveRequestStatus.PENDING) {
+    if (
+      req?.status === LeaveRequestStatus.APPROVED ||
+      req?.status === LeaveRequestStatus.PENDING
+    ) {
       handleCancelClick(req);
     } else {
       // For other statuses, use the original full cancellation flow
@@ -1286,8 +1341,15 @@ const LeaveManagement = () => {
         setUndoModal({ isOpen: false, request: null });
       } else {
         const payload = action.payload as any;
-        const errorMsg = typeof payload === 'string' ? payload : (payload?.message || payload?.error || "Could not undo cancellation");
-        throw new Error(Array.isArray(errorMsg) ? errorMsg.join(', ') : errorMsg);
+        const errorMsg =
+          typeof payload === "string"
+            ? payload
+            : payload?.message ||
+              payload?.error ||
+              "Could not undo cancellation";
+        throw new Error(
+          Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg,
+        );
       }
     } catch (err: any) {
       message.error(
@@ -1316,8 +1378,15 @@ const LeaveManagement = () => {
         setUndoModal({ isOpen: false, request: null });
       } else {
         const payload = action.payload as any;
-        const errorMsg = typeof payload === 'string' ? payload : (payload?.message || payload?.error || "Could not undo modification");
-        throw new Error(Array.isArray(errorMsg) ? errorMsg.join(', ') : errorMsg);
+        const errorMsg =
+          typeof payload === "string"
+            ? payload
+            : payload?.message ||
+              payload?.error ||
+              "Could not undo modification";
+        throw new Error(
+          Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg,
+        );
       }
     } catch (err: any) {
       message.error(
@@ -1398,35 +1467,52 @@ const LeaveManagement = () => {
   };
 
   return (
-    <div className="p-4 md:px-8 md:pb-8 md:pt-0 bg-[#F4F7FE] min-h-screen font-sans text-[#2B3674]">
+    <div className="p-4 md:px-8 md:pb-0 md:pt-0 bg-[#F4F7FE] h-full max-h-full overflow-hidden flex flex-col font-sans text-[#2B3674]">
       {/* Back Button */}
-      <button 
+      <button
         onClick={() => {
           const path = location.pathname;
-          if (path.includes('/manager-dashboard')) {
-            if (path.includes('/timesheet/') || path.includes('/working-details/')) {
-              navigate('/manager-dashboard/timesheet-list');
-            } else if (path.includes('/employee-details/') || path.includes('/view-attendance/')) {
-              navigate('/manager-dashboard/employees');
+          if (path.includes("/manager-dashboard")) {
+            if (
+              path.includes("/timesheet/") ||
+              path.includes("/working-details/")
+            ) {
+              navigate("/manager-dashboard/timesheet-list");
+            } else if (
+              path.includes("/employee-details/") ||
+              path.includes("/view-attendance/")
+            ) {
+              navigate("/manager-dashboard/employees");
             } else {
-              navigate('/manager-dashboard/my-dashboard');
+              navigate("/manager-dashboard/my-dashboard");
             }
-          } else if (path.includes('/admin-dashboard')) {
-            if (path.includes('/timesheet/') || path.includes('/working-details/')) {
-              navigate('/admin-dashboard/timesheet-list');
-            } else if (path.includes('/employee-details/') || path.includes('/view-attendance/')) {
-              navigate('/admin-dashboard/employees');
+          } else if (path.includes("/admin-dashboard")) {
+            if (
+              path.includes("/timesheet/") ||
+              path.includes("/working-details/")
+            ) {
+              navigate("/admin-dashboard/timesheet-list");
+            } else if (
+              path.includes("/employee-details/") ||
+              path.includes("/view-attendance/")
+            ) {
+              navigate("/admin-dashboard/employees");
             } else {
-              navigate('/admin-dashboard');
+              navigate("/admin-dashboard");
             }
           } else {
-            navigate('/employee-dashboard');
+            navigate("/employee-dashboard");
           }
         }}
         className="group flex items-center gap-2 text-[#A3AED0] hover:text-[#4318FF] transition-all mb-2 w-fit mt-4"
       >
-        <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-        <span className="text-[11px] font-black uppercase tracking-widest pl-1">Back</span>
+        <ArrowLeft
+          size={16}
+          className="group-hover:-translate-x-1 transition-transform"
+        />
+        <span className="text-[11px] font-black uppercase tracking-widest pl-1">
+          Back
+        </span>
       </button>
       {/* AntD message context handled via global config */}
       {/* Header */}
@@ -1441,9 +1527,11 @@ const LeaveManagement = () => {
         {/* Apply Button Removed */}
       </div>
 
-      {/* Hero Action Card */}
-      {/* Hero Action Card */}
-      <div className="relative z-30 bg-gradient-to-r from-[#4318FF] to-[#868CFF] rounded-[20px] p-4 md:p-6 mb-8 shadow-xl shadow-blue-500/20 group animate-in fade-in slide-in-from-bottom-4 duration-700">
+      {/* Scrollable Content Container */}
+      <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar pb-6 space-y-6">
+        {/* Hero Action Card */}
+        {/* Hero Action Card */}
+        <div className="relative z-30 bg-gradient-to-r from-[#4318FF] to-[#868CFF] rounded-[20px] p-4 md:p-6 mb-8 shadow-xl shadow-blue-500/20 group animate-in fade-in slide-in-from-bottom-4 duration-700">
         {/* Decorative Elements Wrapper for Overflow */}
         <div className="absolute inset-0 overflow-hidden rounded-[20px]">
           <div className="absolute top-[-10%] right-[-5%] w-64 h-64 bg-white/10 rounded-full blur-[60px] group-hover:bg-white/[0.12] transition-all duration-700" />
@@ -1502,7 +1590,7 @@ const LeaveManagement = () => {
       </div>
 
       {/* Leave Balance Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 mt-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-5 mt-3">
         {[
           {
             label: LeaveRequestType.LEAVE,
@@ -1582,7 +1670,7 @@ const LeaveManagement = () => {
         })}
       </div>
 
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mt-8 mb-4 gap-4">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mt-5 mb-3 gap-4">
         <h3 className="text-xl font-bold text-[#2B3674]">
           Recent Leave History
         </h3>
@@ -1995,8 +2083,14 @@ const LeaveManagement = () => {
                               <span className="opacity-70 border-l border-orange-300 pl-1.5 ml-1 text-[9px] font-bold">
                                 (TO{" "}
                                 {(() => {
-                                  const displayPart = item.requestModifiedFrom.includes(":") ? item.requestModifiedFrom.split(":")[1] : item.requestModifiedFrom;
-                                  return displayPart === LeaveRequestType.APPLY_LEAVE ? "LEAVE" : displayPart.toUpperCase();
+                                  const displayPart =
+                                    item.requestModifiedFrom.includes(":")
+                                      ? item.requestModifiedFrom.split(":")[1]
+                                      : item.requestModifiedFrom;
+                                  return displayPart ===
+                                    LeaveRequestType.APPLY_LEAVE
+                                    ? "LEAVE"
+                                    : displayPart.toUpperCase();
                                 })()}
                                 )
                               </span>
@@ -2065,7 +2159,9 @@ const LeaveManagement = () => {
         <div className="flex justify-center items-center py-2 bg-gray-50/30 border-t border-gray-100">
           <div className="flex items-center gap-2 text-[#A3AED0] opacity-80">
             <ArrowRightLeft size={14} className="animate-pulse" />
-            <span className="text-[10px] font-black uppercase tracking-widest">Scroll table horizontally to view all columns</span>
+            <span className="text-[10px] font-black uppercase tracking-widest">
+              Scroll table horizontally to view all columns
+            </span>
           </div>
         </div>
 
@@ -2118,6 +2214,7 @@ const LeaveManagement = () => {
           </div>
         </div>
       </div>
+      </div>
 
       {/* Application Modal */}
       {/* Application Modal */}
@@ -2156,7 +2253,9 @@ const LeaveManagement = () => {
                   <div className="flex flex-wrap gap-4 items-start">
                     {emailConfig.assignedManagerEmail && (
                       <div className="min-w-0 flex-1">
-                        <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">Assigned Manager</span>
+                        <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
+                          Assigned Manager
+                        </span>
                         <input
                           type="text"
                           readOnly
@@ -2167,7 +2266,9 @@ const LeaveManagement = () => {
                       </div>
                     )}
                     <div className="min-w-0 flex-1">
-                      <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">HR</span>
+                      <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
+                        HR
+                      </span>
                       <input
                         type="text"
                         readOnly
@@ -2179,7 +2280,9 @@ const LeaveManagement = () => {
                     </div>
                   </div>
                   <div>
-                    <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">CC</span>
+                    <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
+                      CC
+                    </span>
                     <div className="flex flex-wrap gap-2 items-center">
                       {isViewMode ? (
                         ccEmails.length > 0 ? (
@@ -2220,7 +2323,11 @@ const LeaveManagement = () => {
                               if (ccEmailError) setCcEmailError("");
                             }}
                             onKeyDown={(e) => {
-                              if (e.key === "Enter" || e.key === "," || e.key === " ") {
+                              if (
+                                e.key === "Enter" ||
+                                e.key === "," ||
+                                e.key === " "
+                              ) {
                                 e.preventDefault();
                                 addCcEmail(ccEmailInput);
                               }
@@ -2230,7 +2337,9 @@ const LeaveManagement = () => {
                             className="min-w-[200px] flex-1 px-3 py-2 border border-gray-200 rounded-xl bg-white text-gray-700 text-sm placeholder-gray-400 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none"
                           />
                           {ccEmailError && (
-                            <p className="text-red-500 text-xs mt-1 ml-1 w-full">{ccEmailError}</p>
+                            <p className="text-red-500 text-xs mt-1 ml-1 w-full">
+                              {ccEmailError}
+                            </p>
                           )}
                         </>
                       )}
@@ -2482,39 +2591,42 @@ const LeaveManagement = () => {
                 <div className="px-4 py-3 rounded-2xl bg-[#F4F7FE] font-bold text-[#4318FF] inline-flex items-center gap-2 min-h-[48px]">
                   <span className="bg-white px-3 py-1.5 rounded-lg shadow-sm border border-blue-100">
                     {formData.startDate && formData.endDate
-                          ? (() => {
-                              if (isViewMode) {
-                                const dur = parseFloat(String(formData.duration));
-                                return `${isNaN(dur) ? 0 : dur} Day(s)`;
-                              }
+                      ? (() => {
+                          if (isViewMode) {
+                            const dur = parseFloat(String(formData.duration));
+                            return `${isNaN(dur) ? 0 : dur} Day(s)`;
+                          }
 
-                              if (
-                                selectedLeaveType === WorkLocation.CLIENT_VISIT ||
-                                selectedLeaveType === WorkLocation.WORK_FROM_HOME ||
-                                selectedLeaveType === LeaveRequestType.APPLY_LEAVE ||
-                                selectedLeaveType === LeaveRequestType.LEAVE ||
-                                selectedLeaveType === LeaveRequestType.HALF_DAY
-                              ) {
-                                const baseDur = calculateDurationExcludingWeekends(
-                                  formData.startDate,
-                                  formData.endDate,
-                                );
-                                  const isHalf =
-                                    leaveDurationType === HalfDayType.HALF_DAY ||
-                                    leaveDurationType === HalfDayType.FIRST_HALF ||
-                                    leaveDurationType === HalfDayType.SECOND_HALF;
-                                  if (isHalf) {
-                                    const factor = getDurationFactor(
-                                      leaveDurationType === HalfDayType.HALF_DAY ? halfDayType : leaveDurationType,
-                                      otherHalfType
-                                    );
-                                    return `${baseDur * factor} Day(s)`;
-                                  }
-                                  return `${baseDur} Day(s)`;
-                              } else {
-                                return `${dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1} Day(s)`;
-                              }
-                            })()
+                          if (
+                            selectedLeaveType === WorkLocation.CLIENT_VISIT ||
+                            selectedLeaveType === WorkLocation.WORK_FROM_HOME ||
+                            selectedLeaveType ===
+                              LeaveRequestType.APPLY_LEAVE ||
+                            selectedLeaveType === LeaveRequestType.LEAVE ||
+                            selectedLeaveType === LeaveRequestType.HALF_DAY
+                          ) {
+                            const baseDur = calculateDurationExcludingWeekends(
+                              formData.startDate,
+                              formData.endDate,
+                            );
+                            const isHalf =
+                              leaveDurationType === HalfDayType.HALF_DAY ||
+                              leaveDurationType === HalfDayType.FIRST_HALF ||
+                              leaveDurationType === HalfDayType.SECOND_HALF;
+                            if (isHalf) {
+                              const factor = getDurationFactor(
+                                leaveDurationType === HalfDayType.HALF_DAY
+                                  ? halfDayType
+                                  : leaveDurationType,
+                                otherHalfType,
+                              );
+                              return `${baseDur * factor} Day(s)`;
+                            }
+                            return `${baseDur} Day(s)`;
+                          } else {
+                            return `${dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1} Day(s)`;
+                          }
+                        })()
                       : "0 Days"}
                   </span>
                 </div>
@@ -2640,8 +2752,14 @@ const LeaveManagement = () => {
                   successMessage="Document uploaded successfully"
                   deleteMessage="Document deleted successfully"
                   disabled={isViewMode}
-                  onFileUpload={(file) => setUploadedDocumentKeys((prev) => [...prev, file.key])}
-                  onFileDelete={(fileKey) => setUploadedDocumentKeys((prev) => prev.filter((k) => k !== fileKey))}
+                  onFileUpload={(file) =>
+                    setUploadedDocumentKeys((prev) => [...prev, file.key])
+                  }
+                  onFileDelete={(fileKey) =>
+                    setUploadedDocumentKeys((prev) =>
+                      prev.filter((k) => k !== fileKey),
+                    )
+                  }
                 />
               </div>
             </div>
@@ -2701,8 +2819,12 @@ const LeaveManagement = () => {
             >
               No, Keep It
             </button>
-            {!(entities.find((e: any) => e.id === cancelModal.id)?.status === LeaveRequestStatus.REQUESTING_FOR_CANCELLATION ||
-               entities.find((e: any) => e.id === cancelModal.id)?.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION) && (
+            {!(
+              entities.find((e: any) => e.id === cancelModal.id)?.status ===
+                LeaveRequestStatus.REQUESTING_FOR_CANCELLATION ||
+              entities.find((e: any) => e.id === cancelModal.id)?.status ===
+                LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
+            ) && (
               <button
                 key="modify"
                 onClick={() => {
@@ -2945,7 +3067,14 @@ const LeaveManagement = () => {
                   modifyFormData.description !==
                   (modifyModal.request.description || "");
 
-                if (!isFirstHalfChanged && !isSecondHalfChanged && !isTitleChanged && !isDescriptionChanged && JSON.stringify(modifyFormData.ccEmails || []) === JSON.stringify(modifyModal.request.ccEmails || [])) {
+                if (
+                  !isFirstHalfChanged &&
+                  !isSecondHalfChanged &&
+                  !isTitleChanged &&
+                  !isDescriptionChanged &&
+                  JSON.stringify(modifyFormData.ccEmails || []) ===
+                    JSON.stringify(modifyModal.request.ccEmails || [])
+                ) {
                   message.warning(
                     "No changes detected. Please modify at least one field to submit.",
                   );
@@ -3009,7 +3138,9 @@ const LeaveManagement = () => {
                 <div className="flex flex-wrap gap-4 items-start">
                   {emailConfig.assignedManagerEmail && (
                     <div className="min-w-0 flex-1">
-                      <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">Assigned Manager</span>
+                      <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
+                        Assigned Manager
+                      </span>
                       <input
                         type="text"
                         readOnly
@@ -3020,7 +3151,9 @@ const LeaveManagement = () => {
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
-                    <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">HR</span>
+                    <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
+                      HR
+                    </span>
                     <input
                       type="text"
                       readOnly
@@ -3032,7 +3165,9 @@ const LeaveManagement = () => {
                   </div>
                 </div>
                 <div>
-                  <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">CC</span>
+                  <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
+                    CC
+                  </span>
                   <div className="flex flex-wrap gap-2 items-center">
                     {(modifyFormData.ccEmails || []).length > 0 ? (
                       (modifyFormData.ccEmails || []).map((email: string) => (
@@ -3051,24 +3186,30 @@ const LeaveManagement = () => {
               </div>
               {/* Subject - inside card */}
               <div className="space-y-2 pt-2 border-t border-[#E0E7FF]">
-                <label className="text-sm font-bold text-[#2B3674] ml-1">Subject <span className="text-red-500">*</span></label>
+                <label className="text-sm font-bold text-[#2B3674] ml-1">
+                  Subject <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
                   value={modifyFormData.title}
                   onChange={(e) => {
-                    setModifyFormData({ ...modifyFormData, title: e.target.value });
+                    setModifyFormData({
+                      ...modifyFormData,
+                      title: e.target.value,
+                    });
                     setModifyErrors({ ...modifyErrors, title: "" });
                   }}
                   className={`w-full px-5 py-3 rounded-xl border text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400 ${
-                    modifyErrors.title ? "border-red-500" :
-                    modifyFormData.firstHalf ===
-                      (modifyModal.request?.firstHalf ||
-                        modifyModal.request?.requestType) &&
-                    modifyFormData.secondHalf ===
-                      (modifyModal.request?.secondHalf ||
-                        modifyModal.request?.requestType)
-                      ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
-                      : "bg-white border-gray-200"
+                    modifyErrors.title
+                      ? "border-red-500"
+                      : modifyFormData.firstHalf ===
+                            (modifyModal.request?.firstHalf ||
+                              modifyModal.request?.requestType) &&
+                          modifyFormData.secondHalf ===
+                            (modifyModal.request?.secondHalf ||
+                              modifyModal.request?.requestType)
+                        ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
+                        : "bg-white border-gray-200"
                   }`}
                   placeholder="e.g. Annual Vacation"
                   disabled={
@@ -3081,7 +3222,9 @@ const LeaveManagement = () => {
                   }
                 />
                 {modifyErrors.title && (
-                  <p className="text-red-500 text-xs mt-1 ml-1">{modifyErrors.title}</p>
+                  <p className="text-red-500 text-xs mt-1 ml-1">
+                    {modifyErrors.title}
+                  </p>
                 )}
               </div>
             </div>
@@ -3133,15 +3276,16 @@ const LeaveManagement = () => {
               }}
               rows={3}
               className={`w-full px-5 py-3 border rounded-xl text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-medium text-[#2B3674] placeholder:text-gray-400 resize-none ${
-                modifyErrors.description ? "border-red-500" :
-                modifyFormData.firstHalf ===
-                  (modifyModal.request?.firstHalf ||
-                    modifyModal.request?.requestType) &&
-                modifyFormData.secondHalf ===
-                  (modifyModal.request?.secondHalf ||
-                    modifyModal.request?.requestType)
-                  ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
-                  : "bg-white border-gray-200"
+                modifyErrors.description
+                  ? "border-red-500"
+                  : modifyFormData.firstHalf ===
+                        (modifyModal.request?.firstHalf ||
+                          modifyModal.request?.requestType) &&
+                      modifyFormData.secondHalf ===
+                        (modifyModal.request?.secondHalf ||
+                          modifyModal.request?.requestType)
+                    ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
+                    : "bg-white border-gray-200"
               }`}
               placeholder="Please provide details about your request..."
               disabled={
@@ -3154,7 +3298,9 @@ const LeaveManagement = () => {
               }
             />
             {modifyErrors.description && (
-              <p className="text-red-500 text-xs mt-1 ml-1">{modifyErrors.description}</p>
+              <p className="text-red-500 text-xs mt-1 ml-1">
+                {modifyErrors.description}
+              </p>
             )}
           </div>
 
@@ -3216,7 +3362,6 @@ const LeaveManagement = () => {
                 ]}
               />
             </div>
-
           </div>
 
           {/* Document Upload Section */}
@@ -3256,8 +3401,14 @@ const LeaveManagement = () => {
                 getFiles={getLeaveRequestFiles}
                 previewFile={previewLeaveRequestFile}
                 downloadFile={downloadLeaveRequestFile}
-                onFileUpload={(file) => setUploadedDocumentKeys((prev) => [...prev, file.key])}
-                onFileDelete={(fileKey) => setUploadedDocumentKeys((prev) => prev.filter((k) => k !== fileKey))}
+                onFileUpload={(file) =>
+                  setUploadedDocumentKeys((prev) => [...prev, file.key])
+                }
+                onFileDelete={(fileKey) =>
+                  setUploadedDocumentKeys((prev) =>
+                    prev.filter((k) => k !== fileKey),
+                  )
+                }
                 maxFiles={5}
                 maxFileSize={5 * 1024 * 1024}
                 allowedTypes={["images", "pdf"]}
@@ -3288,8 +3439,12 @@ const LeaveManagement = () => {
               >
                 Close
               </button>
-              {!(requestToCancel?.status === LeaveRequestStatus.REQUESTING_FOR_CANCELLATION || 
-                 requestToCancel?.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION) && (
+              {!(
+                requestToCancel?.status ===
+                  LeaveRequestStatus.REQUESTING_FOR_CANCELLATION ||
+                requestToCancel?.status ===
+                  LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
+              ) && (
                 <button
                   key="modify"
                   onClick={() => {
@@ -3366,19 +3521,24 @@ const LeaveManagement = () => {
             </div>
           ) : cancellableDates.length === 0 ? (
             <p className="text-gray-500 text-center">
-              All dates are already modified or cancelled, check table for dates.
+              All dates are already modified or cancelled, check table for
+              dates.
             </p>
           ) : (
             <div className="space-y-4">
               <p className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-100">
                 Select the dates you wish to cancel.
-                {!(requestToCancel?.status === LeaveRequestStatus.REQUESTING_FOR_CANCELLATION || 
-                   requestToCancel?.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION) && (
+                {!(
+                  requestToCancel?.status ===
+                    LeaveRequestStatus.REQUESTING_FOR_CANCELLATION ||
+                  requestToCancel?.status ===
+                    LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
+                ) && (
                   <>
                     <br />
                     <span className="text-xs text-blue-800 font-semibold">
-                      * You can only cancel dates before 06:30 PM of that particular
-                      day.
+                      * You can only cancel dates before 06:30 PM of that
+                      particular day.
                     </span>
                   </>
                 )}

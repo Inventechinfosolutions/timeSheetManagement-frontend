@@ -54,7 +54,7 @@ const ManagerEmployeesView: React.FC = () => {
   const managerName = mappings[0]?.managerName || managerId;
 
   return (
-    <div className="p-4 md:p-8 bg-[#F4F7FE] min-h-screen font-['DM_Sans',sans-serif]">
+    <div className="p-4 md:p-8 bg-[#F4F7FE] font-['DM_Sans',sans-serif]">
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
         <button

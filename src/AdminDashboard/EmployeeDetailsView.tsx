@@ -353,7 +353,7 @@ const EmployeeDetailsView = () => {
       </div>
 
       {/* Top Card - User Header with Gradient */}
-      <div className="relative overflow-hidden rounded-2xl md:rounded-[24px] shadow-[0px_20px_50px_0px_#111c440d] border border-gray-100">
+      <div className="relative overflow-hidden rounded-2xl md:rounded-[24px] shadow-[0px_10px_30px_0px_rgba(17,28,68,0.04)] border border-gray-100">
         {/* Gradient Background */}
         <div
           className="absolute inset-0 opacity-100"
@@ -412,7 +412,7 @@ const EmployeeDetailsView = () => {
       </div>
 
       {/* Personal Information Card */}
-      <div className="bg-white rounded-2xl md:rounded-[24px] p-5 sm:p-6 md:p-8 shadow-[0px_20px_50px_0px_#111c440d] border border-gray-100 mb-4 md:mb-8">
+      <div className="bg-white rounded-2xl md:rounded-[24px] p-5 sm:p-6 md:p-8 shadow-[0px_10px_30px_0px_rgba(17,28,68,0.04)] border border-gray-100 mb-6 md:mb-8">
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#667eea] to-[#764ba2] flex items-center justify-center shadow-lg shadow-purple-200">

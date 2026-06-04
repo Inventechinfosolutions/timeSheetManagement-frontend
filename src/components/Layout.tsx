@@ -18,10 +18,11 @@ const isDashboardRoute = (pathname: string) =>
 const Layout = ({ children }: LayoutProps) => {
   const { pathname } = useLocation()
   const showContentSpinner = !isDashboardRoute(pathname)
+  const isDashboard = isDashboardRoute(pathname)
 
   return (
     <div className="layout">
-      <Header />
+      {!isDashboard && <Header />}
       <main className="main-content">
         {showContentSpinner ? (
           <div className="relative flex-1 min-h-0 flex flex-col">
@@ -31,7 +32,7 @@ const Layout = ({ children }: LayoutProps) => {
         ) : (
           children
         )}
-        <Footer />
+        {!isDashboard && <Footer />}
       </main>
     </div>
   )

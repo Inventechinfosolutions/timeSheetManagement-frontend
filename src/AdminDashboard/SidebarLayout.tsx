@@ -22,6 +22,8 @@ import { AppDispatch } from "../store";
 import { getEntities } from "../reducers/employeeDetails.reducer";
 import { logoutUser } from "../reducers/user.reducer";
 import ApiLoadingSpinner from "../components/ApiLoadingSpinner";
+import Header from "../components/Header";
+import Footer from "../components/Footer";
 
 interface SidebarLayoutProps {
   children: React.ReactNode;
@@ -509,12 +511,14 @@ const SidebarLayout = ({
 
       <main
         ref={mainContentRef}
-        className="flex-1 min-h-0 h-full relative no-scrollbar flex flex-col bg-[#F4F7FE] overflow-auto"
+        className="flex-1 min-h-0 h-full relative custom-scrollbar flex flex-col bg-[#F4F7FE] overflow-y-auto overflow-x-hidden"
       >
-        <div className="relative flex-1 min-h-0 flex flex-col">
+        <Header />
+        <div className="relative grow shrink-0 flex flex-col">
           {children}
           <ApiLoadingSpinner contained contentAreaRef={mainContentRef} />
         </div>
+        <Footer />
       </main>
     </div>
   );

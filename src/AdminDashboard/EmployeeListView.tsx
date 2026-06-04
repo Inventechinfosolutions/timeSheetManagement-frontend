@@ -530,20 +530,20 @@ const EmployeeListView = () => {
   // }, ...);
 
   return (
-    <div className="p-5 bg-[#F4F7FE] min-h-screen font-sans">
+    <div className="p-5 bg-[#F4F7FE] font-sans">
       <div className="max-w-[1600px] mx-auto">
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
-          <h1 className="text-xl md:text-2xl font-bold text-[#2B3674] m-0">
+        <div className="flex flex-row flex-wrap justify-between items-center gap-3 mb-8">
+          <h1 className="text-xl md:text-2xl font-bold text-[#2B3674] m-0 whitespace-nowrap">
             Employee List
           </h1>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+          <div className="flex flex-row flex-wrap items-center gap-3">
             {/* Modern Custom Dropdown */}
             {canEdit && (
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-2 px-5 py-2.5 bg-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] text-[#2B3674] font-bold text-sm hover:bg-gray-50 transition-all border border-transparent focus:border-[#4318FF]/20"
+                  className="flex items-center justify-between gap-2 px-5 py-2.5 bg-white rounded-full border border-gray-200 text-[#2B3674] font-bold text-sm hover:bg-gray-50 transition-all focus:border-[#4318FF]/40"
                 >
                   <div className="flex items-center gap-2">
                     <Filter size={16} className="text-[#4318FF]" />
@@ -606,7 +606,7 @@ ${
               <div className="relative" ref={statusDropdownRef}>
                 <button
                   onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
-                  className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-2 px-5 py-2.5 bg-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] text-[#2B3674] font-bold text-sm hover:bg-gray-50 transition-all border border-transparent focus:border-[#4318FF]/20"
+                  className="flex items-center justify-between gap-2 px-5 py-2.5 bg-white rounded-full border border-gray-200 text-[#2B3674] font-bold text-sm hover:bg-gray-50 transition-all focus:border-[#4318FF]/40"
                 >
                   <div className="flex items-center gap-2">
                     <Filter size={16} className="text-[#4318FF]" />
@@ -649,7 +649,7 @@ ${
             )}
 
             {/* Search Box */}
-            <div className="flex items-center bg-white rounded-full px-5 py-2.5 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] min-w-0 sm:min-w-[250px] flex-1 border border-transparent focus-within:border-[#4318FF]/20 transition-all">
+            <div className="flex items-center bg-white rounded-full px-5 py-2.5 min-w-[200px] border border-gray-200 focus-within:border-[#4318FF]/40 transition-all">
               <Search size={18} className="text-[#A3AED0] mr-2" />
               <input
                 type="text"
@@ -718,7 +718,7 @@ ${
           </div>
         </div>
 
-        <div className="bg-white rounded-[20px] p-0 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] overflow-hidden border border-gray-100">
+        <div className="bg-white rounded-[20px] p-0 overflow-hidden border border-gray-100">
           {/* Desktop Table View */}
           <div className="hidden lg:block">
             <table className="w-full border-separate border-spacing-0">

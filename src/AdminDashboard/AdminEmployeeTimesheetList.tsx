@@ -259,7 +259,7 @@ const AdminEmployeeTimesheetList = () => {
   };
 
   return (
-    <div className="p-4 md:p-6 bg-[#F4F7FE] min-h-screen font-sans">
+    <div className="p-4 md:p-6 bg-[#F4F7FE] font-sans">
       <div className="max-w-[1600px] mx-auto">
         <h1 className="text-xl md:text-2xl font-bold text-[#2B3674] m-0 mb-5">
           Employee Timesheet
