@@ -664,6 +664,14 @@ const Requests = () => {
     }
   };
 
+  const isRejectionAction =
+    confirmModal.status === LeaveRequestStatus.REJECTED ||
+    confirmModal.status === LeaveRequestStatus.CANCELLATION_REJECTED ||
+    confirmModal.status === LeaveRequestStatus.MODIFICATION_REJECTED ||
+    (confirmModal.status === LeaveRequestStatus.APPROVED &&
+      entities.find((e) => e.id === confirmModal.id)?.status ===
+        LeaveRequestStatus.REQUESTING_FOR_CANCELLATION);
+
   return (
     <div className="p-4 md:p-8 bg-[#F4F7FE] font-sans">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
@@ -1455,61 +1463,29 @@ const Requests = () => {
           <div className="relative w-full max-w-md bg-white rounded-[24px] overflow-hidden shadow-[0px_20px_40px_rgba(0,0,0,0.1)] animate-in fade-in zoom-in duration-200 transform">
             <div className="p-8 text-center">
               <div
-                className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-6 ${confirmModal.status === LeaveRequestStatus.APPROVED &&
-                  entities.find((e) => e.id === confirmModal.id)?.status ===
-                  LeaveRequestStatus.REQUESTING_FOR_CANCELLATION
-                  ? "bg-red-50 text-red-500" // Rejecting Cancellation
-                  : confirmModal.status === LeaveRequestStatus.APPROVED ||
-                    confirmModal.status ===
-                    LeaveRequestStatus.CANCELLATION_APPROVED
-                    ? "bg-green-50 text-green-500"
-                    : "bg-red-50 text-red-500"
-                  }`}
+                className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-6 ${
+                  isRejectionAction ? "bg-red-50 text-red-500" : "bg-green-50 text-green-500"
+                }`}
               >
-                {confirmModal.status === LeaveRequestStatus.APPROVED ||
-                  confirmModal.status ===
-                  LeaveRequestStatus.CANCELLATION_APPROVED ? (
-                  <CheckCircle size={32} strokeWidth={2.5} />
-                ) : (
+                {isRejectionAction ? (
                   <XCircle size={32} strokeWidth={2.5} />
+                ) : (
+                  <CheckCircle size={32} strokeWidth={2.5} />
                 )}
               </div>
 
               <h3 className="text-2xl font-black text-[#2B3674] mb-2">
-                {confirmModal.status === LeaveRequestStatus.APPROVED
-                  ? entities.find((e) => e.id === confirmModal.id)?.status ===
-                    LeaveRequestStatus.REQUESTING_FOR_CANCELLATION
-                    ? "Reject Request?"
-                    : "Approve Request?"
-                  : confirmModal.status === LeaveRequestStatus.REJECTED ||
-                    confirmModal.status === LeaveRequestStatus.CANCELLATION_REJECTED
-                    ? "Reject Request?"
-                    : "Approve Request?"}
+                {isRejectionAction ? "Reject Request?" : "Approve Request?"}
               </h3>
 
               <p className="text-gray-500 font-medium leading-relaxed mb-8">
                 Are you sure you want to{" "}
                 <span
-                  className={`font-bold ${confirmModal.status === LeaveRequestStatus.APPROVED &&
-                    entities.find((e) => e.id === confirmModal.id)?.status ===
-                    LeaveRequestStatus.REQUESTING_FOR_CANCELLATION
-                    ? "text-red-600"
-                    : confirmModal.status === LeaveRequestStatus.APPROVED ||
-                      confirmModal.status ===
-                      LeaveRequestStatus.CANCELLATION_APPROVED
-                      ? "text-green-600"
-                      : "text-red-600"
-                    }`}
+                  className={`font-bold ${
+                    isRejectionAction ? "text-red-600" : "text-green-600"
+                  }`}
                 >
-                  {confirmModal.status === LeaveRequestStatus.APPROVED
-                    ? entities.find((e) => e.id === confirmModal.id)?.status ===
-                      LeaveRequestStatus.REQUESTING_FOR_CANCELLATION
-                      ? "Reject"
-                      : "Approve"
-                    : confirmModal.status === LeaveRequestStatus.REJECTED ||
-                      confirmModal.status === LeaveRequestStatus.CANCELLATION_REJECTED
-                      ? "Reject"
-                      : "Approve"}
+                  {isRejectionAction ? "Reject" : "Approve"}
                 </span>{" "}
                 this request for{" "}
                 <span className="text-[#2B3674] font-bold">
@@ -1517,6 +1493,8 @@ const Requests = () => {
                 </span>
                 ?
                 {confirmModal.status === LeaveRequestStatus.APPROVED &&
+                  entities.find((e) => e.id === confirmModal.id)?.status !==
+                    LeaveRequestStatus.REQUESTING_FOR_CANCELLATION &&
                   " This will automatically update attendance records."}
                 {confirmModal.status ===
                   LeaveRequestStatus.CANCELLATION_APPROVED &&
@@ -1543,17 +1521,10 @@ const Requests = () => {
                   className={`flex-1 py-3.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${isProcessing
                     ? "opacity-70 cursor-not-allowed"
                     : "transform active:scale-95"
-                    } ${confirmModal.status === LeaveRequestStatus.APPROVED &&
-                      entities.find((e) => e.id === confirmModal.id)?.status ===
-                      LeaveRequestStatus.REQUESTING_FOR_CANCELLATION
-                      ? "bg-red-500 hover:bg-red-600 shadow-red-200 active:scale-95"
-                      : confirmModal.status === LeaveRequestStatus.APPROVED ||
-                        confirmModal.status ===
-                        LeaveRequestStatus.CANCELLATION_APPROVED ||
-                        confirmModal.status ===
-                        LeaveRequestStatus.MODIFICATION_APPROVED
-                        ? "bg-green-500 hover:bg-green-600 shadow-green-200 active:scale-95"
-                        : "bg-red-500 hover:bg-red-600 shadow-red-200 active:scale-95"
+                    } ${
+                      isRejectionAction
+                        ? "bg-red-500 hover:bg-red-600 shadow-red-200 active:scale-95"
+                        : "bg-green-500 hover:bg-green-600 shadow-green-200 active:scale-95"
                     }`}
                 >
                   {isProcessing ? (
@@ -1562,22 +1533,7 @@ const Requests = () => {
                       Processing...
                     </>
                   ) : (
-                    <>
-                      {confirmModal.status === LeaveRequestStatus.APPROVED ||
-                        confirmModal.status ===
-                        LeaveRequestStatus.MODIFICATION_APPROVED
-                        ? entities.find((e) => e.id === confirmModal.id)
-                          ?.status ===
-                          LeaveRequestStatus.REQUESTING_FOR_CANCELLATION
-                          ? "Confirm Reject" // Special text for this specific case
-                          : "Confirm Approve"
-                        : confirmModal.status === LeaveRequestStatus.REJECTED ||
-                          confirmModal.status === LeaveRequestStatus.CANCELLATION_REJECTED ||
-                          confirmModal.status ===
-                          LeaveRequestStatus.MODIFICATION_REJECTED
-                          ? "Confirm Reject"
-                          : "Confirm Approve"}
-                    </>
+                    <>{isRejectionAction ? "Confirm Reject" : "Confirm Approve"}</>
                   )}
                 </button>
               </div>
@@ -1594,7 +1550,6 @@ const Requests = () => {
         centered
         width={720}
         style={{ maxWidth: '95vw' }}
-        styles={{ content: { padding: 0, borderRadius: '16px', overflow: 'hidden' } }}
         className="application-modal"
       >
         <div className="relative flex flex-col bg-white rounded-[16px] max-h-[85vh]">

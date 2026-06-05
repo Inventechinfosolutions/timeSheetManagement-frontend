@@ -336,3 +336,10 @@ input[type="password"]::-webkit-password-reveal-button {
   font-size: 12px !important;
   display: inline-block !important;
 }
+
+.application-modal .ant-modal-content {
+  padding: 0 !important;
+  border-radius: 16px !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(255, 255, 255, 0.5) !important;
+}

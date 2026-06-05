@@ -2224,14 +2224,14 @@ const LeaveManagement = () => {
         footer={null}
         closable={true}
         centered
-        width={980}
+        width={750}
         className="application-modal"
       >
-        <div className="relative overflow-hidden bg-white rounded-[16px]">
+        <div className="relative overflow-hidden bg-white flex flex-col max-h-[82vh]">
           {/* Modal Header */}
-          <div className="pt-2 px-6">
+          <div className="pt-5 pb-3 px-6 border-b border-gray-100 shrink-0">
             <div className="flex justify-between items-start">
-              <h2 className="text-2xl md:text-3xl font-black text-[#2B3674]">
+              <h2 className="text-xl md:text-2xl font-bold text-[#2B3674] tracking-tight">
                 {selectedLeaveType === LeaveRequestType.APPLY_LEAVE
                   ? LeaveRequestType.LEAVE
                   : selectedLeaveType === LeaveRequestType.HALF_DAY
@@ -2242,7 +2242,7 @@ const LeaveManagement = () => {
           </div>
 
           {/* Modal Body */}
-          <div className="p-6 space-y-5 overflow-y-auto custom-scrollbar max-h-[90vh]">
+          <div className="p-6 space-y-5 overflow-y-auto flex-1 custom-scrollbar">
             {/* Email recipients - in card */}
             <div className="rounded-2xl border border-[#E0E7FF] bg-[#F8FAFC] p-4 shadow-sm">
               <div className="space-y-3">
@@ -2776,32 +2776,33 @@ const LeaveManagement = () => {
               </div>
             )}
 
-            {/* Actions Footer */}
-            {!isViewMode && (
-              <div className="pt-2 flex gap-4">
-                <button
-                  onClick={handleCloseModal}
-                  className="flex-1 py-3.5 rounded-2xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  disabled={loading}
-                  className="flex-1 py-4 rounded-2xl font-bold text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95 transform disabled:opacity-80"
-                >
-                  {loading ? (
-                    <div className="flex items-center justify-center gap-2">
-                      <Loader2 className="animate-spin" size={20} />
-                      <span>Submitting...</span>
-                    </div>
-                  ) : (
-                    "Submit Application"
-                  )}
-                </button>
-              </div>
-            )}
           </div>
+
+          {/* Actions Footer */}
+          {!isViewMode && (
+            <div className="p-4 bg-white border-t border-gray-100 flex gap-4 shrink-0">
+              <button
+                onClick={handleCloseModal}
+                className="flex-1 py-2.5 rounded-xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 transition-all active:scale-95 text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={loading}
+                className="flex-1 py-2.5 rounded-xl font-bold text-white bg-gradient-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95 disabled:opacity-80 text-sm flex items-center justify-center"
+              >
+                {loading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <Loader2 className="animate-spin" size={18} />
+                    <span>Submitting...</span>
+                  </div>
+                ) : (
+                  "Submit Application"
+                )}
+              </button>
+            </div>
+          )}
         </div>
       </Modal>
 
@@ -3012,122 +3013,24 @@ const LeaveManagement = () => {
           !isModifying && setModifyModal({ isOpen: false, request: null });
           setModifyErrors({ title: "", description: "" });
         }}
-        width={980}
-        title={
-          <div className="text-xl font-bold text-gray-800">Modify Request</div>
-        }
-        footer={
-          <div className="flex justify-end gap-3 pt-4">
-            <button
-              key="back"
-              onClick={() => setModifyModal({ isOpen: false, request: null })}
-              disabled={isModifying}
-              className="px-6 py-2.5 rounded-xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              key="submit"
-              onClick={async () => {
-                if (!modifyModal.request) return;
-
-                // Validation: Check if title and description are not empty
-                const newErrors = { title: "", description: "" };
-                let isValid = true;
-
-                if (!modifyFormData.title.trim()) {
-                  newErrors.title = "Subject is required";
-                  isValid = false;
-                }
-                if (!modifyFormData.description.trim()) {
-                  newErrors.description = "Description is required";
-                  isValid = false;
-                }
-
-                if (!isValid) {
-                  setModifyErrors(newErrors);
-                  return;
-                }
-
-                // Validation: Check if any change was made
-                const originalFirstHalf =
-                  modifyModal.request.firstHalf ||
-                  modifyModal.request.requestType;
-                const originalSecondHalf =
-                  modifyModal.request.secondHalf ||
-                  modifyModal.request.requestType;
-
-                const isFirstHalfChanged =
-                  modifyFormData.firstHalf !== originalFirstHalf;
-                const isSecondHalfChanged =
-                  modifyFormData.secondHalf !== originalSecondHalf;
-                const isTitleChanged =
-                  modifyFormData.title !== (modifyModal.request.title || "");
-                const isDescriptionChanged =
-                  modifyFormData.description !==
-                  (modifyModal.request.description || "");
-
-                if (
-                  !isFirstHalfChanged &&
-                  !isSecondHalfChanged &&
-                  !isTitleChanged &&
-                  !isDescriptionChanged &&
-                  JSON.stringify(modifyFormData.ccEmails || []) ===
-                    JSON.stringify(modifyModal.request.ccEmails || [])
-                ) {
-                  message.warning(
-                    "No changes detected. Please modify at least one field to submit.",
-                  );
-                  return;
-                }
-
-                setIsModifying(true);
-                try {
-                  await dispatch(
-                    modifyLeaveRequest({
-                      id: modifyModal.request.id,
-                      employeeId: modifyModal.request.employeeId,
-                      updateData: {
-                        ...modifyFormData,
-                        datesToModify: modifyModal.datesToModify,
-                        documentKeys: uploadedDocumentKeys,
-                      },
-                    }),
-                  ).unwrap();
-                  setModifyModal({ isOpen: false, request: null });
-                  setUploadedDocumentKeys([]); // Reset on success
-                  if (employeeId) {
-                    refreshData();
-                  }
-                } catch (err: any) {
-                  message.error(
-                    `Modification Failed: ${err.message || "Failed to modify request."}`,
-                  );
-                } finally {
-                  setIsModifying(false);
-                }
-              }}
-              disabled={isModifying}
-              className={`px-8 py-2.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${
-                isModifying
-                  ? "bg-blue-400 cursor-not-allowed"
-                  : "bg-blue-500 hover:bg-blue-600 shadow-blue-200 transform active:scale-95"
-              }`}
-            >
-              {isModifying ? (
-                <>
-                  <Loader2 className="animate-spin" size={18} />
-                  Processing...
-                </>
-              ) : (
-                "Save and Submit"
-              )}
-            </button>
-          </div>
-        }
+        footer={null}
+        closable={true}
         centered
+        width={750}
+        className="application-modal"
       >
-        <div className="py-2 space-y-4 max-h-[80vh] overflow-y-auto custom-scrollbar px-1">
+        <div className="relative overflow-hidden bg-white flex flex-col max-h-[82vh]">
+          {/* Modal Header */}
+          <div className="pt-5 pb-3 px-6 border-b border-gray-100 shrink-0">
+            <div className="flex justify-between items-start">
+              <h2 className="text-xl md:text-2xl font-bold text-[#2B3674] tracking-tight">
+                Modify Request
+              </h2>
+            </div>
+          </div>
+
+          {/* Modal Body */}
+          <div className="p-6 space-y-5 overflow-y-auto flex-1 custom-scrollbar px-1">
           {/* Email recipients + Subject card - same as Create */}
           <div className="rounded-2xl border border-[#E0E7FF] bg-[#F8FAFC] p-4 shadow-sm">
             <div className="space-y-3">
@@ -3416,6 +3319,114 @@ const LeaveManagement = () => {
                 deleteMessage="Document removed successfully"
               />
             </div>
+          </div>
+        </div>
+
+        {/* Modal Footer */}
+          <div className="flex justify-end gap-3 pt-4 px-6 pb-5 border-t border-gray-100 shrink-0">
+            <button
+              onClick={() => setModifyModal({ isOpen: false, request: null })}
+              disabled={isModifying}
+              className="px-6 py-2.5 rounded-xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={async () => {
+                if (!modifyModal.request) return;
+
+                // Validation: Check if title and description are not empty
+                const newErrors = { title: "", description: "" };
+                let isValid = true;
+
+                if (!modifyFormData.title.trim()) {
+                  newErrors.title = "Subject is required";
+                  isValid = false;
+                }
+                if (!modifyFormData.description.trim()) {
+                  newErrors.description = "Description is required";
+                  isValid = false;
+                }
+
+                if (!isValid) {
+                  setModifyErrors(newErrors);
+                  return;
+                }
+
+                // Validation: Check if any change was made
+                const originalFirstHalf =
+                  modifyModal.request.firstHalf ||
+                  modifyModal.request.requestType;
+                const originalSecondHalf =
+                  modifyModal.request.secondHalf ||
+                  modifyModal.request.requestType;
+
+                const isFirstHalfChanged =
+                  modifyFormData.firstHalf !== originalFirstHalf;
+                const isSecondHalfChanged =
+                  modifyFormData.secondHalf !== originalSecondHalf;
+                const isTitleChanged =
+                  modifyFormData.title !== (modifyModal.request.title || "");
+                const isDescriptionChanged =
+                  modifyFormData.description !==
+                  (modifyModal.request.description || "");
+
+                if (
+                  !isFirstHalfChanged &&
+                  !isSecondHalfChanged &&
+                  !isTitleChanged &&
+                  !isDescriptionChanged &&
+                  JSON.stringify(modifyFormData.ccEmails || []) ===
+                    JSON.stringify(modifyModal.request.ccEmails || [])
+                ) {
+                  message.warning(
+                    "No changes detected. Please modify at least one field to submit.",
+                  );
+                  return;
+                }
+
+                setIsModifying(true);
+                try {
+                  await dispatch(
+                    modifyLeaveRequest({
+                      id: modifyModal.request.id,
+                      employeeId: modifyModal.request.employeeId,
+                      updateData: {
+                        ...modifyFormData,
+                        datesToModify: modifyModal.datesToModify,
+                        documentKeys: uploadedDocumentKeys,
+                      },
+                    }),
+                  ).unwrap();
+                  setModifyModal({ isOpen: false, request: null });
+                  setUploadedDocumentKeys([]); // Reset on success
+                  if (employeeId) {
+                    refreshData();
+                  }
+                } catch (err: any) {
+                  message.error(
+                    `Modification Failed: ${err.message || "Failed to modify request."}`,
+                  );
+                } finally {
+                  setIsModifying(false);
+                }
+              }}
+              disabled={isModifying}
+              className={`px-8 py-2.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${
+                isModifying
+                  ? "bg-blue-400 cursor-not-allowed"
+                  : "bg-blue-500 hover:bg-blue-600 shadow-blue-200 transform active:scale-95"
+              }`}
+            >
+              {isModifying ? (
+                <>
+                  <Loader2 className="animate-spin" size={18} />
+                  Processing...
+                </>
+              ) : (
+                "Save and Submit"
+              )}
+            </button>
           </div>
         </div>
       </Modal>
