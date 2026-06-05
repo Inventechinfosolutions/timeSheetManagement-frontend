@@ -34,6 +34,9 @@ const AttendanceViewWrapper = (props: AttendanceViewWrapperProps) => {
     return (
       <MobileResponsiveCalendarPage
         employeeId={props.employeeId}
+        entries={props.entries}
+        currentDate={props.currentDate}
+        hideMonthNavigation={props.hideMonthNavigation}
         onNavigateToDate={props.onNavigateToDate}
       />
     );

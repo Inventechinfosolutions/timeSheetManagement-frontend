@@ -22,13 +22,10 @@ import {
 import { TimesheetEntry } from "../types";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import {
-  fetchMonthlyAttendance,
-  autoUpdateTimesheet,
+  fetchMyTimesheet,
   downloadAttendancePdfReport,
 } from "../reducers/employeeAttendance.reducer";
 import { AttendanceStatus, UserType, Department } from "../enums";
-import { fetchBlockers } from "../reducers/timesheetBlocker.reducer";
-import { getLeaveHistory } from "../reducers/leaveRequest.reducer";
 
 interface CalendarProps {
   now?: Date;
@@ -133,6 +130,7 @@ const Calendar = ({
   const isMyRoute =
     location.pathname.includes("my-dashboard") ||
     location.pathname.includes("my-timesheet") ||
+    location.pathname.includes("timesheet-view") ||
     location.pathname === "/employee-dashboard" ||
     location.pathname === "/employee-dashboard/";
 
@@ -161,12 +159,12 @@ const Calendar = ({
     return true;
   }, []);
 
-  // Fetch holidays on mount
+  // Fetch master holidays for holiday markers on the calendar
   useEffect(() => {
     dispatch(fetchHolidays());
   }, [dispatch]);
 
-  // Fetch attendance data and blockers when month/employee changes
+  // Fetch attendance and blockers in a single consolidated request
   useEffect(() => {
     if (
       !currentEmployeeId ||
@@ -182,21 +180,11 @@ const Calendar = ({
     if (attendanceFetchedKey.current === fetchKey) return;
     attendanceFetchedKey.current = fetchKey;
 
-    dispatch(fetchBlockers(currentEmployeeId));
     dispatch(
-      fetchMonthlyAttendance({
+      fetchMyTimesheet({
         employeeId: currentEmployeeId,
         month: (displayDate.getMonth() + 1).toString().padStart(2, "0"),
         year: displayDate.getFullYear().toString(),
-      }),
-    );
-    // Also fetch leave requests so we can reflect approved Leave/WFH/Client Visit
-    // even if attendance records are not present (backend delay/lock rules).
-    dispatch(
-      getLeaveHistory({
-        employeeId: currentEmployeeId,
-        page: 1,
-        limit: 500,
       }),
     );
   }, [dispatch, currentEmployeeId, displayDate, propEntries, isAdmin]);
@@ -222,17 +210,6 @@ const Calendar = ({
     } else {
       setInternalDisplayDate(newDate);
     }
-
-    if (currentEmployeeId && currentEmployeeId !== "Admin") {
-      dispatch(
-        autoUpdateTimesheet({
-          employeeId: currentEmployeeId,
-          month: (newDate.getMonth() + 1).toString().padStart(2, "0"),
-          year: newDate.getFullYear().toString(),
-          dryRun: true,
-        }),
-      );
-    }
   };
 
   const handleNextMonth = () => {
@@ -246,17 +223,6 @@ const Calendar = ({
       onMonthChange(newDate);
     } else {
       setInternalDisplayDate(newDate);
-    }
-
-    if (currentEmployeeId && currentEmployeeId !== "Admin") {
-      dispatch(
-        autoUpdateTimesheet({
-          employeeId: currentEmployeeId,
-          month: (newDate.getMonth() + 1).toString().padStart(2, "0"),
-          year: newDate.getFullYear().toString(),
-          dryRun: true,
-        }),
-      );
     }
   };
 
