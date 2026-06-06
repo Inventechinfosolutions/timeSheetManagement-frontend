@@ -264,7 +264,7 @@ const AdminDashboard = () => {
       className={`${styles.container} h-full overflow-y-auto custom-scrollbar`}
     >
       {/* Month Selector Section */}
-      <div className="flex justify-center md:justify-end mb-6">
+      {/* <div className="flex justify-center md:justify-end mb-6">
         <div className="inline-flex items-center bg-white rounded-full px-3 py-1 shadow-sm border border-gray-100/50 gap-2">
           <button
             onClick={() => {
@@ -295,7 +295,7 @@ const AdminDashboard = () => {
             <ChevronRight size={16} strokeWidth={2.5} />
           </button>
         </div>
-      </div>
+      </div> */}
 
       {/* Stats Section */}
       <div className={styles.cardGrid}>

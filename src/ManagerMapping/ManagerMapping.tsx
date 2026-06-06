@@ -77,6 +77,7 @@ const ManagerMapping: React.FC = () => {
   const [searchText, setSearchText] = useState("");
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [isDeptDropdownOpen, setIsDeptDropdownOpen] = useState(false);
+  const [isManagerDropdownOpen, setIsManagerDropdownOpen] = useState(false);
 
   // History Pagination/Search state
   const [historySearch, setHistorySearch] = useState("");
@@ -186,6 +187,7 @@ const ManagerMapping: React.FC = () => {
     setAssignedEmployees([]);
     setSelectedEmployees([]);
     setIsDeptDropdownOpen(false);
+    setIsManagerDropdownOpen(false);
 
     // Fetch managers for selected department
     if (dept === "All Departments") {
@@ -276,7 +278,10 @@ const ManagerMapping: React.FC = () => {
             </label>
             <div className="relative">
               <button
-                onClick={() => setIsDeptDropdownOpen(!isDeptDropdownOpen)}
+                onClick={() => {
+                  setIsDeptDropdownOpen(!isDeptDropdownOpen);
+                  setIsManagerDropdownOpen(false);
+                }}
                 className="w-full flex items-center justify-between px-4 py-3 bg-white border border-gray-200 rounded-xl text-[#2B3674] font-medium hover:border-[#4318FF] transition-colors"
               >
                 <span>{selectedDepartment || "Select Department"}</span>
@@ -288,6 +293,7 @@ const ManagerMapping: React.FC = () => {
                         e.stopPropagation();
                         handleClear();
                         setIsDeptDropdownOpen(false);
+                        setIsManagerDropdownOpen(false);
                       }}
                       className="p-1 rounded-full hover:bg-red-50 text-[#A3AED0] hover:text-red-500 transition-colors"
                       title="Clear department"
@@ -331,38 +337,65 @@ const ManagerMapping: React.FC = () => {
               Manager
             </label>
             <div className="relative">
-              <select
-                value={selectedManager?.id || ""}
-                onChange={(e) => {
-                  const manager = availableManagers.find(
-                    (m) => String(m.id) === e.target.value,
-                  );
-                  if (manager) handleManagerSelect(manager);
+              <button
+                type="button"
+                disabled={!selectedDepartment || selectedDepartment === "All Departments"}
+                onClick={() => {
+                  setIsManagerDropdownOpen(!isManagerDropdownOpen);
+                  setIsDeptDropdownOpen(false);
                 }}
-                disabled={selectedDepartment === "All Departments"}
-                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-[#2B3674] font-medium hover:border-[#4318FF] transition-colors disabled:opacity-50 disabled:cursor-not-allowed pr-10"
+                className="w-full flex items-center justify-between px-4 py-3 bg-white border border-gray-200 rounded-xl text-[#2B3674] font-medium hover:border-[#4318FF] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <option value="">Select Manager</option>
-                {availableManagers.map((manager) => (
-                  <option key={manager.id} value={manager.id}>
-                    {manager.fullName} ({manager.employeeId})
-                  </option>
-                ))}
-              </select>
-              {selectedManager && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedManager(null);
-                    setAssignedEmployees([]);
-                    setSelectedEmployees([]);
-                  }}
-                  className="absolute right-8 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-red-50 text-[#A3AED0] hover:text-red-500 transition-colors"
-                  title="Clear manager"
-                  type="button"
-                >
-                  <X size={16} />
-                </button>
+                <span>
+                  {selectedManager
+                    ? `${selectedManager.fullName} (${selectedManager.employeeId})`
+                    : "Select Manager"}
+                </span>
+                <div className="flex items-center gap-1">
+                  {selectedManager && (
+                    <span
+                      role="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedManager(null);
+                        setAssignedEmployees([]);
+                        setSelectedEmployees([]);
+                        setIsManagerDropdownOpen(false);
+                      }}
+                      className="p-1 rounded-full hover:bg-red-50 text-[#A3AED0] hover:text-red-500 transition-colors"
+                      title="Clear manager"
+                    >
+                      <X size={16} />
+                    </span>
+                  )}
+                  <ChevronDown
+                    size={20}
+                    className={`text-[#A3AED0] transition-transform ${isManagerDropdownOpen ? "rotate-180" : ""}`}
+                  />
+                </div>
+              </button>
+              {isManagerDropdownOpen && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50 max-h-64 overflow-y-auto">
+                  {availableManagers.length === 0 ? (
+                    <div className="px-4 py-2 text-sm text-[#A3AED0] font-medium">
+                      No managers available
+                    </div>
+                  ) : (
+                    availableManagers.map((manager) => (
+                      <button
+                        key={manager.id}
+                        type="button"
+                        onClick={() => {
+                          handleManagerSelect(manager);
+                          setIsManagerDropdownOpen(false);
+                        }}
+                        className={`w-full text-left px-4 py-2 text-sm font-medium hover:bg-[#F4F7FE] ${selectedManager?.id === manager.id ? "text-[#4318FF] bg-[#4318FF]/5" : "text-[#2B3674]"}`}
+                      >
+                        {manager.fullName} ({manager.employeeId})
+                      </button>
+                    ))
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -573,7 +606,10 @@ const ManagerMapping: React.FC = () => {
           <div className="flex items-center gap-3 w-full md:w-auto">
             <div className="relative">
               <button
-                onClick={() => setIsHistoryDeptOpen(!isHistoryDeptOpen)}
+                onClick={() => {
+                  setIsHistoryDeptOpen(!isHistoryDeptOpen);
+                  setIsHistoryStatusOpen(false);
+                }}
                 className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl shadow-sm border border-gray-100 text-[#2B3674] font-bold text-sm hover:bg-gray-50 transition-all min-w-[160px]"
               >
                 <Filter size={16} className="text-[#4318FF]" />
@@ -614,7 +650,10 @@ const ManagerMapping: React.FC = () => {
 
             <div className="relative">
               <button
-                onClick={() => setIsHistoryStatusOpen(!isHistoryStatusOpen)}
+                onClick={() => {
+                  setIsHistoryStatusOpen(!isHistoryStatusOpen);
+                  setIsHistoryDeptOpen(false);
+                }}
                 className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl shadow-sm border border-gray-100 text-[#2B3674] font-bold text-sm hover:bg-gray-50 transition-all min-w-[140px]"
               >
                 <Filter size={16} className="text-[#4318FF]" />

@@ -357,11 +357,10 @@ const MyTimesheet = ({
     dispatch(fetchHolidays());
   }, [dispatch]);
 
-  // Helper: is the viewed month a past or current month (not future)?
+  // Helper: is the viewed month the current month?
   const isViewedMonthEligible =
-    now.getFullYear() < today.getFullYear() ||
-    (now.getFullYear() === today.getFullYear() &&
-      now.getMonth() <= today.getMonth());
+    now.getFullYear() === today.getFullYear() &&
+    now.getMonth() === today.getMonth();
 
   // Fetch attendance and blockers in a single consolidated request
   useEffect(() => {
@@ -1685,13 +1684,12 @@ const MyTimesheet = ({
   const paddingDays = firstDayOfMonth;
 
   const handleAutoUpdateClick = () => {
-    // Block future months (past and current months are allowed)
+    // Only allow auto-update for the current month
     if (
-      now.getFullYear() > today.getFullYear() ||
-      (now.getFullYear() === today.getFullYear() &&
-        now.getMonth() > today.getMonth())
+      now.getFullYear() !== today.getFullYear() ||
+      now.getMonth() !== today.getMonth()
     ) {
-      message.error("Auto-update is not available for future months.");
+      message.error("Auto-update is only available for the current month.");
       return;
     }
     setShowAutoUpdateModal(true);

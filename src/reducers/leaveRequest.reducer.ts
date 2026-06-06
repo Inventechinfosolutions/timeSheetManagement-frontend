@@ -624,6 +624,15 @@ const leaveRequestSlice = createSlice({
       }
     });
 
+    // Reject Cancellation Request
+    builder.addCase(rejectCancellationRequest.fulfilled, (state, action) => {
+      const updatedItem = action.payload.request || action.payload;
+      const index = state.entities.findIndex((item) => item.id === updatedItem.id);
+      if (index !== -1) {
+        state.entities[index].status = updatedItem.status;
+      }
+    });
+
     // File Upload
     builder.addCase(uploadLeaveRequestFile.pending, (state) => {
       state.fileLoading = true;
