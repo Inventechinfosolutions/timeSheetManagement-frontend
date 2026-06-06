@@ -31,12 +31,22 @@ const ManagerEmployeesView: React.FC = () => {
   const itemsPerPage = 10;
 
   const [unfilteredTotal, setUnfilteredTotal] = useState<number>(0);
+  const [managerNameState, setManagerNameState] = useState<string>("");
 
   useEffect(() => {
     if (!debouncedSearch && !loading && totalItems > 0) {
       setUnfilteredTotal(totalItems);
     }
   }, [debouncedSearch, loading, totalItems]);
+
+  useEffect(() => {
+    if (mappings.length > 0 && !managerNameState) {
+      const name = mappings[0]?.managerName;
+      if (name && name !== managerId) {
+        setManagerNameState(name);
+      }
+    }
+  }, [mappings, managerId, managerNameState]);
 
   // Debounce search
   useEffect(() => {
@@ -61,7 +71,7 @@ const ManagerEmployeesView: React.FC = () => {
     }
   }, [dispatch, managerId, teamPage, debouncedSearch]);
 
-  const managerName = mappings[0]?.managerName || managerId;
+  const managerName = managerNameState || mappings[0]?.managerName || managerId;
 
   return (
     <div className="p-4 md:p-8 bg-[#F4F7FE] font-['DM_Sans',sans-serif]">
@@ -90,10 +100,12 @@ const ManagerEmployeesView: React.FC = () => {
             <User size={20} />
           </div>
           <div>
-            <p className="text-xs text-[#A3AED0] font-medium">Team Details</p>
             <h3 className="text-base font-bold text-[#2B3674] leading-tight">
-              {managerName}
+              {managerNameState || mappings[0]?.managerName || "Team Details"}
             </h3>
+            <p className="text-xs text-[#A3AED0] font-medium mt-1">
+              Manager ID: {managerId}
+            </p>
           </div>
         </div>
 
