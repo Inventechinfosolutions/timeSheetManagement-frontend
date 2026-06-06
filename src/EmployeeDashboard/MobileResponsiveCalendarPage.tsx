@@ -16,11 +16,11 @@ import {
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { RootState } from "../store";
 import {
-  fetchMonthlyAttendance,
   downloadAttendancePdfReport,
+  fetchMyTimesheet,
 } from "../reducers/employeeAttendance.reducer";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
-import { fetchBlockers } from "../reducers/timesheetBlocker.reducer";
+import { TimesheetEntry } from "../types";
 import { AttendanceStatus, UserType, Department } from "../enums";
 import {
   generateMonthlyEntries,
@@ -31,12 +31,18 @@ import { saveAs } from "file-saver";
 
 interface MobileResponsiveCalendarPageProps {
   employeeId?: string;
+  entries?: TimesheetEntry[];
+  currentDate?: Date;
+  hideMonthNavigation?: boolean;
   onNavigateToDate?: (timestamp: number) => void;
   onBlockedClick?: () => void;
 }
 
 const MobileResponsiveCalendarPage = ({
   employeeId: propEmployeeId,
+  entries: propEntries,
+  currentDate: propCurrentDate,
+  hideMonthNavigation = false,
   onNavigateToDate,
   onBlockedClick,
 }: MobileResponsiveCalendarPageProps) => {
@@ -67,6 +73,7 @@ const MobileResponsiveCalendarPage = ({
   const isMyRoute =
     location.pathname.includes("my-dashboard") ||
     location.pathname.includes("my-timesheet") ||
+    location.pathname.includes("timesheet-view") ||
     location.pathname === "/employee-dashboard" ||
     location.pathname === "/employee-dashboard/";
 
@@ -79,8 +86,16 @@ const MobileResponsiveCalendarPage = ({
   const attendanceFetchedKey = useRef<string | null>(null);
 
   // Local State
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(
+    () => propCurrentDate || new Date(),
+  );
   const now = new Date(); // Real "today"
+
+  useEffect(() => {
+    if (propCurrentDate) {
+      setCurrentDate(propCurrentDate);
+    }
+  }, [propCurrentDate]);
 
   // Download State
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
@@ -90,27 +105,27 @@ const MobileResponsiveCalendarPage = ({
   });
   const [isDownloading, setIsDownloading] = useState(false);
 
-  // 1. Fetch Data Logic
+  // 1. Fetch Data Logic (skip holidays when parent already provides entries)
   useEffect(() => {
+    if (propEntries) return;
     dispatch(fetchHolidays());
-  }, [dispatch]);
+  }, [dispatch, propEntries]);
 
   useEffect(() => {
-    if (!currentEmployeeId) return;
+    if (!currentEmployeeId || propEntries) return;
 
     const fetchKey = `${currentEmployeeId}-${currentDate.getMonth() + 1}-${currentDate.getFullYear()}`;
     if (attendanceFetchedKey.current === fetchKey) return;
     attendanceFetchedKey.current = fetchKey;
 
-    dispatch(fetchBlockers(currentEmployeeId));
     dispatch(
-      fetchMonthlyAttendance({
+      fetchMyTimesheet({
         employeeId: currentEmployeeId,
         month: (currentDate.getMonth() + 1).toString().padStart(2, "0"),
         year: currentDate.getFullYear().toString(),
       }),
     );
-  }, [dispatch, currentEmployeeId, currentDate]);
+  }, [dispatch, currentEmployeeId, currentDate, propEntries]);
 
   // 2. Calendar Logic (Grid Generation)
   const { monthDays, blanks, daysOfWeek, currentMonthName, entries } =
@@ -140,9 +155,9 @@ const MobileResponsiveCalendarPage = ({
           month: "long",
           year: "numeric",
         }),
-        entries: generatedEntries,
+        entries: propEntries || generatedEntries,
       };
-    }, [currentDate, records]);
+    }, [currentDate, records, propEntries, now]);
 
   // 3. Navigation Handlers
   const handlePrevMonth = () => {
@@ -261,6 +276,7 @@ const MobileResponsiveCalendarPage = ({
         </div>
 
         {/* Month Navigator */}
+        {!hideMonthNavigation && (
         <div className="flex items-center justify-center gap-2 bg-white/50 p-1 rounded-lg backdrop-blur-sm">
           <button
             onClick={handlePrevMonth}
@@ -289,6 +305,7 @@ const MobileResponsiveCalendarPage = ({
             <ChevronRight size={20} />
           </button>
         </div>
+        )}
       </div>
 
       <div className="p-3">

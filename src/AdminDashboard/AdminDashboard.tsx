@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import dayjs from "dayjs";
 import Chart from "react-apexcharts";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { RootState } from "../store";
 import { getEntities } from "../reducers/employeeDetails.reducer";
 import { useAppDispatch, useAppSelector } from "../hooks";
@@ -9,7 +9,6 @@ import {
   Users,
   Search,
   Clock,
-  FileText,
   TrendingUp,
   Filter,
   ChevronDown,
@@ -21,24 +20,12 @@ import {
   ArrowLeft,
   ChevronLeft,
 } from "lucide-react";
-import { AttendanceStatus , UserStatus} from "../enums";
-import {
-  fetchAllEmployeesMonthlyAttendance,
-  fetchMonthlyAttendance,
-  downloadAttendancePdfReport,
-} from "../reducers/employeeAttendance.reducer";
+import { downloadAttendancePdfReport } from "../reducers/employeeAttendance.reducer";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import { saveAs } from "file-saver";
-import { generateRangeEntries } from "../utils/attendanceUtils";
-import {
-  fetchUnreadNotifications,
-  fetchEmployeeUpdates,
-} from "../reducers/leaveNotification.reducer";
-import { fetchNotifications } from "../reducers/notification.reducer";
 import { fetchDepartments } from "../reducers/masterDepartment.reducer";
 
 const AdminDashboard = () => {
-  const navigate = useNavigate();
   const location = useLocation();
 
   const basePath = location.pathname.startsWith("/manager-dashboard")
@@ -49,10 +36,6 @@ const AdminDashboard = () => {
   // Root States
   const { entities, totalItems } = useAppSelector(
     (state: RootState) => state.employeeDetails,
-  );
-  const { currentUser } = useAppSelector((state: RootState) => state.user);
-  const { employeeRecords } = useAppSelector(
-    (state: RootState) => state.attendance,
   );
   // @ts-ignore
   const { holidays } = useAppSelector(
@@ -75,16 +58,6 @@ const AdminDashboard = () => {
     entities: any[];
     totalItems: number;
   } | null>(null);
-
-  // Chart Logic States
-  // Chart Logic States
-  const [sortOption] = useState("hours_desc");
-  // const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
-  // const sortDropdownRef = useRef<HTMLDivElement>(null);
-
-  // const [comparisonDept] = useState("All");
-  // const [isComparisonDeptOpen, setIsComparisonDeptOpen] = useState(false);
-  // const comparisonDeptRef = useRef<HTMLDivElement>(null);
 
   // Export Modal States
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
@@ -110,14 +83,6 @@ const AdminDashboard = () => {
 
   // Effects
   useEffect(() => {
-    // Initial fetch for dashboard stats (Global Attendance)
-    dispatch(
-      fetchAllEmployeesMonthlyAttendance({
-        month: currentMonth,
-        year: currentYear,
-      }),
-    );
-    // Initial fetch for global statistics cache
     dispatch(getEntities({ page: 1, limit: 1000, userStatus: "ACTIVE" })).then(
       (action: any) => {
         if (action.payload) {
@@ -132,24 +97,13 @@ const AdminDashboard = () => {
         }
       },
     );
-    // Fetch holidays for PDF export
-    dispatch(fetchHolidays());
-    // Fetch departments
-    dispatch(fetchDepartments());
-  }, [dispatch, currentMonth, currentYear]);
-
-  // Refresh admin notifications on load
-  useEffect(() => {
-    dispatch(fetchUnreadNotifications());
-
-    const employeeId =
-      currentUser?.employeeId ||
-      (entities.length > 0 ? entities[0].employeeId : null);
-    if (employeeId && employeeId !== "Admin") {
-      dispatch(fetchNotifications(employeeId));
-      dispatch(fetchEmployeeUpdates(employeeId));
+    if (holidays.length === 0) {
+      dispatch(fetchHolidays());
     }
-  }, [dispatch, currentUser, entities]);
+    if (departments.length === 0) {
+      dispatch(fetchDepartments());
+    }
+  }, [dispatch, holidays.length, departments.length]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -226,91 +180,13 @@ const AdminDashboard = () => {
     }
   };
 
-  // Memoized Stats & Chart Data
-  const stats = useMemo(() => {
-    const allAttendance = Object.values(employeeRecords).flat();
-    const todayStr = dayjs().format("YYYY-MM-DD");
-
-    if (!allAttendance.length)
-      return { totalHours: 0, todayPresent: 0, totalAbsent: 0 };
-
-    const totalMinutes = allAttendance.reduce(
-      (acc, curr: any) => acc + Number(curr.totalHours || curr.total_hours || 0) * 60,
-      0,
-    );
-
-    const todayRecords = allAttendance.filter((r) => {
-      const rDateStr = dayjs(r.workingDate).format("YYYY-MM-DD");
-      return rDateStr === todayStr;
-    });
-
-    const todayPresent = todayRecords.filter((r: any) =>
-      [AttendanceStatus.FULL_DAY, AttendanceStatus.HALF_DAY].includes(
-        (r.status || r.attendance_status) as AttendanceStatus,
-      ),
-    ).length;
-
-    const todayAbsent = todayRecords.filter(
-      (r: any) => (r.status || r.attendance_status) === AttendanceStatus.LEAVE,
-    ).length;
-
-    return {
-      totalHours: Math.round(totalMinutes / 60),
-      todayPresent,
-      totalAbsent: todayAbsent,
-    };
-  }, [employeeRecords]);
-
   const chartData = useMemo(() => {
-    const daysInMonth = new Date(
-      parseInt(currentYear),
-      parseInt(currentMonth),
-      0,
-    ).getDate();
-    const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-
     const globalEntities = globalStatsCache
       ? globalStatsCache.entities
       : entities;
-    const filteredEntities = entities;
 
-    // 1. Trend (Monthly Cumulative)
-    const trendDailyHours = days.map((day) => {
-      const dateStr = dayjs(new Date(Number(currentYear), Number(currentMonth) - 1, day)).format("YYYY-MM-DD");
-      let totalDayHours = 0;
-      globalEntities.forEach((emp: any) => {
-        const empId = emp.employeeId || emp.id;
-        const records = employeeRecords[empId] || [];
-        const dayRecord: any = records.find((r) => {
-          const rDate = dayjs(r.workingDate).format("YYYY-MM-DD");
-          return rDate === dateStr;
-        });
-        if (dayRecord) totalDayHours += Number(dayRecord.totalHours || dayRecord.total_hours) || 0;
-      });
-      return parseFloat((Number(totalDayHours) || 0).toFixed(1));
-    });
-
-    // 2. Employee Hours Comparison (Filtered)
-    const empHours = filteredEntities
-      .map((emp) => {
-        const empId = emp.employeeId || emp.id;
-        const records = employeeRecords[empId] || [];
-        const total = records.reduce(
-          (sum, r: any) => sum + Number(r.totalHours || r.total_hours || 0),
-          0,
-        );
-        return { name: emp.fullName || emp.name || "Unknown", hours: total };
-      })
-      .sort((a, b) => {
-        if (sortOption === "hours_desc") return b.hours - a.hours;
-        if (sortOption === "hours_asc") return a.hours - b.hours;
-        return 0;
-      });
-
-    // 3. Donut (Global Distribution)
     let departmentsList = departments.map((d) => d.departmentName);
 
-    // If manager dashboard, only show departments that actually have employees in the current view
     const isManagerView = basePath === "/manager-dashboard";
     if (isManagerView) {
       const activeDepts = new Set(
@@ -320,132 +196,59 @@ const AdminDashboard = () => {
     }
 
     return {
-      trend: {
-        series: [{ name: "Total Hours", data: trendDailyHours }],
-        options: {
-          chart: {
-            type: "area" as const,
-            toolbar: { show: false },
-            fontFamily: "DM Sans, sans-serif",
-          },
-          stroke: { curve: "smooth" as const, width: 3 },
-          xaxis: {
-            categories: days.map(String),
-            axisBorder: { show: false },
-            axisTicks: { show: false },
-            labels: { style: { colors: "#A3AED0", fontSize: "12px" } },
-          },
-          yaxis: { labels: { style: { colors: "#A3AED0", fontSize: "12px" } } },
-          colors: ["#4318FF"],
-          fill: {
-            type: "gradient",
-            gradient: {
-              shadeIntensity: 1,
-              opacityFrom: 0.7,
-              opacityTo: 0.2,
-              stops: [0, 90, 100],
-            },
-          },
-          dataLabels: { enabled: false },
-          grid: {
-            borderColor: "rgba(163, 174, 208, 0.1)",
-            strokeDashArray: 5,
-            yaxis: { lines: { show: true } },
-            xaxis: { lines: { show: false } },
-          },
-          tooltip: { theme: "dark" },
+      series: departmentsList.map(
+        (dept) =>
+          globalEntities.filter((e: any) => e.department === dept).length,
+      ),
+      options: {
+        labels: departmentsList,
+        colors: [
+          "#4318FF",
+          "#6AD2FF",
+          "#01B574",
+          "#FFB547",
+          "#EE5D50",
+          "#7551FF",
+          "#E312DC",
+          "#A3AED0",
+        ],
+        chart: {
+          type: "donut" as const,
+          fontFamily: "DM Sans, sans-serif",
+          toolbar: { show: false },
         },
-      },
-      comparison: {
-        series: [{ name: "Total Hours", data: empHours.map((e) => e.hours) }],
-        maxHours: Math.max(...empHours.map((e) => e.hours), 10),
-        categories: empHours.map((e) => e.name),
-        commonOptions: {
-          chart: {
-            type: "bar" as const,
-            toolbar: { show: false },
-            fontFamily: "DM Sans, sans-serif",
-            animations: { enabled: false },
-            stacked: true,
-          },
-          plotOptions: {
-            bar: { borderRadius: 4, horizontal: true, barHeight: "50%" },
-          },
-          dataLabels: { enabled: false },
-          colors: ["#05CD99"],
-          grid: {
-            borderColor: "rgba(163, 174, 208, 0.1)",
-            strokeDashArray: 5,
-            xaxis: { lines: { show: true } },
-            yaxis: { lines: { show: false } },
-            padding: { top: 0, right: 0, bottom: 0, left: 10 },
-          },
-          tooltip: { theme: "dark" },
-          xaxis: { min: 0 },
-        },
-      },
-      donut: {
-        series: departmentsList.map(
-          (dept) =>
-            globalEntities.filter((e: any) => e.department === dept).length,
-        ),
-        options: {
-          labels: departmentsList,
-          colors: [
-            "#4318FF",
-            "#6AD2FF",
-            "#01B574",
-            "#FFB547",
-            "#EE5D50",
-            "#7551FF",
-            "#E312DC",
-            "#A3AED0",
-          ],
-          chart: {
-            type: "donut" as const,
-            fontFamily: "DM Sans, sans-serif",
-            toolbar: { show: false },
-          },
-          plotOptions: {
-            pie: {
-              donut: {
-                labels: {
+        plotOptions: {
+          pie: {
+            donut: {
+              labels: {
+                show: true,
+                total: {
                   show: true,
-                  total: {
-                    show: true,
-                    showAlways: true,
-                    label:
-                      isManagerView && departmentsList.length === 1
-                        ? departmentsList[0]
-                        : "Total Employees",
-                    fontSize: "14px",
-                    fontWeight: 600,
-                    color: "#A3AED0",
-                  },
-                  value: {
-                    show: true,
-                    fontSize: "30px",
-                    fontWeight: 700,
-                    color: "#2B3674",
-                  },
+                  showAlways: true,
+                  label:
+                    isManagerView && departmentsList.length === 1
+                      ? departmentsList[0]
+                      : "Total Employees",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  color: "#A3AED0",
+                },
+                value: {
+                  show: true,
+                  fontSize: "30px",
+                  fontWeight: 700,
+                  color: "#2B3674",
                 },
               },
             },
           },
-          dataLabels: { enabled: false },
-          legend: { position: "bottom" as const },
-          tooltip: { theme: "dark" },
         },
+        dataLabels: { enabled: false },
+        legend: { position: "bottom" as const },
+        tooltip: { theme: "dark" },
       },
     };
-  }, [
-    employeeRecords,
-    entities,
-    globalStatsCache,
-    currentMonth,
-    currentYear,
-    sortOption,
-  ]);
+  }, [entities, globalStatsCache, departments, basePath]);
 
   const styles = {
     container: "p-4 md:p-8 bg-[#F4F7FE] font-['DM_Sans',sans-serif]",
@@ -604,8 +407,8 @@ const AdminDashboard = () => {
           </div>
           <div className="h-[420px] w-full flex items-center justify-center">
             <Chart
-              options={chartData.donut.options}
-              series={chartData.donut.series}
+              options={chartData.options}
+              series={chartData.series}
               type="donut"
               height="100%"
               width="100%"

@@ -19,7 +19,6 @@ import {
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "../store";
-import { getEntities } from "../reducers/employeeDetails.reducer";
 import { logoutUser } from "../reducers/user.reducer";
 import ApiLoadingSpinner from "../components/ApiLoadingSpinner";
 import Header from "../components/Header";
@@ -163,10 +162,6 @@ const SidebarLayout = ({
       navigate("/landing", { state: { skipSplash: true } });
     });
   };
-
-  useEffect(() => {
-    dispatch(getEntities({ search: "" }));
-  }, [dispatch]);
 
   // Scroll to top when tab changes
   useEffect(() => {

@@ -261,6 +261,83 @@ export const fetchWorkedDays = createAsyncThunk(
   },
 );
 
+// 8.5 Fetch Consolidated Employee Dashboard: GET /employee-dashboard/:employeeId
+export interface EmployeeDashboardData {
+  monthlyAttendance: EmployeeAttendance[];
+  yearlyAttendance: EmployeeAttendance[];
+  trends: WorkTrendData[];
+  leaveBalance: {
+    employeeId: string;
+    year: number;
+    entitlement: number;
+    used: number;
+    pending: number;
+    balance: number;
+    carryOver?: number;
+  };
+  monthlyLeaveBalance: {
+    carryOver: number;
+    monthlyAccrual: number;
+    leavesTaken: number;
+    lop: number;
+    balance: number;
+    ytdUsed: number;
+    ytdLop: number;
+  };
+  holidays: any[];
+}
+
+export interface MyTimesheetData {
+  monthlyAttendance: EmployeeAttendance[];
+  blockers: {
+    id?: number;
+    employeeId: string;
+    blockedFrom: string;
+    blockedTo: string;
+    reason?: string;
+    blockedBy: string;
+    blockedAt?: string;
+  }[];
+}
+
+export const fetchMyTimesheet = createAsyncThunk(
+  "attendance/fetchMyTimesheet",
+  async ({
+    employeeId,
+    month,
+    year,
+  }: {
+    employeeId: string;
+    month?: string;
+    year?: string;
+  }) => {
+    const response = await axios.get(
+      `${apiUrl}/my-timesheet/${employeeId}`,
+      { params: { month, year } },
+    );
+    return { employeeId, ...response.data };
+  },
+);
+
+export const fetchEmployeeDashboard = createAsyncThunk(
+  "attendance/fetchEmployeeDashboard",
+  async ({
+    employeeId,
+    month,
+    year,
+  }: {
+    employeeId: string;
+    month?: string;
+    year?: string;
+  }) => {
+    const response = await axios.get(
+      `${apiUrl}/employee-dashboard/${employeeId}`,
+      { params: { month, year } },
+    );
+    return { employeeId, ...response.data };
+  },
+);
+
 // 9. Fetch Dashboard Stats: GET /dashboard-stats/:employeeId
 export const fetchDashboardStats = createAsyncThunk(
   "attendance/fetchDashboardStats",
@@ -450,6 +527,55 @@ const attendanceSlice = createSlice({
           state.error = action.error?.message || "Failed to fetch trends";
         },
       )
+      .addCase(fetchMyTimesheet.pending, (state: AttendanceState) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(
+        fetchMyTimesheet.fulfilled,
+        (
+          state: AttendanceState,
+          action: PayloadAction<MyTimesheetData & { employeeId: string }>,
+        ) => {
+          state.loading = false;
+          state.records = action.payload.monthlyAttendance;
+          if (action.payload.employeeId) {
+            state.employeeRecords[action.payload.employeeId] =
+              action.payload.monthlyAttendance;
+          }
+        },
+      )
+      .addCase(fetchMyTimesheet.rejected, (state: AttendanceState, action: any) => {
+        state.loading = false;
+        state.error = action.error?.message || "Failed to fetch timesheet data";
+      })
+      .addCase(fetchEmployeeDashboard.pending, (state: AttendanceState) => {
+        state.loading = true;
+        state.trendsLoading = true;
+        state.error = null;
+      })
+      .addCase(
+        fetchEmployeeDashboard.fulfilled,
+        (
+          state: AttendanceState,
+          action: PayloadAction<EmployeeDashboardData & { employeeId: string }>,
+        ) => {
+          state.loading = false;
+          state.trendsLoading = false;
+          state.records = action.payload.monthlyAttendance;
+          state.yearlyRecords = action.payload.yearlyAttendance;
+          state.trends = action.payload.trends;
+          if (action.payload.employeeId) {
+            state.employeeRecords[action.payload.employeeId] =
+              action.payload.monthlyAttendance;
+          }
+        },
+      )
+      .addCase(fetchEmployeeDashboard.rejected, (state: AttendanceState, action: any) => {
+        state.loading = false;
+        state.trendsLoading = false;
+        state.error = action.error?.message || "Failed to fetch dashboard data";
+      })
       .addCase(fetchWorkTrendsDetailed.pending, (state: AttendanceState) => {
         state.trendsLoading = true;
       })

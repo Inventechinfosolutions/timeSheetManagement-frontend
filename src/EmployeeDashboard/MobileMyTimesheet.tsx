@@ -12,7 +12,6 @@ interface MobileMyTimesheetProps {
   onHoursInput: (index: number, value: string) => void;
   onSave: () => void;
   onAutoUpdate?: () => void;
-  autoUpdateCount?: number;
   monthTotalHours: number;
   currentMonthName: string;
   loading: boolean;
@@ -41,7 +40,6 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
   onHoursInput,
   onSave,
   onAutoUpdate,
-  autoUpdateCount = 0,
   monthTotalHours,
   currentMonthName,
   loading,
@@ -101,18 +99,10 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
              {onAutoUpdate && (
               <button
                 onClick={onAutoUpdate}
-                disabled={autoUpdateCount === 0}
-                className={`flex items-center justify-center p-3 bg-white text-[#4318FF] border border-[#4318FF]/20 rounded-2xl shadow-sm active:scale-95 transition-all ${autoUpdateCount === 0 ? "opacity-30 grayscale cursor-not-allowed" : ""}`}
-                title={autoUpdateCount > 0 ? `Auto Fill ${autoUpdateCount} days` : "No eligible days"}
+                className="flex items-center justify-center p-3 bg-white text-[#4318FF] border border-[#4318FF]/20 rounded-2xl shadow-sm active:scale-95 transition-all"
+                title="Auto-fill eligible working days"
               >
-                <div className="relative">
-                  <Rocket size={18} strokeWidth={2.5} className={autoUpdateCount > 0 ? "animate-pulse" : ""} />
-                  {autoUpdateCount > 0 && (
-                    <span className="absolute -top-3 -right-3 bg-red-500 text-white text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center border-2 border-white">
-                      {autoUpdateCount}
-                    </span>
-                  )}
-                </div>
+                <Rocket size={18} strokeWidth={2.5} className="animate-pulse" />
               </button>
             )}
             <button

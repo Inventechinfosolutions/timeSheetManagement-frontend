@@ -16,25 +16,8 @@ import {
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { AttendanceStatus, UserType } from "../enums";
-import {
-  fetchMonthlyAttendance,
-  fetchDashboardStats,
-  fetchAttendanceByDateRange,
-  autoUpdateTimesheet,
-  fetchWorkTrendsDetailed,
-} from "../reducers/employeeAttendance.reducer";
+import { fetchEmployeeDashboard } from "../reducers/employeeAttendance.reducer";
 import { getEntity, setCurrentUser } from "../reducers/employeeDetails.reducer";
-import {
-  fetchEmployeeUpdates,
-  fetchUnreadNotifications,
-} from "../reducers/leaveNotification.reducer";
-import { fetchNotifications } from "../reducers/notification.reducer";
-import {
-  getAllLeaveRequests,
-  getLeaveBalance,
-  getMonthlyLeaveBalance,
-  getLeaveStats,
-} from "../reducers/leaveRequest.reducer";
 import { generateMonthlyEntries } from "../utils/attendanceUtils";
 import AttendanceViewWrapper from "./CalenderViewWrapper";
 import AttendancePieChart from "./AttendancePieChart";
@@ -70,8 +53,6 @@ const TodayAttendance = ({
     (state: RootState) => state.masterHolidays,
   );
 
-  // Leave Balance State
-  // Leave Balance State
   const {
     leaveBalance,
     monthlyLeaveBalance,
@@ -91,54 +72,32 @@ const TodayAttendance = ({
       currentUser?.employeeId ||
       currentUser?.loginId;
 
-  // Debug log for manager dashboard data issue
-  useEffect(() => {
-    if (isMyRoute) {
-      console.log("My Route Debug:", {
-        pathname: location.pathname,
-        "currentUser.loginId": currentUser?.loginId,
-        "currentUser.employeeId": currentUser?.employeeId,
-        currentEmployeeId,
-      });
-    }
-  }, [location.pathname, currentUser, currentEmployeeId, isMyRoute]);
-
   const detailsFetched = useRef(false);
+  const dashboardFetchedKey = useRef<string | null>(null);
+  const prevEmployeeId = useRef<string | undefined>();
 
   const [now] = useState(() => new Date());
   const [calendarDate, setCalendarDate] = useState(new Date());
-  const selectedYear = calendarDate.getFullYear();
 
 
-  const fetchAttendanceData = useCallback(
+  const fetchDashboardData = useCallback(
     (date: Date) => {
       if (!currentEmployeeId || currentEmployeeId === "Admin") return;
 
+      const month = (date.getMonth() + 1).toString().padStart(2, "0");
+      const year = date.getFullYear().toString();
+      const fetchKey = `${currentEmployeeId}-${month}-${year}`;
+
+      if (dashboardFetchedKey.current === fetchKey) return;
+      dashboardFetchedKey.current = fetchKey;
+
       dispatch(
-        fetchMonthlyAttendance({
+        fetchEmployeeDashboard({
           employeeId: currentEmployeeId,
-          month: (date.getMonth() + 1).toString().padStart(2, "0"),
-          year: date.getFullYear().toString(),
+          month,
+          year,
         }),
       );
-
-      // Trigger auto-update dry-run only for current or past months (not future)
-      const today = new Date();
-      const isFutureMonth =
-        date.getFullYear() > today.getFullYear() ||
-        (date.getFullYear() === today.getFullYear() &&
-          date.getMonth() > today.getMonth());
-
-      if (!isFutureMonth) {
-        dispatch(
-          autoUpdateTimesheet({
-            employeeId: currentEmployeeId,
-            month: (date.getMonth() + 1).toString().padStart(2, "0"),
-            year: date.getFullYear().toString(),
-            dryRun: true,
-          }),
-        );
-      }
     },
     [dispatch, currentEmployeeId],
   );
@@ -177,78 +136,15 @@ const TodayAttendance = ({
     }
   }, [dispatch, entity, currentEmployeeId, currentUser, viewOnly]);
 
-  // Refresh updates whenever dashboard is accessed
   useEffect(() => {
     if (currentEmployeeId && currentEmployeeId !== "Admin") {
-      dispatch(fetchEmployeeUpdates(currentEmployeeId));
-      dispatch(fetchNotifications(currentEmployeeId));
-      dispatch(fetchUnreadNotifications());
-      dispatch(fetchDashboardStats({ employeeId: currentEmployeeId }));
-      dispatch(
-        fetchDashboardStats({
-          employeeId: currentEmployeeId,
-          month: (calendarDate.getMonth() + 1).toString().padStart(2, "0"),
-          year: calendarDate.getFullYear().toString(),
-        }),
-      );
-
-      // Leave Balance Refresh
-      dispatch(
-        getLeaveBalance({ employeeId: currentEmployeeId, year: selectedYear }),
-      );
-      dispatch(
-        getLeaveStats({
-          employeeId: currentEmployeeId,
-          year: String(selectedYear),
-        }),
-      );
-      dispatch(
-        getMonthlyLeaveBalance({
-          employeeId: currentEmployeeId,
-          month: calendarDate.getMonth() + 1,
-          year: selectedYear,
-        }),
-      );
-      dispatch(
-        getAllLeaveRequests({
-          employeeId: currentEmployeeId,
-          year: String(selectedYear),
-          limit: 500,
-        }),
-      );
-
-      // Fetch Annual Attendance for Stats
-      const startOfYear = `${selectedYear}-01-01`;
-      const endOfYear = `${selectedYear}-12-31`;
-      dispatch(
-        fetchAttendanceByDateRange({
-          employeeId: currentEmployeeId,
-          startDate: startOfYear,
-          endDate: endOfYear,
-        }),
-      );
-
-      // Fetch Trends for Stats Cards accuracy
-      const lastDayOfMonth = new Date(
-        selectedYear,
-        calendarDate.getMonth() + 1,
-        0,
-      );
-      const endDateStr = dayjs(lastDayOfMonth).format("YYYY-MM-DD");
-      const startDateStr = dayjs(calendarDate).startOf("month").format("YYYY-MM-DD");
-
-      dispatch(
-        fetchWorkTrendsDetailed({
-          employeeId: currentEmployeeId,
-          endDate: endDateStr,
-          startDate: startDateStr,
-        }),
-      );
-
-      // Centralized Attendance Fetch for the selected month
-      fetchAttendanceData(calendarDate);
+      if (prevEmployeeId.current !== currentEmployeeId) {
+        dashboardFetchedKey.current = null;
+        prevEmployeeId.current = currentEmployeeId;
+      }
+      fetchDashboardData(calendarDate);
     }
-  }, [dispatch, currentEmployeeId, calendarDate, selectedYear, fetchAttendanceData]);
+  }, [currentEmployeeId, calendarDate, fetchDashboardData]);
 
   // Leave Balance Logic
   const isIntern = useMemo(() => {
@@ -260,11 +156,6 @@ const TodayAttendance = ({
       .toUpperCase();
     return designation.includes("intern") || employmentType === "INTERN";
   }, [entity?.designation, entity?.designation_name, entity?.employmentType]);
-
-  // Whether we are viewing the current real-time month
-  const isViewingCurrentMonth =
-    calendarDate.getMonth() === now.getMonth() &&
-    calendarDate.getFullYear() === now.getFullYear();
 
   // 1. Separate "Today's" Data - ALWAYS based on current real-time Month
   const todayStatsEntry = useMemo(() => {
@@ -538,7 +429,8 @@ const TodayAttendance = ({
               entries={currentMonthEntries as any}
               onMonthChange={(date) => {
                 setCalendarDate(date);
-                fetchAttendanceData(date);
+                dashboardFetchedKey.current = null;
+                fetchDashboardData(date);
               }}
               onNavigateToDate={(timestamp) => {
                 handleNavigate(timestamp);

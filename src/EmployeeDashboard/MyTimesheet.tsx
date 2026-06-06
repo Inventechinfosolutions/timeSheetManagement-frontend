@@ -23,21 +23,17 @@ import {
 import {
   updateAttendanceRecord,
   submitBulkAttendance,
-  fetchMonthlyAttendance,
+  fetchMyTimesheet,
   createAttendanceRecord,
   autoUpdateTimesheet,
 } from "../reducers/employeeAttendance.reducer";
-import {
-  getLeaveHistory,
-  submitLeaveRequest,
-} from "../reducers/leaveRequest.reducer";
+import { submitLeaveRequest } from "../reducers/leaveRequest.reducer";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import {
   generateMonthlyEntries,
   isEditableMonth,
   getBadgeLocation,
 } from "../utils/attendanceUtils";
-import { fetchBlockers } from "../reducers/timesheetBlocker.reducer";
 import MobileMyTimesheet from "./MobileMyTimesheet";
 import AutoUpdateModal from "./AutoUpdateModal";
 import AutoUpdateSuccessModal from "./AutoUpdateSuccessModal";
@@ -122,18 +118,6 @@ const MyTimesheet = ({
       ? currentUser?.employeeId || currentUser?.loginId
       : entity?.employeeId || currentUser?.employeeId || currentUser?.loginId);
 
-  // Debug log for manager dashboard data issue
-  useEffect(() => {
-    if (isMyRoute) {
-      console.log("My Route Debug (MyTimesheet):", {
-        pathname: location.pathname,
-        "currentUser.loginId": currentUser?.loginId,
-        "currentUser.employeeId": currentUser?.employeeId,
-        currentEmployeeId,
-      });
-    }
-  }, [location.pathname, currentUser, currentEmployeeId, isMyRoute]);
-
   const isAdminView = isAdmin && currentEmployeeId === "Admin";
   const isManagerView = !!(
     isManager &&
@@ -209,18 +193,12 @@ const MyTimesheet = ({
   const refreshData = () => {
     if (!currentEmployeeId || (isAdmin && currentEmployeeId === "Admin"))
       return;
+    lastAttendanceKey.current = null;
     dispatch(
-      fetchMonthlyAttendance({
+      fetchMyTimesheet({
         employeeId: currentEmployeeId,
         month: (now.getMonth() + 1).toString().padStart(2, "0"),
         year: now.getFullYear().toString(),
-      }),
-    );
-    dispatch(
-      getLeaveHistory({
-        employeeId: currentEmployeeId,
-        page: 1,
-        limit: 500,
       }),
     );
   };
@@ -374,14 +352,10 @@ const MyTimesheet = ({
     }
   }, [location.state, lastHighlightTrigger]);
 
-  // Fetch holidays on mount
+  // Fetch master holidays for holiday/weekend detection on the timesheet
   useEffect(() => {
     dispatch(fetchHolidays());
   }, [dispatch]);
-
-  // Check for eligible auto-updates when month/employee changes (current or past months)
-  // Ref to track the last checked employee/month/records-length combination
-  const lastCheckRef = useRef<string>("");
 
   // Helper: is the viewed month a past or current month (not future)?
   const isViewedMonthEligible =
@@ -389,58 +363,7 @@ const MyTimesheet = ({
     (now.getFullYear() === today.getFullYear() &&
       now.getMonth() <= today.getMonth());
 
-  useEffect(() => {
-    if (!currentEmployeeId || (isAdmin && currentEmployeeId === "Admin"))
-      return;
-
-    // Only check for current or past months — not future months
-    if (isViewedMonthEligible) {
-      // Create a unique key for the current state. Include autoUpdateTrigger to bypass
-      // duplicate checks when a manual refresh is explicitly requested (e.g. after save).
-      const checkKey = `${currentEmployeeId}-${now.getMonth()}-${now.getFullYear()}-${records.length}-${autoUpdateTrigger}`;
-
-      // Prevent duplicate checks if nothing material changed
-      if (lastCheckRef.current === checkKey) return;
-      lastCheckRef.current = checkKey;
-
-      const checkAutoUpdate = async () => {
-        setIsCheckingAutoUpdate(true);
-        try {
-          const result = await dispatch(
-            autoUpdateTimesheet({
-              employeeId: currentEmployeeId!,
-              month: (now.getMonth() + 1).toString().padStart(2, "0"),
-              year: now.getFullYear().toString(),
-              dryRun: true, // DRY RUN MODE
-            }),
-          ).unwrap();
-
-          setAutoUpdateCount(result.count || 0);
-        } catch (error) {
-          console.warn("Auto-update check failed:", error);
-          setAutoUpdateCount(0);
-        } finally {
-          setIsCheckingAutoUpdate(false);
-        }
-      };
-
-      checkAutoUpdate();
-    } else {
-      // Reset for future months
-      setAutoUpdateCount(0);
-      lastCheckRef.current = "";
-    }
-  }, [
-    dispatch,
-    currentEmployeeId,
-    now,
-    isAdmin,
-    today,
-    records.length,
-    autoUpdateTrigger,
-  ]); // Use records.length instead of records to avoid deep equality issues
-
-  // Fetch attendance and blockers when month/employee changes
+  // Fetch attendance and blockers in a single consolidated request
   useEffect(() => {
     if (!currentEmployeeId || (isAdmin && currentEmployeeId === "Admin"))
       return;
@@ -452,22 +375,11 @@ const MyTimesheet = ({
     if (lastAttendanceKey.current === fetchKey) return;
     lastAttendanceKey.current = fetchKey;
 
-    dispatch(fetchBlockers(currentEmployeeId));
     dispatch(
-      fetchMonthlyAttendance({
+      fetchMyTimesheet({
         employeeId: currentEmployeeId,
         month: (now.getMonth() + 1).toString().padStart(2, "0"),
         year: now.getFullYear().toString(),
-      }),
-    );
-
-    // Also fetch leave requests so we can reflect approved Leave/WFH/Client Visit
-    // even if attendance records are not present (backend delay/lock rules).
-    dispatch(
-      getLeaveHistory({
-        employeeId: currentEmployeeId,
-        page: 1,
-        limit: 500,
       }),
     );
   }, [dispatch, currentEmployeeId, now, isAdmin]);
@@ -1185,18 +1097,9 @@ const MyTimesheet = ({
       try {
         await dispatch(submitBulkAttendance(finalPayload)).unwrap();
         refreshData();
-        dispatch(
-          fetchMonthlyAttendance({
-            employeeId: currentEmployeeId,
-            month: (now.getMonth() + 1).toString().padStart(2, "0"),
-            year: now.getFullYear().toString(),
-          }),
-        );
         // Clear manually edited indices and input values after successful save
         setManuallyEditedIndices(new Set());
         setLocalInputValues({});
-        refreshDryRun();
-        refreshDryRun();
         message.success("Attendance saved successfully");
       } catch (error: any) {
         const finalError = cleanErrorMessage(
@@ -1529,14 +1432,11 @@ const MyTimesheet = ({
                     refreshData();
                     setManuallyEditedIndices(new Set());
                     setLocalInputValues({});
-                    refreshDryRun();
                     message.success("Requests submitted successfully");
                   }
 
                   if (hasHalfDay) {
-                    dispatch(
-                      getLeaveHistory({ employeeId: currentEmployeeId }),
-                    );
+                    refreshData();
                   }
                 } catch (err: any) {
                   const errorMsg = cleanErrorMessage(
@@ -1811,24 +1711,21 @@ const MyTimesheet = ({
       // Close confirmation modal
       setShowAutoUpdateModal(false);
 
-      // Always refetch so UI shows latest data immediately (don't rely on going back)
-      await dispatch(
-        fetchMonthlyAttendance({
-          employeeId: currentEmployeeId!,
-          month: (now.getMonth() + 1).toString().padStart(2, "0"),
-          year: now.getFullYear().toString(),
-        }),
-      );
-
-      if (result.count > 0) {
-        setManuallyEditedIndices(new Set());
-        lastCheckRef.current = "";
+      if (!result.count || result.count === 0) {
+        message.info(
+          result.message || "No eligible days found to update.",
+        );
+        refreshData();
+        return;
       }
+
+      // Always refetch so UI shows latest data immediately (don't rely on going back)
+      refreshData();
+      setManuallyEditedIndices(new Set());
 
       // Show success modal after data is refreshed so totals/calendar are already updated
       setUpdateResult(result);
       setShowSuccessModal(true);
-      refreshDryRun();
     } catch (err: any) {
       setShowAutoUpdateModal(false);
       const errorMsg = cleanErrorMessage(
@@ -1886,7 +1783,7 @@ const MyTimesheet = ({
         isHighlighted={isHighlighted}
         containerClassName={containerClassName}
         onAutoUpdate={isViewedMonthEligible ? handleAutoUpdateClick : undefined}
-        autoUpdateCount={autoUpdateCount}
+        // autoUpdateCount={autoUpdateCount}
         blockers={blockers}
         department={entity?.department || entity?.department_name || ""}
       />
@@ -1947,10 +1844,7 @@ const MyTimesheet = ({
       )}
       <AutoUpdateModal
         isOpen={showAutoUpdateModal}
-        onClose={() => {
-          setShowAutoUpdateModal(false);
-          refreshDryRun();
-        }}
+        onClose={() => setShowAutoUpdateModal(false)}
         onConfirm={confirmAutoUpdate}
         monthName={now.toLocaleDateString("en-US", { month: "long" })}
         year={now.getFullYear()}
@@ -1958,10 +1852,7 @@ const MyTimesheet = ({
       />
       <AutoUpdateSuccessModal
         isOpen={showSuccessModal}
-        onClose={() => {
-          setShowSuccessModal(false);
-          refreshDryRun();
-        }}
+        onClose={() => setShowSuccessModal(false)}
         count={updateResult?.count || 0}
         monthName={now.toLocaleDateString("en-US", { month: "long" })}
         year={now.getFullYear()}
@@ -2052,30 +1943,11 @@ const MyTimesheet = ({
               isViewedMonthEligible && (
                 <button
                   onClick={handleAutoUpdateClick}
-                  disabled={autoUpdateCount === 0 || isCheckingAutoUpdate}
-                  className={`flex items-center justify-center gap-1.5 px-3 py-2 text-white rounded-xl font-bold text-[10px] transition-all active:scale-95 tracking-wide uppercase hover:-translate-y-0.5
-                  ${
-                    autoUpdateCount > 0 && !isCheckingAutoUpdate
-                      ? "bg-gradient-to-r from-[#4318FF] to-[#868CFF] shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:to-[#4318FF]"
-                      : "bg-gray-300 cursor-not-allowed grayscale"
-                  }`}
-                  title={
-                    autoUpdateCount > 0
-                      ? `Auto-fill ${autoUpdateCount} days`
-                      : "No eligible days to update"
-                  }
+                  className="flex items-center justify-center gap-1.5 px-3 py-2 text-white rounded-xl font-bold text-[10px] transition-all active:scale-95 tracking-wide uppercase hover:-translate-y-0.5 bg-gradient-to-r from-[#4318FF] to-[#868CFF] shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:to-[#4318FF]"
+                  title="Auto-fill eligible working days"
                 >
-                  <Rocket
-                    size={14}
-                    className={autoUpdateCount > 0 ? "animate-pulse" : ""}
-                  />
-                  <span className="hidden sm:inline">
-                    {isCheckingAutoUpdate
-                      ? "Checking..."
-                      : autoUpdateCount > 0
-                        ? `Auto Update (${autoUpdateCount})`
-                        : "Auto Update"}
-                  </span>
+                  <Rocket size={14} className="animate-pulse" />
+                  <span className="hidden sm:inline">Auto Update</span>
                 </button>
               )}
 

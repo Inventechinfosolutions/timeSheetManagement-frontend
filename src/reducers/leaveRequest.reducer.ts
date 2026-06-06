@@ -1,6 +1,7 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
 import { LeaveRequestStatus } from "../enums";
+import { fetchEmployeeDashboard } from "./employeeAttendance.reducer";
 
 const apiUrl = "/api/leave-requests";
 
@@ -550,8 +551,23 @@ const leaveRequestSlice = createSlice({
     });
 
     // Get Leave Balance
+    builder.addCase(getLeaveBalance.fulfilled, (state, action) => {
+      state.leaveBalance = action.payload;
+    });
     builder.addCase(getLeaveBalance.rejected, (state) => {
       state.leaveBalance = null;
+    });
+
+    builder.addCase(fetchEmployeeDashboard.pending, (state) => {
+      state.loading = true;
+    });
+    builder.addCase(fetchEmployeeDashboard.fulfilled, (state, action) => {
+      state.loading = false;
+      state.leaveBalance = action.payload.leaveBalance;
+      state.monthlyLeaveBalance = action.payload.monthlyLeaveBalance;
+    });
+    builder.addCase(fetchEmployeeDashboard.rejected, (state) => {
+      state.loading = false;
     });
 
     // Get Monthly Leave Balance
