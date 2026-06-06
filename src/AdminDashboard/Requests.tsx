@@ -402,6 +402,19 @@ const Requests = () => {
           ).unwrap();
 
           message.success("Cancellation Rejected");
+
+          // Refresh the list to show new statuses
+          dispatch(
+            getAllLeaveRequests({
+              department: selectedDept,
+              status: filterStatus,
+              search: debouncedSearchTerm,
+              month: selectedMonth,
+              year: selectedYear,
+              page: currentPage,
+              limit: itemsPerPage,
+            }),
+          );
         }
         setConfirmModal({
           isOpen: false,
