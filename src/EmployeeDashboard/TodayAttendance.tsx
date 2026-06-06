@@ -175,6 +175,21 @@ const TodayAttendance = ({
     return false;
   }, [entity, calendarDate]);
 
+  const showConversionBanner = useMemo(() => {
+    if (!entity?.conversionDate) return false;
+
+    const convDate = dayjs(entity.conversionDate);
+    if (!convDate.isValid()) return false;
+
+    const selectedDate = dayjs(calendarDate);
+    const convYear = convDate.year();
+    const convMonth = convDate.month() + 1;
+    const selectedYear = selectedDate.year();
+    const selectedMonth = selectedDate.month() + 1;
+
+    return selectedYear === convYear && selectedMonth === convMonth;
+  }, [entity, calendarDate]);
+
 
   // 1. Separate "Today's" Data - ALWAYS based on current real-time Month
   const todayStatsEntry = useMemo(() => {
@@ -355,8 +370,31 @@ const TodayAttendance = ({
 
       <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 space-y-6 custom-scrollbar">
         {/* Month Selector Section */}
-        <div className="flex justify-center md:justify-end mb-2">
-          <div className="inline-flex items-center bg-white rounded-full px-3 py-1 shadow-sm border border-gray-100/50 gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+          {/* Historical Intern / Congratulations Alert Badge */}
+          <div className="flex-1 min-w-[200px] flex items-center justify-start">
+            {showInternDataBanner && (
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-blue-50/70 border border-blue-200/50 backdrop-blur-md rounded-full text-blue-800 shadow-xs transition-all duration-300 mr-3">
+                <span className="text-xs font-extrabold uppercase tracking-wider text-blue-600">Intern Period</span>
+                <span className="h-3.5 w-px bg-blue-200"></span>
+                <p className="text-sm font-semibold text-blue-900/90 leading-tight">
+                  Showing internship details for <strong className="font-bold">{entity?.fullName || "Employee"}</strong>. (Intern ID: <code className="bg-blue-100/70 px-1.5 py-0.5 rounded-md text-xs font-extrabold font-mono text-blue-800">{entity?.internId}</code>) Internship End Date: <strong className="font-bold">{entity?.conversionDate ? dayjs(entity.conversionDate).format("DD-MM-YYYY") : "N/A"}</strong>
+                </p>
+              </div>
+            )}
+
+            {showConversionBanner && (
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-green-50/70 border border-green-200/50 backdrop-blur-md rounded-full text-green-800 shadow-xs transition-all duration-300 whitespace-nowrap mr-3">
+                <span className="text-xs font-extrabold uppercase tracking-wider text-green-600 animate-pulse">Congratulations!</span>
+                <span className="h-3.5 w-px bg-green-200"></span>
+                <p className="text-sm font-semibold text-green-900/90 leading-tight whitespace-nowrap">
+                  🎉 Congratulations <strong className="font-bold">{entity?.fullName || "Employee"}</strong> on converting to Full-Time on <strong className="font-bold">{entity?.conversionDate ? dayjs(entity.conversionDate).format("DD-MM-YYYY") : "N/A"}</strong>! 🥳
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="inline-flex items-center bg-white rounded-full px-3 py-1 shadow-sm border border-gray-100/50 gap-2 self-end">
             <button
               onClick={() => {
                 const prev = new Date(calendarDate);
@@ -387,21 +425,6 @@ const TodayAttendance = ({
             </button>
           </div>
         </div>
-
-        {showInternDataBanner && (
-          <div className="mb-4 p-3.5 bg-blue-50/70 border border-blue-200/50 backdrop-blur-md rounded-2xl flex items-center gap-3 text-blue-800 shadow-sm transition-all duration-300">
-            <div className="p-2 bg-blue-100 rounded-xl text-blue-600">
-              <AlertCircle size={18} strokeWidth={2.5} />
-            </div>
-            <div className="flex flex-col gap-0.5">
-              <span className="text-xs font-bold uppercase tracking-wider text-blue-500/80">Intern Period Data</span>
-              <p className="text-xs font-semibold text-blue-900/90 leading-tight">
-                Showing historical intern data for <strong className="font-extrabold">{entity?.fullName || "Employee"}</strong>. 
-                (Intern ID: <code className="bg-blue-100 px-1.5 py-0.5 rounded-md text-[10px] font-extrabold font-mono text-blue-800">{entity?.internId}</code>)
-              </p>
-            </div>
-          </div>
-        )}
 
         {/* Top Section: Dashboard Cards */}
         <AttendanceStatsCards

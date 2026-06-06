@@ -634,8 +634,8 @@ const EmployeeDetailsView = () => {
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
               Employment Type <span className="text-red-500">*</span>
             </label>
-            <div className="relative group">
-              {isEditing ? (
+            <div className="relative group" title={isEditing && employee?.employmentType === "FULL_TIMER" ? "Employment type cannot be changed for full-time employees" : undefined}>
+              {isEditing && employee?.employmentType !== "FULL_TIMER" ? (
                 <select
                   value={editedData.employmentType}
                   onChange={(e) => {
@@ -662,7 +662,7 @@ const EmployeeDetailsView = () => {
                         ? "Intern"
                         : ""
                   }
-                  className="w-full pl-11 pr-4 py-2.5 border-2 border-gray-100 rounded-xl bg-gray-50/50 text-[#1B2559] text-sm font-semibold transition-all"
+                  className={`w-full pl-11 pr-4 py-2.5 border-2 border-gray-100 rounded-xl bg-gray-50/50 text-[#1B2559] text-sm font-semibold transition-all ${isEditing && employee?.employmentType === "FULL_TIMER" ? "cursor-not-allowed" : ""}`}
                 />
               )}
               <div className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-purple-50 flex items-center justify-center">
