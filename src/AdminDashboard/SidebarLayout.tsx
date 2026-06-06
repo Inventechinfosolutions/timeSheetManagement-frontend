@@ -179,7 +179,9 @@ const SidebarLayout = ({
   const isOpen = isHovered || isLocked;
 
   return (
-    <div className="flex w-full h-screen bg-[#f8f9fa] font-sans text-[#2B3674] overflow-hidden relative">
+    <div className="flex flex-col w-full h-screen bg-[#f8f9fa] font-sans text-[#2B3674] overflow-hidden relative">
+      <Header />
+      <div className="flex flex-1 min-h-0 relative overflow-hidden">
       {/* Mobile Menu Trigger - Floating Pulse Button */}
       <button
         onClick={() => setIsMobileOpen(true)}
@@ -513,13 +515,13 @@ const SidebarLayout = ({
         ref={mainContentRef}
         className="flex-1 min-h-0 h-full relative custom-scrollbar flex flex-col bg-[#F4F7FE] overflow-y-auto overflow-x-hidden"
       >
-        <Header />
         <div className="relative grow shrink-0 flex flex-col">
           {children}
           <ApiLoadingSpinner contained contentAreaRef={mainContentRef} />
         </div>
         <Footer />
       </main>
+      </div>
     </div>
   );
 };
