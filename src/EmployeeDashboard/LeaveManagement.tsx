@@ -103,7 +103,7 @@ const LeaveManagement = () => {
     (currentUser?.role &&
       currentUser.role.toUpperCase().includes(UserType.MANAGER));
   const isPrivileged = isAdmin || isManager;
-  
+
   const isCancellationAllowed = (toDate: string) => {
     if (isPrivileged) return true;
     const cutoff = dayjs(toDate).hour(18).minute(30).second(0);
@@ -195,7 +195,9 @@ const LeaveManagement = () => {
   const [halfDayType, setHalfDayType] = useState<string | null>(null);
   const [otherHalfType, setOtherHalfType] = useState<string | null>(null);
   const [isHalfDay, setIsHalfDay] = useState<boolean>(false);
-  const [uploadedDocumentKeys, setUploadedDocumentKeys] = useState<string[]>([]);
+  const [uploadedDocumentKeys, setUploadedDocumentKeys] = useState<string[]>(
+    [],
+  );
   const [isCancelling, setIsCancelling] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [filterStatus, setFilterStatus] = useState("All");
@@ -250,24 +252,37 @@ const LeaveManagement = () => {
     if (modifyModal.isOpen && modifyModal.request?.employeeId) {
       dispatch(getLeaveRequestEmailConfig(modifyModal.request.employeeId))
         .unwrap()
-        .then((data) => setEmailConfig({ assignedManagerEmail: data?.assignedManagerEmail ?? null, hrEmail: data?.hrEmail ?? null }))
-        .catch(() => setEmailConfig({ assignedManagerEmail: null, hrEmail: null }));
+        .then((data) =>
+          setEmailConfig({
+            assignedManagerEmail: data?.assignedManagerEmail ?? null,
+            hrEmail: data?.hrEmail ?? null,
+          }),
+        )
+        .catch(() =>
+          setEmailConfig({ assignedManagerEmail: null, hrEmail: null }),
+        );
     }
   }, [modifyModal.isOpen, modifyModal.request?.employeeId, dispatch]);
 
   const checkDateInReq = (req: any, dateStr: string): boolean => {
     if (req.availableDates) {
       try {
-        const ds: string[] = typeof req.availableDates === 'string' ? JSON.parse(req.availableDates) : req.availableDates;
+        const ds: string[] =
+          typeof req.availableDates === "string"
+            ? JSON.parse(req.availableDates)
+            : req.availableDates;
         if (Array.isArray(ds)) {
           return ds.includes(dateStr);
         }
       } catch (e) {}
     }
-    const current = dayjs(dateStr).startOf('day');
-    const start = dayjs(req.fromDate).startOf('day');
-    const end = dayjs(req.toDate).startOf('day');
-    return (current.isSame(start) || current.isAfter(start)) && (current.isSame(end) || current.isBefore(end));
+    const current = dayjs(dateStr).startOf("day");
+    const start = dayjs(req.fromDate).startOf("day");
+    const end = dayjs(req.toDate).startOf("day");
+    return (
+      (current.isSame(start) || current.isAfter(start)) &&
+      (current.isSame(end) || current.isBefore(end))
+    );
   };
 
   const disabledDate = (current: any) => {
@@ -421,13 +436,21 @@ const LeaveManagement = () => {
     if (!type) return false;
     const t = type.toLowerCase();
     // Things that are NOT away: Office, Present
-    if (t === "office" || t === "present" || t === (WorkLocation.OFFICE as string).toLowerCase() || t === (WorkLocation.PRESENT as string).toLowerCase()) {
+    if (
+      t === "office" ||
+      t === "present" ||
+      t === (WorkLocation.OFFICE as string).toLowerCase() ||
+      t === (WorkLocation.PRESENT as string).toLowerCase()
+    ) {
       return false;
     }
     return true;
   };
 
-  const getDurationFactor = (h1: string | null | undefined, h2: string | null | undefined): number => {
+  const getDurationFactor = (
+    h1: string | null | undefined,
+    h2: string | null | undefined,
+  ): number => {
     return isAway(h1) && isAway(h2) ? 1.0 : 0.5;
   };
 
@@ -544,9 +567,7 @@ const LeaveManagement = () => {
 
       const status = record.status || record.attendance_status;
       const sourceRequestId =
-        record.sourceRequestId ||
-        record.source_request_id ||
-        record.requestId;
+        record.sourceRequestId || record.source_request_id || record.requestId;
 
       const isLeave =
         status === AttendanceStatus.LEAVE ||
@@ -555,11 +576,11 @@ const LeaveManagement = () => {
         status === AttendanceStatus.HALF_DAY ||
         String(status).toLowerCase() === "half day";
 
-      // A date is a barrier if it's a Full Leave or Half Day 
+      // A date is a barrier if it's a Full Leave or Half Day
       // AND it is officially linked to an active request.
       if (
         normalizedRecordDate === dateStr &&
-        (isLeave || isHalfDay) && 
+        (isLeave || isHalfDay) &&
         sourceRequestId
       ) {
         return true;
@@ -766,7 +787,9 @@ const LeaveManagement = () => {
               if (segmentDuration > 0) {
                 let duration = segmentDuration;
                 if (isSplitRequest) {
-                  duration = segmentDuration * getDurationFactor(halfDayType, otherHalfType);
+                  duration =
+                    segmentDuration *
+                    getDurationFactor(halfDayType, otherHalfType);
                 }
 
                 await dispatch(
@@ -808,7 +831,8 @@ const LeaveManagement = () => {
 
         let duration = baseDuration;
         if (isSplitRequest) {
-          duration = baseDuration * getDurationFactor(halfDayType, otherHalfType);
+          duration =
+            baseDuration * getDurationFactor(halfDayType, otherHalfType);
         }
 
         dispatch(
@@ -975,8 +999,15 @@ const LeaveManagement = () => {
     if (employeeId) {
       dispatch(getLeaveRequestEmailConfig(employeeId))
         .unwrap()
-        .then((data) => setEmailConfig({ assignedManagerEmail: data?.assignedManagerEmail ?? null, hrEmail: data?.hrEmail ?? null }))
-        .catch(() => setEmailConfig({ assignedManagerEmail: null, hrEmail: null }));
+        .then((data) =>
+          setEmailConfig({
+            assignedManagerEmail: data?.assignedManagerEmail ?? null,
+            hrEmail: data?.hrEmail ?? null,
+          }),
+        )
+        .catch(() =>
+          setEmailConfig({ assignedManagerEmail: null, hrEmail: null }),
+        );
     }
   };
 
@@ -1013,8 +1044,15 @@ const LeaveManagement = () => {
       if (fetchedItem.employeeId) {
         dispatch(getLeaveRequestEmailConfig(fetchedItem.employeeId))
           .unwrap()
-          .then((data) => setEmailConfig({ assignedManagerEmail: data?.assignedManagerEmail ?? null, hrEmail: data?.hrEmail ?? null }))
-          .catch(() => setEmailConfig({ assignedManagerEmail: null, hrEmail: null }));
+          .then((data) =>
+            setEmailConfig({
+              assignedManagerEmail: data?.assignedManagerEmail ?? null,
+              hrEmail: data?.hrEmail ?? null,
+            }),
+          )
+          .catch(() =>
+            setEmailConfig({ assignedManagerEmail: null, hrEmail: null }),
+          );
       }
       setIsModalOpen(true);
       setErrors({ title: "", description: "", startDate: "", endDate: "" });
@@ -1055,7 +1093,8 @@ const LeaveManagement = () => {
     if (!ccEmails.includes(trimmed)) setCcEmails([...ccEmails, trimmed]);
     setCcEmailInput("");
   };
-  const removeCcEmail = (email: string) => setCcEmails(ccEmails.filter((e) => e !== email));
+  const removeCcEmail = (email: string) =>
+    setCcEmails(ccEmails.filter((e) => e !== email));
 
   const addModifyCcEmail = (email: string) => {
     const trimmed = email.trim().toLowerCase();
@@ -1066,7 +1105,8 @@ const LeaveManagement = () => {
     }
     setModifyCcError("");
     const current = modifyFormData.ccEmails || [];
-    if (!current.includes(trimmed)) setModifyFormData({ ...modifyFormData, ccEmails: [...current, trimmed] });
+    if (!current.includes(trimmed))
+      setModifyFormData({ ...modifyFormData, ccEmails: [...current, trimmed] });
     setModifyCcInput("");
   };
   const removeModifyCcEmail = (email: string) => {
@@ -1108,14 +1148,13 @@ const LeaveManagement = () => {
               req.status === LeaveRequestStatus.CANCELLED ||
               req.status === LeaveRequestStatus.REQUEST_MODIFIED) &&
             req.requestModifiedFrom &&
-            Number(String(req.requestModifiedFrom).split(":")[0]) ===
-              request.id
+            Number(String(req.requestModifiedFrom).split(":")[0]) === request.id
           ) {
             if (req.availableDates) {
               try {
                 const datesInChild = JSON.parse(req.availableDates);
                 if (Array.isArray(datesInChild)) {
-                  datesInChild.forEach(dateStr => lockedDates.add(dateStr));
+                  datesInChild.forEach((dateStr) => lockedDates.add(dateStr));
                 }
               } catch (e) {
                 // Fallback to range
@@ -1140,7 +1179,7 @@ const LeaveManagement = () => {
         // Mark dates as locked if already handled. Admins bypass deadlines, but NOT locks.
         const processedDates = apiDates.map((d: any) => {
           const dateStr = dayjs(d.date).format("YYYY-MM-DD");
-          
+
           // Check for 6:30 PM cutoff for regular users
           const cutoff = dayjs(d.date).hour(18).minute(30).second(0);
           const isTimePassed = dayjs().isAfter(cutoff);
@@ -1157,7 +1196,9 @@ const LeaveManagement = () => {
             return {
               ...d,
               isCancellable: true,
-              reason: d.reason.includes("Deadline") ? "Admin/Manager Bypass" : d.reason,
+              reason: d.reason.includes("Deadline")
+                ? "Admin/Manager Bypass"
+                : d.reason,
             };
           }
 
@@ -1176,8 +1217,13 @@ const LeaveManagement = () => {
       } else {
         // Explicitly throw or handle potential error payload
         const payload = action.payload as any;
-        const errorMsg = typeof payload === 'string' ? payload : (payload?.message || payload?.error || "Failed to fetch");
-        throw new Error(Array.isArray(errorMsg) ? errorMsg.join(', ') : errorMsg);
+        const errorMsg =
+          typeof payload === "string"
+            ? payload
+            : payload?.message || payload?.error || "Failed to fetch";
+        throw new Error(
+          Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg,
+        );
       }
     } catch (err) {
       message.error("Failed to fetch cancellable dates");
@@ -1205,16 +1251,22 @@ const LeaveManagement = () => {
       );
 
       if (cancelRequestDates.fulfilled.match(action)) {
-        const msg = requestToCancel?.status === LeaveRequestStatus.PENDING
-          ? "Dates cancelled successfully"
-          : "Cancellation request submitted successfully";
+        const msg =
+          requestToCancel?.status === LeaveRequestStatus.PENDING
+            ? "Dates cancelled successfully"
+            : "Cancellation request submitted successfully";
         message.success(msg);
         setIsCancelDateModalVisible(false);
         refreshData(1, 10);
       } else {
         const payload = action.payload as any;
-        const errorMsg = typeof payload === 'string' ? payload : (payload?.message || payload?.error || "Cancellation failed");
-        throw new Error(Array.isArray(errorMsg) ? errorMsg.join(', ') : errorMsg);
+        const errorMsg =
+          typeof payload === "string"
+            ? payload
+            : payload?.message || payload?.error || "Cancellation failed";
+        throw new Error(
+          Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg,
+        );
       }
     } catch (err: any) {
       message.error(err.message || "Cancellation failed");
@@ -1255,7 +1307,10 @@ const LeaveManagement = () => {
   // Modified handleCancel to use the date-picker cancellation flow for both Approved and Pending requests
   const handleCancel = (id: number) => {
     const req = entities.find((e: any) => e.id === id);
-    if (req?.status === LeaveRequestStatus.APPROVED || req?.status === LeaveRequestStatus.PENDING) {
+    if (
+      req?.status === LeaveRequestStatus.APPROVED ||
+      req?.status === LeaveRequestStatus.PENDING
+    ) {
       handleCancelClick(req);
     } else {
       // For other statuses, use the original full cancellation flow
@@ -1286,8 +1341,15 @@ const LeaveManagement = () => {
         setUndoModal({ isOpen: false, request: null });
       } else {
         const payload = action.payload as any;
-        const errorMsg = typeof payload === 'string' ? payload : (payload?.message || payload?.error || "Could not undo cancellation");
-        throw new Error(Array.isArray(errorMsg) ? errorMsg.join(', ') : errorMsg);
+        const errorMsg =
+          typeof payload === "string"
+            ? payload
+            : payload?.message ||
+              payload?.error ||
+              "Could not undo cancellation";
+        throw new Error(
+          Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg,
+        );
       }
     } catch (err: any) {
       message.error(
@@ -1316,8 +1378,15 @@ const LeaveManagement = () => {
         setUndoModal({ isOpen: false, request: null });
       } else {
         const payload = action.payload as any;
-        const errorMsg = typeof payload === 'string' ? payload : (payload?.message || payload?.error || "Could not undo modification");
-        throw new Error(Array.isArray(errorMsg) ? errorMsg.join(', ') : errorMsg);
+        const errorMsg =
+          typeof payload === "string"
+            ? payload
+            : payload?.message ||
+              payload?.error ||
+              "Could not undo modification";
+        throw new Error(
+          Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg,
+        );
       }
     } catch (err: any) {
       message.error(
@@ -1398,35 +1467,52 @@ const LeaveManagement = () => {
   };
 
   return (
-    <div className="p-4 md:px-8 md:pb-8 md:pt-0 bg-[#F4F7FE] min-h-screen font-sans text-[#2B3674]">
+    <div className="p-4 md:px-8 md:pb-0 md:pt-0 bg-[#F4F7FE] h-full max-h-full overflow-hidden flex flex-col font-sans text-[#2B3674]">
       {/* Back Button */}
-      <button 
+      <button
         onClick={() => {
           const path = location.pathname;
-          if (path.includes('/manager-dashboard')) {
-            if (path.includes('/timesheet/') || path.includes('/working-details/')) {
-              navigate('/manager-dashboard/timesheet-list');
-            } else if (path.includes('/employee-details/') || path.includes('/view-attendance/')) {
-              navigate('/manager-dashboard/employees');
+          if (path.includes("/manager-dashboard")) {
+            if (
+              path.includes("/timesheet/") ||
+              path.includes("/working-details/")
+            ) {
+              navigate("/manager-dashboard/timesheet-list");
+            } else if (
+              path.includes("/employee-details/") ||
+              path.includes("/view-attendance/")
+            ) {
+              navigate("/manager-dashboard/employees");
             } else {
-              navigate('/manager-dashboard/my-dashboard');
+              navigate("/manager-dashboard/my-dashboard");
             }
-          } else if (path.includes('/admin-dashboard')) {
-            if (path.includes('/timesheet/') || path.includes('/working-details/')) {
-              navigate('/admin-dashboard/timesheet-list');
-            } else if (path.includes('/employee-details/') || path.includes('/view-attendance/')) {
-              navigate('/admin-dashboard/employees');
+          } else if (path.includes("/admin-dashboard")) {
+            if (
+              path.includes("/timesheet/") ||
+              path.includes("/working-details/")
+            ) {
+              navigate("/admin-dashboard/timesheet-list");
+            } else if (
+              path.includes("/employee-details/") ||
+              path.includes("/view-attendance/")
+            ) {
+              navigate("/admin-dashboard/employees");
             } else {
-              navigate('/admin-dashboard');
+              navigate("/admin-dashboard");
             }
           } else {
-            navigate('/employee-dashboard');
+            navigate("/employee-dashboard");
           }
         }}
         className="group flex items-center gap-2 text-[#A3AED0] hover:text-[#4318FF] transition-all mb-2 w-fit mt-4"
       >
-        <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-        <span className="text-[11px] font-black uppercase tracking-widest pl-1">Back</span>
+        <ArrowLeft
+          size={16}
+          className="group-hover:-translate-x-1 transition-transform"
+        />
+        <span className="text-[11px] font-black uppercase tracking-widest pl-1">
+          Back
+        </span>
       </button>
       {/* AntD message context handled via global config */}
       {/* Header */}
@@ -1441,512 +1527,527 @@ const LeaveManagement = () => {
         {/* Apply Button Removed */}
       </div>
 
-      {/* Hero Action Card */}
-      {/* Hero Action Card */}
-      <div className="relative z-30 bg-gradient-to-r from-[#4318FF] to-[#868CFF] rounded-[20px] p-4 md:p-6 mb-8 shadow-xl shadow-blue-500/20 group animate-in fade-in slide-in-from-bottom-4 duration-700">
-        {/* Decorative Elements Wrapper for Overflow */}
-        <div className="absolute inset-0 overflow-hidden rounded-[20px]">
-          <div className="absolute top-[-10%] right-[-5%] w-64 h-64 bg-white/10 rounded-full blur-[60px] group-hover:bg-white/[0.12] transition-all duration-700" />
-          <div className="absolute bottom-[-20%] left-[-5%] w-48 h-48 bg-[#4318FF]/20 rounded-full blur-[40px]" />
-        </div>
-
-        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex flex-col gap-2 pl-5 text-center md:text-left">
-            <h2 className="text-white text-[28px] font-bold tracking-[-0.5px] m-0 leading-tight">
-              Request & Manage Attendance
-            </h2>
-            <p className="text-white/85 text-[15px] font-normal m-0 max-w-sm">
-              Easily submit leave, log remote work, or record client visits in
-              seconds.
-            </p>
+      {/* Scrollable Content Container */}
+      <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar pb-6 space-y-6">
+        {/* Hero Action Card */}
+        {/* Hero Action Card */}
+        <div className="relative z-30 bg-gradient-to-r from-[#4318FF] to-[#868CFF] rounded-[20px] p-4 md:p-6 mb-8 shadow-xl shadow-blue-500/20 group animate-in fade-in slide-in-from-bottom-4 duration-700">
+          {/* Decorative Elements Wrapper for Overflow */}
+          <div className="absolute inset-0 overflow-hidden rounded-[20px]">
+            <div className="absolute top-[-10%] right-[-5%] w-64 h-64 bg-white/10 rounded-full blur-[60px] group-hover:bg-white/[0.12] transition-all duration-700" />
+            <div className="absolute bottom-[-20%] left-[-5%] w-48 h-48 bg-[#4318FF]/20 rounded-full blur-[40px]" />
           </div>
 
-          <div className="overflow-hidden w-full md:max-w-md mask-linear-fade">
-            <div className="flex gap-4 w-max animate-marquee pause-on-hover py-2">
-              {/* Reduced duplication to 3 sets for a shorter looping distance */}
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="flex gap-4">
-                  {applyOptions.map((option, idx) => (
-                    <button
-                      key={`${i}-${idx}`}
-                      onClick={() => handleOpenModal(option.label)}
-                      className="group relative bg-white/10 backdrop-blur-md border border-white/20 p-2 rounded-2xl hover:bg-white transition-all duration-300 flex flex-col items-center justify-center gap-2 w-28 h-28 hover:shadow-2xl hover:-translate-y-1 cursor-pointer"
-                    >
-                      <div
-                        className="h-12 w-12 md:h-14 md:w-14 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-300 transform group-hover:scale-110 group-hover:rotate-3"
-                        style={{
-                          backgroundColor: `rgba(${hexToRgb(option.color)}, 0.25)`,
-                          color: "#ffffff",
-                        }}
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex flex-col gap-2 pl-5 text-center md:text-left">
+              <h2 className="text-white text-[28px] font-bold tracking-[-0.5px] m-0 leading-tight">
+                Request & Manage Attendance
+              </h2>
+              <p className="text-white/85 text-[15px] font-normal m-0 max-w-sm">
+                Easily submit leave, log remote work, or record client visits in
+                seconds.
+              </p>
+            </div>
+
+            <div className="overflow-hidden w-full md:max-w-md mask-linear-fade">
+              <div className="flex gap-4 w-max animate-marquee pause-on-hover py-2">
+                {/* Reduced duplication to 3 sets for a shorter looping distance */}
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="flex gap-4">
+                    {applyOptions.map((option, idx) => (
+                      <button
+                        key={`${i}-${idx}`}
+                        onClick={() => handleOpenModal(option.label)}
+                        className="group relative bg-white/10 backdrop-blur-md border border-white/20 p-2 rounded-2xl hover:bg-white transition-all duration-300 flex flex-col items-center justify-center gap-2 w-28 h-28 hover:shadow-2xl hover:-translate-y-1 cursor-pointer"
                       >
-                        <option.icon
-                          size={28}
-                          className="transition-colors duration-300 group-hover:text-[var(--hover-color)] text-white drop-shadow-md"
-                          style={
-                            {
-                              "--hover-color": option.color,
-                            } as React.CSSProperties
-                          }
-                        />
-                      </div>
-                      <span className="text-white font-bold text-xs group-hover:text-[#2B3674] transition-colors whitespace-nowrap">
-                        {option.label}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              ))}
+                        <div
+                          className="h-12 w-12 md:h-14 md:w-14 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-300 transform group-hover:scale-110 group-hover:rotate-3"
+                          style={{
+                            backgroundColor: `rgba(${hexToRgb(option.color)}, 0.25)`,
+                            color: "#ffffff",
+                          }}
+                        >
+                          <option.icon
+                            size={28}
+                            className="transition-colors duration-300 group-hover:text-[var(--hover-color)] text-white drop-shadow-md"
+                            style={
+                              {
+                                "--hover-color": option.color,
+                              } as React.CSSProperties
+                            }
+                          />
+                        </div>
+                        <span className="text-white font-bold text-xs group-hover:text-[#2B3674] transition-colors whitespace-nowrap">
+                          {option.label}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Leave Balance Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 mt-4">
-        {[
-          {
-            label: LeaveRequestType.LEAVE,
-            key: "leave",
-            color: "from-[#4318FF] to-[#868CFF]",
-            icon: Calendar,
-          },
-          {
-            label: WorkLocation.WORK_FROM_HOME,
-            key: "wfh",
-            color: "from-[#38A169] to-[#68D391]",
-            icon: Home,
-          },
-          {
-            label: WorkLocation.CLIENT_VISIT,
-            key: "clientVisit",
-            color: "from-[#FFB547] to-[#FCCD75]",
-            icon: MapPin,
-          },
-          {
-            label: "Half Day Leave",
-            key: "halfDay",
-            color: "from-[#E31C79] to-[#F78FAD]",
-            icon: Clock,
-          },
-        ].map((config, idx) => {
-          // Normalize data access to be resilient to backend naming (case sensitivity)
-          // We check config.key (lowercase) and also common variations
-          const rawData =
-            (stats as any)?.[config.key] ||
-            (stats as any)?.[config.label] ||
-            {};
-          const applied = rawData.applied ?? rawData.Applied ?? 0;
-          const approved = rawData.approved ?? rawData.Approved ?? 0;
-          const rejected = rawData.rejected ?? rawData.Rejected ?? 0;
+        {/* Leave Balance Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-5 mt-3">
+          {[
+            {
+              label: LeaveRequestType.LEAVE,
+              key: "leave",
+              color: "from-[#4318FF] to-[#868CFF]",
+              icon: Calendar,
+            },
+            {
+              label: WorkLocation.WORK_FROM_HOME,
+              key: "wfh",
+              color: "from-[#38A169] to-[#68D391]",
+              icon: Home,
+            },
+            {
+              label: WorkLocation.CLIENT_VISIT,
+              key: "clientVisit",
+              color: "from-[#FFB547] to-[#FCCD75]",
+              icon: MapPin,
+            },
+            {
+              label: "Half Day Leave",
+              key: "halfDay",
+              color: "from-[#E31C79] to-[#F78FAD]",
+              icon: Clock,
+            },
+          ].map((config, idx) => {
+            // Normalize data access to be resilient to backend naming (case sensitivity)
+            // We check config.key (lowercase) and also common variations
+            const rawData =
+              (stats as any)?.[config.key] ||
+              (stats as any)?.[config.label] ||
+              {};
+            const applied = rawData.applied ?? rawData.Applied ?? 0;
+            const approved = rawData.approved ?? rawData.Approved ?? 0;
+            const rejected = rawData.rejected ?? rawData.Rejected ?? 0;
 
-          return (
-            <div
-              key={idx}
-              className="bg-white rounded-[20px] p-6 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] relative overflow-hidden group hover:shadow-lg transition-all"
-            >
-              <div className="relative z-10">
-                <div className="flex justify-between items-start mb-4">
-                  <div
-                    className={`p-3 rounded-xl bg-linear-to-r ${config.color} text-white shadow-md`}
-                  >
-                    <config.icon size={24} />
-                  </div>
-                  <span className="text-3xl font-black text-[#2B3674]">
-                    {applied}
-                  </span>
-                </div>
-                <h3 className="text-lg font-bold text-[#2B3674]">
-                  {config.label}
-                </h3>
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-[10px] sm:text-[11px] font-bold uppercase tracking-tight">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[#28a745]">Approved:</span>
-                    <span className="text-[#2B3674]">{approved}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[#dc3545]">Rejected:</span>
-                    <span className="text-[#2B3674]">{rejected}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-gray-400">
-                      Cancellation Approved:
+            return (
+              <div
+                key={idx}
+                className="bg-white rounded-[20px] p-6 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] relative overflow-hidden group hover:shadow-lg transition-all"
+              >
+                <div className="relative z-10">
+                  <div className="flex justify-between items-start mb-4">
+                    <div
+                      className={`p-3 rounded-xl bg-linear-to-r ${config.color} text-white shadow-md`}
+                    >
+                      <config.icon size={24} />
+                    </div>
+                    <span className="text-3xl font-black text-[#2B3674]">
+                      {applied}
                     </span>
-                    <span className="text-[#2B3674]">
-                      {(rawData as any).cancelled ?? 0}
-                    </span>
+                  </div>
+                  <h3 className="text-lg font-bold text-[#2B3674]">
+                    {config.label}
+                  </h3>
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-[10px] sm:text-[11px] font-bold uppercase tracking-tight">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[#28a745]">Approved:</span>
+                      <span className="text-[#2B3674]">{approved}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[#dc3545]">Rejected:</span>
+                      <span className="text-[#2B3674]">{rejected}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-gray-400">
+                        Cancellation Approved:
+                      </span>
+                      <span className="text-[#2B3674]">
+                        {(rawData as any).cancelled ?? 0}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mt-8 mb-4 gap-4">
-        <h3 className="text-xl font-bold text-[#2B3674]">
-          Recent Leave History
-        </h3>
-        <div className="flex flex-wrap gap-3 items-center">
-          <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
-            <Select
-              value={selectedMonth}
-              onChange={(val) => setSelectedMonth(val)}
-              className={`w-36 h-10 font-bold text-sm ${selectedMonth !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
-              variant="borderless"
-              dropdownStyle={{ borderRadius: "16px" }}
-              suffixIcon={
-                <ChevronDown
-                  size={18}
-                  className={
-                    selectedMonth !== "All" ? "text-[#4318FF]" : "text-gray-400"
-                  }
-                />
-              }
-            >
-              <Select.Option value="All">All Months</Select.Option>
-              {months.map((m) => (
-                <Select.Option key={m.value} value={m.value}>
-                  {m.label}
-                </Select.Option>
-              ))}
-            </Select>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
-            <Select
-              value={selectedYear}
-              onChange={(val) => setSelectedYear(val)}
-              className={`w-28 h-10 font-bold text-sm ${selectedYear !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
-              variant="borderless"
-              dropdownStyle={{ borderRadius: "16px" }}
-              suffixIcon={
-                <ChevronDown
-                  size={18}
-                  className={
-                    selectedYear !== "All" ? "text-[#4318FF]" : "text-gray-400"
-                  }
-                />
-              }
-            >
-              {years.map((y) => (
-                <Select.Option key={y} value={y}>
-                  {y === "All" ? "All Years" : y}
-                </Select.Option>
-              ))}
-            </Select>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
-            <Select
-              value={filterStatus}
-              onChange={(val) => setFilterStatus(val)}
-              className={`w-60 h-10 font-bold text-sm ${filterStatus !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
-              variant="borderless"
-              dropdownStyle={{ borderRadius: "16px" }}
-              suffixIcon={
-                <ChevronDown
-                  size={18}
-                  className={
-                    filterStatus !== "All" ? "text-[#4318FF]" : "text-gray-400"
-                  }
-                />
-              }
-            >
-              {[
-                "All",
-                LeaveRequestStatus.PENDING,
-                LeaveRequestStatus.APPROVED,
-                LeaveRequestStatus.REJECTED,
-                LeaveRequestStatus.REQUESTING_FOR_CANCELLATION,
-                LeaveRequestStatus.CANCELLATION_APPROVED,
-                LeaveRequestStatus.CANCELLATION_REJECTED,
-                LeaveRequestStatus.REQUESTING_FOR_MODIFICATION,
-                LeaveRequestStatus.REQUEST_MODIFIED,
-                LeaveRequestStatus.MODIFICATION_APPROVED,
-                LeaveRequestStatus.MODIFICATION_CANCELLED,
-                LeaveRequestStatus.MODIFICATION_REJECTED,
-                LeaveRequestStatus.CANCELLATION_REVERTED,
-                LeaveRequestStatus.CANCELLED,
-              ].map((status) => (
-                <Select.Option key={status} value={status}>
-                  {status === "All" ? "All Status" : status}
-                </Select.Option>
-              ))}
-            </Select>
-          </div>
-
-          {/* Clear All Button */}
-          {(selectedMonth !== "All" ||
-            selectedYear !== "All" ||
-            filterStatus !== "All") && (
-            <button
-              onClick={() => {
-                setSelectedMonth("All");
-                setSelectedYear("All");
-                setFilterStatus("All");
-              }}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#5B4FFF] text-white rounded-full hover:bg-[#4318FF] active:scale-95 transition-all text-sm font-bold border border-[#4318FF]/50 whitespace-nowrap"
-              title="Clear all filters"
-            >
-              <X size={16} />
-              <span>Clear All</span>
-            </button>
-          )}
+            );
+          })}
         </div>
-      </div>
-      <div className="bg-white rounded-[20px] shadow-[0px_18px_40px_rgba(112,144,176,0.12)] overflow-hidden border border-gray-100 mb-4">
-        <div className="overflow-x-auto overflow-y-visible custom-scrollbar">
-          <table className="w-full min-w-[900px] border-separate border-spacing-0">
-            <thead>
-              <tr className="bg-[#4318FF] text-white">
-                <th className="py-4 pl-10 pr-4 text-[13px] font-bold uppercase tracking-wider text-left whitespace-nowrap">
-                  Employee
-                </th>
-                <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
-                  Request Type
-                </th>
-                <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
-                  Duration Type
-                </th>
-                <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
-                  Department
-                </th>
-                <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
-                  Duration
-                </th>
-                <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
-                  Submitted Date
-                </th>
-                <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap sticky right-[120px] w-[160px] min-w-[160px] bg-[#4318FF] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)]">
-                  Status
-                </th>
-                <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap sticky right-0 w-[120px] min-w-[120px] bg-[#4318FF] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)]">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {entities.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="py-8 text-center text-gray-400">
-                    <div className="flex flex-col items-center justify-center gap-3">
-                      <div className="bg-gray-50 p-4 rounded-full">
-                        <Calendar size={32} className="text-gray-300" />
-                      </div>
-                      <p className="font-medium text-sm">No Request found</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                [...entities]
-                  .sort((a: any, b: any) => {
-                    const timeA = Math.max(
-                      a.created_at ? new Date(a.created_at).getTime() : 0,
-                      a.updated_at ? new Date(a.updated_at).getTime() : 0,
-                      a.createdAt ? new Date(a.createdAt).getTime() : 0,
-                      a.updatedAt ? new Date(a.updatedAt).getTime() : 0,
-                    );
-                    const timeB = Math.max(
-                      b.created_at ? new Date(b.created_at).getTime() : 0,
-                      b.updated_at ? new Date(b.updated_at).getTime() : 0,
-                      b.createdAt ? new Date(b.createdAt).getTime() : 0,
-                      b.updatedAt ? new Date(b.updatedAt).getTime() : 0,
-                    );
-                    if (timeA === 0 && timeB === 0) {
-                      return (b.id || 0) - (a.id || 0);
-                    }
-                    return timeB - timeA;
-                  })
-                  .map((item, index) => (
-                    <tr
-                      key={index}
-                      className={`group transition-all duration-200 ${
-                        index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"
-                      } hover:bg-gray-100`}
-                    >
-                      <td className="py-4 pl-10 pr-4 text-[#2B3674] text-sm font-bold whitespace-nowrap">
-                        {item.fullName || currentUser?.aliasLoginName || "User"}{" "}
-                        ({item.employeeId})
-                      </td>
-                      <td className="py-4 px-4 text-center whitespace-nowrap">
-                        <div className="flex items-center justify-center gap-3">
-                          <div
-                            className={`p-2 rounded-full ${
-                              item.requestType ===
-                                LeaveRequestType.APPLY_LEAVE ||
-                              item.requestType === LeaveRequestType.LEAVE
-                                ? "bg-blue-50 text-blue-600"
-                                : item.requestType ===
-                                    WorkLocation.WORK_FROM_HOME
-                                  ? "bg-green-50 text-green-600"
-                                  : item.requestType ===
-                                      LeaveRequestType.HALF_DAY
-                                    ? "bg-[#E31C79]/10 text-[#E31C79]"
-                                    : "bg-orange-50 text-orange-500"
-                            }`}
-                          >
-                            {item.requestType ===
-                              LeaveRequestType.APPLY_LEAVE ||
-                            item.requestType === LeaveRequestType.LEAVE ? (
-                              <Calendar size={18} />
-                            ) : item.requestType ===
-                              WorkLocation.WORK_FROM_HOME ? (
-                              <Home size={18} />
-                            ) : item.requestType ===
-                              LeaveRequestType.HALF_DAY ? (
-                              <Clock size={18} />
-                            ) : (
-                              <MapPin size={18} />
-                            )}
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="text-[#2B3674] text-sm font-bold flex items-center gap-2">
-                              {(() => {
-                                // Show combined activities for split-day requests
-                                if (
-                                  item.isHalfDay &&
-                                  item.firstHalf &&
-                                  item.secondHalf
-                                ) {
-                                  const activities = [
-                                    item.firstHalf,
-                                    item.secondHalf,
-                                  ]
-                                    .map((a) =>
-                                      a === LeaveRequestType.APPLY_LEAVE
-                                        ? LeaveRequestType.LEAVE
-                                        : a,
-                                    )
-                                    .filter(
-                                      (a) => a && a !== WorkLocation.OFFICE,
-                                    )
-                                    .filter(
-                                      (value, index, self) =>
-                                        self.indexOf(value) === index,
-                                    );
 
-                                  if (activities.length > 1) {
-                                    // Replace LeaveRequestType.LEAVE with "Half Day Leave" in combined activities
-                                    return activities
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mt-5 mb-3 gap-4">
+          <h3 className="text-xl font-bold text-[#2B3674]">
+            Recent Leave History
+          </h3>
+          <div className="flex flex-wrap gap-3 items-center">
+            <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
+              <Select
+                value={selectedMonth}
+                onChange={(val) => setSelectedMonth(val)}
+                className={`w-36 h-10 font-bold text-sm ${selectedMonth !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+                variant="borderless"
+                dropdownStyle={{ borderRadius: "16px" }}
+                suffixIcon={
+                  <ChevronDown
+                    size={18}
+                    className={
+                      selectedMonth !== "All"
+                        ? "text-[#4318FF]"
+                        : "text-gray-400"
+                    }
+                  />
+                }
+              >
+                <Select.Option value="All">All Months</Select.Option>
+                {months.map((m) => (
+                  <Select.Option key={m.value} value={m.value}>
+                    {m.label}
+                  </Select.Option>
+                ))}
+              </Select>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
+              <Select
+                value={selectedYear}
+                onChange={(val) => setSelectedYear(val)}
+                className={`w-28 h-10 font-bold text-sm ${selectedYear !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+                variant="borderless"
+                dropdownStyle={{ borderRadius: "16px" }}
+                suffixIcon={
+                  <ChevronDown
+                    size={18}
+                    className={
+                      selectedYear !== "All"
+                        ? "text-[#4318FF]"
+                        : "text-gray-400"
+                    }
+                  />
+                }
+              >
+                {years.map((y) => (
+                  <Select.Option key={y} value={y}>
+                    {y === "All" ? "All Years" : y}
+                  </Select.Option>
+                ))}
+              </Select>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
+              <Select
+                value={filterStatus}
+                onChange={(val) => setFilterStatus(val)}
+                className={`w-60 h-10 font-bold text-sm ${filterStatus !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+                variant="borderless"
+                dropdownStyle={{ borderRadius: "16px" }}
+                suffixIcon={
+                  <ChevronDown
+                    size={18}
+                    className={
+                      filterStatus !== "All"
+                        ? "text-[#4318FF]"
+                        : "text-gray-400"
+                    }
+                  />
+                }
+              >
+                {[
+                  "All",
+                  LeaveRequestStatus.PENDING,
+                  LeaveRequestStatus.APPROVED,
+                  LeaveRequestStatus.REJECTED,
+                  LeaveRequestStatus.REQUESTING_FOR_CANCELLATION,
+                  LeaveRequestStatus.CANCELLATION_APPROVED,
+                  LeaveRequestStatus.CANCELLATION_REJECTED,
+                  LeaveRequestStatus.REQUESTING_FOR_MODIFICATION,
+                  LeaveRequestStatus.REQUEST_MODIFIED,
+                  LeaveRequestStatus.MODIFICATION_APPROVED,
+                  LeaveRequestStatus.MODIFICATION_CANCELLED,
+                  LeaveRequestStatus.MODIFICATION_REJECTED,
+                  LeaveRequestStatus.CANCELLATION_REVERTED,
+                  LeaveRequestStatus.CANCELLED,
+                ].map((status) => (
+                  <Select.Option key={status} value={status}>
+                    {status === "All" ? "All Status" : status}
+                  </Select.Option>
+                ))}
+              </Select>
+            </div>
+
+            {/* Clear All Button */}
+            {(selectedMonth !== "All" ||
+              selectedYear !== "All" ||
+              filterStatus !== "All") && (
+              <button
+                onClick={() => {
+                  setSelectedMonth("All");
+                  setSelectedYear("All");
+                  setFilterStatus("All");
+                }}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#5B4FFF] text-white rounded-full hover:bg-[#4318FF] active:scale-95 transition-all text-sm font-bold border border-[#4318FF]/50 whitespace-nowrap"
+                title="Clear all filters"
+              >
+                <X size={16} />
+                <span>Clear All</span>
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="bg-white rounded-[20px] shadow-[0px_18px_40px_rgba(112,144,176,0.12)] overflow-hidden border border-gray-100 mb-4">
+          <div className="overflow-x-auto overflow-y-visible custom-scrollbar">
+            <table className="w-full min-w-[900px] border-separate border-spacing-0">
+              <thead>
+                <tr className="bg-[#4318FF] text-white">
+                  <th className="py-4 pl-10 pr-4 text-[13px] font-bold uppercase tracking-wider text-left whitespace-nowrap">
+                    Employee
+                  </th>
+                  <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
+                    Request Type
+                  </th>
+                  <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
+                    Duration Type
+                  </th>
+                  <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
+                    Department
+                  </th>
+                  <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
+                    Duration
+                  </th>
+                  <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
+                    Submitted Date
+                  </th>
+                  <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap sticky right-[120px] w-[160px] min-w-[160px] bg-[#4318FF] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)]">
+                    Status
+                  </th>
+                  <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap sticky right-0 w-[120px] min-w-[120px] bg-[#4318FF] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)]">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {entities.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-8 text-center text-gray-400">
+                      <div className="flex flex-col items-center justify-center gap-3">
+                        <div className="bg-gray-50 p-4 rounded-full">
+                          <Calendar size={32} className="text-gray-300" />
+                        </div>
+                        <p className="font-medium text-sm">No Request found</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  [...entities]
+                    .sort((a: any, b: any) => {
+                      const timeA = Math.max(
+                        a.created_at ? new Date(a.created_at).getTime() : 0,
+                        a.updated_at ? new Date(a.updated_at).getTime() : 0,
+                        a.createdAt ? new Date(a.createdAt).getTime() : 0,
+                        a.updatedAt ? new Date(a.updatedAt).getTime() : 0,
+                      );
+                      const timeB = Math.max(
+                        b.created_at ? new Date(b.created_at).getTime() : 0,
+                        b.updated_at ? new Date(b.updated_at).getTime() : 0,
+                        b.createdAt ? new Date(b.createdAt).getTime() : 0,
+                        b.updatedAt ? new Date(b.updatedAt).getTime() : 0,
+                      );
+                      if (timeA === 0 && timeB === 0) {
+                        return (b.id || 0) - (a.id || 0);
+                      }
+                      return timeB - timeA;
+                    })
+                    .map((item, index) => (
+                      <tr
+                        key={index}
+                        className={`group transition-all duration-200 ${
+                          index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"
+                        } hover:bg-gray-100`}
+                      >
+                        <td className="py-4 pl-10 pr-4 text-[#2B3674] text-sm font-bold whitespace-nowrap">
+                          {item.fullName ||
+                            currentUser?.aliasLoginName ||
+                            "User"}{" "}
+                          ({item.employeeId})
+                        </td>
+                        <td className="py-4 px-4 text-center whitespace-nowrap">
+                          <div className="flex items-center justify-center gap-3">
+                            <div
+                              className={`p-2 rounded-full ${
+                                item.requestType ===
+                                  LeaveRequestType.APPLY_LEAVE ||
+                                item.requestType === LeaveRequestType.LEAVE
+                                  ? "bg-blue-50 text-blue-600"
+                                  : item.requestType ===
+                                      WorkLocation.WORK_FROM_HOME
+                                    ? "bg-green-50 text-green-600"
+                                    : item.requestType ===
+                                        LeaveRequestType.HALF_DAY
+                                      ? "bg-[#E31C79]/10 text-[#E31C79]"
+                                      : "bg-orange-50 text-orange-500"
+                              }`}
+                            >
+                              {item.requestType ===
+                                LeaveRequestType.APPLY_LEAVE ||
+                              item.requestType === LeaveRequestType.LEAVE ? (
+                                <Calendar size={18} />
+                              ) : item.requestType ===
+                                WorkLocation.WORK_FROM_HOME ? (
+                                <Home size={18} />
+                              ) : item.requestType ===
+                                LeaveRequestType.HALF_DAY ? (
+                                <Clock size={18} />
+                              ) : (
+                                <MapPin size={18} />
+                              )}
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-[#2B3674] text-sm font-bold flex items-center gap-2">
+                                {(() => {
+                                  // Show combined activities for split-day requests
+                                  if (
+                                    item.isHalfDay &&
+                                    item.firstHalf &&
+                                    item.secondHalf
+                                  ) {
+                                    const activities = [
+                                      item.firstHalf,
+                                      item.secondHalf,
+                                    ]
                                       .map((a) =>
-                                        a === LeaveRequestType.LEAVE
-                                          ? "Half Day Leave"
+                                        a === LeaveRequestType.APPLY_LEAVE
+                                          ? LeaveRequestType.LEAVE
                                           : a,
                                       )
-                                      .join(" + ");
+                                      .filter(
+                                        (a) => a && a !== WorkLocation.OFFICE,
+                                      )
+                                      .filter(
+                                        (value, index, self) =>
+                                          self.indexOf(value) === index,
+                                      );
+
+                                    if (activities.length > 1) {
+                                      // Replace LeaveRequestType.LEAVE with "Half Day Leave" in combined activities
+                                      return activities
+                                        .map((a) =>
+                                          a === LeaveRequestType.LEAVE
+                                            ? "Half Day Leave"
+                                            : a,
+                                        )
+                                        .join(" + ");
+                                    }
+                                    if (activities.length === 1) {
+                                      // For single activity that is LeaveRequestType.LEAVE, show "Half Day Leave"
+                                      return activities[0] ===
+                                        LeaveRequestType.LEAVE
+                                        ? "Half Day Leave"
+                                        : activities[0];
+                                    }
                                   }
-                                  if (activities.length === 1) {
-                                    // For single activity that is LeaveRequestType.LEAVE, show "Half Day Leave"
-                                    return activities[0] ===
-                                      LeaveRequestType.LEAVE
+
+                                  // Default display
+                                  if (
+                                    item.requestType ===
+                                      LeaveRequestType.APPLY_LEAVE ||
+                                    item.requestType === LeaveRequestType.LEAVE
+                                  ) {
+                                    return item.isHalfDay
                                       ? "Half Day Leave"
-                                      : activities[0];
+                                      : LeaveRequestType.LEAVE;
                                   }
-                                }
-
-                                // Default display
-                                if (
-                                  item.requestType ===
-                                    LeaveRequestType.APPLY_LEAVE ||
-                                  item.requestType === LeaveRequestType.LEAVE
-                                ) {
-                                  return item.isHalfDay
-                                    ? "Half Day Leave"
-                                    : LeaveRequestType.LEAVE;
-                                }
-                                if (
-                                  item.requestType === LeaveRequestType.HALF_DAY
-                                )
-                                  return "Half Day Leave";
-                                return item.requestType;
-                              })()}
-                              {item.isModified && (
-                                <span className="bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter shadow-sm border border-orange-200">
-                                  Modified
-                                </span>
-                              )}
-                            </span>
+                                  if (
+                                    item.requestType ===
+                                    LeaveRequestType.HALF_DAY
+                                  )
+                                    return "Half Day Leave";
+                                  return item.requestType;
+                                })()}
+                                {item.isModified && (
+                                  <span className="bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter shadow-sm border border-orange-200">
+                                    Modified
+                                  </span>
+                                )}
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4 text-center whitespace-nowrap">
-                        <span
-                          className={`text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap ${(() => {
-                            if (
-                              item.isHalfDay &&
-                              item.firstHalf &&
-                              item.secondHalf
-                            ) {
-                              const isSame = item.firstHalf === item.secondHalf;
-                              if (isSame) return "bg-blue-100 text-blue-700";
-                              return "bg-purple-100 text-purple-700";
-                            }
-                            return "bg-blue-100 text-blue-700";
-                          })()}`}
-                        >
-                          {(() => {
-                            if (
-                              item.isHalfDay &&
-                              item.firstHalf &&
-                              item.secondHalf
-                            ) {
-                              const first =
-                                item.firstHalf === LeaveRequestType.APPLY_LEAVE
-                                  ? LeaveRequestType.LEAVE
-                                  : item.firstHalf;
-                              const second =
-                                item.secondHalf === LeaveRequestType.APPLY_LEAVE
-                                  ? LeaveRequestType.LEAVE
-                                  : item.secondHalf;
-
+                        </td>
+                        <td className="py-4 px-4 text-center whitespace-nowrap">
+                          <span
+                            className={`text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap ${(() => {
                               if (
-                                first === second &&
-                                first !== WorkLocation.OFFICE
+                                item.isHalfDay &&
+                                item.firstHalf &&
+                                item.secondHalf
                               ) {
+                                const isSame =
+                                  item.firstHalf === item.secondHalf;
+                                if (isSame) return "bg-blue-100 text-blue-700";
+                                return "bg-purple-100 text-purple-700";
+                              }
+                              return "bg-blue-100 text-blue-700";
+                            })()}`}
+                          >
+                            {(() => {
+                              if (
+                                item.isHalfDay &&
+                                item.firstHalf &&
+                                item.secondHalf
+                              ) {
+                                const first =
+                                  item.firstHalf ===
+                                  LeaveRequestType.APPLY_LEAVE
+                                    ? LeaveRequestType.LEAVE
+                                    : item.firstHalf;
+                                const second =
+                                  item.secondHalf ===
+                                  LeaveRequestType.APPLY_LEAVE
+                                    ? LeaveRequestType.LEAVE
+                                    : item.secondHalf;
+
+                                if (
+                                  first === second &&
+                                  first !== WorkLocation.OFFICE
+                                ) {
+                                  return HalfDayType.FULL_DAY;
+                                }
+
+                                // Filter out Office
+                                const parts = [];
+                                if (first && first !== WorkLocation.OFFICE)
+                                  parts.push(`First Half = ${first}`);
+                                if (second && second !== WorkLocation.OFFICE)
+                                  parts.push(`Second Half = ${second}`);
+
+                                if (parts.length > 0) return parts.join(" & ");
                                 return HalfDayType.FULL_DAY;
                               }
-
-                              // Filter out Office
-                              const parts = [];
-                              if (first && first !== WorkLocation.OFFICE)
-                                parts.push(`First Half = ${first}`);
-                              if (second && second !== WorkLocation.OFFICE)
-                                parts.push(`Second Half = ${second}`);
-
-                              if (parts.length > 0) return parts.join(" & ");
                               return HalfDayType.FULL_DAY;
-                            }
-                            return HalfDayType.FULL_DAY;
-                          })()}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4 text-center whitespace-nowrap">
-                        <span className="text-xs font-bold text-gray-500 bg-gray-100/50 px-2 py-1 rounded-md">
-                          {item.department || "N/A"}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4 text-center whitespace-nowrap">
-                        <span className="text-sm font-bold text-[#2B3674]">
-                          {dayjs(item.fromDate).format("DD MMM")} -{" "}
-                          {dayjs(item.toDate).format("DD MMM - YYYY")}, TOTAL:{" "}
-                          {item.duration !== undefined && item.duration !== null
-                            ? parseFloat(String(item.duration))
-                            : 0}{" "}
-                          DAY(S)
-                        </span>
-                      </td>
-                      <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold whitespace-nowrap">
-                        {item.submittedDate
-                          ? dayjs(item.submittedDate).format("DD MMM - YYYY")
-                          : item.created_at
-                            ? dayjs(item.created_at).format("DD MMM - YYYY")
-                            : "-"}
-                      </td>
-                      <td
-                        className={`py-4 px-4 text-center sticky right-[120px] w-[160px] min-w-[160px] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}
-                      >
-                        <span
-                          className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all whitespace-nowrap
+                            })()}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4 text-center whitespace-nowrap">
+                          <span className="text-xs font-bold text-gray-500 bg-gray-100/50 px-2 py-1 rounded-md">
+                            {item.department || "N/A"}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4 text-center whitespace-nowrap">
+                          <span className="text-sm font-bold text-[#2B3674]">
+                            {dayjs(item.fromDate).format("DD MMM")} -{" "}
+                            {dayjs(item.toDate).format("DD MMM - YYYY")}, TOTAL:{" "}
+                            {item.duration !== undefined &&
+                            item.duration !== null
+                              ? parseFloat(String(item.duration))
+                              : 0}{" "}
+                            DAY(S)
+                          </span>
+                        </td>
+                        <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold whitespace-nowrap">
+                          {item.submittedDate
+                            ? dayjs(item.submittedDate).format("DD MMM - YYYY")
+                            : item.created_at
+                              ? dayjs(item.created_at).format("DD MMM - YYYY")
+                              : "-"}
+                        </td>
+                        <td
+                          className={`py-4 px-4 text-center sticky right-[120px] w-[160px] min-w-[160px] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}
+                        >
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all whitespace-nowrap
                         ${
                           item.status === LeaveRequestStatus.APPROVED ||
                           item.status ===
@@ -1978,143 +2079,152 @@ const LeaveManagement = () => {
                                       : "bg-red-50 text-red-600 border-red-200"
                         }
                       `}
-                        >
-                          {(item.status === LeaveRequestStatus.PENDING ||
-                            item.status ===
-                              LeaveRequestStatus.REQUESTING_FOR_MODIFICATION) && (
-                            <RotateCcw
-                              size={12}
-                              className="animate-spin-slow"
-                            />
-                          )}
-
-                          {item.status}
-                          {item.status ===
-                            LeaveRequestStatus.REQUEST_MODIFIED &&
-                            item.requestModifiedFrom && (
-                              <span className="opacity-70 border-l border-orange-300 pl-1.5 ml-1 text-[9px] font-bold">
-                                (TO{" "}
-                                {(() => {
-                                  const displayPart = item.requestModifiedFrom.includes(":") ? item.requestModifiedFrom.split(":")[1] : item.requestModifiedFrom;
-                                  return displayPart === LeaveRequestType.APPLY_LEAVE ? "LEAVE" : displayPart.toUpperCase();
-                                })()}
-                                )
-                              </span>
-                            )}
-                        </span>
-                      </td>
-                      <td
-                        className={`py-4 px-4 sticky right-0 w-[120px] min-w-[120px] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}
-                      >
-                        <div className="flex items-center justify-center gap-3">
-                          <button
-                            onClick={() => handleViewApplication(item)}
-                            className="p-2 text-blue-600 bg-blue-50/50 hover:bg-blue-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-blue-200 active:scale-90"
-                            title="View Application"
                           >
-                            <Eye size={20} />
-                          </button>
-                          {(item.status === LeaveRequestStatus.PENDING ||
-                            item.status === LeaveRequestStatus.APPROVED) &&
-                          isCancellationAllowed(item.toDate) ? (
-                            <button
-                              onClick={() => handleCancel(item.id)}
-                              className="p-2 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
-                              title="Cancel Request"
-                            >
-                              <XCircle size={20} />
-                            </button>
-                          ) : item.status ===
-                              LeaveRequestStatus.REQUESTING_FOR_CANCELLATION &&
-                            isUndoable(item) ? (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleUndoCancellation(item);
-                              }}
-                              className="p-2 text-amber-600 bg-amber-50/50 hover:bg-amber-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-amber-200 active:scale-90"
-                              title="Undo Cancellation"
-                            >
-                              <RotateCcw size={20} />
-                            </button>
-                          ) : item.status ===
-                            LeaveRequestStatus.REQUESTING_FOR_MODIFICATION ? (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setUndoModal({ isOpen: true, request: item });
-                              }}
-                              className="p-2 text-orange-600 bg-orange-50/50 hover:bg-orange-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-orange-200 active:scale-90"
-                              title="Undo Modification"
-                            >
-                              <RotateCcw size={20} />
-                            </button>
-                          ) : (
-                            <div className="w-[18px]" />
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                            {(item.status === LeaveRequestStatus.PENDING ||
+                              item.status ===
+                                LeaveRequestStatus.REQUESTING_FOR_MODIFICATION) && (
+                              <RotateCcw
+                                size={12}
+                                className="animate-spin-slow"
+                              />
+                            )}
 
-        {/* Horizontal Scroll Indicator */}
-        <div className="flex justify-center items-center py-2 bg-gray-50/30 border-t border-gray-100">
-          <div className="flex items-center gap-2 text-[#A3AED0] opacity-80">
-            <ArrowRightLeft size={14} className="animate-pulse" />
-            <span className="text-[10px] font-black uppercase tracking-widest">Scroll table horizontally to view all columns</span>
+                            {item.status}
+                            {item.status ===
+                              LeaveRequestStatus.REQUEST_MODIFIED &&
+                              item.requestModifiedFrom && (
+                                <span className="opacity-70 border-l border-orange-300 pl-1.5 ml-1 text-[9px] font-bold">
+                                  (TO{" "}
+                                  {(() => {
+                                    const displayPart =
+                                      item.requestModifiedFrom.includes(":")
+                                        ? item.requestModifiedFrom.split(":")[1]
+                                        : item.requestModifiedFrom;
+                                    return displayPart ===
+                                      LeaveRequestType.APPLY_LEAVE
+                                      ? "LEAVE"
+                                      : displayPart.toUpperCase();
+                                  })()}
+                                  )
+                                </span>
+                              )}
+                          </span>
+                        </td>
+                        <td
+                          className={`py-4 px-4 sticky right-0 w-[120px] min-w-[120px] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}
+                        >
+                          <div className="flex items-center justify-center gap-3">
+                            <button
+                              onClick={() => handleViewApplication(item)}
+                              className="p-2 text-blue-600 bg-blue-50/50 hover:bg-blue-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-blue-200 active:scale-90"
+                              title="View Application"
+                            >
+                              <Eye size={20} />
+                            </button>
+                            {(item.status === LeaveRequestStatus.PENDING ||
+                              item.status === LeaveRequestStatus.APPROVED) &&
+                            isCancellationAllowed(item.toDate) ? (
+                              <button
+                                onClick={() => handleCancel(item.id)}
+                                className="p-2 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
+                                title="Cancel Request"
+                              >
+                                <XCircle size={20} />
+                              </button>
+                            ) : item.status ===
+                                LeaveRequestStatus.REQUESTING_FOR_CANCELLATION &&
+                              isUndoable(item) ? (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleUndoCancellation(item);
+                                }}
+                                className="p-2 text-amber-600 bg-amber-50/50 hover:bg-amber-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-amber-200 active:scale-90"
+                                title="Undo Cancellation"
+                              >
+                                <RotateCcw size={20} />
+                              </button>
+                            ) : item.status ===
+                              LeaveRequestStatus.REQUESTING_FOR_MODIFICATION ? (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setUndoModal({ isOpen: true, request: item });
+                                }}
+                                className="p-2 text-orange-600 bg-orange-50/50 hover:bg-orange-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-orange-200 active:scale-90"
+                                title="Undo Modification"
+                              >
+                                <RotateCcw size={20} />
+                              </button>
+                            ) : (
+                              <div className="w-[18px]" />
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                )}
+              </tbody>
+            </table>
           </div>
-        </div>
 
-        {/* Pagination Controls */}
-        <div className="flex flex-col sm:flex-row justify-between items-center p-4 lg:px-10 lg:pb-6 gap-4">
-          <div className="text-sm font-bold text-[#A3AED0] text-center sm:text-left">
-            Showing{" "}
-            <span className="text-[#2B3674]">
-              {totalItems > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}
-            </span>{" "}
-            to{" "}
-            <span className="text-[#2B3674]">
-              {Math.min(currentPage * itemsPerPage, totalItems)}
-            </span>{" "}
-            of <span className="text-[#2B3674]">{totalItems}</span> entries
+          {/* Horizontal Scroll Indicator */}
+          <div className="flex justify-center items-center py-2 bg-gray-50/30 border-t border-gray-100">
+            <div className="flex items-center gap-2 text-[#A3AED0] opacity-80">
+              <ArrowRightLeft size={14} className="animate-pulse" />
+              <span className="text-[10px] font-black uppercase tracking-widest">
+                Scroll table horizontally to view all columns
+              </span>
+            </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
-              className={`p-2 rounded-xl border border-[#E9EDF7] transition-all flex items-center justify-center
+          {/* Pagination Controls */}
+          <div className="flex flex-col sm:flex-row justify-between items-center p-4 lg:px-10 lg:pb-6 gap-4">
+            <div className="text-sm font-bold text-[#A3AED0] text-center sm:text-left">
+              Showing{" "}
+              <span className="text-[#2B3674]">
+                {totalItems > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}
+              </span>{" "}
+              to{" "}
+              <span className="text-[#2B3674]">
+                {Math.min(currentPage * itemsPerPage, totalItems)}
+              </span>{" "}
+              of <span className="text-[#2B3674]">{totalItems}</span> entries
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className={`p-2 rounded-xl border border-[#E9EDF7] transition-all flex items-center justify-center
               ${
                 currentPage === 1
                   ? "bg-gray-50 text-gray-300 cursor-not-allowed"
                   : "bg-white text-[#4318FF] hover:bg-[#4318FF]/5 active:scale-90 shadow-sm"
               }`}
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <div className="bg-[#F4F7FE] px-4 py-1.5 rounded-xl border border-transparent">
-              <span className="text-xs font-black text-[#2B3674] tracking-widest">
-                {currentPage} / {totalPages > 0 ? totalPages : 1}
-              </span>
-            </div>
-            <button
-              onClick={() =>
-                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-              }
-              disabled={currentPage === totalPages || totalPages === 0}
-              className={`p-2 rounded-xl border border-[#E9EDF7] transition-all flex items-center justify-center
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <div className="bg-[#F4F7FE] px-4 py-1.5 rounded-xl border border-transparent">
+                <span className="text-xs font-black text-[#2B3674] tracking-widest">
+                  {currentPage} / {totalPages > 0 ? totalPages : 1}
+                </span>
+              </div>
+              <button
+                onClick={() =>
+                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                }
+                disabled={currentPage === totalPages || totalPages === 0}
+                className={`p-2 rounded-xl border border-[#E9EDF7] transition-all flex items-center justify-center
               ${
                 currentPage === totalPages || totalPages === 0
                   ? "bg-gray-50 text-gray-300 cursor-not-allowed"
                   : "bg-white text-[#4318FF] hover:bg-[#4318FF]/5 active:scale-90 shadow-sm"
               }`}
-            >
-              <ChevronRight size={18} />
-            </button>
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -2127,14 +2237,14 @@ const LeaveManagement = () => {
         footer={null}
         closable={true}
         centered
-        width={980}
+        width={750}
         className="application-modal"
       >
-        <div className="relative overflow-hidden bg-white rounded-[16px]">
+        <div className="relative overflow-hidden bg-white flex flex-col max-h-[82vh]">
           {/* Modal Header */}
-          <div className="pt-2 px-6">
+          <div className="pt-5 pb-3 px-6 border-b border-gray-100 shrink-0">
             <div className="flex justify-between items-start">
-              <h2 className="text-2xl md:text-3xl font-black text-[#2B3674]">
+              <h2 className="text-xl md:text-2xl font-bold text-[#2B3674] tracking-tight">
                 {selectedLeaveType === LeaveRequestType.APPLY_LEAVE
                   ? LeaveRequestType.LEAVE
                   : selectedLeaveType === LeaveRequestType.HALF_DAY
@@ -2145,7 +2255,7 @@ const LeaveManagement = () => {
           </div>
 
           {/* Modal Body */}
-          <div className="p-6 space-y-5 overflow-y-auto custom-scrollbar max-h-[90vh]">
+          <div className="p-6 space-y-5 overflow-y-auto flex-1 custom-scrollbar">
             {/* Email recipients - in card */}
             <div className="rounded-2xl border border-[#E0E7FF] bg-[#F8FAFC] p-4 shadow-sm">
               <div className="space-y-3">
@@ -2156,7 +2266,9 @@ const LeaveManagement = () => {
                   <div className="flex flex-wrap gap-4 items-start">
                     {emailConfig.assignedManagerEmail && (
                       <div className="min-w-0 flex-1">
-                        <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">Assigned Manager</span>
+                        <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
+                          Assigned Manager
+                        </span>
                         <input
                           type="text"
                           readOnly
@@ -2167,7 +2279,9 @@ const LeaveManagement = () => {
                       </div>
                     )}
                     <div className="min-w-0 flex-1">
-                      <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">HR</span>
+                      <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
+                        HR
+                      </span>
                       <input
                         type="text"
                         readOnly
@@ -2179,7 +2293,9 @@ const LeaveManagement = () => {
                     </div>
                   </div>
                   <div>
-                    <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">CC</span>
+                    <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
+                      CC
+                    </span>
                     <div className="flex flex-wrap gap-2 items-center">
                       {isViewMode ? (
                         ccEmails.length > 0 ? (
@@ -2220,7 +2336,11 @@ const LeaveManagement = () => {
                               if (ccEmailError) setCcEmailError("");
                             }}
                             onKeyDown={(e) => {
-                              if (e.key === "Enter" || e.key === "," || e.key === " ") {
+                              if (
+                                e.key === "Enter" ||
+                                e.key === "," ||
+                                e.key === " "
+                              ) {
                                 e.preventDefault();
                                 addCcEmail(ccEmailInput);
                               }
@@ -2230,7 +2350,9 @@ const LeaveManagement = () => {
                             className="min-w-[200px] flex-1 px-3 py-2 border border-gray-200 rounded-xl bg-white text-gray-700 text-sm placeholder-gray-400 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none"
                           />
                           {ccEmailError && (
-                            <p className="text-red-500 text-xs mt-1 ml-1 w-full">{ccEmailError}</p>
+                            <p className="text-red-500 text-xs mt-1 ml-1 w-full">
+                              {ccEmailError}
+                            </p>
                           )}
                         </>
                       )}
@@ -2482,39 +2604,42 @@ const LeaveManagement = () => {
                 <div className="px-4 py-3 rounded-2xl bg-[#F4F7FE] font-bold text-[#4318FF] inline-flex items-center gap-2 min-h-[48px]">
                   <span className="bg-white px-3 py-1.5 rounded-lg shadow-sm border border-blue-100">
                     {formData.startDate && formData.endDate
-                          ? (() => {
-                              if (isViewMode) {
-                                const dur = parseFloat(String(formData.duration));
-                                return `${isNaN(dur) ? 0 : dur} Day(s)`;
-                              }
+                      ? (() => {
+                          if (isViewMode) {
+                            const dur = parseFloat(String(formData.duration));
+                            return `${isNaN(dur) ? 0 : dur} Day(s)`;
+                          }
 
-                              if (
-                                selectedLeaveType === WorkLocation.CLIENT_VISIT ||
-                                selectedLeaveType === WorkLocation.WORK_FROM_HOME ||
-                                selectedLeaveType === LeaveRequestType.APPLY_LEAVE ||
-                                selectedLeaveType === LeaveRequestType.LEAVE ||
-                                selectedLeaveType === LeaveRequestType.HALF_DAY
-                              ) {
-                                const baseDur = calculateDurationExcludingWeekends(
-                                  formData.startDate,
-                                  formData.endDate,
-                                );
-                                  const isHalf =
-                                    leaveDurationType === HalfDayType.HALF_DAY ||
-                                    leaveDurationType === HalfDayType.FIRST_HALF ||
-                                    leaveDurationType === HalfDayType.SECOND_HALF;
-                                  if (isHalf) {
-                                    const factor = getDurationFactor(
-                                      leaveDurationType === HalfDayType.HALF_DAY ? halfDayType : leaveDurationType,
-                                      otherHalfType
-                                    );
-                                    return `${baseDur * factor} Day(s)`;
-                                  }
-                                  return `${baseDur} Day(s)`;
-                              } else {
-                                return `${dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1} Day(s)`;
-                              }
-                            })()
+                          if (
+                            selectedLeaveType === WorkLocation.CLIENT_VISIT ||
+                            selectedLeaveType === WorkLocation.WORK_FROM_HOME ||
+                            selectedLeaveType ===
+                              LeaveRequestType.APPLY_LEAVE ||
+                            selectedLeaveType === LeaveRequestType.LEAVE ||
+                            selectedLeaveType === LeaveRequestType.HALF_DAY
+                          ) {
+                            const baseDur = calculateDurationExcludingWeekends(
+                              formData.startDate,
+                              formData.endDate,
+                            );
+                            const isHalf =
+                              leaveDurationType === HalfDayType.HALF_DAY ||
+                              leaveDurationType === HalfDayType.FIRST_HALF ||
+                              leaveDurationType === HalfDayType.SECOND_HALF;
+                            if (isHalf) {
+                              const factor = getDurationFactor(
+                                leaveDurationType === HalfDayType.HALF_DAY
+                                  ? halfDayType
+                                  : leaveDurationType,
+                                otherHalfType,
+                              );
+                              return `${baseDur * factor} Day(s)`;
+                            }
+                            return `${baseDur} Day(s)`;
+                          } else {
+                            return `${dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1} Day(s)`;
+                          }
+                        })()
                       : "0 Days"}
                   </span>
                 </div>
@@ -2640,8 +2765,14 @@ const LeaveManagement = () => {
                   successMessage="Document uploaded successfully"
                   deleteMessage="Document deleted successfully"
                   disabled={isViewMode}
-                  onFileUpload={(file) => setUploadedDocumentKeys((prev) => [...prev, file.key])}
-                  onFileDelete={(fileKey) => setUploadedDocumentKeys((prev) => prev.filter((k) => k !== fileKey))}
+                  onFileUpload={(file) =>
+                    setUploadedDocumentKeys((prev) => [...prev, file.key])
+                  }
+                  onFileDelete={(fileKey) =>
+                    setUploadedDocumentKeys((prev) =>
+                      prev.filter((k) => k !== fileKey),
+                    )
+                  }
                 />
               </div>
             </div>
@@ -2657,33 +2788,33 @@ const LeaveManagement = () => {
                 </p>
               </div>
             )}
-
-            {/* Actions Footer */}
-            {!isViewMode && (
-              <div className="pt-2 flex gap-4">
-                <button
-                  onClick={handleCloseModal}
-                  className="flex-1 py-3.5 rounded-2xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  disabled={loading}
-                  className="flex-1 py-4 rounded-2xl font-bold text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95 transform disabled:opacity-80"
-                >
-                  {loading ? (
-                    <div className="flex items-center justify-center gap-2">
-                      <Loader2 className="animate-spin" size={20} />
-                      <span>Submitting...</span>
-                    </div>
-                  ) : (
-                    "Submit Application"
-                  )}
-                </button>
-              </div>
-            )}
           </div>
+
+          {/* Actions Footer */}
+          {!isViewMode && (
+            <div className="p-4 bg-white border-t border-gray-100 flex gap-4 shrink-0">
+              <button
+                onClick={handleCloseModal}
+                className="flex-1 py-2.5 rounded-xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 transition-all active:scale-95 text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={loading}
+                className="flex-1 py-2.5 rounded-xl font-bold text-white bg-gradient-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95 disabled:opacity-80 text-sm flex items-center justify-center"
+              >
+                {loading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <Loader2 className="animate-spin" size={18} />
+                    <span>Submitting...</span>
+                  </div>
+                ) : (
+                  "Submit Application"
+                )}
+              </button>
+            </div>
+          )}
         </div>
       </Modal>
 
@@ -2701,8 +2832,12 @@ const LeaveManagement = () => {
             >
               No, Keep It
             </button>
-            {!(entities.find((e: any) => e.id === cancelModal.id)?.status === LeaveRequestStatus.REQUESTING_FOR_CANCELLATION ||
-               entities.find((e: any) => e.id === cancelModal.id)?.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION) && (
+            {!(
+              entities.find((e: any) => e.id === cancelModal.id)?.status ===
+                LeaveRequestStatus.REQUESTING_FOR_CANCELLATION ||
+              entities.find((e: any) => e.id === cancelModal.id)?.status ===
+                LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
+            ) && (
               <button
                 key="modify"
                 onClick={() => {
@@ -2890,14 +3025,318 @@ const LeaveManagement = () => {
           !isModifying && setModifyModal({ isOpen: false, request: null });
           setModifyErrors({ title: "", description: "" });
         }}
-        width={980}
-        title={
-          <div className="text-xl font-bold text-gray-800">Modify Request</div>
-        }
-        footer={
-          <div className="flex justify-end gap-3 pt-4">
+        footer={null}
+        closable={true}
+        centered
+        width={750}
+        className="application-modal"
+      >
+        <div className="relative overflow-hidden bg-white flex flex-col max-h-[82vh]">
+          {/* Modal Header */}
+          <div className="pt-5 pb-3 px-6 border-b border-gray-100 shrink-0">
+            <div className="flex justify-between items-start">
+              <h2 className="text-xl md:text-2xl font-bold text-[#2B3674] tracking-tight">
+                Modify Request
+              </h2>
+            </div>
+          </div>
+
+          {/* Modal Body */}
+          <div className="p-6 space-y-5 overflow-y-auto flex-1 custom-scrollbar px-1">
+            {/* Email recipients + Subject card - same as Create */}
+            <div className="rounded-2xl border border-[#E0E7FF] bg-[#F8FAFC] p-4 shadow-sm">
+              <div className="space-y-3">
+                <label className="text-sm font-bold text-[#2B3674] ml-1 block">
+                  Email recipients
+                </label>
+                <div className="space-y-4">
+                  <div className="flex flex-wrap gap-4 items-start">
+                    {emailConfig.assignedManagerEmail && (
+                      <div className="min-w-0 flex-1">
+                        <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
+                          Assigned Manager
+                        </span>
+                        <input
+                          type="text"
+                          readOnly
+                          disabled
+                          value={emailConfig.assignedManagerEmail}
+                          className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-gray-700 cursor-not-allowed"
+                        />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
+                        HR
+                      </span>
+                      <input
+                        type="text"
+                        readOnly
+                        disabled
+                        value={emailConfig.hrEmail || ""}
+                        placeholder="Not configured"
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-gray-700 cursor-not-allowed"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
+                      CC
+                    </span>
+                    <div className="flex flex-wrap gap-2 items-center">
+                      {(modifyFormData.ccEmails || []).length > 0 ? (
+                        (modifyFormData.ccEmails || []).map((email: string) => (
+                          <span
+                            key={email}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-200 text-gray-700 text-sm font-medium"
+                          >
+                            {email}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-sm text-gray-500">—</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                {/* Subject - inside card */}
+                <div className="space-y-2 pt-2 border-t border-[#E0E7FF]">
+                  <label className="text-sm font-bold text-[#2B3674] ml-1">
+                    Subject <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={modifyFormData.title}
+                    onChange={(e) => {
+                      setModifyFormData({
+                        ...modifyFormData,
+                        title: e.target.value,
+                      });
+                      setModifyErrors({ ...modifyErrors, title: "" });
+                    }}
+                    className={`w-full px-5 py-3 rounded-xl border text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400 ${
+                      modifyErrors.title
+                        ? "border-red-500"
+                        : modifyFormData.firstHalf ===
+                              (modifyModal.request?.firstHalf ||
+                                modifyModal.request?.requestType) &&
+                            modifyFormData.secondHalf ===
+                              (modifyModal.request?.secondHalf ||
+                                modifyModal.request?.requestType)
+                          ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
+                          : "bg-white border-gray-200"
+                    }`}
+                    placeholder="e.g. Annual Vacation"
+                    disabled={
+                      modifyFormData.firstHalf ===
+                        (modifyModal.request?.firstHalf ||
+                          modifyModal.request?.requestType) &&
+                      modifyFormData.secondHalf ===
+                        (modifyModal.request?.secondHalf ||
+                          modifyModal.request?.requestType)
+                    }
+                  />
+                  {modifyErrors.title && (
+                    <p className="text-red-500 text-xs mt-1 ml-1">
+                      {modifyErrors.title}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3">
+              <p className="text-sm text-yellow-800 font-semibold">
+                📅{" "}
+                {modifyModal.datesToModify
+                  ? `Modifying ${modifyModal.datesToModify.length} selected date(s).`
+                  : "Dates are locked and cannot be modified."}
+              </p>
+              {!modifyModal.datesToModify && (
+                <p className="text-xs text-yellow-700 mt-1">
+                  From:{" "}
+                  <strong>
+                    {dayjs(modifyModal.request?.fromDate).format("DD-MM-YYYY")}
+                  </strong>{" "}
+                  → To:{" "}
+                  <strong>
+                    {dayjs(modifyModal.request?.toDate).format("DD-MM-YYYY")}
+                  </strong>
+                </p>
+              )}
+              {modifyModal.datesToModify && (
+                <p className="text-xs text-yellow-700 mt-1">
+                  Selected:{" "}
+                  <strong>
+                    {modifyModal.datesToModify
+                      .map((d) => dayjs(d).format("DD MMM"))
+                      .join(", ")}
+                  </strong>
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-[#2B3674] mb-2">
+                Description <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={modifyFormData.description}
+                onChange={(e) => {
+                  setModifyFormData({
+                    ...modifyFormData,
+                    description: e.target.value,
+                  });
+                  setModifyErrors({ ...modifyErrors, description: "" });
+                }}
+                rows={3}
+                className={`w-full px-5 py-3 border rounded-xl text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-medium text-[#2B3674] placeholder:text-gray-400 resize-none ${
+                  modifyErrors.description
+                    ? "border-red-500"
+                    : modifyFormData.firstHalf ===
+                          (modifyModal.request?.firstHalf ||
+                            modifyModal.request?.requestType) &&
+                        modifyFormData.secondHalf ===
+                          (modifyModal.request?.secondHalf ||
+                            modifyModal.request?.requestType)
+                      ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
+                      : "bg-white border-gray-200"
+                }`}
+                placeholder="Please provide details about your request..."
+                disabled={
+                  modifyFormData.firstHalf ===
+                    (modifyModal.request?.firstHalf ||
+                      modifyModal.request?.requestType) &&
+                  modifyFormData.secondHalf ===
+                    (modifyModal.request?.secondHalf ||
+                      modifyModal.request?.requestType)
+                }
+              />
+              {modifyErrors.description && (
+                <p className="text-red-500 text-xs mt-1 ml-1">
+                  {modifyErrors.description}
+                </p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold text-[#2B3674] mb-2">
+                  First Half
+                </label>
+                <Select
+                  value={modifyFormData.firstHalf}
+                  onChange={(value) =>
+                    setModifyFormData({ ...modifyFormData, firstHalf: value })
+                  }
+                  className="w-full"
+                  size="large"
+                  options={[
+                    { label: WorkLocation.OFFICE, value: WorkLocation.OFFICE },
+                    {
+                      label: LeaveRequestType.LEAVE,
+                      value: LeaveRequestType.LEAVE,
+                    },
+                    {
+                      label: WorkLocation.WORK_FROM_HOME,
+                      value: WorkLocation.WORK_FROM_HOME,
+                    },
+                    {
+                      label: WorkLocation.CLIENT_VISIT,
+                      value: WorkLocation.CLIENT_VISIT,
+                    },
+                  ]}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-[#2B3674] mb-2">
+                  Second Half
+                </label>
+                <Select
+                  value={modifyFormData.secondHalf}
+                  onChange={(value) =>
+                    setModifyFormData({ ...modifyFormData, secondHalf: value })
+                  }
+                  className="w-full"
+                  size="large"
+                  options={[
+                    { label: WorkLocation.OFFICE, value: WorkLocation.OFFICE },
+                    {
+                      label: LeaveRequestType.LEAVE,
+                      value: LeaveRequestType.LEAVE,
+                    },
+                    {
+                      label: WorkLocation.WORK_FROM_HOME,
+                      value: WorkLocation.WORK_FROM_HOME,
+                    },
+                    {
+                      label: WorkLocation.CLIENT_VISIT,
+                      value: WorkLocation.CLIENT_VISIT,
+                    },
+                  ]}
+                />
+              </div>
+            </div>
+
+            {/* Document Upload Section */}
+            <div
+              className={`mt-4 ${
+                modifyFormData.firstHalf ===
+                  (modifyModal.request?.firstHalf ||
+                    modifyModal.request?.requestType) &&
+                modifyFormData.secondHalf ===
+                  (modifyModal.request?.secondHalf ||
+                    modifyModal.request?.requestType)
+                  ? "opacity-50 pointer-events-none"
+                  : ""
+              }`}
+            >
+              <label className="block text-sm font-bold text-[#2B3674] mb-2">
+                Supporting Documents (Optional)
+              </label>
+              <div className="bg-[#F4F7FE] rounded-2xl p-2 border border-blue-50">
+                <CommonMultipleUploader
+                  key={`modify-uploader-${modifyModal.request?.id}`}
+                  entityType="LEAVE_REQUEST"
+                  entityId={Number(entity?.id || 0)}
+                  refId={0}
+                  refType="DOCUMENT"
+                  disabled={
+                    modifyFormData.firstHalf ===
+                      (modifyModal.request?.firstHalf ||
+                        modifyModal.request?.requestType) &&
+                    modifyFormData.secondHalf ===
+                      (modifyModal.request?.secondHalf ||
+                        modifyModal.request?.requestType)
+                  }
+                  fetchOnMount={false}
+                  uploadFile={uploadLeaveRequestFile}
+                  deleteFile={deleteLeaveRequestFile}
+                  getFiles={getLeaveRequestFiles}
+                  previewFile={previewLeaveRequestFile}
+                  downloadFile={downloadLeaveRequestFile}
+                  onFileUpload={(file) =>
+                    setUploadedDocumentKeys((prev) => [...prev, file.key])
+                  }
+                  onFileDelete={(fileKey) =>
+                    setUploadedDocumentKeys((prev) =>
+                      prev.filter((k) => k !== fileKey),
+                    )
+                  }
+                  maxFiles={5}
+                  maxFileSize={5 * 1024 * 1024}
+                  allowedTypes={["images", "pdf"]}
+                  successMessage="Document added successfully"
+                  deleteMessage="Document removed successfully"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Modal Footer */}
+          <div className="flex justify-end gap-3 pt-4 px-6 pb-5 border-t border-gray-100 shrink-0">
             <button
-              key="back"
               onClick={() => setModifyModal({ isOpen: false, request: null })}
               disabled={isModifying}
               className="px-6 py-2.5 rounded-xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 transition-colors"
@@ -2905,7 +3344,6 @@ const LeaveManagement = () => {
               Cancel
             </button>
             <button
-              key="submit"
               onClick={async () => {
                 if (!modifyModal.request) return;
 
@@ -2945,7 +3383,14 @@ const LeaveManagement = () => {
                   modifyFormData.description !==
                   (modifyModal.request.description || "");
 
-                if (!isFirstHalfChanged && !isSecondHalfChanged && !isTitleChanged && !isDescriptionChanged && JSON.stringify(modifyFormData.ccEmails || []) === JSON.stringify(modifyModal.request.ccEmails || [])) {
+                if (
+                  !isFirstHalfChanged &&
+                  !isSecondHalfChanged &&
+                  !isTitleChanged &&
+                  !isDescriptionChanged &&
+                  JSON.stringify(modifyFormData.ccEmails || []) ===
+                    JSON.stringify(modifyModal.request.ccEmails || [])
+                ) {
                   message.warning(
                     "No changes detected. Please modify at least one field to submit.",
                   );
@@ -2995,277 +3440,6 @@ const LeaveManagement = () => {
               )}
             </button>
           </div>
-        }
-        centered
-      >
-        <div className="py-2 space-y-4 max-h-[80vh] overflow-y-auto custom-scrollbar px-1">
-          {/* Email recipients + Subject card - same as Create */}
-          <div className="rounded-2xl border border-[#E0E7FF] bg-[#F8FAFC] p-4 shadow-sm">
-            <div className="space-y-3">
-              <label className="text-sm font-bold text-[#2B3674] ml-1 block">
-                Email recipients
-              </label>
-              <div className="space-y-4">
-                <div className="flex flex-wrap gap-4 items-start">
-                  {emailConfig.assignedManagerEmail && (
-                    <div className="min-w-0 flex-1">
-                      <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">Assigned Manager</span>
-                      <input
-                        type="text"
-                        readOnly
-                        disabled
-                        value={emailConfig.assignedManagerEmail}
-                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-gray-700 cursor-not-allowed"
-                      />
-                    </div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">HR</span>
-                    <input
-                      type="text"
-                      readOnly
-                      disabled
-                      value={emailConfig.hrEmail || ""}
-                      placeholder="Not configured"
-                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-gray-700 cursor-not-allowed"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">CC</span>
-                  <div className="flex flex-wrap gap-2 items-center">
-                    {(modifyFormData.ccEmails || []).length > 0 ? (
-                      (modifyFormData.ccEmails || []).map((email: string) => (
-                        <span
-                          key={email}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-200 text-gray-700 text-sm font-medium"
-                        >
-                          {email}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-sm text-gray-500">—</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-              {/* Subject - inside card */}
-              <div className="space-y-2 pt-2 border-t border-[#E0E7FF]">
-                <label className="text-sm font-bold text-[#2B3674] ml-1">Subject <span className="text-red-500">*</span></label>
-                <input
-                  type="text"
-                  value={modifyFormData.title}
-                  onChange={(e) => {
-                    setModifyFormData({ ...modifyFormData, title: e.target.value });
-                    setModifyErrors({ ...modifyErrors, title: "" });
-                  }}
-                  className={`w-full px-5 py-3 rounded-xl border text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400 ${
-                    modifyErrors.title ? "border-red-500" :
-                    modifyFormData.firstHalf ===
-                      (modifyModal.request?.firstHalf ||
-                        modifyModal.request?.requestType) &&
-                    modifyFormData.secondHalf ===
-                      (modifyModal.request?.secondHalf ||
-                        modifyModal.request?.requestType)
-                      ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
-                      : "bg-white border-gray-200"
-                  }`}
-                  placeholder="e.g. Annual Vacation"
-                  disabled={
-                    modifyFormData.firstHalf ===
-                      (modifyModal.request?.firstHalf ||
-                        modifyModal.request?.requestType) &&
-                    modifyFormData.secondHalf ===
-                      (modifyModal.request?.secondHalf ||
-                        modifyModal.request?.requestType)
-                  }
-                />
-                {modifyErrors.title && (
-                  <p className="text-red-500 text-xs mt-1 ml-1">{modifyErrors.title}</p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3">
-            <p className="text-sm text-yellow-800 font-semibold">
-              📅{" "}
-              {modifyModal.datesToModify
-                ? `Modifying ${modifyModal.datesToModify.length} selected date(s).`
-                : "Dates are locked and cannot be modified."}
-            </p>
-            {!modifyModal.datesToModify && (
-              <p className="text-xs text-yellow-700 mt-1">
-                From:{" "}
-                <strong>
-                  {dayjs(modifyModal.request?.fromDate).format("DD-MM-YYYY")}
-                </strong>{" "}
-                → To:{" "}
-                <strong>
-                  {dayjs(modifyModal.request?.toDate).format("DD-MM-YYYY")}
-                </strong>
-              </p>
-            )}
-            {modifyModal.datesToModify && (
-              <p className="text-xs text-yellow-700 mt-1">
-                Selected:{" "}
-                <strong>
-                  {modifyModal.datesToModify
-                    .map((d) => dayjs(d).format("DD MMM"))
-                    .join(", ")}
-                </strong>
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-bold text-[#2B3674] mb-2">
-              Description <span className="text-red-500">*</span>
-            </label>
-            <textarea
-              value={modifyFormData.description}
-              onChange={(e) => {
-                setModifyFormData({
-                  ...modifyFormData,
-                  description: e.target.value,
-                });
-                setModifyErrors({ ...modifyErrors, description: "" });
-              }}
-              rows={3}
-              className={`w-full px-5 py-3 border rounded-xl text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-medium text-[#2B3674] placeholder:text-gray-400 resize-none ${
-                modifyErrors.description ? "border-red-500" :
-                modifyFormData.firstHalf ===
-                  (modifyModal.request?.firstHalf ||
-                    modifyModal.request?.requestType) &&
-                modifyFormData.secondHalf ===
-                  (modifyModal.request?.secondHalf ||
-                    modifyModal.request?.requestType)
-                  ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
-                  : "bg-white border-gray-200"
-              }`}
-              placeholder="Please provide details about your request..."
-              disabled={
-                modifyFormData.firstHalf ===
-                  (modifyModal.request?.firstHalf ||
-                    modifyModal.request?.requestType) &&
-                modifyFormData.secondHalf ===
-                  (modifyModal.request?.secondHalf ||
-                    modifyModal.request?.requestType)
-              }
-            />
-            {modifyErrors.description && (
-              <p className="text-red-500 text-xs mt-1 ml-1">{modifyErrors.description}</p>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-bold text-[#2B3674] mb-2">
-                First Half
-              </label>
-              <Select
-                value={modifyFormData.firstHalf}
-                onChange={(value) =>
-                  setModifyFormData({ ...modifyFormData, firstHalf: value })
-                }
-                className="w-full"
-                size="large"
-                options={[
-                  { label: WorkLocation.OFFICE, value: WorkLocation.OFFICE },
-                  {
-                    label: LeaveRequestType.LEAVE,
-                    value: LeaveRequestType.LEAVE,
-                  },
-                  {
-                    label: WorkLocation.WORK_FROM_HOME,
-                    value: WorkLocation.WORK_FROM_HOME,
-                  },
-                  {
-                    label: WorkLocation.CLIENT_VISIT,
-                    value: WorkLocation.CLIENT_VISIT,
-                  },
-                ]}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-bold text-[#2B3674] mb-2">
-                Second Half
-              </label>
-              <Select
-                value={modifyFormData.secondHalf}
-                onChange={(value) =>
-                  setModifyFormData({ ...modifyFormData, secondHalf: value })
-                }
-                className="w-full"
-                size="large"
-                options={[
-                  { label: WorkLocation.OFFICE, value: WorkLocation.OFFICE },
-                  {
-                    label: LeaveRequestType.LEAVE,
-                    value: LeaveRequestType.LEAVE,
-                  },
-                  {
-                    label: WorkLocation.WORK_FROM_HOME,
-                    value: WorkLocation.WORK_FROM_HOME,
-                  },
-                  {
-                    label: WorkLocation.CLIENT_VISIT,
-                    value: WorkLocation.CLIENT_VISIT,
-                  },
-                ]}
-              />
-            </div>
-
-          </div>
-
-          {/* Document Upload Section */}
-          <div
-            className={`mt-4 ${
-              modifyFormData.firstHalf ===
-                (modifyModal.request?.firstHalf ||
-                  modifyModal.request?.requestType) &&
-              modifyFormData.secondHalf ===
-                (modifyModal.request?.secondHalf ||
-                  modifyModal.request?.requestType)
-                ? "opacity-50 pointer-events-none"
-                : ""
-            }`}
-          >
-            <label className="block text-sm font-bold text-[#2B3674] mb-2">
-              Supporting Documents (Optional)
-            </label>
-            <div className="bg-[#F4F7FE] rounded-2xl p-2 border border-blue-50">
-              <CommonMultipleUploader
-                key={`modify-uploader-${modifyModal.request?.id}`}
-                entityType="LEAVE_REQUEST"
-                entityId={Number(entity?.id || 0)}
-                refId={0}
-                refType="DOCUMENT"
-                disabled={
-                  modifyFormData.firstHalf ===
-                    (modifyModal.request?.firstHalf ||
-                      modifyModal.request?.requestType) &&
-                  modifyFormData.secondHalf ===
-                    (modifyModal.request?.secondHalf ||
-                      modifyModal.request?.requestType)
-                }
-                fetchOnMount={false}
-                uploadFile={uploadLeaveRequestFile}
-                deleteFile={deleteLeaveRequestFile}
-                getFiles={getLeaveRequestFiles}
-                previewFile={previewLeaveRequestFile}
-                downloadFile={downloadLeaveRequestFile}
-                onFileUpload={(file) => setUploadedDocumentKeys((prev) => [...prev, file.key])}
-                onFileDelete={(fileKey) => setUploadedDocumentKeys((prev) => prev.filter((k) => k !== fileKey))}
-                maxFiles={5}
-                maxFileSize={5 * 1024 * 1024}
-                allowedTypes={["images", "pdf"]}
-                successMessage="Document added successfully"
-                deleteMessage="Document removed successfully"
-              />
-            </div>
-          </div>
         </div>
       </Modal>
 
@@ -3288,8 +3462,12 @@ const LeaveManagement = () => {
               >
                 Close
               </button>
-              {!(requestToCancel?.status === LeaveRequestStatus.REQUESTING_FOR_CANCELLATION || 
-                 requestToCancel?.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION) && (
+              {!(
+                requestToCancel?.status ===
+                  LeaveRequestStatus.REQUESTING_FOR_CANCELLATION ||
+                requestToCancel?.status ===
+                  LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
+              ) && (
                 <button
                   key="modify"
                   onClick={() => {
@@ -3366,19 +3544,24 @@ const LeaveManagement = () => {
             </div>
           ) : cancellableDates.length === 0 ? (
             <p className="text-gray-500 text-center">
-              All dates are already modified or cancelled, check table for dates.
+              All dates are already modified or cancelled, check table for
+              dates.
             </p>
           ) : (
             <div className="space-y-4">
               <p className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-100">
                 Select the dates you wish to cancel.
-                {!(requestToCancel?.status === LeaveRequestStatus.REQUESTING_FOR_CANCELLATION || 
-                   requestToCancel?.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION) && (
+                {!(
+                  requestToCancel?.status ===
+                    LeaveRequestStatus.REQUESTING_FOR_CANCELLATION ||
+                  requestToCancel?.status ===
+                    LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
+                ) && (
                   <>
                     <br />
                     <span className="text-xs text-blue-800 font-semibold">
-                      * You can only cancel dates before 06:30 PM of that particular
-                      day.
+                      * You can only cancel dates before 06:30 PM of that
+                      particular day.
                     </span>
                   </>
                 )}

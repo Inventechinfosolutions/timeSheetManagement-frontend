@@ -6,6 +6,7 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
+  X,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { RootState } from "../store";
@@ -54,7 +55,7 @@ const ManagerEmployeesView: React.FC = () => {
   const managerName = mappings[0]?.managerName || managerId;
 
   return (
-    <div className="p-4 md:p-8 bg-[#F4F7FE] min-h-screen font-['DM_Sans',sans-serif]">
+    <div className="p-4 md:p-8 bg-[#F4F7FE] font-['DM_Sans',sans-serif]">
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
         <button
@@ -93,15 +94,24 @@ const ManagerEmployeesView: React.FC = () => {
 
       {/* Search Bar Section */}
       <div className="mb-8">
-        <div className="flex items-center bg-white rounded-[24px] px-6 py-4 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] w-full md:max-w-md border border-transparent focus-within:border-[#4318FF]/20 transition-all">
-          <Search size={20} className="text-[#A3AED0] mr-3" />
+        <div className="flex items-center bg-white rounded-full px-5 py-2.5 border border-gray-200 focus-within:border-[#4318FF]/40 transition-all w-full md:max-w-xs">
+          <Search size={18} className="text-[#A3AED0] mr-2" />
           <input
             type="text"
             placeholder="Search employees..."
             value={teamSearch}
             onChange={(e) => setTeamSearch(e.target.value)}
-            className="border-none outline-none bg-transparent text-[#2B3674] w-full text-base font-medium placeholder:text-[#A3AED0]/60"
+            className="border-none outline-none bg-transparent text-[#2B3674] w-full text-sm font-semibold placeholder:text-[#A3AED0]/60"
           />
+          {teamSearch && (
+            <button
+              onClick={() => setTeamSearch("")}
+              className="text-[#A3AED0] hover:text-[#4318FF] transition-colors focus:outline-none ml-2 flex items-center justify-center"
+              type="button"
+            >
+              <X size={18} />
+            </button>
+          )}
         </div>
       </div>
 

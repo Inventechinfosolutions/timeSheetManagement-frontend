@@ -14,6 +14,7 @@ interface AttendanceViewWrapperProps {
   variant?: "small" | "large" | "sidebar";
   viewOnly?: boolean;
   hideMonthNavigation?: boolean;
+  hideBackButton?: boolean;
 }
 
 const AttendanceViewWrapper = (props: AttendanceViewWrapperProps) => {

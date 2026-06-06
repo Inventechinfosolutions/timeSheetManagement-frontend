@@ -224,7 +224,7 @@ const DailyStatus = () => {
 
   const styles = {
     container:
-      "p-4 md:p-8 bg-[#F4F7FE] min-h-screen font-['DM_Sans',sans-serif]",
+      "p-4 md:p-8 bg-[#F4F7FE] font-['DM_Sans',sans-serif]",
     tableWrapper:
       "bg-white rounded-[20px] p-0 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] overflow-hidden border border-gray-100",
     th: "py-4 px-4 text-[13px] font-bold uppercase tracking-wider",

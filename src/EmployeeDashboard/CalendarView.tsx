@@ -39,6 +39,7 @@ interface CalendarProps {
   viewOnly?: boolean;
   onBlockedClick?: () => void;
   hideMonthNavigation?: boolean;
+  hideBackButton?: boolean;
 }
 
 /** Matches half-day text like "Work From Home" (badge uses "WORK FROM HOME (FULL DAY)", not literal "WFH"). */
@@ -105,6 +106,7 @@ const Calendar = ({
   viewOnly = false,
   onBlockedClick,
   hideMonthNavigation = false,
+  hideBackButton = false,
 }: CalendarProps) => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -413,7 +415,7 @@ const Calendar = ({
       } ${!isSmall && !isSidebar ? "p-4 md:p-6" : ""}`}
     >
       {/* Back Button */}
-      {!isSmall && !isSidebar && (
+      {!isSmall && !isSidebar && !hideBackButton && (
         <button 
           onClick={() => {
             const path = location.pathname;

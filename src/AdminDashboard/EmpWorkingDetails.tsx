@@ -141,7 +141,7 @@ const EmpWorkingDetails = () => {
   };
 
   return (
-    <div className="p-5 bg-[#F4F7FE] min-h-screen font-sans">
+    <div className="p-5 bg-[#F4F7FE] font-sans">
       <div className="max-w-[1600px] mx-auto">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
           <h1 className="text-xl md:text-2xl font-bold text-[#2B3674] m-0">

@@ -109,7 +109,7 @@ const Landing = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-[#F3F4F6] relative overflow-hidden font-sans p-2 sm:p-4 select-none">
+    <div className="absolute inset-0 bg-[#F3F4F6] overflow-hidden font-sans select-none flex items-center justify-center">
       {/* Self-contained Font Styling */}
       <style>{`
         .font-serif {
@@ -140,124 +140,136 @@ const Landing = () => {
       )}
 
       {!showSplash && (
-        <div className="w-full max-w-[420px] md:max-w-[960px] h-auto md:h-[580px] bg-[#FCFCFE] md:bg-gradient-to-br md:from-[#006CF1] md:to-[#0051B8] rounded-[24px] sm:rounded-[32px] flex flex-col md:flex-row overflow-hidden relative z-10 md:items-stretch shadow-[0_15px_50px_rgba(0,0,0,0.05)] md:shadow-none">
-          
-          <div className="hidden md:block absolute inset-0 overflow-hidden pointer-events-none z-0">
-            <div className="absolute left-[188px] -top-24 w-[340px] h-[340px] rounded-full bg-gradient-to-br from-[#005ECF] to-[#003B8C] shadow-2xl opacity-80"></div>
-            <div className="absolute left-[184px] -bottom-24 w-[240px] h-[240px] rounded-full bg-gradient-to-br from-[#0058C4] to-[#00357F] shadow-2xl opacity-90"></div>
-            <div className="absolute -left-20 -bottom-20 w-[200px] h-[200px] rounded-full bg-gradient-to-br from-[#0052B8] to-[#002F73] shadow-2xl opacity-90"></div>
-          </div>
-
-          {/* LEFT SIDE: New Abstract Blue Layered Spheres Design */}
-          <div className="hidden md:flex md:w-[45%] flex-col justify-between p-6 sm:p-8 md:p-10 text-white relative min-h-[340px] md:h-full md:self-stretch bg-transparent z-10">
-            <div className="relative z-10"></div>
-            <div className="my-auto py-4 sm:py-6 relative z-10 flex flex-col items-start justify-center text-left w-full">
-              <h1 className="text-3xl sm:text-4xl font-extrabold tracking-wide text-white uppercase mb-4 font-sans">
-                WorkSphere
-              </h1>
-              <p className="text-white/80 font-sans text-xs sm:text-sm max-w-[280px] sm:max-w-xs leading-relaxed">
-                Streamline your time management, log daily tasks, and track
-                attendance seamlessly with our modern enterprise platform.
-              </p>
+        <div className="w-full h-full flex items-center justify-center p-4 sm:p-6 lg:py-[4vh] lg:px-8">
+          <div className="w-full max-w-[420px] lg:max-w-[960px] h-auto lg:h-[min(580px,82vh)] bg-[#FCFCFE] lg:bg-gradient-to-br lg:from-[#006CF1] lg:to-[#0051B8] rounded-[24px] sm:rounded-[32px] flex flex-col lg:flex-row overflow-hidden relative z-10 lg:items-stretch shadow-[0_15px_50px_rgba(0,0,0,0.05)] lg:shadow-none">
+            
+            <div className="hidden lg:block absolute inset-0 overflow-hidden pointer-events-none z-0">
+              <div className="absolute left-[188px] -top-24 w-[340px] h-[340px] rounded-full bg-gradient-to-br from-[#005ECF] to-[#003B8C] shadow-2xl opacity-80"></div>
+              <div className="absolute left-[184px] -bottom-24 w-[240px] h-[240px] rounded-full bg-gradient-to-br from-[#0058C4] to-[#00357F] shadow-2xl opacity-90"></div>
+              <div className="absolute -left-20 -bottom-20 w-[200px] h-[200px] rounded-full bg-gradient-to-br from-[#0052B8] to-[#002F73] shadow-2xl opacity-90"></div>
             </div>
 
-            <div className="relative z-10 text-[8px] font-black tracking-[0.2em] uppercase text-white/70 flex justify-center md:justify-start gap-4">
-              <span>POWERED BY INVENTECH INFO SOLUTIONS</span>
-            </div>
-          </div>
-
-          <div className="w-full md:w-[55%] bg-[#FCFCFE] md:rounded-l-[60px] lg:rounded-l-[80px] flex flex-col justify-center p-6 sm:p-10 md:p-12 relative z-20 min-h-[340px] md:h-[calc(100%+2px)] md:self-stretch md:-mt-[1px] md:-mb-[1px]">
-            <div className="mb-8 relative flex flex-col items-center text-center">
-              <div className="mb-6  backdrop-blur-md px-5 py-2 inline-flex items-center gap-3 hover:scale-[1.02] transition-all duration-300">
-                <img
-                  src={workspherelogo}
-                  alt="WorkSphere"
-                  className="h-20 w-auto"
-                />
+            {/* LEFT SIDE: New Abstract Blue Layered Spheres Design */}
+            <div className="hidden lg:flex lg:w-[45%] flex-col justify-between p-6 sm:p-8 lg:py-[4vh] lg:px-8 text-white relative lg:h-full lg:self-stretch bg-transparent z-10">
+              <div className="relative z-10"></div>
+              <div className="my-auto py-4 sm:py-6 relative z-10 flex flex-col items-start justify-center text-left w-full">
+                <h1 className="text-3xl sm:text-4xl font-extrabold tracking-wide text-white uppercase mb-4 font-sans">
+                  WorkSphere
+                </h1>
+                <p className="text-white/80 font-sans text-xs sm:text-sm max-w-[280px] sm:max-w-xs leading-relaxed">
+                  Streamline your time management, log daily tasks, and track
+                  attendance seamlessly with our modern enterprise platform.
+                </p>
               </div>
-              <p className="text-gray-400 text-xs sm:text-sm font-medium">
-                Enter your credentials to access your dashboard.
-              </p>
+
+              <div className="relative z-10 text-[8px] font-black tracking-[0.2em] uppercase text-white/70 flex justify-center lg:justify-start gap-4">
+                <span>
+                  POWERED BY{" "}
+                  <a
+                    href="https://inventechinfo.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:underline hover:text-white transition-colors cursor-pointer"
+                  >
+                    INVENTECH INFO SOLUTIONS
+                  </a>
+                </span>
+              </div>
             </div>
 
-            {/* Error notifications */}
-            {error && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-2xl text-xs font-semibold w-full text-center animate-in fade-in duration-200">
-                {error}
-              </div>
-            )}
-
-            <div className="w-full max-w-[420px] mx-auto relative">
-              <form onSubmit={handleLogin} className="space-y-5">
-                <div className="space-y-1.5 group">
-                  <label className="text-xs font-bold text-gray-500 tracking-wide ml-0.5">
-                    Username
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="Enter corporate ID"
-                      className="w-full pl-11 pr-4 py-3.5 bg-[#F9F9FB] border border-gray-200/80 rounded-xl focus:bg-white focus:border-[#006CF1] focus:ring-4 focus:ring-[#006CF1]/10 transition-all text-gray-800 placeholder-gray-400/80 text-xs font-semibold focus:outline-none"
-                      value={loginId}
-                      onChange={(e) => setLoginId(e.target.value)}
-                      required
-                    />
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#006CF1] transition-colors">
-                      <User size={16} />
-                    </div>
-                  </div>
+            <div className="w-full lg:w-[55%] bg-[#FCFCFE] lg:rounded-l-[60px] xl:rounded-l-[80px] flex flex-col justify-center p-6 sm:p-8 lg:py-[4vh] lg:px-10 relative z-20 min-h-[340px] lg:h-[calc(100%+2px)] lg:self-stretch lg:-mt-[1px] lg:-mb-[1px]">
+              <div className="mb-4 lg:mb-[2.5vh] relative flex flex-col items-center text-center">
+                <div className="mb-3 lg:mb-[2vh] backdrop-blur-md px-5 py-2 inline-flex items-center gap-3 hover:scale-[1.02] transition-all duration-300">
+                  <img
+                    src={workspherelogo}
+                    alt="WorkSphere"
+                    className="h-10 sm:h-12 lg:h-[6vh] lg:max-h-[56px] w-auto"
+                  />
                 </div>
-                <div className="space-y-1.5">
-                  <div className="flex justify-between items-center px-0.5">
-                    <label className="text-xs font-bold text-gray-500 tracking-wide">
-                      Password
+                <p className="text-gray-400 text-xs sm:text-sm font-medium">
+                  Enter your credentials to access your dashboard.
+                </p>
+              </div>
+
+              {/* Error notifications */}
+              {error && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-100 text-red-600 rounded-2xl text-xs font-semibold w-full text-center animate-in fade-in duration-200">
+                  {error}
+                </div>
+              )}
+
+              <div className="w-full max-w-[420px] mx-auto relative">
+                <form onSubmit={handleLogin} className="space-y-4 lg:space-y-[2vh]">
+                  <div className="space-y-1.5 group">
+                    <label className="text-xs font-bold text-gray-500 tracking-wide ml-0.5">
+                      Username
                     </label>
-                    <button
-                      type="button"
-                      onClick={() => navigate("/forgot-password")}
-                      className="cursor-pointer text-xs font-bold text-[#006CF1] hover:text-[#0051B8] transition-colors"
-                    >
-                      Forgot Password?
-                    </button>
-                  </div>
-                  <div className="relative group">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Enter security password"
-                      className="w-full pl-11 pr-10 py-3.5 bg-[#F9F9FB] border border-gray-200/80 rounded-xl focus:bg-white focus:border-[#006CF1] focus:ring-4 focus:ring-[#006CF1]/10 transition-all text-gray-800 placeholder-gray-400/80 text-xs font-semibold focus:outline-none"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#006CF1] transition-colors">
-                      <Lock size={16} />
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Enter corporate ID"
+                        className="w-full pl-10 pr-4 py-2.5 sm:py-3 bg-[#F9F9FB] border border-gray-200/80 rounded-xl focus:bg-white focus:border-[#006CF1] focus:ring-4 focus:ring-[#006CF1]/10 transition-all text-gray-800 placeholder-gray-400/80 text-xs font-semibold focus:outline-none"
+                        value={loginId}
+                        onChange={(e) => setLoginId(e.target.value)}
+                        required
+                      />
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#006CF1] transition-colors">
+                        <User size={16} />
+                      </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none p-1 transition-colors"
-                    >
-                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
                   </div>
-                </div>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center px-0.5">
+                      <label className="text-xs font-bold text-gray-500 tracking-wide">
+                        Password
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => navigate("/forgot-password")}
+                        className="cursor-pointer text-xs font-bold text-[#006CF1] hover:text-[#0051B8] transition-colors"
+                      >
+                        Forgot Password?
+                      </button>
+                    </div>
+                    <div className="relative group">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Enter security password"
+                        className="w-full pl-10 pr-10 py-2.5 sm:py-3 bg-[#F9F9FB] border border-gray-200/80 rounded-xl focus:bg-white focus:border-[#006CF1] focus:ring-4 focus:ring-[#006CF1]/10 transition-all text-gray-800 placeholder-gray-400/80 text-xs font-semibold focus:outline-none"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                      />
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#006CF1] transition-colors">
+                        <Lock size={16} />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none p-1 transition-colors"
+                      >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
 
-                {/* Sign In Button */}
-                <button
-                  type="submit"
-                  disabled={isSubmitting || loading || !loginId || !password}
-                  className="w-full max-w-[410px] mx-auto bg-[#006CF1] hover:bg-[#0051B8] text-white font-bold py-3.5 rounded-xl shadow-[0_8px_20px_-4px_rgba(0,108,241,0.4)] transition-all duration-200 active:scale-[0.98] mt-6 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none text-xs tracking-wider cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  {isSubmitting || loading ? "Authorizing..." : "Login"}
-                  {!isSubmitting && !loading && <ArrowRight size={13} />}
-                </button>
-              </form>
-            </div>
+                  {/* Sign In Button */}
+                  <button
+                    type="submit"
+                    disabled={isSubmitting || loading || !loginId || !password}
+                    className="w-full max-w-[410px] mx-auto bg-[#006CF1] hover:bg-[#0051B8] text-white font-bold py-2.5 sm:py-3 rounded-xl shadow-[0_8px_20px_-4px_rgba(0,108,241,0.4)] transition-all duration-200 active:scale-[0.98] mt-4 sm:mt-5 lg:mt-[2vh] disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none text-xs tracking-wider cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    {isSubmitting || loading ? "Authorizing..." : "Login"}
+                    {!isSubmitting && !loading && <ArrowRight size={13} />}
+                  </button>
+                </form>
+              </div>
 
-            {/* Portal security footer */}
-            <div className="pt-8 border-t border-gray-100 flex items-center justify-center lg:justify-start gap-2 text-[9px] text-gray-400 font-extrabold uppercase tracking-widest mt-8">
-              <ShieldCheck size={14} className="text-gray-300" />
-              <span>Authorized personnel only</span>
+              {/* Portal security footer */}
+              <div className="pt-4 border-t border-gray-100 flex items-center justify-center lg:justify-start gap-2 text-[9px] text-gray-400 font-extrabold uppercase tracking-widest mt-6 sm:mt-8 lg:mt-[3vh]">
+                <ShieldCheck size={14} className="text-gray-300" />
+                <span>Authorized personnel only</span>
+              </div>
             </div>
           </div>
         </div>

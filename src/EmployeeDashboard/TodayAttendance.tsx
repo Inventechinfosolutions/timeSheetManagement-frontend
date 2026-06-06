@@ -334,7 +334,7 @@ const TodayAttendance = ({
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 space-y-6 custom-scrollbar">
         {/* Month Selector Section */}
         <div className="flex justify-center md:justify-end mb-2">
           <div className="inline-flex items-center bg-white rounded-full px-3 py-1 shadow-sm border border-gray-100/50 gap-2">
@@ -436,6 +436,7 @@ const TodayAttendance = ({
                 handleNavigate(timestamp);
               }}
               hideMonthNavigation={true}
+              hideBackButton={true}
             />
           </div>
         </div>

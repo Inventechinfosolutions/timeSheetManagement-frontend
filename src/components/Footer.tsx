@@ -1,9 +1,9 @@
-import './Footer.css'
-import inventechLogo from '../assets/inventech-logo.jpg'
-import worksphereLogo from '../assets/workspherelogo.png'
+import "./Footer.css";
+import inventechLogo from "../assets/inventech-logo.jpg";
+import worksphereLogo from "../assets/workspherelogo.png";
 
 const Footer = () => {
-  const currentYear = new Date().getFullYear()
+  const currentYear = new Date().getFullYear();
 
   return (
     <footer className="footer">
@@ -16,8 +16,7 @@ const Footer = () => {
           />
 
           <p className="footer-small">
-            &copy; {currentYear}   worksphere  Powred  by{" "}
-
+            &copy; {currentYear} worksphere Powred by{" "}
             <a
               href="https://inventechinfo.com/"
               target="_blank"
@@ -30,7 +29,7 @@ const Footer = () => {
         </div>
       </div>
     </footer>
-  )
-}
+  );
+};
 
-export default Footer
+export default Footer;

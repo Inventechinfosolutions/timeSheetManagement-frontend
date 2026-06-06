@@ -256,7 +256,7 @@ const ManagerMapping: React.FC = () => {
   };
 
   return (
-    <div className="p-4 md:p-8 bg-[#F4F7FE] min-h-screen font-['DM_Sans',sans-serif]">
+    <div className="p-4 md:p-8 bg-[#F4F7FE] font-['DM_Sans',sans-serif]">
       {/* Header Card - hidden for Receptionist (view only Mapping History) */}
       {!isReceptionist && (
       <div className="bg-white rounded-[24px] shadow-[0px_18px_40px_rgba(112,144,176,0.12)] p-6 mb-6">
