@@ -157,6 +157,25 @@ const TodayAttendance = ({
     return designation.includes("intern") || employmentType === "INTERN";
   }, [entity?.designation, entity?.designation_name, entity?.employmentType]);
 
+  const showInternDataBanner = useMemo(() => {
+    if (!entity?.internId || !entity?.conversionDate) return false;
+
+    const convDate = dayjs(entity.conversionDate);
+    if (!convDate.isValid()) return false;
+
+    const selectedDate = dayjs(calendarDate);
+    const convYear = convDate.year();
+    const convMonth = convDate.month() + 1;
+    const selectedYear = selectedDate.year();
+    const selectedMonth = selectedDate.month() + 1;
+
+    if (selectedYear < convYear) return true;
+    if (selectedYear === convYear && selectedMonth < convMonth) return true;
+
+    return false;
+  }, [entity, calendarDate]);
+
+
   // 1. Separate "Today's" Data - ALWAYS based on current real-time Month
   const todayStatsEntry = useMemo(() => {
     // Generate entries for the ACTUAL current month (now)
@@ -368,6 +387,21 @@ const TodayAttendance = ({
             </button>
           </div>
         </div>
+
+        {showInternDataBanner && (
+          <div className="mb-4 p-3.5 bg-blue-50/70 border border-blue-200/50 backdrop-blur-md rounded-2xl flex items-center gap-3 text-blue-800 shadow-sm transition-all duration-300">
+            <div className="p-2 bg-blue-100 rounded-xl text-blue-600">
+              <AlertCircle size={18} strokeWidth={2.5} />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-xs font-bold uppercase tracking-wider text-blue-500/80">Intern Period Data</span>
+              <p className="text-xs font-semibold text-blue-900/90 leading-tight">
+                Showing historical intern data for <strong className="font-extrabold">{entity?.fullName || "Employee"}</strong>. 
+                (Intern ID: <code className="bg-blue-100 px-1.5 py-0.5 rounded-md text-[10px] font-extrabold font-mono text-blue-800">{entity?.internId}</code>)
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Top Section: Dashboard Cards */}
         <AttendanceStatsCards

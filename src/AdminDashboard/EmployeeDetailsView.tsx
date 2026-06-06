@@ -226,6 +226,20 @@ const EmployeeDetailsView = () => {
       return;
     }
 
+    // Validate that if employment type is modified, employee ID and designation must be modified too
+    if (employee && editedData.employmentType !== employee.employmentType) {
+      const originalEmployeeId = String(employee.employeeId || employee.id || "");
+      if (
+        editedData.employeeId === originalEmployeeId ||
+        editedData.designation === (employee.designation || "")
+      ) {
+        setValidationError(
+          "When changing the Employment Type, you must also update the Employee ID and the Designation."
+        );
+        return;
+      }
+    }
+
     setShowConfirm(true);
   };
 
