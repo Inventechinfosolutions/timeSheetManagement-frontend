@@ -42,10 +42,10 @@ const AutoUpdateModal: React.FC<AutoUpdateModalProps> = ({
               <Rocket className="text-white w-5 h-5" strokeWidth={1.5} />
             </div>
             <h2 className="text-lg md:text-xl font-bold text-white tracking-tight">
-              Auto Fill Timesheet
+              Auto Fill-Timesheet
             </h2>
             <p className="text-blue-100 text-[11px] font-medium mt-0.5">
-              {monthName} {year}
+              For {monthName} {year}
             </p>
           </div>
 

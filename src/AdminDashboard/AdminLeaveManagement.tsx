@@ -1789,11 +1789,10 @@ const AdminLeaveManagement = () => {
             <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-4">
               <div className="flex flex-col gap-2 pl-5 text-center md:text-left">
                 <h2 className="text-white text-[28px] font-bold tracking-[-0.5px] m-0 leading-tight">
-                  Request & Manage Attendance
+                  Submit a Request
                 </h2>
                 <p className="text-white/85 text-[15px] font-normal m-0 max-w-sm">
-                  Apply leaves, work from home, or client visits on behalf of
-                  employees.
+                  View Employees request history or submit new attendance updates on behalf of the employees.
                 </p>
               </div>
 
@@ -1909,7 +1908,7 @@ const AdminLeaveManagement = () => {
           <>
             <div className="flex flex-col md:flex-row items-center justify-between mt-8 mb-4 gap-4">
               <h3 className="text-xl font-bold text-[#2B3674]">
-                Recent Leave History
+                Recent Log History
               </h3>
 
               <div className="flex flex-wrap gap-3 items-center w-full md:w-auto">
@@ -1934,7 +1933,7 @@ const AdminLeaveManagement = () => {
                       />
                     }
                   >
-                    <Select.Option value="All">All Months</Select.Option>
+                    <Select.Option value="All">All</Select.Option>
                     {months.map((m) => (
                       <Select.Option key={m.value} value={m.value}>
                         {m.label}
@@ -1966,7 +1965,7 @@ const AdminLeaveManagement = () => {
                   >
                     {years.map((y) => (
                       <Select.Option key={y} value={y}>
-                        {y === "All" ? "All Years" : y}
+                        {y === "All" ? "All" : y}
                       </Select.Option>
                     ))}
                   </Select>
@@ -2010,7 +2009,7 @@ const AdminLeaveManagement = () => {
                       LeaveRequestStatus.CANCELLED,
                     ].map((status) => (
                       <Select.Option key={status} value={status}>
-                        {status === "All" ? "All Status" : status}
+                        {status === "All" ? "All" : status}
                       </Select.Option>
                     ))}
                   </Select>
@@ -2048,16 +2047,16 @@ const AdminLeaveManagement = () => {
                         Request Type
                       </th>
                       <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
-                        Duration Type
+                        Type
                       </th>
                       <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
                         Department
                       </th>
                       <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
-                        Duration
+                        Date Range
                       </th>
                       <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
-                        Submitted Date
+                        Submitted
                       </th>
                       <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap sticky right-[120px] w-[160px] min-w-[160px] bg-[#4318FF] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)]">
                         Status
@@ -2573,7 +2572,7 @@ const AdminLeaveManagement = () => {
                       {emailConfig.assignedManagerEmail && (
                         <div className="min-w-0 flex-1">
                           <span className="text-xs font-medium text-gray-600 block mb-1 uppercase tracking-wide">
-                            Assigned Manager
+                            Reporting Manager
                           </span>
                           <div className="px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-gray-700 font-bold text-sm">
                             {emailConfig.assignedManagerEmail}
@@ -2818,7 +2817,7 @@ const AdminLeaveManagement = () => {
             <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-4 items-end">
               <div className="space-y-2" ref={startDateRef}>
                 <label className="text-sm font-bold text-[#2B3674] ml-1">
-                  Start Date <span className="text-red-500">*</span>
+                  From <span className="text-red-500">*</span>
                 </label>
                 {isViewMode ? (
                   <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] text-center">
@@ -2872,7 +2871,7 @@ const AdminLeaveManagement = () => {
               </div>
               <div className="space-y-2" ref={endDateRef}>
                 <label className="text-sm font-bold text-[#2B3674] ml-1">
-                  End Date <span className="text-red-500">*</span>
+                  To <span className="text-red-500">*</span>
                 </label>
                 {isViewMode ? (
                   <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] text-center">
@@ -2911,7 +2910,7 @@ const AdminLeaveManagement = () => {
               </div>
               <div className="space-y-2 flex flex-col justify-end">
                 <label className="text-sm font-bold text-[#2B3674] ml-1">
-                  Total Days:
+                  Duration:
                 </label>
                 <div className="px-4 py-3 rounded-2xl bg-[#F4F7FE] font-bold text-[#4318FF] inline-flex items-center gap-2 min-h-[48px]">
                   <span className="bg-white px-3 py-1.5 rounded-lg shadow-sm border border-blue-100">
@@ -3038,11 +3037,11 @@ const AdminLeaveManagement = () => {
             {/* Description Field */}
             <div className="space-y-2" ref={descriptionRef}>
               <label className="text-sm font-bold text-[#2B3674] ml-1">
-                Description <span className="text-red-500">*</span>
+                Reason for Request <span className="text-red-500">*</span>
               </label>
               {isViewMode ? (
                 <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-medium text-[#2B3674] min-h-[60px] whitespace-pre-wrap break-words leading-relaxed">
-                  {formData.description || "No description provided."}
+                  {formData.description || "Reason for Request is not provided."}
                 </div>
               ) : (
                 <div className="relative">
@@ -3075,7 +3074,7 @@ const AdminLeaveManagement = () => {
             {/* Document Upload Section */}
             <div className="space-y-2">
               <label className="text-sm font-bold text-[#2B3674] ml-1">
-                Supporting Documents {isViewMode ? "" : "(Optional)"}
+                Attachments {isViewMode ? "" : "(Optional)"}
               </label>
               {!isViewMode && (
                 <p className="text-xs text-gray-500 ml-1 mb-1">
@@ -3149,7 +3148,7 @@ const AdminLeaveManagement = () => {
                 >
                   {loadingRequests || isAutoApproving
                     ? "Submitting..."
-                    : "Submit Application"}
+                    : "Submit Request"}
                 </button>
               </div>
             )}
@@ -3541,7 +3540,7 @@ const AdminLeaveManagement = () => {
                   {emailConfig.assignedManagerEmail && (
                     <div className="min-w-0 flex-1">
                       <span className="text-xs font-medium text-gray-600 block mb-1 uppercase tracking-wide">
-                        Assigned Manager
+                        Reporting Manager
                       </span>
                       <div className="px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-gray-700 font-bold text-sm">
                         {emailConfig.assignedManagerEmail}

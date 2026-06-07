@@ -1520,7 +1520,7 @@ const LeaveManagement = () => {
         <div>
           <h1 className="text-2xl font-bold text-[#2B3674]">Work Management</h1>
           <p className="text-sm text-gray-500 mt-1">
-            View your leave balance and request new leave
+            View your request history or submit new attendance updates.
           </p>
         </div>
 
@@ -1541,11 +1541,10 @@ const LeaveManagement = () => {
           <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex flex-col gap-2 pl-5 text-center md:text-left">
               <h2 className="text-white text-[28px] font-bold tracking-[-0.5px] m-0 leading-tight">
-                Request & Manage Attendance
+                Submit a Request
               </h2>
               <p className="text-white/85 text-[15px] font-normal m-0 max-w-sm">
-                Easily submit leave, log remote work, or record client visits in
-                seconds.
+                Select a category to quickly apply for leave, remote work, or client visits.
               </p>
             </div>
 
@@ -1672,7 +1671,7 @@ const LeaveManagement = () => {
 
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between mt-5 mb-3 gap-4">
           <h3 className="text-xl font-bold text-[#2B3674]">
-            Recent Leave History
+            Recent Log History
           </h3>
           <div className="flex flex-wrap gap-3 items-center">
             <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
@@ -1693,7 +1692,7 @@ const LeaveManagement = () => {
                   />
                 }
               >
-                <Select.Option value="All">All Months</Select.Option>
+                <Select.Option value="All">Months</Select.Option>
                 {months.map((m) => (
                   <Select.Option key={m.value} value={m.value}>
                     {m.label}
@@ -1722,7 +1721,7 @@ const LeaveManagement = () => {
               >
                 {years.map((y) => (
                   <Select.Option key={y} value={y}>
-                    {y === "All" ? "All Years" : y}
+                    {y === "All" ? "Years" : y}
                   </Select.Option>
                 ))}
               </Select>
@@ -1763,7 +1762,7 @@ const LeaveManagement = () => {
                   LeaveRequestStatus.CANCELLED,
                 ].map((status) => (
                   <Select.Option key={status} value={status}>
-                    {status === "All" ? "All Status" : status}
+                    {status === "All" ? "All" : status}
                   </Select.Option>
                 ))}
               </Select>
@@ -1800,16 +1799,16 @@ const LeaveManagement = () => {
                     Request Type
                   </th>
                   <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
-                    Duration Type
+                    Type
                   </th>
                   <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
                     Department
                   </th>
                   <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
-                    Duration
+                    Date Range
                   </th>
                   <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
-                    Submitted Date
+                    Submitted
                   </th>
                   <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap sticky right-[120px] w-[160px] min-w-[160px] bg-[#4318FF] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)]">
                     Status
@@ -2267,7 +2266,7 @@ const LeaveManagement = () => {
                     {emailConfig.assignedManagerEmail && (
                       <div className="min-w-0 flex-1">
                         <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
-                          Assigned Manager
+                          Reporting Manager
                         </span>
                         <input
                           type="text"
@@ -2403,7 +2402,7 @@ const LeaveManagement = () => {
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-[#2B3674] ml-1">
-                      Duration Type
+                      Type
                     </label>
                     <Select
                       value={leaveDurationType}
@@ -2498,7 +2497,7 @@ const LeaveManagement = () => {
             <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-4 items-end">
               <div className="space-y-2" ref={startDateRef}>
                 <label className="text-sm font-bold text-[#2B3674] ml-1">
-                  Start Date <span className="text-red-500">*</span>
+                  From <span className="text-red-500">*</span>
                 </label>
                 {isViewMode ? (
                   <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] text-center">
@@ -2556,7 +2555,7 @@ const LeaveManagement = () => {
               </div>
               <div className="space-y-2" ref={endDateRef}>
                 <label className="text-sm font-bold text-[#2B3674] ml-1">
-                  End Date <span className="text-red-500">*</span>
+                  To <span className="text-red-500">*</span>
                 </label>
                 {isViewMode ? (
                   <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] text-center">
@@ -2599,7 +2598,7 @@ const LeaveManagement = () => {
               </div>
               <div className="space-y-2 flex flex-col justify-end">
                 <label className="text-sm font-bold text-[#2B3674] ml-1">
-                  Total Days:
+                  Duration:
                 </label>
                 <div className="px-4 py-3 rounded-2xl bg-[#F4F7FE] font-bold text-[#4318FF] inline-flex items-center gap-2 min-h-[48px]">
                   <span className="bg-white px-3 py-1.5 rounded-lg shadow-sm border border-blue-100">
@@ -2700,11 +2699,11 @@ const LeaveManagement = () => {
             {/* Description Field */}
             <div className="space-y-2" ref={descriptionRef}>
               <label className="text-sm font-bold text-[#2B3674] ml-1">
-                Description <span className="text-red-500">*</span>
+                Reason for Request<span className="text-red-500">*</span>
               </label>
               {isViewMode ? (
                 <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-medium text-[#2B3674] min-h-[60px] whitespace-pre-wrap break-words leading-relaxed">
-                  {formData.description || "No description provided."}
+                  {formData.description || "Reason for Request is not provided."}
                 </div>
               ) : (
                 <div className="relative">
@@ -2738,7 +2737,7 @@ const LeaveManagement = () => {
             {/* Document Upload Section */}
             <div className="space-y-2">
               <label className="text-sm font-bold text-[#2B3674] ml-1">
-                Supporting Documents {isViewMode ? "" : "(Optional)"}
+                Attachments {isViewMode ? "" : "(Optional)"}
               </label>
               {!isViewMode && (
                 <p className="text-xs text-gray-500 ml-1 mb-1">
@@ -2810,7 +2809,7 @@ const LeaveManagement = () => {
                     <span>Submitting...</span>
                   </div>
                 ) : (
-                  "Submit Application"
+                  "Submit Request"
                 )}
               </button>
             </div>
@@ -3054,7 +3053,7 @@ const LeaveManagement = () => {
                     {emailConfig.assignedManagerEmail && (
                       <div className="min-w-0 flex-1">
                         <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
-                          Assigned Manager
+                          Reporting Manager
                         </span>
                         <input
                           type="text"
