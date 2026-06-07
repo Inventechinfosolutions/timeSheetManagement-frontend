@@ -306,7 +306,7 @@ const AdminEmployeeTimesheetList = () => {
                 className={`flex items-center gap-2 px-4 py-2.5 bg-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] font-bold text-sm hover:bg-gray-50 transition-all border border-transparent focus:border-[#4318FF]/20 whitespace-nowrap ${selectedDepartment !== "All Departments" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
               >
                 <Filter size={14} className="text-[#4318FF]" />
-                <span>{selectedDepartment}</span>
+                <span>{selectedDepartment === "All Departments" ? "Departments" : selectedDepartment}</span>
                 <ChevronDown
                   size={14}
                   className={`text-[#A3AED0] transition-transform duration-300 ${isDropdownOpen ? "rotate-180" : ""}`}
@@ -365,7 +365,7 @@ const AdminEmployeeTimesheetList = () => {
               className={`flex items-center gap-2 px-4 py-2.5 bg-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] font-bold text-sm hover:bg-gray-50 transition-all border border-transparent focus:border-[#4318FF]/20 whitespace-nowrap ${selectedStatus !== "All Status" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
             >
               <Filter size={14} className="text-[#4318FF]" />
-              <span>{selectedStatus}</span>
+              <span>{selectedStatus === "All Status" ? "Status" : selectedStatus}</span>
               <ChevronDown
                 size={14}
                 className={`text-[#A3AED0] transition-transform duration-300 ${isStatusDropdownOpen ? "rotate-180" : ""}`}

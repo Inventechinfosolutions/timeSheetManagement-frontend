@@ -108,12 +108,12 @@ const Header = ({
 
       const f =
         firstHalf === LeaveRequestType.APPLY_LEAVE ||
-        firstHalf === LeaveRequestType.LEAVE
+          firstHalf === LeaveRequestType.LEAVE
           ? LeaveRequestType.LEAVE
           : firstHalf;
       const s =
         secondHalf === LeaveRequestType.APPLY_LEAVE ||
-        secondHalf === LeaveRequestType.LEAVE
+          secondHalf === LeaveRequestType.LEAVE
           ? LeaveRequestType.LEAVE
           : secondHalf;
 
@@ -216,8 +216,8 @@ const Header = ({
     : isReceptionist
       ? "R"
       : currentUser?.aliasLoginName?.charAt(0)?.toUpperCase() ||
-        currentUser?.loginId?.charAt(0)?.toUpperCase() ||
-        "U";
+      currentUser?.loginId?.charAt(0)?.toUpperCase() ||
+      "U";
 
   // Fetch profile image - ONLY for the logged-in user, not the viewed entity (if Admin)
   // Fetch profile image - ONLY for the logged-in user, not the viewed entity (if Admin)
@@ -308,11 +308,10 @@ const Header = ({
           <Link
             to="/about"
             className={`px-3 py-1.5 rounded-xl font-bold text-sm md:text-[15px] transition-all duration-200 
-                ${
-                  location.pathname === "/about"
-                    ? "bg-white text-[#4318FF] shadow-lg"
-                    : "text-white hover:bg-white/10"
-                }`}
+                ${location.pathname === "/about"
+                ? "bg-white text-[#4318FF] shadow-lg"
+                : "text-white hover:bg-white/10"
+              }`}
           >
             About
           </Link>
@@ -322,17 +321,15 @@ const Header = ({
             <div className="relative" ref={notificationRef}>
               <button
                 onClick={() => setIsNotificationOpen(!isNotificationOpen)}
-                className={`relative p-2 rounded-xl transition-all group ${
-                  isNotificationOpen
-                    ? "bg-white text-[#4318FF]"
-                    : "hover:bg-white/10 text-white"
-                }`}
+                className={`relative p-2 rounded-xl transition-all group ${isNotificationOpen
+                  ? "bg-white text-[#4318FF]"
+                  : "hover:bg-white/10 text-white"
+                  }`}
               >
                 <Bell
                   size={18}
-                  className={`group-hover:scale-110 transition-transform ${
-                    isNotificationOpen ? "fill-current" : ""
-                  }`}
+                  className={`group-hover:scale-110 transition-transform ${isNotificationOpen ? "fill-current" : ""
+                    }`}
                 />
                 {unreadCount > 0 && (
                   <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold shadow-sm border border-white/20 px-1">
@@ -365,7 +362,7 @@ const Header = ({
                       {/* Tabs */}
                       <div className="flex items-center gap-6 px-6 border-b border-gray-50">
                         <button className="py-3 text-sm font-bold text-[#1B2559] border-b-2 border-[#1B2559] relative">
-                          Inbox
+                          {isApprover ? "Pending Approvals" : "Inbox"}
                           <span className="ml-2 bg-[#1B2559] text-white text-[10px] px-1.5 py-0.5 rounded-md">
                             {unreadCount}
                           </span>
@@ -698,9 +695,9 @@ const Header = ({
                                     // Case 7: Modification Rejected or Cancelled
                                     else if (
                                       update.status ===
-                                        LeaveRequestStatus.MODIFICATION_REJECTED ||
+                                      LeaveRequestStatus.MODIFICATION_REJECTED ||
                                       update.status ===
-                                        LeaveRequestStatus.MODIFICATION_CANCELLED
+                                      LeaveRequestStatus.MODIFICATION_CANCELLED
                                     ) {
                                       title = "Modification Rejected";
                                       message = (
@@ -790,63 +787,62 @@ const Header = ({
                             {/* Regular Notifications */}
                             {notifications.length > 0
                               ? notifications.map((notif) => (
-                                  <div
-                                    key={notif.id}
-                                    onClick={() =>
-                                      handleNotificationClick(notif.id)
-                                    }
-                                    className={`flex gap-4 p-5 hover:bg-gray-50/80 transition-colors border-b border-gray-50 last:border-0 group cursor-pointer relative ${
-                                      !notif.isRead ? "bg-blue-50/30" : ""
+                                <div
+                                  key={notif.id}
+                                  onClick={() =>
+                                    handleNotificationClick(notif.id)
+                                  }
+                                  className={`flex gap-4 p-5 hover:bg-gray-50/80 transition-colors border-b border-gray-50 last:border-0 group cursor-pointer relative ${!notif.isRead ? "bg-blue-50/30" : ""
                                     }`}
-                                  >
-                                    <div className="relative shrink-0">
-                                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-[#4318FF]">
-                                        <Bell size={18} />
-                                      </div>
-                                    </div>
-                                    <div className="flex-1 space-y-1">
-                                      <div className="flex justify-between items-start">
-                                        <p className="text-sm text-[#1B2559] leading-snug">
-                                          <span className="font-bold">
-                                            {notif.title}
-                                          </span>
-                                        </p>
-                                        {!notif.isRead && (
-                                          <span className="w-2 h-2 bg-[#4318FF] rounded-full shrink-0 mt-1.5"></span>
-                                        )}
-                                      </div>
-                                      <div className="flex flex-col gap-1">
-                                        <span className="text-xs text-gray-500 font-medium line-clamp-2">
-                                          {notif.message}
-                                        </span>
-                                        <span className="text-[10px] text-gray-400">
-                                          {new Date(
-                                            notif.createdAt,
-                                          ).toLocaleDateString()}{" "}
-                                          {new Date(
-                                            notif.createdAt,
-                                          ).toLocaleTimeString([], {
-                                            hour: "2-digit",
-                                            minute: "2-digit",
-                                          })}
-                                        </span>
-                                      </div>
+                                >
+                                  <div className="relative shrink-0">
+                                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-[#4318FF]">
+                                      <Bell size={18} />
                                     </div>
                                   </div>
-                                ))
+                                  <div className="flex-1 space-y-1">
+                                    <div className="flex justify-between items-start">
+                                      <p className="text-sm text-[#1B2559] leading-snug">
+                                        <span className="font-bold">
+                                          {notif.title}
+                                        </span>
+                                      </p>
+                                      {!notif.isRead && (
+                                        <span className="w-2 h-2 bg-[#4318FF] rounded-full shrink-0 mt-1.5"></span>
+                                      )}
+                                    </div>
+                                    <div className="flex flex-col gap-1">
+                                      <span className="text-xs text-gray-500 font-medium line-clamp-2">
+                                        {notif.message}
+                                      </span>
+                                      <span className="text-[10px] text-gray-400">
+                                        {new Date(
+                                          notif.createdAt,
+                                        ).toLocaleDateString()}{" "}
+                                        {new Date(
+                                          notif.createdAt,
+                                        ).toLocaleTimeString([], {
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                        })}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))
                               : employeeUpdates.length === 0 && (
-                                  <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-                                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-3">
-                                      <Bell
-                                        size={24}
-                                        className="text-gray-300"
-                                      />
-                                    </div>
-                                    <p className="text-sm font-bold text-[#1B2559]">
-                                      No new notifications
-                                    </p>
+                                <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                                  <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-3">
+                                    <Bell
+                                      size={24}
+                                      className="text-gray-300"
+                                    />
                                   </div>
-                                )}
+                                  <p className="text-sm font-bold text-[#1B2559]">
+                                    No new notifications
+                                  </p>
+                                </div>
+                              )}
                           </>
                         )}
                       </div>
@@ -979,9 +975,8 @@ const Header = ({
                   </div>
                   <ChevronDown
                     size={14}
-                    className={`text-blue-100 transition-transform ${
-                      isDropdownOpen ? "rotate-180" : ""
-                    }`}
+                    className={`text-blue-100 transition-transform ${isDropdownOpen ? "rotate-180" : ""
+                      }`}
                   />
                 </div>
               </button>
@@ -1007,39 +1002,39 @@ const Header = ({
                     <div className="px-4 py-3 border-b border-gray-100">
                       <p className="text-sm font-bold text-[#1B2559]">
                         {location.pathname.includes("/employee-dashboard") ||
-                        location.pathname.includes(
-                          "/manager-dashboard/leave-management",
-                        ) ||
-                        location.pathname.includes("/manager-dashboard/my") ||
-                        location.pathname.includes(
-                          "/admin-dashboard/my-profile",
-                        ) ||
-                        location.pathname === "/manager-dashboard" ||
-                        location.pathname === "/admin-dashboard"
+                          location.pathname.includes(
+                            "/manager-dashboard/leave-management",
+                          ) ||
+                          location.pathname.includes("/manager-dashboard/my") ||
+                          location.pathname.includes(
+                            "/admin-dashboard/my-profile",
+                          ) ||
+                          location.pathname === "/manager-dashboard" ||
+                          location.pathname === "/admin-dashboard"
                           ? currentUser?.aliasLoginName || "User"
                           : entity?.fullName ||
-                            entity?.name ||
-                            currentUser?.aliasLoginName ||
-                            "User"}
+                          entity?.name ||
+                          currentUser?.aliasLoginName ||
+                          "User"}
                       </p>
                       <p className="text-xs text-gray-400 mt-0.5">
                         {location.pathname.includes("/employee-dashboard") ||
-                        location.pathname.includes(
-                          "/manager-dashboard/leave-management",
-                        ) ||
-                        location.pathname.includes("/manager-dashboard/my") ||
-                        location.pathname.includes(
-                          "/admin-dashboard/my-profile",
-                        ) ||
-                        location.pathname === "/manager-dashboard" ||
-                        location.pathname === "/admin-dashboard"
+                          location.pathname.includes(
+                            "/manager-dashboard/leave-management",
+                          ) ||
+                          location.pathname.includes("/manager-dashboard/my") ||
+                          location.pathname.includes(
+                            "/admin-dashboard/my-profile",
+                          ) ||
+                          location.pathname === "/manager-dashboard" ||
+                          location.pathname === "/admin-dashboard"
                           ? currentUser?.loginId || ""
                           : entity?.email || currentUser?.loginId || ""}
                       </p>
                     </div>
                   )}
 
-                  {/* My Profile - Only show for employees (not Admin/Receptionist in this block; Receptionist can use Change Password from sidebar) */}
+                  {/* Account Settings - Only show for employees (not Admin/Receptionist in this block; Receptionist can use Change Password from sidebar) */}
                   {!isAdminOrReceptionist && (
                     <button
                       onClick={handleProfileClick}
@@ -1050,7 +1045,7 @@ const Header = ({
                       </div>
                       <div>
                         <p className="text-sm font-semibold text-[#1B2559]">
-                          My Profile
+                          Account Settings
                         </p>
                         <p className="text-xs text-gray-400">
                           View your profile

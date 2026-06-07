@@ -42,10 +42,10 @@ const AutoUpdateModal: React.FC<AutoUpdateModalProps> = ({
               <Rocket className="text-white w-5 h-5" strokeWidth={1.5} />
             </div>
             <h2 className="text-lg md:text-xl font-bold text-white tracking-tight">
-              Auto Update Timesheet
+              Auto Fill-Timesheet
             </h2>
             <p className="text-blue-100 text-[11px] font-medium mt-0.5">
-              {monthName} {year}
+              For {monthName} {year}
             </p>
           </div>
 
@@ -62,7 +62,7 @@ const AutoUpdateModal: React.FC<AutoUpdateModalProps> = ({
         <div className="p-3.5 space-y-3 overflow-y-auto flex-1 custom-scrollbar">
           <div className="bg-blue-50/50 rounded-xl p-2.5 border border-blue-100">
             <p className="text-[11px] md:text-xs text-gray-600 leading-normal text-center font-medium">
-              This will automatically fill <span className="text-[#4318FF] font-bold">9 hours and location to office</span> for all eligible working days in the current month up to today.
+              This will automatically log <span className="text-[#4318FF] font-bold">9 hours (Office)</span> for all past eligible working days this month.
             </p>
           </div>
 
@@ -91,7 +91,7 @@ const AutoUpdateModal: React.FC<AutoUpdateModalProps> = ({
           <div className="flex gap-2 items-start p-2 bg-gray-50 rounded-xl border border-gray-100">
             <AlertTriangle className="text-gray-400 w-3.5 h-3.5 shrink-0 mt-0.5" />
             <p className="text-[10px] text-gray-500 leading-tight">
-              Only days with <strong>no existing entries</strong> will be updated. Existing data will not be overwritten.
+              Only empty days will be filled. Existing entries will not be overwritten.
             </p>
           </div>
         </div>
@@ -119,7 +119,7 @@ const AutoUpdateModal: React.FC<AutoUpdateModalProps> = ({
             ) : (
               <>
                 <Rocket size={14} className="animate-pulse" />
-                <span>Confirm & Update</span>
+                <span>Confirm & Auto-Fill</span>
               </>
             )}
           </button>

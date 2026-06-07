@@ -1924,7 +1924,7 @@ const MyTimesheet = ({
             )} */}
             <div className="flex flex-col sm:flex-row items-end sm:items-baseline gap-1 sm:gap-2">
               <p className="text-xs sm:text-sm uppercase font-bold text-gray-700 tracking-wider leading-none">
-                TOTAL HOURS :
+                TOTAL TRACKED :
               </p>
               <div className="flex items-baseline gap-1">
                 <p className="text-xl sm:text-2xl font-black text-[#4318FF] leading-none">
@@ -1945,7 +1945,7 @@ const MyTimesheet = ({
                   title="Auto-fill eligible working days"
                 >
                   <Rocket size={14} className="animate-pulse" />
-                  <span className="hidden sm:inline">Auto Update</span>
+                  <span className="hidden sm:inline">Auto Fill</span>
                 </button>
               )}
 
