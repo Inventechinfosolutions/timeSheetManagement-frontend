@@ -434,6 +434,7 @@ const TodayAttendance = ({
           attendanceRecords={yearlyRecords}
           isIntern={isIntern}
           joiningDate={entity?.joiningDate || (currentUser as any)?.joiningDate}
+          conversionDate={entity?.conversionDate || (currentUser as any)?.conversionDate}
           trends={trends}
           monthlyLeaveBalance={monthlyLeaveBalance}
           loading={leaveLoading}
