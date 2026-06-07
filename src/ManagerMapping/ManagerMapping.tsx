@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Search,
   X,
@@ -93,6 +93,32 @@ const ManagerMapping: React.FC = () => {
   const historyItemsPerPage = 10;
   const [debouncedHistorySearch, setDebouncedHistorySearch] = useState("");
   const [debouncedSearchText, setDebouncedSearchText] = useState("");
+
+  // Refs for click-outside detection
+  const deptDropdownRef = useRef<HTMLDivElement>(null);
+  const managerDropdownRef = useRef<HTMLDivElement>(null);
+  const historyDeptRef = useRef<HTMLDivElement>(null);
+  const historyStatusRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (deptDropdownRef.current && !deptDropdownRef.current.contains(e.target as Node)) {
+        setIsDeptDropdownOpen(false);
+      }
+      if (managerDropdownRef.current && !managerDropdownRef.current.contains(e.target as Node)) {
+        setIsManagerDropdownOpen(false);
+      }
+      if (historyDeptRef.current && !historyDeptRef.current.contains(e.target as Node)) {
+        setIsHistoryDeptOpen(false);
+      }
+      if (historyStatusRef.current && !historyStatusRef.current.contains(e.target as Node)) {
+        setIsHistoryStatusOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Fetch initial data
   useEffect(() => {
@@ -266,7 +292,7 @@ const ManagerMapping: React.FC = () => {
           Manager Mapping
         </h1>
         <p className="text-sm text-[#A3AED0] font-medium">
-          Assign employees to managers based on department
+          Assign department leads and manage team reporting lines.
         </p>
 
         {/* Filters */}
@@ -276,7 +302,7 @@ const ManagerMapping: React.FC = () => {
             <label className="block text-sm font-bold text-[#2B3674] mb-2">
               Department
             </label>
-            <div className="relative">
+            <div className="relative" ref={deptDropdownRef}>
               <button
                 onClick={() => {
                   setIsDeptDropdownOpen(!isDeptDropdownOpen);
@@ -309,12 +335,6 @@ const ManagerMapping: React.FC = () => {
               </button>
               {isDeptDropdownOpen && (
                 <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50 max-h-64 overflow-y-auto">
-                  <button
-                    onClick={() => handleDepartmentChange("All Departments")}
-                    className={`w-full text-left px-4 py-2 text-sm font-medium hover:bg-[#F4F7FE] ${selectedDepartment === "All Departments" ? "text-[#4318FF] bg-[#4318FF]/5" : "text-[#2B3674]"}`}
-                  >
-                    All Departments
-                  </button>
                   {departments.map((dept) => (
                     <button
                       key={dept.id}
@@ -336,7 +356,7 @@ const ManagerMapping: React.FC = () => {
             <label className="block text-sm font-bold text-[#2B3674] mb-2">
               Manager
             </label>
-            <div className="relative">
+            <div className="relative" ref={managerDropdownRef}>
               <button
                 type="button"
                 disabled={!selectedDepartment || selectedDepartment === "All Departments"}
@@ -604,7 +624,7 @@ const ManagerMapping: React.FC = () => {
         </h3>
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
           <div className="flex items-center gap-3 w-full md:w-auto">
-            <div className="relative">
+            <div className="relative" ref={historyDeptRef}>
               <button
                 onClick={() => {
                   setIsHistoryDeptOpen(!isHistoryDeptOpen);
@@ -613,7 +633,7 @@ const ManagerMapping: React.FC = () => {
                 className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl shadow-sm border border-gray-100 text-[#2B3674] font-bold text-sm hover:bg-gray-50 transition-all min-w-[160px]"
               >
                 <Filter size={16} className="text-[#4318FF]" />
-                <span>{historyDepartment}</span>
+                <span>{historyDepartment === "All" ? "Department" : historyDepartment}</span>
                 <ChevronDown
                   size={16}
                   className={`ml-auto text-[#A3AED0] transition-transform ${isHistoryDeptOpen ? "rotate-180" : ""}`}
@@ -648,7 +668,7 @@ const ManagerMapping: React.FC = () => {
               )}
             </div>
 
-            <div className="relative">
+            <div className="relative" ref={historyStatusRef}>
               <button
                 onClick={() => {
                   setIsHistoryStatusOpen(!isHistoryStatusOpen);
@@ -658,7 +678,7 @@ const ManagerMapping: React.FC = () => {
               >
                 <Filter size={16} className="text-[#4318FF]" />
                 <span>
-                  {historyStatus === "All" ? "All Status" : historyStatus}
+                  {historyStatus === "All" ? "Status" : historyStatus}
                 </span>
                 <ChevronDown
                   size={16}
@@ -768,7 +788,7 @@ const ManagerMapping: React.FC = () => {
                       })
                     }
                   >
-                    Total Employees Count
+                    Team Size
                   </th>
                   <th
                     className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider cursor-pointer hover:bg-[#3311DD] transition-colors"

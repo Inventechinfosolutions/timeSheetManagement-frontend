@@ -544,7 +544,7 @@ const AttendanceStatsCards = ({
           </div>
           <div className="w-full">
             <div className="text-[#A3AED0] font-bold text-[10px] uppercase tracking-wider mb-1">
-              Carry Over
+              Carry Forward
             </div>
             <div className="flex flex-col">
               <span className="text-2xl font-extrabold text-[#1B2559] tracking-tight">
@@ -606,7 +606,7 @@ const AttendanceStatsCards = ({
         </div>
         <div className="w-full z-10">
           <div className="text-white/90 font-bold text-[10px] uppercase tracking-wider mb-1">
-            Available Leave
+            Available Leave Balance
           </div>
           <div className="flex flex-col">
             <div className="flex items-baseline gap-2">

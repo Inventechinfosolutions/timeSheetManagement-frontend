@@ -22,7 +22,7 @@ const ManagerLayout = () => {
       path.includes("/manager-dashboard/employee-details/") ||
       path.includes("/manager-dashboard/view-attendance/")
     ) {
-      return "Employee Details";
+      return "Employee Directory";
     }
     if (path === "/manager-dashboard/my-dashboard") {
       return "My Dashboard";
@@ -31,7 +31,7 @@ const ManagerLayout = () => {
       return "My Timesheet";
     }
     if (path === "/manager-dashboard/my-timesheet-view") {
-      return "My Timesheet View";
+      return "My Timesheet History";
     }
     if (
       path.includes("/manager-dashboard/timesheet/") ||
@@ -44,7 +44,7 @@ const ManagerLayout = () => {
       return "Working Details";
     }
     if (path.includes("/manager-dashboard/work-management")) {
-      return "Work Management";
+      return "Request Management";
     }
     if (path.includes("/manager-dashboard/leave-balance")) {
       return "Leave Balance";
@@ -56,16 +56,16 @@ const ManagerLayout = () => {
       return "Employee Dashboard";
     }
     if (path.includes("/manager-dashboard/my-profile")) {
-      return "My Profile";
+      return "Account Settings";
     }
     if (path.includes("/manager-dashboard/leave-management")) {
-      return "Work Management ";
+      return "Request Management ";
     }
 
     switch (tab) {
       case "employees":
       case "employee-details":
-        return "Employee Details";
+        return "Employee Directory";
       case "requests":
         return "Notification";
       case "timesheet-list":
@@ -73,7 +73,7 @@ const ManagerLayout = () => {
       case "working-details":
         return "Employee Timesheet";
       case "work-management":
-        return "Work Management";
+        return "Request Management";
       case "leave-balance":
         return "Leave Balance";
       case "manager-mapping":
@@ -83,11 +83,11 @@ const ManagerLayout = () => {
       case "my-timesheet":
         return "My Timesheet";
       case "my-timesheet-view":
-        return "My Timesheet View";
+        return "My Timesheet History";
       case "my-profile":
-        return "My Profile";
+        return "Account Settings";
       case "leave-management":
-        return "Work Management ";
+        return "Request Management ";
       default:
         return "Employee Dashboard";
     }
@@ -111,7 +111,7 @@ const ManagerLayout = () => {
       }
     }
 
-    if (tabName === "Employee Details") {
+    if (tabName === "Employee Directory") {
       navigate("/manager-dashboard/employees");
     } else if (tabName === "Employee Timesheet") {
       navigate("/manager-dashboard/timesheet-list");
@@ -119,7 +119,7 @@ const ManagerLayout = () => {
       navigate("/manager-dashboard/working-details");
     } else if (tabName === "Notification") {
       navigate("/manager-dashboard/requests");
-    } else if (tabName === "Work Management") {
+    } else if (tabName === "Request Management") {
       navigate("/manager-dashboard/work-management");
     } else if (tabName === "Leave Balance") {
       navigate("/manager-dashboard/leave-balance");
@@ -131,11 +131,11 @@ const ManagerLayout = () => {
       navigate("/manager-dashboard/my-dashboard");
     } else if (tabName === "My Timesheet") {
       navigate("/manager-dashboard/my-timesheet");
-    } else if (tabName === "My Timesheet View") {
+    } else if (tabName === "My Timesheet History") {
       navigate("/manager-dashboard/my-timesheet-view");
-    } else if (tabName === "My Profile") {
+    } else if (tabName === "Account Settings") {
       navigate("/manager-dashboard/my-profile");
-    } else if (tabName === "Work Management ") {
+    } else if (tabName === "Request Management ") {
       navigate("/manager-dashboard/leave-management");
     }
   };

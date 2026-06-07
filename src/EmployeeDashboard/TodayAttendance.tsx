@@ -378,7 +378,7 @@ const TodayAttendance = ({
                 <span className="text-xs font-extrabold uppercase tracking-wider text-blue-600">Intern Period</span>
                 <span className="h-3.5 w-px bg-blue-200"></span>
                 <p className="text-sm font-semibold text-blue-900/90 leading-tight">
-                  Showing internship details for <strong className="font-bold">{entity?.fullName || "Employee"}</strong>. (Intern ID: <code className="bg-blue-100/70 px-1.5 py-0.5 rounded-md text-xs font-extrabold font-mono text-blue-800">{entity?.internId}</code>) Internship End Date: <strong className="font-bold">{entity?.conversionDate ? dayjs(entity.conversionDate).format("DD-MM-YYYY") : "N/A"}</strong>
+                  Showing Internship details of <strong className="font-bold">{entity?.fullName || "Employee"}</strong>. Internship successfully completed on <strong className="font-bold">{entity?.conversionDate ? dayjs(entity.conversionDate).format("MMM D, YYYY") : "N/A"}</strong>.
                 </p>
               </div>
             )}
@@ -388,7 +388,7 @@ const TodayAttendance = ({
                 <span className="text-xs font-extrabold uppercase tracking-wider text-green-600 animate-pulse">Congratulations!</span>
                 <span className="h-3.5 w-px bg-green-200"></span>
                 <p className="text-sm font-semibold text-green-900/90 leading-tight whitespace-nowrap">
-                  🎉 Congratulations <strong className="font-bold">{entity?.fullName || "Employee"}</strong> on converting to Full-Time on <strong className="font-bold">{entity?.conversionDate ? dayjs(entity.conversionDate).format("DD-MM-YYYY") : "N/A"}</strong>! 🥳
+                  🎉 Congratulations, <strong className="font-bold">{entity?.fullName || "Employee"}</strong>, on your transition to a Full-Time role!
                 </p>
               </div>
             )}

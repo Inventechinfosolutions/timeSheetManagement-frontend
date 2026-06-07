@@ -104,15 +104,46 @@ const Requests = () => {
     isOpen: boolean;
     id: number | null;
     status:
-      | LeaveRequestStatus.APPROVED
-      | LeaveRequestStatus.REJECTED
-      | LeaveRequestStatus.CANCELLATION_APPROVED
-      | LeaveRequestStatus.CANCELLATION_REJECTED
-      | LeaveRequestStatus.MODIFICATION_APPROVED
-      | LeaveRequestStatus.MODIFICATION_REJECTED
-      | null;
+    | LeaveRequestStatus.APPROVED
+    | LeaveRequestStatus.REJECTED
+    | LeaveRequestStatus.CANCELLATION_APPROVED
+    | LeaveRequestStatus.CANCELLATION_REJECTED
+    | LeaveRequestStatus.MODIFICATION_APPROVED
+    | LeaveRequestStatus.MODIFICATION_REJECTED
+    | null;
     employeeName: string;
+    requestType?: string;
+    firstHalf?: string;
+    secondHalf?: string;
+    isHalfDay?: boolean;
   }>({ isOpen: false, id: null, status: null, employeeName: "" });
+
+  // Converts a raw request type string to a display-friendly label
+  const normalizeTypeName = (type: string): string => {
+    const t = (type || "").trim();
+    if (t === LeaveRequestType.APPLY_LEAVE || t === LeaveRequestType.LEAVE) return "Leave";
+    if (t === WorkLocation.WORK_FROM_HOME || t === LeaveRequestType.WFH) return "WFH";
+    if (t === WorkLocation.CLIENT_VISIT) return "Client Visit";
+    if (t === WorkLocation.OFFICE) return "Office";
+    if (t === AttendanceStatus.HALF_DAY) return "Half Day";
+    return t;
+  };
+
+  // Returns a human-readable request type label, handling split (half-day) combos
+  const getRequestTypeLabel = (req: {
+    requestType?: string;
+    firstHalf?: string;
+    secondHalf?: string;
+    isHalfDay?: boolean;
+  }): string => {
+    if (req.isHalfDay && req.firstHalf && req.secondHalf) {
+      const first = normalizeTypeName(req.firstHalf);
+      const second = normalizeTypeName(req.secondHalf);
+      if (first === second) return first;
+      return `${first} & ${second}`;
+    }
+    return normalizeTypeName(req.requestType || "");
+  };
 
   const handleUpdateStatus = (
     id: number,
@@ -124,8 +155,18 @@ const Requests = () => {
       | LeaveRequestStatus.MODIFICATION_APPROVED
       | LeaveRequestStatus.MODIFICATION_REJECTED,
     employeeName: string,
+    req?: any,
   ) => {
-    setConfirmModal({ isOpen: true, id, status, employeeName });
+    setConfirmModal({
+      isOpen: true,
+      id,
+      status,
+      employeeName,
+      requestType: req?.requestType,
+      firstHalf: req?.firstHalf,
+      secondHalf: req?.secondHalf,
+      isHalfDay: req?.isHalfDay,
+    });
   };
 
   const [selectedMonth, setSelectedMonth] = useState<string>("All");
@@ -149,7 +190,10 @@ const Requests = () => {
   const currentYear = dayjs().year();
   const years = [
     "All",
-    ...Array.from({ length: 6 }, (_, i) => (currentYear + i).toString()),
+    ...Array.from(
+      { length: 36 },
+      (_, i) => (currentYear - 2 + i).toString()
+    ),
   ];
 
   // const departments = [
@@ -380,7 +424,7 @@ const Requests = () => {
             ? JSON.parse(req.availableDates)
             : req.availableDates;
         if (Array.isArray(ds)) return ds;
-      } catch (e) {}
+      } catch (e) { }
     }
     return getWorkingDatesInRange(req.fromDate, req.toDate);
   };
@@ -613,9 +657,9 @@ const Requests = () => {
                           segment.length *
                           (victim.isHalfDay
                             ? getDurationFactor(
-                                victim.firstHalf,
-                                victim.secondHalf,
-                              )
+                              victim.firstHalf,
+                              victim.secondHalf,
+                            )
                             : 1.0),
                         sourceRequestId: id,
                         sourceRequestType: reqType,
@@ -752,10 +796,7 @@ const Requests = () => {
   const isRejectionAction =
     confirmModal.status === LeaveRequestStatus.REJECTED ||
     confirmModal.status === LeaveRequestStatus.CANCELLATION_REJECTED ||
-    confirmModal.status === LeaveRequestStatus.MODIFICATION_REJECTED ||
-    (confirmModal.status === LeaveRequestStatus.APPROVED &&
-      entities.find((e) => e.id === confirmModal.id)?.status ===
-        LeaveRequestStatus.REQUESTING_FOR_CANCELLATION);
+    confirmModal.status === LeaveRequestStatus.MODIFICATION_REJECTED;
 
   return (
     <div className="p-4 md:p-8 bg-[#F4F7FE] font-sans">
@@ -765,7 +806,7 @@ const Requests = () => {
             Employee Requests
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Review and manage all employee work-related requests
+            Review, approve, or decline employee attendance and time-off requests.
           </p>
         </div>
       </div>
@@ -796,169 +837,179 @@ const Requests = () => {
         </div>
 
         {/* Filters Row */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-end gap-3">
           {/* Department Filter Dropdown */}
           {basePath === "/admin-dashboard" && (
-            <div className="relative">
-              <button
-                onClick={() => setIsDeptOpen(!isDeptOpen)}
-                className={`flex items-center gap-3 px-5 py-3 bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all text-sm font-bold ${selectedDept !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
-              >
-                <Filter
-                  size={18}
-                  className={
-                    selectedDept !== "All" ? "text-[#4318FF]" : "text-gray-400"
-                  }
-                />
-                <span>
-                  {selectedDept === "All" ? "All Departments" : selectedDept}
-                </span>
-                <ChevronDown
-                  size={18}
-                  className={`transition-transform duration-300 ${isDeptOpen ? "rotate-180" : ""}`}
-                />
-              </button>
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-bold text-gray-400 pl-1">Department</span>
+              <div className="relative">
+                <button
+                  onClick={() => setIsDeptOpen(!isDeptOpen)}
+                  className={`flex items-center gap-3 px-5 py-3 bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all text-sm font-bold ${selectedDept !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+                >
+                  <Filter
+                    size={18}
+                    className={
+                      selectedDept !== "All" ? "text-[#4318FF]" : "text-gray-400"
+                    }
+                  />
+                  <span>
+                    {selectedDept === "All" ? "All Departments" : selectedDept}
+                  </span>
+                  <ChevronDown
+                    size={18}
+                    className={`transition-transform duration-300 ${isDeptOpen ? "rotate-180" : ""}`}
+                  />
+                </button>
 
-              {isDeptOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-40"
-                    onClick={() => setIsDeptOpen(false)}
-                  ></div>
-                  <div className="absolute left-0 mt-3 w-56 bg-white rounded-3xl shadow-2xl border border-blue-50 py-3 z-50 overflow-hidden animate-in fade-in zoom-in duration-200 origin-top-left">
-                    <div className="px-5 py-2 mb-1">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-                        Departments
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setSelectedDept("All");
-                        setIsDeptOpen(false);
-                        setCurrentPage(1);
-                      }}
-                      className={`w-full flex items-center px-5 py-2.5 text-sm font-bold transition-all relative ${
-                        selectedDept === "All"
-                          ? "text-[#4318FF] bg-blue-50/50"
-                          : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
-                      }`}
-                    >
-                      {selectedDept === "All" && (
-                        <div className="absolute left-0 w-1 h-6 bg-[#4318FF] rounded-r-full"></div>
-                      )}
-                      All Departments
-                    </button>
-                    {departments.map((dept: any) => (
+                {isDeptOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setIsDeptOpen(false)}
+                    ></div>
+                    <div className="absolute left-0 mt-3 w-56 bg-white rounded-3xl shadow-2xl border border-blue-50 py-3 z-50 overflow-hidden animate-in fade-in zoom-in duration-200 origin-top-left">
+                      <div className="px-5 py-2 mb-1">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                          Departments
+                        </span>
+                      </div>
                       <button
-                        key={dept.id}
                         onClick={() => {
-                          setSelectedDept(dept.departmentName);
+                          setSelectedDept("All");
                           setIsDeptOpen(false);
+                          setCurrentPage(1);
                         }}
-                        className={`w-full flex items-center px-5 py-2.5 text-sm font-bold transition-all relative ${
-                          selectedDept === dept.departmentName
+                        className={`w-full flex items-center px-5 py-2.5 text-sm font-bold transition-all relative ${selectedDept === "All"
                             ? "text-[#4318FF] bg-blue-50/50"
                             : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
-                        }`}
+                          }`}
                       >
-                        {selectedDept === dept.departmentName && (
+                        {selectedDept === "All" && (
                           <div className="absolute left-0 w-1 h-6 bg-[#4318FF] rounded-r-full"></div>
                         )}
-                        {dept.departmentName}
+                        All Departments
                       </button>
-                    ))}
-                  </div>
-                </>
-              )}
+                      {departments.map((dept: any) => (
+                        <button
+                          key={dept.id}
+                          onClick={() => {
+                            setSelectedDept(dept.departmentName);
+                            setIsDeptOpen(false);
+                          }}
+                          className={`w-full flex items-center px-5 py-2.5 text-sm font-bold transition-all relative ${selectedDept === dept.departmentName
+                              ? "text-[#4318FF] bg-blue-50/50"
+                              : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
+                            }`}
+                        >
+                          {selectedDept === dept.departmentName && (
+                            <div className="absolute left-0 w-1 h-6 bg-[#4318FF] rounded-r-full"></div>
+                          )}
+                          {dept.departmentName}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           )}
 
-          <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
-            <Select
-              value={selectedMonth}
-              onChange={(val) => setSelectedMonth(val)}
-              className={`w-36 h-12 font-bold text-sm ${selectedMonth !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
-              variant="borderless"
-              dropdownStyle={{ borderRadius: "16px" }}
-              suffixIcon={
-                <ChevronDown
-                  size={18}
-                  className={
-                    selectedMonth !== "All" ? "text-[#4318FF]" : "text-gray-400"
-                  }
-                />
-              }
-            >
-              <Select.Option value="All">All Months</Select.Option>
-              {months.map((m) => (
-                <Select.Option key={m.value} value={m.value}>
-                  {m.label}
-                </Select.Option>
-              ))}
-            </Select>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-bold text-gray-400 pl-1">Months</span>
+            <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
+              <Select
+                value={selectedMonth}
+                onChange={(val) => setSelectedMonth(val)}
+                className={`w-36 h-12 font-bold text-sm ${selectedMonth !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+                variant="borderless"
+                dropdownStyle={{ borderRadius: "16px" }}
+                suffixIcon={
+                  <ChevronDown
+                    size={18}
+                    className={
+                      selectedMonth !== "All" ? "text-[#4318FF]" : "text-gray-400"
+                    }
+                  />
+                }
+              >
+                <Select.Option value="All">All Months</Select.Option>
+                {months.map((m) => (
+                  <Select.Option key={m.value} value={m.value}>
+                    {m.label}
+                  </Select.Option>
+                ))}
+              </Select>
+            </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
-            <Select
-              value={selectedYear}
-              onChange={(val) => setSelectedYear(val)}
-              className={`w-28 h-12 font-bold text-sm ${selectedYear !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
-              variant="borderless"
-              dropdownStyle={{ borderRadius: "16px" }}
-              suffixIcon={
-                <ChevronDown
-                  size={18}
-                  className={
-                    selectedYear !== "All" ? "text-[#4318FF]" : "text-gray-400"
-                  }
-                />
-              }
-            >
-              {years.map((y) => (
-                <Select.Option key={y} value={y}>
-                  {y === "All" ? "All Years" : y}
-                </Select.Option>
-              ))}
-            </Select>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-bold text-gray-400 pl-1">Years</span>
+            <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
+              <Select
+                value={selectedYear}
+                onChange={(val) => setSelectedYear(val)}
+                className={`w-28 h-12 font-bold text-sm ${selectedYear !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+                variant="borderless"
+                dropdownStyle={{ borderRadius: "16px" }}
+                suffixIcon={
+                  <ChevronDown
+                    size={18}
+                    className={
+                      selectedYear !== "All" ? "text-[#4318FF]" : "text-gray-400"
+                    }
+                  />
+                }
+              >
+                {years.map((y) => (
+                  <Select.Option key={y} value={y}>
+                    {y === "All" ? "All Years" : y}
+                  </Select.Option>
+                ))}
+              </Select>
+            </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
-            <Select
-              value={filterStatus}
-              onChange={(val) => setFilterStatus(val)}
-              className={`w-60 h-12 font-bold text-sm ${filterStatus !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
-              variant="borderless"
-              dropdownStyle={{ borderRadius: "16px" }}
-              suffixIcon={
-                <ChevronDown
-                  size={18}
-                  className={
-                    filterStatus !== "All" ? "text-[#4318FF]" : "text-gray-400"
-                  }
-                />
-              }
-            >
-              {[
-                "All",
-                LeaveRequestStatus.PENDING,
-                LeaveRequestStatus.APPROVED,
-                LeaveRequestStatus.REJECTED,
-                LeaveRequestStatus.REQUESTING_FOR_CANCELLATION,
-                LeaveRequestStatus.CANCELLATION_APPROVED,
-                LeaveRequestStatus.CANCELLATION_REJECTED,
-                LeaveRequestStatus.REQUESTING_FOR_MODIFICATION,
-                LeaveRequestStatus.REQUEST_MODIFIED,
-                LeaveRequestStatus.MODIFICATION_APPROVED,
-                LeaveRequestStatus.MODIFICATION_CANCELLED,
-                LeaveRequestStatus.MODIFICATION_REJECTED,
-                LeaveRequestStatus.CANCELLATION_REVERTED,
-                LeaveRequestStatus.CANCELLED,
-              ].map((status) => (
-                <Select.Option key={status} value={status}>
-                  {status === "All" ? "All Status" : status}
-                </Select.Option>
-              ))}
-            </Select>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-bold text-gray-400 pl-1">Status</span>
+            <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
+              <Select
+                value={filterStatus}
+                onChange={(val) => setFilterStatus(val)}
+                className={`w-60 h-12 font-bold text-sm ${filterStatus !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+                variant="borderless"
+                dropdownStyle={{ borderRadius: "16px" }}
+                suffixIcon={
+                  <ChevronDown
+                    size={18}
+                    className={
+                      filterStatus !== "All" ? "text-[#4318FF]" : "text-gray-400"
+                    }
+                  />
+                }
+              >
+                {[
+                  "All",
+                  LeaveRequestStatus.PENDING,
+                  LeaveRequestStatus.APPROVED,
+                  LeaveRequestStatus.REJECTED,
+                  LeaveRequestStatus.REQUESTING_FOR_CANCELLATION,
+                  LeaveRequestStatus.CANCELLATION_APPROVED,
+                  LeaveRequestStatus.CANCELLATION_REJECTED,
+                  LeaveRequestStatus.REQUESTING_FOR_MODIFICATION,
+                  LeaveRequestStatus.REQUEST_MODIFIED,
+                  LeaveRequestStatus.MODIFICATION_APPROVED,
+                  LeaveRequestStatus.MODIFICATION_CANCELLED,
+                  LeaveRequestStatus.MODIFICATION_REJECTED,
+                  LeaveRequestStatus.CANCELLATION_REVERTED,
+                  LeaveRequestStatus.CANCELLED,
+                ].map((status) => (
+                  <Select.Option key={status} value={status}>
+                    {status === "All" ? "All Status" : status}
+                  </Select.Option>
+                ))}
+              </Select>
+            </div>
           </div>
 
           {/* Clear Filters Button */}
@@ -967,22 +1018,22 @@ const Requests = () => {
             selectedMonth !== "All" ||
             selectedYear !== "All" ||
             filterStatus !== "All") && (
-            <button
-              onClick={() => {
-                setSearchTerm("");
-                setSelectedDept("All");
-                setSelectedMonth("All");
-                setSelectedYear("All");
-                setFilterStatus("All");
-                setCurrentPage(1);
-              }}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#5B4FFF] text-white rounded-full hover:bg-[#4318FF] active:scale-95 transition-all text-sm font-bold border border-[#4318FF]/50 whitespace-nowrap"
-              title="Clear all filters"
-            >
-              <X size={16} />
-              <span>Clear All</span>
-            </button>
-          )}
+              <button
+                onClick={() => {
+                  setSearchTerm("");
+                  setSelectedDept("All");
+                  setSelectedMonth("All");
+                  setSelectedYear("All");
+                  setFilterStatus("All");
+                  setCurrentPage(1);
+                }}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#5B4FFF] text-white rounded-full hover:bg-[#4318FF] active:scale-95 transition-all text-sm font-bold border border-[#4318FF]/50 whitespace-nowrap"
+                title="Clear all filters"
+              >
+                <X size={16} />
+                <span>Clear All</span>
+              </button>
+            )}
         </div>
       </div>
 
@@ -1063,9 +1114,8 @@ const Requests = () => {
                   .map((req, index) => (
                     <tr
                       key={req.id}
-                      className={`group transition-all duration-200 ${
-                        index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"
-                      } hover:bg-gray-100`}
+                      className={`group transition-all duration-200 ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"
+                        } hover:bg-gray-100`}
                     >
                       <td className="py-3 pl-6 pr-4 align-middle">
                         <div className="flex items-center gap-3">
@@ -1099,9 +1149,9 @@ const Requests = () => {
                                 req.secondHalf === WorkLocation.CLIENT_VISIT;
                               const hasLeave =
                                 req.firstHalf ===
-                                  LeaveRequestType.APPLY_LEAVE ||
+                                LeaveRequestType.APPLY_LEAVE ||
                                 req.secondHalf ===
-                                  LeaveRequestType.APPLY_LEAVE ||
+                                LeaveRequestType.APPLY_LEAVE ||
                                 req.firstHalf === LeaveRequestType.LEAVE ||
                                 req.secondHalf === LeaveRequestType.LEAVE;
 
@@ -1131,7 +1181,7 @@ const Requests = () => {
                                 );
                               if (
                                 req.requestType ===
-                                  LeaveRequestType.APPLY_LEAVE ||
+                                LeaveRequestType.APPLY_LEAVE ||
                                 req.requestType === LeaveRequestType.LEAVE
                               )
                                 return (
@@ -1163,44 +1213,19 @@ const Requests = () => {
                                 req.firstHalf &&
                                 req.secondHalf
                               ) {
-                                const activities = [
-                                  req.firstHalf,
-                                  req.secondHalf,
-                                ]
-                                  .map((a) =>
-                                    a === LeaveRequestType.APPLY_LEAVE
-                                      ? LeaveRequestType.LEAVE
-                                      : a,
-                                  )
-                                  .filter((a) => a && a !== WorkLocation.OFFICE)
-                                  .filter(
-                                    (value, index, self) =>
-                                      self.indexOf(value) === index,
-                                  );
-
-                                if (activities.length > 1) {
-                                  // Replace "Leave" with "Half Day Leave" in combined activities
-                                  return activities
-                                    .map((a) =>
-                                      a === LeaveRequestType.LEAVE
-                                        ? "Half Day Leave"
-                                        : a,
-                                    )
-                                    .join(" + ");
-                                }
-                                if (activities.length === 1) {
-                                  // For single activity that is "Leave", show "Half Day Leave"
-                                  return activities[0] ===
-                                    LeaveRequestType.LEAVE
-                                    ? "Half Day Leave"
-                                    : activities[0];
-                                }
+                                const first = normalizeTypeName(req.firstHalf);
+                                const second = normalizeTypeName(req.secondHalf);
+                                // Map Leave → Half Day Leave in the table display
+                                const displayFirst = first === "Leave" ? "Half Day Leave" : first;
+                                const displaySecond = second === "Leave" ? "Half Day Leave" : second;
+                                if (displayFirst === displaySecond) return displayFirst;
+                                return `${displayFirst} + ${displaySecond}`;
                               }
 
                               // Default display
                               if (
                                 req.requestType ===
-                                  LeaveRequestType.APPLY_LEAVE ||
+                                LeaveRequestType.APPLY_LEAVE ||
                                 req.requestType === LeaveRequestType.LEAVE
                               ) {
                                 return req.isHalfDay
@@ -1209,7 +1234,7 @@ const Requests = () => {
                               }
                               if (req.requestType === AttendanceStatus.HALF_DAY)
                                 return "Half Day Leave";
-                              return req.requestType;
+                              return normalizeTypeName(req.requestType);
                             })()}
                             {req.isModified && (
                               <span className="bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter shadow-sm border border-orange-200">
@@ -1240,38 +1265,16 @@ const Requests = () => {
                               req.firstHalf &&
                               req.secondHalf
                             ) {
-                              const first =
-                                req.firstHalf === LeaveRequestType.APPLY_LEAVE
-                                  ? LeaveRequestType.LEAVE
-                                  : req.firstHalf;
-                              const second =
-                                req.secondHalf === LeaveRequestType.APPLY_LEAVE
-                                  ? LeaveRequestType.LEAVE
-                                  : req.secondHalf;
+                              const first = normalizeTypeName(req.firstHalf);
+                              const second = normalizeTypeName(req.secondHalf);
 
-                              if (
-                                first === second &&
-                                first !== WorkLocation.OFFICE
-                              ) {
+                              // Both halves same type → Full Day
+                              if (first === second) {
                                 return AttendanceStatus.FULL_DAY;
                               }
 
-                              // Filter out Office
-                              const validActivities = [first, second].filter(
-                                (a) => a && a !== WorkLocation.OFFICE,
-                              );
-                              if (validActivities.length === 0) {
-                                return WorkLocation.OFFICE;
-                              }
-
-                              const parts = [];
-                              if (first && first !== WorkLocation.OFFICE)
-                                parts.push(`First Half = ${first}`);
-                              if (second && second !== WorkLocation.OFFICE)
-                                parts.push(`Second Half = ${second}`);
-
-                              if (parts.length > 0) return parts.join(" & ");
-                              return AttendanceStatus.FULL_DAY;
+                              // Build "First Half = X & Second Half = Y"
+                              return `First Half = ${first} & Second Half = ${second}`;
                             }
                             return AttendanceStatus.FULL_DAY;
                           })()}
@@ -1307,12 +1310,12 @@ const Requests = () => {
                         >
                           {(req.status === LeaveRequestStatus.PENDING ||
                             req.status ===
-                              LeaveRequestStatus.REQUESTING_FOR_MODIFICATION) && (
-                            <RotateCcw
-                              size={12}
-                              className="animate-spin-slow"
-                            />
-                          )}
+                            LeaveRequestStatus.REQUESTING_FOR_MODIFICATION) && (
+                              <RotateCcw
+                                size={12}
+                                className="animate-spin-slow"
+                              />
+                            )}
                           {req.status}
                           {req.status === LeaveRequestStatus.REQUEST_MODIFIED &&
                             req.requestModifiedFrom && (
@@ -1355,13 +1358,13 @@ const Requests = () => {
                                   ? data.ccEmails
                                   : typeof data.ccEmails === "string"
                                     ? (() => {
-                                        try {
-                                          const p = JSON.parse(data.ccEmails);
-                                          return Array.isArray(p) ? p : [];
-                                        } catch {
-                                          return [];
-                                        }
-                                      })()
+                                      try {
+                                        const p = JSON.parse(data.ccEmails);
+                                        return Array.isArray(p) ? p : [];
+                                      } catch {
+                                        return [];
+                                      }
+                                    })()
                                     : [];
                                 setCcEmails(parsedCc);
 
@@ -1407,6 +1410,7 @@ const Requests = () => {
                                       req.id,
                                       LeaveRequestStatus.APPROVED,
                                       req.fullName || "Employee",
+                                      req,
                                     )
                                   }
                                   className="p-2 text-green-600 bg-green-50/50 hover:bg-green-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-green-200 active:scale-90"
@@ -1420,6 +1424,7 @@ const Requests = () => {
                                       req.id,
                                       LeaveRequestStatus.REJECTED,
                                       req.fullName || "Employee",
+                                      req,
                                     )
                                   }
                                   className="p-2 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
@@ -1431,7 +1436,7 @@ const Requests = () => {
                             )}
                           {!isReceptionist &&
                             req.status ===
-                              LeaveRequestStatus.REQUESTING_FOR_CANCELLATION && (
+                            LeaveRequestStatus.REQUESTING_FOR_CANCELLATION && (
                               <>
                                 <button
                                   onClick={() =>
@@ -1439,6 +1444,7 @@ const Requests = () => {
                                       req.id,
                                       LeaveRequestStatus.CANCELLATION_APPROVED,
                                       req.fullName || "Employee",
+                                      req,
                                     )
                                   }
                                   className="p-2 text-green-600 bg-green-50/50 hover:bg-green-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-green-200 active:scale-90"
@@ -1452,6 +1458,7 @@ const Requests = () => {
                                       req.id,
                                       LeaveRequestStatus.CANCELLATION_REJECTED,
                                       req.fullName || "Employee",
+                                      req,
                                     )
                                   }
                                   className="p-2 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
@@ -1463,7 +1470,7 @@ const Requests = () => {
                             )}
                           {!isReceptionist &&
                             req.status ===
-                              LeaveRequestStatus.REQUESTING_FOR_MODIFICATION && (
+                            LeaveRequestStatus.REQUESTING_FOR_MODIFICATION && (
                               <>
                                 <button
                                   onClick={() =>
@@ -1471,6 +1478,7 @@ const Requests = () => {
                                       req.id,
                                       LeaveRequestStatus.MODIFICATION_APPROVED,
                                       req.fullName || "Employee",
+                                      req,
                                     )
                                   }
                                   className="p-2 text-green-600 bg-green-50/50 hover:bg-green-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-green-200 active:scale-90"
@@ -1484,6 +1492,7 @@ const Requests = () => {
                                       req.id,
                                       LeaveRequestStatus.MODIFICATION_REJECTED,
                                       req.fullName || "Employee",
+                                      req,
                                     )
                                   }
                                   className="p-2 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
@@ -1531,11 +1540,10 @@ const Requests = () => {
               onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
               disabled={currentPage === 1}
               className={`p-2 rounded-xl border border-[#E9EDF7] transition-all flex items-center justify-center
-              ${
-                currentPage === 1
+              ${currentPage === 1
                   ? "bg-gray-50 text-gray-300 cursor-not-allowed"
                   : "bg-white text-[#4318FF] hover:bg-[#4318FF]/5 active:scale-90 shadow-sm"
-              }`}
+                }`}
             >
               <ChevronLeft size={18} />
             </button>
@@ -1550,11 +1558,10 @@ const Requests = () => {
               }
               disabled={currentPage === totalPages || totalPages === 0}
               className={`p-2 rounded-xl border border-[#E9EDF7] transition-all flex items-center justify-center
-              ${
-                currentPage === totalPages || totalPages === 0
+              ${currentPage === totalPages || totalPages === 0
                   ? "bg-gray-50 text-gray-300 cursor-not-allowed"
                   : "bg-white text-[#4318FF] hover:bg-[#4318FF]/5 active:scale-90 shadow-sm"
-              }`}
+                }`}
             >
               <ChevronRight size={18} />
             </button>
@@ -1572,11 +1579,10 @@ const Requests = () => {
           <div className="relative w-full max-w-md bg-white rounded-[24px] overflow-hidden shadow-[0px_20px_40px_rgba(0,0,0,0.1)] animate-in fade-in zoom-in duration-200 transform">
             <div className="p-8 text-center">
               <div
-                className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-6 ${
-                  isRejectionAction
+                className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-6 ${isRejectionAction
                     ? "bg-red-50 text-red-500"
                     : "bg-green-50 text-green-500"
-                }`}
+                  }`}
               >
                 {isRejectionAction ? (
                   <XCircle size={32} strokeWidth={2.5} />
@@ -1585,36 +1591,49 @@ const Requests = () => {
                 )}
               </div>
 
-              <h3 className="text-2xl font-black text-[#2B3674] mb-2">
-                {isRejectionAction ? "Reject Request?" : "Approve Request?"}
-              </h3>
-
-              <p className="text-gray-500 font-medium leading-relaxed mb-8">
-                Are you sure you want to{" "}
-                <span
-                  className={`font-bold ${
-                    isRejectionAction ? "text-red-600" : "text-green-600"
-                  }`}
-                >
-                  {isRejectionAction ? "Reject" : "Approve"}
-                </span>{" "}
-                this request for{" "}
-                <span className="text-[#2B3674] font-bold">
-                  {confirmModal.employeeName}
-                </span>
-                ?
-                {confirmModal.status === LeaveRequestStatus.APPROVED &&
-                  entities.find((e) => e.id === confirmModal.id)?.status !==
-                    LeaveRequestStatus.REQUESTING_FOR_CANCELLATION &&
-                  " This will automatically update attendance records."}
-                {confirmModal.status ===
-                  LeaveRequestStatus.CANCELLATION_APPROVED &&
-                  " This will revert any associated attendance records."}
-                {confirmModal.status === LeaveRequestStatus.APPROVED && // This handles the case where we are rejecting the cancellation (reverting locally to Approved)
-                  entities.find((e) => e.id === confirmModal.id)?.status ===
-                    LeaveRequestStatus.REQUESTING_FOR_CANCELLATION &&
-                  " This will reject the cancellation request and keep the request as Approved."}
-              </p>
+              {(() => {
+                const typeLabel = getRequestTypeLabel({
+                  requestType: confirmModal.requestType,
+                  firstHalf: confirmModal.firstHalf,
+                  secondHalf: confirmModal.secondHalf,
+                  isHalfDay: confirmModal.isHalfDay,
+                });
+                const hasType = typeLabel.length > 0;
+                const action = isRejectionAction ? "Reject" : "Approve";
+                const title = hasType
+                  ? `${action} ${typeLabel}?`
+                  : `${action} Request`;
+                const bodyTypePhrase = hasType
+                  ? `the ${typeLabel} request`
+                  : "this request";
+                return (
+                  <>
+                    <h3 className="text-2xl font-black text-[#2B3674] mb-2">
+                      {title}
+                    </h3>
+                    <p className="text-gray-500 font-medium leading-relaxed mb-8">
+                      Are you sure you want to{" "}
+                      <span
+                        className={`font-bold ${isRejectionAction ? "text-red-600" : "text-green-600"
+                          }`}
+                      >
+                        {isRejectionAction ? "reject" : "approve"}
+                      </span>{" "}
+                      {bodyTypePhrase} for{" "}
+                      <span className="text-[#2B3674] font-bold">
+                        {confirmModal.employeeName}
+                      </span>
+                      ?{" "}
+                      {isRejectionAction ? (
+                        confirmModal.status === LeaveRequestStatus.CANCELLATION_REJECTED &&
+                        "This will reject the cancellation request and keep the request as Approved."
+                      ) : (
+                        "This will automatically update attendance records."
+                      )}
+                    </p>
+                  </>
+                );
+              })()}
 
               <div className="flex gap-4">
                 <button
@@ -1629,15 +1648,13 @@ const Requests = () => {
                 <button
                   onClick={executeStatusUpdate}
                   disabled={isProcessing}
-                  className={`flex-1 py-3.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${
-                    isProcessing
+                  className={`flex-1 py-3.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${isProcessing
                       ? "opacity-70 cursor-not-allowed"
                       : "transform active:scale-95"
-                  } ${
-                    isRejectionAction
+                    } ${isRejectionAction
                       ? "bg-red-500 hover:bg-red-600 shadow-red-200 active:scale-95"
                       : "bg-green-500 hover:bg-green-600 shadow-green-200 active:scale-95"
-                  }`}
+                    }`}
                 >
                   {isProcessing ? (
                     <>
@@ -1646,7 +1663,7 @@ const Requests = () => {
                     </>
                   ) : (
                     <>
-                      {isRejectionAction ? "Confirm Reject" : "Confirm Approve"}
+                      {isRejectionAction ? "Yes, Reject" : "Confirm Approval"}
                     </>
                   )}
                 </button>

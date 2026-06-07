@@ -22,7 +22,7 @@ const EmployeeDashboard = () => {
 
   // Redux
   const dispatch = useAppDispatch();
-  const {} = useAppSelector((state) => state.attendance);
+  const { } = useAppSelector((state) => state.attendance);
   const { entity } = useAppSelector((state) => state.employeeDetails);
   const currentEmployeeId = entity?.employeeId;
 
@@ -76,7 +76,7 @@ const EmployeeDashboard = () => {
       return <MyTimesheet now={viewDate} selectedDateId={scrollToDate} />;
     }
 
-    if (activeTab === "Timesheet View") {
+    if (activeTab === "Timesheet History") {
       return (
         <div className="px-4 md:px-8 pb-0 pt-2 md:pt-4 h-full">
           <Calendar
@@ -92,7 +92,7 @@ const EmployeeDashboard = () => {
       );
     }
 
-    if (activeTab === "My Profile") {
+    if (activeTab === "Account Settings") {
       return <MyProfile />;
     }
 

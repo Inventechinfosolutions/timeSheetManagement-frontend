@@ -12,10 +12,10 @@ const EmployeeLayout = () => {
   const getActiveTab = () => {
     switch (tab) {
       case "my-timesheet": return "My Timesheet";
-      case "timesheet-view": return "Timesheet View";
-      case "my-profile": return "My Profile";
+      case "timesheet-view": return "Timesheet History";
+      case "my-profile": return "Account Settings";
       case "change-password": return "Change Password";
-      case "leave-management": return "Work Management";
+      case "leave-management": return "Request Management";
       case "leave-balance": return "Leave Balance";
       default: return "Dashboard";
     }
@@ -26,16 +26,16 @@ const EmployeeLayout = () => {
       case "My Timesheet":
         navigate("/employee-dashboard/my-timesheet");
         break;
-      case "Timesheet View":
+      case "Timesheet History":
         navigate("/employee-dashboard/timesheet-view");
         break;
-      case "My Profile":
+      case "Account Settings":
         navigate("/employee-dashboard/my-profile");
         break;
       case "Change Password":
         navigate("/employee-dashboard/change-password");
         break;
-      case "Work Management":
+      case "Request Management":
         navigate("/employee-dashboard/leave-management");
         break;
       case "Leave Balance":

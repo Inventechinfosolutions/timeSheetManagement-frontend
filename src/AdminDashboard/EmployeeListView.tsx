@@ -534,7 +534,7 @@ const EmployeeListView = () => {
       <div className="max-w-[1600px] mx-auto">
         <div className="flex flex-row flex-wrap justify-between items-center gap-3 mb-8">
           <h1 className="text-xl md:text-2xl font-bold text-[#2B3674] m-0 whitespace-nowrap">
-            Employee List
+            Employee Directory
           </h1>
 
           <div className="flex flex-row flex-wrap items-center gap-3">
@@ -610,7 +610,7 @@ ${
                 >
                   <div className="flex items-center gap-2">
                     <Filter size={16} className="text-[#4318FF]" />
-                    <span>{selectedStatus === "All" ? "All Statuses" : selectedStatus.charAt(0) + selectedStatus.slice(1).toLowerCase()}</span>
+                    <span>{selectedStatus === "All" ? "Status" : selectedStatus.charAt(0) + selectedStatus.slice(1).toLowerCase()}</span>
                   </div>
                   <ChevronDown
                     size={16}
