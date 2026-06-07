@@ -307,14 +307,14 @@ const AttendanceStatsCards = ({
       }`}
     >
       {/* Card 1 - Total Monthly Hours */}
-      <div className="bg-linear-to-br from-[#36B9CC] to-[#258391] rounded-[20px] p-4 shadow-lg shadow-cyan-500/20 flex flex-col items-start gap-3 relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 min-h-[140px]">
+      {/* <div className="bg-linear-to-br from-[#36B9CC] to-[#258391] rounded-[20px] p-4 shadow-lg shadow-cyan-500/20 flex flex-col items-start gap-3 relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 min-h-[140px]">
         <div className="absolute -right-4 -top-4 w-20 h-20 bg-white/20 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500"></div>
         <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-white/30 backdrop-blur-md border border-white/20 text-white shadow-inner z-10">
           <CalendarIcon size={20} strokeWidth={2.5} />
         </div>
         <div className="w-full z-10">
           <div className="text-white/90 font-bold text-[10px] uppercase tracking-wider mb-1">
-            Monthly Hours
+            Hours Logged
           </div>
           <div className="flex flex-col">
             <span className="text-2xl font-extrabold text-white tracking-tight">
@@ -328,7 +328,7 @@ const AttendanceStatsCards = ({
             </span>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* Card 2 - Entitlement */}
       <div className="bg-white rounded-[20px] p-4 shadow-lg shadow-gray-200/50 border border-gray-100 flex flex-col items-start gap-3 relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 min-h-[140px]">
@@ -337,15 +337,15 @@ const AttendanceStatsCards = ({
         </div>
         <div className="w-full">
           <div className="text-[#A3AED0] font-bold text-[10px] uppercase tracking-wider mb-1">
-            Total Leave
+            Annual Leave Quota
           </div>
           <div className="flex flex-col">
             <span className="text-2xl font-extrabold text-[#1B2559] tracking-tight">
               {entitlement}
             </span>
-            <span className="text-[9px] font-bold text-[#A3AED0] uppercase mt-1">
+            {/* <span className="text-[9px] font-bold text-[#A3AED0] uppercase mt-1">
               Awarded Per Year
-            </span>
+            </span> */}
           </div>
         </div>
       </div>
@@ -379,7 +379,7 @@ const AttendanceStatsCards = ({
         </div>
         <div className="w-full">
           <div className="text-[#A3AED0] font-bold text-[10px] uppercase tracking-wider mb-1">
-            Leave Taken
+            Leave Used
           </div>
           <div className="flex flex-col">
             <span className="text-2xl font-extrabold text-[#1B2559] tracking-tight">
@@ -420,7 +420,7 @@ const AttendanceStatsCards = ({
         </div>
         <div className="w-full z-10">
           <div className="text-white/90 font-bold text-[10px] uppercase tracking-wider mb-1">
-            Balance Leave
+            Available Leave
           </div>
           <div className="flex flex-col">
             <div className="flex items-baseline gap-2">

@@ -462,7 +462,7 @@ const TodayAttendance = ({
               className="px-8 py-3 rounded-xl text-white font-bold bg-linear-to-r from-[#868CFF] to-[#4318FF] shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all flex items-center gap-2 transform active:scale-95"
             >
               <Edit size={18} />
-              <span>Update Today's Attendance</span>
+              <span>Log Today's Hours</span>
             </button>
           </div>
         )}
