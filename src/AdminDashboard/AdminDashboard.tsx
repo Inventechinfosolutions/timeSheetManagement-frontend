@@ -381,7 +381,7 @@ const AdminDashboard = () => {
       {/* Analytics Section */}
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-xl font-bold text-[#2B3674]">
-          Attendance Analytics
+          Workforce Analytics
         </h3>
         {/* <div className="flex items-center gap-4">
           <button
@@ -399,7 +399,7 @@ const AdminDashboard = () => {
         <div className="bg-white p-6 rounded-[24px] shadow-[0px_18px_40px_rgba(112,144,176,0.08)] max-w-[700px] w-full">
           <div className="flex justify-between items-center mb-6">
             <h4 className="text-lg font-bold text-[#2B3674] flex items-center gap-2">
-              Employee Distribution
+              Department Breakdown
               <div className="p-2 bg-gray-100 rounded-lg">
                 <Clock size={16} className="text-gray-500" />
               </div>
