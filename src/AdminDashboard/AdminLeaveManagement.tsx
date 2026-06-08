@@ -2093,7 +2093,28 @@ const AdminLeaveManagement = () => {
                               } hover:bg-gray-100`}
                           >
                             <td className="py-4 pl-10 pr-4 text-[#2B3674] text-sm font-bold whitespace-nowrap">
-                              {item.fullName || "User"} ({item.employeeId})
+                              {item.fullName || "User"} (
+                                {(() => {
+                                  const internId = (item as any).internId || selectedEmployee?.internId;
+                                  const convDate = ((item as any).conversionDate || selectedEmployee?.conversionDate)
+                                    ? dayjs((item as any).conversionDate || selectedEmployee?.conversionDate)
+                                    : null;
+                                  const leaveDate = item.fromDate
+                                    ? dayjs(item.fromDate)
+                                    : null;
+                                  // Show intern ID for leaves submitted before conversion date
+                                  if (
+                                    internId &&
+                                    convDate &&
+                                    convDate.isValid() &&
+                                    leaveDate &&
+                                    leaveDate.isBefore(convDate, "day")
+                                  ) {
+                                    return internId;
+                                  }
+                                  return item.employeeId;
+                                })()}
+                                )
                             </td>
                             <td className="py-4 px-4 text-center whitespace-nowrap">
                               <div className="flex items-center justify-center gap-2">

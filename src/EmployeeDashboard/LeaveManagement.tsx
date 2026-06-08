@@ -1863,7 +1863,27 @@ const LeaveManagement = () => {
                           {item.fullName ||
                             currentUser?.aliasLoginName ||
                             "User"}{" "}
-                          ({item.employeeId})
+                          (
+                            {(() => {
+                              const internId = (item as any).internId || entity?.internId;
+                              const convDate = ((item as any).conversionDate || entity?.conversionDate)
+                                ? dayjs((item as any).conversionDate || entity?.conversionDate)
+                                : null;
+                              const leaveDate = item.fromDate
+                                ? dayjs(item.fromDate)
+                                : null;
+                              if (
+                                internId &&
+                                convDate &&
+                                convDate.isValid() &&
+                                leaveDate &&
+                                leaveDate.isBefore(convDate, "day")
+                              ) {
+                                return internId;
+                              }
+                              return item.employeeId;
+                            })()}
+                          )
                         </td>
                         <td className="py-4 px-4 text-center whitespace-nowrap">
                           <div className="flex items-center justify-center gap-3">

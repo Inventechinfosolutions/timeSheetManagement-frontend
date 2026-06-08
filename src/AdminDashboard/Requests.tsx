@@ -1131,7 +1131,25 @@ const Requests = () => {
                               {req.fullName || "Unknown"}
                             </p>
                             <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">
-                              {req.employeeId}
+                              {(() => {
+                                const internId = (req as any).internId;
+                                const convDate = (req as any).conversionDate
+                                  ? dayjs((req as any).conversionDate)
+                                  : null;
+                                const leaveDate = req.fromDate
+                                  ? dayjs(req.fromDate)
+                                  : null;
+                                if (
+                                  internId &&
+                                  convDate &&
+                                  convDate.isValid() &&
+                                  leaveDate &&
+                                  leaveDate.isBefore(convDate, "day")
+                                ) {
+                                  return internId;
+                                }
+                                return req.employeeId;
+                              })()}
                             </p>
                           </div>
                         </div>
