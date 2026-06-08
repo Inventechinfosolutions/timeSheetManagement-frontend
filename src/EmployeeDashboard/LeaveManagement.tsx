@@ -1287,7 +1287,7 @@ const LeaveManagement = () => {
         const msg =
           requestToCancel?.status === LeaveRequestStatus.PENDING
             ? "Dates cancelled successfully"
-            : "Cancellation request submitted successfully";
+            : "Cancellation Request Submitted: Notification";
         message.success(msg);
         setIsCancelDateModalVisible(false);
         refreshData(1, 10);
@@ -3458,6 +3458,7 @@ const LeaveManagement = () => {
                     }),
                   ).unwrap();
                   setModifyModal({ isOpen: false, request: null });
+                  message.success("Modification Request Submitted: Notification sent to Manager");
                   setUploadedDocumentKeys([]); // Reset on success
                   if (employeeId) {
                     refreshData();
