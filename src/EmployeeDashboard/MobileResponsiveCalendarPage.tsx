@@ -268,7 +268,7 @@ const MobileResponsiveCalendarPage = ({
           </div>
           <button
             onClick={handleDownload}
-            className="p-2.5 bg-gradient-to-r from-[#4318FF] to-[#868CFF] text-white rounded-xl shadow-lg shadow-blue-500/30 active:scale-95 transition-all"
+            className="p-2.5 bg-[#4318FF] text-white rounded-xl shadow-lg shadow-blue-500/30 active:scale-95 transition-all"
             title="Download Report"
           >
             <Download size={18} strokeWidth={2.5} />
@@ -585,7 +585,7 @@ const MobileResponsiveCalendarPage = ({
                     !downloadDateRange.from ||
                     !downloadDateRange.to
                       ? "bg-gray-300 shadow-none cursor-not-allowed"
-                      : "bg-gradient-to-r from-[#4318FF] to-[#868CFF] shadow-blue-500/30 hover:shadow-blue-500/50"
+                      : "bg-[#4318FF] shadow-blue-500/30 hover:shadow-blue-500/50"
                   }
                 `}
               >

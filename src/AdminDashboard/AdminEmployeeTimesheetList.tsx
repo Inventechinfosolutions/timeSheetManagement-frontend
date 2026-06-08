@@ -258,12 +258,38 @@ const AdminEmployeeTimesheetList = () => {
     setCurrentPage(1);
   };
 
+  const departmentTagClass = (name: string, isSelected: boolean) =>
+    isSelected
+      ? "bg-[#4318FF] text-white border-[#4318FF] shadow-sm"
+      : name === "All Departments"
+        ? "bg-gray-50 text-[#475569] border-gray-200 hover:bg-gray-100"
+        : "bg-[#F4F7FE] text-[#4318FF] border-[#4318FF]/15 hover:bg-[#4318FF]/10";
+
+  const statusTagClass = (status: string, isSelected: boolean) => {
+    if (isSelected) {
+      if (status === MonthStatus.SUBMITTED) {
+        return "bg-green-500 text-white border-green-500 shadow-sm";
+      }
+      if (status === MonthStatus.PENDING) {
+        return "bg-amber-500 text-white border-amber-500 shadow-sm";
+      }
+      return "bg-[#4318FF] text-white border-[#4318FF] shadow-sm";
+    }
+    if (status === MonthStatus.SUBMITTED) {
+      return "bg-green-50 text-green-600 border-green-100 hover:bg-green-100";
+    }
+    if (status === MonthStatus.PENDING) {
+      return "bg-amber-50 text-amber-600 border-amber-100 hover:bg-amber-100";
+    }
+    return "bg-gray-50 text-[#475569] border-gray-200 hover:bg-gray-100";
+  };
+
   return (
     <div className="p-4 md:p-6 bg-[#F4F7FE] font-sans">
       <div className="max-w-[1600px] mx-auto">
-        <h1 className="text-xl md:text-2xl font-bold text-[#2B3674] m-0 mb-5">
+        {/* <h1 className="text-xl md:text-2xl font-bold text-[#2B3674] m-0 mb-5">
           Employee Timesheet
-        </h1>
+        </h1> */}
 
         {/* Filters Row */}
         <div className="flex flex-wrap items-center gap-3 mb-6">
@@ -300,13 +326,15 @@ const AdminEmployeeTimesheetList = () => {
 
           {/* Department Dropdown */}
           {basePath === "/admin-dashboard" && (
-            <div className="relative" ref={dropdownRef}>
+            <div className="relative min-w-[240px] sm:min-w-[280px] md:min-w-[320px]" ref={dropdownRef}>
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className={`flex items-center gap-2 px-4 py-2.5 bg-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] font-bold text-sm hover:bg-gray-50 transition-all border border-transparent focus:border-[#4318FF]/20 whitespace-nowrap ${selectedDepartment !== "All Departments" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+                className={`w-full flex items-center justify-between gap-2 px-4 py-2.5 bg-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] font-bold text-sm hover:bg-gray-50 transition-all border border-transparent focus:border-[#4318FF]/20 ${selectedDepartment !== "All Departments" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
               >
-                <Filter size={14} className="text-[#4318FF]" />
-                <span>{selectedDepartment === "All Departments" ? "Departments" : selectedDepartment}</span>
+                <div className="flex items-center gap-2 min-w-0">
+                  <Filter size={14} className="text-[#4318FF] shrink-0" />
+                  <span className="truncate">{selectedDepartment === "All Departments" ? "Departments" : selectedDepartment}</span>
+                </div>
                 <ChevronDown
                   size={14}
                   className={`text-[#A3AED0] transition-transform duration-300 ${isDropdownOpen ? "rotate-180" : ""}`}
@@ -314,45 +342,37 @@ const AdminEmployeeTimesheetList = () => {
               </button>
 
               {isDropdownOpen && (
-                <div className="absolute top-full left-0 mt-2 w-full sm:w-48 bg-white/80 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-white/20 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <div className="px-3 py-1 mb-1">
-                    <span className="text-[10px] font-black text-[#A3AED0] uppercase tracking-widest pl-2">
+                <div className="absolute top-full left-0 mt-2 w-full min-w-full bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-gray-100 p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-200 max-h-64 overflow-y-auto custom-scrollbar">
+                  <div className="mb-2">
+                    <span className="text-[10px] font-black text-[#A3AED0] uppercase tracking-widest">
                       Departments
                     </span>
                   </div>
-                  <button
-                    onClick={() => {
-                      setSelectedDepartment("All Departments");
-                      setIsDropdownOpen(false);
-                      setCurrentPage(1);
-                    }}
-                    className={`w-full text-left px-5 py-2 text-sm font-semibold transition-colors
-                    ${
-                      selectedDepartment === "All Departments"
-                        ? "text-[#4318FF] bg-[#4318FF]/5"
-                        : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
-                    }`}
-                  >
-                    All Departments
-                  </button>
-                  {departments.map((dept) => (
+                  <div className="flex flex-col gap-2">
                     <button
-                      key={dept.id}
                       onClick={() => {
-                        setSelectedDepartment(dept.departmentName);
+                        setSelectedDepartment("All Departments");
                         setIsDropdownOpen(false);
                         setCurrentPage(1);
                       }}
-                      className={`w-full text-left px-5 py-2 text-sm font-semibold transition-colors
-                      ${
-                        selectedDepartment === dept.departmentName
-                          ? "text-[#4318FF] bg-[#4318FF]/5"
-                          : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
-                      }`}
+                      className={`w-full flex items-center justify-center px-3 py-2 rounded-full text-xs font-bold border transition-all ${departmentTagClass("All Departments", selectedDepartment === "All Departments")}`}
                     >
-                      {dept.departmentName}
+                      All Departments
                     </button>
-                  ))}
+                    {departments.map((dept) => (
+                      <button
+                        key={dept.id}
+                        onClick={() => {
+                          setSelectedDepartment(dept.departmentName);
+                          setIsDropdownOpen(false);
+                          setCurrentPage(1);
+                        }}
+                        className={`w-full flex items-center justify-center px-3 py-2 rounded-full text-xs font-bold border transition-all text-center ${departmentTagClass(dept.departmentName, selectedDepartment === dept.departmentName)}`}
+                      >
+                        {dept.departmentName}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -373,36 +393,33 @@ const AdminEmployeeTimesheetList = () => {
             </button>
 
             {isStatusDropdownOpen && (
-              <div className="absolute top-full left-0 mt-2 w-full sm:w-48 bg-white/80 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-white/20 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="px-3 py-1 mb-1">
-                  <span className="text-[10px] font-black text-[#A3AED0] uppercase tracking-widest pl-2">
+              <div className="absolute top-full left-0 mt-2 w-full min-w-[200px] bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-white/20 p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="mb-2">
+                  <span className="text-[10px] font-black text-[#A3AED0] uppercase tracking-widest">
                     Status
                   </span>
                 </div>
-                {statuses.map((status) => (
-                  <button
-                    key={status}
-                    onClick={() => {
-                      setSelectedStatus(status);
-                      setIsStatusDropdownOpen(false);
-                      setCurrentPage(1);
-                    }}
-                    className={`w-full text-left px-5 py-2 text-sm font-semibold transition-colors
-                    ${
-                      selectedStatus === status
-                        ? "text-[#4318FF] bg-[#4318FF]/5"
-                        : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
-                    }`}
-                  >
-                    {status}
-                  </button>
-                ))}
+                <div className="flex flex-wrap gap-2">
+                  {statuses.map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => {
+                        setSelectedStatus(status);
+                        setIsStatusDropdownOpen(false);
+                        setCurrentPage(1);
+                      }}
+                      className={`inline-flex px-3 py-1.5 rounded-full text-xs font-bold border transition-all uppercase tracking-wide ${statusTagClass(status, selectedStatus === status)}`}
+                    >
+                      {status}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>
 
           {/* Search Box */}
-          <div className="flex items-center bg-white rounded-full px-4 py-2.5 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] min-w-[180px] border border-transparent focus-within:border-[#4318FF]/20 transition-all">
+          <div className="flex items-center bg-white rounded-full px-4 py-2.5 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] w-full sm:w-auto min-w-[240px] sm:min-w-[300px] md:min-w-[360px] flex-1 sm:flex-none border border-transparent focus-within:border-[#4318FF]/20 transition-all">
             <Search size={16} className="text-[#A3AED0] mr-2 flex-shrink-0" />
             <input
               type="text"
@@ -478,8 +495,10 @@ const AdminEmployeeTimesheetList = () => {
                     <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
                       {emp.id}
                     </td>
-                    <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
-                      {emp.department || "General"}
+                    <td className="py-4 px-4 text-center">
+                      <span className="inline-flex px-3 py-1 rounded-full bg-[#F4F7FE] text-[#4318FF] text-xs font-bold border border-[#4318FF]/10 max-w-[200px] truncate">
+                        {emp.department || "General"}
+                      </span>
                     </td>
                     <td className="py-4 px-4 text-center">
                       <span

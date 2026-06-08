@@ -173,6 +173,28 @@ const SidebarLayout = ({
   // Sidebar opens if it's either hovered OR locked
   const isOpen = isHovered || isLocked;
 
+  const navItemClass = (isActive: boolean, expanded = true) =>
+    [
+      "w-full flex items-center cursor-pointer transition-all duration-300 relative group rounded-xl",
+      isActive
+        ? expanded
+          ? "bg-white/95 text-[#2B3674] font-semibold shadow-[0_4px_20px_rgba(0,0,0,0.12)]"
+          : "md:justify-center"
+        : "text-white/80 hover:bg-white/10 hover:text-white",
+      expanded ? "gap-3 px-3 py-2.5" : "md:justify-center md:px-0 py-2",
+    ].join(" ");
+
+  const navIconWrapClass = (isActive: boolean, expanded = true) =>
+    [
+      "shrink-0 relative z-10 flex items-center justify-center transition-all duration-300",
+      isActive && !expanded
+        ? "p-2.5 bg-white text-[#4318FF] rounded-xl shadow-[0_4px_16px_rgba(0,0,0,0.12)]"
+        : "",
+    ].join(" ");
+
+  const navIconClass = (isActive: boolean, expanded = true) =>
+    `w-5 h-5 transition-all duration-300 ${isActive && expanded ? "text-[#4318FF]" : isActive ? "text-[#4318FF]" : "group-hover:scale-110"}`;
+
   return (
     <div className="flex flex-col w-full h-screen bg-[#f8f9fa] font-sans text-[#2B3674] overflow-hidden relative">
       <Header />
@@ -314,11 +336,11 @@ const SidebarLayout = ({
                         onClick={() => toggleGroup(group.title)}
                         className={`w-full flex items-center justify-between px-4 py-2 text-[11px] font-bold uppercase tracking-widest transition-all duration-200 rounded-xl mb-1 border
                                               ${isExpanded
-                            ? "text-white bg-white/25 border-white/40 shadow-sm"
-                            : "text-blue-100 hover:text-white hover:bg-white/10 border-white/10"
+                            ? "text-white bg-white/15 border-white/20 shadow-sm"
+                            : "text-white/70 hover:text-white hover:bg-white/10 border-white/10"
                           }
                                               ${hasActiveItem && !isExpanded
-                            ? "text-white bg-white/15"
+                            ? "text-white bg-white/10 border-white/15"
                             : ""
                           }
                                             `}
@@ -351,24 +373,13 @@ const SidebarLayout = ({
                                 onTabChange?.(item.name);
                                 setIsMobileOpen(false);
                               }}
-                              className={`w-full flex items-center p-2.5 rounded-xl cursor-pointer transition-all duration-300 relative overflow-hidden group
-                                                            ${isActive
-                                  ? "bg-white shadow-lg text-[#4318FF] font-bold"
-                                  : "text-blue-100 hover:bg-white/10 hover:text-white"
-                                }
-                                                            ${isOpen
-                                  ? "gap-4 px-4"
-                                  : "md:justify-center md:px-0 gap-0"
-                                }
-                                                        `}
+                              className={navItemClass(isActive, isOpen)}
                             >
-                              <div className="shrink-0 relative z-10 transition-transform duration-300">
-                                <Icon
-                                  className={`w-5 h-5 transition-colors duration-300 ${isActive
-                                    ? "text-[#4318FF]"
-                                    : "group-hover:scale-110"
-                                    }`}
-                                />
+                              {isActive && isOpen && (
+                                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 bg-[#4318FF] rounded-r-full" />
+                              )}
+                              <div className={navIconWrapClass(isActive, isOpen)}>
+                                <Icon className={navIconClass(isActive, isOpen)} />
                               </div>
                               <span
                                 className={`text-sm whitespace-nowrap transition-all duration-300 relative z-10
@@ -406,24 +417,13 @@ const SidebarLayout = ({
                         onTabChange?.(item.name);
                         setIsMobileOpen(false);
                       }}
-                      className={`w-full flex items-center p-3 rounded-2xl cursor-pointer transition-all duration-300 relative overflow-hidden group
-                                            ${isActive
-                          ? "bg-white shadow-lg text-[#4318FF] font-bold"
-                          : "text-blue-100 hover:bg-white/10 hover:text-white"
-                        }
-                                            ${isOpen
-                          ? "gap-4 px-4"
-                          : "md:justify-center md:px-0 gap-0"
-                        }
-                                        `}
+                      className={navItemClass(isActive, isOpen)}
                     >
-                      <div className="shrink-0 relative z-10 transition-transform duration-300">
-                        <Icon
-                          className={`w-5 h-5 transition-colors duration-300 ${isActive
-                            ? "text-[#4318FF]"
-                            : "group-hover:scale-110"
-                            }`}
-                        />
+                      {isActive && isOpen && (
+                        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 bg-[#4318FF] rounded-r-full" />
+                      )}
+                      <div className={navIconWrapClass(isActive, isOpen)}>
+                        <Icon className={navIconClass(isActive, isOpen)} />
                       </div>
                       <span
                         className={`text-sm whitespace-nowrap transition-all duration-300 relative z-10

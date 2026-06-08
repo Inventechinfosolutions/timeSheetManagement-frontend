@@ -107,7 +107,7 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
             )}
             <button
               onClick={onSave}
-              className="flex items-center gap-2 px-4 py-3 bg-linear-to-br from-[#4318FF] to-[#5D38FF] text-white rounded-2xl shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
+              className="flex items-center gap-2 px-4 py-3 bg-[#4318FF] text-white rounded-2xl shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
             >
               <Save size={18} strokeWidth={2.5} />
               <span className="text-xs font-bold uppercase tracking-wider">

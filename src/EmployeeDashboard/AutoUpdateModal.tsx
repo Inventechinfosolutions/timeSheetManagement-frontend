@@ -109,7 +109,7 @@ const AutoUpdateModal: React.FC<AutoUpdateModalProps> = ({
           <button
             onClick={onConfirm}
             disabled={loading}
-            className="flex-[2] py-2 px-3 rounded-lg font-bold text-white bg-gradient-to-r from-[#4318FF] to-[#868CFF] shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:to-[#4318FF] transition-all active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-70 disabled:pointer-events-none text-[11px] md:text-xs"
+            className="flex-[2] py-2 px-3 rounded-lg font-bold text-white bg-[#4318FF] shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-70 disabled:pointer-events-none text-[11px] md:text-xs"
           >
             {loading ? (
               <>

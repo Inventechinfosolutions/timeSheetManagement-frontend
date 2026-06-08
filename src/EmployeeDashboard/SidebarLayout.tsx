@@ -67,6 +67,28 @@ const SidebarLayout = ({
   // Sidebar opens if it's either hovered OR locked
   const isOpen = isHovered || isLocked;
 
+  const navItemClass = (isActive: boolean, expanded = true) =>
+    [
+      "w-full flex items-center cursor-pointer transition-all duration-300 relative group rounded-xl",
+      isActive
+        ? expanded
+          ? "bg-white/95 text-[#2B3674] font-semibold shadow-[0_4px_20px_rgba(0,0,0,0.12)]"
+          : "md:justify-center"
+        : "text-white/80 hover:bg-white/10 hover:text-white",
+      expanded ? "gap-3 px-3 py-2.5" : "md:justify-center md:px-0 py-2",
+    ].join(" ");
+
+  const navIconWrapClass = (isActive: boolean, expanded = true) =>
+    [
+      "shrink-0 relative z-10 flex items-center justify-center transition-all duration-300",
+      isActive && !expanded
+        ? "p-2.5 bg-white text-[#4318FF] rounded-xl shadow-[0_4px_16px_rgba(0,0,0,0.12)]"
+        : "",
+    ].join(" ");
+
+  const navIconClass = (isActive: boolean, expanded = true) =>
+    `w-5 h-5 transition-all duration-300 ${isActive && expanded ? "text-[#4318FF]" : isActive ? "text-[#4318FF]" : "group-hover:scale-110"}`;
+
   const handleLogout = () => {
     dispatch(logoutUser()).then(() => {
       navigate("/landing", { state: { skipSplash: true } });
@@ -227,23 +249,14 @@ const SidebarLayout = ({
                       onTabChange?.(item.name);
                       setIsMobileOpen(false);
                     }}
-                    className={`w-full flex items-center p-3 rounded-2xl cursor-pointer transition-all duration-300 relative overflow-hidden group
-                                        ${isActive
-                        ? "bg-white shadow-lg text-[#4318FF] font-bold"
-                        : "text-blue-100 hover:bg-white/10 hover:text-white"
-                      }
-                                        ${isOpen || isMobileOpen
-                        ? "gap-4 px-4"
-                        : "md:justify-center md:px-0 gap-0"
-                      }
-                                    `}
+                    className={navItemClass(isActive, isOpen || isMobileOpen)}
                   >
+                    {isActive && (isOpen || isMobileOpen) && (
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 bg-[#4318FF] rounded-r-full" />
+                    )}
                     {/* Icon */}
-                    <div className="shrink-0 relative z-10 transition-transform duration-300">
-                      <item.icon
-                        className={`w-5 h-5 transition-colors duration-300 ${isActive ? "text-[#4318FF]" : "group-hover:scale-110"
-                          }`}
-                      />
+                    <div className={navIconWrapClass(isActive, isOpen || isMobileOpen)}>
+                      <item.icon className={navIconClass(isActive, isOpen || isMobileOpen)} />
                     </div>
 
                     {/* Label */}

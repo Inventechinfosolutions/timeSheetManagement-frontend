@@ -19,6 +19,7 @@ import {
   Calendar,
   ArrowLeft,
   ChevronLeft,
+  Building2,
 } from "lucide-react";
 import { downloadAttendancePdfReport } from "../reducers/employeeAttendance.reducer";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
@@ -250,170 +251,238 @@ const AdminDashboard = () => {
     };
   }, [entities, globalStatsCache, departments, basePath]);
 
-  const styles = {
-    container: "p-4 md:p-8 bg-[#F4F7FE] font-['DM_Sans',sans-serif]",
-    cardGrid: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8",
-    statCard: (gradient: string) =>
-      `relative overflow-hidden p-6 rounded-[24px] text-white shadow-xl ${gradient} transition-transform hover:-translate-y-1 duration-300`,
-    glassInner:
-      "absolute top-[-20px] right-[-20px] w-32 h-32 bg-white/10 rounded-full blur-2xl",
-  };
+  const dashboardStats = useMemo(() => {
+    const globalEntities = globalStatsCache
+      ? globalStatsCache.entities
+      : entities;
+    const totalEmployees =
+      globalStatsCache?.totalItems || totalItems || globalEntities.length;
+
+    let departmentsList = departments.map((d) => d.departmentName);
+    const isManagerView = basePath === "/manager-dashboard";
+    if (isManagerView) {
+      const activeDepts = new Set(
+        globalEntities.map((e: any) => e.department).filter(Boolean),
+      );
+      departmentsList = departmentsList.filter((d) => activeDepts.has(d));
+    }
+
+    const deptBreakdown = departmentsList
+      .map((dept) => ({
+        name: dept,
+        count: globalEntities.filter((e: any) => e.department === dept).length,
+      }))
+      .filter((d) => d.count > 0)
+      .sort((a, b) => b.count - a.count);
+
+    const topDept = deptBreakdown[0];
+    const departmentCount = deptBreakdown.length;
+    const avgPerDept =
+      departmentCount > 0 ? Math.round(totalEmployees / departmentCount) : 0;
+
+    return {
+      totalEmployees,
+      departmentCount,
+      topDept,
+      avgPerDept,
+      deptBreakdown,
+      isManagerView,
+    };
+  }, [entities, globalStatsCache, departments, totalItems, basePath]);
+
+  const statCards = [
+    {
+      label: "Total Employees",
+      value: dashboardStats.totalEmployees,
+      sub: "Active workforce",
+      icon: Users,
+      color: "bg-linear-to-r from-[#4318FF] to-[#868CFF]",
+    },
+    {
+      label: "Departments",
+      value: dashboardStats.departmentCount,
+      sub: "With active staff",
+      icon: Building2,
+      color: "bg-linear-to-r from-[#38A169] to-[#68D391]",
+    },
+    {
+      label: "Top Department",
+      value: dashboardStats.topDept?.name || "—",
+      sub: dashboardStats.topDept
+        ? `${dashboardStats.topDept.count} employees`
+        : "No data",
+      icon: TrendingUp,
+      color: "bg-linear-to-r from-[#FFB547] to-[#FCCD75]",
+      isText: true,
+    },
+    {
+      label: "Avg per Department",
+      value: dashboardStats.avgPerDept,
+      sub: "Employees / dept",
+      icon: Clock,
+      color: "bg-linear-to-r from-[#6AD2FF] to-[#4318FF]",
+    },
+  ];
+
+  const chartColors = [
+    "#4318FF",
+    "#6AD2FF",
+    "#01B574",
+    "#FFB547",
+    "#EE5D50",
+    "#7551FF",
+    "#E312DC",
+    "#A3AED0",
+  ];
 
   return (
-    <div
-      className={`${styles.container} h-full overflow-y-auto custom-scrollbar`}
-    >
-      {/* Month Selector Section */}
-      {/* <div className="flex justify-center md:justify-end mb-6">
-        <div className="inline-flex items-center bg-white rounded-full px-3 py-1 shadow-sm border border-gray-100/50 gap-2">
-          <button
-            onClick={() => {
-              const prev = new Date(selectedDate);
-              prev.setMonth(prev.getMonth() - 1);
-              setSelectedDate(prev);
-            }}
-            className="p-1 hover:bg-gray-50 rounded-full transition-colors text-[#4318FF] hover:scale-110 active:scale-95"
-          >
-            <ChevronLeft size={16} strokeWidth={2.5} />
-          </button>
-
-          <span className="text-[#1B2559] font-bold min-w-[90px] text-center text-xs md:text-sm selection:bg-none tracking-tight">
+    <div className="p-4 md:p-8 bg-[#F4F7FE] font-sans h-full overflow-y-auto custom-scrollbar">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-[#2B3674]">
+            {dashboardStats.isManagerView
+              ? "Employee Dashboard"
+              : "Admin Dashboard"}
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Workforce overview for{" "}
             {selectedDate.toLocaleString("default", {
               month: "long",
               year: "numeric",
             })}
-          </span>
+          </p>
+        </div>
+        <button
+          onClick={() => setIsExportModalOpen(true)}
+          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-[#4318FF] text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all active:scale-95 self-start sm:self-auto"
+        >
+          <Download size={16} />
+          <span>Export Reports</span>
+        </button>
+      </div>
 
-          <button
-            onClick={() => {
-              const next = new Date(selectedDate);
-              next.setMonth(next.getMonth() + 1);
-              setSelectedDate(next);
-            }}
-            className="p-1 hover:bg-gray-50 rounded-full transition-colors text-[#4318FF] hover:scale-110 active:scale-95"
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+        {statCards.map((card) => (
+          <div
+            key={card.label}
+            className="bg-white rounded-2xl p-4 shadow-[0px_8px_24px_rgba(112,144,176,0.1)] hover:shadow-md transition-all group"
           >
-            <ChevronRight size={16} strokeWidth={2.5} />
-          </button>
-        </div>
-      </div> */}
-
-      {/* Stats Section */}
-      <div className={styles.cardGrid}>
-        <div
-          className={styles.statCard(
-            "bg-linear-to-br from-[#4318FF] to-[#5BC4FF]",
-          )}
-        >
-          <div className={styles.glassInner} />
-          <div className="flex justify-between items-start mb-4">
-            <h1 className="text-sm font-medium text-white/80">
-              Total Employees
-            </h1>
-            <TrendingUp size={20} className="text-white/60" />
+            <div className="flex justify-between items-start mb-3">
+              <div
+                className={`p-2 rounded-lg ${card.color} text-white shadow-sm`}
+              >
+                <card.icon size={18} />
+              </div>
+              <span
+                className={`font-black text-[#2B3674] text-right leading-tight ${card.isText ? "text-sm max-w-[120px] truncate" : "text-2xl"}`}
+              >
+                {card.value}
+              </span>
+            </div>
+            <h3 className="text-sm font-bold text-[#2B3674]">{card.label}</h3>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mt-0.5">
+              {card.sub}
+            </p>
           </div>
-          <h2 className="text-4xl font-black mb-1">
-            {globalStatsCache ? globalStatsCache.totalItems : totalItems}
-          </h2>
-          <p className="text-[11px] opacity-70 font-bold">+4.2% this month</p>
-          <Users
-            className="absolute bottom-4 right-4 text-white/20"
-            size={48}
-          />
-        </div>
-
-        {/* <div
-          className={styles.statCard(
-            "bg-linear-to-br from-[#868CFF] to-[#4318FF]",
-          )}
-        >
-          <div className={styles.glassInner} />
-          <div className="flex justify-between items-start mb-4">
-            <h1 className="text-sm font-medium text-white/80">Hours Worked</h1>
-            <Clock size={20} className="text-white/60" />
-          </div>
-          <h2 className="text-4xl font-black mb-1">
-            {stats.totalHours.toLocaleString()}
-          </h2>
-          <p className="text-[11px] opacity-70 font-bold">Hours</p>
-          <Clock
-            className="absolute bottom-4 right-4 text-white/20"
-            size={48}
-          />
-        </div> */}
-
-        {/* <div
-          className={styles.statCard(
-            "bg-linear-to-br from-[#05CD99] to-[#48BB78]",
-          )}
-        >
-          <div className={styles.glassInner} />
-          <div className="flex justify-between items-start mb-4">
-            <h1 className="text-sm font-medium text-white/80">Today Present</h1>
-            <Users size={20} className="text-white/60" />
-          </div>
-          <h2 className="text-4xl font-black mb-1">{stats.todayPresent}</h2>
-          <p className="text-[11px] opacity-70 font-bold">Active Now</p>
-          <TrendingUp
-            className="absolute bottom-4 right-4 text-white/20"
-            size={48}
-          />
-        </div> */}
-
-        {/* <div
-          className={styles.statCard(
-            "bg-linear-to-br from-[#FF9060] to-[#FF5C00]",
-          )}
-        >
-          <div className={styles.glassInner} />
-          <div className="flex justify-between items-start mb-4">
-            <h1 className="text-sm font-medium text-white/80">Total Absent</h1>
-            <Users size={20} className="text-white/60" />
-          </div>
-          <h2 className="text-4xl font-black mb-1">{stats.totalAbsent}</h2>
-          <p className="text-[11px] opacity-70 font-bold">On Leave Today</p>
-          <FileText
-            className="absolute bottom-4 right-4 text-white/20"
-            size={48}
-          />
-        </div> */}
+        ))}
       </div>
 
       {/* Analytics Section */}
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-xl font-bold text-[#2B3674]">
+      <div className="mb-4">
+        <h3 className="text-lg font-bold text-[#2B3674]">
           Workforce Analytics
         </h3>
-        {/* <div className="flex items-center gap-4">
-          <button
-            onClick={() => navigate(`${basePath}/daily-attendance`)}
-            className="flex items-center gap-2 px-6 py-2.5 bg-linear-to-r from-[#4318FF] to-[#868CFF] text-white rounded-xl text-xs font-black shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all duration-300 transform hover:-translate-y-0.5"
-          >
-            <TrendingUp size={16} />
-            <span>View Daily Status</span>
-          </button>
-        </div> */}
+        <p className="text-xs text-gray-500 mt-0.5">
+          Department distribution across your organization
+        </p>
       </div>
 
-      <div className="flex justify-center mb-20">
-        {/* Donut Chart: Distribution */}
-        <div className="bg-white p-6 rounded-[24px] shadow-[0px_18px_40px_rgba(112,144,176,0.08)] max-w-[700px] w-full">
-          <div className="flex justify-between items-center mb-6">
-            <h4 className="text-lg font-bold text-[#2B3674] flex items-center gap-2">
-              Department Breakdown
-              <div className="p-2 bg-gray-100 rounded-lg">
-                <Clock size={16} className="text-gray-500" />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
+        {/* Donut Chart */}
+        <div className="lg:col-span-2 bg-white p-5 md:p-6 rounded-2xl shadow-[0px_8px_24px_rgba(112,144,176,0.1)] border border-gray-100/80">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 rounded-lg bg-[#F4F7FE] text-[#4318FF]">
+              <Building2 size={18} />
+            </div>
+            <div>
+              <h4 className="text-base font-bold text-[#2B3674]">
+                Department Breakdown
+              </h4>
+              <p className="text-xs text-gray-400">
+                Employee count by department
+              </p>
+            </div>
+          </div>
+          <div className="h-[360px] w-full flex items-center justify-center">
+            {dashboardStats.deptBreakdown.length > 0 ? (
+              <Chart
+                options={chartData.options}
+                series={chartData.series}
+                type="donut"
+                height="100%"
+                width="100%"
+              />
+            ) : (
+              <div className="text-center text-gray-400 text-sm">
+                No department data available
               </div>
-            </h4>
+            )}
           </div>
-          <div className="h-[420px] w-full flex items-center justify-center">
-            <Chart
-              options={chartData.options}
-              series={chartData.series}
-              type="donut"
-              height="100%"
-              width="100%"
-            />
+        </div>
+
+        {/* Department List */}
+        <div className="bg-white p-5 md:p-6 rounded-2xl shadow-[0px_8px_24px_rgba(112,144,176,0.1)] border border-gray-100/80 flex flex-col">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 rounded-lg bg-[#F4F7FE] text-[#4318FF]">
+              <Users size={18} />
+            </div>
+            <div>
+              <h4 className="text-base font-bold text-[#2B3674]">
+                By Department
+              </h4>
+              <p className="text-xs text-gray-400">Ranked by headcount</p>
+            </div>
           </div>
+          <div className="flex-1 space-y-2 overflow-y-auto custom-scrollbar max-h-[360px]">
+            {dashboardStats.deptBreakdown.length > 0 ? (
+              dashboardStats.deptBreakdown.map((dept, idx) => (
+                <div
+                  key={dept.name}
+                  className="flex items-center justify-between gap-3 p-2.5 rounded-xl hover:bg-[#F4F7FE]/60 transition-colors"
+                >
+                  <span
+                    className="px-3 py-1.5 rounded-full text-xs font-bold border truncate max-w-[180px]"
+                    style={{
+                      backgroundColor: `${chartColors[idx % chartColors.length]}15`,
+                      color: chartColors[idx % chartColors.length],
+                      borderColor: `${chartColors[idx % chartColors.length]}30`,
+                    }}
+                  >
+                    {dept.name}
+                  </span>
+                  <span className="text-sm font-black text-[#2B3674] shrink-0">
+                    {dept.count}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-gray-400 text-center py-8">
+                No departments found
+              </p>
+            )}
+          </div>
+          {dashboardStats.deptBreakdown.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center">
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">
+                Total
+              </span>
+              <span className="text-lg font-black text-[#4318FF]">
+                {dashboardStats.totalEmployees}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -653,7 +722,7 @@ const AdminDashboard = () => {
                       <button
                         onClick={handleBulkExport}
                         disabled={isExporting}
-                        className="flex items-center gap-4 px-10 py-4 bg-linear-to-r from-[#4318FF] to-[#868CFF] text-white rounded-[16px] font-black text-[11px] disabled:opacity-70 shadow-lg shadow-blue-500/20"
+                        className="flex items-center gap-4 px-10 py-4 bg-[#4318FF] text-white rounded-[16px] font-black text-[11px] disabled:opacity-70 shadow-lg shadow-blue-500/20"
                       >
                         {isExporting ? "GENERATING..." : "DOWNLOAD PDF"}{" "}
                         {!isExporting && <Download size={16} />}

@@ -83,6 +83,7 @@ const Requests = () => {
   const [filterStatus, setFilterStatus] = useState("All");
   const [selectedDept, setSelectedDept] = useState("All");
   const [isDeptOpen, setIsDeptOpen] = useState(false);
+  const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [selectedOwnerId, setSelectedOwnerId] = useState<number | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -827,23 +828,76 @@ const Requests = () => {
     confirmModal.status === LeaveRequestStatus.CANCELLATION_REJECTED ||
     confirmModal.status === LeaveRequestStatus.MODIFICATION_REJECTED;
 
+  const departmentTagClass = (name: string, isSelected: boolean) =>
+    isSelected
+      ? "bg-[#4318FF] text-white border-[#4318FF] shadow-sm"
+      : name === "All"
+        ? "bg-gray-50 text-[#475569] border-gray-200 hover:bg-gray-100"
+        : "bg-[#F4F7FE] text-[#4318FF] border-[#4318FF]/15 hover:bg-[#4318FF]/10";
+
+  const filterStatusOptions = [
+    "All",
+    LeaveRequestStatus.PENDING,
+    LeaveRequestStatus.APPROVED,
+    LeaveRequestStatus.REJECTED,
+    LeaveRequestStatus.REQUESTING_FOR_CANCELLATION,
+    LeaveRequestStatus.CANCELLATION_APPROVED,
+    LeaveRequestStatus.CANCELLATION_REJECTED,
+    LeaveRequestStatus.REQUESTING_FOR_MODIFICATION,
+    LeaveRequestStatus.REQUEST_MODIFIED,
+    LeaveRequestStatus.MODIFICATION_APPROVED,
+    LeaveRequestStatus.MODIFICATION_CANCELLED,
+    LeaveRequestStatus.MODIFICATION_REJECTED,
+    LeaveRequestStatus.CANCELLATION_REVERTED,
+    LeaveRequestStatus.CANCELLED,
+  ];
+
+  const filterStatusTagClass = (status: string, isSelected: boolean) => {
+    if (isSelected) {
+      if (status === "All") {
+        return "bg-[#4318FF] text-white border-[#4318FF] shadow-sm";
+      }
+      switch (status) {
+        case LeaveRequestStatus.APPROVED:
+        case LeaveRequestStatus.CANCELLATION_APPROVED:
+        case LeaveRequestStatus.MODIFICATION_APPROVED:
+          return "bg-green-500 text-white border-green-500 shadow-sm";
+        case LeaveRequestStatus.REJECTED:
+        case LeaveRequestStatus.CANCELLATION_REJECTED:
+        case LeaveRequestStatus.MODIFICATION_REJECTED:
+        case LeaveRequestStatus.CANCELLED:
+          return "bg-red-500 text-white border-red-500 shadow-sm";
+        case LeaveRequestStatus.REQUESTING_FOR_CANCELLATION:
+        case LeaveRequestStatus.REQUESTING_FOR_MODIFICATION:
+        case LeaveRequestStatus.REQUEST_MODIFIED:
+        case LeaveRequestStatus.MODIFICATION_CANCELLED:
+          return "bg-orange-500 text-white border-orange-500 shadow-sm";
+        case LeaveRequestStatus.CANCELLATION_REVERTED:
+          return "bg-amber-500 text-white border-amber-500 shadow-sm";
+        default:
+          return "bg-amber-500 text-white border-amber-500 shadow-sm";
+      }
+    }
+    if (status === "All") {
+      return "bg-gray-50 text-[#475569] border-gray-200 hover:bg-gray-100";
+    }
+    return `${getStatusColor(status)} hover:opacity-90`;
+  };
+
   return (
     <div className="p-4 md:p-8 bg-[#F4F7FE] font-sans">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#2B3674]">
+      {/* Header + Search */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div className="shrink-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-[#2B3674]">
             Employee Requests
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-xs sm:text-sm text-gray-500 mt-1">
             Review, approve, or decline employee attendance and time-off requests.
           </p>
         </div>
-      </div>
 
-      {/* Filters Area */}
-      <div className="flex flex-col gap-4 mb-6">
-        {/* Search Bar Row */}
-        <div className="relative w-full md:w-[400px] group">
+        <div className="relative w-full sm:w-auto sm:min-w-[300px] md:min-w-[360px] lg:min-w-[400px] sm:max-w-[480px] group">
           <Search
             className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#4318FF] transition-colors"
             size={20}
@@ -864,30 +918,38 @@ const Requests = () => {
             </button>
           )}
         </div>
+      </div>
 
+      {/* Filters Area */}
+      <div className="flex flex-col gap-4 mb-6">
         {/* Filters Row */}
         <div className="flex flex-wrap items-end gap-3">
           {/* Department Filter Dropdown */}
           {basePath === "/admin-dashboard" && (
             <div className="flex flex-col gap-1.5">
               <span className="text-xs font-bold text-gray-400 pl-1">Department</span>
-              <div className="relative">
+              <div className="relative min-w-[240px] sm:min-w-[280px] md:min-w-[320px]">
                 <button
-                  onClick={() => setIsDeptOpen(!isDeptOpen)}
-                  className={`flex items-center gap-3 px-5 py-3 bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all text-sm font-bold ${selectedDept !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+                  onClick={() => {
+                    setIsDeptOpen(!isDeptOpen);
+                    setIsStatusOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between gap-3 px-5 py-3 bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all text-sm font-bold ${selectedDept !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
                 >
-                  <Filter
-                    size={18}
-                    className={
-                      selectedDept !== "All" ? "text-[#4318FF]" : "text-gray-400"
-                    }
-                  />
-                  <span>
-                    {selectedDept === "All" ? "All Departments" : selectedDept}
-                  </span>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Filter
+                      size={18}
+                      className={
+                        selectedDept !== "All" ? "text-[#4318FF]" : "text-gray-400"
+                      }
+                    />
+                    <span className="truncate">
+                      {selectedDept === "All" ? "All Departments" : selectedDept}
+                    </span>
+                  </div>
                   <ChevronDown
                     size={18}
-                    className={`transition-transform duration-300 ${isDeptOpen ? "rotate-180" : ""}`}
+                    className={`shrink-0 transition-transform duration-300 ${isDeptOpen ? "rotate-180" : ""}`}
                   />
                 </button>
 
@@ -897,46 +959,37 @@ const Requests = () => {
                       className="fixed inset-0 z-40"
                       onClick={() => setIsDeptOpen(false)}
                     ></div>
-                    <div className="absolute left-0 mt-3 w-56 bg-white rounded-3xl shadow-2xl border border-blue-50 py-3 z-50 overflow-hidden animate-in fade-in zoom-in duration-200 origin-top-left">
-                      <div className="px-5 py-2 mb-1">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                    <div className="absolute left-0 mt-3 w-full min-w-full bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-gray-100 p-3 z-50 max-h-64 overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="mb-2">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-[#A3AED0]">
                           Departments
                         </span>
                       </div>
-                      <button
-                        onClick={() => {
-                          setSelectedDept("All");
-                          setIsDeptOpen(false);
-                          setCurrentPage(1);
-                        }}
-                        className={`w-full flex items-center px-5 py-2.5 text-sm font-bold transition-all relative ${selectedDept === "All"
-                            ? "text-[#4318FF] bg-blue-50/50"
-                            : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
-                          }`}
-                      >
-                        {selectedDept === "All" && (
-                          <div className="absolute left-0 w-1 h-6 bg-[#4318FF] rounded-r-full"></div>
-                        )}
-                        All Departments
-                      </button>
-                      {departments.map((dept: any) => (
+                      <div className="flex flex-col gap-2">
                         <button
-                          key={dept.id}
                           onClick={() => {
-                            setSelectedDept(dept.departmentName);
+                            setSelectedDept("All");
                             setIsDeptOpen(false);
+                            setCurrentPage(1);
                           }}
-                          className={`w-full flex items-center px-5 py-2.5 text-sm font-bold transition-all relative ${selectedDept === dept.departmentName
-                              ? "text-[#4318FF] bg-blue-50/50"
-                              : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
-                            }`}
+                          className={`w-full flex items-center justify-center px-3 py-2 rounded-full text-xs font-bold border transition-all ${departmentTagClass("All", selectedDept === "All")}`}
                         >
-                          {selectedDept === dept.departmentName && (
-                            <div className="absolute left-0 w-1 h-6 bg-[#4318FF] rounded-r-full"></div>
-                          )}
-                          {dept.departmentName}
+                          All Departments
                         </button>
-                      ))}
+                        {departments.map((dept: any) => (
+                          <button
+                            key={dept.id}
+                            onClick={() => {
+                              setSelectedDept(dept.departmentName);
+                              setIsDeptOpen(false);
+                              setCurrentPage(1);
+                            }}
+                            className={`w-full flex items-center justify-center px-3 py-2 rounded-full text-xs font-bold border transition-all text-center ${departmentTagClass(dept.departmentName, selectedDept === dept.departmentName)}`}
+                          >
+                            {dept.departmentName}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </>
                 )}
@@ -1001,43 +1054,61 @@ const Requests = () => {
 
           <div className="flex flex-col gap-1.5">
             <span className="text-xs font-bold text-gray-400 pl-1">Status</span>
-            <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
-              <Select
-                value={filterStatus}
-                onChange={(val) => setFilterStatus(val)}
-                className={`w-60 h-12 font-bold text-sm ${filterStatus !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
-                variant="borderless"
-                dropdownStyle={{ borderRadius: "16px" }}
-                suffixIcon={
-                  <ChevronDown
+            <div className="relative min-w-[240px] sm:min-w-[280px] md:min-w-[320px]">
+              <button
+                onClick={() => {
+                  setIsStatusOpen(!isStatusOpen);
+                  setIsDeptOpen(false);
+                }}
+                className={`w-full flex items-center justify-between gap-3 px-5 py-3 bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all text-sm font-bold ${filterStatus !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <Filter
                     size={18}
                     className={
                       filterStatus !== "All" ? "text-[#4318FF]" : "text-gray-400"
                     }
                   />
-                }
-              >
-                {[
-                  "All",
-                  LeaveRequestStatus.PENDING,
-                  LeaveRequestStatus.APPROVED,
-                  LeaveRequestStatus.REJECTED,
-                  LeaveRequestStatus.REQUESTING_FOR_CANCELLATION,
-                  LeaveRequestStatus.CANCELLATION_APPROVED,
-                  LeaveRequestStatus.CANCELLATION_REJECTED,
-                  LeaveRequestStatus.REQUESTING_FOR_MODIFICATION,
-                  LeaveRequestStatus.REQUEST_MODIFIED,
-                  LeaveRequestStatus.MODIFICATION_APPROVED,
-                  LeaveRequestStatus.MODIFICATION_CANCELLED,
-                  LeaveRequestStatus.MODIFICATION_REJECTED,
-                  LeaveRequestStatus.CANCELLATION_REVERTED,
-                  LeaveRequestStatus.CANCELLED,
-                ].map((status) => (
-                  <Select.Option key={status} value={status}>
-                    {status === "All" ? "All Status" : status}
-                  </Select.Option>
-                ))}
-              </Select>
+                  <span className="truncate">
+                    {filterStatus === "All" ? "All Status" : filterStatus}
+                  </span>
+                </div>
+                <ChevronDown
+                  size={18}
+                  className={`shrink-0 transition-transform duration-300 ${isStatusOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+
+              {isStatusOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setIsStatusOpen(false)}
+                  />
+                  <div className="absolute left-0 mt-3 w-full min-w-full bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-gray-100 p-3 z-50 max-h-72 overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="mb-2">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-[#A3AED0]">
+                        Status
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      {filterStatusOptions.map((status) => (
+                        <button
+                          key={status}
+                          onClick={() => {
+                            setFilterStatus(status);
+                            setIsStatusOpen(false);
+                            setCurrentPage(1);
+                          }}
+                          className={`w-full flex items-center justify-center px-3 py-2 rounded-full text-xs font-bold border transition-all text-center ${filterStatusTagClass(status, filterStatus === status)}`}
+                        >
+                          {status === "All" ? "All Status" : status}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 

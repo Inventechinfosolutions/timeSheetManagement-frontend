@@ -485,7 +485,7 @@ const Calendar = ({
               {!isSmall && !isSidebar && (
                 <button
                   onClick={handleDownload}
-                  className="hidden md:flex items-center gap-2 px-6 py-2.5 bg-linear-to-r from-[#4318FF] to-[#868CFF] text-white rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 text-xs font-bold tracking-wide uppercase group"
+                  className="hidden md:flex items-center gap-2 px-6 py-2.5 bg-[#4318FF] text-white rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 text-xs font-bold tracking-wide uppercase group"
                   title="Download Monthly Report"
                 >
                   <Download
@@ -499,7 +499,7 @@ const Calendar = ({
               {!isSmall && !isSidebar && (
                 <button
                   onClick={handleDownload}
-                  className="md:hidden flex p-2.5 bg-linear-to-r from-[#4318FF] to-[#868CFF] text-white rounded-xl shadow-lg shadow-blue-500/30 active:scale-95 transition-all"
+                  className="md:hidden flex p-2.5 bg-[#4318FF] text-white rounded-xl shadow-lg shadow-blue-500/30 active:scale-95 transition-all"
                   title="Download Monthly Report"
                 >
                   <Download size={18} strokeWidth={2.5} />
@@ -1243,7 +1243,7 @@ const Calendar = ({
               <button
                 onClick={handleConfirmDownload}
                 disabled={isDownloading}
-                className={`flex-1 px-4 py-3 text-xs font-bold text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5 active:scale-95 tracking-wide uppercase ${isDownloading ? "opacity-70 cursor-not-allowed" : ""}`}
+                className={`flex-1 px-4 py-3 text-xs font-bold text-white bg-[#4318FF] rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5 active:scale-95 tracking-wide uppercase ${isDownloading ? "opacity-70 cursor-not-allowed" : ""}`}
               >
                 {isDownloading ? (
                   <Loader2 size={16} className="animate-spin" />

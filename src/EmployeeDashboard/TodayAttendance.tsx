@@ -334,41 +334,46 @@ const TodayAttendance = ({
     );
 
   return (
-    <div className="flex flex-col h-full w-full overflow-hidden bg-gray-50/50">
+    <div className="flex flex-col h-full w-full overflow-hidden bg-[#F4F7FE]">
       {/* Header */}
       {!viewOnly && (
-        <div className="px-6 py-5 bg-linear-to-r from-blue-100 via-blue-50 to-white border-b border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-[#1B2559]">
-              {currentUser?.userType === UserType.MANAGER
-                ? "Manager Dashboard"
-                : "Employee Dashboard"}
-            </h1>
-            <p className="text-sm text-gray-500 font-medium mt-1">
-              Welcome back,{" "}
-              {(isMyRoute
-                ? currentUser?.aliasLoginName || currentUser?.loginId
-                : null) ||
-                entity?.firstName ||
-                entity?.fullName ||
-                currentUser?.aliasLoginName ||
-                "Employee"}
-            </p>
-          </div>
+        <div className="px-4 md:px-8 pt-4 md:pt-6 pb-2">
+          <div className="bg-white rounded-2xl p-4 md:p-5 shadow-[0px_8px_24px_rgba(112,144,176,0.1)] border border-gray-100/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-xl md:text-2xl font-bold text-[#2B3674]">
+                {currentUser?.userType === UserType.MANAGER
+                  ? "Manager Dashboard"
+                  : "Employee Dashboard"}
+              </h1>
+              <p className="text-sm text-gray-500 mt-1">
+                Welcome back,{" "}
+                <span className="font-semibold text-[#4318FF]">
+                  {(isMyRoute
+                    ? currentUser?.aliasLoginName || currentUser?.loginId
+                    : null) ||
+                    entity?.firstName ||
+                    entity?.fullName ||
+                    currentUser?.aliasLoginName ||
+                    "Employee"}
+                </span>
+              </p>
+            </div>
 
-          <div className="flex items-center gap-3">
-            <div className="px-4 py-2 bg-[#F4F7FE] rounded-lg text-sm font-bold text-[#2B3674]">
-              {displayEntry.fullDate.toLocaleDateString("en-US", {
-                weekday: "long",
-                month: "long",
-                day: "numeric",
-              })}
+            <div className="flex items-center gap-2 px-4 py-2 bg-[#F4F7FE] rounded-xl border border-[#4318FF]/10">
+              <CalendarIcon size={16} className="text-[#4318FF] shrink-0" />
+              <span className="text-sm font-bold text-[#2B3674]">
+                {displayEntry.fullDate.toLocaleDateString("en-US", {
+                  weekday: "long",
+                  month: "long",
+                  day: "numeric",
+                })}
+              </span>
             </div>
           </div>
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 space-y-6 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 md:px-8 pb-6 space-y-5 custom-scrollbar">
         {/* Month Selector Section */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
           {/* Historical Intern / Congratulations Alert Badge */}
@@ -460,7 +465,7 @@ const TodayAttendance = ({
           <div className="flex justify-center">
             <button
               onClick={() => handleNavigate(now.getTime())}
-              className="px-8 py-3 rounded-xl text-white font-bold bg-linear-to-r from-[#868CFF] to-[#4318FF] shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all flex items-center gap-2 transform active:scale-95"
+              className="px-8 py-3 rounded-xl text-white font-bold bg-[#4318FF] shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all flex items-center gap-2 transform active:scale-95"
             >
               <Edit size={18} />
               <span>Log Today's Hours</span>
@@ -469,16 +474,19 @@ const TodayAttendance = ({
         )}
 
         {/* Bottom Section: Calendar/List */}
-        <div className="bg-white rounded-xl shadow-[0px_10px_30px_rgba(0,0,0,0.02)] border border-gray-100/50 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-            <h3 className="text-lg font-bold text-[#1B2559]">
-              Attendance List
-            </h3>
-            <div className="flex gap-2">
-              <div className="text-xs px-3 py-1 bg-gray-50 rounded-full text-gray-500 border border-gray-100">
-                All Statuses
-              </div>
+        <div className="bg-white rounded-2xl shadow-[0px_8px_24px_rgba(112,144,176,0.1)] border border-gray-100/80 overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div>
+              <h3 className="text-base font-bold text-[#2B3674]">
+                Attendance List
+              </h3>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Monthly attendance records
+              </p>
             </div>
+            <span className="text-xs px-3 py-1.5 bg-[#F4F7FE] rounded-full text-[#4318FF] font-bold border border-[#4318FF]/15">
+              All Statuses
+            </span>
           </div>
           <div className="p-4">
             <AttendanceViewWrapper

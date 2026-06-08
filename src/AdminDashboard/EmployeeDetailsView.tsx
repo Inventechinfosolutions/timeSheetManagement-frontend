@@ -890,7 +890,7 @@ const EmployeeDetailsView = () => {
 
                   <button
                     type="submit"
-                    className="w-full py-3 mt-2 bg-gradient-to-r from-[#4318FF] to-[#868CFF] text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all active:scale-95"
+                    className="w-full py-3 mt-2 bg-[#4318FF] text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all active:scale-95"
                   >
                     Update Password
                   </button>

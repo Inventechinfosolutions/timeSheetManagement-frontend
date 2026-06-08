@@ -1941,7 +1941,7 @@ const MyTimesheet = ({
               isViewedMonthEligible && (
                 <button
                   onClick={handleAutoUpdateClick}
-                  className="flex items-center justify-center gap-1.5 px-3 py-2 text-white rounded-xl font-bold text-[10px] transition-all active:scale-95 tracking-wide uppercase hover:-translate-y-0.5 bg-gradient-to-r from-[#4318FF] to-[#868CFF] shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:to-[#4318FF]"
+                  className="flex items-center justify-center gap-1.5 px-3 py-2 text-white rounded-xl font-bold text-[10px] transition-all active:scale-95 tracking-wide uppercase hover:-translate-y-0.5 bg-[#4318FF] shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50"
                   title="Auto-fill eligible working days"
                 >
                   <Rocket size={14} className="animate-pulse" />

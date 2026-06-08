@@ -529,73 +529,107 @@ const EmployeeListView = () => {
   // }
   // }, ...);
 
+  const departmentTagClass = (name: string, isSelected: boolean) =>
+    isSelected
+      ? "bg-[#4318FF] text-white border-[#4318FF] shadow-sm"
+      : name === "All"
+        ? "bg-gray-50 text-[#475569] border-gray-200 hover:bg-gray-100"
+        : "bg-[#F4F7FE] text-[#4318FF] border-[#4318FF]/15 hover:bg-[#4318FF]/10";
+
+  const statusTagClass = (status: string, isSelected: boolean) => {
+    if (isSelected) {
+      if (status === "ACTIVE") {
+        return "bg-green-500 text-white border-green-500 shadow-sm";
+      }
+      if (status === "INACTIVE") {
+        return "bg-red-500 text-white border-red-500 shadow-sm";
+      }
+      if (status === "DRAFT") {
+        return "bg-gray-500 text-white border-gray-500 shadow-sm";
+      }
+      return "bg-[#4318FF] text-white border-[#4318FF] shadow-sm";
+    }
+    if (status === "ACTIVE") {
+      return "bg-green-50 text-green-600 border-green-100 hover:bg-green-100";
+    }
+    if (status === "INACTIVE") {
+      return "bg-red-50 text-red-600 border-red-100 hover:bg-red-100";
+    }
+    if (status === "DRAFT") {
+      return "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100";
+    }
+    return "bg-gray-50 text-[#475569] border-gray-200 hover:bg-gray-100";
+  };
+
+  const formatStatusLabel = (status: string) => {
+    if (status === "All") return "All Status";
+    return status.charAt(0) + status.slice(1).toLowerCase();
+  };
+
   return (
     <div className="p-5 bg-[#F4F7FE] font-sans">
       <div className="max-w-[1600px] mx-auto">
         <div className="flex flex-row flex-wrap justify-between items-center gap-3 mb-8">
-          <h1 className="text-xl md:text-2xl font-bold text-[#2B3674] m-0 whitespace-nowrap">
+          {/* <h1 className="text-xl md:text-2xl font-bold text-[#2B3674] m-0 whitespace-nowrap">
             Employee Directory
-          </h1>
+          </h1> */}
 
           <div className="flex flex-row flex-wrap items-center gap-3">
             {/* Modern Custom Dropdown */}
             {canEdit && (
-              <div className="relative" ref={dropdownRef}>
+              <div className="relative min-w-[200px] sm:min-w-[240px] md:min-w-[280px]" ref={dropdownRef}>
                 <button
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="flex items-center justify-between gap-2 px-5 py-2.5 bg-white rounded-full border border-gray-200 text-[#2B3674] font-bold text-sm hover:bg-gray-50 transition-all focus:border-[#4318FF]/40"
+                  onClick={() => {
+                    setIsDropdownOpen(!isDropdownOpen);
+                    setIsStatusDropdownOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between gap-2 px-5 py-2.5 bg-white rounded-full border border-gray-200 font-bold text-sm hover:bg-gray-50 transition-all focus:border-[#4318FF]/40 ${selectedDepartment !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
                 >
-                  <div className="flex items-center gap-2">
-                    <Filter size={16} className="text-[#4318FF]" />
-                    <span>{selectedDepartment}</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Filter size={16} className="text-[#4318FF] shrink-0" />
+                    <span className="truncate">
+                      {selectedDepartment === "All" ? "All Departments" : selectedDepartment}
+                    </span>
                   </div>
                   <ChevronDown
                     size={16}
-                    className={`text-[#A3AED0] transition-transform duration-300 ${isDropdownOpen ? "rotate-180" : ""}`}
+                    className={`shrink-0 text-[#A3AED0] transition-transform duration-300 ${isDropdownOpen ? "rotate-180" : ""}`}
                   />
                 </button>
 
                 {isDropdownOpen && (
-                  <div className="absolute top-full left-0 mt-2 w-full sm:w-48 bg-white/80 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-white/20 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="px-3 py-1 mb-1">
-                      <span className="text-[10px] font-black text-[#A3AED0] uppercase tracking-widest pl-2">
+                  <div className="absolute top-full left-0 mt-2 w-full min-w-full bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-gray-100 p-3 z-50 max-h-64 overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="mb-2">
+                      <span className="text-[10px] font-black text-[#A3AED0] uppercase tracking-widest">
                         Departments
                       </span>
                     </div>
-                    <button
-                      key="All"
-                      onClick={() => {
-                        setSelectedDepartment("All");
-                        setIsDropdownOpen(false);
-                        setCurrentPage(1);
-                      }}
-                      className={`w-full text-left px-5 py-2 text-sm font-semibold transition-colors
-${
-  selectedDepartment === "All"
-    ? "text-[#4318FF] bg-[#4318FF]/5"
-    : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
-}`}
-                    >
-                      All
-                    </button>
-                    {departments.map((dept) => (
+                    <div className="flex flex-col gap-2">
                       <button
-                        key={dept.id}
+                        key="All"
                         onClick={() => {
-                          setSelectedDepartment(dept.departmentName);
+                          setSelectedDepartment("All");
                           setIsDropdownOpen(false);
                           setCurrentPage(1);
                         }}
-                        className={`w-full text-left px-5 py-2 text-sm font-semibold transition-colors
-${
-  selectedDepartment === dept.departmentName
-    ? "text-[#4318FF] bg-[#4318FF]/5"
-    : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
-}`}
+                        className={`w-full flex items-center justify-center px-3 py-2 rounded-full text-xs font-bold border transition-all ${departmentTagClass("All", selectedDepartment === "All")}`}
                       >
-                        {dept.departmentName}
+                        All Departments
                       </button>
-                    ))}
+                      {departments.map((dept) => (
+                        <button
+                          key={dept.id}
+                          onClick={() => {
+                            setSelectedDepartment(dept.departmentName);
+                            setIsDropdownOpen(false);
+                            setCurrentPage(1);
+                          }}
+                          className={`w-full flex items-center justify-center px-3 py-2 rounded-full text-xs font-bold border transition-all text-center ${departmentTagClass(dept.departmentName, selectedDepartment === dept.departmentName)}`}
+                        >
+                          {dept.departmentName}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -603,46 +637,48 @@ ${
 
             {/* Modern Status Dropdown */}
             {canEdit && (
-              <div className="relative" ref={statusDropdownRef}>
+              <div className="relative min-w-[160px] sm:min-w-[180px]" ref={statusDropdownRef}>
                 <button
-                  onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
-                  className="flex items-center justify-between gap-2 px-5 py-2.5 bg-white rounded-full border border-gray-200 text-[#2B3674] font-bold text-sm hover:bg-gray-50 transition-all focus:border-[#4318FF]/40"
+                  onClick={() => {
+                    setIsStatusDropdownOpen(!isStatusDropdownOpen);
+                    setIsDropdownOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between gap-2 px-5 py-2.5 bg-white rounded-full border border-gray-200 font-bold text-sm hover:bg-gray-50 transition-all focus:border-[#4318FF]/40 ${selectedStatus !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
                 >
-                  <div className="flex items-center gap-2">
-                    <Filter size={16} className="text-[#4318FF]" />
-                    <span>{selectedStatus === "All" ? "Status" : selectedStatus.charAt(0) + selectedStatus.slice(1).toLowerCase()}</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Filter size={16} className="text-[#4318FF] shrink-0" />
+                    <span className="truncate">
+                      {selectedStatus === "All" ? "Status" : formatStatusLabel(selectedStatus)}
+                    </span>
                   </div>
                   <ChevronDown
                     size={16}
-                    className={`text-[#A3AED0] transition-transform duration-300 ${isStatusDropdownOpen ? "rotate-180" : ""}`}
+                    className={`shrink-0 text-[#A3AED0] transition-transform duration-300 ${isStatusDropdownOpen ? "rotate-180" : ""}`}
                   />
                 </button>
 
                 {isStatusDropdownOpen && (
-                  <div className="absolute top-full left-0 mt-2 w-full sm:w-48 bg-white/80 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-white/20 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="px-3 py-1 mb-1">
-                      <span className="text-[10px] font-black text-[#A3AED0] uppercase tracking-widest pl-2">
+                  <div className="absolute top-full left-0 mt-2 w-full min-w-full bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-gray-100 p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="mb-2">
+                      <span className="text-[10px] font-black text-[#A3AED0] uppercase tracking-widest">
                         Status
                       </span>
                     </div>
-                    {["All", "DRAFT", "ACTIVE", "INACTIVE"].map((status) => (
-                      <button
-                        key={status}
-                        onClick={() => {
-                          setSelectedStatus(status);
-                          setIsStatusDropdownOpen(false);
-                          setCurrentPage(1);
-                        }}
-                        className={`w-full text-left px-5 py-2 text-sm font-semibold transition-colors
-${
-  selectedStatus === status
-    ? "text-[#4318FF] bg-[#4318FF]/5"
-    : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
-}`}
-                      >
-                        {status === "All" ? "All" : status.charAt(0) + status.slice(1).toLowerCase()}
-                      </button>
-                    ))}
+                    <div className="flex flex-col gap-2">
+                      {["All", "DRAFT", "ACTIVE", "INACTIVE"].map((status) => (
+                        <button
+                          key={status}
+                          onClick={() => {
+                            setSelectedStatus(status);
+                            setIsStatusDropdownOpen(false);
+                            setCurrentPage(1);
+                          }}
+                          className={`w-full flex items-center justify-center px-3 py-2 rounded-full text-xs font-bold border transition-all ${statusTagClass(status, selectedStatus === status)}`}
+                        >
+                          {formatStatusLabel(status)}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -672,7 +708,7 @@ ${
               <>
                 <button
                   onClick={handleDownloadClick}
-                  className="flex items-center justify-center gap-2 px-6 py-2.5 bg-linear-to-r from-[#4318FF] to-[#868CFF] text-white rounded-xl font-black text-xs transition-all shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transform hover:-translate-y-0.5 active:scale-95 tracking-widest uppercase"
+                  className="flex items-center justify-center gap-2 px-6 py-2.5 bg-[#4318FF] text-white rounded-xl font-black text-xs transition-all shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transform hover:-translate-y-0.5 active:scale-95 tracking-widest uppercase"
                   title="Download Excel Template"
                 >
                   <Download size={18} />
@@ -689,7 +725,7 @@ ${
 
                 <button
                   onClick={() => setIsCreateModalOpen(true)}
-                  className="flex items-center justify-center gap-2 px-6 py-2.5 bg-linear-to-r from-[#4318FF] to-[#868CFF] text-white rounded-xl font-black text-xs transition-all shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transform hover:-translate-y-0.5 active:scale-95 tracking-widest uppercase"
+                  className="flex items-center justify-center gap-2 px-6 py-2.5 bg-[#4318FF] text-white rounded-xl font-black text-xs transition-all shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transform hover:-translate-y-0.5 active:scale-95 tracking-widest uppercase"
                 >
                   <UserPlus size={18} />
                   <span className="hidden sm:inline">Create Employee</span>
@@ -1101,7 +1137,7 @@ ${
               <button
                 onClick={handleUpload}
                 disabled={!selectedFile || uploadLoading}
-                className="flex-1 px-4 py-3 text-sm font-bold text-white bg-gradient-to-r from-[#4318FF] to-[#868CFF] rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-xl transition-all flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-3 text-sm font-bold text-white bg-[#4318FF] rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-xl transition-all flex items-center justify-center gap-2"
               >
                 {uploadLoading ? (
                   <>
@@ -1218,7 +1254,7 @@ ${
             <div className="flex-none p-6 border-t border-gray-100">
               <button
                 onClick={handleCloseResultModal}
-                className="w-full px-4 py-3 text-sm font-bold text-white bg-gradient-to-r from-[#4318FF] to-[#868CFF] rounded-xl shadow-lg hover:shadow-xl transition-all"
+                className="w-full px-4 py-3 text-sm font-bold text-white bg-[#4318FF] rounded-xl shadow-lg hover:shadow-xl transition-all"
               >
                 Close
               </button>
@@ -1578,7 +1614,7 @@ ${
                   <button
                     type="submit"
                     disabled={loading}
-                    className="flex-1 px-4 py-3 text-sm font-bold text-white bg-gradient-to-r from-[#4318FF] to-[#868CFF] rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-xl transition-all flex items-center justify-center gap-2"
+                    className="flex-1 px-4 py-3 text-sm font-bold text-white bg-[#4318FF] rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-xl transition-all flex items-center justify-center gap-2"
                   >
                     {loading ? (
                       <>
@@ -1655,7 +1691,7 @@ ${
                   </button>
                   <button
                     onClick={confirmDownload}
-                    className="flex-1 px-4 py-3 text-sm font-bold text-white bg-gradient-to-r from-[#4318FF] to-[#868CFF] rounded-xl shadow-lg hover:shadow-xl transition-all"
+                    className="flex-1 px-4 py-3 text-sm font-bold text-white bg-[#4318FF] rounded-xl shadow-lg hover:shadow-xl transition-all"
                   >
                     Yes
                   </button>

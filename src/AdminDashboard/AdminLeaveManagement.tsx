@@ -62,6 +62,7 @@ import {
   Clock,
   Building2,
   ArrowRightLeft,
+  Filter,
 } from "lucide-react";
 import { message } from "antd";
 import CommonMultipleUploader from "../EmployeeDashboard/CommonMultipleUploader";
@@ -188,6 +189,7 @@ const AdminLeaveManagement = () => {
   const [selectedMonth, setSelectedMonth] = useState<string>("All");
   const [selectedYear, setSelectedYear] = useState<string>("All");
   const [filterStatus, setFilterStatus] = useState<string>("All");
+  const [isStatusOpen, setIsStatusOpen] = useState(false);
 
   const [modifyModal, setModifyModal] = useState<{
     isOpen: boolean;
@@ -1608,21 +1610,105 @@ const AdminLeaveManagement = () => {
   const removeCcEmail = (email: string) =>
     setCcEmails(ccEmails.filter((e) => e !== email));
 
-  const applyOptions = [
-    { label: LeaveRequestType.LEAVE, icon: Calendar, color: "#4318FF" },
-    { label: "WFH", icon: Home, color: "#38A169" },
-    { label: WorkLocation.CLIENT_VISIT, icon: MapPin, color: "#FFB547" },
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case LeaveRequestStatus.APPROVED:
+      case LeaveRequestStatus.CANCELLATION_APPROVED:
+      case LeaveRequestStatus.MODIFICATION_APPROVED:
+        return "bg-green-50 text-green-600 border-green-200";
+      case LeaveRequestStatus.MODIFICATION_CANCELLED:
+        return "bg-orange-100 text-orange-600 border-orange-200";
+      case LeaveRequestStatus.REJECTED:
+      case LeaveRequestStatus.CANCELLATION_REJECTED:
+      case LeaveRequestStatus.MODIFICATION_REJECTED:
+      case LeaveRequestStatus.CANCELLED:
+        return "bg-red-50 text-red-600 border-red-200";
+      case LeaveRequestStatus.CANCELLATION_REVERTED:
+        return "bg-yellow-50 text-yellow-600 border-yellow-200";
+      case LeaveRequestStatus.REQUESTING_FOR_CANCELLATION:
+      case LeaveRequestStatus.REQUESTING_FOR_MODIFICATION:
+      case LeaveRequestStatus.REQUEST_MODIFIED:
+        return "bg-orange-100 text-orange-600 border-orange-200";
+      default:
+        return "bg-yellow-50 text-yellow-600 border-yellow-200";
+    }
+  };
+
+  const filterStatusOptions = [
+    "All",
+    LeaveRequestStatus.PENDING,
+    LeaveRequestStatus.APPROVED,
+    LeaveRequestStatus.REJECTED,
+    LeaveRequestStatus.REQUESTING_FOR_CANCELLATION,
+    LeaveRequestStatus.CANCELLATION_APPROVED,
+    LeaveRequestStatus.CANCELLATION_REJECTED,
+    LeaveRequestStatus.REQUESTING_FOR_MODIFICATION,
+    LeaveRequestStatus.REQUEST_MODIFIED,
+    LeaveRequestStatus.MODIFICATION_APPROVED,
+    LeaveRequestStatus.MODIFICATION_CANCELLED,
+    LeaveRequestStatus.MODIFICATION_REJECTED,
+    LeaveRequestStatus.CANCELLATION_REVERTED,
+    LeaveRequestStatus.CANCELLED,
   ];
 
-  const hexToRgb = (hex: string) => {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result
-      ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(
-        result[3],
-        16,
-      )}`
-      : "0, 0, 0";
+  const filterStatusTagClass = (status: string, isSelected: boolean) => {
+    if (isSelected) {
+      if (status === "All") {
+        return "bg-[#4318FF] text-white border-[#4318FF] shadow-sm";
+      }
+      switch (status) {
+        case LeaveRequestStatus.APPROVED:
+        case LeaveRequestStatus.CANCELLATION_APPROVED:
+        case LeaveRequestStatus.MODIFICATION_APPROVED:
+          return "bg-green-500 text-white border-green-500 shadow-sm";
+        case LeaveRequestStatus.REJECTED:
+        case LeaveRequestStatus.CANCELLATION_REJECTED:
+        case LeaveRequestStatus.MODIFICATION_REJECTED:
+        case LeaveRequestStatus.CANCELLED:
+          return "bg-red-500 text-white border-red-500 shadow-sm";
+        case LeaveRequestStatus.REQUESTING_FOR_CANCELLATION:
+        case LeaveRequestStatus.REQUESTING_FOR_MODIFICATION:
+        case LeaveRequestStatus.REQUEST_MODIFIED:
+        case LeaveRequestStatus.MODIFICATION_CANCELLED:
+          return "bg-orange-500 text-white border-orange-500 shadow-sm";
+        case LeaveRequestStatus.CANCELLATION_REVERTED:
+          return "bg-amber-500 text-white border-amber-500 shadow-sm";
+        default:
+          return "bg-amber-500 text-white border-amber-500 shadow-sm";
+      }
+    }
+    if (status === "All") {
+      return "bg-gray-50 text-[#475569] border-gray-200 hover:bg-gray-100";
+    }
+    return `${getStatusColor(status)} hover:opacity-90`;
   };
+
+  const applyOptions = [
+    {
+      label: LeaveRequestType.LEAVE,
+      icon: Calendar,
+      color: "#4318FF",
+      cardBg: "from-[#EEF0FF] to-[#E4E9FF]",
+      border: "border-[#4318FF]/15",
+      iconBg: "bg-linear-to-br from-[#4318FF] to-[#868CFF]",
+    },
+    {
+      label: "WFH",
+      icon: Home,
+      color: "#38A169",
+      cardBg: "from-[#EDFAF3] to-[#DFF5E8]",
+      border: "border-[#38A169]/15",
+      iconBg: "bg-linear-to-br from-[#38A169] to-[#68D391]",
+    },
+    {
+      label: WorkLocation.CLIENT_VISIT,
+      icon: MapPin,
+      color: "#FFB547",
+      cardBg: "from-[#FFF8ED] to-[#FFF0D6]",
+      border: "border-[#FFB547]/20",
+      iconBg: "bg-linear-to-br from-[#FFB547] to-[#FCCD75]",
+    },
+  ];
 
   const renderCancelButton = (item: any) => {
     // Receptionist is view-only: no cancel (isReceptionist from component scope)
@@ -1664,214 +1750,175 @@ const AdminLeaveManagement = () => {
   return (
     <div className="p-4 md:px-8 md:pb-0 md:pt-0 bg-[#F4F7FE] h-full max-h-full overflow-hidden flex flex-col font-sans text-[#2B3674]">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-[#F4F7FE] -mx-4 px-4 py-2 mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all">
-        <div>
-          <h1 className="text-2xl font-bold text-[#2B3674]">Request Management</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Review team logs and submit requests on behalf of employees.
-          </p>
+      <div className="sticky top-0 z-40 bg-[#F4F7FE] -mx-4 px-4 py-2 mb-4 transition-all">
+        <div className="flex flex-col gap-4">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-[#2B3674]">Request Management</h1>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1">
+              Review team logs and submit requests on behalf of employees.
+            </p>
+          </div>
+
+          {!isReceptionist && (
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+              <div
+                className="relative w-full sm:w-[320px] md:w-[380px] lg:w-[420px] shrink-0"
+                ref={employeeDropdownRef}
+              >
+                <button
+                  onClick={() =>
+                    setIsEmployeeDropdownOpen(!isEmployeeDropdownOpen)
+                  }
+                  className={`w-full px-4 py-2.5 rounded-xl bg-white border ${errors.employee ? "border-red-500" : "border-[#E9EDF7]"
+                    } hover:border-[#A3AED0] focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-semibold text-sm text-[#2B3674] flex items-center justify-between shadow-sm`}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <User size={16} className="text-[#4318FF] shrink-0" />
+                    <span className="truncate">
+                      {selectedEmployee
+                        ? `${selectedEmployee.fullName || selectedEmployee.aliasLoginName || "Unknown"} (${selectedEmployee.employeeId || selectedEmployee.id})`
+                        : "Please Select  employee"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {selectedEmployee && (
+                      <span
+                        role="button"
+                        onClick={handleClearEmployee}
+                        className="p-1 rounded-full hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
+                        title="Clear selection"
+                      >
+                        <X size={14} />
+                      </span>
+                    )}
+                    <ChevronDown
+                      size={16}
+                      className={`text-gray-400 transition-transform ${isEmployeeDropdownOpen ? "rotate-180" : ""
+                        }`}
+                    />
+                  </div>
+                </button>
+                {errors.employee && (
+                  <p className="text-red-500 text-xs mt-1 ml-2">
+                    {errors.employee}
+                  </p>
+                )}
+
+                {isEmployeeDropdownOpen && (
+                  <div
+                    className="absolute z-50 w-full mt-2 bg-white rounded-2xl shadow-xl border border-[#E9EDF7] max-h-60 overflow-y-auto"
+                    onScroll={handleScroll}
+                  >
+                    <div className="sticky top-0 bg-white p-2 border-b border-gray-100 z-10">
+                      <div className="relative">
+                        <Search
+                          size={16}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Search by employee ID..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="w-full pl-9 pr-4 py-2 bg-[#F4F7FE] rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#4318FF]/20 text-[#2B3674]"
+                          onClick={(e) => e.stopPropagation()}
+                          autoFocus
+                        />
+                      </div>
+                    </div>
+                    {loadingEmployees && empPage === 1 ? (
+                      <div className="p-4 flex justify-center items-center text-[#4318FF]">
+                        <Loader2 size={20} className="animate-spin" />
+                      </div>
+                    ) : displayedEmployees.length === 0 ? (
+                      <div className="p-4 text-center text-gray-500 text-sm">
+                        No employees found
+                      </div>
+                    ) : (
+                      displayedEmployees.map((emp: any) => (
+                        <button
+                          key={emp.id || emp.employeeId}
+                          onClick={() => {
+                            setSelectedEmployee(emp);
+                            setIsEmployeeDropdownOpen(false);
+                            setErrors((prev) => ({ ...prev, employee: "" }));
+                            setCurrentPage(1);
+                            setSearchTerm("");
+                          }}
+                          className={`w-full px-5 py-3 text-left hover:bg-[#F4F7FE] transition-colors flex items-center gap-3 first:rounded-t-2xl last:rounded-b-2xl ${(selectedEmployee?.employeeId ||
+                              selectedEmployee?.id) === (emp.employeeId || emp.id)
+                              ? "bg-[#F4F7FE] font-bold"
+                              : ""
+                            }`}
+                        >
+                          <User size={18} className="text-[#4318FF]" />
+                          <span className="text-sm text-[#2B3674]">
+                            {emp.fullName || emp.aliasLoginName || "Unknown"} (
+                            {emp.employeeId || emp.id})
+                          </span>
+                        </button>
+                      ))
+                    )}
+                    {loadingEmployees && empPage > 1 && (
+                      <div className="p-2 flex justify-center items-center text-[#4318FF]">
+                        <Loader2 size={16} className="animate-spin" />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto">
+                {applyOptions.map((option, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleOpenModal(option.label)}
+                    className={`group relative overflow-hidden border ${option.border} bg-linear-to-br ${option.cardBg} p-2.5 rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col items-center justify-center gap-2 w-[88px] h-[88px] cursor-pointer shrink-0`}
+                  >
+                    <div
+                      className={`h-10 w-10 rounded-xl flex items-center justify-center text-white shadow-sm transition-transform duration-200 group-hover:scale-105 ${option.iconBg}`}
+                    >
+                      <option.icon size={20} />
+                    </div>
+                    <span className="text-[#2B3674] font-bold text-[10px] leading-tight text-center">
+                      {option.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Scrollable Content Container */}
-      <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar pb-6 space-y-6">
-        {/* Employee Selection Dropdown - hidden for receptionist (view only) */}
-        {!isReceptionist && (
-          <div className="mb-6">
-            <label className="text-sm font-bold text-[#2B3674] mb-2 block">
-              Select Employee
-            </label>
-            <div className="relative" ref={employeeDropdownRef}>
-              <button
-                onClick={() =>
-                  setIsEmployeeDropdownOpen(!isEmployeeDropdownOpen)
-                }
-                className={`w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] border ${errors.employee ? "border-red-500" : "border-[#E9EDF7]"
-                  } hover:border-[#A3AED0] focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-bold text-[#2B3674] flex items-center justify-between`}
-              >
-                <div className="flex items-center gap-3">
-                  <User size={20} className="text-[#4318FF]" />
-                  <span>
-                    {selectedEmployee
-                      ? `${selectedEmployee.fullName || selectedEmployee.aliasLoginName || "Unknown"} (${selectedEmployee.employeeId || selectedEmployee.id})`
-                      : "Select an employee"}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1">
-                  {selectedEmployee && (
-                    <span
-                      role="button"
-                      onClick={handleClearEmployee}
-                      className="p-1 rounded-full hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
-                      title="Clear selection"
-                    >
-                      <X size={16} />
-                    </span>
-                  )}
-                  <ChevronDown
-                    size={20}
-                    className={`text-gray-400 transition-transform ${isEmployeeDropdownOpen ? "rotate-180" : ""
-                      }`}
-                  />
-                </div>
-              </button>
-              {errors.employee && (
-                <p className="text-red-500 text-xs mt-1 ml-2">
-                  {errors.employee}
-                </p>
-              )}
-
-              {isEmployeeDropdownOpen && (
-                <div
-                  className="absolute z-50 w-full mt-2 bg-white rounded-2xl shadow-xl border border-[#E9EDF7] max-h-60 overflow-y-auto"
-                  onScroll={handleScroll}
-                >
-                  <div className="sticky top-0 bg-white p-2 border-b border-gray-100 z-10">
-                    <div className="relative">
-                      <Search
-                        size={16}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Search by employee ID..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 bg-[#F4F7FE] rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#4318FF]/20 text-[#2B3674]"
-                        onClick={(e) => e.stopPropagation()}
-                        autoFocus
-                      />
-                    </div>
-                  </div>
-                  {loadingEmployees && empPage === 1 ? (
-                    <div className="p-4 flex justify-center items-center text-[#4318FF]">
-                      <Loader2 size={20} className="animate-spin" />
-                    </div>
-                  ) : displayedEmployees.length === 0 ? (
-                    <div className="p-4 text-center text-gray-500 text-sm">
-                      No employees found
-                    </div>
-                  ) : (
-                    displayedEmployees.map((emp: any) => (
-                      <button
-                        key={emp.id || emp.employeeId}
-                        onClick={() => {
-                          setSelectedEmployee(emp);
-                          setIsEmployeeDropdownOpen(false);
-                          setErrors((prev) => ({ ...prev, employee: "" }));
-                          // Reset page when employee changes
-                          setCurrentPage(1);
-                          setSearchTerm("");
-                        }}
-                        className={`w-full px-5 py-3 text-left hover:bg-[#F4F7FE] transition-colors flex items-center gap-3 first:rounded-t-2xl last:rounded-b-2xl ${(selectedEmployee?.employeeId ||
-                            selectedEmployee?.id) === (emp.employeeId || emp.id)
-                            ? "bg-[#F4F7FE] font-bold"
-                            : ""
-                          }`}
-                      >
-                        <User size={18} className="text-[#4318FF]" />
-                        <span className="text-sm text-[#2B3674]">
-                          {emp.fullName || emp.aliasLoginName || "Unknown"} (
-                          {emp.employeeId || emp.id})
-                        </span>
-                      </button>
-                    ))
-                  )}
-                  {loadingEmployees && empPage > 1 && (
-                    <div className="p-2 flex justify-center items-center text-[#4318FF]">
-                      <Loader2 size={16} className="animate-spin" />
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Hero Action Card - hidden for receptionist */}
-        {!isReceptionist && (
-          <div className="relative z-30 bg-gradient-to-r from-[#4318FF] to-[#868CFF] rounded-[20px] p-4 md:p-6 mb-8 shadow-xl shadow-blue-500/20 group animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <div className="absolute inset-0 overflow-hidden rounded-[20px]">
-              <div className="absolute top-[-10%] right-[-5%] w-64 h-64 bg-white/10 rounded-full blur-[60px] group-hover:bg-white/[0.12] transition-all duration-700" />
-              <div className="absolute bottom-[-20%] left-[-5%] w-48 h-48 bg-[#4318FF]/20 rounded-full blur-[40px]" />
-            </div>
-
-            <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-4">
-              <div className="flex flex-col gap-2 pl-5 text-center md:text-left">
-                <h2 className="text-white text-[28px] font-bold tracking-[-0.5px] m-0 leading-tight">
-                  Submit a Request
-                </h2>
-                <p className="text-white/85 text-[15px] font-normal m-0 max-w-sm">
-                  Apply leaves, work from home, or client visits on behalf of employees.
-                </p>
-              </div>
-
-              <div className="overflow-hidden w-full md:max-w-md mask-linear-fade">
-                <div className="flex gap-4 w-max animate-marquee pause-on-hover py-2">
-                  {[...Array(3)].map((_, i) => (
-                    <div key={i} className="flex gap-4">
-                      {applyOptions.map((option, idx) => (
-                        <button
-                          key={`${i}-${idx}`}
-                          onClick={() => handleOpenModal(option.label)}
-                          className="group relative bg-white/10 backdrop-blur-md border border-white/20 p-2 rounded-2xl hover:bg-white transition-all duration-300 flex flex-col items-center justify-center gap-2 w-28 h-28 hover:shadow-lg hover:-translate-y-0.5 cursor-pointer"
-                        >
-                          <div
-                            className="p-3 rounded-xl transition-all duration-300"
-                            style={{
-                              backgroundColor: `rgba(${hexToRgb(option.color)}, 0.2)`,
-                              color: "#ffffff",
-                            }}
-                          >
-                            <option.icon
-                              size={28}
-                              className="transition-colors duration-300 group-hover:text-[var(--hover-color)] text-white"
-                              style={
-                                {
-                                  "--hover-color": option.color,
-                                } as React.CSSProperties
-                              }
-                            />
-                          </div>
-                          <span className="text-white font-bold text-xs group-hover:text-[#2B3674] transition-colors whitespace-nowrap">
-                            {option.label}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
+      <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar pb-6 space-y-4">
         {/* Leave Balance Cards - Only show if employee is selected (hidden for receptionist) */}
         {!isReceptionist && selectedEmployee && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 mt-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6 mt-2">
             {[
               {
                 label: LeaveRequestType.LEAVE,
                 key: "leave",
-                color: "from-[#4318FF] to-[#868CFF]",
+                color: "bg-linear-to-r from-[#4318FF] to-[#868CFF]",
                 icon: Calendar,
               },
               {
                 label: "WFH",
                 key: "wfh",
-                color: "from-[#38A169] to-[#68D391]",
+                color: "bg-linear-to-r from-[#38A169] to-[#68D391]",
                 icon: Home,
               },
               {
                 label: WorkLocation.CLIENT_VISIT,
                 key: "clientVisit",
-                color: "from-[#FFB547] to-[#FCCD75]",
+                color: "bg-linear-to-r from-[#FFB547] to-[#FCCD75]",
                 icon: MapPin,
               },
               {
                 label: "Half Day Leave",
                 key: "halfDay",
-                color: "from-[#E31C79] to-[#F78FAD]",
+                color: "bg-linear-to-r from-[#E31C79] to-[#F78FAD]",
                 icon: Clock,
               },
             ].map((config, idx) => {
@@ -1886,25 +1933,31 @@ const AdminLeaveManagement = () => {
               return (
                 <div
                   key={idx}
-                  className="bg-white rounded-[20px] p-6 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] relative overflow-hidden group hover:shadow-lg transition-all"
+                  className="bg-white rounded-2xl p-3.5 shadow-[0px_8px_24px_rgba(112,144,176,0.1)] relative overflow-hidden group hover:shadow-md transition-all"
                 >
                   <div className="relative z-10">
-                    <div className="flex justify-between items-start mb-4">
+                    <div className="flex justify-between items-start mb-2">
                       <div
-                        className={`p-3 rounded-xl bg-linear-to-r ${config.color} text-white shadow-md`}
+                        className={`p-2 rounded-lg ${config.color} text-white shadow-sm`}
                       >
-                        <config.icon size={24} />
+                        <config.icon size={16} />
                       </div>
-                      <span className="text-3xl font-black text-[#2B3674]">
+                      <span className="text-xl font-black text-[#2B3674]">
                         {applied}
                       </span>
                     </div>
-                    <h3 className="text-lg font-bold text-[#2B3674]">
+                    <h3 className="text-sm font-bold text-[#2B3674] leading-tight">
                       {config.label}
                     </h3>
-                    <div className="mt-2 flex items-center justify-between text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                      <span>Approved: {approved}</span>
-                      <span>Rejected: {rejected}</span>
+                    <div className="mt-2 flex flex-col gap-0.5 text-[9px] font-bold uppercase tracking-tight">
+                      <div className="flex items-center gap-1">
+                        <span className="text-[#28a745]">Approved:</span>
+                        <span className="text-[#2B3674]">{approved}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[#dc3545]">Rejected:</span>
+                        <span className="text-[#2B3674]">{rejected}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1921,108 +1974,133 @@ const AdminLeaveManagement = () => {
                 Recent Log History
               </h3>
 
-              <div className="flex flex-wrap gap-3 items-center w-full md:w-auto">
-                <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden flex-1 md:flex-none">
-                  <Select
-                    value={selectedMonth}
-                    onChange={(val) => {
-                      setSelectedMonth(val);
-                      setCurrentPage(1);
-                    }}
-                    className={`w-full md:w-36 h-10 font-bold text-sm ${selectedMonth !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
-                    variant="borderless"
-                    dropdownStyle={{ borderRadius: "16px" }}
-                    suffixIcon={
-                      <ChevronDown
-                        size={18}
-                        className={
-                          selectedMonth !== "All"
-                            ? "text-[#4318FF]"
-                            : "text-gray-400"
-                        }
-                      />
-                    }
-                  >
-                    <Select.Option value="All">All</Select.Option>
-                    {months.map((m) => (
-                      <Select.Option key={m.value} value={m.value}>
-                        {m.label}
-                      </Select.Option>
-                    ))}
-                  </Select>
+              <div className="flex flex-wrap gap-3 items-end w-full md:w-auto">
+                <div className="flex flex-col gap-1.5 flex-1 md:flex-none">
+                  <span className="text-xs font-bold text-gray-400 pl-1">Month</span>
+                  <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
+                    <Select
+                      value={selectedMonth}
+                      onChange={(val) => {
+                        setSelectedMonth(val);
+                        setCurrentPage(1);
+                      }}
+                      className={`w-full md:w-36 h-10 font-bold text-sm ${selectedMonth !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+                      variant="borderless"
+                      dropdownStyle={{ borderRadius: "16px" }}
+                      suffixIcon={
+                        <ChevronDown
+                          size={18}
+                          className={
+                            selectedMonth !== "All"
+                              ? "text-[#4318FF]"
+                              : "text-gray-400"
+                          }
+                        />
+                      }
+                    >
+                      <Select.Option value="All">All Months</Select.Option>
+                      {months.map((m) => (
+                        <Select.Option key={m.value} value={m.value}>
+                          {m.label}
+                        </Select.Option>
+                      ))}
+                    </Select>
+                  </div>
                 </div>
 
-                <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden flex-1 md:flex-none">
-                  <Select
-                    value={selectedYear}
-                    onChange={(val) => {
-                      setSelectedYear(val);
-                      setCurrentPage(1);
-                    }}
-                    className={`w-full md:w-28 h-10 font-bold text-sm ${selectedYear !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
-                    variant="borderless"
-                    dropdownStyle={{ borderRadius: "16px" }}
-                    suffixIcon={
-                      <ChevronDown
-                        size={18}
-                        className={
-                          selectedYear !== "All"
-                            ? "text-[#4318FF]"
-                            : "text-gray-400"
-                        }
-                      />
-                    }
-                  >
-                    {years.map((y) => (
-                      <Select.Option key={y} value={y}>
-                        {y === "All" ? "All" : y}
-                      </Select.Option>
-                    ))}
-                  </Select>
+                <div className="flex flex-col gap-1.5 flex-1 md:flex-none">
+                  <span className="text-xs font-bold text-gray-400 pl-1">Year</span>
+                  <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
+                    <Select
+                      value={selectedYear}
+                      onChange={(val) => {
+                        setSelectedYear(val);
+                        setCurrentPage(1);
+                      }}
+                      className={`w-full md:w-28 h-10 font-bold text-sm ${selectedYear !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+                      variant="borderless"
+                      dropdownStyle={{ borderRadius: "16px" }}
+                      suffixIcon={
+                        <ChevronDown
+                          size={18}
+                          className={
+                            selectedYear !== "All"
+                              ? "text-[#4318FF]"
+                              : "text-gray-400"
+                          }
+                        />
+                      }
+                    >
+                      {years.map((y) => (
+                        <Select.Option key={y} value={y}>
+                          {y === "All" ? "All Years" : y}
+                        </Select.Option>
+                      ))}
+                    </Select>
+                  </div>
                 </div>
 
-                <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden flex-1 md:flex-none">
-                  <Select
-                    value={filterStatus}
-                    onChange={(val) => {
-                      setFilterStatus(val);
-                      setCurrentPage(1);
-                    }}
-                    className={`w-full md:w-40 h-10 font-bold text-sm ${filterStatus !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
-                    variant="borderless"
-                    dropdownStyle={{ borderRadius: "16px" }}
-                    suffixIcon={
+                <div className="flex flex-col gap-1.5 flex-1 md:flex-none">
+                  <span className="text-xs font-bold text-gray-400 pl-1">Status</span>
+                  <div className="relative w-full md:min-w-[240px] lg:min-w-[280px]">
+                    <button
+                      type="button"
+                      onClick={() => setIsStatusOpen(!isStatusOpen)}
+                      className="w-full flex items-center justify-between gap-3 px-4 py-2.5 bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all text-sm font-bold text-[#2B3674]"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Filter
+                          size={16}
+                          className={
+                            filterStatus !== "All"
+                              ? "text-[#4318FF] shrink-0"
+                              : "text-gray-400 shrink-0"
+                          }
+                        />
+                        <span
+                          className={`truncate px-2.5 py-0.5 rounded-full text-xs font-bold border ${filterStatus === "All" ? "bg-gray-50 text-[#475569] border-gray-200" : getStatusColor(filterStatus)}`}
+                        >
+                          {filterStatus === "All" ? "All Status" : filterStatus}
+                        </span>
+                      </div>
                       <ChevronDown
                         size={18}
-                        className={
-                          filterStatus !== "All"
-                            ? "text-[#4318FF]"
-                            : "text-gray-400"
-                        }
+                        className={`shrink-0 text-gray-400 transition-transform duration-300 ${isStatusOpen ? "rotate-180" : ""}`}
                       />
-                    }
-                  >
-                    {[
-                      "All",
-                      LeaveRequestStatus.PENDING,
-                      LeaveRequestStatus.APPROVED,
-                      LeaveRequestStatus.REJECTED,
-                      LeaveRequestStatus.REQUESTING_FOR_CANCELLATION,
-                      LeaveRequestStatus.CANCELLATION_APPROVED,
-                      LeaveRequestStatus.CANCELLATION_REJECTED,
-                      LeaveRequestStatus.REQUESTING_FOR_MODIFICATION,
-                      LeaveRequestStatus.REQUEST_MODIFIED,
-                      LeaveRequestStatus.MODIFICATION_APPROVED,
-                      LeaveRequestStatus.MODIFICATION_CANCELLED,
-                      LeaveRequestStatus.MODIFICATION_REJECTED,
-                      LeaveRequestStatus.CANCELLATION_REVERTED,
-                      LeaveRequestStatus.CANCELLED,
-                    ].map((status) => (
-                      <Select.Option key={status} value={status}>
-                        {status === "All" ? "All" : status}
-                      </Select.Option>
-                    ))}
-                  </Select>
+                    </button>
+
+                    {isStatusOpen && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-40"
+                          onClick={() => setIsStatusOpen(false)}
+                        />
+                        <div className="absolute left-0 mt-2 w-full min-w-full bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-gray-100 p-3 z-50 max-h-72 overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-top-2 duration-200">
+                          <div className="mb-2">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-[#A3AED0]">
+                              Status
+                            </span>
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            {filterStatusOptions.map((status) => (
+                              <button
+                                key={status}
+                                type="button"
+                                onClick={() => {
+                                  setFilterStatus(status);
+                                  setIsStatusOpen(false);
+                                  setCurrentPage(1);
+                                }}
+                                className={`w-full flex items-center justify-center px-3 py-2 rounded-full text-xs font-bold border transition-all text-center ${filterStatusTagClass(status, filterStatus === status)}`}
+                              >
+                                {status === "All" ? "All Status" : status}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 {/* Clear All Button */}
@@ -3122,7 +3200,7 @@ const AdminLeaveManagement = () => {
                 <button
                   onClick={handleSubmit}
                   disabled={loadingRequests || isAutoApproving}
-                  className="flex-1 py-4 rounded-2xl font-bold text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95 transform disabled:opacity-50"
+                  className="flex-1 py-4 rounded-2xl font-bold text-white bg-[#4318FF] hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95 transform disabled:opacity-50"
                 >
                   {loadingRequests || isAutoApproving
                     ? "Submitting..."
@@ -3194,7 +3272,7 @@ const AdminLeaveManagement = () => {
                         );
                         if (req) handleModifyClick(req);
                       }}
-                      className="flex-1 py-3.5 rounded-2xl font-bold text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95 transform tracking-wider flex items-center justify-center gap-2"
+                      className="flex-1 py-3.5 rounded-2xl font-bold text-white bg-[#4318FF] hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95 transform tracking-wider flex items-center justify-center gap-2"
                     >
                       Modify Request
                     </button>
@@ -3265,7 +3343,7 @@ const AdminLeaveManagement = () => {
                     disabled={selectedCancelDates.length === 0}
                     className={`whitespace-nowrap flex-1 sm:flex-none px-6 py-2.5 rounded-xl font-bold transition-all tracking-wider flex items-center justify-center gap-2 ${selectedCancelDates.length === 0
                         ? "text-gray-400 bg-gray-100 cursor-not-allowed"
-                        : "text-white bg-linear-to-r from-[#4318FF] to-[#868CFF] hover:shadow-lg hover:shadow-blue-500/30 active:scale-95 transform"
+                        : "text-white bg-[#4318FF] hover:shadow-lg hover:shadow-blue-500/30 active:scale-95 transform"
                       }`}
                   >
                     Modify Request
