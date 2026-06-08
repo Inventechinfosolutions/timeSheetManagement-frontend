@@ -48,6 +48,7 @@ import {
   Clock,
   ArrowRightLeft,
   ArrowLeft,
+  Building2,
 } from "lucide-react";
 import { message } from "antd";
 import CommonMultipleUploader from "./CommonMultipleUploader";
@@ -66,6 +67,16 @@ const datePickerTheme = {
 const LeaveManagement = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+
+  const normalizeTypeName = (type: string): string => {
+    const t = (type || "").trim();
+    if (t === LeaveRequestType.APPLY_LEAVE || t === LeaveRequestType.LEAVE) return "Leave";
+    if (t === WorkLocation.WORK_FROM_HOME || t === LeaveRequestType.WFH) return "WFH";
+    if (t === WorkLocation.CLIENT_VISIT) return "Client Visit";
+    if (t === WorkLocation.OFFICE) return "Office";
+    if (t === AttendanceStatus.HALF_DAY) return "Half Day";
+    return t;
+  };
   const {
     entities = [],
     totalItems,
@@ -1883,7 +1894,7 @@ const LeaveManagement = () => {
                       }
                       return timeB - timeA;
                     })
-                    .map((item, index) => (
+                    .map((item: any, index: number) => (
                       <tr
                         key={index}
                         className={`group transition-all duration-200 ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"
@@ -1917,33 +1928,38 @@ const LeaveManagement = () => {
                         </td>
                         <td className="py-4 px-4 text-center whitespace-nowrap">
                           <div className="flex items-center justify-center gap-3">
-                            <div
-                              className={`p-2 rounded-full ${item.requestType ===
-                                  LeaveRequestType.APPLY_LEAVE ||
+                            <div className="p-1.5 bg-gray-50 rounded-lg group-hover:bg-white transition-colors">
+                              {(() => {
+                                // Determine icon based on combined activities
+                                const hasWFH =
+                                  item.firstHalf === WorkLocation.WORK_FROM_HOME ||
+                                  item.secondHalf === WorkLocation.WORK_FROM_HOME;
+                                const hasCV =
+                                  item.firstHalf === WorkLocation.CLIENT_VISIT ||
+                                  item.secondHalf === WorkLocation.CLIENT_VISIT;
+                                const hasLeave =
+                                  item.firstHalf === LeaveRequestType.LEAVE ||
+                                  item.secondHalf === LeaveRequestType.LEAVE ||
+                                  item.firstHalf === LeaveRequestType.APPLY_LEAVE ||
+                                  item.secondHalf === LeaveRequestType.APPLY_LEAVE;
+
+                                if (hasWFH && hasLeave)
+                                  return <Home size={16} className="text-green-600" />;
+                                if (hasCV && hasLeave)
+                                  return <MapPin size={16} className="text-orange-600" />;
+                                if (item.requestType === WorkLocation.WORK_FROM_HOME)
+                                  return <Home size={16} className="text-green-600" />;
+                                if (item.requestType === WorkLocation.CLIENT_VISIT)
+                                  return <MapPin size={16} className="text-orange-600" />;
+                                if (
+                                  item.requestType === LeaveRequestType.APPLY_LEAVE ||
                                   item.requestType === LeaveRequestType.LEAVE
-                                  ? "bg-blue-50 text-blue-600"
-                                  : item.requestType ===
-                                    WorkLocation.WORK_FROM_HOME
-                                    ? "bg-green-50 text-green-600"
-                                    : item.requestType ===
-                                      LeaveRequestType.HALF_DAY
-                                      ? "bg-[#E31C79]/10 text-[#E31C79]"
-                                      : "bg-orange-50 text-orange-500"
-                                }`}
-                            >
-                              {item.requestType ===
-                                LeaveRequestType.APPLY_LEAVE ||
-                                item.requestType === LeaveRequestType.LEAVE ? (
-                                <Calendar size={18} />
-                              ) : item.requestType ===
-                                WorkLocation.WORK_FROM_HOME ? (
-                                <Home size={18} />
-                              ) : item.requestType ===
-                                LeaveRequestType.HALF_DAY ? (
-                                <Clock size={18} />
-                              ) : (
-                                <MapPin size={18} />
-                              )}
+                                )
+                                  return <Calendar size={16} className="text-blue-600" />;
+                                if (item.requestType === LeaveRequestType.HALF_DAY)
+                                  return <Calendar size={16} className="text-pink-600" />;
+                                return <Building2 size={16} className="text-gray-600" />;
+                              })()}
                             </div>
                             <div className="flex flex-col">
                               <span className="text-[#2B3674] text-sm font-bold flex items-center gap-2">
@@ -1954,40 +1970,13 @@ const LeaveManagement = () => {
                                     item.firstHalf &&
                                     item.secondHalf
                                   ) {
-                                    const activities = [
-                                      item.firstHalf,
-                                      item.secondHalf,
-                                    ]
-                                      .map((a) =>
-                                        a === LeaveRequestType.APPLY_LEAVE
-                                          ? LeaveRequestType.LEAVE
-                                          : a,
-                                      )
-                                      .filter(
-                                        (a) => a && a !== WorkLocation.OFFICE,
-                                      )
-                                      .filter(
-                                        (value, index, self) =>
-                                          self.indexOf(value) === index,
-                                      );
-
-                                    if (activities.length > 1) {
-                                      // Replace LeaveRequestType.LEAVE with "Half Day Leave" in combined activities
-                                      return activities
-                                        .map((a) =>
-                                          a === LeaveRequestType.LEAVE
-                                            ? "Half Day Leave"
-                                            : a,
-                                        )
-                                        .join(" + ");
-                                    }
-                                    if (activities.length === 1) {
-                                      // For single activity that is LeaveRequestType.LEAVE, show "Half Day Leave"
-                                      return activities[0] ===
-                                        LeaveRequestType.LEAVE
-                                        ? "Half Day Leave"
-                                        : activities[0];
-                                    }
+                                    const first = normalizeTypeName(item.firstHalf);
+                                    const second = normalizeTypeName(item.secondHalf);
+                                    // Map Leave → Half Day Leave in the table display
+                                    const displayFirst = first === "Leave" ? "Half Day Leave" : first;
+                                    const displaySecond = second === "Leave" ? "Half Day Leave" : second;
+                                    if (displayFirst === displaySecond) return displayFirst;
+                                    return `${displayFirst} + ${displaySecond}`;
                                   }
 
                                   // Default display
@@ -2005,7 +1994,7 @@ const LeaveManagement = () => {
                                     LeaveRequestType.HALF_DAY
                                   )
                                     return "Half Day Leave";
-                                  return item.requestType;
+                                  return normalizeTypeName(item.requestType);
                                 })()}
                                 {item.isModified && (
                                   <span className="bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter shadow-sm border border-orange-200">
@@ -2038,35 +2027,18 @@ const LeaveManagement = () => {
                                 item.firstHalf &&
                                 item.secondHalf
                               ) {
-                                const first =
-                                  item.firstHalf ===
-                                    LeaveRequestType.APPLY_LEAVE
-                                    ? LeaveRequestType.LEAVE
-                                    : item.firstHalf;
-                                const second =
-                                  item.secondHalf ===
-                                    LeaveRequestType.APPLY_LEAVE
-                                    ? LeaveRequestType.LEAVE
-                                    : item.secondHalf;
+                                const first = normalizeTypeName(item.firstHalf);
+                                const second = normalizeTypeName(item.secondHalf);
 
-                                if (
-                                  first === second &&
-                                  first !== WorkLocation.OFFICE
-                                ) {
-                                  return HalfDayType.FULL_DAY;
+                                // Both halves same type → Full Day
+                                if (first === second) {
+                                  return AttendanceStatus.FULL_DAY;
                                 }
 
-                                // Filter out Office
-                                const parts = [];
-                                if (first && first !== WorkLocation.OFFICE)
-                                  parts.push(`First Half = ${first}`);
-                                if (second && second !== WorkLocation.OFFICE)
-                                  parts.push(`Second Half = ${second}`);
-
-                                if (parts.length > 0) return parts.join(" & ");
-                                return HalfDayType.FULL_DAY;
+                                // Build "First Half = X & Second Half = Y"
+                                return `First Half = ${first} & Second Half = ${second}`;
                               }
-                              return HalfDayType.FULL_DAY;
+                              return AttendanceStatus.FULL_DAY;
                             })()}
                           </span>
                         </td>

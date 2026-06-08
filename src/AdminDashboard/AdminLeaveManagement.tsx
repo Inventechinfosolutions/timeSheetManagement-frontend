@@ -94,6 +94,16 @@ const datePickerTheme = {
 const AdminLeaveManagement = () => {
   const dispatch = useAppDispatch();
   const { currentUser } = useAppSelector((state) => state.user);
+
+  const normalizeTypeName = (type: string): string => {
+    const t = (type || "").trim();
+    if (t === LeaveRequestType.APPLY_LEAVE || t === LeaveRequestType.LEAVE) return "Leave";
+    if (t === WorkLocation.WORK_FROM_HOME || t === LeaveRequestType.WFH) return "WFH";
+    if (t === WorkLocation.CLIENT_VISIT) return "Client Visit";
+    if (t === WorkLocation.OFFICE) return "Office";
+    if (t === AttendanceStatus.HALF_DAY) return "Half Day";
+    return t;
+  };
   const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
   const {
     entities = [] as LeaveRequest[],
@@ -2213,40 +2223,13 @@ const AdminLeaveManagement = () => {
                                       item.firstHalf &&
                                       item.secondHalf
                                     ) {
-                                      const activities = [
-                                        item.firstHalf,
-                                        item.secondHalf,
-                                      ]
-                                        .map((a) =>
-                                          a === LeaveRequestType.APPLY_LEAVE
-                                            ? LeaveRequestType.LEAVE
-                                            : a,
-                                        )
-                                        .filter(
-                                          (a) => a && a !== WorkLocation.OFFICE,
-                                        )
-                                        .filter(
-                                          (value, index, self) =>
-                                            self.indexOf(value) === index,
-                                        );
-
-                                      if (activities.length > 1) {
-                                        // Replace LeaveRequestType.LEAVE with "Half Day Leave" in combined activities
-                                        return activities
-                                          .map((a) =>
-                                            a === LeaveRequestType.LEAVE
-                                              ? "Half Day Leave"
-                                              : a,
-                                          )
-                                          .join(" + ");
-                                      }
-                                      if (activities.length === 1) {
-                                        // For single activity that is LeaveRequestType.LEAVE, show "Half Day Leave"
-                                        return activities[0] ===
-                                          LeaveRequestType.LEAVE
-                                          ? "Half Day Leave"
-                                          : activities[0];
-                                      }
+                                      const first = normalizeTypeName(item.firstHalf);
+                                      const second = normalizeTypeName(item.secondHalf);
+                                      // Map Leave → Half Day Leave in the table display
+                                      const displayFirst = first === "Leave" ? "Half Day Leave" : first;
+                                      const displaySecond = second === "Leave" ? "Half Day Leave" : second;
+                                      if (displayFirst === displaySecond) return displayFirst;
+                                      return `${displayFirst} + ${displaySecond}`;
                                     }
 
                                     // Default display
@@ -2265,7 +2248,7 @@ const AdminLeaveManagement = () => {
                                       LeaveRequestType.HALF_DAY
                                     )
                                       return "Half Day Leave";
-                                    return item.requestType;
+                                    return normalizeTypeName(item.requestType);
                                   })()}
                                   {item.isModified && (
                                     <span className="bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter shadow-sm border border-orange-200">
@@ -2298,39 +2281,18 @@ const AdminLeaveManagement = () => {
                                     item.firstHalf &&
                                     item.secondHalf
                                   ) {
-                                    const first =
-                                      item.firstHalf ===
-                                        LeaveRequestType.APPLY_LEAVE
-                                        ? LeaveRequestType.LEAVE
-                                        : item.firstHalf;
-                                    const second =
-                                      item.secondHalf ===
-                                        LeaveRequestType.APPLY_LEAVE
-                                        ? LeaveRequestType.LEAVE
-                                        : item.secondHalf;
+                                    const first = normalizeTypeName(item.firstHalf);
+                                    const second = normalizeTypeName(item.secondHalf);
 
-                                    if (
-                                      first === second &&
-                                      first !== WorkLocation.OFFICE
-                                    ) {
-                                      return HalfDayType.FULL_DAY;
+                                    // Both halves same type → Full Day
+                                    if (first === second) {
+                                      return AttendanceStatus.FULL_DAY;
                                     }
 
-                                    // Filter out Office
-                                    const parts = [];
-                                    if (first && first !== WorkLocation.OFFICE)
-                                      parts.push(`First Half = ${first}`);
-                                    if (
-                                      second &&
-                                      second !== WorkLocation.OFFICE
-                                    )
-                                      parts.push(`Second Half = ${second}`);
-
-                                    if (parts.length > 0)
-                                      return parts.join(" & ");
-                                    return HalfDayType.FULL_DAY;
+                                    // Build "First Half = X & Second Half = Y"
+                                    return `First Half = ${first} & Second Half = ${second}`;
                                   }
-                                  return HalfDayType.FULL_DAY;
+                                  return AttendanceStatus.FULL_DAY;
                                 })()}
                               </span>
                             </td>

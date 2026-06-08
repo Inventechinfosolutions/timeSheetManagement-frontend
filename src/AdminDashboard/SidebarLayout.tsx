@@ -449,7 +449,7 @@ const SidebarLayout = ({
           </nav>
 
           {/* Logout Button */}
-          <div className="px-4 pb-6 mt-2 border-t border-white/10 pt-4">
+          <div className="px-4 pb-14 mt-2 border-t border-white/10 pt-4">
             <div className="relative group">
               <button
                 onClick={handleLogout}
@@ -487,7 +487,7 @@ const SidebarLayout = ({
 
         <main
           ref={mainContentRef}
-          className="flex-1 min-h-0 h-full relative custom-scrollbar flex flex-col bg-[#F4F7FE] overflow-y-auto overflow-x-hidden"
+          className="flex-1 min-h-0 h-full relative custom-scrollbar flex flex-col bg-[#F4F7FE] overflow-y-auto overflow-x-hidden pb-10"
         >
           <div className="relative grow shrink-0 flex flex-col">
             {children}

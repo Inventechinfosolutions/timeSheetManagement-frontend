@@ -9,6 +9,7 @@ import {
   updateEntity,
   clearErrorMessage,
 } from "../reducers/employeeDetails.reducer";
+import { authMe } from "../reducers/user.reducer";
 import {
   User,
   Users,
@@ -266,6 +267,10 @@ const EmployeeDetailsView = () => {
         // Refresh the entity with current employee ID
         dispatch(getEntity(employeeId!));
       }
+
+      // Refresh the logged-in user's Redux state so that aliasLoginName
+      // (used in the header / avatar) reflects the updated name immediately.
+      dispatch(authMe());
 
       // Hide success message after 3 seconds
       setTimeout(() => {
