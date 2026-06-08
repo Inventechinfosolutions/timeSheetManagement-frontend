@@ -1011,7 +1011,7 @@ const MyTimesheet = ({
     });
 
     if (payload.length === 0) {
-      message.success("No changes to save");
+      message.success("Timesheet already submitted");
       return;
     }
 
