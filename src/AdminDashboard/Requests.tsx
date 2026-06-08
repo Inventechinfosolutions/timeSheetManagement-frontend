@@ -445,7 +445,7 @@ const Requests = () => {
             rejectCancellationRequest({ id, employeeId: request.employeeId }),
           ).unwrap();
 
-          message.success("Cancellation Rejected");
+          message.error("Cancellation Request Rejected");
 
           // Refresh the list to show new statuses
           dispatch(
@@ -494,14 +494,39 @@ const Requests = () => {
       // [REMOVED] Redundant frontend attendance updates.
       // Synchronization is now handled exclusively by the backend in LeaveRequestsService.updateStatus.
 
-      const statusMessages: Record<string, string> = {
-        [LeaveRequestStatus.APPROVED]: "Request Approved",
-        [LeaveRequestStatus.REJECTED]: "Request Rejected",
-        [LeaveRequestStatus.MODIFICATION_APPROVED]: "Modification Approved",
-        [LeaveRequestStatus.MODIFICATION_REJECTED]: "Modification Rejected",
-        [LeaveRequestStatus.CANCELLATION_APPROVED]: "Cancellation Approved",
-        [LeaveRequestStatus.CANCELLATION_REJECTED]: "Cancellation Rejected",
-      };
+      const typeLabel = getRequestTypeLabel({
+        requestType: confirmModal.requestType,
+        firstHalf: confirmModal.firstHalf,
+        secondHalf: confirmModal.secondHalf,
+        isHalfDay: confirmModal.isHalfDay,
+      });
+
+      let bannerMsg = "";
+      let isSuccess = true;
+      const checkStatus = status as any;
+
+      if (checkStatus === LeaveRequestStatus.APPROVED) {
+        bannerMsg = `${typeLabel} Request Approved`;
+        isSuccess = true;
+      } else if (checkStatus === LeaveRequestStatus.REJECTED) {
+        bannerMsg = `${typeLabel} Request Rejected`;
+        isSuccess = false;
+      } else if (checkStatus === LeaveRequestStatus.CANCELLATION_APPROVED) {
+        bannerMsg = "Cancellation Request Approved";
+        isSuccess = true;
+      } else if (checkStatus === LeaveRequestStatus.CANCELLATION_REJECTED) {
+        bannerMsg = "Cancellation Request Rejected";
+        isSuccess = false;
+      } else if (checkStatus === LeaveRequestStatus.MODIFICATION_APPROVED) {
+        bannerMsg = "Modified Request Approved";
+        isSuccess = true;
+      } else if (checkStatus === LeaveRequestStatus.MODIFICATION_REJECTED) {
+        bannerMsg = "Modified Request Rejected";
+        isSuccess = false;
+      } else {
+        bannerMsg = `Request ${status}`;
+        isSuccess = true;
+      }
 
       // 3. SMART OVERLAP HANDLING (Victim Logic)
       if (status === LeaveRequestStatus.APPROVED) {
@@ -721,7 +746,11 @@ const Requests = () => {
         }
       }
 
-      message.success(statusMessages[status] || `Request ${status}`);
+      if (isSuccess) {
+        message.success(bannerMsg);
+      } else {
+        message.error(bannerMsg);
+      }
 
       // Close modal
       setConfirmModal({
@@ -1131,7 +1160,25 @@ const Requests = () => {
                               {req.fullName || "Unknown"}
                             </p>
                             <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">
-                              {req.employeeId}
+                              {(() => {
+                                const internId = (req as any).internId;
+                                const convDate = (req as any).conversionDate
+                                  ? dayjs((req as any).conversionDate)
+                                  : null;
+                                const leaveDate = req.fromDate
+                                  ? dayjs(req.fromDate)
+                                  : null;
+                                if (
+                                  internId &&
+                                  convDate &&
+                                  convDate.isValid() &&
+                                  leaveDate &&
+                                  leaveDate.isBefore(convDate, "day")
+                                ) {
+                                  return internId;
+                                }
+                                return req.employeeId;
+                              })()}
                             </p>
                           </div>
                         </div>

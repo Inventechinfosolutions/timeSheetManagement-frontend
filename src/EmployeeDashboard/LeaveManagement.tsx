@@ -890,9 +890,39 @@ const LeaveManagement = () => {
 
   useEffect(() => {
     if (submitSuccess) {
-      message.success("Application Submitted: Notification sent to Manager");
+      const isSplit =
+        leaveDurationType === HalfDayType.HALF_DAY ||
+        leaveDurationType === HalfDayType.FIRST_HALF ||
+        leaveDurationType === HalfDayType.SECOND_HALF;
+
+      // Normalize names
+      const normalize = (t: string | null) => {
+        if (!t) return "";
+        const normalized = t.toLowerCase();
+        if (normalized.includes("leave") || normalized.includes("apply_leave")) return "Leave";
+        if (normalized.includes("wfh") || normalized.includes("work_from_home")) return "WFH";
+        if (normalized.includes("client_visit") || normalized.includes("client visit")) return "Client Visit";
+        if (normalized.includes("office")) return "Office";
+        return t;
+      };
+
+      const baseName = normalize(selectedLeaveType);
+      let typeText = "";
+
+      if (isSplit && otherHalfType) {
+        const otherName = normalize(otherHalfType);
+        if (baseName && otherName && baseName !== otherName) {
+          typeText = `${baseName} & ${otherName}`;
+        } else {
+          typeText = baseName || otherName || "Application";
+        }
+      } else {
+        typeText = baseName || "Application";
+      }
+
+      message.success(`${typeText} Request Submitted: Notification sent to Manager`);
     }
-  }, [submitSuccess]);
+  }, [submitSuccess, selectedLeaveType, leaveDurationType, otherHalfType]);
 
   // Fetch master holidays on mount
   useEffect(() => {
@@ -1257,7 +1287,7 @@ const LeaveManagement = () => {
         const msg =
           requestToCancel?.status === LeaveRequestStatus.PENDING
             ? "Dates cancelled successfully"
-            : "Cancellation request submitted successfully";
+            : "Cancellation Request Submitted: Notification";
         message.success(msg);
         setIsCancelDateModalVisible(false);
         refreshData(1, 10);
@@ -1863,7 +1893,27 @@ const LeaveManagement = () => {
                           {item.fullName ||
                             currentUser?.aliasLoginName ||
                             "User"}{" "}
-                          ({item.employeeId})
+                          (
+                            {(() => {
+                              const internId = (item as any).internId || entity?.internId;
+                              const convDate = ((item as any).conversionDate || entity?.conversionDate)
+                                ? dayjs((item as any).conversionDate || entity?.conversionDate)
+                                : null;
+                              const leaveDate = item.fromDate
+                                ? dayjs(item.fromDate)
+                                : null;
+                              if (
+                                internId &&
+                                convDate &&
+                                convDate.isValid() &&
+                                leaveDate &&
+                                leaveDate.isBefore(convDate, "day")
+                              ) {
+                                return internId;
+                              }
+                              return item.employeeId;
+                            })()}
+                          )
                         </td>
                         <td className="py-4 px-4 text-center whitespace-nowrap">
                           <div className="flex items-center justify-center gap-3">
@@ -3408,6 +3458,7 @@ const LeaveManagement = () => {
                     }),
                   ).unwrap();
                   setModifyModal({ isOpen: false, request: null });
+                  message.success("Modification Request Submitted: Notification sent to Manager");
                   setUploadedDocumentKeys([]); // Reset on success
                   if (employeeId) {
                     refreshData();
