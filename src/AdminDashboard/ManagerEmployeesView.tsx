@@ -11,7 +11,11 @@ import {
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { RootState } from "../store";
-import { getAllManagerMappings } from "../reducers/managerMapping.reducer";
+import { getAllManagerMappings, reset as resetMappings } from "../reducers/managerMapping.reducer";
+import {
+  getEntity as getEmployeeEntity,
+  reset as resetEmployeeDetails,
+} from "../reducers/employeeDetails.reducer";
 import { UserStatus } from "../enums";
 
 const ManagerEmployeesView: React.FC = () => {
@@ -24,6 +28,10 @@ const ManagerEmployeesView: React.FC = () => {
     totalItems,
   } = useAppSelector((state: RootState) => state.managerMapping);
 
+  const managerEntity = useAppSelector(
+    (state: RootState) => state.employeeDetails.entity
+  );
+
   // Pagination and Search State
   const [teamSearch, setTeamSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -33,6 +41,26 @@ const ManagerEmployeesView: React.FC = () => {
   const [unfilteredTotal, setUnfilteredTotal] = useState<number>(0);
   const [managerNameState, setManagerNameState] = useState<string>("");
 
+  // Clear cached states and fetch manager details when switching managers (managerId changes)
+  // to prevent displaying a mismatched/stale manager name.
+  useEffect(() => {
+    dispatch(resetMappings());
+    dispatch(resetEmployeeDetails());
+    if (managerId) {
+      dispatch(getEmployeeEntity(managerId));
+    }
+    setManagerNameState("");
+    setUnfilteredTotal(0);
+    setTeamSearch("");
+    setDebouncedSearch("");
+    setTeamPage(1);
+
+    return () => {
+      dispatch(resetMappings());
+      dispatch(resetEmployeeDetails());
+    };
+  }, [managerId, dispatch]);
+
   useEffect(() => {
     if (!debouncedSearch && !loading && totalItems > 0) {
       setUnfilteredTotal(totalItems);
@@ -41,9 +69,29 @@ const ManagerEmployeesView: React.FC = () => {
 
   useEffect(() => {
     if (mappings.length > 0 && !managerNameState) {
-      const name = mappings[0]?.managerName;
-      if (name && name !== managerId) {
-        setManagerNameState(name);
+      // Find the best manager name candidate from all mapping records
+      const names = mappings
+        .map((m: any) => m.managerName)
+        .filter((name: any): name is string => 
+          typeof name === 'string' && 
+          name.trim() !== '' && 
+          name !== managerId
+        );
+
+      if (names.length > 0) {
+        const cleanNames = names.filter((name: string) => {
+          const lower = name.toLowerCase().trim();
+          // Exclude repeated characters like "gggg" or placeholders
+          if (/^(.)\1+$/.test(lower)) return false;
+          if (['test', 'testing', 'admin', 'manager', 'null', 'undefined'].includes(lower)) return false;
+          return true;
+        });
+
+        const bestName = cleanNames.length > 0
+          ? cleanNames.reduce((longest, current) => current.length > longest.length ? current : longest, cleanNames[0])
+          : names[0];
+
+        setManagerNameState(bestName);
       }
     }
   }, [mappings, managerId, managerNameState]);
@@ -71,7 +119,32 @@ const ManagerEmployeesView: React.FC = () => {
     }
   }, [dispatch, managerId, teamPage, debouncedSearch]);
 
-  const managerName = managerNameState || mappings[0]?.managerName || managerId;
+  const managerName = useMemo(() => {
+    if (managerEntity?.fullName) return managerEntity.fullName;
+    if (managerNameState) return managerNameState;
+    if (mappings.length === 0) return managerId;
+
+    const names = mappings
+      .map((m: any) => m.managerName)
+      .filter((name: any): name is string => 
+        typeof name === 'string' && 
+        name.trim() !== '' && 
+        name !== managerId
+      );
+
+    if (names.length === 0) return mappings[0]?.managerName || managerId;
+
+    const cleanNames = names.filter((name: string) => {
+      const lower = name.toLowerCase().trim();
+      if (/^(.)\1+$/.test(lower)) return false;
+      if (['test', 'testing', 'admin', 'manager', 'null', 'undefined'].includes(lower)) return false;
+      return true;
+    });
+
+    return cleanNames.length > 0
+      ? cleanNames.reduce((longest, current) => current.length > longest.length ? current : longest, cleanNames[0])
+      : names[0];
+  }, [managerEntity?.fullName, managerNameState, mappings, managerId]);
 
   return (
     <div className="p-4 md:p-8 bg-[#F4F7FE] font-['DM_Sans',sans-serif]">
@@ -101,7 +174,7 @@ const ManagerEmployeesView: React.FC = () => {
           </div>
           <div>
             <h3 className="text-base font-bold text-[#2B3674] leading-tight">
-              {managerNameState || mappings[0]?.managerName || "Team Details"}
+              {managerName || "Team Details"}
             </h3>
             <p className="text-xs text-[#A3AED0] font-medium mt-1">
               Manager ID: {managerId}
@@ -209,13 +282,12 @@ const ManagerEmployeesView: React.FC = () => {
                         </td>
                         <td className="py-4 pl-4 pr-10 text-center">
                           <span
-                            className={`inline-flex px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider border ${
-                              m.status === UserStatus.ACTIVE
+                            className={`inline-flex px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider border ${m.status === UserStatus.ACTIVE
                                 ? "bg-green-50 text-green-500 border-green-100"
                                 : m.status === UserStatus.INACTIVE
                                   ? "bg-red-50 text-red-500 border-red-100"
                                   : "bg-gray-50 text-gray-500 border-gray-100"
-                            }`}
+                              }`}
                           >
                             {m.status}
                           </span>
