@@ -1161,10 +1161,10 @@ const Requests = () => {
                 <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
                   Submitted Date
                 </th>
-                <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap sticky right-[120px] w-[160px] min-w-[160px] bg-[#4318FF] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)]">
+                <th className="px-3 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap sticky right-[140px] w-[260px] min-w-[260px] max-w-[260px] bg-[#4318FF] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)]">
                   Status
                 </th>
-                <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap sticky right-0 w-[120px] min-w-[120px] bg-[#4318FF] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)]">
+                <th className="px-3 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap sticky right-0 w-[140px] min-w-[140px] max-w-[140px] bg-[#4318FF] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)]">
                   Actions
                 </th>
               </tr>
@@ -1421,7 +1421,7 @@ const Requests = () => {
                             : "N/A"}
                       </td>
                       <td
-                        className={`py-4 px-4 text-center sticky right-[120px] w-[160px] min-w-[160px] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}
+                        className={`py-4 px-3 text-center sticky right-[140px] w-[260px] min-w-[260px] max-w-[260px] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}
                       >
                         <span
                           className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all inline-flex items-center gap-1.5 whitespace-nowrap ${getStatusColor(req.status)}`}
@@ -1454,9 +1454,9 @@ const Requests = () => {
                         </span>
                       </td>
                       <td
-                        className={`py-4 px-4 sticky right-0 w-[120px] min-w-[120px] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}
+                        className={`py-4 px-3 sticky right-0 w-[140px] min-w-[140px] max-w-[140px] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}
                       >
-                        <div className="flex items-center justify-center gap-3">
+                        <div className="flex items-center justify-center gap-2">
                           <button
                             onClick={async () => {
                               try {
@@ -1514,10 +1514,10 @@ const Requests = () => {
                                 );
                               }
                             }}
-                            className="p-2 text-blue-600 bg-blue-50/50 hover:bg-blue-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-blue-200 active:scale-90"
+                            className="p-1.5 text-blue-600 bg-blue-50/50 hover:bg-blue-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-blue-200 active:scale-90"
                             title="View Details"
                           >
-                            <Eye size={20} />
+                            <Eye size={18} />
                           </button>
                           {!isReceptionist &&
                             req.status === LeaveRequestStatus.PENDING && (
@@ -1531,10 +1531,10 @@ const Requests = () => {
                                       req,
                                     )
                                   }
-                                  className="p-2 text-green-600 bg-green-50/50 hover:bg-green-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-green-200 active:scale-90"
+                                  className="p-1.5 text-green-600 bg-green-50/50 hover:bg-green-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-green-200 active:scale-90"
                                   title="Approve"
                                 >
-                                  <CheckCircle size={20} />
+                                  <CheckCircle size={18} />
                                 </button>
                                 <button
                                   onClick={() =>
@@ -1545,10 +1545,10 @@ const Requests = () => {
                                       req,
                                     )
                                   }
-                                  className="p-2 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
+                                  className="p-1.5 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
                                   title="Reject"
                                 >
-                                  <XCircle size={20} />
+                                  <XCircle size={18} />
                                 </button>
                               </>
                             )}
@@ -1565,10 +1565,10 @@ const Requests = () => {
                                       req,
                                     )
                                   }
-                                  className="p-2 text-green-600 bg-green-50/50 hover:bg-green-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-green-200 active:scale-90"
+                                  className="p-1.5 text-green-600 bg-green-50/50 hover:bg-green-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-green-200 active:scale-90"
                                   title="Approve Cancellation"
                                 >
-                                  <CheckCircle size={20} />
+                                  <CheckCircle size={18} />
                                 </button>
                                 <button
                                   onClick={() =>
@@ -1579,10 +1579,10 @@ const Requests = () => {
                                       req,
                                     )
                                   }
-                                  className="p-2 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
+                                  className="p-1.5 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
                                   title="Reject Cancellation"
                                 >
-                                  <XCircle size={20} />
+                                  <XCircle size={18} />
                                 </button>
                               </>
                             )}
@@ -1599,10 +1599,10 @@ const Requests = () => {
                                       req,
                                     )
                                   }
-                                  className="p-2 text-green-600 bg-green-50/50 hover:bg-green-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-green-200 active:scale-90"
+                                  className="p-1.5 text-green-600 bg-green-50/50 hover:bg-green-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-green-200 active:scale-90"
                                   title="Approve Modification"
                                 >
-                                  <CheckCircle size={20} />
+                                  <CheckCircle size={18} />
                                 </button>
                                 <button
                                   onClick={() =>
@@ -1613,10 +1613,10 @@ const Requests = () => {
                                       req,
                                     )
                                   }
-                                  className="p-2 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
+                                  className="p-1.5 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
                                   title="Reject Modification"
                                 >
-                                  <XCircle size={20} />
+                                  <XCircle size={18} />
                                 </button>
                               </>
                             )}
@@ -1895,7 +1895,7 @@ const Requests = () => {
                   <div className="flex flex-wrap gap-4 flex-1 min-w-0">
                     <div className="flex-1 min-w-[130px] space-y-2">
                       <label className="text-base font-bold text-[#1B2559] ml-1">
-                        Start Date
+                        From
                       </label>
                       <div className="w-full px-5 py-4 rounded-[20px] bg-[#F4F7FE] font-bold text-[#1B2559] text-center">
                         {dayjs(selectedRequest.fromDate).format("DD-MM-YYYY")}
@@ -1903,7 +1903,7 @@ const Requests = () => {
                     </div>
                     <div className="flex-1 min-w-[130px] space-y-2">
                       <label className="text-base font-bold text-[#1B2559] ml-1">
-                        End Date
+                        To
                       </label>
                       <div className="w-full px-5 py-4 rounded-[20px] bg-[#F4F7FE] font-bold text-[#1B2559] text-center">
                         {dayjs(selectedRequest.toDate).format("DD-MM-YYYY")}
@@ -1913,7 +1913,7 @@ const Requests = () => {
 
                   <div className="flex items-center gap-4 mb-3">
                     <span className="text-sm font-bold text-[#1B2559] whitespace-nowrap">
-                      Total Days:
+                      Duration:
                     </span>
                     <div className="bg-white px-6 py-3 rounded-[16px] border border-[#E0E7FF] min-w-[100px] text-center">
                       <span className="text-[#4318FF] font-black">

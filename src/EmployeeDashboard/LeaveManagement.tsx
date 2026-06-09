@@ -1923,10 +1923,10 @@ const LeaveManagement = () => {
                   <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
                     Submitted
                   </th>
-                  <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap sticky right-[120px] w-[160px] min-w-[160px] bg-[#4318FF] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)]">
+                  <th className="px-3 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap sticky right-[140px] w-[260px] min-w-[260px] max-w-[260px] bg-[#4318FF] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)]">
                     Status
                   </th>
-                  <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap sticky right-0 w-[120px] min-w-[120px] bg-[#4318FF] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)]">
+                  <th className="px-3 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap sticky right-0 w-[140px] min-w-[140px] max-w-[140px] bg-[#4318FF] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)]">
                     Actions
                   </th>
                 </tr>
@@ -1974,25 +1974,25 @@ const LeaveManagement = () => {
                             currentUser?.aliasLoginName ||
                             "User"}{" "}
                           (
-                            {(() => {
-                              const internId = (item as any).internId || entity?.internId;
-                              const convDate = ((item as any).conversionDate || entity?.conversionDate)
-                                ? dayjs((item as any).conversionDate || entity?.conversionDate)
-                                : null;
-                              const leaveDate = item.fromDate
-                                ? dayjs(item.fromDate)
-                                : null;
-                              if (
-                                internId &&
-                                convDate &&
-                                convDate.isValid() &&
-                                leaveDate &&
-                                leaveDate.isBefore(convDate, "day")
-                              ) {
-                                return internId;
-                              }
-                              return item.employeeId;
-                            })()}
+                          {(() => {
+                            const internId = (item as any).internId || entity?.internId;
+                            const convDate = ((item as any).conversionDate || entity?.conversionDate)
+                              ? dayjs((item as any).conversionDate || entity?.conversionDate)
+                              : null;
+                            const leaveDate = item.fromDate
+                              ? dayjs(item.fromDate)
+                              : null;
+                            if (
+                              internId &&
+                              convDate &&
+                              convDate.isValid() &&
+                              leaveDate &&
+                              leaveDate.isBefore(convDate, "day")
+                            ) {
+                              return internId;
+                            }
+                            return item.employeeId;
+                          })()}
                           )
                         </td>
                         <td className="py-4 px-4 text-center whitespace-nowrap">
@@ -2135,7 +2135,7 @@ const LeaveManagement = () => {
                               : "-"}
                         </td>
                         <td
-                          className={`py-4 px-4 text-center sticky right-[120px] w-[160px] min-w-[160px] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}
+                          className={`py-4 px-3 text-center sticky right-[140px] w-[260px] min-w-[260px] max-w-[260px] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}
                         >
                           <span
                             className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all whitespace-nowrap
@@ -2201,25 +2201,25 @@ const LeaveManagement = () => {
                           </span>
                         </td>
                         <td
-                          className={`py-4 px-4 sticky right-0 w-[120px] min-w-[120px] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}
+                          className={`py-4 px-3 sticky right-0 w-[140px] min-w-[140px] max-w-[140px] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}
                         >
-                          <div className="flex items-center justify-center gap-3">
+                          <div className="flex items-center justify-center gap-2">
                             <button
                               onClick={() => handleViewApplication(item)}
-                              className="p-2 text-blue-600 bg-blue-50/50 hover:bg-blue-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-blue-200 active:scale-90"
+                              className="p-1.5 text-blue-600 bg-blue-50/50 hover:bg-blue-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-blue-200 active:scale-90"
                               title="View Application"
                             >
-                              <Eye size={20} />
+                              <Eye size={18} />
                             </button>
                             {(item.status === LeaveRequestStatus.PENDING ||
                               item.status === LeaveRequestStatus.APPROVED) &&
                               isCancellationAllowed(item.toDate) ? (
                               <button
                                 onClick={() => handleCancel(item.id)}
-                                className="p-2 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
+                                className="p-1.5 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
                                 title="Cancel Request"
                               >
-                                <XCircle size={20} />
+                                <XCircle size={18} />
                               </button>
                             ) : item.status ===
                               LeaveRequestStatus.REQUESTING_FOR_CANCELLATION &&
@@ -2229,10 +2229,10 @@ const LeaveManagement = () => {
                                   e.stopPropagation();
                                   handleUndoCancellation(item);
                                 }}
-                                className="p-2 text-amber-600 bg-amber-50/50 hover:bg-amber-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-amber-200 active:scale-90"
+                                className="p-1.5 text-amber-600 bg-amber-50/50 hover:bg-amber-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-amber-200 active:scale-90"
                                 title="Undo Cancellation"
                               >
-                                <RotateCcw size={20} />
+                                <RotateCcw size={18} />
                               </button>
                             ) : item.status ===
                               LeaveRequestStatus.REQUESTING_FOR_MODIFICATION ? (
@@ -2241,10 +2241,10 @@ const LeaveManagement = () => {
                                   e.stopPropagation();
                                   setUndoModal({ isOpen: true, request: item });
                                 }}
-                                className="p-2 text-orange-600 bg-orange-50/50 hover:bg-orange-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-orange-200 active:scale-90"
+                                className="p-1.5 text-orange-600 bg-orange-50/50 hover:bg-orange-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-orange-200 active:scale-90"
                                 title="Undo Modification"
                               >
-                                <RotateCcw size={20} />
+                                <RotateCcw size={18} />
                               </button>
                             ) : (
                               <div className="w-[18px]" />
@@ -2799,8 +2799,8 @@ const LeaveManagement = () => {
                     rows={3}
                     placeholder="Please provide details about your request..."
                     className={`w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] border ${errors.description
-                        ? "border-red-500"
-                        : "border-transparent"
+                      ? "border-red-500"
+                      : "border-transparent"
                       } focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium text-[#2B3674] placeholder:font-medium placeholder:text-gray-400 resize-none`}
                     value={formData.description}
                     onChange={(e) => {
@@ -2974,8 +2974,8 @@ const LeaveManagement = () => {
               onClick={executeCancel}
               disabled={isCancelling}
               className={`px-8 py-2.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${isCancelling
-                  ? "bg-red-400 cursor-not-allowed opacity-80"
-                  : "bg-red-500 hover:bg-red-600 shadow-red-200 transform active:scale-95"
+                ? "bg-red-400 cursor-not-allowed opacity-80"
+                : "bg-red-500 hover:bg-red-600 shadow-red-200 transform active:scale-95"
                 }`}
             >
               {isCancelling ? (
@@ -3011,103 +3011,91 @@ const LeaveManagement = () => {
       </Modal>
 
       {/* Undo Confirmation Modal */}
-      <Modal
-        open={undoModal.isOpen}
-        onCancel={() =>
-          !isUndoing && setUndoModal({ isOpen: false, request: null })
-        }
-        footer={[
-          <button
-            key="back"
-            disabled={isUndoing}
-            className="px-6 py-2.5 rounded-xl font-bold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 transition-colors mr-3"
-            onClick={() => setUndoModal({ isOpen: false, request: null })}
-          >
-            {undoModal.request?.status ===
-              LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
-              ? "Keep Request"
-              : "Keep as is"}
-          </button>,
-          <button
-            key="submit"
-            disabled={isUndoing}
-            className={`px-8 py-2.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 inline-flex ${isUndoing
-                ? "bg-indigo-400 cursor-not-allowed"
-                : "bg-[#4318FF] hover:bg-indigo-700 shadow-indigo-200 transform active:scale-95"
-              }`}
-            onClick={
-              undoModal.request?.status ===
-                LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
-                ? executeUndoModification
-                : executeUndo
-            }
-          >
-            {isUndoing ? (
-              <>
-                <Loader2 className="animate-spin" size={18} />
+      {undoModal.isOpen && (
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-[#2B3674]/40 backdrop-blur-sm transition-opacity"
+            onClick={() => !isUndoing && setUndoModal({ isOpen: false, request: null })}
+          />
+          <div className="relative w-full max-w-md bg-white rounded-[24px] overflow-hidden shadow-[0px_20px_40px_rgba(0,0,0,0.1)] animate-in fade-in zoom-in duration-200 transform">
+            <div className="p-8 text-center">
+              <div className="mx-auto w-16 h-16 rounded-full bg-blue-50 text-[#4318FF] flex items-center justify-center mb-6">
+                <RotateCcw size={32} />
+              </div>
+
+              <h3 className="text-2xl font-black text-[#2B3674] mb-2">
                 {undoModal.request?.status ===
                   LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
-                  ? "Withdrawing..."
-                  : "Reverting..."}
-              </>
-            ) : (
-              undoModal.request?.status ===
-                LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
-                ? "Withdraw Request"
-                : "Yes, Revert it"
-            )}
-          </button>,
-        ]}
-        centered
-        closable={!isUndoing}
-      >
-        <div className="flex items-center gap-4 mb-4">
-          <div
-            className={`flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-2xl border ${undoModal.request?.status ===
-                LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
-                ? "bg-orange-50 border-orange-100"
-                : "bg-indigo-50 border-indigo-100"
-              }`}
-          >
-            <RotateCcw
-              className={`h-6 w-6 ${undoModal.request?.status ===
-                  LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
-                  ? "text-orange-600"
-                  : "text-[#4318FF]"
-                }`}
-            />
+                  ? "Withdraw Modification"
+                  : "Revert Cancellation"}
+              </h3>
+              <p className="text-gray-500 font-medium leading-relaxed mb-8">
+                {undoModal.request?.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION ? (
+                  <>
+                    Are you sure you want to withdraw your modification request for{" "}
+                    <span className="text-[#2B3674] font-bold">
+                      "{undoModal.request?.title}"
+                    </span>
+                    ? This will cancel your pending changes.
+                  </>
+                ) : (
+                  <>
+                    Are you sure you want to revert the cancellation for{" "}
+                    <span className="text-[#2B3674] font-bold">
+                      "{undoModal.request?.title}"
+                    </span>
+                    ? This will restore your original request status to{" "}
+                    <span className="text-green-600 font-bold uppercase tracking-wider">
+                      Approved
+                    </span>
+                    .
+                  </>
+                )}
+              </p>
+
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setUndoModal({ isOpen: false, request: null })}
+                  disabled={isUndoing}
+                  className="flex-1 py-3.5 rounded-xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
+                >
+                  {undoModal.request?.status ===
+                    LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
+                    ? "Keep Request"
+                    : "No"}
+                </button>
+                <button
+                  onClick={
+                    undoModal.request?.status ===
+                      LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
+                      ? executeUndoModification
+                      : executeUndo
+                  }
+                  disabled={isUndoing}
+                  className="flex-1 py-3.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed transform active:scale-95 bg-[#4318FF] hover:bg-indigo-700 shadow-indigo-200 active:scale-95"
+                >
+                  {isUndoing ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin" />
+                      <span>
+                        {undoModal.request?.status ===
+                          LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
+                          ? "Withdrawing..."
+                          : "Reverting..."}
+                      </span>
+                    </>
+                  ) : (
+                    undoModal.request?.status ===
+                      LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
+                      ? "Withdraw Request"
+                      : "Yes, Revert it"
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
-          <h3 className="text-xl leading-8 font-extrabold text-[#1B2559]">
-            {undoModal.request?.status ===
-              LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
-              ? "Withdraw Modification"
-              : "Revert Cancellation"}
-          </h3>
         </div>
-        <p className="text-sm text-gray-500 leading-relaxed font-medium">
-          {undoModal.request?.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION ? (
-            <>
-              Are you sure you want to withdraw your modification request for{" "}
-              <span className="text-[#1B2559] font-bold">
-                "{undoModal.request?.title}"
-              </span>
-              ? This will cancel your pending changes.
-            </>
-          ) : (
-            <>
-              Are you sure you want to revert the cancellation for{" "}
-              <span className="text-[#1B2559] font-bold">
-                "{undoModal.request?.title}"
-              </span>
-              ? This will restore your original request status to{" "}
-              <span className="text-green-600 font-bold uppercase tracking-wider">
-                Approved
-              </span>
-              .
-            </>
-          )}
-        </p>
-      </Modal>
+      )}
 
       {/* Modification Modal */}
       <Modal
@@ -3206,15 +3194,15 @@ const LeaveManagement = () => {
                       setModifyErrors({ ...modifyErrors, title: "" });
                     }}
                     className={`w-full px-5 py-3 rounded-xl border text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400 ${modifyErrors.title
-                        ? "border-red-500"
-                        : modifyFormData.firstHalf ===
-                          (modifyModal.request?.firstHalf ||
-                            modifyModal.request?.requestType) &&
-                          modifyFormData.secondHalf ===
-                          (modifyModal.request?.secondHalf ||
-                            modifyModal.request?.requestType)
-                          ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
-                          : "bg-white border-gray-200"
+                      ? "border-red-500"
+                      : modifyFormData.firstHalf ===
+                        (modifyModal.request?.firstHalf ||
+                          modifyModal.request?.requestType) &&
+                        modifyFormData.secondHalf ===
+                        (modifyModal.request?.secondHalf ||
+                          modifyModal.request?.requestType)
+                        ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
+                        : "bg-white border-gray-200"
                       }`}
                     placeholder="e.g. Annual Vacation"
                     disabled={
@@ -3281,15 +3269,15 @@ const LeaveManagement = () => {
                 }}
                 rows={3}
                 className={`w-full px-5 py-3 border rounded-xl text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-medium text-[#2B3674] placeholder:text-gray-400 resize-none ${modifyErrors.description
-                    ? "border-red-500"
-                    : modifyFormData.firstHalf ===
-                      (modifyModal.request?.firstHalf ||
-                        modifyModal.request?.requestType) &&
-                      modifyFormData.secondHalf ===
-                      (modifyModal.request?.secondHalf ||
-                        modifyModal.request?.requestType)
-                      ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
-                      : "bg-white border-gray-200"
+                  ? "border-red-500"
+                  : modifyFormData.firstHalf ===
+                    (modifyModal.request?.firstHalf ||
+                      modifyModal.request?.requestType) &&
+                    modifyFormData.secondHalf ===
+                    (modifyModal.request?.secondHalf ||
+                      modifyModal.request?.requestType)
+                    ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
+                    : "bg-white border-gray-200"
                   }`}
                 placeholder="Please provide details about your request..."
                 disabled={
@@ -3371,13 +3359,13 @@ const LeaveManagement = () => {
             {/* Document Upload Section */}
             <div
               className={`mt-4 ${modifyFormData.firstHalf ===
-                  (modifyModal.request?.firstHalf ||
-                    modifyModal.request?.requestType) &&
-                  modifyFormData.secondHalf ===
-                  (modifyModal.request?.secondHalf ||
-                    modifyModal.request?.requestType)
-                  ? "opacity-50 pointer-events-none"
-                  : ""
+                (modifyModal.request?.firstHalf ||
+                  modifyModal.request?.requestType) &&
+                modifyFormData.secondHalf ===
+                (modifyModal.request?.secondHalf ||
+                  modifyModal.request?.requestType)
+                ? "opacity-50 pointer-events-none"
+                : ""
                 }`}
             >
               <label className="block text-sm font-bold text-[#2B3674] mb-2">
@@ -3514,8 +3502,8 @@ const LeaveManagement = () => {
               }}
               disabled={isModifying}
               className={`px-8 py-2.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${isModifying
-                  ? "bg-blue-400 cursor-not-allowed"
-                  : "bg-blue-500 hover:bg-blue-600 shadow-blue-200 transform active:scale-95"
+                ? "bg-blue-400 cursor-not-allowed"
+                : "bg-blue-500 hover:bg-blue-600 shadow-blue-200 transform active:scale-95"
                 }`}
             >
               {isModifying ? (
@@ -3593,8 +3581,8 @@ const LeaveManagement = () => {
                     }}
                     disabled={selectedCancelDates.length === 0}
                     className={`whitespace-nowrap flex-1 sm:flex-none px-6 py-2.5 rounded-xl font-bold transition-all transform active:scale-95 tracking-wider flex items-center justify-center gap-2 ${selectedCancelDates.length === 0
-                        ? "text-gray-400 bg-gray-100 cursor-not-allowed"
-                        : "text-white bg-[#4318FF] hover:shadow-lg hover:shadow-blue-500/30"
+                      ? "text-gray-400 bg-gray-100 cursor-not-allowed"
+                      : "text-white bg-[#4318FF] hover:shadow-lg hover:shadow-blue-500/30"
                       }`}
                   >
                     Modify Request
@@ -3606,10 +3594,10 @@ const LeaveManagement = () => {
               onClick={handleConfirmDateCancel}
               disabled={selectedCancelDates.length === 0 || isCancelling}
               className={`whitespace-nowrap w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${selectedCancelDates.length === 0
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : isCancelling
-                    ? "bg-red-400 cursor-not-allowed opacity-80"
-                    : "bg-red-500 hover:bg-red-600 shadow-red-200 transform active:scale-95"
+                ? "bg-gray-400 cursor-not-allowed"
+                : isCancelling
+                  ? "bg-red-400 cursor-not-allowed opacity-80"
+                  : "bg-red-500 hover:bg-red-600 shadow-red-200 transform active:scale-95"
                 }`}
             >
               {isCancelling ? (
@@ -3680,10 +3668,10 @@ const LeaveManagement = () => {
                   <div
                     key={item.date}
                     className={`flex items-center justify-between p-3 rounded-lg border transition-all ${!item.isCancellable
-                        ? "bg-gray-50 border-gray-100 opacity-60"
-                        : selectedCancelDates.includes(item.date)
-                          ? "bg-red-50 border-red-200"
-                          : "bg-white border-gray-200 hover:border-blue-300"
+                      ? "bg-gray-50 border-gray-100 opacity-60"
+                      : selectedCancelDates.includes(item.date)
+                        ? "bg-red-50 border-red-200"
+                        : "bg-white border-gray-200 hover:border-blue-300"
                       }`}
                   >
                     <div className="flex items-center gap-3">
