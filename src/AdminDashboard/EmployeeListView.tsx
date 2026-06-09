@@ -1428,11 +1428,21 @@ ${
                           required
                         >
                           <option value="">Select Role</option>
-                          {roles.map((r) => (
-                            <option key={r} value={r}>
-                              {r}
-                            </option>
-                          ))}
+                          {roles
+                            .filter((r) => {
+                              const normalized = r.toUpperCase().trim();
+                              return (
+                                normalized !== "ADMIN" &&
+                                normalized !== "RECEPTIONIST" &&
+                                normalized !== "TEAM LEAD" &&
+                                normalized !== "TEAMLEAD"
+                              );
+                            })
+                            .map((r) => (
+                              <option key={r} value={r}>
+                                {r}
+                              </option>
+                            ))}
                         </select>
                         <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                         <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">

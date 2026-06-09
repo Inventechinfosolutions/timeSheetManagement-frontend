@@ -16,7 +16,7 @@ const Footer = () => {
           />
 
           <p className="footer-small">
-            &copy; {currentYear} worksphere Powred by{" "}
+            &copy; {currentYear} Worksphere Powered by{" "}
             <a
               href="https://inventechinfo.com/"
               target="_blank"
