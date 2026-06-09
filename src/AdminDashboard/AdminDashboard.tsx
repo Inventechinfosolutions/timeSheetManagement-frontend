@@ -8,7 +8,6 @@ import { useAppDispatch, useAppSelector } from "../hooks";
 import {
   Users,
   Search,
-  Clock,
   TrendingUp,
   Filter,
   ChevronDown,
@@ -298,30 +297,6 @@ const AdminDashboard = () => {
       icon: Users,
       color: "bg-linear-to-r from-[#4318FF] to-[#868CFF]",
     },
-    {
-      label: "Departments",
-      value: dashboardStats.departmentCount,
-      sub: "With active staff",
-      icon: Building2,
-      color: "bg-linear-to-r from-[#38A169] to-[#68D391]",
-    },
-    {
-      label: "Top Department",
-      value: dashboardStats.topDept?.name || "—",
-      sub: dashboardStats.topDept
-        ? `${dashboardStats.topDept.count} employees`
-        : "No data",
-      icon: TrendingUp,
-      color: "bg-linear-to-r from-[#FFB547] to-[#FCCD75]",
-      isText: true,
-    },
-    {
-      label: "Avg per Department",
-      value: dashboardStats.avgPerDept,
-      sub: "Employees / dept",
-      icon: Clock,
-      color: "bg-linear-to-r from-[#6AD2FF] to-[#4318FF]",
-    },
   ];
 
   const chartColors = [
@@ -353,21 +328,14 @@ const AdminDashboard = () => {
             })}
           </p>
         </div>
-        <button
-          onClick={() => setIsExportModalOpen(true)}
-          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-[#4318FF] text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all active:scale-95 self-start sm:self-auto"
-        >
-          <Download size={16} />
-          <span>Export Reports</span>
-        </button>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+      <div className="flex flex-wrap gap-4 mb-6">
         {statCards.map((card) => (
           <div
             key={card.label}
-            className="bg-white rounded-2xl p-4 shadow-[0px_8px_24px_rgba(112,144,176,0.1)] hover:shadow-md transition-all group"
+            className="w-full sm:w-[320px] bg-white rounded-2xl p-4 shadow-[0px_8px_24px_rgba(112,144,176,0.1)] hover:shadow-md transition-all group"
           >
             <div className="flex justify-between items-start mb-3">
               <div
@@ -399,9 +367,9 @@ const AdminDashboard = () => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
+      <div className="mb-10">
         {/* Donut Chart */}
-        <div className="lg:col-span-2 bg-white p-5 md:p-6 rounded-2xl shadow-[0px_8px_24px_rgba(112,144,176,0.1)] border border-gray-100/80">
+        <div className="max-w-3xl bg-white p-5 md:p-6 rounded-2xl shadow-[0px_8px_24px_rgba(112,144,176,0.1)] border border-gray-100/80">
           <div className="flex items-center gap-3 mb-4">
             <div className="p-2 rounded-lg bg-[#F4F7FE] text-[#4318FF]">
               <Building2 size={18} />
@@ -430,59 +398,6 @@ const AdminDashboard = () => {
               </div>
             )}
           </div>
-        </div>
-
-        {/* Department List */}
-        <div className="bg-white p-5 md:p-6 rounded-2xl shadow-[0px_8px_24px_rgba(112,144,176,0.1)] border border-gray-100/80 flex flex-col">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 rounded-lg bg-[#F4F7FE] text-[#4318FF]">
-              <Users size={18} />
-            </div>
-            <div>
-              <h4 className="text-base font-bold text-[#2B3674]">
-                By Department
-              </h4>
-              <p className="text-xs text-gray-400">Ranked by headcount</p>
-            </div>
-          </div>
-          <div className="flex-1 space-y-2 overflow-y-auto custom-scrollbar max-h-[360px]">
-            {dashboardStats.deptBreakdown.length > 0 ? (
-              dashboardStats.deptBreakdown.map((dept, idx) => (
-                <div
-                  key={dept.name}
-                  className="flex items-center justify-between gap-3 p-2.5 rounded-xl hover:bg-[#F4F7FE]/60 transition-colors"
-                >
-                  <span
-                    className="px-3 py-1.5 rounded-full text-xs font-bold border truncate max-w-[180px]"
-                    style={{
-                      backgroundColor: `${chartColors[idx % chartColors.length]}15`,
-                      color: chartColors[idx % chartColors.length],
-                      borderColor: `${chartColors[idx % chartColors.length]}30`,
-                    }}
-                  >
-                    {dept.name}
-                  </span>
-                  <span className="text-sm font-black text-[#2B3674] shrink-0">
-                    {dept.count}
-                  </span>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-gray-400 text-center py-8">
-                No departments found
-              </p>
-            )}
-          </div>
-          {dashboardStats.deptBreakdown.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center">
-              <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">
-                Total
-              </span>
-              <span className="text-lg font-black text-[#4318FF]">
-                {dashboardStats.totalEmployees}
-              </span>
-            </div>
-          )}
         </div>
       </div>
 

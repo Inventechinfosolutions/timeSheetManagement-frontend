@@ -1729,7 +1729,7 @@ const AdminLeaveManagement = () => {
       return (
         <button
           onClick={() => handleCancel(item.id)}
-          className="p-2 text-red-500 bg-red-50/50 hover:bg-red-500 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
+          className="p-1.5 text-red-500 bg-red-50/50 hover:bg-red-500 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
           title="Cancel Request"
         >
           <XCircle size={18} />
@@ -1739,7 +1739,7 @@ const AdminLeaveManagement = () => {
     return (
       <button
         disabled
-        className="p-2 text-gray-300 bg-gray-50 rounded-xl cursor-not-allowed"
+        className="p-1.5 text-gray-300 bg-gray-50 rounded-xl cursor-not-allowed"
         title="Cancellation unavailable (Deadline: 06:30 PM same day)"
       >
         <XCircle size={18} />
@@ -2146,10 +2146,10 @@ const AdminLeaveManagement = () => {
                       <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
                         Submitted
                       </th>
-                      <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap sticky right-[120px] w-[160px] min-w-[160px] bg-[#4318FF] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)]">
+                      <th className="px-3 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap sticky right-[140px] w-[260px] min-w-[260px] max-w-[260px] bg-[#4318FF] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)]">
                         Status
                       </th>
-                      <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap sticky right-0 w-[120px] min-w-[120px] bg-[#4318FF] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)]">
+                      <th className="px-3 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap sticky right-0 w-[140px] min-w-[140px] max-w-[140px] bg-[#4318FF] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)]">
                         Actions
                       </th>
                     </tr>
@@ -2403,7 +2403,7 @@ const AdminLeaveManagement = () => {
                                   : "-"}
                             </td>
                             <td
-                              className={`py-4 px-4 text-center sticky right-[120px] w-[160px] min-w-[160px] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}
+                              className={`py-4 px-3 text-center sticky right-[140px] w-[260px] min-w-[260px] max-w-[260px] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}
                             >
                               <span
                                 className={`inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all whitespace-nowrap
@@ -2464,12 +2464,12 @@ const AdminLeaveManagement = () => {
                               </span>
                             </td>
                             <td
-                              className={`py-4 px-4 sticky right-0 w-[120px] min-w-[120px] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}
+                              className={`py-4 px-3 sticky right-0 w-[140px] min-w-[140px] max-w-[140px] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}
                             >
-                              <div className="flex items-center justify-center gap-3">
+                              <div className="flex items-center justify-center gap-2">
                                 <button
                                   onClick={() => handleViewApplication(item)}
-                                  className="p-2 text-blue-600 bg-blue-50/50 hover:bg-blue-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-blue-200 active:scale-90"
+                                  className="p-1.5 text-blue-600 bg-blue-50/50 hover:bg-blue-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-blue-200 active:scale-90"
                                   title="View Application"
                                 >
                                   <Eye size={18} />
@@ -2485,7 +2485,7 @@ const AdminLeaveManagement = () => {
                                       onClick={() =>
                                         handleUndoCancellation(item)
                                       }
-                                      className="p-2 text-amber-600 bg-amber-50/50 hover:bg-amber-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-amber-200 active:scale-90"
+                                      className="p-1.5 text-amber-600 bg-amber-50/50 hover:bg-amber-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-amber-200 active:scale-90"
                                       title="Undo Cancellation"
                                     >
                                       <RotateCcw size={18} />
@@ -2496,7 +2496,7 @@ const AdminLeaveManagement = () => {
                                   item.status === "Requesting For Modification") && (
                                     <button
                                       onClick={() => handleUndoModification(item)}
-                                      className="p-2 text-orange-600 bg-orange-50/50 hover:bg-orange-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-orange-200 active:scale-90"
+                                      className="p-1.5 text-orange-600 bg-orange-50/50 hover:bg-orange-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-orange-200 active:scale-90"
                                       title="Undo Modification"
                                     >
                                       <RotateCcw size={18} />

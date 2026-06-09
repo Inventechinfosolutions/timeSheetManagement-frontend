@@ -456,8 +456,8 @@ const AttendanceStatsCards = ({
     <div
       className={`grid ${
         isInternThisMonth
-          ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-5"
-          : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-6"
+          ? "grid-cols-2 sm:grid-cols-4"
+          : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5"
       } gap-4 transition-opacity duration-300 ${
         loading ? "opacity-50 pointer-events-none" : "opacity-100"
       }`}
