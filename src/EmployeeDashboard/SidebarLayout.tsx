@@ -329,7 +329,7 @@ const SidebarLayout = ({
             {children}
             <ApiLoadingSpinner contained contentAreaRef={mainContentRef} />
           </div>
-          <Footer />
+          <Footer className="sidebar-footer" />
         </main>
       </div>
     </div>

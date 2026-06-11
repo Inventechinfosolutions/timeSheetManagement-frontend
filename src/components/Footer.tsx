@@ -2,11 +2,15 @@ import "./Footer.css";
 import inventechLogo from "../assets/inventech-logo.jpg";
 import worksphereLogo from "../assets/workspherelogo.png";
 
-const Footer = () => {
+interface FooterProps {
+  className?: string;
+}
+
+const Footer = ({ className = "" }: FooterProps) => {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="footer">
+    <footer className={`footer ${className}`}>
       <div className="footer-container">
         <div className="footer-content">
           <img
