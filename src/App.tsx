@@ -37,6 +37,7 @@ import AttendanceViewWrapper from "./EmployeeDashboard/CalenderViewWrapper";
 import MobileResponsiveCalendarPage from "./EmployeeDashboard/MobileResponsiveCalendarPage";
 import LeaveManagement from "./EmployeeDashboard/LeaveManagement";
 import LeaveBalance from "./EmployeeDashboard/LeaveBalance";
+import FaceDemoPage from "./facescanner/FaceDemoPage";
 
 // Admin Dashboard Components
 import AdminDashboard from "./AdminDashboard/AdminDashboard";
@@ -74,6 +75,8 @@ const EmployeeTabWrapper = () => {
       return <LeaveManagement />;
     case "leave-balance":
       return <LeaveBalance />;
+    case "face-demo":
+      return <FaceDemoPage />;
     default:
       return <Navigate to="/employee-dashboard" replace />;
   }
