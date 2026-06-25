@@ -1,11 +1,5 @@
 import { useState, useMemo } from "react";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Sector,
-} from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Sector } from "recharts";
 import { PieChart as PieChartIcon } from "lucide-react";
 import { AttendanceStatus, WorkLocation } from "../enums";
 
@@ -77,7 +71,10 @@ const AttendancePieChart = ({ data, currentMonth }: Props) => {
         counts[AttendanceStatus.LEAVE]++;
       } else if (status === AttendanceStatus.HOLIDAY.toUpperCase()) {
         counts[AttendanceStatus.HOLIDAY]++;
-      } else if (status === AttendanceStatus.WEEKEND.toUpperCase() || record.isWeekend) {
+      } else if (
+        status === AttendanceStatus.WEEKEND.toUpperCase() ||
+        record.isWeekend
+      ) {
         counts[AttendanceStatus.WEEKEND]++;
       } else {
         // Fallback for Not Updated, Pending, or any other past dates
@@ -86,12 +83,36 @@ const AttendancePieChart = ({ data, currentMonth }: Props) => {
     });
 
     return [
-      { name: AttendanceStatus.PRESENT, value: counts[AttendanceStatus.PRESENT], color: "#05CD99" }, // Emerald green
-      { name: AttendanceStatus.ABSENT, value: counts[AttendanceStatus.ABSENT], color: "#EE5D50" }, // Coral red
-      { name: AttendanceStatus.LEAVE, value: counts[AttendanceStatus.LEAVE], color: "#FF708B" }, // Pinkish coral
-      { name: AttendanceStatus.HOLIDAY, value: counts[AttendanceStatus.HOLIDAY], color: "#4318FF" }, // Indigo
-      { name: AttendanceStatus.WEEKEND, value: counts[AttendanceStatus.WEEKEND], color: "#00B8FF" }, // Sky blue
-      { name: AttendanceStatus.NOT_UPDATED, value: counts[AttendanceStatus.NOT_UPDATED], color: "#FFB547" }, // Amber orange
+      {
+        name: AttendanceStatus.PRESENT,
+        value: counts[AttendanceStatus.PRESENT],
+        color: "#05CD99",
+      }, // Emerald green
+      {
+        name: AttendanceStatus.ABSENT,
+        value: counts[AttendanceStatus.ABSENT],
+        color: "#EE5D50",
+      }, // Coral red
+      {
+        name: AttendanceStatus.LEAVE,
+        value: counts[AttendanceStatus.LEAVE],
+        color: "#FF708B",
+      }, // Pinkish coral
+      {
+        name: AttendanceStatus.HOLIDAY,
+        value: counts[AttendanceStatus.HOLIDAY],
+        color: "#4318FF",
+      }, // Indigo
+      {
+        name: AttendanceStatus.WEEKEND,
+        value: counts[AttendanceStatus.WEEKEND],
+        color: "#00B8FF",
+      }, // Sky blue
+      {
+        name: AttendanceStatus.NOT_UPDATED,
+        value: counts[AttendanceStatus.NOT_UPDATED],
+        color: "#FFB547",
+      }, // Amber orange
     ]
       .map((item) => ({
         ...item,
@@ -111,15 +132,8 @@ const AttendancePieChart = ({ data, currentMonth }: Props) => {
   };
 
   const renderActiveShape = (props: any) => {
-    const {
-      cx,
-      cy,
-      innerRadius,
-      outerRadius,
-      startAngle,
-      endAngle,
-      fill,
-    } = props;
+    const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } =
+      props;
 
     return (
       <g>
@@ -138,16 +152,18 @@ const AttendancePieChart = ({ data, currentMonth }: Props) => {
   };
 
   const renderHeader = () => (
-    <div className="w-full flex flex-row items-center justify-between gap-2 mb-6">
+    <div className="w-full flex flex-row items-center justify-between gap-2 mb-4">
       <div>
-        <h4 className="text-base sm:text-lg font-bold text-[#1B2559] tracking-tight">
+        <h4 className="text-sm sm:text-lg font-bold text-[#1B2559] tracking-tight">
           Attendance Breakdown
         </h4>
-        <p className="text-[11px] text-[#A3AED0] font-bold uppercase tracking-wider mt-0.5">Live Data</p>
+        <p className="text-[10px] text-[#A3AED0] font-bold uppercase tracking-wider mt-0.5">
+          Live Data
+        </p>
       </div>
 
-      <div className="flex items-center gap-1.5 bg-[#F4F7FE] px-3 py-1.5 rounded-xl border border-gray-50/50">
-        <span className="text-xs font-bold text-[#4318FF]">
+      <div className="flex items-center gap-1.5 bg-[#eef1fb] px-3 py-1.5 rounded-xl shrink-0">
+        <span className="text-[11px] font-bold text-[#4318FF] whitespace-nowrap">
           {currentMonth.toLocaleDateString("en-US", {
             day: "numeric",
             month: "long",
@@ -193,10 +209,9 @@ const AttendancePieChart = ({ data, currentMonth }: Props) => {
         }
       `}</style>
       {renderHeader()}
-      
+
       {/* Side-by-Side Flex Container */}
       <div className="flex-1 flex flex-col sm:flex-row items-center justify-between gap-6 w-full mt-2">
-        
         {/* Left Side: Donut Chart */}
         <div className="h-[220px] w-full sm:w-[45%] relative flex items-center justify-center">
           <ResponsiveContainer width="100%" height="100%">
@@ -221,10 +236,10 @@ const AttendancePieChart = ({ data, currentMonth }: Props) => {
                 style={{ cursor: "pointer", outline: "none" }}
               >
                 {chartData.map((entry, index) => (
-                  <Cell 
-                    key={`cell-${index}`} 
-                    fill={entry.color} 
-                    stroke="none" 
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={entry.color}
+                    stroke="none"
                     style={{ outline: "none" }}
                   />
                 ))}
@@ -275,9 +290,10 @@ const AttendancePieChart = ({ data, currentMonth }: Props) => {
         {/* Right Side: Vertical Legend Cards */}
         <div className="w-full sm:w-[50%] flex flex-col gap-2.5">
           {chartData.map((item, index) => {
-            const percentage = total > 0 ? ((item.value / total) * 100).toFixed(1) : "0.0";
+            const percentage =
+              total > 0 ? ((item.value / total) * 100).toFixed(1) : "0.0";
             const isHovered = activeIndex === index;
-            
+
             // Helper to get translucent background colors from hex
             let bgColor = "rgba(0, 108, 241, 0.05)";
             if (item.color.startsWith("#")) {
@@ -291,10 +307,12 @@ const AttendancePieChart = ({ data, currentMonth }: Props) => {
               <div
                 key={item.name}
                 className="flex items-center justify-between py-2.5 px-4 rounded-xl cursor-pointer select-none transition-all duration-200"
-                style={{ 
+                style={{
                   backgroundColor: bgColor,
-                  border: isHovered ? `1px solid ${item.color}` : "1px solid transparent",
-                  transform: isHovered ? "translateX(4px)" : "translateX(0px)"
+                  border: isHovered
+                    ? `1px solid ${item.color}`
+                    : "1px solid transparent",
+                  transform: isHovered ? "translateX(4px)" : "translateX(0px)",
                 }}
                 onMouseEnter={() => setActiveIndex(index)}
                 onMouseLeave={() => setActiveIndex(null)}
@@ -318,7 +336,6 @@ const AttendancePieChart = ({ data, currentMonth }: Props) => {
             );
           })}
         </div>
-
       </div>
     </div>
   );

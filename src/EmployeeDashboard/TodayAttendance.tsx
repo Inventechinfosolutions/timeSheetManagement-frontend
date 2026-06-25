@@ -79,7 +79,6 @@ const TodayAttendance = ({
   const [now] = useState(() => new Date());
   const [calendarDate, setCalendarDate] = useState(new Date());
 
-
   const fetchDashboardData = useCallback(
     (date: Date) => {
       if (!currentEmployeeId || currentEmployeeId === "Admin") return;
@@ -190,7 +189,6 @@ const TodayAttendance = ({
     return selectedYear === convYear && selectedMonth === convMonth;
   }, [entity, calendarDate]);
 
-
   // 1. Separate "Today's" Data - ALWAYS based on current real-time Month
   const todayStatsEntry = useMemo(() => {
     // Generate entries for the ACTUAL current month (now)
@@ -233,7 +231,6 @@ const TodayAttendance = ({
       isSaved: false,
       isToday: true,
     } as any);
-
 
   const handleDateNavigator = useCallback(
     (timestamp: number) => {
@@ -337,37 +334,89 @@ const TodayAttendance = ({
     <div className="flex flex-col h-full w-full overflow-hidden bg-[#F4F7FE]">
       {/* Header */}
       {!viewOnly && (
-        <div className="px-4 md:px-8 pt-4 md:pt-6 pb-2">
-          <div className="bg-white rounded-2xl p-4 md:p-5 shadow-[0px_8px_24px_rgba(112,144,176,0.1)] border border-gray-100/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-xl md:text-2xl font-bold text-[#2B3674]">
-                {currentUser?.userType === UserType.MANAGER
-                  ? "Manager Dashboard"
-                  : "Employee Dashboard"}
-              </h1>
-              <p className="text-sm text-gray-500 mt-1">
-                Welcome back,{" "}
-                <span className="font-semibold text-[#4318FF]">
-                  {(isMyRoute
-                    ? currentUser?.aliasLoginName || currentUser?.loginId
-                    : null) ||
-                    entity?.firstName ||
-                    entity?.fullName ||
-                    currentUser?.aliasLoginName ||
-                    "Employee"}
-                </span>
-              </p>
-            </div>
+        <div className="px-4 md:px-8 pt-4 md:pt-6 pb-1 md:pb-2">
+          <div className="bg-white rounded-2xl p-4 md:p-5 shadow-[0px_8px_24px_rgba(112,144,176,0.1)] border border-gray-100/80">
+            {/* Top Row: Title + Date Chip */}
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h1 className="text-base md:text-lg font-medium text-[#2B3674]">
+                  {currentUser?.userType === UserType.MANAGER
+                    ? "Manager Dashboard"
+                    : "Employee Dashboard"}
+                </h1>
+                <p className="text-sm text-gray-500 mt-1">
+                  Welcome back,{" "}
+                  <span className="font-semibold text-[#4318FF]">
+                    {(isMyRoute
+                      ? currentUser?.aliasLoginName || currentUser?.loginId
+                      : null) ||
+                      entity?.firstName ||
+                      entity?.fullName ||
+                      currentUser?.aliasLoginName ||
+                      "Employee"}
+                  </span>
+                </p>
+              </div>
 
-            <div className="flex items-center gap-2 px-4 py-2 bg-[#F4F7FE] rounded-xl border border-[#4318FF]/10">
-              <CalendarIcon size={16} className="text-[#4318FF] shrink-0" />
-              <span className="text-sm font-bold text-[#2B3674]">
-                {displayEntry.fullDate.toLocaleDateString("en-US", {
-                  weekday: "long",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </span>
+              {/* Right column: Date Chip + Month Navigator */}
+              <div className="flex-shrink-0 flex flex-col items-end gap-1">
+                {currentUser?.userType !== UserType.MANAGER && displayEntry && (
+                  <div className="bg-[#eef1fb] rounded-xl px-3 py-2 text-center w-full">
+                    <div className="flex items-center justify-center gap-1">
+                      <CalendarIcon size={13} className="text-[#4318FF]" />
+                      <p className="text-xs font-medium text-[#4318FF] leading-snug whitespace-nowrap">
+                        {displayEntry.fullDate.toLocaleDateString("en-US", {
+                          weekday: "short",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Month Navigator — sits below Wed Jun 24 */}
+                <div className="flex items-center justify-between bg-[#f4f6fd] rounded-lg px-2 py-1 gap-2 w-full">
+                  <button
+                    onClick={() => {
+                      const prev = new Date(calendarDate);
+                      prev.setMonth(prev.getMonth() - 1);
+                      setCalendarDate(prev);
+                    }}
+                    className="w-4 h-4 bg-white rounded-md flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all shadow-sm"
+                    aria-label="Previous month"
+                  >
+                    <ChevronLeft
+                      size={10}
+                      strokeWidth={2.5}
+                      className="text-[#4318FF]"
+                    />
+                  </button>
+
+                  <span className="text-[10px] font-medium text-[#4318FF] whitespace-nowrap">
+                    {calendarDate.toLocaleString("default", {
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </span>
+
+                  <button
+                    onClick={() => {
+                      const next = new Date(calendarDate);
+                      next.setMonth(next.getMonth() + 1);
+                      setCalendarDate(next);
+                    }}
+                    className="w-4 h-4 bg-white rounded-md flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all shadow-sm"
+                    aria-label="Next month"
+                  >
+                    <ChevronRight
+                      size={10}
+                      strokeWidth={2.5}
+                      className="text-[#4318FF]"
+                    />
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -380,26 +429,44 @@ const TodayAttendance = ({
           <div className="flex-1 min-w-[200px] flex items-center justify-start">
             {showInternDataBanner && (
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-blue-50/70 border border-blue-200/50 backdrop-blur-md rounded-full text-blue-800 shadow-xs transition-all duration-300 mr-3">
-                <span className="text-xs font-extrabold uppercase tracking-wider text-blue-600">Intern Period</span>
+                <span className="text-xs font-extrabold uppercase tracking-wider text-blue-600">
+                  Intern Period
+                </span>
                 <span className="h-3.5 w-px bg-blue-200"></span>
                 <p className="text-sm font-semibold text-blue-900/90 leading-tight">
-                  Showing Internship details of <strong className="font-bold">{entity?.fullName || "Employee"}</strong>. Internship successfully completed on <strong className="font-bold">{entity?.conversionDate ? dayjs(entity.conversionDate).format("MMM D, YYYY") : "N/A"}</strong>.
+                  Showing Internship details of{" "}
+                  <strong className="font-bold">
+                    {entity?.fullName || "Employee"}
+                  </strong>
+                  . Internship successfully completed on{" "}
+                  <strong className="font-bold">
+                    {entity?.conversionDate
+                      ? dayjs(entity.conversionDate).format("MMM D, YYYY")
+                      : "N/A"}
+                  </strong>
+                  .
                 </p>
               </div>
             )}
 
             {showConversionBanner && (
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-green-50/70 border border-green-200/50 backdrop-blur-md rounded-full text-green-800 shadow-xs transition-all duration-300 whitespace-nowrap mr-3">
-                <span className="text-xs font-extrabold uppercase tracking-wider text-green-600 animate-pulse">Congratulations!</span>
+                <span className="text-xs font-extrabold uppercase tracking-wider text-green-600 animate-pulse">
+                  Congratulations!
+                </span>
                 <span className="h-3.5 w-px bg-green-200"></span>
                 <p className="text-sm font-semibold text-green-900/90 leading-tight whitespace-nowrap">
-                  🎉 Congratulations, <strong className="font-bold">{entity?.fullName || "Employee"}</strong>, on your transition to a Full-Time role!
+                  🎉 Congratulations,{" "}
+                  <strong className="font-bold">
+                    {entity?.fullName || "Employee"}
+                  </strong>
+                  , on your transition to a Full-Time role!
                 </p>
               </div>
             )}
           </div>
 
-          <div className="inline-flex items-center bg-white rounded-full px-3 py-1 shadow-sm border border-gray-100/50 gap-2 self-end">
+          {/* <div className="inline-flex items-center bg-white rounded-full px-3 py-1 shadow-sm border border-gray-100/50 gap-2 self-end">
             <button
               onClick={() => {
                 const prev = new Date(calendarDate);
@@ -411,13 +478,6 @@ const TodayAttendance = ({
               <ChevronLeft size={16} strokeWidth={2.5} />
             </button>
 
-            <span className="text-[#1B2559] font-bold min-w-[90px] text-center text-xs md:text-sm selection:bg-none tracking-tight">
-              {calendarDate.toLocaleString("default", {
-                month: "long",
-                year: "numeric",
-              })}
-            </span>
-
             <button
               onClick={() => {
                 const next = new Date(calendarDate);
@@ -428,7 +488,7 @@ const TodayAttendance = ({
             >
               <ChevronRight size={16} strokeWidth={2.5} />
             </button>
-          </div>
+          </div> */}
         </div>
 
         {/* Top Section: Dashboard Cards */}
@@ -439,7 +499,9 @@ const TodayAttendance = ({
           attendanceRecords={yearlyRecords}
           isIntern={isIntern}
           joiningDate={entity?.joiningDate || (currentUser as any)?.joiningDate}
-          conversionDate={entity?.conversionDate || (currentUser as any)?.conversionDate}
+          conversionDate={
+            entity?.conversionDate || (currentUser as any)?.conversionDate
+          }
           trends={trends}
           monthlyLeaveBalance={monthlyLeaveBalance}
           loading={leaveLoading}
@@ -465,7 +527,7 @@ const TodayAttendance = ({
           <div className="flex justify-center">
             <button
               onClick={() => handleNavigate(now.getTime())}
-              className="px-8 py-3 rounded-xl text-white font-bold bg-[#4318FF] shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all flex items-center gap-2 transform active:scale-95"
+              className="w-full md:w-auto px-8 py-3 rounded-xl text-white font-bold bg-[#4318FF] shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all flex items-center justify-center gap-2 transform active:scale-95"
             >
               <Edit size={18} />
               <span>Log Today's Hours</span>
@@ -475,20 +537,20 @@ const TodayAttendance = ({
 
         {/* Bottom Section: Calendar/List */}
         <div className="bg-white rounded-2xl shadow-[0px_8px_24px_rgba(112,144,176,0.1)] border border-gray-100/80 overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+          <div className="px-4 md:px-5 py-3 md:py-4 border-b border-gray-100 flex items-center justify-between gap-2">
             <div>
-              <h3 className="text-base font-bold text-[#2B3674]">
+              <h3 className="text-sm md:text-base font-bold text-[#2B3674]">
                 Attendance List
               </h3>
               <p className="text-xs text-gray-400 mt-0.5">
                 Monthly attendance records
               </p>
             </div>
-            <span className="text-xs px-3 py-1.5 bg-[#F4F7FE] rounded-full text-[#4318FF] font-bold border border-[#4318FF]/15">
+            <span className="text-xs px-3 py-1.5 bg-[#F4F7FE] rounded-full text-[#4318FF] font-bold border border-[#4318FF]/15 shrink-0 whitespace-nowrap">
               All Statuses
             </span>
           </div>
-          <div className="p-4">
+          <div className="p-3 md:p-4">
             <AttendanceViewWrapper
               now={now}
               currentDate={calendarDate}

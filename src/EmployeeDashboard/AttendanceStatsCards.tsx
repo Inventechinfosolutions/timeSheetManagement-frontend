@@ -120,7 +120,9 @@ const AttendanceStatsCards = ({
           const dateStrLocal = dayjs(r.workingDate).format("YYYY-MM-DD");
 
           const isHoliday = holidays?.some((h: any) => {
-            const hDateStr = dayjs(h.holidayDate || h.date).format("YYYY-MM-DD");
+            const hDateStr = dayjs(h.holidayDate || h.date).format(
+              "YYYY-MM-DD",
+            );
             return hDateStr === dateStrLocal;
           });
 
@@ -191,7 +193,14 @@ const AttendanceStatsCards = ({
       fullTimerAdded: calculatedFullTimerAdded,
       internLeavesTaken: calculatedInternLeavesTaken,
     };
-  }, [attendanceRecords, year, isIntern, conversionDate, joiningDate, holidays]);
+  }, [
+    attendanceRecords,
+    year,
+    isIntern,
+    conversionDate,
+    joiningDate,
+    holidays,
+  ]);
 
   // Calculate Recursive Stats based on User Rules
   // Rule 1: Add Accrual (1.5) at start of month
@@ -228,7 +237,9 @@ const AttendanceStatsCards = ({
     };
 
     // Fallback to existing calculation if backend data is not yet loaded
-    let currentBalance = !isInternForMonth(1) ? leaveBalance?.carryOver || 0 : 0; // Opening Balance (Year)
+    let currentBalance = !isInternForMonth(1)
+      ? leaveBalance?.carryOver || 0
+      : 0; // Opening Balance (Year)
     const monthlyAccrual = isIntern ? 1 : 1.5;
 
     // Parse Joining Date
@@ -261,7 +272,9 @@ const AttendanceStatsCards = ({
           const dateStrLocal = dayjs(r.workingDate).format("YYYY-MM-DD");
 
           const isHoliday = holidays?.some((h: any) => {
-            const hDateStr = dayjs(h.holidayDate || h.date).format("YYYY-MM-DD");
+            const hDateStr = dayjs(h.holidayDate || h.date).format(
+              "YYYY-MM-DD",
+            );
             return hDateStr === dateStrLocal;
           });
 
@@ -366,7 +379,15 @@ const AttendanceStatsCards = ({
       monthlyOpening: finalOpening,
       totalLOP_YTD,
     };
-  }, [attendanceRecords, year, month, isIntern, leaveBalance, joiningDate, holidays]);
+  }, [
+    attendanceRecords,
+    year,
+    month,
+    isIntern,
+    leaveBalance,
+    joiningDate,
+    holidays,
+  ]);
 
   // Use trends data for accurate monthly used count
   const trendForMonth = useMemo(() => {
@@ -439,7 +460,8 @@ const AttendanceStatsCards = ({
       const d = new Date(r.workingDate);
       return d.getFullYear() === year && d.getMonth() + 1 === month;
     });
-    return recordsMonthly.filter((r) => r.status === LeaveRequestStatus.PENDING).length;
+    return recordsMonthly.filter((r) => r.status === LeaveRequestStatus.PENDING)
+      .length;
   }, [month, year, attendanceRecords]);
 
   const calculatedMonthlyHours = useMemo(() => {
@@ -454,176 +476,162 @@ const AttendanceStatsCards = ({
 
   return (
     <div
-      className={`grid ${
-        isInternThisMonth
-          ? "grid-cols-2 sm:grid-cols-4"
-          : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5"
-      } gap-4 transition-opacity duration-300 ${
+      className={`transition-opacity duration-300 ${
         loading ? "opacity-50 pointer-events-none" : "opacity-100"
       }`}
     >
-      {/* Card 1 - Total Monthly Hours */}
-      {/* <div className="bg-linear-to-br from-[#36B9CC] to-[#258391] rounded-[20px] p-4 shadow-lg shadow-cyan-500/20 flex flex-col items-start gap-3 relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 min-h-[140px]">
-        <div className="absolute -right-4 -top-4 w-20 h-20 bg-white/20 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500"></div>
-        <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-white/30 backdrop-blur-md border border-white/20 text-white shadow-inner z-10">
-          <CalendarIcon size={20} strokeWidth={2.5} />
-        </div>
-        <div className="w-full z-10">
-          <div className="text-white/90 font-bold text-[10px] uppercase tracking-wider mb-1">
-            Hours Logged
-          </div>
-          <div className="flex flex-col">
-            <span className="text-2xl font-extrabold text-white tracking-tight">
-              {(Number(calculatedMonthlyHours) || 0).toFixed(1)}
-            </span>
-            <span className="text-[9px] font-bold text-white/70 uppercase mt-1">
-              In{" "}
-              {new Date(year, month - 1).toLocaleDateString("en-US", {
-                month: "short",
-              })}
-            </span>
-          </div>
-        </div>
-      </div> */}
+      <div
+        className={`
+          grid grid-cols-2 gap-3 px-4 py-2
+          sm:flex sm:flex-row sm:flex-wrap sm:gap-4 sm:px-0 sm:py-0
+        `}
+      >
+       
 
-      {/* Card 2 - Entitlement */}
-      <div className="bg-white rounded-[20px] p-4 shadow-lg shadow-gray-200/50 border border-gray-100 flex flex-col items-start gap-3 relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 min-h-[140px] w-full">
-        <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-blue-50 text-[#4318FF] transition-colors group-hover:bg-blue-100">
-          <TrendingUp size={20} strokeWidth={2.5} />
-        </div>
-        <div className="w-full">
-          <div className="text-[#A3AED0] font-bold text-[10px] uppercase tracking-wider mb-1 flex items-center gap-1.5">
-            <span>Annual Leave Quota</span>
-            {isConversionMonth && (
-              <Tooltip
-                title={
-                  <div className="p-2 text-xs space-y-1.5 min-w-[170px] text-white">
-                    <div className="font-extrabold border-b border-white/20 pb-1 mb-1">
-                      Conversion Quota
-                    </div>
-                    <div className="flex justify-between gap-4 font-medium">
-                      <span>Intern Quota:</span>
-                      <span className="font-bold">
-                        {internQuota.toFixed(1)}
-                        {internLeavesTaken > 0 ? ` (${internLeavesTaken.toFixed(1)} Taken)` : ""}
-                      </span>
-                    </div>
-                    <div className="flex justify-between gap-4 font-medium">
-                      <span>Added (FT):</span>
-                      <span className="font-bold text-green-300">+{fullTimerAdded.toFixed(1)}</span>
-                    </div>
-                    <div className="flex justify-between gap-4 border-t border-dashed border-white/20 pt-1 mt-1 font-bold">
-                      <span>Total Quota:</span>
-                      <span>{entitlement.toFixed(1)}</span>
-                    </div>
-                  </div>
-                }
-                color="#1B2559"
-                placement="top"
-                overlayInnerStyle={{ borderRadius: "12px", padding: "8px 12px" }}
-              >
-                <span className="cursor-pointer text-[#4318FF] hover:text-[#3B15E0] inline-flex items-center">
-                  <Info size={12} strokeWidth={2.5} />
-                </span>
-              </Tooltip>
-            )}
+        {/* Card 2 - Annual Leave Quota */}
+        <div className="bg-white rounded-2xl p-3 border border-gray-100 flex flex-col gap-2 min-h-[120px] group hover:shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 sm:rounded-[20px] sm:p-4 sm:shadow-lg sm:shadow-gray-200/50 sm:min-h-[140px] sm:flex-1">
+          <div className="h-8 w-8 sm:h-10 sm:w-10 flex items-center justify-center group-hover:bg-blue-100 rounded-xl bg-blue-50 text-[#4318FF]">
+            <TrendingUp size={16} strokeWidth={2.5} />
           </div>
-          <div className="flex flex-col w-full">
-            <span className="text-2xl font-extrabold text-[#1B2559] tracking-tight">
+          <div className="w-full">
+            <div className="text-[#A3AED0] font-bold text-[9px] sm:text-[10px] uppercase tracking-wider mb-1 flex items-center gap-1">
+              <span>Annual Leave Quota</span>
+              {isConversionMonth && (
+                <Tooltip
+                  title={
+                    <div className="p-2 text-xs space-y-1.5 min-w-[170px] text-white">
+                      <div className="font-extrabold border-b border-white/20 pb-1 mb-1">
+                        Conversion Quota
+                      </div>
+                      <div className="flex justify-between gap-4 font-medium">
+                        <span>Intern Quota:</span>
+                        <span className="font-bold">
+                          {internQuota.toFixed(1)}
+                          {internLeavesTaken > 0
+                            ? ` (${internLeavesTaken.toFixed(1)} Taken)`
+                            : ""}
+                        </span>
+                      </div>
+                      <div className="flex justify-between gap-4 font-medium">
+                        <span>Added (FT):</span>
+                        <span className="font-bold text-green-300">
+                          +{fullTimerAdded.toFixed(1)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between gap-4 border-t border-dashed border-white/20 pt-1 mt-1 font-bold">
+                        <span>Total Quota:</span>
+                        <span>{entitlement.toFixed(1)}</span>
+                      </div>
+                    </div>
+                  }
+                  color="#1B2559"
+                  placement="top"
+                  overlayInnerStyle={{
+                    borderRadius: "12px",
+                    padding: "8px 12px",
+                  }}
+                >
+                  <span className="cursor-pointer text-[#4318FF] hover:text-[#3B15E0] inline-flex items-center">
+                    <Info size={11} strokeWidth={2.5} />
+                  </span>
+                </Tooltip>
+              )}
+            </div>
+            <span className="text-xl sm:text-2xl font-extrabold text-[#1B2559] tracking-tight leading-none">
               {entitlement}
             </span>
           </div>
         </div>
-      </div>
 
-      {/* Card 3 - Carry Over (Full-timers only) */}
-      {!isInternThisMonth && (
-        <div className="bg-white rounded-[20px] p-4 shadow-lg shadow-gray-200/50 border border-gray-100 flex flex-col items-start gap-3 relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 min-h-[140px]">
-          <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-indigo-50 text-[#7551FF] transition-colors group-hover:bg-indigo-100">
-            <TrendingUp size={20} strokeWidth={2.5} />
-          </div>
-          <div className="w-full">
-            <div className="text-[#A3AED0] font-bold text-[10px] uppercase tracking-wider mb-1">
-              Carry Forward
+        {/* Card 3 - Carry Forward */}
+        {!isInternThisMonth ? (
+          <div className="bg-white rounded-2xl p-3 border border-gray-100 flex flex-col gap-2 min-h-[120px] group hover:shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 sm:rounded-[20px] sm:p-4 sm:shadow-lg sm:shadow-gray-200/50 sm:min-h-[140px] sm:flex-1">
+            <div className="h-8 w-8 sm:h-10 sm:w-10 flex items-center justify-center group-hover:bg-blue-100 rounded-xl bg-amber-50 text-amber-500">
+              <TrendingUp size={16} strokeWidth={2.5} />
             </div>
-            <div className="flex flex-col">
-              <span className="text-2xl font-extrabold text-[#1B2559] tracking-tight">
+            <div className="w-full">
+              <div className="text-[#A3AED0] font-bold text-[9px] sm:text-[10px] uppercase tracking-wider mb-1">
+                Carry Forward
+              </div>
+              <span className="text-xl sm:text-2xl font-extrabold text-[#1B2559] tracking-tight leading-none">
                 {(Number(dynamicCarryOver) || 0).toFixed(1)}
               </span>
-              <span className="text-[9px] font-bold text-[#A3AED0] uppercase mt-1">
-                From Previous Months
-              </span>
+              <p className="text-[9px] font-semibold text-gray-500 mt-1">
+                from prev. months
+              </p>
             </div>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="hidden sm:block" />
+        )}
 
-      {/* Card 4 - Leaves Taken */}
-      <div className="bg-white rounded-[20px] p-4 shadow-lg shadow-gray-200/50 border border-gray-100 flex flex-col items-start gap-3 relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 min-h-[140px]">
-        <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-green-50 text-[#05CD99] transition-colors group-hover:bg-green-100">
-          <CheckCircle size={20} strokeWidth={2.5} />
-        </div>
-        <div className="w-full">
-          <div className="text-[#A3AED0] font-bold text-[10px] uppercase tracking-wider mb-1">
-            Leave Used
+        {/* Card 4 - Leave Used */}
+        <div className="bg-white rounded-2xl p-3 border border-gray-100 flex flex-col gap-2 min-h-[120px] group hover:shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 sm:rounded-[20px] sm:p-4 sm:shadow-lg sm:shadow-gray-200/50 sm:min-h-[140px] sm:flex-1">
+          <div className="h-8 w-8 sm:h-10 sm:w-10 flex items-center justify-center group-hover:bg-blue-100 rounded-xl bg-green-50 text-[#05CD99]">
+            <CheckCircle size={16} strokeWidth={2.5} />
           </div>
-          <div className="flex flex-col">
-            <span className="text-2xl font-extrabold text-[#1B2559] tracking-tight">
-              {(Number(isInternThisMonth ? paidUsed : approvedUsed) || 0).toFixed(1)}
+          <div className="w-full">
+            <div className="text-[#A3AED0] font-bold text-[9px] sm:text-[10px] uppercase tracking-wider mb-1">
+              Leave Used
+            </div>
+            <span className="text-xl sm:text-2xl font-extrabold text-[#1B2559] tracking-tight leading-none">
+              {(
+                Number(isInternThisMonth ? paidUsed : approvedUsed) || 0
+              ).toFixed(1)}
             </span>
-            <span className="text-[9px] font-bold text-[#A3AED0] uppercase mt-1">
+            <p className="text-[9px] font-medium text-gray-400 mt-1">
               Approved
-            </span>
+            </p>
           </div>
         </div>
-      </div>
 
-      {/* Card 5 - LOP */}
-      <div className="bg-white rounded-[20px] p-4 shadow-lg shadow-gray-200/50 border border-gray-100 flex flex-col items-start gap-3 relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 min-h-[140px]">
-        <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-red-50 text-[#EE5D50] transition-colors group-hover:bg-red-100">
-          <Ban size={20} strokeWidth={2.5} />
-        </div>
-        <div className="w-full">
-          <div className="text-[#A3AED0] font-bold text-[10px] uppercase tracking-wider mb-1">
-            LOP
+        {/* Card 5 - LOP */}
+        <div className="bg-white rounded-2xl p-3 border border-gray-100 flex flex-col gap-2 min-h-[120px] group hover:shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 sm:rounded-[20px] sm:p-4 sm:shadow-lg sm:shadow-gray-200/50 sm:min-h-[140px] sm:flex-1">
+          <div className="h-8 w-8 sm:h-10 sm:w-10 flex items-center justify-center group-hover:bg-red-100 rounded-xl bg-red-50 text-[#EE5D50]">
+            <Ban size={16} strokeWidth={2.5} />
           </div>
-          <div className="flex flex-col">
-            <span className="text-2xl font-extrabold text-[#1B2559] tracking-tight">
+          <div className="w-full">
+            <div className="text-[#A3AED0] font-bold text-[9px] sm:text-[10px] uppercase tracking-wider mb-1">
+              LOP
+            </div>
+            <span className="text-xl sm:text-2xl font-extrabold text-[#1B2559] tracking-tight leading-none">
               {finalLOP}
             </span>
-            <span className="text-[9px] font-bold text-[#A3AED0] uppercase mt-1">
+            <p className="text-[9px] font-medium text-gray-400 mt-1">
               Loss of Pay
-            </span>
+            </p>
           </div>
         </div>
-      </div>
 
-      {/* Card 7 - Balance */}
-      <div className="bg-linear-to-br from-[#4318FF] to-[#3B15E0] rounded-[20px] p-4 shadow-lg shadow-blue-500/30 flex flex-col items-start gap-3 relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 min-h-[140px]">
-        <div className="absolute -right-4 -top-4 w-20 h-20 bg-white/20 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500"></div>
-        <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-white/30 backdrop-blur-md border border-white/20 text-white shadow-inner z-10">
-          <ClipboardList size={20} strokeWidth={2.5} />
-        </div>
-        <div className="w-full z-10">
-          <div className="text-white/90 font-bold text-[10px] uppercase tracking-wider mb-1">
-            Available Leave Balance
-          </div>
-          <div className="flex flex-col">
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-extrabold text-white tracking-tight">
-                {balanceMonthly.toFixed(1)}
-              </span>
-              <span className="text-[10px] font-bold text-white/60 uppercase">
-                This Month
-              </span>
-            </div>
-            {!isInternThisMonth && (
-              <div className="flex items-baseline gap-2 mt-0.5">
-                {/* <span className="text-[10px] font-medium text-white/60">
-                  Total Annual: {balance.toFixed(1)}
-                </span> */}
+        {/* Card 6 - Available Leave Balance */}
+        <div className="col-span-2 sm:col-auto sm:flex-1">
+          <div className="bg-gradient-to-br from-[#4318FF] to-[#3B15E0] rounded-2xl p-4 shadow-lg shadow-blue-500/20 relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 min-h-[120px] sm:min-h-[140px]">
+            {/* Decorative blobs */}
+            <div className="absolute -right-4 -top-4 w-20 h-20 bg-white/20 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500" />
+            <div className="absolute -left-6 -bottom-6 w-24 h-24 bg-white/10 rounded-full blur-2xl" />
+
+            {/* Content */}
+            <div className="relative z-10 flex flex-col justify-between h-full gap-3">
+              {/* Icon + Label row */}
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 flex-shrink-0 flex items-center justify-center rounded-xl bg-white/20 border border-white/20 text-white">
+                  <ClipboardList size={15} strokeWidth={2.5} />
+                </div>
+                <p className="text-white/80 font-semibold text-[10px] uppercase tracking-wider leading-tight">
+                  Available Leave Balance
+                </p>
               </div>
-            )}
+
+              {/* Value row */}
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-3xl font-extrabold text-white tracking-tight leading-none">
+                  {balanceMonthly.toFixed(1)}
+                </span>
+                <span className="text-[10px] font-semibold text-white/60 uppercase">
+                  this month
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

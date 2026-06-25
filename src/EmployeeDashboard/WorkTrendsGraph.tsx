@@ -46,12 +46,13 @@ const WorkTrendsGraph = ({ currentMonth }: Props) => {
   }
 
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-col h-full min-h-[400px]">
+    <div className="bg-white rounded-2xl p-6 md:p-6 p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-col h-full min-h-[400px]">
       <div className="flex items-center justify-between mb-6">
-        <h4 className="text-lg font-bold text-[#1B2559]">Work Location Trend</h4>
-
-        <div className="flex items-center gap-2">
-          <span className="text-s font-bold text-[#1B2559]">
+        <h4 className="md:text-lg text-sm font-bold text-[#1B2559]">
+          Work Location Trend
+        </h4>
+        <div className="flex items-center gap-1.5 bg-[#eef1fb] px-3 py-1.5 rounded-xl">
+          <span className="md:text-s text-[11px] font-bold text-[#4318FF]">
             {currentMonth.toLocaleDateString("en-US", {
               month: "long",
               year: "numeric",
@@ -65,9 +66,10 @@ const WorkTrendsGraph = ({ currentMonth }: Props) => {
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={data}
-              margin={{ top: 20, right: 30, left: -10, bottom: 20 }}
-              barSize={60}
-              barGap={12}
+              margin={{ top: 10, right: 30, left: -10, bottom: 20 }}
+              barSize={40}
+              barGap={4}
+              barCategoryGap="30%"
             >
               <CartesianGrid
                 strokeDasharray="3 3"
@@ -92,8 +94,9 @@ const WorkTrendsGraph = ({ currentMonth }: Props) => {
                 verticalAlign="top"
                 height={40}
                 iconType="circle"
+                iconSize={7}
                 wrapperStyle={{
-                  fontSize: "13px",
+                  fontSize: "10px",
                   fontWeight: 600,
                   color: "#2B3674",
                   paddingBottom: "16px",
