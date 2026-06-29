@@ -1,18 +1,20 @@
 import { useMemo } from "react";
 import dayjs from "dayjs";
-import {
-  Calendar as CalendarIcon,
-  TrendingUp,
-  CheckCircle,
-  Ban,
-  Clock,
-  ClipboardList,
-  Info,
-} from "lucide-react";
-import { Tooltip } from "antd";
 import { WorkTrendData } from "../reducers/employeeAttendance.reducer";
-import { LeaveRequestStatus } from "../enums";
 import { useAppSelector } from "../hooks";
+import AttendanceStatsCardsDesktop from "./AttendanceStatsCards.desktop";
+import AttendanceStatsCardsMobile from "./AttendanceStatsCards.mobile";
+import "./AttendanceStatsCards.css";
+
+interface MonthlyLeaveBalance {
+  carryOver: number;
+  monthlyAccrual: number;
+  leavesTaken: number;
+  lop: number;
+  balance: number;
+  ytdUsed: number;
+  ytdLop: number;
+}
 
 interface Props {
   year: number;
@@ -23,16 +25,21 @@ interface Props {
   joiningDate?: string | Date;
   conversionDate?: string | Date;
   trends?: WorkTrendData[];
-  monthlyLeaveBalance?: {
-    carryOver: number;
-    monthlyAccrual: number;
-    leavesTaken: number;
-    lop: number;
-    balance: number;
-    ytdUsed: number;
-    ytdLop: number;
-  } | null;
+  monthlyLeaveBalance?: MonthlyLeaveBalance | null;
   loading?: boolean;
+}
+
+export interface AttendanceStatsCardValues {
+  isInternThisMonth: boolean;
+  isConversionMonth: boolean;
+  internQuota: number;
+  fullTimerAdded: number;
+  internLeavesTaken: number;
+  entitlement: number;
+  carryForward: number;
+  leaveUsed: number;
+  lop: number;
+  availableBalance: number;
 }
 
 const ENTITLEMENT = {
@@ -56,8 +63,6 @@ const AttendanceStatsCards = ({
   const { holidays } = useAppSelector(
     (state) => (state as any).masterHolidays || { holidays: [] },
   );
-
-  const currentYearMonth = `${year}-${month.toString().padStart(2, "0")}`;
 
   const isInternThisMonth = useMemo(() => {
     if (isIntern) return true;
@@ -85,12 +90,10 @@ const AttendanceStatsCards = ({
     if (!convDate.isValid()) return false;
 
     const selectedDate = dayjs(new Date(year, month - 1, 1));
-    const convYear = convDate.year();
-    const convMonth = convDate.month() + 1;
-    const selectedYear = selectedDate.year();
-    const selectedMonth = selectedDate.month() + 1;
-
-    return selectedYear === convYear && selectedMonth === convMonth;
+    return (
+      selectedDate.year() === convDate.year() &&
+      selectedDate.month() + 1 === convDate.month() + 1
+    );
   }, [conversionDate, year, month]);
 
   const { internQuota, fullTimerAdded, internLeavesTaken } = useMemo(() => {
@@ -106,19 +109,18 @@ const AttendanceStatsCards = ({
 
     const getMonthlyUsageForQuota = (m: number) => {
       if (!Array.isArray(attendanceRecords)) return 0;
+
       return attendanceRecords
         .filter((r) => {
           const dateStr = dayjs(r.workingDate).format("YYYY-MM-DD");
-          const [y, mStr] = dateStr.split("-");
-          return parseInt(y) === year && parseInt(mStr) === m;
+          const [recordYear, recordMonth] = dateStr.split("-");
+          return parseInt(recordYear) === year && parseInt(recordMonth) === m;
         })
         .reduce((acc, r) => {
           const dateObj = new Date(r.workingDate);
           const day = dateObj.getDay();
           const isWeekend = day === 0 || day === 6;
-
           const dateStrLocal = dayjs(r.workingDate).format("YYYY-MM-DD");
-
           const isHoliday = holidays?.some((h: any) => {
             const hDateStr = dayjs(h.holidayDate || h.date).format(
               "YYYY-MM-DD",
@@ -126,31 +128,20 @@ const AttendanceStatsCards = ({
             return hDateStr === dateStrLocal;
           });
 
-          if (isWeekend || isHoliday) {
-            return acc;
-          }
+          if (isWeekend || isHoliday) return acc;
 
-          let dailyUsage = 0;
           const status = (r.status || "").toLowerCase();
-
           if (r.firstHalf || r.secondHalf) {
             const processHalf = (half: string | null) => {
               if (!half) return 0;
-              const h = half.toLowerCase();
-              if (h.includes("leave")) {
-                return 0.5;
-              }
-              return 0;
+              return half.toLowerCase().includes("leave") ? 0.5 : 0;
             };
-            dailyUsage = processHalf(r.firstHalf) + processHalf(r.secondHalf);
-          } else {
-            if (status.includes("leave")) {
-              dailyUsage = 1;
-            } else if (status.includes("half day")) {
-              dailyUsage = 0.5;
-            }
+            return acc + processHalf(r.firstHalf) + processHalf(r.secondHalf);
           }
-          return acc + dailyUsage;
+
+          if (status.includes("leave")) return acc + 1;
+          if (status.includes("half day")) return acc + 0.5;
+          return acc;
         }, 0);
     };
 
@@ -168,19 +159,17 @@ const AttendanceStatsCards = ({
     let calculatedInternLeavesTaken = 0;
 
     for (let m = 1; m <= 12; m++) {
-      if (year < joinYear || (year === joinYear && m < joinMonth)) {
-        continue;
-      }
+      if (year < joinYear || (year === joinYear && m < joinMonth)) continue;
 
-      const isInternThisMonth = isInternForMonth(m);
+      const internMonth = isInternForMonth(m);
       const jd = joiningDate ? new Date(joiningDate) : null;
-      let monthlyAccrual = isInternThisMonth ? 1.0 : 1.5;
+      let monthlyAccrual = internMonth ? 1.0 : 1.5;
 
       if (year === joinYear && m === joinMonth && jd && jd.getDate() > 10) {
         monthlyAccrual = 0;
       }
 
-      if (isInternThisMonth) {
+      if (internMonth) {
         calculatedInternQuota += monthlyAccrual;
         calculatedInternLeavesTaken += getMonthlyUsageForQuota(m);
       } else {
@@ -193,37 +182,15 @@ const AttendanceStatsCards = ({
       fullTimerAdded: calculatedFullTimerAdded,
       internLeavesTaken: calculatedInternLeavesTaken,
     };
-  }, [
-    attendanceRecords,
-    year,
-    isIntern,
-    conversionDate,
-    joiningDate,
-    holidays,
-  ]);
+  }, [attendanceRecords, year, isIntern, conversionDate, joiningDate, holidays]);
 
-  // Calculate Recursive Stats based on User Rules
-  // Rule 1: Add Accrual (1.5) at start of month
-  // Rule 2: Deduct leaves taken
-  // Rule 3: LOP if balance < 0
-  // Rule 4: Floor balance at 0
-  const {
-    closingBalance,
-    monthlyLOP,
-    monthlyUsed,
-    annualUsedYTD,
-    monthlyOpening,
-    totalLOP_YTD,
-  } = useMemo(() => {
-    // If backend data is available, use it
+  const { closingBalance, monthlyLOP, monthlyUsed, monthlyOpening } = useMemo(() => {
     if (monthlyLeaveBalance) {
       return {
         closingBalance: monthlyLeaveBalance.balance,
         monthlyLOP: monthlyLeaveBalance.lop,
         monthlyUsed: monthlyLeaveBalance.leavesTaken,
-        annualUsedYTD: monthlyLeaveBalance.ytdUsed,
         monthlyOpening: monthlyLeaveBalance.carryOver,
-        totalLOP_YTD: monthlyLeaveBalance.ytdLop,
       };
     }
 
@@ -236,15 +203,10 @@ const AttendanceStatsCards = ({
       return targetDate < convDate;
     };
 
-    // Fallback to existing calculation if backend data is not yet loaded
-    let currentBalance = !isInternForMonth(1)
-      ? leaveBalance?.carryOver || 0
-      : 0; // Opening Balance (Year)
-    const monthlyAccrual = isIntern ? 1 : 1.5;
-
-    // Parse Joining Date
+    let currentBalance = !isInternForMonth(1) ? leaveBalance?.carryOver || 0 : 0;
     let joinMonth = 0;
     let joinYear = 0;
+
     if (joiningDate) {
       const jd = new Date(joiningDate);
       if (!isNaN(jd.getTime())) {
@@ -253,24 +215,20 @@ const AttendanceStatsCards = ({
       }
     }
 
-    // Helper to get usage for a specific month
     const getMonthlyUsage = (m: number) => {
       if (!Array.isArray(attendanceRecords)) return 0;
+
       return attendanceRecords
         .filter((r) => {
-          // Robust local date formatting to avoid timezone-shifting ISO conversions
           const dateStr = dayjs(r.workingDate).format("YYYY-MM-DD");
-          const [y, mStr] = dateStr.split("-");
-          return parseInt(y) === year && parseInt(mStr) === m;
+          const [recordYear, recordMonth] = dateStr.split("-");
+          return parseInt(recordYear) === year && parseInt(recordMonth) === m;
         })
         .reduce((acc, r) => {
-          // Rule: Skip Holidays and Weekends for Absent/Leave usage calculations
           const dateObj = new Date(r.workingDate);
           const day = dateObj.getDay();
           const isWeekend = day === 0 || day === 6;
-
           const dateStrLocal = dayjs(r.workingDate).format("YYYY-MM-DD");
-
           const isHoliday = holidays?.some((h: any) => {
             const hDateStr = dayjs(h.holidayDate || h.date).format(
               "YYYY-MM-DD",
@@ -278,92 +236,63 @@ const AttendanceStatsCards = ({
             return hDateStr === dateStrLocal;
           });
 
-          if (isWeekend || isHoliday) {
-            return acc; // completely ignore weekends & holidays for LOP/usage count
-          }
+          if (isWeekend || isHoliday) return acc;
 
-          let dailyUsage = 0;
           const status = (r.status || "").toLowerCase();
-
           if (r.firstHalf || r.secondHalf) {
             const processHalf = (half: string | null) => {
               if (!half) return 0;
-              const h = half.toLowerCase();
-              if (h.includes("leave") || h.includes("absent")) {
-                return 0.5;
-              }
-              return 0;
+              const halfStatus = half.toLowerCase();
+              return halfStatus.includes("leave") || halfStatus.includes("absent")
+                ? 0.5
+                : 0;
             };
-            dailyUsage = processHalf(r.firstHalf) + processHalf(r.secondHalf);
-          } else {
-            if (status.includes("leave") || status.includes("absent")) {
-              dailyUsage = 1;
-            } else if (status.includes("half day")) {
-              dailyUsage = 0.5;
-            }
+            return acc + processHalf(r.firstHalf) + processHalf(r.secondHalf);
           }
-          return acc + dailyUsage;
+
+          if (status.includes("leave") || status.includes("absent")) return acc + 1;
+          if (status.includes("half day")) return acc + 0.5;
+          return acc;
         }, 0);
     };
 
     let finalBalance = 0;
     let finalLOP = 0;
     let finalUsed = 0;
-    let totalUsedYTD = 0;
-    let finalOpening = 0; // Capture opening balance for the month
-    let totalLOP_YTD = 0; // Cumulative LOP
+    let finalOpening = 0;
 
-    // Iterate from Jan up to current Month
     for (let m = 1; m <= month; m++) {
-      // Validation: Check Joining Date
-      // If employee hasn't joined yet for this month iteration, skip logic
-      // This ensures Jan/Feb are ignored if joined in March
       if (year < joinYear || (year === joinYear && m < joinMonth)) {
-        currentBalance = 0; // No balance before joining
-
-        // Even if simplified, we must ensure if this IS the selected month (unlikely if strictly checking)
-        // But if user selects Jan and joined in March? Then Stats show 0.
+        currentBalance = 0;
         if (m === month) {
           finalOpening = 0;
           finalBalance = 0;
-          // other finals are 0 init
         }
         continue;
       }
 
-      const isInternThisMonthFallback = isInternForMonth(m);
-      let monthlyAccrualFallback = isInternThisMonthFallback ? 1 : 1.5;
-      if (year === joinYear && m === joinMonth && joinDate.date() > 10) {
-        monthlyAccrualFallback = 0;
+      const internMonth = isInternForMonth(m);
+      const jd = joiningDate ? dayjs(joiningDate) : null;
+      let monthlyAccrual = internMonth ? 1 : 1.5;
+
+      if (year === joinYear && m === joinMonth && jd?.isValid() && jd.date() > 10) {
+        monthlyAccrual = 0;
       }
 
-      // For interns: Reset balance at start of each month (no carry forward)
-      if (isInternThisMonthFallback) {
-        currentBalance = 0;
-      }
+      if (internMonth) currentBalance = 0;
+      if (m === month) finalOpening = currentBalance;
 
-      // If this is the selected month, capture opening balance BEFORE accrual
-      if (m === month) {
-        finalOpening = currentBalance;
-      }
+      currentBalance += monthlyAccrual;
 
-      // Add Accrual at Start of Month
-      currentBalance += monthlyAccrualFallback;
-
-      // Deduct Usage
       const used = getMonthlyUsage(m);
       currentBalance -= used;
-      totalUsedYTD += used;
 
-      // Check LOP
       let lop = 0;
       if (currentBalance < 0) {
         lop = Math.abs(currentBalance);
-        currentBalance = 0; // Floor at 0
+        currentBalance = 0;
       }
-      totalLOP_YTD += lop;
 
-      // If this is the selected month, capture stats
       if (m === month) {
         finalBalance = currentBalance;
         finalLOP = lop;
@@ -375,21 +304,20 @@ const AttendanceStatsCards = ({
       closingBalance: finalBalance,
       monthlyLOP: finalLOP,
       monthlyUsed: finalUsed,
-      annualUsedYTD: totalUsedYTD,
       monthlyOpening: finalOpening,
-      totalLOP_YTD,
     };
   }, [
     attendanceRecords,
     year,
     month,
     isIntern,
+    conversionDate,
     leaveBalance,
     joiningDate,
     holidays,
+    monthlyLeaveBalance,
   ]);
 
-  // Use trends data for accurate monthly used count
   const trendForMonth = useMemo(() => {
     const monthNames = [
       "Jan",
@@ -405,236 +333,46 @@ const AttendanceStatsCards = ({
       "Nov",
       "Dec",
     ];
-    const currentMonthName = monthNames[month - 1];
-    return trends.find((t) => t.month === currentMonthName && t.year === year);
+    return trends.find(
+      (t) => t.month === monthNames[month - 1] && t.year === year,
+    );
   }, [trends, month, year]);
 
-  // Map new stats to existing variables for UI
-  const paidUsed = monthlyLeaveBalance
-    ? monthlyLeaveBalance.leavesTaken
-    : trendForMonth
-      ? trendForMonth.totalLeaves
-      : monthlyUsed;
-  const lopUsed = 0; // handled by monthlyLOP
-  const approvedUsed = monthlyLeaveBalance
-    ? monthlyLeaveBalance.leavesTaken
-    : trendForMonth
-      ? trendForMonth.totalLeaves
-      : monthlyUsed;
-  const finalLOP = monthlyLeaveBalance ? monthlyLeaveBalance.lop : monthlyLOP;
-
   const entitlement = useMemo(() => {
-    if (isInternThisMonth) {
-      return 12;
-    }
+    if (isInternThisMonth) return ENTITLEMENT.INTERN;
     if (leaveBalance && String(leaveBalance.year) === String(year)) {
       return leaveBalance.entitlement;
     }
     return isIntern ? ENTITLEMENT.INTERN : ENTITLEMENT.FULL_TIMER;
   }, [leaveBalance, year, isIntern, isInternThisMonth]);
 
-  const carryOverValue = useMemo(() => {
-    return !isInternThisMonth ? leaveBalance?.carryOver || 0 : 0;
-  }, [isInternThisMonth, leaveBalance]);
+  const leaveUsed = monthlyLeaveBalance
+    ? monthlyLeaveBalance.leavesTaken
+    : trendForMonth
+      ? trendForMonth.totalLeaves
+      : monthlyUsed;
 
-  // Annual Balance = (Entitlement + CarryOver) - (Total Used - Total LOP)
-  // i.e., Entitlement + CarryOver - Paid Leaves Used
-  const paidUsedYTD_Total = annualUsedYTD - totalLOP_YTD;
-  const balance = entitlement + carryOverValue - paidUsedYTD_Total;
-
-  const balanceMonthly = closingBalance;
-
-  // We need these for compatibility if used elsewhere, but mainly we use the above
-  const paidUsedYTD = annualUsedYTD;
-  const paidUsedBefore = annualUsedYTD - monthlyUsed;
-
-  // Display Static Carry Over as per user request
-  // Logical calculation for availability stays in LOP/Balance
-  const dynamicCarryOver = useMemo(() => {
-    return monthlyOpening;
-  }, [monthlyOpening]);
-
-  const pendingCount = useMemo(() => {
-    if (!Array.isArray(attendanceRecords)) return 0;
-    const recordsMonthly = attendanceRecords.filter((r) => {
-      const d = new Date(r.workingDate);
-      return d.getFullYear() === year && d.getMonth() + 1 === month;
-    });
-    return recordsMonthly.filter((r) => r.status === LeaveRequestStatus.PENDING)
-      .length;
-  }, [month, year, attendanceRecords]);
-
-  const calculatedMonthlyHours = useMemo(() => {
-    if (!Array.isArray(attendanceRecords)) return 0;
-    return attendanceRecords
-      .filter((r) => {
-        const d = new Date(r.workingDate);
-        return d.getFullYear() === year && d.getMonth() + 1 === month;
-      })
-      .reduce((acc, r) => acc + Number(r.totalHours || 0), 0);
-  }, [month, year, attendanceRecords]);
+  const values: AttendanceStatsCardValues = {
+    isInternThisMonth,
+    isConversionMonth,
+    internQuota,
+    fullTimerAdded,
+    internLeavesTaken,
+    entitlement,
+    carryForward: monthlyOpening,
+    leaveUsed,
+    lop: monthlyLeaveBalance ? monthlyLeaveBalance.lop : monthlyLOP,
+    availableBalance: closingBalance,
+  };
 
   return (
     <div
-      className={`transition-opacity duration-300 ${
-        loading ? "opacity-50 pointer-events-none" : "opacity-100"
+      className={`attendance-stats ${
+        loading ? "attendance-stats--loading" : ""
       }`}
     >
-      <div
-        className={`
-          grid grid-cols-2 gap-3 px-4 py-2
-          sm:flex sm:flex-row sm:flex-wrap sm:gap-4 sm:px-0 sm:py-0
-        `}
-      >
-       
-
-        {/* Card 2 - Annual Leave Quota */}
-        <div className="bg-white rounded-2xl p-3 border border-gray-100 flex flex-col gap-2 min-h-[120px] group hover:shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 sm:rounded-[20px] sm:p-4 sm:shadow-lg sm:shadow-gray-200/50 sm:min-h-[140px] sm:flex-1">
-          <div className="h-8 w-8 sm:h-10 sm:w-10 flex items-center justify-center group-hover:bg-blue-100 rounded-xl bg-blue-50 text-[#4318FF]">
-            <TrendingUp size={16} strokeWidth={2.5} />
-          </div>
-          <div className="w-full">
-            <div className="text-[#A3AED0] font-bold text-[9px] sm:text-[10px] uppercase tracking-wider mb-1 flex items-center gap-1">
-              <span>Annual Leave Quota</span>
-              {isConversionMonth && (
-                <Tooltip
-                  title={
-                    <div className="p-2 text-xs space-y-1.5 min-w-[170px] text-white">
-                      <div className="font-extrabold border-b border-white/20 pb-1 mb-1">
-                        Conversion Quota
-                      </div>
-                      <div className="flex justify-between gap-4 font-medium">
-                        <span>Intern Quota:</span>
-                        <span className="font-bold">
-                          {internQuota.toFixed(1)}
-                          {internLeavesTaken > 0
-                            ? ` (${internLeavesTaken.toFixed(1)} Taken)`
-                            : ""}
-                        </span>
-                      </div>
-                      <div className="flex justify-between gap-4 font-medium">
-                        <span>Added (FT):</span>
-                        <span className="font-bold text-green-300">
-                          +{fullTimerAdded.toFixed(1)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between gap-4 border-t border-dashed border-white/20 pt-1 mt-1 font-bold">
-                        <span>Total Quota:</span>
-                        <span>{entitlement.toFixed(1)}</span>
-                      </div>
-                    </div>
-                  }
-                  color="#1B2559"
-                  placement="top"
-                  overlayInnerStyle={{
-                    borderRadius: "12px",
-                    padding: "8px 12px",
-                  }}
-                >
-                  <span className="cursor-pointer text-[#4318FF] hover:text-[#3B15E0] inline-flex items-center">
-                    <Info size={11} strokeWidth={2.5} />
-                  </span>
-                </Tooltip>
-              )}
-            </div>
-            <span className="text-xl sm:text-2xl font-extrabold text-[#1B2559] tracking-tight leading-none">
-              {entitlement}
-            </span>
-          </div>
-        </div>
-
-        {/* Card 3 - Carry Forward */}
-        {!isInternThisMonth ? (
-          <div className="bg-white rounded-2xl p-3 border border-gray-100 flex flex-col gap-2 min-h-[120px] group hover:shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 sm:rounded-[20px] sm:p-4 sm:shadow-lg sm:shadow-gray-200/50 sm:min-h-[140px] sm:flex-1">
-            <div className="h-8 w-8 sm:h-10 sm:w-10 flex items-center justify-center group-hover:bg-blue-100 rounded-xl bg-amber-50 text-amber-500">
-              <TrendingUp size={16} strokeWidth={2.5} />
-            </div>
-            <div className="w-full">
-              <div className="text-[#A3AED0] font-bold text-[9px] sm:text-[10px] uppercase tracking-wider mb-1">
-                Carry Forward
-              </div>
-              <span className="text-xl sm:text-2xl font-extrabold text-[#1B2559] tracking-tight leading-none">
-                {(Number(dynamicCarryOver) || 0).toFixed(1)}
-              </span>
-              <p className="text-[9px] font-semibold text-gray-500 mt-1">
-                from prev. months
-              </p>
-            </div>
-          </div>
-        ) : (
-          <div className="hidden sm:block" />
-        )}
-
-        {/* Card 4 - Leave Used */}
-        <div className="bg-white rounded-2xl p-3 border border-gray-100 flex flex-col gap-2 min-h-[120px] group hover:shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 sm:rounded-[20px] sm:p-4 sm:shadow-lg sm:shadow-gray-200/50 sm:min-h-[140px] sm:flex-1">
-          <div className="h-8 w-8 sm:h-10 sm:w-10 flex items-center justify-center group-hover:bg-blue-100 rounded-xl bg-green-50 text-[#05CD99]">
-            <CheckCircle size={16} strokeWidth={2.5} />
-          </div>
-          <div className="w-full">
-            <div className="text-[#A3AED0] font-bold text-[9px] sm:text-[10px] uppercase tracking-wider mb-1">
-              Leave Used
-            </div>
-            <span className="text-xl sm:text-2xl font-extrabold text-[#1B2559] tracking-tight leading-none">
-              {(
-                Number(isInternThisMonth ? paidUsed : approvedUsed) || 0
-              ).toFixed(1)}
-            </span>
-            <p className="text-[9px] font-medium text-gray-400 mt-1">
-              Approved
-            </p>
-          </div>
-        </div>
-
-        {/* Card 5 - LOP */}
-        <div className="bg-white rounded-2xl p-3 border border-gray-100 flex flex-col gap-2 min-h-[120px] group hover:shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 sm:rounded-[20px] sm:p-4 sm:shadow-lg sm:shadow-gray-200/50 sm:min-h-[140px] sm:flex-1">
-          <div className="h-8 w-8 sm:h-10 sm:w-10 flex items-center justify-center group-hover:bg-red-100 rounded-xl bg-red-50 text-[#EE5D50]">
-            <Ban size={16} strokeWidth={2.5} />
-          </div>
-          <div className="w-full">
-            <div className="text-[#A3AED0] font-bold text-[9px] sm:text-[10px] uppercase tracking-wider mb-1">
-              LOP
-            </div>
-            <span className="text-xl sm:text-2xl font-extrabold text-[#1B2559] tracking-tight leading-none">
-              {finalLOP}
-            </span>
-            <p className="text-[9px] font-medium text-gray-400 mt-1">
-              Loss of Pay
-            </p>
-          </div>
-        </div>
-
-        {/* Card 6 - Available Leave Balance */}
-        <div className="col-span-2 sm:col-auto sm:flex-1">
-          <div className="bg-gradient-to-br from-[#4318FF] to-[#3B15E0] rounded-2xl p-4 shadow-lg shadow-blue-500/20 relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 min-h-[120px] sm:min-h-[140px]">
-            {/* Decorative blobs */}
-            <div className="absolute -right-4 -top-4 w-20 h-20 bg-white/20 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500" />
-            <div className="absolute -left-6 -bottom-6 w-24 h-24 bg-white/10 rounded-full blur-2xl" />
-
-            {/* Content */}
-            <div className="relative z-10 flex flex-col justify-between h-full gap-3">
-              {/* Icon + Label row */}
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 flex-shrink-0 flex items-center justify-center rounded-xl bg-white/20 border border-white/20 text-white">
-                  <ClipboardList size={15} strokeWidth={2.5} />
-                </div>
-                <p className="text-white/80 font-semibold text-[10px] uppercase tracking-wider leading-tight">
-                  Available Leave Balance
-                </p>
-              </div>
-
-              {/* Value row */}
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-3xl font-extrabold text-white tracking-tight leading-none">
-                  {balanceMonthly.toFixed(1)}
-                </span>
-                <span className="text-[10px] font-semibold text-white/60 uppercase">
-                  this month
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <AttendanceStatsCardsMobile values={values} />
+      <AttendanceStatsCardsDesktop values={values} />
     </div>
   );
 };

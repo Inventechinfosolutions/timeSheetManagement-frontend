@@ -1,0 +1,336 @@
+.attendance-stats {
+  opacity: 1;
+  transition: opacity 300ms ease;
+}
+
+.attendance-stats--loading {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.attendance-stats-desktop {
+  display: none;
+}
+
+.attendance-stats-mobile {
+  width: 100%;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.attendance-stats-grid--mobile {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  padding: 0;
+  width: 100%;
+}
+
+.attendance-stat-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+
+  width: 100%;
+  min-width: 0;
+  min-height: 90px;
+
+  padding: 12px;
+  box-sizing: border-box;
+
+  background: #ffffff;
+  border: 1px solid #eef2f7;
+  border-radius: 16px;
+
+  box-shadow: 0 4px 12px rgba(112, 144, 176, 0.12);
+
+  transition:
+    transform .3s ease,
+    box-shadow .3s ease;
+}
+
+.attendance-stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    0 10px 15px -3px rgb(0 0 0 / 0.1),
+    0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+.attendance-stat-icon {
+  display: flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  transition: background-color 300ms ease;
+}
+
+.attendance-stat-card:hover .attendance-stat-icon {
+  background: #dbeafe;
+}
+
+.attendance-stat-icon--blue {
+  background: #eff6ff;
+  color: #4318ff;
+}
+
+.attendance-stat-icon--amber {
+  background: #fffbeb;
+  color: #f59e0b;
+}
+
+.attendance-stat-icon--green {
+  background: #f0fdf4;
+  color: #05cd99;
+}
+
+.attendance-stat-icon--red {
+  background: #fef2f2;
+  color: #ee5d50;
+}
+
+.attendance-stat-body {
+  width: 100%;
+}
+
+.attendance-stat-label {
+  margin-bottom: 2px;
+  color: #a3aed0;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.attendance-stat-label--with-icon {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.attendance-stat-info {
+  display: inline-flex;
+  cursor: pointer;
+  color: #4318ff;
+}
+
+.attendance-stat-info:hover {
+  color: #3b15e0;
+}
+
+.attendance-stat-value {
+  color: #1b2559;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.attendance-stat-note {
+  margin: 2px 0 0;
+  color: #6b7280;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.attendance-stat-note--muted {
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+.attendance-stat-tooltip {
+  min-width: 170px;
+  padding: 8px;
+  color: #ffffff;
+  font-size: 12px;
+}
+
+.attendance-stat-tooltip-title {
+  margin-bottom: 4px;
+  border-bottom: 1px solid rgb(255 255 255 / 0.2);
+  padding-bottom: 4px;
+  font-weight: 800;
+}
+
+.attendance-stat-tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 6px;
+  font-weight: 500;
+}
+
+.attendance-stat-tooltip-row span:last-child {
+  font-weight: 700;
+}
+
+.attendance-stat-tooltip-positive {
+  color: #86efac;
+}
+
+.attendance-stat-tooltip-total {
+  margin-top: 4px;
+  border-top: 1px dashed rgb(255 255 255 / 0.2);
+  font-weight: 700;
+}
+
+.attendance-balance-card {
+  position: relative;
+  width: 100%;
+  min-height: 70px;
+  overflow: hidden;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #4318ff, #3b15e0);
+  padding: 10px 12px;
+  box-sizing: border-box;
+  box-shadow: 0 10px 15px -3px rgb(59 130 246 / 0.2);
+  transition:
+    box-shadow 300ms ease,
+    transform 300ms ease;
+}
+
+.attendance-balance-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 25px -5px rgb(59 130 246 / 0.25);
+}
+
+.attendance-balance-card--mobile {
+  grid-column: 1 / -1;
+  width: 100%;
+  margin-top: 2px;
+}
+
+.attendance-balance-orb {
+  position: absolute;
+  border-radius: 9999px;
+  pointer-events: none;
+}
+
+.attendance-balance-orb--top {
+  top: -16px;
+  right: -16px;
+  width: 80px;
+  height: 80px;
+  background: rgb(255 255 255 / 0.2);
+  filter: blur(16px);
+  transition: transform 500ms ease;
+}
+
+.attendance-balance-card:hover .attendance-balance-orb--top {
+  transform: scale(1.5);
+}
+
+.attendance-balance-orb--bottom {
+  bottom: -24px;
+  left: -24px;
+  width: 96px;
+  height: 96px;
+  background: rgb(255 255 255 / 0.1);
+  filter: blur(24px);
+}
+
+.attendance-balance-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  height: 100%;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.attendance-balance-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.attendance-balance-icon {
+  display: flex;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(255 255 255 / 0.2);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 0.2);
+  color: #ffffff;
+}
+
+.attendance-balance-heading p {
+  margin: 0;
+  color: rgb(255 255 255 / 0.8);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.attendance-balance-row {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.attendance-balance-row span {
+  color: #ffffff;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.attendance-balance-row small {
+  color: rgb(255 255 255 / 0.6);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+@media (min-width: 640px) {
+  .attendance-stats-mobile {
+    display: none;
+  }
+
+  .attendance-stats-desktop {
+    display: block;
+  }
+
+  .attendance-stats-grid--desktop {
+    display: flex;
+    flex-flow: row wrap;
+    gap: 16px;
+  }
+
+  .attendance-stat-card {
+    min-height: 140px;
+    flex: 1 1 0;
+    border-radius: 20px;
+    padding: 16px;
+    box-shadow: 0 10px 15px -3px rgb(229 231 235 / 0.5);
+  }
+
+  .attendance-stat-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .attendance-stat-label {
+    font-size: 10px;
+  }
+
+  .attendance-stat-value {
+    font-size: 24px;
+  }
+
+  .attendance-balance-card {
+    min-height: 140px;
+    flex: 1 1 0;
+    border-radius: 20px;
+    padding: 16px;
+  }
+}
