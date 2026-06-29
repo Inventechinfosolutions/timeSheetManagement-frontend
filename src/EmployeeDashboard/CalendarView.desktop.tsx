@@ -2,6 +2,7 @@ import { ArrowLeft, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Downloa
 import { AttendanceStatus } from "../enums";
 import type { TimesheetEntry } from "../types";
 import type { CalendarViewRenderProps } from "./CalendarView";
+import "./CalendarView.desktop.css";
 import {
   CALENDAR_LEGEND_ITEMS,
   calendarEntryIsClientVisit,

@@ -9,11 +9,11 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import type { WorkTrendsGraphViewProps } from "./WorkTrendsGraph";
+import type { WorkTrendsGraphViewProps } from "../EmployeeDashboard/WorkTrendsGraph";
 import {
   WORK_TREND_BARS,
   WORK_TRENDS_EMPTY_TEXT,
-} from "./WorkTrendsGraph.enums";
+} from "../EmployeeDashboard/WorkTrendsGraph.enums";
 import "./WorkTrendsGraph.mobile.css";
 
 const formatLabel = (val: any) =>

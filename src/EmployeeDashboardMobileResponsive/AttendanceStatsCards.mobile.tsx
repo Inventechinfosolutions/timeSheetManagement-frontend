@@ -1,6 +1,6 @@
 import { Ban, CheckCircle, ClipboardList, Info, TrendingUp } from "lucide-react";
 import { Tooltip } from "antd";
-import type { AttendanceStatsCardValues } from "./AttendanceStatsCards";
+import type { AttendanceStatsCardValues } from "../EmployeeDashboard/AttendanceStatsCards";
 
 interface Props {
   values: AttendanceStatsCardValues;

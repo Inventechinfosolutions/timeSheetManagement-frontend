@@ -14,7 +14,7 @@ import {
 } from "../reducers/employeeAttendance.reducer";
 import { generateMonthlyEntries, isEditableMonth } from "../utils/attendanceUtils";
 import CalendarViewDesktop from "./CalendarView.desktop";
-import CalendarViewMobile from "./CalendarView.mobile";
+import CalendarViewMobile from "../EmployeeDashboardMobileResponsive/CalendarView.mobile";
 import {
   CALENDAR_DAYS_OF_WEEK,
   CalendarVariant,

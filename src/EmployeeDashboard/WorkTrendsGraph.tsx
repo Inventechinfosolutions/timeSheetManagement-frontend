@@ -2,7 +2,7 @@ import { useAppSelector } from "../hooks";
 import type { WorkTrendData } from "../reducers/employeeAttendance.reducer";
 import type { RootState } from "../store";
 import WorkTrendsGraphDesktop from "./WorkTrendsGraph.desktop";
-import WorkTrendsGraphMobile from "./WorkTrendsGraph.mobile";
+import WorkTrendsGraphMobile from "../EmployeeDashboardMobileResponsive/WorkTrendsGraph.mobile";
 
 interface Props {
   employeeId?: string;

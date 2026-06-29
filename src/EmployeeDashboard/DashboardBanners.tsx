@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import { BannerProps } from "./EmployeeDashboardTypes";
+import { BannerProps } from "./EmployeeDashboard.types";
 
 export default function DashboardBanners({ showInternDataBanner, showConversionBanner, entity }: BannerProps) {
   if (!showInternDataBanner && !showConversionBanner) return null;

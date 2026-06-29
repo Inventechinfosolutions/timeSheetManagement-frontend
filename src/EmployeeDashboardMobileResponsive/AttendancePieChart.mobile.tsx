@@ -1,6 +1,6 @@
 import { PieChart as PieChartIcon } from "lucide-react";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
-import type { AttendancePieChartViewProps } from "./AttendancePieChart";
+import type { AttendancePieChartViewProps } from "../EmployeeDashboard/AttendancePieChart";
 import "./AttendancePieChart.mobile.css";
 
 const getLegendBackground = (color: string, isHovered: boolean) => {

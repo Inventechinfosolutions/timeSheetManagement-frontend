@@ -1,0 +1,75 @@
+/* ── Attendance Stats — Desktop ── */
+
+.attendance-stats-desktop {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .attendance-stats-desktop {
+    display: block;
+  }
+
+  .attendance-stats-grid--desktop {
+    display: flex;
+    flex-flow: row wrap;
+    gap: 16px;
+  }
+
+  /* desktop stat card */
+  .attendance-stats-desktop .attendance-stat-card {
+    min-height: 140px;
+    flex: 1 1 0;
+    border-radius: 20px;
+    padding: 16px;
+    box-shadow: 0 10px 15px -3px rgb(229 231 235 / 0.5);
+  }
+
+  .attendance-stats-desktop .attendance-stat-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .attendance-stats-desktop .attendance-stat-label {
+    font-size: 10px;
+  }
+
+  .attendance-stats-desktop .attendance-stat-value {
+    font-size: 24px;
+  }
+
+  /* desktop balance card */
+  .attendance-stats-desktop .attendance-balance-card {
+    min-height: 140px;
+    flex: 1 1 0;
+    border-radius: 20px;
+    padding: 16px;
+  }
+
+  .attendance-stats-desktop .attendance-balance-content {
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .attendance-stats-desktop .attendance-balance-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 12px;
+  }
+
+  .attendance-stats-desktop .attendance-balance-heading p {
+    font-size: 11px;
+  }
+
+  .attendance-stats-desktop .attendance-balance-row {
+    gap: 6px;
+  }
+
+  .attendance-stats-desktop .attendance-balance-row span {
+    font-size: 30px;
+  }
+
+  .attendance-stats-desktop .attendance-balance-row small {
+    font-size: 11px;
+  }
+}

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Sector } from "recharts";
 import { AttendanceStatus, WorkLocation } from "../enums";
 import AttendancePieChartDesktop from "./AttendancePieChart.desktop";
-import AttendancePieChartMobile from "./AttendancePieChart.mobile";
+import AttendancePieChartMobile from "../EmployeeDashboardMobileResponsive/AttendancePieChart.mobile";
 import { ATTENDANCE_PIE_CHART_ITEMS } from "./AttendancePieChart.enums";
 
 interface Props {

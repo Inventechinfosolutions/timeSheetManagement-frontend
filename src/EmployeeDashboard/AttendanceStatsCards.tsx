@@ -3,8 +3,10 @@ import dayjs from "dayjs";
 import { WorkTrendData } from "../reducers/employeeAttendance.reducer";
 import { useAppSelector } from "../hooks";
 import AttendanceStatsCardsDesktop from "./AttendanceStatsCards.desktop";
-import AttendanceStatsCardsMobile from "./AttendanceStatsCards.mobile";
+import AttendanceStatsCardsMobile from "../EmployeeDashboardMobileResponsive/AttendanceStatsCards.mobile";
 import "./AttendanceStatsCards.css";
+import "./AttendanceStatsCardsMobile.css";
+import "./AttendanceStatsCardsDesktop.css";
 
 interface MonthlyLeaveBalance {
   carryOver: number;

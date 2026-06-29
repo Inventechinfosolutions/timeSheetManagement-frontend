@@ -1,30 +1,21 @@
 import { useMemo, useCallback, useState, useEffect, useRef } from "react";
 import dayjs from "dayjs";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
-import { Edit } from "lucide-react";
-import { useAppDispatch, useAppSelector } from "../hooks";
-import { AttendanceStatus, UserType } from "../enums";
-import { fetchEmployeeDashboard } from "../reducers/employeeAttendance.reducer";
-import { getEntity, setCurrentUser } from "../reducers/employeeDetails.reducer";
-import { generateMonthlyEntries } from "../utils/attendanceUtils";
-import AttendanceViewWrapper from "./CalenderViewWrapper";
-import AttendancePieChart from "./AttendancePieChart";
-import WorkTrendsGraph from "./WorkTrendsGraph";
-import AttendanceStatsCards from "./AttendanceStatsCards";
-import { RootState } from "../store";
-import DashboardHeaderDesktop from "./DashboardHeader.desktop";
-import DashboardHeaderMobile from "./DashboardHeader.mobile";
-import DashboardBanners from "./DashboardBanners";
-import "./employeeDashboard.css";
+import { useAppDispatch, useAppSelector } from "../hooks";           // ✅
+import { AttendanceStatus, UserType } from "../enums";              // ✅
+import { fetchEmployeeDashboard } from "../reducers/employeeAttendance.reducer";  // ✅
+import { getEntity, setCurrentUser } from "../reducers/employeeDetails.reducer";  // ✅
+import { generateMonthlyEntries } from "../utils/attendanceUtils";  // ✅
+import { RootState } from "../store";                               // ✅
+import TodayAttendanceDesktop from "./TodayAttendance.desktop";     // ✅
+import TodayAttendanceMobile from "../EmployeeDashboardMobileResponsive/TodayAttendance.mobile";       // ✅
+import type { TodayAttendanceProps } from "./TodayAttendance.types"; // ✅
+import "./employeeDashboard.css";                                   // ✅
 
-interface Props {
-  setActiveTab?: (tab: string) => void;
-  setScrollToDate?: (date: number | null) => void;
-  onNavigate?: (timestamp: number) => void;
-  viewOnly?: boolean;
-}
 
-const TodayAttendance = ({ setActiveTab, setScrollToDate, onNavigate, viewOnly = false }: Props) => {
+const TodayAttendance = ({
+  setActiveTab, setScrollToDate, onNavigate, viewOnly = false,
+}: TodayAttendanceProps) => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const location = useLocation();
@@ -73,7 +64,7 @@ const TodayAttendance = ({ setActiveTab, setScrollToDate, onNavigate, viewOnly =
         detailsFetched.current = true;
         dispatch(getEntity(searchTerm)).unwrap()
           .then((found) => { if (found) dispatch(setCurrentUser(found)); })
-          .catch((err) => { detailsFetched.current = false; console.error("Failed to fetch employee details:", err); });
+          .catch((err) => { detailsFetched.current = false; console.error("Failed:", err); });
       }
     }
   }, [dispatch, entity, currentEmployeeId, currentUser, viewOnly]);
@@ -173,69 +164,34 @@ const TodayAttendance = ({ setActiveTab, setScrollToDate, onNavigate, viewOnly =
     else handleDateNavigator(timestamp);
   };
 
-  if (records.length === 0 && loading)
+  if (records.length === 0 && loading) {
     return (
       <div className="flex items-center justify-center p-20">
         <div className="w-12 h-12 border-4 border-[#00A3C4]/20 border-t-[#00A3C4] rounded-full animate-spin" />
       </div>
     );
+  }
 
-  const headerProps = { currentUser, entity, isMyRoute, displayEntry, calendarDate, setCalendarDate, UserType };
+  const headerProps = {
+    currentUser, entity, isMyRoute, displayEntry,
+    calendarDate, setCalendarDate, UserType,
+  };
+
+  const viewProps = {
+    viewOnly, headerProps, showInternDataBanner, showConversionBanner,
+    entity, calendarDate, setCalendarDate,
+    leaveBalance, yearlyRecords, isIntern,
+    joiningDate: entity?.joiningDate || (currentUser as any)?.joiningDate,
+    conversionDate: entity?.conversionDate || (currentUser as any)?.conversionDate,
+    trends, monthlyLeaveBalance, leaveLoading,
+    currentMonthEntries, now, handleNavigate,
+    fetchDashboardData, dashboardFetchedKey, currentEmployeeId,
+  };
 
   return (
     <div className="flex flex-col h-full w-full overflow-hidden bg-[#F4F7FE]">
-
-      {!viewOnly && (
-        <>
-          <DashboardHeaderDesktop {...headerProps} />
-          <DashboardHeaderMobile {...headerProps} />
-        </>
-      )}
-
-      <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 md:px-8 pb-6 space-y-5 custom-scrollbar">
-        <DashboardBanners showInternDataBanner={showInternDataBanner} showConversionBanner={showConversionBanner} entity={entity} />
-
-        <AttendanceStatsCards
-          year={calendarDate.getFullYear()} month={calendarDate.getMonth() + 1}
-          leaveBalance={leaveBalance} attendanceRecords={yearlyRecords} isIntern={isIntern}
-          joiningDate={entity?.joiningDate || (currentUser as any)?.joiningDate}
-          conversionDate={entity?.conversionDate || (currentUser as any)?.conversionDate}
-          trends={trends} monthlyLeaveBalance={monthlyLeaveBalance} loading={leaveLoading}
-        />
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
-          <div className="w-full"><AttendancePieChart data={currentMonthEntries} currentMonth={calendarDate} /></div>
-          <div className="w-full"><WorkTrendsGraph employeeId={currentEmployeeId} currentMonth={calendarDate} /></div>
-        </div>
-
-        {!viewOnly && (
-          <div className="flex justify-center">
-            <button onClick={() => handleNavigate(now.getTime())}
-              className="w-full md:w-auto px-8 py-3 rounded-xl text-white font-bold bg-[#4318FF] shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all flex items-center justify-center gap-2 transform active:scale-95">
-              <Edit size={18} />
-              <span>Log Today's Hours</span>
-            </button>
-          </div>
-        )}
-
-        <div className="bg-white rounded-2xl shadow-[0px_8px_24px_rgba(112,144,176,0.1)] border border-gray-100/80 overflow-hidden">
-          <div className="px-4 md:px-5 py-3 md:py-4 border-b border-gray-100 flex items-center justify-between gap-2">
-            <div>
-              <h3 className="text-sm md:text-base font-bold text-[#2B3674]">Attendance List</h3>
-              <p className="text-xs text-gray-400 mt-0.5">Monthly attendance records</p>
-            </div>
-            <span className="text-xs px-3 py-1.5 bg-[#F4F7FE] rounded-full text-[#4318FF] font-bold border border-[#4318FF]/15 shrink-0 whitespace-nowrap">All Statuses</span>
-          </div>
-          <div className="p-3 md:p-4">
-            <AttendanceViewWrapper
-              now={now} currentDate={calendarDate} entries={currentMonthEntries as any}
-              onMonthChange={(date) => { setCalendarDate(date); dashboardFetchedKey.current = null; fetchDashboardData(date); }}
-              onNavigateToDate={(timestamp) => handleNavigate(timestamp)}
-              hideMonthNavigation={true} hideBackButton={true}
-            />
-          </div>
-        </div>
-      </div>
+      <TodayAttendanceDesktop {...viewProps} />
+      <TodayAttendanceMobile {...viewProps} />
     </div>
   );
 };

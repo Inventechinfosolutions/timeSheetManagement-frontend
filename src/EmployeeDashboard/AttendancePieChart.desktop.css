@@ -1,0 +1,172 @@
+/* ── Attendance Pie Chart — Desktop only ── */
+
+.pie-chart-desktop {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .pie-chart-desktop {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 400px;
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 8px 30px rgb(0 0 0 / 0.04);
+    border: 1px solid #f3f4f6;
+  }
+}
+
+/* ── Header ── */
+.pie-chart-desktop__header {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.pie-chart-desktop__title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1b2559;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.pie-chart-desktop__subtitle {
+  font-size: 10px;
+  color: #a3aed0;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 2px 0 0;
+}
+
+.pie-chart-desktop__date-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #eef1fb;
+  padding: 6px 12px;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.pie-chart-desktop__date-text {
+  font-size: 11px;
+  font-weight: 700;
+  color: #4318ff;
+  white-space: nowrap;
+}
+
+/* ── Empty state ── */
+.pie-chart-desktop__empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  gap: 8px;
+}
+
+.pie-chart-desktop__empty-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #f9fafb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.pie-chart-desktop__empty-text {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* ── Chart + Legend row ── */
+.pie-chart-desktop__body {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.pie-chart-desktop__chart-wrap {
+  height: 220px;
+  width: 45%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Legend ── */
+.pie-chart-desktop__legend {
+  width: 50%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pie-chart-desktop__legend-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 200ms ease, border 200ms ease, transform 200ms ease;
+  border: 1px solid transparent;
+}
+
+.pie-chart-desktop__legend-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pie-chart-desktop__legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.pie-chart-desktop__legend-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1b2559;
+}
+
+.pie-chart-desktop__legend-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1b2559;
+}
+
+.pie-chart-desktop__legend-pct {
+  font-size: 12px;
+  font-weight: 600;
+  color: #a3aed0;
+  margin-left: 4px;
+}
+
+/* ── Recharts focus reset ── */
+.pie-chart-desktop__chart-wrap *:focus,
+.pie-chart-desktop__chart-wrap *:active {
+  outline: none !important;
+  box-shadow: none !important;
+  -webkit-tap-highlight-color: transparent;
+}
