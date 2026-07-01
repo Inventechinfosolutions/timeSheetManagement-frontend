@@ -2,6 +2,7 @@ import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-reac
 import type { CalendarViewRenderProps } from "../EmployeeDashboard/CalendarView";
 import { CALENDAR_SIMPLE_LEGEND_DOTS } from "../EmployeeDashboard/CalendarView.enums";
 import { CalendarGrid } from "../EmployeeDashboard/CalendarView.desktop";
+import "./style.css";
 
 const CalendarViewMobile = (props: CalendarViewRenderProps) => {
   const compactSurfaceClass = props.isSmall

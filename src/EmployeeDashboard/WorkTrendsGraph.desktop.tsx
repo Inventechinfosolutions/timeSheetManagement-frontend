@@ -56,9 +56,9 @@ const WorkTrendsGraphDesktop = ({
             <BarChart
               data={data}
               margin={{ top: 10, right: 30, left: -10, bottom: 20 }}
-              barSize={40}
+              barSize={60}
               barGap={4}
-              barCategoryGap="30%"
+              barCategoryGap="35%"
             >
               <CartesianGrid
                 strokeDasharray="3 3"

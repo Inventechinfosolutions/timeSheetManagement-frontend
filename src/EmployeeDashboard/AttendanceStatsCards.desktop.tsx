@@ -1,4 +1,10 @@
-import { Ban, CheckCircle, ClipboardList, Info, TrendingUp } from "lucide-react";
+import {
+  Ban,
+  CheckCircle,
+  ClipboardList,
+  Info,
+  TrendingUp,
+} from "lucide-react";
 import { Tooltip } from "antd";
 import type { AttendanceStatsCardValues } from "./AttendanceStatsCards";
 
@@ -72,7 +78,9 @@ const AttendanceStatsCardsDesktop = ({ values }: Props) => {
               <span className="attendance-stat-value">
                 {(Number(values.carryForward) || 0).toFixed(1)}
               </span>
-              <p className="attendance-stat-note">from prev. months</p>
+              <p className="attendance-stat-note attendance-stat-note--muted">
+                FROM PREVIOUS MONTH
+              </p>
             </div>
           </div>
         ) : (
@@ -89,7 +97,7 @@ const AttendanceStatsCardsDesktop = ({ values }: Props) => {
               {(Number(values.leaveUsed) || 0).toFixed(1)}
             </span>
             <p className="attendance-stat-note attendance-stat-note--muted">
-              Approved
+              APPROVED
             </p>
           </div>
         </div>
@@ -102,7 +110,7 @@ const AttendanceStatsCardsDesktop = ({ values }: Props) => {
             <div className="attendance-stat-label">LOP</div>
             <span className="attendance-stat-value">{values.lop}</span>
             <p className="attendance-stat-note attendance-stat-note--muted">
-              Loss of Pay
+              LOSS OF PAY
             </p>
           </div>
         </div>
@@ -111,14 +119,12 @@ const AttendanceStatsCardsDesktop = ({ values }: Props) => {
           <div className="attendance-balance-orb attendance-balance-orb--top" />
           <div className="attendance-balance-orb attendance-balance-orb--bottom" />
           <div className="attendance-balance-content">
-            <div className="attendance-balance-heading">
-              <div className="attendance-balance-icon">
-                <ClipboardList size={15} strokeWidth={2.5} />
-              </div>
-              <p>Available Leave Balance</p>
+            <div className="attendance-balance-icon">
+              <ClipboardList size={15} strokeWidth={2.5} />
             </div>
+            <p className="attendance-stat-label">AVAILABLE LEAVE BALANCE</p>
             <div className="attendance-balance-row">
-              <span>{values.availableBalance.toFixed(1)}</span>
+              <span className="attendance-stat-value">{values.availableBalance.toFixed(1)}</span>
               <small>this month</small>
             </div>
           </div>

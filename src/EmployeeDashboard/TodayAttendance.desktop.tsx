@@ -8,7 +8,7 @@ import AttendanceViewWrapper from "./CalenderViewWrapper";
 import { LOG_BUTTON_TEXT, ATTENDANCE_LIST_LABELS } from "./TodayAttendance.enums";
 import type { DesktopViewProps } from "./TodayAttendance.types";
 import "./TodayAttendance.desktop.css";
-import "./TodayAttendance.mobile.css";
+// import "./TodayAttendance.mobile.css";
 
 const TodayAttendanceDesktop = ({
   viewOnly, headerProps, showInternDataBanner, showConversionBanner,

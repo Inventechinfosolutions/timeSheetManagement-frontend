@@ -7,7 +7,7 @@ import WorkTrendsGraph from "../EmployeeDashboard/WorkTrendsGraph";
 import AttendanceViewWrapper from "../EmployeeDashboard/CalenderViewWrapper";
 import { LOG_BUTTON_TEXT, ATTENDANCE_LIST_LABELS } from "../EmployeeDashboard/TodayAttendance.enums";
 import type { MobileViewProps } from "../EmployeeDashboard/TodayAttendance.types";
-import "./TodayAttendance.mobile.css";
+import "./style.css";
 
 const TodayAttendanceMobile = ({
   viewOnly, headerProps, showInternDataBanner, showConversionBanner,

@@ -1,6 +1,8 @@
 import { Ban, CheckCircle, ClipboardList, Info, TrendingUp } from "lucide-react";
 import { Tooltip } from "antd";
 import type { AttendanceStatsCardValues } from "../EmployeeDashboard/AttendanceStatsCards";
+import "./style.css";
+
 
 interface Props {
   values: AttendanceStatsCardValues;
@@ -72,7 +74,7 @@ const AttendanceStatsCardsMobile = ({ values }: Props) => {
               <span className="attendance-stat-value">
                 {(Number(values.carryForward) || 0).toFixed(1)}
               </span>
-              <p className="attendance-stat-note">from prev. months</p>
+              <p className="attendance-stat-note attendance-stat-note--muted">FROM PREVIOUS MONTH</p>
             </div>
           </div>
         )}
@@ -87,7 +89,7 @@ const AttendanceStatsCardsMobile = ({ values }: Props) => {
               {(Number(values.leaveUsed) || 0).toFixed(1)}
             </span>
             <p className="attendance-stat-note attendance-stat-note--muted">
-              Approved
+              APPROVED
             </p>
           </div>
         </div>
@@ -100,7 +102,7 @@ const AttendanceStatsCardsMobile = ({ values }: Props) => {
             <div className="attendance-stat-label">LOP</div>
             <span className="attendance-stat-value">{values.lop}</span>
             <p className="attendance-stat-note attendance-stat-note--muted">
-              Loss of Pay
+              LOSS OF PAY
             </p>
           </div>
         </div>

@@ -14,7 +14,7 @@ import {
   WORK_TREND_BARS,
   WORK_TRENDS_EMPTY_TEXT,
 } from "../EmployeeDashboard/WorkTrendsGraph.enums";
-import "./WorkTrendsGraph.mobile.css";
+import "./style.css";
 
 const formatLabel = (val: any) =>
   val && Number(val) > 0 ? Number(val).toFixed(1) : "";

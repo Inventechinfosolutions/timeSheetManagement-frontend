@@ -1,22 +1,30 @@
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Calendar as CalendarIcon,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { HeaderProps } from "../EmployeeDashboard/EmployeeDashboard.types";
-import "./DashboardHeaderMobile.css";
+import "./style.css";
 
 export default function DashboardHeaderMobile({
-  currentUser, entity, isMyRoute, displayEntry,
-  calendarDate, setCalendarDate, UserType,
+  currentUser,
+  entity,
+  isMyRoute,
+  displayEntry,
+  calendarDate,
+  setCalendarDate,
+  UserType,
 }: HeaderProps) {
   return (
     <div className="dashboard-header-mobile">
       <div className="dashboard-header-mobile__card">
         <div className="dashboard-header-mobile__row">
-
           {/* Left */}
           <div className="dashboard-header-mobile__left">
             <h1 className="dashboard-header-mobile__title">
               {currentUser?.userType === UserType.MANAGER
                 ? "Manager Dashboard"
-                : "Employee Dashboard"}
+                : "Employee Dashboard "}
             </h1>
             <p className="dashboard-header-mobile__subtitle">
               Welcome back,{" "}
@@ -83,7 +91,6 @@ export default function DashboardHeaderMobile({
               </button>
             </div>
           </div>
-
         </div>
       </div>
     </div>
