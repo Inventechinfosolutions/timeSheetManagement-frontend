@@ -263,7 +263,7 @@ const MyTimesheet = ({
     const targetDate = selectedDateId
       ? new Date(selectedDateId)
       : now.getMonth() === today.getMonth() &&
-          now.getFullYear() === today.getFullYear()
+        now.getFullYear() === today.getFullYear()
         ? today
         : null;
 
@@ -371,9 +371,8 @@ const MyTimesheet = ({
     if (!currentEmployeeId || (isAdmin && currentEmployeeId === "Admin"))
       return;
 
-    const fetchKey = `${currentEmployeeId}-${
-      now.getMonth() + 1
-    }-${now.getFullYear()}`;
+    const fetchKey = `${currentEmployeeId}-${now.getMonth() + 1
+      }-${now.getFullYear()}`;
 
     if (lastAttendanceKey.current === fetchKey) return;
     lastAttendanceKey.current = fetchKey;
@@ -977,7 +976,7 @@ const MyTimesheet = ({
               // Check what the local status was (from handleHoursInput)
               derivedStatus =
                 entry.status === AttendanceStatus.NOT_UPDATED ||
-                currentTotal === null
+                  currentTotal === null
                   ? AttendanceStatus.NOT_UPDATED
                   : AttendanceStatus.ABSENT;
             }
@@ -1107,8 +1106,8 @@ const MyTimesheet = ({
       } catch (error: any) {
         const finalError = cleanErrorMessage(
           error?.response?.data?.message ||
-            error?.message ||
-            "Failed to save records.",
+          error?.message ||
+          "Failed to save records.",
         );
         message.error(finalError);
         refreshData();
@@ -1444,8 +1443,8 @@ const MyTimesheet = ({
                 } catch (err: any) {
                   const errorMsg = cleanErrorMessage(
                     err?.response?.data?.message ||
-                      err?.message ||
-                      "Failed to process requests",
+                    err?.message ||
+                    "Failed to process requests",
                   );
                   message.error(errorMsg);
                 }
@@ -1568,19 +1567,18 @@ const MyTimesheet = ({
                           <td className="p-3 text-right">
                             <div className="flex flex-col items-end gap-1">
                               <span
-                                className={`text-[10px] font-black uppercase px-2 py-1 rounded-md tracking-tighter shadow-sm border ${
-                                  isHalf
-                                    ? "bg-amber-50 text-amber-600 border-amber-200"
-                                    : isAbsent
-                                      ? "bg-rose-50 text-rose-600 border-rose-200"
-                                      : isClear || isNotUpdated || isUpcoming
-                                        ? isHoliday_modal
-                                          ? "bg-blue-50 text-blue-600 border-blue-200"
-                                          : isWeekend
-                                            ? "bg-rose-50 text-rose-600 border-rose-200"
-                                            : "bg-gray-50 text-gray-400 border-gray-200"
-                                        : "bg-emerald-50 text-emerald-600 border-emerald-200"
-                                }`}
+                                className={`text-[10px] font-black uppercase px-2 py-1 rounded-md tracking-tighter shadow-sm border ${isHalf
+                                  ? "bg-amber-50 text-amber-600 border-amber-200"
+                                  : isAbsent
+                                    ? "bg-rose-50 text-rose-600 border-rose-200"
+                                    : isClear || isNotUpdated || isUpcoming
+                                      ? isHoliday_modal
+                                        ? "bg-blue-50 text-blue-600 border-blue-200"
+                                        : isWeekend
+                                          ? "bg-rose-50 text-rose-600 border-rose-200"
+                                          : "bg-gray-50 text-gray-400 border-gray-200"
+                                      : "bg-emerald-50 text-emerald-600 border-emerald-200"
+                                  }`}
                               >
                                 {isHalf
                                   ? AttendanceStatus.HALF_DAY
@@ -1589,10 +1587,10 @@ const MyTimesheet = ({
                                     : isClear || isNotUpdated || isUpcoming
                                       ? isHoliday_modal
                                         ? (
-                                            isHoliday_modal.holidayName ||
-                                            isHoliday_modal.name ||
-                                            AttendanceStatus.HOLIDAY
-                                          ).toUpperCase()
+                                          isHoliday_modal.holidayName ||
+                                          isHoliday_modal.name ||
+                                          AttendanceStatus.HOLIDAY
+                                        ).toUpperCase()
                                         : isWeekend
                                           ? AttendanceStatus.WEEKEND
                                           : isUpcoming
@@ -1732,8 +1730,8 @@ const MyTimesheet = ({
       setShowAutoUpdateModal(false);
       const errorMsg = cleanErrorMessage(
         err?.response?.data?.message ||
-          err?.message ||
-          "Failed to auto-update timesheet.",
+        err?.message ||
+        "Failed to auto-update timesheet.",
       );
       message.error(errorMsg);
       refreshData();
@@ -1874,13 +1872,12 @@ const MyTimesheet = ({
               <button
                 onClick={handlePrevMonth}
                 disabled={isAdminView || loading}
-                className={`p-1 rounded-lg transition-all ${
-                  isAdminView
-                    ? "text-gray-300 cursor-not-allowed hidden"
-                    : loading
-                      ? "text-gray-300 cursor-wait"
-                      : "hover:bg-gray-50 text-gray-400 hover:text-[#4318FF]"
-                }`}
+                className={`p-1 rounded-lg transition-all ${isAdminView
+                  ? "text-gray-300 cursor-not-allowed hidden"
+                  : loading
+                    ? "text-gray-300 cursor-wait"
+                    : "hover:bg-gray-50 text-gray-400 hover:text-[#4318FF]"
+                  }`}
               >
                 <ChevronLeft size={16} strokeWidth={2.5} />
               </button>
@@ -1893,19 +1890,18 @@ const MyTimesheet = ({
               <button
                 onClick={handleNextMonth}
                 disabled={isAdminView || loading}
-                className={`p-1 rounded-lg transition-all ${
-                  isAdminView
-                    ? "text-gray-300 cursor-not-allowed hidden"
-                    : loading
-                      ? "text-gray-300 cursor-wait"
-                      : "hover:bg-gray-50 text-gray-400 hover:text-[#4318FF]"
-                }`}
+                className={`p-1 rounded-lg transition-all ${isAdminView
+                  ? "text-gray-300 cursor-not-allowed hidden"
+                  : loading
+                    ? "text-gray-300 cursor-wait"
+                    : "hover:bg-gray-50 text-gray-400 hover:text-[#4318FF]"
+                  }`}
               >
                 <ChevronRight size={16} strokeWidth={2.5} />
               </button>
             </div>
 
-            {/* Total Hours Mobile (Show when sm:hidden) */}
+            {/* Total Hours Mobile (Show when sm:hidden)
             <div className="sm:hidden text-right">
               <p className="text-[8px] uppercase font-black text-gray-400 tracking-wider leading-none mb-0.5">
                 Total
@@ -1913,7 +1909,7 @@ const MyTimesheet = ({
               <p className="text-lg font-black text-[#4318FF] leading-none">
                 {(Number(monthTotalHours) || 0).toFixed(1)}
               </p>
-            </div>
+            </div> */}
           </div>
 
           <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
@@ -2091,7 +2087,7 @@ const MyTimesheet = ({
             const isSelected =
               selectedDateId &&
               new Date(selectedDateId).toDateString() ===
-                day.fullDate.toDateString();
+              day.fullDate.toDateString();
             const highlightClass =
               isSelected && isHighlighted
                 ? "date-highlight ring-4 ring-[#4318FF]/20 z-10 scale-[1.02]"
@@ -2212,13 +2208,13 @@ const MyTimesheet = ({
                   border: "border-[#4318FF]/20",
                   text: "text-[#4318FF]",
                 };
-                if (loc === "office" || s === "office")
-                  return {
-                    bg: "bg-[#E6FFFA]",
-                    badge: "bg-[#01B574] text-white font-bold",
-                    border: "border-[#01B574]/20",
-                    text: "text-[#01B574]",
-                  };
+              if (loc === "office" || s === "office")
+                return {
+                  bg: "bg-[#E6FFFA]",
+                  badge: "bg-[#01B574] text-white font-bold",
+                  border: "border-[#01B574]/20",
+                  text: "text-[#01B574]",
+                };
 
               return {
                 bg: "bg-[#F8FAFC]",
@@ -2330,13 +2326,12 @@ const MyTimesheet = ({
                 key={idx}
                 id={`day-${day.fullDate.getTime()}`}
                 className={`relative flex flex-col justify-between p-1 rounded-xl md:rounded-2xl border transition-all duration-300 cursor-pointer min-h-[78px] md:min-h-[88px] group 
-                            ${borderClass} ${shadowClass} ${highlightClass} ${day.isToday ? bgClass : "bg-white"} ${
-                              isBlocked
-                                ? isAdmin || isManager
-                                  ? "cursor-pointer"
-                                  : "cursor-not-allowed"
-                                : "hover:-translate-y-1 hover:shadow-lg"
-                            }`}
+                            ${borderClass} ${shadowClass} ${highlightClass} ${day.isToday ? bgClass : "bg-white"} ${isBlocked
+                    ? isAdmin || isManager
+                      ? "cursor-pointer"
+                      : "cursor-not-allowed"
+                    : "hover:-translate-y-1 hover:shadow-lg"
+                  }`}
                 onClick={() => {
                   if (isBlocked && (isAdmin || isManager) && onBlockedClick) {
                     onBlockedClick();
@@ -2372,10 +2367,9 @@ const MyTimesheet = ({
                 <div className="flex justify-between items-start z-10 mb-0.5">
                   <div
                     className={`flex items-center justify-center w-5 h-5 md:w-6 md:h-6 rounded-full text-[9px] md:text-[10px] font-bold transition-colors
-                      ${
-                        day.isToday
-                          ? "bg-[#4318FF] text-white shadow-lg shadow-blue-500/30"
-                          : "bg-white/50 text-[#2B3674] group-hover:bg-[#4318FF] group-hover:text-white"
+                      ${day.isToday
+                        ? "bg-[#4318FF] text-white shadow-lg shadow-blue-500/30"
+                        : "bg-white/50 text-[#2B3674] group-hover:bg-[#4318FF] group-hover:text-white"
                       }
                   `}
                   >
@@ -2416,12 +2410,11 @@ const MyTimesheet = ({
                       type="text"
                       disabled={!isEditable || isError}
                       className={`w-full h-6 text-center font-medium bg-transparent transition-all focus:outline-none focus:ring-0
-                        ${
-                          !isEditable
-                            ? "text-gray-400 cursor-not-allowed"
-                            : isError
-                              ? "text-red-500 text-[10px] font-bold animate-pulse"
-                              : "text-gray-800 text-xl md:text-2xl group-hover:scale-105 focus:scale-105"
+                        ${!isEditable
+                          ? "text-gray-400 cursor-not-allowed"
+                          : isError
+                            ? "text-red-500 text-[10px] font-bold animate-pulse"
+                            : "text-gray-800 text-xl md:text-2xl group-hover:scale-105 focus:scale-105"
                         }`}
                       placeholder="-"
                       value={isError ? inputError.message : inputValue}
@@ -2445,23 +2438,23 @@ const MyTimesheet = ({
                     ? "ABSENT"
                     : holidayInfo || displayStatus === AttendanceStatus.HOLIDAY
                       ? holidayInfo?.holidayName ||
-                        holidayInfo?.name ||
-                        "HOLIDAY"
+                      holidayInfo?.name ||
+                      "HOLIDAY"
                       : (isSunday &&
-                            displayStatus !== AttendanceStatus.ABSENT) ||
-                          (isSaturdayWithNoData && !day.workLocation)
+                        displayStatus !== AttendanceStatus.ABSENT) ||
+                        (isSaturdayWithNoData && !day.workLocation)
                         ? "WEEKEND"
                         : displayStatus === AttendanceStatus.LEAVE
                           ? "LEAVE"
                           : day.workLocation &&
-                              (displayStatus as string) !==
-                                AttendanceStatus.LEAVE
+                            (displayStatus as string) !==
+                            AttendanceStatus.LEAVE
                             ? day.workLocation
                             : displayStatus === AttendanceStatus.HALF_DAY ||
-                                displayStatus === AttendanceStatus.WFH ||
-                                displayStatus ===
-                                  AttendanceStatus.CLIENT_VISIT ||
-                                displayStatus === AttendanceStatus.FULL_DAY
+                              displayStatus === AttendanceStatus.WFH ||
+                              displayStatus ===
+                              AttendanceStatus.CLIENT_VISIT ||
+                              displayStatus === AttendanceStatus.FULL_DAY
                               ? displayStatus
                               : displayStatus || AttendanceStatus.UPCOMING}
                 </div>

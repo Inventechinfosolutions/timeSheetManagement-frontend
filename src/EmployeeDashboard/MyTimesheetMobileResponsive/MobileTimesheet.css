@@ -30,7 +30,18 @@
 }
 
 .mobile-timesheet-total {
-  min-width: max-content;
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: baseline !important;
+  min-width: max-content !important;
+}
+
+/* Ensure no media query strips the layout down on small devices */
+@media (max-width: 380px) {
+  .flex-nowrap {
+    flex-wrap: nowrap !important;
+  }
 }
 
 .mobile-timesheet-actions {
@@ -57,50 +68,47 @@
   .mobile-timesheet-shell {
     padding: 14px 18px 22px;
   }
+
   .mobile-timesheet-shell .mobile-timesheet-grid {
     gap: 10px;
     grid-auto-rows: minmax(64px, auto);
   }
+
   .mobile-timesheet-shell .mobile-timesheet-day {
     min-height: 64px;
   }
-  .mobile-timesheet-toolbar {
-    padding: 16px 18px;
-  }
+
   .mobile-timesheet-legend {
     column-gap: 14px;
     row-gap: 8px;
   }
+
   .mobile-timesheet-legend-item {
     font-size: 9.5px;
   }
 }
 
 @media (max-width: 380px) {
-  .mobile-timesheet-toolbar {
-    padding-left: 12px;
-    padding-right: 12px;
-  }
-  .mobile-timesheet-summary-row {
-    padding-left: 0;
-    padding-right: 0;
-  }
   .mobile-timesheet-actions {
     gap: 4px !important;
   }
+
   .mobile-timesheet-legend {
     padding-left: 0;
     padding-right: 0;
     column-gap: 8px;
     row-gap: 6px;
   }
+
   .mobile-timesheet-legend-item {
     font-size: 7.5px;
     letter-spacing: 0;
   }
+
   .mobile-timesheet-shell .mobile-timesheet-grid {
     gap: 6px;
   }
+
   .mobile-timesheet-shell .mobile-timesheet-day {
     border-radius: 10px;
   }
@@ -111,6 +119,7 @@
     opacity: 0;
     transform: scale(0.96);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -140,6 +149,7 @@
     opacity: 0;
     transform: translateY(100%);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
