@@ -16,8 +16,57 @@
   height: 60px;
 }
 
+.header-desktop-logo {
+  display: none;
+}
+
+@media (min-width: 1280px) {
+  .panel-close-button,
+  .profile-panel-header {
+    display: none;
+  }
+
+  .header-desktop-logo {
+    display: inline-flex;
+  }
+
+  .mobile-header {
+    display: none !important;
+  }
+
+  .header-desktop-logo-img {
+    height: 1.75rem;
+  }
+
+  .header-actions {
+    gap: 0.75rem;
+  }
+
+  .notification-popover {
+    position: absolute;
+    right: 0;
+    margin-top: 0.75rem;
+    width: 400px;
+    transform-origin: top right;
+  }
+
+  .profile-trigger {
+    column-gap: 0.5rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .profile-menu {
+    position: absolute;
+    right: 0;
+    margin-top: 0.5rem;
+    width: 14rem;
+  }
+}
+
 .header-logo {
   flex: 1;
+  position: relative;
 }
 
 .logo-link {
@@ -79,40 +128,4 @@
 
 .nav-button:active {
   transform: translateY(0);
-}
-
-@media (max-width: 768px) {
-  .header-container {
-    height: auto;
-    padding: 8px 16px 4px 16px; /* Added right padding for screen edge gap */
-    flex-direction: column;
-    gap: 6px; /* Added gap between logo and navigation row */
-    align-items: center;
-  }
-
-  .header-logo {
-    flex: 0 1 auto;
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    padding-right: 16px; /* Keep logo centered relative to screen */
-  }
-
-  .header-logo > div {
-    transform: scale(0.9);
-    transform-origin: center center;
-  }
-
-  .header-container .ml-auto {
-    margin-left: 0;
-    width: 100%;
-    justify-content: flex-end;
-    padding: 0;
-    gap: 12px;
-  }
-
-  /* Ensure the items stay grouped on the right */
-  .header-container .ml-auto > * {
-    flex: 0 0 auto;
-  }
 }

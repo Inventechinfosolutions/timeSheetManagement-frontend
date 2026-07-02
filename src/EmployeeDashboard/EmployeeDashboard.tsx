@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import Header from "../components/Header";
+import Header from "../components/DesktopHeader/Header";
 import SidebarLayout from "./SidebarLayout";
 import MyTimesheet from "./MyTimesheet";
 import Calendar from "./CalendarView"; // Replaced FullTimesheet

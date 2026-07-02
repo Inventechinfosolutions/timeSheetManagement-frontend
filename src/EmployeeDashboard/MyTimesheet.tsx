@@ -34,7 +34,7 @@ import {
   isEditableMonth,
   getBadgeLocation,
 } from "../utils/attendanceUtils";
-import MobileMyTimesheet from "./MobileMyTimesheet";
+import MobileTimesheet from "./MyTimesheetMobileResponsive/MobileTimesheet";
 import AutoUpdateModal from "./AutoUpdateModal";
 import AutoUpdateSuccessModal from "./AutoUpdateSuccessModal";
 
@@ -46,6 +46,8 @@ interface TimesheetProps {
   onBlockedClick?: () => void;
   containerClassName?: string;
 }
+
+const RESPONSIVE_TIMESHEET_BREAKPOINT = 1024;
 
 const cleanErrorMessage = (msg: string) => {
   if (typeof msg !== "string") return msg;
@@ -205,13 +207,15 @@ const MyTimesheet = ({
 
   const today = useMemo(() => new Date(), []);
 
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [isMobile, setIsMobile] = useState(
+    window.innerWidth <= RESPONSIVE_TIMESHEET_BREAKPOINT,
+  );
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
   const [shouldSetLastWeek, setShouldSetLastWeek] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
+      setIsMobile(window.innerWidth <= RESPONSIVE_TIMESHEET_BREAKPOINT);
     };
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
@@ -1755,35 +1759,36 @@ const MyTimesheet = ({
 
   if (isMobile) {
     return (
-      <MobileMyTimesheet
-        currentWeekEntries={weeks[currentWeekIndex] || []}
-        onPrevWeek={handlePrevWeek}
-        onNextWeek={handleNextWeek}
-        onHoursInput={handleHoursInput}
-        onSave={onSaveAll}
-        monthTotalHours={monthTotalHours}
-        currentMonthName={now.toLocaleDateString("en-US", {
-          month: "long",
-          year: "numeric",
-        })}
+      <MobileTimesheet
+        now={now}
         loading={loading}
-        isAdmin={isAdmin}
-        isManager={isManager}
-        isManagerView={isManagerView}
-        readOnly={effectiveReadOnly}
-        isDateBlocked={isDateBlocked}
-        isEditableMonth={isEditableMonth}
-        isHoliday={isHoliday}
-        onBlockedClick={onBlockedClick}
-        localInputValues={localInputValues}
-        onInputBlur={handleInputBlur}
+        localEntries={localEntries}
+        paddingDays={paddingDays}
+        monthTotalHours={monthTotalHours}
+        holidays={holidays}
         selectedDateId={selectedDateId}
         isHighlighted={isHighlighted}
+        effectiveReadOnly={effectiveReadOnly}
+        isAdmin={isAdmin}
+        isManager={isManager}
+        isAdminView={isAdminView}
+        isManagerView={isManagerView}
+        isViewedMonthEligible={isViewedMonthEligible}
         containerClassName={containerClassName}
-        onAutoUpdate={isViewedMonthEligible ? handleAutoUpdateClick : undefined}
-        // autoUpdateCount={autoUpdateCount}
-        blockers={blockers}
-        department={entity?.department || entity?.department_name || ""}
+        showAutoUpdateModal={showAutoUpdateModal}
+        showSuccessModal={showSuccessModal}
+        isAutoUpdating={isAutoUpdating}
+        updateResult={updateResult}
+        setShowAutoUpdateModal={setShowAutoUpdateModal}
+        setShowSuccessModal={setShowSuccessModal}
+        confirmAutoUpdate={confirmAutoUpdate}
+        handlePrevMonth={handlePrevMonth}
+        handleNextMonth={handleNextMonth}
+        handleAutoUpdateClick={handleAutoUpdateClick}
+        handleHoursInput={handleHoursInput}
+        onSaveAll={onSaveAll}
+        isDateBlocked={isDateBlocked}
+        onBlockedClick={onBlockedClick}
       />
     );
   }
@@ -2207,13 +2212,13 @@ const MyTimesheet = ({
                   border: "border-[#4318FF]/20",
                   text: "text-[#4318FF]",
                 };
-              if (loc === "office" || s === "office")
-                return {
-                  bg: "bg-[#E6FFFA]",
-                  badge: "bg-[#01B574] text-white font-bold",
-                  border: "border-[#01B574]/20",
-                  text: "text-[#01B574]",
-                };
+                if (loc === "office" || s === "office")
+                  return {
+                    bg: "bg-[#E6FFFA]",
+                    badge: "bg-[#01B574] text-white font-bold",
+                    border: "border-[#01B574]/20",
+                    text: "text-[#01B574]",
+                  };
 
               return {
                 bg: "bg-[#F8FAFC]",

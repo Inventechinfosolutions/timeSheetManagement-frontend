@@ -37,6 +37,7 @@ import AttendanceViewWrapper from "./EmployeeDashboard/CalenderViewWrapper";
 import MobileResponsiveCalendarPage from "./EmployeeDashboard/MobileResponsiveCalendarPage";
 import LeaveManagement from "./EmployeeDashboard/LeaveManagement";
 import LeaveBalance from "./EmployeeDashboard/LeaveBalance";
+import About from "./pages/About";
 
 // Admin Dashboard Components
 import AdminDashboard from "./AdminDashboard/AdminDashboard";
@@ -74,6 +75,10 @@ const EmployeeTabWrapper = () => {
       return <LeaveManagement />;
     case "leave-balance":
       return <LeaveBalance />;
+
+    case "about": 
+      return <About />;
+
     default:
       return <Navigate to="/employee-dashboard" replace />;
   }
@@ -229,7 +234,10 @@ function AppContent() {
           }
         />
 
-        <Route path="/login" element={<Navigate to="/landing?skipSplash=true" replace />} />
+        <Route
+          path="/login"
+          element={<Navigate to="/landing?skipSplash=true" replace />}
+        />
 
         <Route path="/welcome" element={<Navigate to="/landing" replace />} />
         <Route path="/portal" element={<Navigate to="/landing" replace />} />
@@ -271,7 +279,9 @@ function AppContent() {
                 <Route
                   path="/admin-dashboard"
                   element={
-                    <ProtectedRoute allowedRoles={[UserType.ADMIN, UserType.RECEPTIONIST]}>
+                    <ProtectedRoute
+                      allowedRoles={[UserType.ADMIN, UserType.RECEPTIONIST]}
+                    >
                       <AdminLayout />
                     </ProtectedRoute>
                   }
@@ -371,6 +381,15 @@ function AppContent() {
                   <Route index element={<TodayAttendance />} />
                   <Route path=":tab/:date?" element={<EmployeeTabWrapper />} />
                 </Route>
+
+                {/* <Route
+  path="/about"
+  element={
+    <SidebarLayout>
+      <MobileAbout />
+    </SidebarLayout>
+  }
+/> */}
 
                 {/* Other Configured Routes */}
                 {adminComponentConfigs
