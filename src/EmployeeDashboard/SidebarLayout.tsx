@@ -9,6 +9,7 @@ import {
   Eye,
   Menu,
   LogOut,
+  ScanFace,
 } from "lucide-react";
 import { useAppSelector, useAppDispatch } from "../hooks";
 import { useParams, useNavigate } from "react-router-dom";
@@ -235,16 +236,16 @@ const SidebarLayout = ({
             ></div>
           </div>
 
-          {/* Demo Face Recognition Button */}
+          {/* Check-in / Check-out Button */}
           <div className="px-4 mb-1">
             <button
               type="button"
               onClick={() => navigate("/employee-dashboard/face-demo")}
-              className="w-full flex items-center p-3 rounded-2xl cursor-pointer transition-all duration-300 relative overflow-hidden group bg-white text-blue-600 hover:bg-blue-50"
+              className="w-full flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-300 relative overflow-hidden group bg-white text-blue-600 hover:bg-blue-50"
             >
-              <div className="shrink-0 relative z-10 transition-transform duration-300 text-blue-600" />
+              <ScanFace size={18} className="shrink-0 relative z-10 transition-transform duration-300 text-blue-600" />
               <span className="text-sm font-semibold whitespace-nowrap transition-all duration-300 relative z-10">
-                demo face recognition
+                Check-in / Check-out
               </span>
             </button>
           </div>
