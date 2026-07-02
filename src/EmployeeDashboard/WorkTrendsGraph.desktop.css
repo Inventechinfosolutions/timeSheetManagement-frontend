@@ -1,0 +1,122 @@
+/* ── Work Trends Graph — Desktop only ── */
+
+.work-trends-desktop {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .work-trends-desktop {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 400px;
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 8px 30px rgb(0 0 0 / 0.04);
+    border: 1px solid #f3f4f6;
+  }
+}
+
+/* ── Loading state ── */
+.work-trends-desktop__loading {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .work-trends-desktop__loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-height: 400px;
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 8px 30px rgb(0 0 0 / 0.04);
+    border: 1px solid #f3f4f6;
+  }
+}
+
+.work-trends-desktop__spinner {
+  width: 32px;
+  height: 32px;
+  border: 4px solid rgba(67, 24, 255, 0.2);
+  border-top-color: #4318ff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.work-trends-desktop__loading-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #9ca3af;
+  margin-top: 12px;
+}
+
+/* ── Header ── */
+.work-trends-desktop__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.work-trends-desktop__title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1b2559;
+  margin: 0;
+}
+
+.work-trends-desktop__date-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #eef1fb;
+  padding: 6px 12px;
+  border-radius: 12px;
+}
+
+.work-trends-desktop__date-text {
+  font-size: 14px;
+  font-weight: 700;
+  color: #4318ff;
+  white-space: nowrap;
+}
+
+/* ── Chart area ── */
+.work-trends-desktop__chart {
+  flex: 1;
+  width: 100%;
+  min-height: 300px;
+}
+
+/* ── Empty state ── */
+.work-trends-desktop__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  background: #f9fafb;
+  border-radius: 12px;
+  border: 2px dashed #e5e7eb;
+}
+
+.work-trends-desktop__empty-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #9ca3af;
+}
+
+.work-trends-desktop__empty-subtitle {
+  font-size: 12px;
+  color: #d1d5db;
+  margin-top: 4px;
+}

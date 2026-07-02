@@ -1,0 +1,145 @@
+/* ── Attendance Stats — Desktop ── */
+
+.attendance-stats-desktop {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .attendance-stats-desktop {
+    display: block;
+    margin-top: 6px;
+  }
+
+  .attendance-stats-grid--desktop {
+    display: flex;
+    flex-flow: row wrap;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  /* desktop stat card */
+  .attendance-stats-desktop .attendance-stat-card {
+    min-height: 88px;
+    flex: 1 1 0;
+    width: 0;              /* NEW — forces flex-basis to drive width, ignoring content size */
+    min-width: 0;           /* NEW — prevents text/content from pushing card wider than siblings */
+    box-sizing: border-box; /* NEW — ensures padding is included in the flex-basis calculation */
+    border-radius: 16px;
+    padding: 10px 12px;
+    box-shadow: 0 10px 15px -3px rgb(229 231 235 / 0.5);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 6px;
+  }
+
+  .attendance-stats-desktop .attendance-stat-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .attendance-stats-desktop .attendance-stat-label {
+    font-size: 9px;
+    margin: 0;
+  }
+
+  .attendance-stats-desktop .attendance-stat-value {
+    font-size: 20px;
+    margin: 0;
+    line-height: 1.1;
+  }
+
+  .attendance-stats-desktop .attendance-stat-caption {
+    font-size: 9px;
+    margin-top: -2px;
+  }
+
+  /* ── desktop balance card — blue gradient ── */
+  .attendance-stats-desktop .attendance-balance-card {
+    min-height: 88px;
+    flex: 1 1 0;
+    width: 0;              /* NEW — same fix, matches the 4 stat cards exactly */
+    min-width: 0;           /* NEW */
+    box-sizing: border-box; /* NEW */
+    border-radius: 16px;
+    padding: 10px 12px;
+    background: linear-gradient(135deg, #6938ef 0%, #4318ff 100%);
+    box-shadow: 0 10px 15px -3px rgba(67, 24, 255, 0.35);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .attendance-stats-desktop .attendance-balance-orb--top,
+  .attendance-stats-desktop .attendance-balance-orb--bottom {
+    display: block;
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    pointer-events: none;
+  }
+
+  .attendance-stats-desktop .attendance-balance-orb--top {
+    top: -16px;
+    right: -16px;
+    width: 60px;
+    height: 60px;
+  }
+
+  .attendance-stats-desktop .attendance-balance-orb--bottom {
+    bottom: -20px;
+    left: -8px;
+    width: 60px;
+    height: 60px;
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .attendance-stats-desktop .attendance-balance-content {
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 6px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .attendance-stats-desktop .attendance-balance-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+  }
+
+  .attendance-stats-desktop .attendance-balance-card .attendance-stat-label {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.8);
+    margin: 0;
+  }
+
+  .attendance-stats-desktop .attendance-balance-row {
+    display: flex;
+    gap: 6px;
+    align-items: baseline;
+  }
+
+  .attendance-stats-desktop .attendance-balance-card .attendance-balance-row span {
+    font-size: 20px !important;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: 0;
+    font-family: inherit;
+    color: #fff;
+    margin: 0;
+  }
+
+  .attendance-stats-desktop .attendance-balance-row small {
+    font-size: 10px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.7);
+  }
+}

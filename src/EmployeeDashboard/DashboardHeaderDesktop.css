@@ -1,0 +1,143 @@
+/* ── Dashboard Header Desktop ── */
+
+.dashboard-header-desktop {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .dashboard-header-desktop {
+    display: block;
+    padding: 24px 32px 8px;
+  }
+}
+
+.dashboard-header-desktop__card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0px 8px 24px rgba(112, 144, 176, 0.1);
+  border: 1px solid rgba(243, 244, 246, 0.8);
+}
+
+@media (min-width: 768px) {
+  .dashboard-header-desktop__card {
+    padding: 20px;
+  }
+}
+
+.dashboard-header-desktop__row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* ── Left: title + welcome ── */
+.dashboard-header-desktop__left {
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-header-desktop__title {
+  font-size: 15px;
+  font-weight: 500;
+  color: #2b3674;
+  margin: 0;
+}
+
+@media (min-width: 768px) {
+  .dashboard-header-desktop__title {
+    font-size: 18px;
+  }
+}
+
+.dashboard-header-desktop__subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 4px 0 0;
+}
+
+.dashboard-header-desktop__username {
+  font-weight: 600;
+  color: #4318ff;
+}
+
+/* ── Right: date pill + month navigator ── */
+.dashboard-header-desktop__right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.dashboard-header-desktop__date-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: #eef1fb;
+  border-radius: 12px;
+  padding: 8px 12px;
+  width: 100%;
+  text-align: center;
+}
+
+.dashboard-header-desktop__date-pill-icon {
+  color: #4318ff;
+  flex-shrink: 0;
+}
+
+.dashboard-header-desktop__date-pill-text {
+  font-size: 12px;
+  font-weight: 500;
+  color: #4318ff;
+  white-space: nowrap;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.dashboard-header-desktop__month-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: #f4f6fd;
+  border-radius: 8px;
+  padding: 4px 8px;
+  width: 100%;
+}
+
+.dashboard-header-desktop__month-btn {
+  width: 16px;
+  height: 16px;
+  background: #ffffff;
+  border: none;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  padding: 0;
+  transition: background 150ms ease, transform 150ms ease;
+}
+
+.dashboard-header-desktop__month-btn:hover {
+  background: #f9fafb;
+}
+
+.dashboard-header-desktop__month-btn:active {
+  transform: scale(0.95);
+}
+
+.dashboard-header-desktop__month-btn svg {
+  color: #4318ff;
+}
+
+.dashboard-header-desktop__month-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: #4318ff;
+  white-space: nowrap;
+}
