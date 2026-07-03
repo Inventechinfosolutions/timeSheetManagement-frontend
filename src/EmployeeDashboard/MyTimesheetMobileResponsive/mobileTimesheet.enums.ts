@@ -13,4 +13,6 @@ export enum MobileTimesheetDayTone {
   HALF_DAY = "half-day",
   HOLIDAY = "holiday",
   PRESENT = "present",
+  CLIENT_VISIT = "CLIENT_VISIT",
+  WFH = "WFH",
 }

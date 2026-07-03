@@ -4,21 +4,17 @@ import { ChevronLeft, ChevronRight, Lock, Rocket } from "lucide-react";
 import { AttendanceStatus } from "../../enums";
 import AutoUpdateModal from "../AutoUpdateModal";
 import AutoUpdateSuccessModal from "../AutoUpdateSuccessModal";
+import TimesheetImg from "../../assets/TimesheetIMG.png";
 import {
   MobileHoliday,
   MobileTimesheetInputModalState,
   MobileTimesheetPreview,
   MobileTimesheetProps,
 } from "./mobileTimesheet.types";
-import {
-  MobileTimesheetDayTone,
-} from "./mobileTimesheet.enums";
 import "./MobileTimesheet.css";
 
-interface ExtendedInputModalState extends Omit<
-  MobileTimesheetInputModalState,
-  "entry"
-> {
+interface ExtendedInputModalState
+  extends Omit<MobileTimesheetInputModalState, "entry"> {
   entry:
   | (MobileTimesheetInputModalState["entry"] & {
     isBlockedHalfDay?: boolean;
@@ -120,114 +116,103 @@ const getMobileModalPreview = (
   return { bg: "bg-gray-100", text: "text-gray-500", label: "Enter hours" };
 };
 
-// Fixed getDayTone prioritizing Client Visit and WFH raw states
-const getDayTone = (
-  day: MobileTimesheetProps["localEntries"][number],
-  displayStatus: string,
-  holidayInfo: MobileHoliday | undefined,
-): MobileTimesheetDayTone => {
-  const dayOfWeek = day.fullDate.getDay();
-  const statusStr = (day.status as string || "").toLowerCase().trim();
-  const locationStr = (day.workLocation as string || "").toLowerCase().trim();
+/* ============================================================
+   COLOR ENGINE — Updated for explicit WFH (Purple) & Client (Blue)
+   ============================================================ */
 
-  // 1. Force structural status matches first (fixes the image_b9cfc0.png green override issue)
-  if (statusStr.includes("client visit") || locationStr.includes("client visit")) {
-    return MobileTimesheetDayTone.CLIENT_VISIT;
-  }
+const getStatusStyles = (
+  statusStr: string | null | undefined,
+  location?: string | null,
+) => {
+  const s = (statusStr || "").toLowerCase();
+  const loc = (location || "").toLowerCase();
 
+  if (s === "blocked")
+    return {
+      bg: "bg-gray-200",
+      badge: "bg-gray-600 text-white",
+      border: "border-transparent",
+      text: "text-gray-600",
+    };
+  if (s === "holiday")
+    return {
+      bg: "bg-[#DBEAFE]",
+      badge: "bg-[#1890FF]/70 text-white font-bold",
+      border: "border-[#1890FF]/20",
+      text: "text-[#1890FF]",
+    };
   if (
-    statusStr === "wfh" ||
-    statusStr.includes("work from home") ||
-    locationStr.includes("wfh") ||
-    locationStr.includes("work from home")
-  ) {
-    return MobileTimesheetDayTone.WFH;
-  }
-
-  // 2. Base date configurations
-  if (dayOfWeek === 0) return MobileTimesheetDayTone.WEEKEND;
-  if (day.isToday) return MobileTimesheetDayTone.TODAY;
-  if (dayOfWeek === 6) return MobileTimesheetDayTone.SATURDAY;
-
-  if (holidayInfo || displayStatus === AttendanceStatus.HOLIDAY) {
-    return MobileTimesheetDayTone.HOLIDAY;
-  }
-
+    s === AttendanceStatus.WEEKEND.toLowerCase() ||
+    s === AttendanceStatus.LEAVE.toLowerCase()
+  )
+    return {
+      bg: "bg-[#FEE2E2]", // 🔴 Leave / Absent Red
+      badge: "bg-[#EE5D50]/70 text-white font-bold",
+      border: "border-[#EE5D50]/10",
+      text: "text-[#EE5D50]",
+    };
+  if (s === AttendanceStatus.FULL_DAY.toLowerCase() || s === "full day" || loc === "office" || s === "office")
+    return {
+      bg: "bg-[#E6FFFA]", // 🟢 Office / Full Day Green
+      badge: "bg-[#01B574] text-white font-bold",
+      border: "border-[#01B574]/20",
+      text: "text-[#01B574]",
+    };
+  if (s.includes("half day"))
+    return {
+      bg: "bg-[#FEF3C7]",
+      badge: "bg-[#FFB020]/80 text-white font-bold",
+      border: "border-[#FFB020]/20",
+      text: "text-[#FFB020]",
+    };
+  if (s === AttendanceStatus.ABSENT.toLowerCase())
+    return {
+      bg: "bg-[#FECACA]",
+      badge: "bg-[#DC2626]/70 text-white font-bold",
+      border: "border-[#DC2626]/20",
+      text: "text-[#DC2626]",
+    };
+  if (s === "wfh" || loc === "wfh" || s === "work from home")
+    return {
+      bg: "bg-[#fceed2]",
+      badge: "bg-[#6366F1]/70 text-white font-bold",
+      border: "border-[#6366F1]/20",
+      text: "text-[#4F46E5]",
+    };
   if (
-    displayStatus === AttendanceStatus.LEAVE ||
-    displayStatus === AttendanceStatus.ABSENT
-  ) {
-    return MobileTimesheetDayTone.ABSENT_OR_LEAVE;
-  }
+    s === "client visit" ||
+    loc === "client visit" ||
+    loc === "client place" ||
+    s === "client"
+  )
+    return {
+      bg: "bg-[#f2fcbd]",
+      badge: "bg-[#4318FF]/70 text-white font-bold",
+      border: "border-[#4318FF]/20",
+      text: "text-[#4318FF]",
+    };
 
-  if (
-    displayStatus === AttendanceStatus.HALF_DAY ||
-    displayStatus.toLowerCase().includes("half day")
-  ) {
-    return MobileTimesheetDayTone.HALF_DAY;
-  }
-
-  if (
-    (day.totalHours && Number(day.totalHours) > 0) ||
-    displayStatus === AttendanceStatus.FULL_DAY
-  ) {
-    return MobileTimesheetDayTone.PRESENT;
-  }
-
-  return MobileTimesheetDayTone.DEFAULT;
+  return {
+    bg: "bg-[#F8FAFC]",
+    badge: "bg-[#64748B]/90 text-white font-bold",
+    border: "border-gray-300",
+    text: "text-gray-600",
+  };
 };
 
-const mobileToneClasses: Record<any, { bg: string; border: string; text: string }> = {
-  [MobileTimesheetDayTone.DEFAULT]: {
-    bg: "bg-white",
-    border: "border border-gray-200",
-    text: "text-gray-800",
-  },
-  [MobileTimesheetDayTone.TODAY]: {
-    bg: "bg-white",
-    border: "border-2 border-[#4318FF]",
-    text: "text-[#4318FF]",
-  },
-  [MobileTimesheetDayTone.WEEKEND]: {
-    bg: "bg-gray-100",
-    border: "border border-gray-300",
-    text: "text-gray-500 font-bold",
-  },
-  [MobileTimesheetDayTone.SATURDAY]: {
-    bg: "bg-pink-50",
-    border: "border border-pink-300",
-    text: "text-pink-700 font-bold",
-  },
-  [MobileTimesheetDayTone.ABSENT_OR_LEAVE]: {
-    bg: "bg-red-50",
-    border: "border border-red-300",
-    text: "text-red-600 font-bold",
-  },
-  [MobileTimesheetDayTone.HALF_DAY]: {
-    bg: "bg-amber-50",
-    border: "border border-amber-300",
-    text: "text-amber-700 font-bold",
-  },
-  [MobileTimesheetDayTone.HOLIDAY]: {
-    bg: "bg-cyan-50",
-    border: "border border-cyan-300",
-    text: "text-cyan-700 font-bold",
-  },
-  [MobileTimesheetDayTone.PRESENT]: {
-    bg: "bg-emerald-50",
-    border: "border border-emerald-400",
-    text: "text-emerald-700 font-bold",
-  },
-  [MobileTimesheetDayTone.WFH]: {
-    bg: "bg-indigo-50",
-    border: "border border-indigo-200",
-    text: "text-indigo-600 font-bold",
-  },
-  [MobileTimesheetDayTone.CLIENT_VISIT]: {
-    bg: "bg-slate-100",
-    border: "border border-slate-300",
-    text: "text-slate-600 font-bold",
-  },
+const HEX_FALLBACK: Record<string, string> = {
+  "bg-gray-200": "#e5e7eb",
+  "bg-white": "#ffffff",
+  "bg-[#E6FFFA]": "#E6FFFA",
+  "bg-[#EEF2FF]": "#EEF2FF",
+  "bg-[#DBEAFE]": "#DBEAFE",
+  "bg-[#FEE2E2]": "#FEE2E2",
+};
+
+const bgClassToHex = (bgClass: string): string => {
+  const match = bgClass.match(/#([0-9a-fA-F]{3,8})/);
+  if (match) return `#${match[1]}`;
+  return HEX_FALLBACK[bgClass] || "#F8FAFC";
 };
 
 const getDisplayStatus = (
@@ -278,15 +263,6 @@ const getDisplayStatus = (
   }
 
   return displayStatus || AttendanceStatus.UPCOMING;
-};
-
-const getHalfDayColorHex = (statusString: string): string => {
-  const lower = statusString.toLowerCase();
-  if (lower.includes("office") || lower.includes("present")) return "#ecfdf5";
-  if (lower.includes("leave") || lower.includes("absent")) return "#fef2f2";
-  if (lower.includes("wfh") || lower.includes("work from home")) return "#e0e7ff";
-  if (lower.includes("client")) return "#f1f5f9";
-  return "#fffbeb";
 };
 
 const MobileTimesheet = ({
@@ -695,13 +671,8 @@ const MobileTimesheet = ({
         />
 
         <div className="flex-1 overflow-visible mt-1 mb-3 flex flex-col bg-transparent p-2 shadow-none border-none">
-          {/* Toolbar container wrapper */}
           <div className="mobile-timesheet-toolbar bg-white rounded-[20px] px-3 py-2 shadow-sm border border-gray-50 mb-3 w-full box-border">
-
-            {/* Strict three equal columns layout */}
             <div className="mobile-timesheet-summary-row grid grid-cols-3 items-center w-full overflow-hidden">
-
-              {/* 1. LEFT COLUMN: Month Picker */}
               <div className="flex items-center justify-start gap-0.5">
                 <button
                   onClick={handlePrevMonth}
@@ -735,7 +706,6 @@ const MobileTimesheet = ({
                 </button>
               </div>
 
-              {/* 2. CENTER COLUMN: Total Tracked */}
               <div className="mobile-timesheet-total flex flex-row flex-nowrap items-baseline justify-center gap-0.5 min-w-0">
                 <p className="text-[10px] tracking-tight uppercase font-black text-gray-600 leading-none whitespace-nowrap">
                   TOTAL TRACKED:
@@ -746,7 +716,6 @@ const MobileTimesheet = ({
                 <span className="text-[10px] font-bold text-gray-500 whitespace-nowrap">hrs</span>
               </div>
 
-              {/* 3. RIGHT COLUMN: Auto Fill Button (Text stacked vertically, Icon to the side) */}
               <div className="mobile-timesheet-actions flex items-center justify-end">
                 {(!effectiveReadOnly ||
                   (isAdmin && !isAdminView) ||
@@ -757,17 +726,14 @@ const MobileTimesheet = ({
                       className="flex flex-row items-center justify-center gap-1.5 py-1 px-2.5 rounded-lg font-black text-[7.5px] uppercase tracking-wide text-white transition-all active:scale-95 bg-[#4318FF] whitespace-nowrap text-left"
                       title="Auto-fill working days to 9 hours"
                     >
-                      {/* Stacked text blocks */}
                       <div className="flex flex-col leading-[1.1]">
                         <span>Auto</span>
                         <span>Fill</span>
                       </div>
-                      {/* Icon cleanly on the side */}
                       <Rocket size={11} className="flex-shrink-0" />
                     </button>
                   )}
               </div>
-
             </div>
           </div>
 
@@ -802,8 +768,11 @@ const MobileTimesheet = ({
                     ? "date-highlight ring-4 ring-[#4318FF]/20 z-10 scale-[1.02]"
                     : "";
                 const isBlocked = isDateBlocked(day.fullDate);
-                const tone = getDayTone(day, displayStatus, holidayInfo);
-                const toneClasses = mobileToneClasses[tone] || mobileToneClasses[MobileTimesheetDayTone.DEFAULT];
+
+                const overallStyles = getStatusStyles(
+                  displayStatus,
+                  day.workLocation,
+                );
 
                 const statusLabel = day.status
                   ? (day.status as string).toUpperCase()
@@ -825,22 +794,76 @@ const MobileTimesheet = ({
                   }
                 }
 
-                const isSplitDay = firstHalf && secondHalf && firstHalf.toLowerCase() !== secondHalf.toLowerCase();
-                const dynamicSplitBgStyle = isSplitDay
-                  ? { background: `linear-gradient(to bottom, ${getHalfDayColorHex(firstHalf)} 50%, ${getHalfDayColorHex(secondHalf)} 50%)` }
-                  : {};
+                const dayOfWeek = day.fullDate.getDay();
+                const isSunday = dayOfWeek === 0;
+                const isSaturday = dayOfWeek === 6;
+                const h_val = Number(day.totalHours || 0);
+                const isNonWorkingDay = isSunday || !!holidayInfo;
+
+                const isSplitDay =
+                  !!firstHalf &&
+                  !!secondHalf &&
+                  !((isNonWorkingDay && h_val >= 1) || (isSaturday && h_val >= 4));
+
+                let splitBgStyle: React.CSSProperties = {};
+                if (isSplitDay) {
+                  const normalizedFirst = firstHalf.toLowerCase();
+                  const normalizedSecond = secondHalf.toLowerCase();
+
+                  const checkOffice = (s: string) => s === "office";
+                  const checkWfh = (s: string) => s === "wfh" || s === "work from home";
+                  const checkClient = (s: string) => s === "client" || s === "client visit" || s === "client place";
+                  const checkLeave = (s: string) => s === "leave";
+
+                  if (checkOffice(normalizedFirst) && checkOffice(normalizedSecond)) {
+                    splitBgStyle = { background: bgClassToHex(getStatusStyles("office").bg) };
+                  } else if (checkWfh(normalizedFirst) && checkWfh(normalizedSecond)) {
+                    splitBgStyle = { background: bgClassToHex(getStatusStyles("wfh").bg) };
+                  } else if (checkClient(normalizedFirst) && checkClient(normalizedSecond)) {
+                    splitBgStyle = { background: bgClassToHex(getStatusStyles("client visit").bg) };
+                  } else {
+                    // HORIZONTAL GRADIENT SPLIT (Top Half / Bottom Half) as requested per image_cf597f.png
+                    let firstColor = bgClassToHex(getStatusStyles(firstHalf).bg);
+                    let secondColor = bgClassToHex(getStatusStyles(secondHalf).bg);
+
+                    if (checkOffice(normalizedFirst)) firstColor = bgClassToHex(getStatusStyles("office").bg);
+                    if (checkWfh(normalizedFirst)) firstColor = bgClassToHex(getStatusStyles("wfh").bg);
+                    if (checkClient(normalizedFirst)) firstColor = bgClassToHex(getStatusStyles("client visit").bg);
+                    if (checkLeave(normalizedFirst)) firstColor = bgClassToHex(getStatusStyles(AttendanceStatus.LEAVE).bg);
+
+                    if (checkOffice(normalizedSecond)) secondColor = bgClassToHex(getStatusStyles("office").bg);
+                    if (checkWfh(normalizedSecond)) secondColor = bgClassToHex(getStatusStyles("wfh").bg);
+                    if (checkClient(normalizedSecond)) secondColor = bgClassToHex(getStatusStyles("client visit").bg);
+                    if (checkLeave(normalizedSecond)) secondColor = bgClassToHex(getStatusStyles(AttendanceStatus.LEAVE).bg);
+
+                    splitBgStyle = {
+                      background: `linear-gradient(to bottom, ${firstColor} 50%, ${secondColor} 50%)`,
+                    };
+                  }
+                }
+
+                const cellBgClass = day.isToday
+                  ? "bg-white"
+                  : isSplitDay
+                    ? ""
+                    : overallStyles.bg;
+                const cellBorderClass = day.isToday
+                  ? "border-transparent"
+                  : isSplitDay
+                    ? "border-transparent"
+                    : overallStyles.border;
+                const cellTextClass = overallStyles.text;
 
                 return (
                   <div
                     key={index}
                     id={`day-${day.fullDate.getTime()}`}
                     className={`mobile-timesheet-day relative flex flex-col items-center justify-center rounded-xl border transition-all duration-200 cursor-pointer aspect-[4/5] sm:aspect-square w-full shadow-sm group overflow-visible
-                    ${isSplitDay ? "" : toneClasses.bg} ${toneClasses.border} ${highlightClass} ${day.isToday ? "ring-2 ring-[#4318FF] ring-offset-1" : ""}
+                    ${cellBgClass} ${cellBorderClass} ${highlightClass} ${day.isToday ? "ring-2 ring-[#4318FF] ring-offset-1" : ""}
                     ${isBlocked ? "cursor-pointer" : "active:scale-95"}`}
-                    style={dynamicSplitBgStyle}
+                    style={splitBgStyle}
                     onClick={() => openHoursModal(index)}
                   >
-                    {/* Top Right Lock Icon */}
                     {isBlocked && (
                       <div
                         className="absolute top-1.5 right-1.5 cursor-pointer z-30 p-0.5"
@@ -850,18 +873,16 @@ const MobileTimesheet = ({
                           openBlockedModal(day);
                         }}
                       >
-                        <Lock size={9} className={`${toneClasses.text} opacity-85`} />
+                        <Lock size={9} className={`${cellTextClass} opacity-85`} />
                       </div>
                     )}
 
-                    {/* Date Number */}
                     <span
-                      className={`text-[13px] font-extrabold ${toneClasses.text} ${day.isToday ? "font-black" : ""} leading-none`}
+                      className={`text-[13px] font-extrabold ${cellTextClass} ${day.isToday ? "font-black" : ""} leading-none`}
                     >
                       {day.date}
                     </span>
 
-                    {/* Hours (if present and not blocked) */}
                     {day.totalHours !== null &&
                       day.totalHours !== undefined &&
                       Number(day.totalHours) > 0 &&
@@ -871,7 +892,6 @@ const MobileTimesheet = ({
                         </span>
                       )}
 
-                    {/* Status Label container remains at the bottom */}
                     {isBlocked && (
                       <div
                         className="absolute inset-x-0 bottom-1 flex flex-col items-center justify-center p-0.5 text-center cursor-pointer z-20"
@@ -881,7 +901,7 @@ const MobileTimesheet = ({
                           openBlockedModal(day);
                         }}
                       >
-                        <span className={`text-[6px] font-black leading-none uppercase tracking-tighter max-w-full truncate px-0.5 ${toneClasses.text}`}>
+                        <span className={`text-[6px] font-black leading-none uppercase tracking-tighter max-w-full truncate px-0.5 ${cellTextClass}`}>
                           {statusLabel}
                         </span>
                       </div>
@@ -891,7 +911,7 @@ const MobileTimesheet = ({
               })}
             </div>
 
-            <div className="mobile-timesheet-legend flex gap-x-2 gap-y-1 px-2 mb-2 mobile-timesheet-scrollbar pb-0">
+            <div className="mobile-timesheet-legend flex flex-wrap gap-x-4 gap-y-3 px-4 py-3 mb-4 bg-white border border-gray-100 rounded-xl shadow-sm items-center justify-start">
               {[
                 {
                   label: AttendanceStatus.FULL_DAY,
@@ -915,13 +935,13 @@ const MobileTimesheet = ({
                 },
                 {
                   label: "WFH",
-                  color: "bg-indigo-50",
-                  border: "border-indigo-200",
+                  color: "bg-[#FCEED2]",
+                  border: "border-[#DDB66D]",
                 },
                 {
                   label: "Client Visit",
-                  color: "bg-slate-100",
-                  border: "border-slate-300",
+                  color: "bg-[#F2FCBD]",
+                  border: "border-[#B7D94A]",
                 },
                 {
                   label: AttendanceStatus.NOT_UPDATED,
@@ -951,14 +971,21 @@ const MobileTimesheet = ({
               ].map((item) => (
                 <div
                   key={item.label}
-                  className="mobile-timesheet-legend-item flex items-center gap-1 text-[10px] font-bold text-gray-600 whitespace-nowrap uppercase tracking-wider"
+                  className="mobile-timesheet-legend-item flex items-center gap-1.5 text-[10px] font-bold text-slate-600 whitespace-nowrap uppercase tracking-wider"
                 >
                   <div
-                    className={`w-2 h-2 rounded-full ${item.color} border ${item.border}`}
+                    className={`w-2.5 h-2.5 rounded-full ${item.color} border ${item.border}`}
                   />
                   <span>{item.label}</span>
                 </div>
               ))}
+            </div>
+            <div className="w-full px-2 mt-2">
+              <img
+                src={TimesheetImg}
+                alt="Stay on Track, Stay Productive"
+                className="w-full h-auto object-contain rounded-2xl"
+              />
             </div>
           </div>
         </div>
