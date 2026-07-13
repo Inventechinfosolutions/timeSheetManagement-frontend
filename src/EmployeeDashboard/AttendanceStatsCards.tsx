@@ -4,6 +4,7 @@ import { WorkTrendData } from "../reducers/employeeAttendance.reducer";
 import { useAppSelector } from "../hooks";
 import AttendanceStatsCardsDesktop from "./AttendanceStatsCards.desktop";
 import AttendanceStatsCardsMobile from "../EmployeeDashboardMobileResponsive/AttendanceStatsCards.mobile";
+import  AttendanceStatsCardsTab from "../EmployeeDashboardTabResponsive/AttendanceStatsCards.tab";
 import "./AttendanceStatsCards.css";
 import "./AttendanceStatsCardsDesktop.css";
 
@@ -373,6 +374,7 @@ const AttendanceStatsCards = ({
       }`}
     >
       <AttendanceStatsCardsMobile values={values} />
+      <AttendanceStatsCardsTab values={values} />
       <AttendanceStatsCardsDesktop values={values} />
     </div>
   );

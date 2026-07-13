@@ -3,6 +3,7 @@ import type { WorkTrendData } from "../reducers/employeeAttendance.reducer";
 import type { RootState } from "../store";
 import WorkTrendsGraphDesktop from "./WorkTrendsGraph.desktop";
 import WorkTrendsGraphMobile from "../EmployeeDashboardMobileResponsive/WorkTrendsGraph.mobile";
+import WorkTrendsGraphTab from "../EmployeeDashboardTabResponsive/WorkTrendsGraph.tab";
 
 interface Props {
   employeeId?: string;
@@ -29,6 +30,7 @@ const WorkTrendsGraph = ({ currentMonth }: Props) => {
   return (
     <>
       <WorkTrendsGraphMobile {...viewProps} />
+      <WorkTrendsGraphTab {...viewProps} />
       <WorkTrendsGraphDesktop {...viewProps} />
     </>
   );

@@ -1,0 +1,681 @@
+/* ════════════════════════════════════════════════════════════
+   iPad / Tab Styles ONLY — style.tab.css
+   Every rule here is scoped to 768px–1024px.
+   This file does not touch, override, or depend on your
+   mobile (-mobile) or desktop (-desktop) styles.
+   Import this only in your .Tab.tsx components.
+   ════════════════════════════════════════════════════════════ */
+ 
+/* ── Dashboard Header — Tab ── */
+ 
+.dashboard-header-tab {
+  display: none;
+  padding: 20px 24px 10px;
+}
+ 
+@media (min-width: 768px) and (max-width: 1024px) {
+  .dashboard-header-tab {
+    display: block;
+  }
+}
+ 
+.dashboard-header-tab__card {
+  width: 100%;
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 20px 24px;
+  box-shadow: 0px 8px 24px rgba(112, 144, 176, 0.1);
+  border: 1px solid rgba(243, 244, 246, 0.8);
+}
+ 
+.dashboard-header-tab__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+ 
+.dashboard-header-tab__left {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+ 
+.dashboard-header-tab__title {
+  font-size: 19px;
+  font-weight: 600;
+  color: #2b3674;
+  margin: 0;
+  line-height: 1.3;
+}
+ 
+.dashboard-header-tab__subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 4px 0 0;
+  line-height: 1.3;
+}
+ 
+.dashboard-header-tab__username {
+  font-weight: 600;
+  color: #4318ff;
+}
+ 
+.dashboard-header-tab__right {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+ 
+.dashboard-header-tab__date-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #eef1fb;
+  border-radius: 12px;
+  padding: 9px 16px;
+}
+ 
+.dashboard-header-tab__date-pill-icon {
+  color: #4318ff;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+ 
+.dashboard-header-tab__date-pill-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: #4318ff;
+  white-space: nowrap;
+  margin: 0;
+  line-height: 1;
+}
+ 
+.dashboard-header-tab__month-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: #eef1fb;
+  border-radius: 12px;
+  padding: 8px 14px;
+  min-width: 160px;
+}
+ 
+.dashboard-header-tab__month-btn {
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: #ffffff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #4318ff;
+  box-shadow: 0 1px 3px rgba(67, 24, 255, 0.12);
+  padding: 0;
+  flex-shrink: 0;
+}
+ 
+.dashboard-header-tab__month-btn svg {
+  width: 12px;
+  height: 12px;
+  color: #4318ff;
+  display: block;
+}
+ 
+.dashboard-header-tab__month-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4318ff;
+  white-space: nowrap;
+  line-height: 1;
+  flex: 1;
+  text-align: center;
+}
+
+/* ── Attendance Stats — Tab ── */
+ 
+.attendance-stats-tab {
+  display: none;
+  width: 100%;
+  padding: 0;
+  box-sizing: border-box;
+}
+ 
+@media (min-width: 768px) and (max-width: 1024px) {
+  .attendance-stats-tab {
+    display: block;
+  }
+}
+ 
+.attendance-stats-grid--tab {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  padding: 0;
+  width: 100%;
+}
+ 
+.attendance-stats-tab .attendance-stat-card {
+  min-height: 108px;
+  padding: 16px;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(112, 144, 176, 0.12);
+}
+ 
+.attendance-stats-tab .attendance-stat-card:hover {
+  box-shadow:
+    0 10px 15px -3px rgb(0 0 0 / 0.1),
+    0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+ 
+.attendance-stats-tab .attendance-stat-card:hover .attendance-stat-icon {
+  background: #dbeafe;
+}
+ 
+.attendance-stats-tab .attendance-stat-icon {
+  width: 32px;
+  height: 32px;
+}
+ 
+.attendance-stats-tab .attendance-stat-label {
+  font-size: 11px;
+}
+ 
+.attendance-stats-tab .attendance-stat-value {
+  font-size: 22px;
+}
+ 
+.attendance-stats-tab .attendance-balance-card {
+  min-height: 78px;
+  border-radius: 14px;
+  padding: 14px 18px;
+  box-shadow: 0 10px 15px -3px rgb(59 130 246 / 0.2);
+}
+ 
+.attendance-stats-tab .attendance-balance-card:hover {
+  box-shadow: 0 20px 25px -5px rgb(59 130 246 / 0.25);
+}
+ 
+.attendance-balance-card--tab {
+  grid-column: 1 / -1;
+  width: 100%;
+  margin-top: 4px;
+}
+ 
+.attendance-stats-tab .attendance-balance-content {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+ 
+.attendance-stats-tab .attendance-balance-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+}
+ 
+.attendance-stats-tab .attendance-balance-heading p {
+  font-size: 11px;
+}
+ 
+.attendance-stats-tab .attendance-balance-row {
+  gap: 6px;
+  flex-shrink: 0;
+}
+ 
+.attendance-stats-tab .attendance-balance-row span {
+  font-size: 24px;
+}
+ 
+.attendance-stats-tab .attendance-balance-row small {
+  font-size: 11px;
+}
+
+/* ── Attendance Pie — Tab ── */
+ 
+.attendance-pie-tab {
+  display: none;
+  min-height: 340px;
+  height: auto;
+  flex-direction: column;
+  border: 1px solid #f3f4f6;
+  border-radius: 16px;
+  background: #ffffff;
+  padding: 18px 22px;
+  margin-top: 0;
+  box-shadow: 0 8px 30px rgb(0 0 0 / 0.04);
+}
+ 
+@media (min-width: 768px) and (max-width: 1024px) {
+  .attendance-pie-tab {
+    display: flex;
+  }
+}
+ 
+.attendance-pie-tab .recharts-pie-sector:focus,
+.attendance-pie-tab .recharts-sector:focus,
+.attendance-pie-tab .recharts-pie-sector:active,
+.attendance-pie-tab .recharts-sector:active,
+.attendance-pie-tab path:focus,
+.attendance-pie-tab path:active,
+.attendance-pie-tab g:focus,
+.attendance-pie-tab g:active,
+.attendance-pie-tab svg:focus,
+.attendance-pie-tab svg:active {
+  outline: none !important;
+  box-shadow: none !important;
+  -webkit-tap-highlight-color: transparent;
+}
+ 
+.attendance-pie-tab__header {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+ 
+.attendance-pie-tab__title {
+  margin: 0;
+  color: #1b2559;
+  font-size: 15px;
+  font-weight: 700;
+}
+ 
+.attendance-pie-tab__subtitle {
+  margin: 2px 0 0;
+  color: #a3aed0;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+ 
+.attendance-pie-tab__date {
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: #eef1fb;
+  padding: 6px 12px;
+  color: #4318ff;
+  font-size: 12px;
+  font-weight: 700;
+}
+ 
+/* FIX: chart and legend now stack vertically instead of side-by-side —
+   the row layout looked cramped ("Present2 (100.0%)" jammed next to
+   the chart) on narrower tablet widths. */
+.attendance-pie-tab__content {
+  display: flex;
+  flex: 1;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 14px;
+  margin-top: 0;
+}
+ 
+.attendance-pie-tab__chart {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 200px;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+ 
+.attendance-pie-tab__center-label {
+  fill: #a3aed0;
+  font-family: "Plus Jakarta Sans", Inter, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+}
+ 
+.attendance-pie-tab__center-value {
+  fill: #006cf1;
+  font-family: "Plus Jakarta Sans", Inter, sans-serif;
+  font-size: 26px;
+  font-weight: 800;
+}
+ 
+.attendance-pie-tab__legend {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 10px;
+}
+ 
+.attendance-pie-tab__legend-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+ 
+.attendance-pie-tab__legend-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+ 
+.attendance-pie-tab__legend-name span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+ 
+.attendance-pie-tab__legend-name strong,
+.attendance-pie-tab__legend-value {
+  color: #1b2559;
+  font-size: 13px;
+  font-weight: 700;
+}
+ 
+.attendance-pie-tab__legend-value span {
+  margin-left: 4px;
+  color: #a3aed0;
+  font-size: 12px;
+  font-weight: 600;
+}
+ 
+.attendance-pie-tab__empty {
+  display: flex;
+  flex: 1;
+  width: 100%;
+  min-height: 220px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #9ca3af;
+  font-size: 14px;
+  font-weight: 500;
+}
+ 
+.attendance-pie-tab__empty-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #f4f7fe;
+  color: #a3aed0;
+}
+
+/* ── Work Trends — Tab ── */
+
+.work-trends-tab {
+  display: none;
+  min-height: 340px;
+  height: 100%;
+  flex-direction: column;
+  border: 1px solid #f3f4f6;
+  border-radius: 16px;
+  background: #ffffff;
+  padding: 18px;
+  box-shadow: 0 8px 30px rgb(0 0 0 / 0.04);
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  .work-trends-tab {
+    display: flex;
+  }
+}
+
+.work-trends-tab--loading {
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+}
+
+.work-trends-tab__spinner {
+  width: 34px;
+  height: 34px;
+  border: 4px solid rgb(67 24 255 / 0.2);
+  border-top-color: #4318ff;
+  border-radius: 9999px;
+  animation: work-trends-tab-spin 1s linear infinite;
+}
+
+.work-trends-tab__loading-text {
+  margin-top: 12px;
+  color: #9ca3af;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.work-trends-tab__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.work-trends-tab__header h4 {
+  margin: 0;
+  color: #1b2559;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.work-trends-tab__date {
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: #eef1fb;
+  padding: 6px 12px;
+  color: #4318ff;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.work-trends-tab__chart-wrap {
+  width: 100%;
+  min-height: 260px;
+  flex: 1;
+}
+
+.work-trends-tab__empty {
+  display: flex;
+  height: 100%;
+  min-height: 260px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed #e5e7eb;
+  border-radius: 12px;
+  background: #f9fafb;
+  padding: 20px;
+  text-align: center;
+}
+
+.work-trends-tab__empty div {
+  color: #9ca3af;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.work-trends-tab__empty span {
+  margin-top: 4px;
+  color: #d1d5db;
+  font-size: 12px;
+}
+
+@keyframes work-trends-tab-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Today Attendance — Tab ── */
+
+.today-attendance-tab {
+  display: none;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  .today-attendance-tab {
+    display: flex;
+  }
+}
+
+.today-attendance-tab__content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Charts side by side — tablet has the width for it */
+.today-attendance-tab__charts {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+  width: 100%;
+  align-items: stretch;
+}
+
+.today-attendance-tab__chart-item {
+  width: 50%;
+}
+
+.today-attendance-tab__log-btn-wrap {
+  display: flex;
+  justify-content: center;
+}
+
+.today-attendance-tab__log-btn {
+  width: auto;
+  min-width: 280px;
+  padding: 13px 36px;
+  border-radius: 12px;
+  color: #ffffff;
+  font-weight: 700;
+  background: #4318ff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 10px 20px rgba(67, 24, 255, 0.3);
+  transition: box-shadow 200ms ease, transform 150ms ease;
+}
+
+.today-attendance-tab__log-btn:hover {
+  box-shadow: 0 10px 20px rgba(67, 24, 255, 0.5);
+}
+
+.today-attendance-tab__log-btn:active {
+  transform: scale(0.96);
+}
+
+.today-attendance-tab__list-card {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0px 8px 24px rgba(112, 144, 176, 0.1);
+  border: 1px solid rgba(243, 244, 246, 0.8);
+  overflow: hidden;
+}
+
+.today-attendance-tab__list-header {
+  padding: 14px 20px;
+  border-bottom: 1px solid #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.today-attendance-tab__list-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #2b3674;
+  margin: 0;
+}
+
+.today-attendance-tab__list-subtitle {
+  font-size: 12px;
+  color: #9ca3af;
+  margin: 2px 0 0;
+}
+
+.today-attendance-tab__list-badge {
+  font-size: 12px;
+  padding: 5px 12px;
+  background: #f4f7fe;
+  border-radius: 9999px;
+  color: #4318ff;
+  font-weight: 700;
+  border: 1px solid rgba(67, 24, 255, 0.15);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.today-attendance-tab__list-body {
+  padding: 16px;
+}
+
+/* ── Calendar View — Tab ── */
+ 
+.calendar-view__surface--tab {
+  border-radius: 16px;
+  padding: 1.25rem;
+  background: #ffffff;
+  border: 1px solid #f3f4f6;
+  box-shadow: 0 8px 30px rgb(0 0 0 / 0.04);
+}
+ 
+@media (min-width: 768px) and (max-width: 1024px) {
+  .calendar-view__day {
+    min-height: 96px;
+  }
+}
+ 
+@media (min-width: 768px) and (max-width: 1024px) {
+  .calendar-view--desktop {
+    padding: 1rem;
+  }
+ 
+  .calendar-view__surface--desktop {
+    border-radius: 16px;
+    padding: 1.125rem;
+  }
+ 
+  .calendar-view__desktop-header {
+    gap: 1rem;
+  }
+ 
+  .calendar-view__day {
+    min-height: 96px;
+    padding: 0.625rem;
+    border-radius: 1rem;
+  }
+ 
+  .calendar-view__status-label {
+    font-size: 10px;
+    min-height: 20px;
+  }
+}
