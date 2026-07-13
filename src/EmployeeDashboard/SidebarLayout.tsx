@@ -10,6 +10,7 @@ import {
   Menu,
   LogOut,
   ScanFace,
+  ClipboardList,
 } from "lucide-react";
 import { useAppSelector, useAppDispatch } from "../hooks";
 import { useParams, useNavigate } from "react-router-dom";
@@ -58,8 +59,12 @@ const SidebarLayout = ({
         return "Change Password";
       case "leave-management":
         return "Request Management";
+      case "correction-management":
+        return "Correction Management";
       case "leave-balance":
         return "Leave Balance";
+      case "face-demo":
+        return "Face Demo";
       default:
         return "Dashboard";
     }
@@ -101,6 +106,7 @@ const SidebarLayout = ({
     { name: "My Timesheet", icon: Calendar },
     { name: "Timesheet History", icon: Eye },
     { name: "Request Management", icon: Calendar },
+    { name: "Correction Management", icon: ClipboardList },
     { name: "Account Settings", icon: User },
     //{ name: 'Change Password', icon: Lock },
   ];

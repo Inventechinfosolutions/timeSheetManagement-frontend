@@ -66,7 +66,6 @@ import {
 } from "lucide-react";
 import { message } from "antd";
 import CommonMultipleUploader from "../EmployeeDashboard/CommonMultipleUploader";
-
 const isCancellationAllowed = (submittedDate: string) => {
   if (!submittedDate) return true;
   const submission = dayjs(submittedDate).startOf("day");

@@ -157,6 +157,10 @@ export const mapAttendanceToEntry = (
     // Determine Work Location (Badge Text) derived from splits
     const firstHalf = attendance?.firstHalf || (attendance as any)?.first_half;
     const secondHalf = attendance?.secondHalf || (attendance as any)?.second_half;
+    const checkingInTime =
+      attendance?.checkingInTime || (attendance as any)?.checking_in_time || null;
+    const checkingOutTime =
+      attendance?.checkingOutTime || (attendance as any)?.checking_out_time || null;
 
     const workLocation = getBadgeLocation(status, firstHalf, secondHalf);
 
@@ -176,6 +180,8 @@ export const mapAttendanceToEntry = (
         sourceRequestId: attendance?.sourceRequestId, // Track auto-generated records
         firstHalf,
         secondHalf,
+        checkingInTime,
+        checkingOutTime,
         isSavedLogout: !!attendance?.logoutTime && attendance.logoutTime !== "00:00:00" && !attendance.logoutTime.includes("NaN"),
     } as TimesheetEntry;
 };

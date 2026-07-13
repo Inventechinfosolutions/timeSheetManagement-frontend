@@ -10,6 +10,7 @@ import {
   Rocket,
   ShieldBan,
   ArrowLeft,
+  Clock,
 } from "lucide-react";
 import { TimesheetEntry } from "../types";
 import { useAppDispatch, useAppSelector } from "../hooks";
@@ -37,6 +38,8 @@ import {
 import MobileMyTimesheet from "./MobileMyTimesheet";
 import AutoUpdateModal from "./AutoUpdateModal";
 import AutoUpdateSuccessModal from "./AutoUpdateSuccessModal";
+import AttendanceCorrectionModal from "./AttendanceCorrectionModal";
+import { formatClockTime, canRequestCorrectionForDay } from "../reducers/attendanceCorrection.api";
 
 interface TimesheetProps {
   now?: Date;
@@ -81,7 +84,7 @@ const MyTimesheet = ({
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
-  const { records, loading } = useAppSelector((state) => state.attendance);
+  const { records, loading, correctionRequests } = useAppSelector((state) => state.attendance);
   const { entity } = useAppSelector((state) => state.employeeDetails);
   const { currentUser } = useAppSelector((state) => state.user);
 
@@ -126,6 +129,60 @@ const MyTimesheet = ({
   );
 
   const effectiveReadOnly = readOnly || isAdminView;
+  const clockOnlyMode = !isAdmin && !isManager && !effectiveReadOnly;
+
+  const [correctionModalOpen, setCorrectionModalOpen] = useState(false);
+  const [correctionDates, setCorrectionDates] = useState<Date[]>([]);
+  const [correctionCheckIn, setCorrectionCheckIn] = useState<string | null>(null);
+  const [correctionCheckOut, setCorrectionCheckOut] = useState<string | null>(null);
+  const [correctionSelectionIds, setCorrectionSelectionIds] = useState<Set<number>>(
+    () => new Set(),
+  );
+
+  const isPastCalendarDate = (date: Date) =>
+    dayjs(date).startOf("day").isBefore(dayjs().startOf("day"));
+
+  const toggleCorrectionSelection = (day: TimesheetEntry) => {
+    if (!isPastCalendarDate(day.fullDate) || !canRequestCorrectionForDay(day)) return;
+    const id = day.fullDate.getTime();
+    setCorrectionSelectionIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const openCorrectionModal = (day?: TimesheetEntry) => {
+    const fromSelection = localEntries.filter((entry) =>
+      correctionSelectionIds.has(entry.fullDate.getTime()),
+    );
+    const candidates = day ? [day, ...fromSelection] : fromSelection;
+    const uniquePast = Array.from(
+      new Map(
+        candidates
+          .filter(
+            (entry) =>
+              isPastCalendarDate(entry.fullDate) &&
+              canRequestCorrectionForDay(entry),
+          )
+          .map((entry) => [entry.fullDate.getTime(), entry.fullDate]),
+      ).values(),
+    );
+
+    const primaryDay = day ?? fromSelection[0];
+    setCorrectionDates(uniquePast);
+    setCorrectionCheckIn(primaryDay?.checkingInTime ?? null);
+    setCorrectionCheckOut(primaryDay?.checkingOutTime ?? null);
+    setCorrectionModalOpen(true);
+  };
+
+  const getCorrectionStatusForDay = (fullDate: Date) => {
+    const dateStr = dayjs(fullDate).format("YYYY-MM-DD");
+    return correctionRequests.find(
+      (c) => dayjs(c.workingDate).format("YYYY-MM-DD") === dateStr,
+    )?.status;
+  };
 
   const parseLocalDate = (dateStr: string) => {
     const parts = dayjs(dateStr).format("YYYY-MM-DD").split("-");
@@ -1755,36 +1812,62 @@ const MyTimesheet = ({
 
   if (isMobile) {
     return (
-      <MobileMyTimesheet
-        currentWeekEntries={weeks[currentWeekIndex] || []}
-        onPrevWeek={handlePrevWeek}
-        onNextWeek={handleNextWeek}
-        onHoursInput={handleHoursInput}
-        onSave={onSaveAll}
-        monthTotalHours={monthTotalHours}
-        currentMonthName={now.toLocaleDateString("en-US", {
-          month: "long",
-          year: "numeric",
-        })}
-        loading={loading}
-        isAdmin={isAdmin}
-        isManager={isManager}
-        isManagerView={isManagerView}
-        readOnly={effectiveReadOnly}
-        isDateBlocked={isDateBlocked}
-        isEditableMonth={isEditableMonth}
-        isHoliday={isHoliday}
-        onBlockedClick={onBlockedClick}
-        localInputValues={localInputValues}
-        onInputBlur={handleInputBlur}
-        selectedDateId={selectedDateId}
-        isHighlighted={isHighlighted}
-        containerClassName={containerClassName}
-        onAutoUpdate={isViewedMonthEligible ? handleAutoUpdateClick : undefined}
-        // autoUpdateCount={autoUpdateCount}
-        blockers={blockers}
-        department={entity?.department || entity?.department_name || ""}
-      />
+      <>
+        <MobileMyTimesheet
+          currentWeekEntries={weeks[currentWeekIndex] || []}
+          onPrevWeek={handlePrevWeek}
+          onNextWeek={handleNextWeek}
+          onHoursInput={handleHoursInput}
+          onSave={onSaveAll}
+          monthTotalHours={monthTotalHours}
+          currentMonthName={now.toLocaleDateString("en-US", {
+            month: "long",
+            year: "numeric",
+          })}
+          loading={loading}
+          isAdmin={isAdmin}
+          isManager={isManager}
+          isManagerView={isManagerView}
+          readOnly={effectiveReadOnly}
+          clockOnlyMode={clockOnlyMode}
+          isDateBlocked={isDateBlocked}
+          isEditableMonth={isEditableMonth}
+          isHoliday={isHoliday}
+          onBlockedClick={onBlockedClick}
+          localInputValues={localInputValues}
+          onInputBlur={handleInputBlur}
+          selectedDateId={selectedDateId}
+          isHighlighted={isHighlighted}
+          containerClassName={containerClassName}
+          onAutoUpdate={isViewedMonthEligible ? handleAutoUpdateClick : undefined}
+          blockers={blockers}
+          department={entity?.department || entity?.department_name || ""}
+          onRequestChange={(day) => openCorrectionModal(day)}
+          onOpenRequestChangeHeader={() => openCorrectionModal()}
+        />
+        {clockOnlyMode && currentEmployeeId && (
+          <AttendanceCorrectionModal
+            open={correctionModalOpen}
+            onClose={() => setCorrectionModalOpen(false)}
+            employeeId={String(currentEmployeeId)}
+            defaultDates={correctionDates}
+            defaultCheckIn={correctionCheckIn}
+            defaultCheckOut={correctionCheckOut}
+            onSuccess={() => {
+              setCorrectionSelectionIds(new Set());
+              if (currentEmployeeId) {
+                dispatch(
+                  fetchMyTimesheet({
+                    employeeId: String(currentEmployeeId),
+                    month: String(now.getMonth() + 1).padStart(2, "0"),
+                    year: String(now.getFullYear()),
+                  }),
+                );
+              }
+            }}
+          />
+        )}
+      </>
     );
   }
 
@@ -1938,7 +2021,8 @@ const MyTimesheet = ({
             {(!effectiveReadOnly ||
               (isAdmin && !isAdminView) ||
               (isManager && !isManagerView)) &&
-              isViewedMonthEligible && (
+              isViewedMonthEligible &&
+              !clockOnlyMode && (
                 <button
                   onClick={handleAutoUpdateClick}
                   className="flex items-center justify-center gap-1.5 px-3 py-2 text-white rounded-xl font-bold text-[10px] transition-all active:scale-95 tracking-wide uppercase hover:-translate-y-0.5 bg-[#4318FF] shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50"
@@ -1949,7 +2033,23 @@ const MyTimesheet = ({
                 </button>
               )}
 
-            {(!effectiveReadOnly || (isAdmin && !isAdminView)) && (
+            {clockOnlyMode && (
+              <button
+                type="button"
+                onClick={() => openCorrectionModal()}
+                className="flex items-center justify-center gap-1.5 px-4 py-2 bg-white border-2 border-[#4318FF] text-[#4318FF] rounded-xl font-bold text-[10px] shadow-sm hover:bg-[#4318FF]/5 transition-all active:scale-95 tracking-wide uppercase"
+              >
+                <Clock size={14} />
+                <span>
+                  Request Change
+                  {correctionSelectionIds.size > 0
+                    ? ` (${correctionSelectionIds.size})`
+                    : ""}
+                </span>
+              </button>
+            )}
+
+            {(!effectiveReadOnly || (isAdmin && !isAdminView)) && !clockOnlyMode && (
               <button
                 onClick={onSaveAll}
                 disabled={loading}
@@ -1970,6 +2070,12 @@ const MyTimesheet = ({
             )}
           </div>
         </div>
+
+        {clockOnlyMode && (
+          <p className="text-[10px] text-slate-500 px-2 mb-1">
+            Tap past days to multi-select, then Request Change. Corrections are for past dates only.
+          </p>
+        )}
 
         {/* Legend */}
         <div className="flex items-center gap-x-2 md:gap-x-3 gap-y-1 flex-nowrap overflow-hidden px-2 mb-2">
@@ -2318,6 +2424,13 @@ const MyTimesheet = ({
               borderClass = "border-transparent";
             }
 
+            const isCorrectionSelected =
+              clockOnlyMode && correctionSelectionIds.has(day.fullDate.getTime());
+            const canRequestCorrection =
+              clockOnlyMode &&
+              isPastCalendarDate(day.fullDate) &&
+              canRequestCorrectionForDay(day);
+
             const isError = inputError?.index === idx;
 
             return (
@@ -2326,6 +2439,8 @@ const MyTimesheet = ({
                 id={`day-${day.fullDate.getTime()}`}
                 className={`relative flex flex-col justify-between p-1 rounded-xl md:rounded-2xl border transition-all duration-300 cursor-pointer min-h-[78px] md:min-h-[88px] group 
                             ${borderClass} ${shadowClass} ${highlightClass} ${day.isToday ? bgClass : "bg-white"} ${
+                              isCorrectionSelected ? "ring-2 ring-[#4318FF]/60" : ""
+                            } ${
                               isBlocked
                                 ? isAdmin || isManager
                                   ? "cursor-pointer"
@@ -2333,6 +2448,10 @@ const MyTimesheet = ({
                                 : "hover:-translate-y-1 hover:shadow-lg"
                             }`}
                 onClick={() => {
+                  if (canRequestCorrection) {
+                    toggleCorrectionSelection(day);
+                    return;
+                  }
                   if (isBlocked && (isAdmin || isManager) && onBlockedClick) {
                     onBlockedClick();
                   }
@@ -2407,6 +2526,32 @@ const MyTimesheet = ({
                     </div>
                   )}
                   <div className="relative group/input w-full flex justify-center">
+                    {clockOnlyMode ? (
+                      <div className="w-full text-center py-1">
+                        <p className="text-[10px] font-semibold text-slate-600">
+                          {formatClockTime(day.checkingInTime)} – {formatClockTime(day.checkingOutTime)}
+                        </p>
+                        <p className="text-lg font-bold text-gray-800">
+                          {inputValue !== '-' ? `${inputValue}h` : '—'}
+                        </p>
+                        {getCorrectionStatusForDay(day.fullDate) === 'Pending' && (
+                          <span className="text-[8px] font-bold text-amber-600 uppercase">Pending</span>
+                        )}
+                        {canRequestCorrection && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openCorrectionModal(day);
+                            }}
+                            className="mt-1 text-[8px] font-bold text-[#4318FF] uppercase hover:underline"
+                          >
+                            Request Change
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <>
                     <input
                       type="text"
                       disabled={!isEditable || isError}
@@ -2426,10 +2571,14 @@ const MyTimesheet = ({
                     {isEditable && !isError && (
                       <div className="absolute bottom-0 w-12 h-0.5 bg-black/20 rounded-full group-hover/input:bg-black transition-colors"></div>
                     )}
+                      </>
+                    )}
                   </div>
+                  {!clockOnlyMode && (
                   <span className="text-[8px] md:text-[9px] text-black/50 font-bold uppercase tracking-wider select-none mt-0.5 mb-1">
                     hrs
                   </span>
+                  )}
                 </div>
 
                 {/* Bottom: Status Badge */}
@@ -2465,6 +2614,24 @@ const MyTimesheet = ({
           })}
         </div>
       </div>
+
+      {clockOnlyMode && currentEmployeeId && (
+        <AttendanceCorrectionModal
+          open={correctionModalOpen}
+          onClose={() => {
+            setCorrectionModalOpen(false);
+            setCorrectionSelectionIds(new Set());
+          }}
+          employeeId={currentEmployeeId}
+          defaultDates={correctionDates}
+          defaultCheckIn={correctionCheckIn}
+          defaultCheckOut={correctionCheckOut}
+          onSuccess={() => {
+            setCorrectionSelectionIds(new Set());
+            refreshData();
+          }}
+        />
+      )}
     </div>
   );
 };

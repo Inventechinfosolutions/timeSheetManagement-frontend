@@ -38,6 +38,7 @@ import MobileResponsiveCalendarPage from "./EmployeeDashboard/MobileResponsiveCa
 import LeaveManagement from "./EmployeeDashboard/LeaveManagement";
 import LeaveBalance from "./EmployeeDashboard/LeaveBalance";
 import CheckinCheckoutPage from "./facescanner/checkinCheckoutpage";
+import EmployeeAttendanceCorrections from "./EmployeeDashboard/EmployeeAttendanceCorrections";
 
 // Admin Dashboard Components
 import AdminDashboard from "./AdminDashboard/AdminDashboard";
@@ -54,6 +55,7 @@ import DailyStatus from "./AdminDashboard/DailyStatus";
 import Requests from "./AdminDashboard/Requests";
 import AdminViewEmployeeDashboard from "./AdminDashboard/AdminViewEmployeeDashboard";
 import AdminLeaveManagement from "./AdminDashboard/AdminLeaveManagement";
+import ManagerAttendanceCorrections from "./AdminDashboard/ManagerAttendanceCorrections";
 import ManagerMapping from "./ManagerMapping/ManagerMapping";
 import ManagerEmployeesView from "./AdminDashboard/ManagerEmployeesView";
 
@@ -73,6 +75,8 @@ const EmployeeTabWrapper = () => {
       return <MobileResponsiveCalendarPage />;
     case "leave-management":
       return <LeaveManagement />;
+    case "correction-management":
+      return <EmployeeAttendanceCorrections />;
     case "leave-balance":
       return <LeaveBalance />;
     case "face-demo":
@@ -102,6 +106,8 @@ const AdminTabWrapper = () => {
       return <Requests />;
     case "work-management":
       return <AdminLeaveManagement />;
+    case "correction-management":
+      return <ManagerAttendanceCorrections />;
     case "leave-balance":
       return <LeaveBalance />;
     case "manager-mapping":

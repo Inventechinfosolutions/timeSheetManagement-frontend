@@ -16,6 +16,7 @@ const EmployeeLayout = () => {
       case "my-profile": return "Account Settings";
       case "change-password": return "Change Password";
       case "leave-management": return "Request Management";
+      case "correction-management": return "Correction Management";
       case "leave-balance": return "Leave Balance";
       case "face-demo": return "Face Demo";
       default: return "Dashboard";
@@ -38,6 +39,9 @@ const EmployeeLayout = () => {
         break;
       case "Request Management":
         navigate("/employee-dashboard/leave-management");
+        break;
+      case "Correction Management":
+        navigate("/employee-dashboard/correction-management");
         break;
       case "Leave Balance":
         navigate("/employee-dashboard/leave-balance");

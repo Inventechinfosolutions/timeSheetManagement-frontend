@@ -68,6 +68,7 @@ const SidebarLayout = ({
           { name: "Employee Directory", icon: Users },
           { name: "Employee Timesheet", icon: AlarmClock },
           { name: "Request Management", icon: Calendar },
+          { name: "Correction Management", icon: ClipboardList },
           { name: "Notification", icon: Bell },
         ],
       },
@@ -81,17 +82,22 @@ const SidebarLayout = ({
       { name: "Employee Directory", icon: Users },
       { name: "Employee Timesheet", icon: AlarmClock },
       { name: "Request Management", icon: Calendar },
+      { name: "Correction Management", icon: ClipboardList },
       { name: "Manager Mapping", icon: Users },
       { name: "Notification", icon: Bell },
     ],
     [],
   );
 
-  // Receptionist: hide Request Management from sidebar
+  // Receptionist: hide Request Management and Correction Management from sidebar
   const visibleAdminSidebarItems = useMemo(
     () =>
       title === "Receptionist"
-        ? adminSidebarItems.filter((i) => i.name !== "Request Management")
+        ? adminSidebarItems.filter(
+            (i) =>
+              i.name !== "Request Management" &&
+              i.name !== "Correction Management",
+          )
         : adminSidebarItems,
     [title, adminSidebarItems],
   );
@@ -115,6 +121,8 @@ const SidebarLayout = ({
         return "Leave Balance";
       case "work-management":
         return "Request Management";
+      case "correction-management":
+        return "Correction Management";
       case "my-dashboard":
         return "My Dashboard";
       case "my-timesheet":

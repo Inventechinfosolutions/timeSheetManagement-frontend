@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Button, Modal, Spin, message } from 'antd';
-import { LogIn, LogOut, ScanFace } from 'lucide-react';
+import { LogIn, LogOut, ScanFace, Clock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAppSelector } from '../hooks';
 import FaceScanner from './faceScanner';
 import FaceEnroller from './faceEnroller';
@@ -8,45 +9,59 @@ import {
   checkin,
   checkout,
   getApiErrorMessage,
-  isFaceEnrolled,
+  getFaceAttendanceStatus,
+  type FaceAttendanceStatus,
 } from './service/faceApi';
 
 type ScanAction = 'checkin' | 'checkout';
 
+const defaultStatus: FaceAttendanceStatus = {
+  isFaceEnrolled: false,
+  hasCheckedIn: false,
+  hasCheckedOut: false,
+  canCheckin: false,
+  canCheckout: false,
+};
+
 const CheckinCheckoutPage = () => {
+  const navigate = useNavigate();
   const { currentUser } = useAppSelector((state) => state.user);
   const employeeId = currentUser?.employeeId || currentUser?.loginId || '';
 
   const [loadingStatus, setLoadingStatus] = useState(true);
-  const [isEnrolled, setIsEnrolled] = useState(false);
+  const [statusError, setStatusError] = useState<string | null>(null);
+  const [faceStatus, setFaceStatus] = useState<FaceAttendanceStatus>(defaultStatus);
   const [enrollOpen, setEnrollOpen] = useState(false);
   const [verifyOpen, setVerifyOpen] = useState(false);
   const [scanAction, setScanAction] = useState<ScanAction | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const fetchEnrolledStatus = useCallback(async () => {
+  const fetchFaceStatus = useCallback(async () => {
     if (!employeeId) {
       setLoadingStatus(false);
       return;
     }
     setLoadingStatus(true);
+    setStatusError(null);
     try {
-      const enrolled = await isFaceEnrolled(employeeId);
-      setIsEnrolled(enrolled);
+      const status = await getFaceAttendanceStatus(employeeId);
+      setFaceStatus(status);
     } catch (error) {
-      message.error(getApiErrorMessage(error));
-      setIsEnrolled(false);
+      const msg = getApiErrorMessage(error);
+      setStatusError(msg);
+      message.error(msg);
+      setFaceStatus(defaultStatus);
     } finally {
       setLoadingStatus(false);
     }
   }, [employeeId]);
 
   useEffect(() => {
-    fetchEnrolledStatus();
-  }, [fetchEnrolledStatus]);
+    fetchFaceStatus();
+  }, [fetchFaceStatus]);
 
   const handleEnrollClick = () => {
-    if (isEnrolled) {
+    if (faceStatus.isFaceEnrolled) {
       Modal.confirm({
         title: 'Re-enroll face?',
         content: 'This will replace your existing face enrollment. Are you sure?',
@@ -61,8 +76,16 @@ const CheckinCheckoutPage = () => {
   };
 
   const openVerifyModal = (action: ScanAction) => {
-    if (!isEnrolled) {
+    if (!faceStatus.isFaceEnrolled) {
       message.warning('Please enroll your face first');
+      return;
+    }
+    if (action === 'checkin' && !faceStatus.canCheckin) {
+      message.warning('You have already checked in today');
+      return;
+    }
+    if (action === 'checkout' && !faceStatus.canCheckout) {
+      message.warning('Please check in first before checking out');
       return;
     }
     setScanAction(action);
@@ -78,9 +101,21 @@ const CheckinCheckoutPage = () => {
         scanAction === 'checkin'
           ? await checkin(employeeId, images)
           : await checkout(employeeId, images);
-      message.success(result.message || `${scanAction === 'checkin' ? 'Check-in' : 'Check-out'} successful`);
+
+      let successMessage = result.message || `${scanAction === 'checkin' ? 'Check-in' : 'Check-out'} successful`;
+      if (scanAction === 'checkout' && result.attendance) {
+        const { totalHours, status } = result.attendance;
+        if (totalHours != null && status) {
+          successMessage = `${successMessage} — ${totalHours}h logged (${status})`;
+        } else if (totalHours != null) {
+          successMessage = `${successMessage} — ${totalHours}h logged`;
+        }
+      }
+
+      message.success(successMessage);
       setVerifyOpen(false);
       setScanAction(null);
+      await fetchFaceStatus();
     } catch (error) {
       message.error(getApiErrorMessage(error));
     } finally {
@@ -106,6 +141,18 @@ const CheckinCheckoutPage = () => {
     );
   }
 
+  if (statusError) {
+    return (
+      <div className="p-6 max-w-2xl mx-auto text-center">
+        <h1 className="text-xl font-bold text-slate-800 mb-2">Face Attendance</h1>
+        <p className="text-red-600 mb-4">{statusError}</p>
+        <Button type="primary" onClick={fetchFaceStatus}>
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 max-w-2xl mx-auto">
       <div className="mb-8">
@@ -115,20 +162,30 @@ const CheckinCheckoutPage = () => {
 
       {loadingStatus ? (
         <div className="flex justify-center py-16">
-          <Spin size="large" tip="Checking enrollment status..." />
+          <Spin size="large" tip="Loading attendance status..." />
         </div>
       ) : (
         <>
-          <div className="mb-6">
+          <div className="mb-6 flex flex-wrap gap-2">
             <span
               className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
-                isEnrolled
+                faceStatus.isFaceEnrolled
                   ? 'bg-emerald-100 text-emerald-700'
                   : 'bg-amber-100 text-amber-700'
               }`}
             >
-              {isEnrolled ? 'Face enrolled' : 'Not enrolled'}
+              {faceStatus.isFaceEnrolled ? 'Face enrolled' : 'Not enrolled'}
             </span>
+            {faceStatus.hasCheckedIn && (
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
+                Checked in
+              </span>
+            )}
+            {faceStatus.hasCheckedOut && (
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-violet-100 text-violet-700">
+                Checked out
+              </span>
+            )}
           </div>
 
           <div className="flex flex-col gap-3">
@@ -140,14 +197,14 @@ const CheckinCheckoutPage = () => {
               disabled={submitting}
               className="flex items-center justify-center h-12"
             >
-              {isEnrolled ? 'Re-enroll' : 'Enroll'}
+              {faceStatus.isFaceEnrolled ? 'Re-enroll' : 'Enroll'}
             </Button>
 
             <Button
               size="large"
               icon={<LogIn size={18} />}
               onClick={() => openVerifyModal('checkin')}
-              disabled={submitting}
+              disabled={submitting || !faceStatus.canCheckin}
               className="flex items-center justify-center h-12"
             >
               Check-in
@@ -157,10 +214,19 @@ const CheckinCheckoutPage = () => {
               size="large"
               icon={<LogOut size={18} />}
               onClick={() => openVerifyModal('checkout')}
-              disabled={submitting}
+              disabled={submitting || !faceStatus.canCheckout}
               className="flex items-center justify-center h-12"
             >
-              Check-out
+              {faceStatus.hasCheckedOut ? 'Re check-out' : 'Check-out'}
+            </Button>
+
+            <Button
+              size="large"
+              icon={<Clock size={18} />}
+              onClick={() => navigate('/employee-dashboard/my-timesheet')}
+              className="flex items-center justify-center h-12"
+            >
+              Request Change (past dates)
             </Button>
           </div>
         </>
@@ -170,7 +236,9 @@ const CheckinCheckoutPage = () => {
         open={enrollOpen}
         employeeId={employeeId}
         onClose={() => setEnrollOpen(false)}
-        onSuccess={() => setIsEnrolled(true)}
+        onSuccess={() => {
+          fetchFaceStatus();
+        }}
       />
 
       <Modal

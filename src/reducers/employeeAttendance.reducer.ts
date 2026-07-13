@@ -2,6 +2,7 @@ import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios";
 
 import { AttendanceStatus, WorkLocation as OfficeLocation } from '../enums';
+import type { AttendanceCorrectionRequest } from './attendanceCorrection.api';
 
 // INTERFACES
 export interface EmployeeAttendance {
@@ -16,6 +17,8 @@ export interface EmployeeAttendance {
   sourceRequestId?: number | null; // Track auto-generated records
   firstHalf?: string | null;
   secondHalf?: string | null;
+  checkingInTime?: string | null;
+  checkingOutTime?: string | null;
 }
 
 // Interface for Trends
@@ -52,6 +55,7 @@ interface AttendanceState {
     endDate: string;
     workedDays: number;
   } | null;
+  correctionRequests: AttendanceCorrectionRequest[];
 }
 
 const initialState: AttendanceState = {
@@ -65,6 +69,7 @@ const initialState: AttendanceState = {
   currentDayRecord: null,
   yearlyRecords: [],
   workedDaysSummary: null,
+  correctionRequests: [],
 };
 
 const apiUrl = "/api/employee-attendance";
@@ -298,6 +303,7 @@ export interface MyTimesheetData {
     blockedBy: string;
     blockedAt?: string;
   }[];
+  correctionRequests?: AttendanceCorrectionRequest[];
 }
 
 export const fetchMyTimesheet = createAsyncThunk(
@@ -539,6 +545,7 @@ const attendanceSlice = createSlice({
         ) => {
           state.loading = false;
           state.records = action.payload.monthlyAttendance;
+          state.correctionRequests = action.payload.correctionRequests || [];
           if (action.payload.employeeId) {
             state.employeeRecords[action.payload.employeeId] =
               action.payload.monthlyAttendance;

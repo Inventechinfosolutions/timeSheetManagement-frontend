@@ -4,6 +4,11 @@ import { ChevronLeft, ChevronRight, Save, Lock, Rocket } from "lucide-react";
 import { TimesheetEntry } from "../types";
 import { TimesheetBlocker } from "../reducers/timesheetBlocker.reducer";
 import { AttendanceStatus } from "../enums";
+import {
+  canRequestCorrectionForDay,
+  formatClockTime,
+} from "../reducers/attendanceCorrection.api";
+import dayjs from "dayjs";
 
 interface MobileMyTimesheetProps {
   currentWeekEntries: { entry: TimesheetEntry; originalIndex: number }[];
@@ -19,6 +24,7 @@ interface MobileMyTimesheetProps {
   isManager: boolean;
   isManagerView: boolean;
   readOnly: boolean;
+  clockOnlyMode?: boolean;
   blockers: TimesheetBlocker[];
   isDateBlocked: (date: Date) => boolean;
   isEditableMonth: (date: Date) => boolean;
@@ -31,7 +37,12 @@ interface MobileMyTimesheetProps {
   selectedDateId: number | null;
   isHighlighted: boolean;
   containerClassName?: string;
+  onRequestChange?: (day: TimesheetEntry) => void;
+  onOpenRequestChangeHeader?: () => void;
 }
+
+const isPastCalendarDate = (date: Date) =>
+  dayjs(date).startOf("day").isBefore(dayjs().startOf("day"));
 
 const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
   currentWeekEntries,
@@ -47,23 +58,29 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
   isManager,
   isManagerView,
   readOnly,
+  clockOnlyMode = false,
   blockers,
   isEditableMonth,
   isHoliday,
-  isDateBlocked,
+  isDateBlocked: _isDateBlocked,
 
   onBlockedClick,
-  department,
+  department: _department,
   localInputValues,
   onInputBlur,
   selectedDateId,
   isHighlighted,
   containerClassName,
+  onRequestChange,
+  onOpenRequestChangeHeader,
 }) => {
   // Sort entries to match Sun-Sat order (0-6)
   const sortedEntries = [...currentWeekEntries].sort((a, b) => {
     return a.entry.fullDate.getDay() - b.entry.fullDate.getDay();
   });
+
+  const showManualActions =
+    !clockOnlyMode && (!readOnly || isAdmin || (isManager && !isManagerView));
 
   return (
     <div
@@ -94,27 +111,38 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
             </span>
           </div>
         </div>
-      {(!readOnly || isAdmin || (isManager && !isManagerView)) && (
-          <div className="flex gap-2">
-             {onAutoUpdate && (
+        {clockOnlyMode ? (
+          <button
+            onClick={() => onOpenRequestChangeHeader?.()}
+            className="flex items-center gap-2 px-3 py-2.5 bg-[#4318FF] text-white rounded-2xl shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
+          >
+            <span className="text-[10px] font-bold uppercase tracking-wider">
+              Request Change
+            </span>
+          </button>
+        ) : (
+          showManualActions && (
+            <div className="flex gap-2">
+              {onAutoUpdate && (
+                <button
+                  onClick={onAutoUpdate}
+                  className="flex items-center justify-center p-3 bg-white text-[#4318FF] border border-[#4318FF]/20 rounded-2xl shadow-sm active:scale-95 transition-all"
+                  title="Auto-fill eligible working days"
+                >
+                  <Rocket size={18} strokeWidth={2.5} className="animate-pulse" />
+                </button>
+              )}
               <button
-                onClick={onAutoUpdate}
-                className="flex items-center justify-center p-3 bg-white text-[#4318FF] border border-[#4318FF]/20 rounded-2xl shadow-sm active:scale-95 transition-all"
-                title="Auto-fill eligible working days"
+                onClick={onSave}
+                className="flex items-center gap-2 px-4 py-3 bg-[#4318FF] text-white rounded-2xl shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
               >
-                <Rocket size={18} strokeWidth={2.5} className="animate-pulse" />
+                <Save size={18} strokeWidth={2.5} />
+                <span className="text-xs font-bold uppercase tracking-wider">
+                  Save
+                </span>
               </button>
-            )}
-            <button
-              onClick={onSave}
-              className="flex items-center gap-2 px-4 py-3 bg-[#4318FF] text-white rounded-2xl shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
-            >
-              <Save size={18} strokeWidth={2.5} />
-              <span className="text-xs font-bold uppercase tracking-wider">
-                Save
-              </span>
-            </button>
-          </div>
+            </div>
+          )
         )}
       </div>
 
@@ -153,18 +181,23 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
 
               const manualBlocker = blocker;
               const isStatusLeave = entry.status === AttendanceStatus.LEAVE;
-              
-              // Dept Block list usually blocks Sundays entirely. 
-              // We need to allow Sunday if it's a workday now.
-              let isDeptBlocked = false;
-              // if (dayOfWeek === 0) isDeptBlocked = true; // REMOVED: Allow Sunday editing
 
-              const isBlocked = !!manualBlocker || (!isAdmin && !isManager && (isStatusLeave || isDeptBlocked));
-              
+              let isDeptBlocked = false;
+
+              const isBlocked =
+                !!manualBlocker ||
+                (!isAdmin && !isManager && (isStatusLeave || isDeptBlocked));
+
               const isEditable =
+                !clockOnlyMode &&
                 (isAdmin || !readOnly) &&
                 (isAdmin || isEditableMonth(entry.fullDate)) &&
                 !isBlocked;
+
+              const canRequest =
+                clockOnlyMode &&
+                isPastCalendarDate(entry.fullDate) &&
+                canRequestCorrectionForDay(entry);
 
               // Styling logic (Matching MobileResponsiveCalendarPage)
               let bg = "bg-white text-gray-600 border-gray-200"; // Default
@@ -173,11 +206,11 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
               if (entry.isToday) {
                 bg =
                   "bg-white ring-2 ring-[#4318FF] text-[#4318FF] border-transparent font-extrabold shadow-md";
-              } else if (isBlocked) {
+              } else if (isBlocked && !clockOnlyMode) {
                 bg =
                   "bg-gray-200 border border-gray-400 text-gray-500 font-bold";
               } else if (
-                (entry.status || "").toLowerCase().includes("wfh") || 
+                (entry.status || "").toLowerCase().includes("wfh") ||
                 (entry.status || "").toLowerCase().includes("work from home") ||
                 (entry.status || "").toLowerCase().includes("full day")
               ) {
@@ -188,7 +221,10 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
                   "bg-orange-100 border border-orange-600 text-black font-bold";
               } else if (entry.status === AttendanceStatus.LEAVE) {
                 bg = "bg-red-200 border border-red-600 text-black font-bold";
-              } else if (isHolidayDate || entry.status === AttendanceStatus.HOLIDAY) {
+              } else if (
+                isHolidayDate ||
+                entry.status === AttendanceStatus.HOLIDAY
+              ) {
                 bg = "bg-blue-100 border border-blue-500 text-black font-bold";
               } else if (entry.isWeekend) {
                 bg = "bg-pink-100 border border-pink-400 text-black font-bold";
@@ -235,8 +271,13 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
                           ? "date-highlight ring-4 ring-[#4318FF] ring-offset-2 scale-110 shadow-xl"
                           : ""
                       }
+                      ${canRequest ? "cursor-pointer" : ""}
                     `}
                     onClick={() => {
+                      if (canRequest && onRequestChange) {
+                        onRequestChange(entry);
+                        return;
+                      }
                       if (isBlocked && isAdmin && onBlockedClick)
                         onBlockedClick();
                     }}
@@ -250,37 +291,62 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
                     </div>
 
                     {/* Lock Icon for Admin Blockers or Month-end Locks */}
-                    {(isBlocked || (!isAdmin && !isEditableMonth(entry.fullDate))) && (
+                    {(isBlocked ||
+                      (!isAdmin && !isEditableMonth(entry.fullDate))) &&
+                      !clockOnlyMode && (
                         <div className="absolute -top-1 -left-1 p-1 rounded-full bg-red-50 text-red-500 border border-red-100 z-10">
-                            <Lock size={8} strokeWidth={3} />
+                          <Lock size={8} strokeWidth={3} />
                         </div>
-                    )}
+                      )}
 
-                    <input
-                      type="text"
-                      disabled={!isEditable}
-                      className="w-full h-full bg-transparent text-center text-xl font-bold focus:outline-none placeholder:text-gray-300"
-                      value={inputValue}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === "" || /^\d*\.?\d*$/.test(val)) {
-                          onHoursInput(originalIndex, val);
-                        }
-                      }}
-                      onBlur={() => onInputBlur(originalIndex)}
-                      placeholder="-"
-                    />
-                    {isBlocked && (
+                    {clockOnlyMode ? (
+                      <div className="flex flex-col items-center justify-center px-0.5 leading-tight">
+                        <span className="text-[8px] sm:text-[9px] font-bold">
+                          {formatClockTime(entry.checkingInTime)}
+                        </span>
+                        <span className="text-[7px] text-gray-400">–</span>
+                        <span className="text-[8px] sm:text-[9px] font-bold">
+                          {formatClockTime(entry.checkingOutTime)}
+                        </span>
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        disabled={!isEditable}
+                        className="w-full h-full bg-transparent text-center text-xl font-bold focus:outline-none placeholder:text-gray-300"
+                        value={inputValue}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === "" || /^\d*\.?\d*$/.test(val)) {
+                            onHoursInput(originalIndex, val);
+                          }
+                        }}
+                        onBlur={() => onInputBlur(originalIndex)}
+                        placeholder="-"
+                      />
+                    )}
+                    {isBlocked && !clockOnlyMode && (
                       <div className="absolute inset-0 z-20 bg-black/40 backdrop-blur-[2px] rounded-xl flex flex-col items-center justify-center p-1 text-center pointer-events-none">
-                         <Lock size={12} className="text-white mb-0.5" />
-                         <span className="text-[7px] font-black text-white leading-none uppercase tracking-tighter">
-                           {manualBlocker 
-                             ? (isAdmin || isManager ? "Unblock" : `Contact ${manualBlocker.blockedBy || "Admin"}`)
-                             : "On Leave"}
-                         </span>
+                        <Lock size={12} className="text-white mb-0.5" />
+                        <span className="text-[7px] font-black text-white leading-none uppercase tracking-tighter">
+                          {manualBlocker
+                            ? isAdmin || isManager
+                              ? "Unblock"
+                              : `Contact ${manualBlocker.blockedBy || "Admin"}`
+                            : "On Leave"}
+                        </span>
                       </div>
                     )}
                   </div>
+                  {clockOnlyMode && canRequest && (
+                    <button
+                      type="button"
+                      className="text-[8px] font-bold text-[#4318FF] uppercase"
+                      onClick={() => onRequestChange?.(entry)}
+                    >
+                      Change
+                    </button>
+                  )}
                 </div>
               );
             })}
@@ -301,10 +367,22 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
           { label: "Present", className: "bg-green-100 border-green-600" },
           { label: "WFH", className: "bg-blue-100 border-blue-600" },
           { label: "Client Visit", className: "bg-blue-100 border-blue-600" },
-          { label: AttendanceStatus.HALF_DAY, className: "bg-orange-100 border-orange-600" },
-          { label: AttendanceStatus.LEAVE, className: "bg-red-200 border-red-600" },
-          { label: AttendanceStatus.NOT_UPDATED, className: "bg-white border-gray-300" },
-          { label: AttendanceStatus.HOLIDAY, className: "bg-blue-100 border-blue-500" },
+          {
+            label: AttendanceStatus.HALF_DAY,
+            className: "bg-orange-100 border-orange-600",
+          },
+          {
+            label: AttendanceStatus.LEAVE,
+            className: "bg-red-200 border-red-600",
+          },
+          {
+            label: AttendanceStatus.NOT_UPDATED,
+            className: "bg-white border-gray-300",
+          },
+          {
+            label: AttendanceStatus.HOLIDAY,
+            className: "bg-blue-100 border-blue-500",
+          },
           { label: "Today", className: "bg-white border-2 border-[#4318FF]" },
           { label: "Blocked", className: "bg-gray-200 border-gray-400" },
         ].map((item) => (

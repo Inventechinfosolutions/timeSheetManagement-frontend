@@ -2,11 +2,30 @@ import axios from 'axios';
 
 const apiUrl = '/api/employee-details';
 
+export interface FaceAttendanceStatus {
+  isFaceEnrolled: boolean;
+  hasCheckedIn: boolean;
+  hasCheckedOut: boolean;
+  checkingInTime?: string | null;
+  checkingOutTime?: string | null;
+  canCheckin: boolean;
+  canCheckout: boolean;
+  checkoutLocked?: boolean;
+}
+
+export interface FaceAttendanceSummary {
+  checkingInTime?: string | null;
+  checkingOutTime?: string | null;
+  totalHours?: number | null;
+  status?: string | null;
+}
+
 export interface FaceActionResponse {
   success: boolean;
   employeeId: string;
   message: string;
   verified?: boolean;
+  attendance?: FaceAttendanceSummary;
 }
 
 export function getApiErrorMessage(error: unknown): string {
@@ -22,8 +41,12 @@ export function getApiErrorMessage(error: unknown): string {
   return 'Request failed';
 }
 
-export async function isFaceEnrolled(employeeId: string): Promise<boolean> {
-  const response = await axios.get<boolean>(`${apiUrl}/face/is-face-enrolled/${employeeId}`);
+export async function getFaceAttendanceStatus(
+  employeeId: string,
+): Promise<FaceAttendanceStatus> {
+  const response = await axios.get<FaceAttendanceStatus>(
+    `${apiUrl}/face/is-face-enrolled/${employeeId}`,
+  );
   return response.data;
 }
 

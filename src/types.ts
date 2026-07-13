@@ -22,4 +22,6 @@ export interface TimesheetEntry {
     sourceRequestId?: number; // Track auto-generated records
     firstHalf?: string | WorkLocation | null;
     secondHalf?: string | WorkLocation | null;
+    checkingInTime?: string | null;
+    checkingOutTime?: string | null;
 }
