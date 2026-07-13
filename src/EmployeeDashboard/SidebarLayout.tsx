@@ -18,6 +18,7 @@ import { UserType } from "../enums";
 import ApiLoadingSpinner from "../components/ApiLoadingSpinner";
 import Header from "../components/DesktopHeader/Header";
 import Footer from "../components/Footer";
+import "./SidebarLayout.css";
 
 interface SidebarLayoutProps {
   children: React.ReactNode;
@@ -69,6 +70,7 @@ const SidebarLayout = ({
           : "xl:justify-center"
         : "text-white/80 hover:bg-white/10 hover:text-white",
       expanded ? "gap-3 px-3 py-2.5" : "xl:justify-center xl:px-0 py-2",
+      !expanded ? "sidebar-collapsed-center" : "",
     ].join(" ");
 
   const navIconWrapClass = (isActive: boolean, expanded = true) =>
@@ -99,34 +101,27 @@ const SidebarLayout = ({
 
   return (
     <div className="flex flex-col w-full h-screen bg-[#f8f9fa] font-sans text-[#2B3674] overflow-hidden relative">
-      
-      {/* FIXED: Removed the deep bypass wrapper container to stop the mobile header elements from displaying on desktop zoom levels */}
+
+      {/* Universal Sticky/Flex Top Header Header Component */}
       <Header onMobileMenuClick={() => setIsMobileOpen(true)} />
-      
-      <div className="flex flex-1 min-h-0 relative overflow-hidden">
-        
-        {/* Backdrop Element */}
+
+      {/* Main Container Wrapper */}
+      <div className="flex flex-1 min-h-0 relative overflow-hidden w-full">
+
+        {/* Mobile Backdrop Overlay Element - onClick closing removed */}
         <div
-          className={`xl:hidden fixed inset-0 bg-[#111c44]/60 backdrop-blur-md z-[2000] transition-opacity duration-300 ease-in-out
+          className={`sidebar-mobile-backdrop xl:hidden fixed inset-0 bg-[#111c44]/60 backdrop-blur-md z-[2000] transition-opacity duration-300 ease-in-out
             ${isMobileOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}
           `}
-          onClick={() => setIsMobileOpen(false)}
         />
 
-        {/* Desktop Layout Spacer */}
-        <div
-          className={`shrink-0 transition-all duration-300 ease-in-out hidden xl:block ${
-            isOpen ? "w-64" : "w-20"
-          }`}
-        />
-
-        {/* Responsive Sidebar Side Drawer Component */}
+        {/* Combined Sidebar Component */}
         <aside
-          className={`fixed top-0 left-0 h-full xl:absolute xl:top-0 xl:left-0 xl:h-full flex flex-col shrink-0 transition-all duration-300 ease-in-out text-white
-            ${
-              isMobileOpen
-                ? "translate-x-0 w-72 z-[2001]" 
-                : "-translate-x-full xl:translate-x-0 z-30"
+          className={`app-sidebar ${isOpen ? "app-sidebar--open" : "app-sidebar--collapsed"} fixed top-0 left-0 h-full flex flex-col shrink-0 transition-all duration-300 ease-in-out text-white
+            xl:sticky xl:top-0
+            ${isMobileOpen
+              ? "translate-x-0 w-72 z-[2001]"
+              : "-translate-x-full xl:translate-x-0 z-30"
             }
             ${isOpen ? "xl:w-64" : "xl:w-20"}
           `}
@@ -140,12 +135,12 @@ const SidebarLayout = ({
           onMouseLeave={() => !isLocked && setIsHovered(false)}
         >
           {/* Mobile & Zoomed Drawer Header View Container */}
-          <div className="xl:hidden flex items-center justify-between p-6 mb-2 border-b border-white/10">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl border border-white/10">
+          <div className="sidebar-drawer-header xl:hidden flex items-center p-6 mb-2 border-b border-white/10 relative w-full">
+            <div className="flex items-center gap-3 pr-12">
+              <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl border border-white/10 shrink-0">
                 <User className="w-6 h-6 text-white" />
               </div>
-              <span className="text-xl font-bold text-white tracking-tight">
+              <span className="text-xl font-bold text-white tracking-tight whitespace-nowrap">
                 {currentUser?.userType === UserType.ADMIN
                   ? "Admin"
                   : currentUser?.userType === UserType.MANAGER
@@ -153,17 +148,19 @@ const SidebarLayout = ({
                     : "Employee"}
               </span>
             </div>
+
+            {/* Absolute positioning completely overrides any layout grid or column behavior from CSS */}
             <button
               onClick={() => setIsMobileOpen(false)}
-              className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+              className="absolute right-6 top-1/2 -translate-y-1/2 p-2 rounded-lg hover:bg-white/10 transition-colors z-50"
               aria-label="Close menu"
             >
               <X className="w-6 h-6 text-white" />
             </button>
           </div>
-          
+
           {/* Branding Profile Tag Element */}
-          <div className="hidden xl:flex h-14 items-center justify-between px-0 relative mb-0 mt-4">
+          <div className="sidebar-desktop-profile hidden xl:flex h-14 items-center justify-between px-0 relative mb-0 mt-4">
             <div
               className={`flex items-center gap-3 transition-all duration-300 overflow-hidden h-full
                 ${isOpen ? "w-full opacity-100 pl-6" : "w-full justify-center opacity-100 px-0"}
@@ -175,10 +172,9 @@ const SidebarLayout = ({
 
               <div
                 className={`flex flex-col transition-all duration-300 origin-left
-                  ${
-                    isOpen
-                      ? "opacity-100 scale-100 ml-0"
-                      : "opacity-0 scale-90 w-0 ml-[-100px] overflow-hidden absolute"
+                  ${isOpen
+                    ? "opacity-100 scale-100 ml-0"
+                    : "opacity-0 scale-90 w-0 ml-[-100px] overflow-hidden absolute"
                   }
                 `}
               >
@@ -208,9 +204,8 @@ const SidebarLayout = ({
 
           <div className="px-4 mb-2 mt-2">
             <div
-              className={`h-px bg-white/20 transition-all duration-500 ${
-                isOpen ? "w-full" : "w-8 mx-auto"
-              }`}
+              className={`h-px bg-white/20 transition-all duration-500 ${isOpen ? "w-full" : "w-8 mx-auto"
+                }`}
             ></div>
           </div>
 
@@ -252,10 +247,9 @@ const SidebarLayout = ({
 
                     <span
                       className={`text-sm whitespace-nowrap transition-all duration-300 relative z-10
-                        ${
-                          isOpen || isMobileOpen
-                            ? "opacity-100 translate-x-0 w-auto"
-                            : "opacity-0 -translate-x-4 w-0 overflow-hidden absolute"
+                        ${isOpen || isMobileOpen
+                          ? "opacity-100 translate-x-0 w-auto"
+                          : "opacity-0 -translate-x-4 w-0 overflow-hidden absolute"
                         }
                       `}
                     >
@@ -264,7 +258,7 @@ const SidebarLayout = ({
                   </button>
 
                   {!isOpen && !isMobileOpen && (
-                    <div className="hidden xl:block absolute left-[calc(100%+10px)] top-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#111c44] text-white text-xs font-bold rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 whitespace-nowrap z-50">
+                    <div className="sidebar-tooltip hidden xl:block absolute left-[calc(100%+10px)] top-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#111c44] text-white text-xs font-bold rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 whitespace-nowrap z-50">
                       {item.name}
                       <div className="absolute top-1/2 -left-1 -translate-y-1/2 border-4 border-r-[#111c44] border-l-transparent border-t-transparent border-b-transparent"></div>
                     </div>
@@ -288,10 +282,9 @@ const SidebarLayout = ({
                 </div>
                 <span
                   className={`text-sm font-semibold whitespace-nowrap transition-all duration-300 relative z-10
-                    ${
-                      isOpen || isMobileOpen
-                        ? "opacity-100 translate-x-0 w-auto"
-                        : "opacity-0 -translate-x-4 w-0 overflow-hidden absolute"
+                    ${isOpen || isMobileOpen
+                      ? "opacity-100 translate-x-0 w-auto"
+                      : "opacity-0 -translate-x-4 w-0 overflow-hidden absolute"
                     }
                   `}
                 >
@@ -300,7 +293,7 @@ const SidebarLayout = ({
               </button>
 
               {!isOpen && !isMobileOpen && (
-                <div className="hidden xl:block absolute left-[calc(100%+10px)] top-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#111c44] text-white text-xs font-bold rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 whitespace-nowrap z-50">
+                <div className="sidebar-tooltip hidden xl:block absolute left-[calc(100%+10px)] top-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#111c44] text-white text-xs font-bold rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 whitespace-nowrap z-50">
                   Logout
                   <div className="absolute top-1/2 -left-1 -translate-y-1/2 border-4 border-r-[#111c44] border-l-transparent border-t-transparent border-b-transparent"></div>
                 </div>
@@ -312,7 +305,7 @@ const SidebarLayout = ({
         {/* Content Render Main Target Pane */}
         <main
           ref={mainContentRef}
-          className="flex-1 min-h-0 h-full relative flex flex-col bg-[#F4F7FE] overflow-y-auto overflow-x-hidden pb-16 xl:pb-0"
+          className="app-main-content flex-1 min-h-0 h-full relative flex flex-col bg-[#F4F7FE] overflow-y-auto overflow-x-hidden pb-16 xl:pb-0"
         >
           <div className="relative grow shrink-0 flex flex-col w-full">
             {children}
@@ -320,15 +313,16 @@ const SidebarLayout = ({
           </div>
 
           {/* Bottom Responsive Mobile Navigation */}
-          <div className="xl:hidden">
+          <div className="app-mobile-bottom-nav xl:hidden">
             <MobileBottomNav
               activeTab={derivedActiveTab}
               onTabChange={onTabChange}
+              isSidebarOpen={isMobileOpen}
             />
           </div>
 
           {/* Footers */}
-          <div className="hidden xl:block">
+          <div className="app-desktop-footer hidden xl:block">
             <Footer className="sidebar-footer" />
           </div>
         </main>

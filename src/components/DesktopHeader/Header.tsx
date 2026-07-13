@@ -102,12 +102,12 @@ const Header = ({
       }
       const f =
         firstHalf === LeaveRequestType.APPLY_LEAVE ||
-        firstHalf === LeaveRequestType.LEAVE
+          firstHalf === LeaveRequestType.LEAVE
           ? LeaveRequestType.LEAVE
           : firstHalf;
       const s =
         secondHalf === LeaveRequestType.APPLY_LEAVE ||
-        secondHalf === LeaveRequestType.LEAVE
+          secondHalf === LeaveRequestType.LEAVE
           ? LeaveRequestType.LEAVE
           : secondHalf;
       if (f === WorkLocation.OFFICE) return s;
@@ -261,17 +261,35 @@ const Header = ({
         borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
       }}
     >
-      <div className="header-container relative">
+      <div className="header-container w-full max-w-[1920px] mx-auto h-[72px] px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-14 flex items-center justify-between relative">
         {/* Desktop Logo (Left side) */}
         <div
-          className="header-desktop-logo p-[1px] bg-gradient-to-tr from-cyan-400 to-indigo-500 rounded-2xl shadow-[0_8px_30px_rgba(59,130,246,0.15)] cursor-pointer"
+          className="
+    header-desktop-logo
+    hidden lg:flex
+    items-center
+    shrink-0
+    p-[1px]
+    bg-gradient-to-tr
+    from-cyan-400
+    to-indigo-500
+    rounded-2xl
+    shadow-[0_8px_30px_rgba(59,130,246,0.15)]
+    cursor-pointer
+  "
           onClick={handleLogoClick}
         >
           <div className="px-4 py-1 bg-white rounded-[12px]">
             <img
               src={workspherelogo}
-              alt="WorkSphere Logo"
-              className="header-desktop-logo-img w-auto object-contain"
+              alt="WorkSphere"
+              className="
+        h-10
+        xl:h-11
+        2xl:h-12
+        w-auto
+        object-contain
+    "
             />
           </div>
         </div>
@@ -280,7 +298,7 @@ const Header = ({
           onLogoClick={handleLogoClick}
           onMenuClick={onMobileMenuClick}
         />
-        <div className="header-actions flex items-center ml-auto">
+        <div className="header-actions flex items-center gap-3 xl:gap-5 ml-auto shrink-0">
           {/* Notification Bell */}
           {!hideNotifications && (
             <div className="relative" ref={notificationRef}>
@@ -291,17 +309,24 @@ const Header = ({
                     isMobileHeaderViewport() ? true : !prev,
                   );
                 }}
-                className={`notification-trigger relative p-2 rounded-xl transition-all group ${
-                  isNotificationOpen
+                className={`
+notification-trigger
+relative
+p-2.5
+xl:p-3
+rounded-xl
+transition-all
+group
+${isNotificationOpen
                     ? "bg-white text-[#4318FF]"
                     : "hover:bg-white/10 text-white"
-                }`}
+                  }
+`}
               >
                 <Bell
                   size={18}
-                  className={`group-hover:scale-110 transition-transform ${
-                    isNotificationOpen ? "fill-current" : ""
-                  }`}
+                  className={`group-hover:scale-110 transition-transform ${isNotificationOpen ? "fill-current" : ""
+                    }`}
                 />
                 {unreadCount > 0 && (
                   <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold shadow-sm border border-white/20 px-1">
@@ -311,7 +336,26 @@ const Header = ({
               </button>
               {/* Modern Notification Popup */}
               {isNotificationOpen && (
-                <div className="notification-popover bg-white rounded-3xl shadow-[0px_20px_60px_-10px_rgba(0,0,0,0.15)] ring-1 ring-gray-100 z-[10000] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="
+notification-popover
+absolute
+right-0
+top-14
+w-[390px]
+xl:w-[430px]
+2xl:w-[460px]
+bg-white
+rounded-3xl
+shadow-[0px_20px_60px_-10px_rgba(0,0,0,0.15)]
+ring-1
+ring-gray-100
+z-[10000]
+overflow-hidden
+animate-in
+fade-in
+slide-in-from-top-2
+duration-200
+">
                   {viewMode === "list" ? (
                     <>
                       {/* Header */}
@@ -631,14 +675,14 @@ const Header = ({
                                     ) {
                                       const rawSource =
                                         update.requestModifiedFrom &&
-                                        update.requestModifiedFrom.includes(":")
+                                          update.requestModifiedFrom.includes(":")
                                           ? update.requestModifiedFrom.split(
-                                              ":",
-                                            )[1]
+                                            ":",
+                                          )[1]
                                           : update.requestModifiedFrom;
                                       const source =
                                         rawSource ===
-                                        LeaveRequestType.APPLY_LEAVE
+                                          LeaveRequestType.APPLY_LEAVE
                                           ? LeaveRequestType.LEAVE
                                           : rawSource;
                                       title = "Request Modified";
@@ -684,9 +728,9 @@ const Header = ({
                                     // Case 7: Modification Rejected or Cancelled
                                     else if (
                                       update.status ===
-                                        LeaveRequestStatus.MODIFICATION_REJECTED ||
+                                      LeaveRequestStatus.MODIFICATION_REJECTED ||
                                       update.status ===
-                                        LeaveRequestStatus.MODIFICATION_CANCELLED
+                                      LeaveRequestStatus.MODIFICATION_CANCELLED
                                     ) {
                                       title = "Modification Rejected";
                                       message = (
@@ -768,63 +812,62 @@ const Header = ({
                             {/* Regular Notifications */}
                             {notifications.length > 0
                               ? notifications.map((notif) => (
-                                  <div
-                                    key={notif.id}
-                                    onClick={() =>
-                                      handleNotificationClick(notif.id)
-                                    }
-                                    className={`flex gap-4 p-5 hover:bg-gray-50/80 transition-colors border-b border-gray-50 last:border-0 group cursor-pointer relative ${
-                                      !notif.isRead ? "bg-blue-50/30" : ""
+                                <div
+                                  key={notif.id}
+                                  onClick={() =>
+                                    handleNotificationClick(notif.id)
+                                  }
+                                  className={`flex gap-4 p-5 hover:bg-gray-50/80 transition-colors border-b border-gray-50 last:border-0 group cursor-pointer relative ${!notif.isRead ? "bg-blue-50/30" : ""
                                     }`}
-                                  >
-                                    <div className="relative shrink-0">
-                                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-[#4318FF]">
-                                        <Bell size={18} />
-                                      </div>
-                                    </div>
-                                    <div className="flex-1 space-y-1">
-                                      <div className="flex justify-between items-start">
-                                        <p className="text-sm text-[#1B2559] leading-snug">
-                                          <span className="font-bold">
-                                            {notif.title}
-                                          </span>
-                                        </p>
-                                        {!notif.isRead && (
-                                          <span className="w-2 h-2 bg-[#4318FF] rounded-full shrink-0 mt-1.5"></span>
-                                        )}
-                                      </div>
-                                      <div className="flex flex-col gap-1">
-                                        <span className="text-xs text-gray-500 font-medium line-clamp-2">
-                                          {notif.message}
-                                        </span>
-                                        <span className="text-[10px] text-gray-400">
-                                          {new Date(
-                                            notif.createdAt,
-                                          ).toLocaleDateString()}{" "}
-                                          {new Date(
-                                            notif.createdAt,
-                                          ).toLocaleTimeString([], {
-                                            hour: "2-digit",
-                                            minute: "2-digit",
-                                          })}
-                                        </span>
-                                      </div>
+                                >
+                                  <div className="relative shrink-0">
+                                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-[#4318FF]">
+                                      <Bell size={18} />
                                     </div>
                                   </div>
-                                ))
+                                  <div className="flex-1 space-y-1">
+                                    <div className="flex justify-between items-start">
+                                      <p className="text-sm text-[#1B2559] leading-snug">
+                                        <span className="font-bold">
+                                          {notif.title}
+                                        </span>
+                                      </p>
+                                      {!notif.isRead && (
+                                        <span className="w-2 h-2 bg-[#4318FF] rounded-full shrink-0 mt-1.5"></span>
+                                      )}
+                                    </div>
+                                    <div className="flex flex-col gap-1">
+                                      <span className="text-xs text-gray-500 font-medium line-clamp-2">
+                                        {notif.message}
+                                      </span>
+                                      <span className="text-[10px] text-gray-400">
+                                        {new Date(
+                                          notif.createdAt,
+                                        ).toLocaleDateString()}{" "}
+                                        {new Date(
+                                          notif.createdAt,
+                                        ).toLocaleTimeString([], {
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                        })}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))
                               : employeeUpdates.length === 0 && (
-                                  <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-                                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-3">
-                                      <Bell
-                                        size={24}
-                                        className="text-gray-300"
-                                      />
-                                    </div>
-                                    <p className="text-sm font-bold text-[#1B2559]">
-                                      No new notifications
-                                    </p>
+                                <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                                  <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-3">
+                                    <Bell
+                                      size={24}
+                                      className="text-gray-300"
+                                    />
                                   </div>
-                                )}
+                                  <p className="text-sm font-bold text-[#1B2559]">
+                                    No new notifications
+                                  </p>
+                                </div>
+                              )}
                           </>
                         )}
                       </div>
@@ -933,9 +976,36 @@ const Header = ({
                     isMobileHeaderViewport() ? true : !prev,
                   );
                 }}
-                className="profile-trigger flex items-center gap-1.5 px-1.5 py-1.5 hover:bg-white/10 rounded-xl transition-all"
+                className="
+profile-trigger
+flex
+items-center
+gap-2
+xl:gap-3
+px-2
+xl:px-3
+py-2
+hover:bg-white/10
+rounded-xl
+transition-all
+"
               >
-                <div className="w-8 h-8 shrink-0 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-sm uppercase">
+                <div className="
+w-9
+h-9
+xl:w-10
+xl:h-10
+rounded-full
+bg-white/20
+flex
+items-center
+justify-center
+text-white
+font-bold
+text-sm
+uppercase
+shrink-0
+">
                   {loggedInUserProfileImageUrl && !imageError ? (
                     <img
                       src={loggedInUserProfileImageUrl}
@@ -944,22 +1014,22 @@ const Header = ({
                       onError={() => setImageError(true)}
                     />
                   ) : // Grabs the first letter of the username, defaulting to '?' if name is missing
-                  currentUser?.aliasLoginName ? (
-                    currentUser.aliasLoginName.charAt(0)
-                  ) : (
-                    "?"
-                  )}
+                    currentUser?.aliasLoginName ? (
+                      currentUser.aliasLoginName.charAt(0)
+                    ) : (
+                      "?"
+                    )}
                 </div>
                 {/* User info */}
                 <div className="profile-user-info flex flex-col items-start min-w-[70px]">
-                  <span className="text-sm font-bold text-white truncate max-w-[100px]">
+                  <span className="text-sm font-bold text-white truncate max-w-[120px] xl:max-w-[160px]">
                     {isAdmin
                       ? "Admin"
                       : isReceptionist
                         ? "Receptionist"
                         : currentUser?.aliasLoginName?.split(" ")[0] || "User"}
                   </span>
-                  <span className="text-[11px] text-blue-100/80 truncate max-w-[100px]">
+                  <span className="text-[11px] text-blue-100/80 truncate max-w-[120px] xl:max-w-[160px]">
                     {isAdmin
                       ? "Administrator"
                       : isReceptionist
@@ -971,14 +1041,31 @@ const Header = ({
                 </div>
                 <ChevronDown
                   size={14}
-                  className={`text-blue-100 transition-transform ${
-                    isDropdownOpen ? "rotate-180" : ""
-                  }`}
+                  className={`text-blue-100 transition-transform ${isDropdownOpen ? "rotate-180" : ""
+                    }`}
                 />
               </button>
               {/* Dropdown Menu */}
               {isDropdownOpen && (
-                <div className="profile-menu bg-white rounded-xl shadow-[0px_20px_50px_0px_#111c440d] border border-gray-100 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="
+profile-menu
+absolute
+right-0
+top-14
+w-[300px]
+xl:w-[330px]
+bg-white
+rounded-xl
+shadow-[0px_20px_50px_0px_#111c440d]
+border
+border-gray-100
+py-2
+z-50
+animate-in
+fade-in
+slide-in-from-top-2
+duration-200
+">
                   {isAdmin ? (
                     <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
                       <p className="text-sm font-bold text-[#1B2559]">Admin</p>
@@ -1001,32 +1088,32 @@ const Header = ({
                       <div>
                         <p className="text-sm font-bold text-[#1B2559]">
                           {location.pathname.includes("/employee-dashboard") ||
-                          location.pathname.includes(
-                            "/manager-dashboard/leave-management",
-                          ) ||
-                          location.pathname.includes("/manager-dashboard/my") ||
-                          location.pathname.includes(
-                            "/admin-dashboard/my-profile",
-                          ) ||
-                          location.pathname === "/manager-dashboard" ||
-                          location.pathname === "/admin-dashboard"
+                            location.pathname.includes(
+                              "/manager-dashboard/leave-management",
+                            ) ||
+                            location.pathname.includes("/manager-dashboard/my") ||
+                            location.pathname.includes(
+                              "/admin-dashboard/my-profile",
+                            ) ||
+                            location.pathname === "/manager-dashboard" ||
+                            location.pathname === "/admin-dashboard"
                             ? currentUser?.aliasLoginName || "User"
                             : entity?.fullName ||
-                              entity?.name ||
-                              currentUser?.aliasLoginName ||
-                              "User"}
+                            entity?.name ||
+                            currentUser?.aliasLoginName ||
+                            "User"}
                         </p>
                         <p className="text-xs text-gray-400 mt-0.5">
                           {location.pathname.includes("/employee-dashboard") ||
-                          location.pathname.includes(
-                            "/manager-dashboard/leave-management",
-                          ) ||
-                          location.pathname.includes("/manager-dashboard/my") ||
-                          location.pathname.includes(
-                            "/admin-dashboard/my-profile",
-                          ) ||
-                          location.pathname === "/manager-dashboard" ||
-                          location.pathname === "/admin-dashboard"
+                            location.pathname.includes(
+                              "/manager-dashboard/leave-management",
+                            ) ||
+                            location.pathname.includes("/manager-dashboard/my") ||
+                            location.pathname.includes(
+                              "/admin-dashboard/my-profile",
+                            ) ||
+                            location.pathname === "/manager-dashboard" ||
+                            location.pathname === "/admin-dashboard"
                             ? currentUser?.loginId || ""
                             : entity?.email || currentUser?.loginId || ""}
                         </p>

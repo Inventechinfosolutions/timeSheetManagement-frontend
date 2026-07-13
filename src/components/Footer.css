@@ -46,13 +46,24 @@
   text-decoration: none;
 }
 
-/* Responsive fix: When the sidebar collapses or hides on mobile screens */
-@media (max-width: 768px) {
+/* The fixed desktop footer belongs only to laptop/desktop layouts. */
+@media (max-width: 1279px) {
   .footer {
     left: 0;
     width: 100%;
   }
   .footer-container {
     padding: 0 20px;
+  }
+}
+
+@media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
+  .footer {
+    left: 255px;
+    width: calc(100% - 255px);
+  }
+
+  .footer-container {
+    padding: 0 40px;
   }
 }

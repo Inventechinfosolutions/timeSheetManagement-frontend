@@ -175,9 +175,8 @@ const Calendar = ({
       return;
     if (propEntries) return;
 
-    const fetchKey = `${currentEmployeeId}-${
-      displayDate.getMonth() + 1
-    }-${displayDate.getFullYear()}`;
+    const fetchKey = `${currentEmployeeId}-${displayDate.getMonth() + 1
+      }-${displayDate.getFullYear()}`;
 
     if (attendanceFetchedKey.current === fetchKey) return;
     attendanceFetchedKey.current = fetchKey;
@@ -200,6 +199,16 @@ const Calendar = ({
 
     return generateMonthlyEntries(displayDate, now, records);
   }, [displayDate, now, records, propEntries]);
+
+  const monthTotalHours = useMemo(
+    () =>
+      entries.reduce(
+        (sum, entry: any) =>
+          sum + (Number(entry?.totalHours ?? entry?.hours ?? 0) || 0),
+        0,
+      ),
+    [entries],
+  );
 
   const handlePrevMonth = () => {
     const newDate = new Date(
@@ -410,13 +419,12 @@ const Calendar = ({
 
   return (
     <div
-      className={`animate-in fade-in duration-500 flex flex-col ${
-        scrollable ? "h-full flex-1 min-h-0" : ""
-      } ${!isSmall && !isSidebar ? "p-4 md:p-6" : ""}`}
+      className={`animate-in fade-in duration-500 flex flex-col ${scrollable ? "h-full flex-1 min-h-0" : ""
+        } ${!isSmall && !isSidebar ? "p-4 md:p-6" : ""}`}
     >
       {/* Back Button */}
       {!isSmall && !isSidebar && !hideBackButton && (
-        <button 
+        <button
           onClick={() => {
             const path = location.pathname;
             if (path.includes('/manager-dashboard')) {
@@ -446,106 +454,116 @@ const Calendar = ({
         </button>
       )}
       <div
-        className={`bg-white shadow-[0px_20px_50px_0px_#111c440d] border border-gray-100 flex flex-col ${
-          isSmall
-            ? "p-3 rounded-xl"
-            : isSidebar
-              ? "p-4 rounded-xl"
-              : `p-6 rounded-[20px] ${scrollable ? "flex-1 h-full overflow-hidden" : ""}`
-        }`}
+        className={`bg-white shadow-[0px_20px_50px_0px_#111c440d] border border-gray-100 flex flex-col ${isSmall
+          ? "p-3 rounded-xl"
+          : isSidebar
+            ? "p-4 rounded-xl"
+            : `p-6 rounded-[20px] ${scrollable ? "flex-1 h-full overflow-hidden" : ""}`
+          }`}
       >
         {!isSmall && (
           <div
-            className={`flex flex-wrap items-center justify-between gap-y-4 gap-x-2 ${
-              isSidebar ? "mb-4" : "mb-6"
-            }`}
+            className={`flex flex-wrap items-center justify-between gap-y-4 gap-x-2 ${isSidebar ? "mb-4" : "mb-6"
+              }`}
           >
-            <div className="flex items-center gap-3 min-w-fit">
-              <div
-                className={`p-2 rounded-lg ${
-                  isSidebar ? "bg-blue-50" : "bg-[#4318FF]/10"
-                }`}
-              >
-                <CalendarIcon
-                  className={`${
-                    isSidebar ? "w-4 h-4" : "w-6 h-6"
-                  } text-[#4318FF]`}
-                />
-              </div>
-              <h3
-                className={`${
-                  isSidebar ? "text-base" : "text-xl md:text-2xl"
-                } font-bold text-[#2B3674] tracking-tight leading-tight`}
-              >
-                {isSidebar ? "Attendance" : "Monthly Attendance Snapshot"}
-              </h3>
-            </div>
+            <div className="flex flex-row items-center justify-between w-full gap-4 flex-wrap sm:flex-nowrap">
 
-            <div className="flex items-center gap-2 md:gap-3 ml-auto sm:ml-0">
-              {!isSmall && !isSidebar && (
-                <button
-                  onClick={handleDownload}
-                  className="hidden md:flex items-center gap-2 px-6 py-2.5 bg-[#4318FF] text-white rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 text-xs font-bold tracking-wide uppercase group"
-                  title="Download Monthly Report"
-                >
-                  <Download
-                    size={16}
-                    strokeWidth={2.5}
-                    className="group-hover:animate-bounce"
-                  />
-                  <span>Download Report</span>
-                </button>
-              )}
-              {!isSmall && !isSidebar && (
-                <button
-                  onClick={handleDownload}
-                  className="md:hidden flex p-2.5 bg-[#4318FF] text-white rounded-xl shadow-lg shadow-blue-500/30 active:scale-95 transition-all"
-                  title="Download Monthly Report"
-                >
-                  <Download size={18} strokeWidth={2.5} />
-                </button>
-              )}
-
-              {!hideMonthNavigation && (
+              {/* Left Title Component (Your exact code) */}
+              <div className="flex items-center gap-3 min-w-fit">
                 <div
-                  className={`flex items-center gap-1 ${
-                    isSidebar
+                  className={`p-2 rounded-lg ${isSidebar ? "bg-blue-50" : "bg-[#4318FF]/10"
+                    }`}
+                >
+                  <CalendarIcon
+                    className={`${isSidebar ? "w-4 h-4" : "w-6 h-6"
+                      } text-[#4318FF]`}
+                  />
+                </div>
+                <h3
+                  className={`${isSidebar ? "text-base" : "text-xl md:text-2xl"
+                    } font-bold text-[#2B3674] tracking-tight leading-tight`}
+                >
+                  {isSidebar ? "Attendance" : "Monthly Attendance Snapshot"}
+                </h3>
+              </div>
+
+              {/* Right Controls Component (Your exact code) */}
+              <div className="flex items-center gap-2 md:gap-3 ml-auto">
+                {!isSidebar && (
+                  <div className="flex items-baseline gap-1.5 px-2 whitespace-nowrap">
+                    <span className="text-xs font-black uppercase tracking-wide text-[#2B3674]">
+                      Total Tracked:
+                    </span>
+                    <span className="text-2xl font-black leading-none text-[#4318FF]">
+                      {monthTotalHours.toFixed(1)}
+                    </span>
+                    <span className="text-[11px] font-bold text-[#2B3674]">
+                      hrs
+                    </span>
+                  </div>
+                )}
+
+                {!isSmall && !isSidebar && (
+                  <button
+                    onClick={handleDownload}
+                    className="hidden md:flex items-center gap-2 px-6 py-2.5 bg-[#4318FF] text-white rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 text-xs font-bold tracking-wide uppercase group"
+                    title="Download Monthly Report"
+                  >
+                    <Download
+                      size={16}
+                      strokeWidth={2.5}
+                      className="group-hover:animate-bounce"
+                    />
+                    <span>Download Report</span>
+                  </button>
+                )}
+                {!isSmall && !isSidebar && (
+                  <button
+                    onClick={handleDownload}
+                    className="md:hidden flex p-2.5 bg-[#4318FF] text-white rounded-xl shadow-lg shadow-blue-500/30 active:scale-95 transition-all"
+                    title="Download Monthly Report"
+                  >
+                    <Download size={18} strokeWidth={2.5} />
+                  </button>
+                )}
+
+                {!hideMonthNavigation && (
+                  <div
+                    className={`flex items-center gap-1 ${isSidebar
                       ? "bg-transparent p-0"
                       : "bg-[#F4F7FE] p-1 rounded-xl border border-transparent hover:border-gray-200 transition-colors"
-                  }`}
-                >
-                  <button
-                    onClick={handlePrevMonth}
-                    className={`p-1.5 hover:bg-white hover:shadow-sm rounded-lg transition-all text-[#A3AED0] hover:text-[#4318FF] active:scale-90 ${
-                      isSidebar ? "p-1" : ""
-                    }`}
+                      }`}
                   >
-                    <ChevronLeft size={20} strokeWidth={2.5} />
-                  </button>
-                  <span
-                    className={`${
-                      isSidebar
+                    <button
+                      onClick={handlePrevMonth}
+                      className={`p-1.5 hover:bg-white hover:shadow-sm rounded-lg transition-all text-[#A3AED0] hover:text-[#4318FF] active:scale-90 ${isSidebar ? "p-1" : ""
+                        }`}
+                    >
+                      <ChevronLeft size={20} strokeWidth={2.5} />
+                    </button>
+                    <span
+                      className={`${isSidebar
                         ? "text-sm min-w-[90px]"
                         : "text-sm font-extrabold min-w-[120px] md:min-w-[140px]"
-                    } text-[#2B3674] text-center select-none`}
-                  >
-                    {currentMonthName}
-                  </span>
-                  <button
-                    onClick={handleNextMonth}
-                    disabled={!canNavigateToNextMonth}
-                    className={`p-1.5 rounded-lg transition-all active:scale-90 ${
-                      isSidebar ? "p-1" : ""
-                    } ${
-                      !canNavigateToNextMonth
-                        ? "text-gray-300 cursor-not-allowed"
-                        : "text-[#A3AED0] hover:text-[#4318FF] hover:bg-white hover:shadow-sm"
-                    }`}
-                  >
-                    <ChevronRight size={20} strokeWidth={2.5} />
-                  </button>
-                </div>
-              )}
+                        } text-[#2B3674] text-center select-none`}
+                    >
+                      {currentMonthName}
+                    </span>
+                    <button
+                      onClick={handleNextMonth}
+                      disabled={!canNavigateToNextMonth}
+                      className={`p-1.5 rounded-lg transition-all active:scale-90 ${isSidebar ? "p-1" : ""
+                        } ${!canNavigateToNextMonth
+                          ? "text-gray-300 cursor-not-allowed"
+                          : "text-[#A3AED0] hover:text-[#4318FF] hover:bg-white hover:shadow-sm"
+                        }`}
+                    >
+                      <ChevronRight size={20} strokeWidth={2.5} />
+                    </button>
+                  </div>
+                )}
+              </div>
+
             </div>
           </div>
         )}
@@ -621,20 +639,18 @@ const Calendar = ({
         >
           {/* Weekday Header */}
           <div
-            className={`grid grid-cols-7 sticky top-0 bg-white z-20 pb-2 border-b border-gray-50 ${
-              isSmall ? "gap-0.5" : isSidebar ? "gap-1" : "gap-3"
-            }`}
+            className={`grid grid-cols-7 sticky top-0 bg-white z-20 pb-2 border-b border-gray-50 ${isSmall ? "gap-0.5" : isSidebar ? "gap-1" : "gap-3"
+              }`}
           >
             {daysOfWeek.map((day) => (
               <div
                 key={day}
-                className={`text-center text-xs font-black text-gray-700 uppercase tracking-wide ${
-                  isSmall
-                    ? "text-[7px] mb-0.5"
-                    : isSidebar
-                      ? "text-[9px] mb-1"
-                      : "text-[10px] py-2"
-                }`}
+                className={`text-center text-xs font-black text-gray-700 uppercase tracking-wide ${isSmall
+                  ? "text-[7px] mb-0.5"
+                  : isSidebar
+                    ? "text-[9px] mb-1"
+                    : "text-[10px] py-2"
+                  }`}
               >
                 {day}
               </div>
@@ -643,9 +659,8 @@ const Calendar = ({
 
           {/* Calendar Grid */}
           <div
-            className={`grid grid-cols-7 pb-2 mt-2 flex-1 ${
-              isSmall ? "gap-1" : isSidebar ? "gap-1.5" : "gap-3"
-            }`}
+            className={`grid grid-cols-7 pb-2 mt-2 flex-1 ${isSmall ? "gap-1" : isSidebar ? "gap-1.5" : "gap-3"
+              }`}
           >
             {blanks.map((blank) => (
               <div
@@ -707,7 +722,7 @@ const Calendar = ({
                 !!(entry as any)?.firstHalf &&
                 !!(entry as any)?.secondHalf &&
                 (entry as any).firstHalf !== (entry as any).secondHalf &&
-                !( ((isSunday || !!holiday) && Number(entry?.totalHours || 0) >= 1) || (isSaturday && Number(entry?.totalHours || 0) >= 4) );
+                !(((isSunday || !!holiday) && Number(entry?.totalHours || 0) >= 1) || (isSaturday && Number(entry?.totalHours || 0) >= 4));
 
               // Helper to get consistent styles matching MyTimesheet exactly
               const getStatusStyles = (
@@ -853,8 +868,8 @@ const Calendar = ({
               } else if (isSaturdayWithNoData) {
                 cellClass = `bg-red-50 border-transparent text-red-600 hover:bg-red-100 ${baseHover}`;
                 statusLabel = "WEEKEND";
-              } else if (entry && Number(entry.totalHours) > 0 && 
-                         entry?.status !== AttendanceStatus.LEAVE) {
+              } else if (entry && Number(entry.totalHours) > 0 &&
+                entry?.status !== AttendanceStatus.LEAVE) {
                 const h = Number(entry.totalHours);
                 const isNonWorkingFull = ((isSunday || !!holiday) && h >= 1 && h <= 9) || (isSaturday && h >= 4 && h <= 9);
                 if (h > 6 || isNonWorkingFull) {
@@ -865,21 +880,21 @@ const Calendar = ({
                   statusLabel = AttendanceStatus.HALF_DAY;
                 }
               }
- else if (isSplitDay) {
+              else if (isSplitDay) {
                 // Split Day: No border
                 cellClass = `bg-white border-transparent ${baseHover}`;
               } else if (entry?.status === AttendanceStatus.FULL_DAY) {
                 cellClass = `bg-emerald-50 border-transparent hover:bg-emerald-100 ${baseHover}`;
                 // If it is a holiday with work, use Full Day label
                 if (holiday && entry && Number(entry.totalHours) > 0) {
-                   statusLabel = AttendanceStatus.FULL_DAY;
+                  statusLabel = AttendanceStatus.FULL_DAY;
                 } else if (!entry?.totalHours || Number(entry.totalHours) === 0) {
                   statusLabel = "";
                 }
               } else if (entry?.status === AttendanceStatus.HALF_DAY) {
                 cellClass = `bg-amber-100 border-amber-300 hover:bg-amber-200 ${baseHover}`;
                 if (holiday && entry && Number(entry.totalHours) > 0) {
-                   statusLabel = AttendanceStatus.HALF_DAY;
+                  statusLabel = AttendanceStatus.HALF_DAY;
                 } else if (!entry?.totalHours || Number(entry.totalHours) === 0) {
                   statusLabel = "";
                 }
@@ -999,7 +1014,7 @@ const Calendar = ({
                   {isSplitDay ? (
                     <div className="absolute inset-0 z-0 rounded-2xl flex flex-col sm:flex-row overflow-hidden">
                       {isWorkLoc((entry as any).firstHalf) &&
-                      isWorkLoc((entry as any).secondHalf) ? (
+                        isWorkLoc((entry as any).secondHalf) ? (
                         <>
                           <div className="flex-1 bg-[#E6FFFA] border-b sm:border-b-0 sm:border-r border-[#01B574]/20" />
                           <div className="flex-1 bg-[#E6FFFA]" />
@@ -1018,11 +1033,10 @@ const Calendar = ({
                   ) : null}
 
                   <span
-                    className={`text-sm font-bold text-black mb-3 flex items-center justify-center w-6 h-6 rounded-full z-10 transition-colors duration-300 ${
-                      isToday
-                        ? "bg-[#4318FF] text-white"
-                        : "group-hover:bg-[#4318FF] group-hover:text-white"
-                    } `}
+                    className={`text-sm font-bold text-black mb-3 flex items-center justify-center w-6 h-6 rounded-full z-10 transition-colors duration-300 ${isToday
+                      ? "bg-[#4318FF] text-white"
+                      : "group-hover:bg-[#4318FF] group-hover:text-white"
+                      } `}
                   >
                     {day}
                   </span>
@@ -1069,23 +1083,21 @@ const Calendar = ({
                       </div>
                     ) : (
                       <div
-                        className={`h-1 w-8 rounded-full ${
-                          holiday
-                            ? "bg-[#00A3C4]/20"
-                            : isBlocked
-                              ? "bg-gray-300"
-                              : "bg-gray-100"
-                        }`}
+                        className={`h-1 w-8 rounded-full ${holiday
+                          ? "bg-[#00A3C4]/20"
+                          : isBlocked
+                            ? "bg-gray-300"
+                            : "bg-gray-100"
+                          }`}
                       ></div>
                     )}
                   </div>
 
                   <div
-                    className={`text-[10px] font-bold uppercase truncate w-full text-center px-1 py-1 rounded-md mt-1 backdrop-blur-sm z-10                         ${
-                      (entry?.status as any) === AttendanceStatus.ABSENT
-                        ? "text-white bg-[#EE5D50]/70"
-                        : holiday
-                          ? "text-white bg-[#1890FF]/70"
+                    className={`text-[10px] font-bold uppercase truncate w-full text-center px-1 py-1 rounded-md mt-1 backdrop-blur-sm z-10                         ${(entry?.status as any) === AttendanceStatus.ABSENT
+                      ? "text-white bg-[#EE5D50]/70"
+                      : holiday
+                        ? "text-white bg-[#1890FF]/70"
                         : isSunday
                           ? "text-white bg-red-400/70"
                           : isSplitDay
@@ -1094,52 +1106,52 @@ const Calendar = ({
                               ? "text-white bg-[#01B574]" // Green for Full Working split
                               : "text-white bg-[#FFB020]/80" // Orange for Half leave split
                             : entry?.status === AttendanceStatus.FULL_DAY &&
-                                statusLabel
+                              statusLabel
                               ? "text-white bg-[#01B574]"
                               : entry?.status === AttendanceStatus.HALF_DAY &&
-                                  statusLabel
+                                statusLabel
                                 ? "text-white bg-[#FFB020]/80"
                                 : entry?.status === AttendanceStatus.LEAVE
                                   ? "text-white bg-red-400/70"
                                   : calendarEntryIsClientVisit(entry) ||
-                                      calendarEntryIsWFH(entry)
+                                    calendarEntryIsWFH(entry)
                                     ? "text-white bg-[#4318FF]/70"
-                                      : isIncomplete && statusLabel
-                                        ? "text-white bg-[#64748B]/90"
-                                        : entry?.isWeekend
-                                          ? "text-white bg-red-400/70"
-                                          : "text-white bg-[#64748B]/90"
-                    }
+                                    : isIncomplete && statusLabel
+                                      ? "text-white bg-[#64748B]/90"
+                                      : entry?.isWeekend
+                                        ? "text-white bg-red-400/70"
+                                        : "text-white bg-[#64748B]/90"
+                      }
                     `}
                   >
                     {(entry?.status as any) === AttendanceStatus.ABSENT
                       ? "ABSENT"
                       : holiday
                         ? holiday.name || 'HOLIDAY'
-                      : (isSunday || (isSaturdayWithNoData && !entry?.workLocation))
-                        ? "WEEKEND"
-                        : isSplitDay
-                          ? isWorkLoc((entry as any).firstHalf) &&
-                            isWorkLoc((entry as any).secondHalf)
-                            ? "FULL DAY"
-                            : `${(isWorkLoc((entry as any).firstHalf) ? (entry as any).firstHalf : (entry as any).secondHalf)?.toUpperCase()} (HALF DAY)`
-                          : (entry?.status as string) === AttendanceStatus.LEAVE
-                            ? "LEAVE"
-                            : (entry?.status as string) ===
+                        : (isSunday || (isSaturdayWithNoData && !entry?.workLocation))
+                          ? "WEEKEND"
+                          : isSplitDay
+                            ? isWorkLoc((entry as any).firstHalf) &&
+                              isWorkLoc((entry as any).secondHalf)
+                              ? "FULL DAY"
+                              : `${(isWorkLoc((entry as any).firstHalf) ? (entry as any).firstHalf : (entry as any).secondHalf)?.toUpperCase()} (HALF DAY)`
+                            : (entry?.status as string) === AttendanceStatus.LEAVE
+                              ? "LEAVE"
+                              : (entry?.status as string) ===
                                 AttendanceStatus.FULL_DAY
-                              ? `${(entry?.workLocation || "OFFICE")
+                                ? `${(entry?.workLocation || "OFFICE")
                                   .replace(/\(FULL DAY\)/i, "")
                                   .trim()
                                   .toUpperCase()} (FULL DAY)`
-                              : entry?.workLocation &&
+                                : entry?.workLocation &&
                                   (entry?.status as string) !==
-                                    AttendanceStatus.LEAVE &&
+                                  AttendanceStatus.LEAVE &&
                                   (entry?.status as string) !==
-                                    AttendanceStatus.FULL_DAY
-                                ? entry.workLocation
-                                : isIncomplete && !statusLabel
-                                  ? AttendanceStatus.NOT_UPDATED
-                                  : statusLabel}
+                                  AttendanceStatus.FULL_DAY
+                                  ? entry.workLocation
+                                  : isIncomplete && !statusLabel
+                                    ? AttendanceStatus.NOT_UPDATED
+                                    : statusLabel}
                   </div>
 
                   {isIncomplete && (

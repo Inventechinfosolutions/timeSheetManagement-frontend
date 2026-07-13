@@ -1,13 +1,11 @@
 import { Menu } from "lucide-react";
 import { MobileHeaderSlot } from "./enums";
 import { MobileHeaderProps } from "./types";
+import { isDesktopPointerViewport } from "../../utils/responsiveViewport";
 import "./MobileHeader.css";
 
-// FIXED: Changed from 1024px to 1279px (or < 1280px) to match the layout's xl breakpoint threshold.
-// This ensures that when zoomed into 110% or 125%, this evaluates to true and shows the hamburger!
 export const isMobileHeaderViewport = () =>
-  typeof window !== "undefined" &&
-  window.matchMedia("(max-width: 1279px)").matches;
+  typeof window !== "undefined" && !isDesktopPointerViewport();
 
 const MobileHeader = ({
   logoSrc,

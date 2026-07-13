@@ -1,4 +1,4 @@
-/* Change this line from 1024px to 1279px */
+/* Below desktop/laptop width, use the mobile/tablet header. */
 @media (max-width: 1279px) {
   .header-container {
     position: relative;
@@ -135,5 +135,57 @@
     width: auto;
     height: 32px;
     object-fit: contain;
+  }
+}
+
+@media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
+  .mobile-header {
+    display: none !important;
+  }
+
+  .header-desktop-logo {
+    display: inline-flex !important;
+    align-items: center;
+  }
+
+  .header-container {
+    height: 72px;
+    padding: 0 28px;
+  }
+
+  .header-actions {
+    position: relative;
+    z-index: auto;
+    width: auto;
+    gap: 12px;
+  }
+
+  .notification-trigger,
+  .profile-trigger {
+    min-width: auto;
+    min-height: auto;
+  }
+
+  .profile-user-info {
+    display: flex !important;
+  }
+
+  .notification-popover {
+    position: absolute;
+    left: auto;
+    right: 0;
+    top: calc(100% + 12px);
+    width: 400px;
+    max-height: calc(100vh - 120px);
+  }
+
+  .profile-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    left: auto;
+    width: 300px;
+    max-height: calc(100vh - 120px);
+    border-radius: 12px;
   }
 }

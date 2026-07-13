@@ -34,7 +34,8 @@ import MyProfile from "./EmployeeDashboard/MyProfile";
 import TodayAttendance from "./EmployeeDashboard/TodayAttendance";
 import ChangePassword from "./EmployeeDashboard/ChangePassword";
 import AttendanceViewWrapper from "./EmployeeDashboard/CalenderViewWrapper";
-import MobileResponsiveCalendarPage from "./EmployeeDashboard/MobileResponsiveCalendarPage";
+// import MobileResponsiveCalendarPage from "./EmployeeDashboard/MobileResponsiveCalendarPage";
+import MobileTimesheetHistory from "./EmployeeDashboard/MobileTimesheetHistory/MobileTimesheetHistory";
 import LeaveManagement from "./EmployeeDashboard/LeaveManagement";
 import LeaveBalance from "./EmployeeDashboard/LeaveBalance";
 import About from "./pages/About";
@@ -56,11 +57,12 @@ import AdminViewEmployeeDashboard from "./AdminDashboard/AdminViewEmployeeDashbo
 import AdminLeaveManagement from "./AdminDashboard/AdminLeaveManagement";
 import ManagerMapping from "./ManagerMapping/ManagerMapping";
 import ManagerEmployeesView from "./AdminDashboard/ManagerEmployeesView";
+import MobileTimesheet from "./EmployeeDashboard/MyTimesheetMobileResponsive/MobileTimesheet";
 
 const EmployeeTabWrapper = () => {
   const { tab } = useParams<{ tab: string }>();
 
-  switch (tab) {
+  switch (tab?.toLowerCase()) {
     case "my-timesheet":
       return <MyTimesheet />;
     case "timesheet-view":
@@ -70,15 +72,13 @@ const EmployeeTabWrapper = () => {
     case "change-password":
       return <ChangePassword />;
     case "calendar-view":
-      return <MobileResponsiveCalendarPage />;
+      return <MobileTimesheetHistory />;
     case "leave-management":
       return <LeaveManagement />;
     case "leave-balance":
       return <LeaveBalance />;
-
-    case "about": 
+    case "about":
       return <About />;
-
     default:
       return <Navigate to="/employee-dashboard" replace />;
   }
@@ -87,7 +87,7 @@ const EmployeeTabWrapper = () => {
 const AdminTabWrapper = () => {
   const { tab } = useParams<{ tab: string }>();
 
-  switch (tab) {
+  switch (tab?.toLowerCase()) {
     case "registration":
       return <EmpRegistration />;
     case "employees":
@@ -378,18 +378,13 @@ function AppContent() {
                     </ProtectedRoute>
                   }
                 >
+                  <Route
+                    path="/employee-dashboard/mobile-timesheet"
+                    element={<MobileTimesheet />}
+                  />
                   <Route index element={<TodayAttendance />} />
                   <Route path=":tab/:date?" element={<EmployeeTabWrapper />} />
                 </Route>
-
-                {/* <Route
-  path="/about"
-  element={
-    <SidebarLayout>
-      <MobileAbout />
-    </SidebarLayout>
-  }
-/> */}
 
                 {/* Other Configured Routes */}
                 {adminComponentConfigs

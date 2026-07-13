@@ -34,9 +34,13 @@ import {
   isEditableMonth,
   getBadgeLocation,
 } from "../utils/attendanceUtils";
-import MobileTimesheet from "./MyTimesheetMobileResponsive/MobileTimesheet";
 import AutoUpdateModal from "./AutoUpdateModal";
 import AutoUpdateSuccessModal from "./AutoUpdateSuccessModal";
+import MobileTimesheet from "./MyTimesheetMobileResponsive/MobileTimesheet";
+import {
+  DESKTOP_POINTER_QUERY,
+  isDesktopPointerViewport,
+} from "../utils/responsiveViewport";
 
 interface TimesheetProps {
   now?: Date;
@@ -46,8 +50,6 @@ interface TimesheetProps {
   onBlockedClick?: () => void;
   containerClassName?: string;
 }
-
-const RESPONSIVE_TIMESHEET_BREAKPOINT = 1024;
 
 const cleanErrorMessage = (msg: string) => {
   if (typeof msg !== "string") return msg;
@@ -208,17 +210,22 @@ const MyTimesheet = ({
   const today = useMemo(() => new Date(), []);
 
   const [isMobile, setIsMobile] = useState(
-    window.innerWidth <= RESPONSIVE_TIMESHEET_BREAKPOINT,
+    !isDesktopPointerViewport(),
   );
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
   const [shouldSetLastWeek, setShouldSetLastWeek] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth <= RESPONSIVE_TIMESHEET_BREAKPOINT);
+      setIsMobile(!isDesktopPointerViewport());
     };
+    const desktopPointerMedia = window.matchMedia(DESKTOP_POINTER_QUERY);
     window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    desktopPointerMedia.addEventListener?.("change", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      desktopPointerMedia.removeEventListener?.("change", handleResize);
+    };
   }, []);
 
   const weeks = useMemo(() => {
@@ -1793,56 +1800,54 @@ const MyTimesheet = ({
 
   return (
     <div
-      className={`flex flex-col ${containerClassName || "h-full max-h-full overflow-hidden bg-[#F4F7FE] py-2 px-1 md:px-6 md:pt-4 md:pb-0 relative"}`}
+      className={`flex flex-col ${containerClassName || "h-full max-h-full overflow-hidden bg-[#F4F7FE] py-2 px-3 lg:px-6 pt-4 pb-0 relative"}`}
     >
       {/* Back Button */}
-      {!isMobile && (
-        <button
-          onClick={() => {
-            const path = location.pathname;
-            if (path.includes("/manager-dashboard")) {
-              if (
-                path.includes("/timesheet/") ||
-                path.includes("/working-details/")
-              ) {
-                navigate("/manager-dashboard/timesheet-list");
-              } else if (
-                path.includes("/employee-details/") ||
-                path.includes("/view-attendance/")
-              ) {
-                navigate("/manager-dashboard/employees");
-              } else {
-                navigate("/manager-dashboard/my-dashboard");
-              }
-            } else if (path.includes("/admin-dashboard")) {
-              if (
-                path.includes("/timesheet/") ||
-                path.includes("/working-details/")
-              ) {
-                navigate("/admin-dashboard/timesheet-list");
-              } else if (
-                path.includes("/employee-details/") ||
-                path.includes("/view-attendance/")
-              ) {
-                navigate("/admin-dashboard/employees");
-              } else {
-                navigate("/admin-dashboard");
-              }
+      <button
+        onClick={() => {
+          const path = location.pathname;
+          if (path.includes("/manager-dashboard")) {
+            if (
+              path.includes("/timesheet/") ||
+              path.includes("/working-details/")
+            ) {
+              navigate("/manager-dashboard/timesheet-list");
+            } else if (
+              path.includes("/employee-details/") ||
+              path.includes("/view-attendance/")
+            ) {
+              navigate("/manager-dashboard/employees");
             } else {
-              navigate("/employee-dashboard");
+              navigate("/manager-dashboard/my-dashboard");
             }
-          }}
-          className="group flex items-center gap-2 text-[#A3AED0] hover:text-[#4318FF] transition-all mb-2 w-fit mt-2 ml-1"
-        >
-          <ArrowLeft
-            size={16}
-            className="group-hover:-translate-x-1 transition-transform"
-          />
-          <span className="text-[11px] font-black uppercase tracking-widest pl-1">
-            Back
-          </span>
-        </button>
-      )}
+          } else if (path.includes("/admin-dashboard")) {
+            if (
+              path.includes("/timesheet/") ||
+              path.includes("/working-details/")
+            ) {
+              navigate("/admin-dashboard/timesheet-list");
+            } else if (
+              path.includes("/employee-details/") ||
+              path.includes("/view-attendance/")
+            ) {
+              navigate("/admin-dashboard/employees");
+            } else {
+              navigate("/admin-dashboard");
+            }
+          } else {
+            navigate("/employee-dashboard");
+          }
+        }}
+        className="group flex items-center gap-2 text-[#A3AED0] hover:text-[#4318FF] transition-all mb-2 w-fit mt-2 ml-1"
+      >
+        <ArrowLeft
+          size={16}
+          className="group-hover:-translate-x-1 transition-transform"
+        />
+        <span className="text-[11px] font-black uppercase tracking-widest pl-1">
+          Back
+        </span>
+      </button>
       <AutoUpdateModal
         isOpen={showAutoUpdateModal}
         onClose={() => setShowAutoUpdateModal(false)}
@@ -1858,16 +1863,11 @@ const MyTimesheet = ({
         monthName={now.toLocaleDateString("en-US", { month: "long" })}
         year={now.getFullYear()}
       />
-      {false && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/30 backdrop-blur-[2px]">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-4 border-[#4318FF]"></div>
-        </div>
-      )}
 
-      <div className="flex-1 bg-white rounded-[20px] p-4 shadow-[0px_20px_50px_0px_#111c440d] border border-gray-100 overflow-hidden mt-1 mb-3 md:mb-4 flex flex-col">
+      <div className="flex-1 bg-white rounded-[20px] p-3 lg:p-4 xl:p-5 shadow-[0px_20px_50px_0px_#111c440d] border border-gray-100 overflow-hidden mt-1 mb-3 lg:mb-4 flex flex-col mx-auto w-full max-w-[1600px]">
         {/* Header Controls */}
-        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mb-4 gap-4 sm:gap-0 px-2">
-          <div className="flex items-center justify-between sm:justify-start gap-4">
+        <div className="flex flex-row justify-between items-center mb-4 gap-4 px-2 flex-wrap">
+          <div className="flex items-center gap-4">
             <div className="flex items-center gap-1">
               <button
                 onClick={handlePrevMonth}
@@ -1879,9 +1879,9 @@ const MyTimesheet = ({
                     : "hover:bg-gray-50 text-gray-400 hover:text-[#4318FF]"
                   }`}
               >
-                <ChevronLeft size={16} strokeWidth={2.5} />
+                <ChevronLeft size={18} strokeWidth={2.5} />
               </button>
-              <p className="text-sm sm:text-base font-bold text-[#2B3674] min-w-[110px] text-center">
+              <p className="text-base lg:text-lg font-bold text-[#2B3674] min-w-[130px] text-center">
                 {now.toLocaleDateString("en-US", {
                   month: "long",
                   year: "numeric",
@@ -1897,41 +1897,21 @@ const MyTimesheet = ({
                     : "hover:bg-gray-50 text-gray-400 hover:text-[#4318FF]"
                   }`}
               >
-                <ChevronRight size={16} strokeWidth={2.5} />
+                <ChevronRight size={18} strokeWidth={2.5} />
               </button>
             </div>
-
-            {/* Total Hours Mobile (Show when sm:hidden)
-            <div className="sm:hidden text-right">
-              <p className="text-[8px] uppercase font-black text-gray-400 tracking-wider leading-none mb-0.5">
-                Total
-              </p>
-              <p className="text-lg font-black text-[#4318FF] leading-none">
-                {(Number(monthTotalHours) || 0).toFixed(1)}
-              </p>
-            </div> */}
           </div>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-            {/* {!effectiveReadOnly && (
-              <button
-                onClick={handleAutoUpdate}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg font-bold text-[10px] hover:bg-indigo-100 transition-all active:scale-95 border border-indigo-100 uppercase tracking-wide"
-                title="Auto-fill working days to 9 hours"
-              >
-                <Sparkles size={14} className="animate-pulse" />
-                <span>Auto Fill</span>
-              </button>
-            )} */}
-            <div className="flex flex-col sm:flex-row items-end sm:items-baseline gap-1 sm:gap-2">
-              <p className="text-xs sm:text-sm uppercase font-bold text-gray-700 tracking-wider leading-none">
+          <div className="flex items-center gap-3 justify-end flex-wrap">
+            <div className="flex items-baseline gap-2">
+              <p className="text-sm uppercase font-bold text-gray-700 tracking-wider leading-none">
                 TOTAL TRACKED :
               </p>
               <div className="flex items-baseline gap-1">
-                <p className="text-xl sm:text-2xl font-black text-[#4318FF] leading-none">
+                <p className="text-2xl font-black text-[#4318FF] leading-none">
                   {Number(monthTotalHours).toFixed(1)}
                 </p>
-                <span className="text-[10px] font-bold text-gray-700">hrs</span>
+                <span className="text-[11px] font-bold text-gray-700">hrs</span>
               </div>
             </div>
 
@@ -1942,11 +1922,11 @@ const MyTimesheet = ({
               isViewedMonthEligible && (
                 <button
                   onClick={handleAutoUpdateClick}
-                  className="flex items-center justify-center gap-1.5 px-3 py-2 text-white rounded-xl font-bold text-[10px] transition-all active:scale-95 tracking-wide uppercase hover:-translate-y-0.5 bg-[#4318FF] shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50"
+                  className="flex items-center justify-center gap-1.5 px-4 py-2 text-white rounded-xl font-bold text-[11px] transition-all active:scale-95 tracking-wide uppercase hover:-translate-y-0.5 bg-[#4318FF] shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50"
                   title="Auto-fill eligible working days"
                 >
                   <Rocket size={14} className="animate-pulse" />
-                  <span className="hidden sm:inline">Auto Fill</span>
+                  <span>Auto Fill</span>
                 </button>
               )}
 
@@ -1954,7 +1934,7 @@ const MyTimesheet = ({
               <button
                 onClick={onSaveAll}
                 disabled={loading}
-                className={`flex items-center justify-center gap-1.5 px-4 py-2 bg-[#4318FF] text-white rounded-xl font-bold text-[10px] shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all active:scale-95 tracking-wide uppercase ${loading ? "opacity-70 cursor-wait" : ""}`}
+                className={`flex items-center justify-center gap-1.5 px-5 py-2 bg-[#4318FF] text-white rounded-xl font-bold text-[11px] shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all active:scale-95 tracking-wide uppercase ${loading ? "opacity-70 cursor-wait" : ""}`}
               >
                 {loading ? (
                   <>
@@ -1973,7 +1953,7 @@ const MyTimesheet = ({
         </div>
 
         {/* Legend */}
-        <div className="flex items-center gap-x-2 md:gap-x-3 gap-y-1 flex-nowrap overflow-hidden px-2 mb-2">
+        <div className="flex items-center gap-x-3 xl:gap-x-4 gap-y-1 flex-wrap px-2 mb-2">
           {[
             {
               label: AttendanceStatus.FULL_DAY,
@@ -2033,10 +2013,10 @@ const MyTimesheet = ({
           ].map((item) => (
             <div
               key={item.label}
-              className="flex items-center gap-1 md:gap-1.5 text-[8.5px] md:text-[9.5px] font-bold text-gray-600 whitespace-nowrap uppercase tracking-wider"
+              className="flex items-center gap-1.5 text-[10px] xl:text-[10.5px] font-bold text-gray-600 whitespace-nowrap uppercase tracking-wider"
             >
               <div
-                className={`w-2 h-2 md:w-2.5 md:h-2.5 rounded-full ${item.color} border ${item.border}`}
+                className={`w-2.5 h-2.5 rounded-full ${item.color} border ${item.border}`}
               ></div>
               <span>{item.label}</span>
             </div>
@@ -2044,11 +2024,11 @@ const MyTimesheet = ({
         </div>
 
         {/* Days Header */}
-        <div className="grid grid-cols-7 gap-4 mb-2 px-2 border-b border-gray-50 pb-2">
+        <div className="grid grid-cols-7 gap-3 lg:gap-4 mb-2 px-2 border-b border-gray-50 pb-2">
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
             <div
               key={day}
-              className="text-center text-[11px] font-black text-gray-700 uppercase tracking-wider"
+              className="text-center text-xs font-black text-gray-700 uppercase tracking-wider"
             >
               {day}
             </div>
@@ -2058,12 +2038,12 @@ const MyTimesheet = ({
         {/* Calendar Grid */}
         <div
           ref={scrollContainerRef}
-          className="grid grid-cols-7 gap-2 md:gap-3 overflow-y-auto max-h-full pr-1 pt-2.5 md:pt-3.5 pb-2 px-2 scroll-smooth flex-1 custom-scrollbar"
+          className="grid grid-cols-7 gap-3 lg:gap-4 overflow-y-auto max-h-full pr-1 pt-3 lg:pt-4 pb-2 px-2 scroll-smooth flex-1 custom-scrollbar"
         >
           {Array.from({ length: paddingDays }).map((_, idx) => (
             <div
               key={`p-${idx}`}
-              className="min-h-[78px] md:min-h-[88px] rounded-xl md:rounded-2xl bg-gray-50/30 border border-dashed border-gray-100"
+              className="min-h-[92px] lg:min-h-[104px] xl:min-h-[112px] rounded-2xl bg-gray-50/30 border border-dashed border-gray-100"
             ></div>
           ))}
           {localEntries.map((day, idx) => {
@@ -2325,7 +2305,7 @@ const MyTimesheet = ({
               <div
                 key={idx}
                 id={`day-${day.fullDate.getTime()}`}
-                className={`relative flex flex-col justify-between p-1 rounded-xl md:rounded-2xl border transition-all duration-300 cursor-pointer min-h-[78px] md:min-h-[88px] group 
+                className={`relative flex flex-col justify-between p-1.5 rounded-2xl border transition-all duration-300 cursor-pointer min-h-[92px] lg:min-h-[104px] xl:min-h-[112px] group 
                             ${borderClass} ${shadowClass} ${highlightClass} ${day.isToday ? bgClass : "bg-white"} ${isBlocked
                     ? isAdmin || isManager
                       ? "cursor-pointer"
@@ -2339,11 +2319,11 @@ const MyTimesheet = ({
                 }}
               >
                 {/* Background Layer for Split Days or Single Color */}
-                <div className="absolute inset-0 z-0 rounded-xl md:rounded-2xl overflow-hidden flex flex-col sm:flex-row">
+                <div className="absolute inset-0 z-0 rounded-2xl overflow-hidden flex flex-row">
                   {isSplitDay ? (
                     isWorkLoc(day.firstHalf) && isWorkLoc(day.secondHalf) ? (
                       <>
-                        <div className="flex-1 bg-[#E6FFFA] border-b sm:border-b-0 sm:border-r border-[#01B574]/20" />
+                        <div className="flex-1 bg-[#E6FFFA] border-r border-[#01B574]/20" />
                         <div className="flex-1 bg-[#E6FFFA]" />
                       </>
                     ) : (
@@ -2366,7 +2346,7 @@ const MyTimesheet = ({
                 {/* Top Row: Date & Lock */}
                 <div className="flex justify-between items-start z-10 mb-0.5">
                   <div
-                    className={`flex items-center justify-center w-5 h-5 md:w-6 md:h-6 rounded-full text-[9px] md:text-[10px] font-bold transition-colors
+                    className={`flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold transition-colors
                       ${day.isToday
                         ? "bg-[#4318FF] text-white shadow-lg shadow-blue-500/30"
                         : "bg-white/50 text-[#2B3674] group-hover:bg-[#4318FF] group-hover:text-white"
@@ -2383,7 +2363,7 @@ const MyTimesheet = ({
                       !isEditableMonth(day.fullDate))) &&
                     displayStatus !== AttendanceStatus.ABSENT && (
                       <div className="p-0.5 rounded-full bg-red-50 text-red-500 border border-red-100 transition-transform hover:scale-110">
-                        <ShieldBan size={10} strokeWidth={2.5} />
+                        <ShieldBan size={11} strokeWidth={2.5} />
                       </div>
                     )}
                 </div>
@@ -2394,12 +2374,12 @@ const MyTimesheet = ({
                   {isSplitDay && (
                     <div className="flex gap-1 w-full mb-0.5 z-10 px-0.5">
                       <div
-                        className={`flex-1 py-0.5 rounded-sm text-center text-[7px] md:text-[8px] font-bold uppercase ${getStatusStyles(day.firstHalf).badge}`}
+                        className={`flex-1 py-0.5 rounded-sm text-center text-[8px] font-bold uppercase ${getStatusStyles(day.firstHalf).badge}`}
                       >
                         {getShortStatus(day.firstHalf)}
                       </div>
                       <div
-                        className={`flex-1 py-0.5 rounded-sm text-center text-[7px] md:text-[8px] font-bold uppercase ${getStatusStyles(day.secondHalf).badge}`}
+                        className={`flex-1 py-0.5 rounded-sm text-center text-[8px] font-bold uppercase ${getStatusStyles(day.secondHalf).badge}`}
                       >
                         {getShortStatus(day.secondHalf)}
                       </div>
@@ -2414,7 +2394,7 @@ const MyTimesheet = ({
                           ? "text-gray-400 cursor-not-allowed"
                           : isError
                             ? "text-red-500 text-[10px] font-bold animate-pulse"
-                            : "text-gray-800 text-xl md:text-2xl group-hover:scale-105 focus:scale-105"
+                            : "text-gray-800 text-xl xl:text-2xl group-hover:scale-105 focus:scale-105"
                         }`}
                       placeholder="-"
                       value={isError ? inputError.message : inputValue}
@@ -2425,14 +2405,14 @@ const MyTimesheet = ({
                       <div className="absolute bottom-0 w-12 h-0.5 bg-black/20 rounded-full group-hover/input:bg-black transition-colors"></div>
                     )}
                   </div>
-                  <span className="text-[8px] md:text-[9px] text-black/50 font-bold uppercase tracking-wider select-none mt-0.5 mb-1">
+                  <span className="text-[9px] text-black/50 font-bold uppercase tracking-wider select-none mt-0.5 mb-1">
                     hrs
                   </span>
                 </div>
 
                 {/* Bottom: Status Badge */}
                 <div
-                  className={`w-full py-0.5 rounded-md text-center text-[9px] md:text-[10px] font-black uppercase tracking-wider truncate px-1 shadow-sm z-10 mt-auto ${badgeClass}`}
+                  className={`w-full py-0.5 rounded-md text-center text-[10px] font-black uppercase tracking-wider truncate px-1 shadow-sm z-10 mt-auto ${badgeClass}`}
                 >
                   {displayStatus === AttendanceStatus.ABSENT
                     ? "ABSENT"

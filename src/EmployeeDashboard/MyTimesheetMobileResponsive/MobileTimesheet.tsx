@@ -117,8 +117,8 @@ const getMobileModalPreview = (
 };
 
 /* ============================================================
-   COLOR ENGINE — Updated for explicit WFH (Purple) & Client (Blue)
-   ============================================================ */
+  COLOR ENGINE — Updated for explicit WFH (Purple) & Client (Blue)
+  ============================================================ */
 
 const getStatusStyles = (
   statusStr: string | null | undefined,
@@ -174,7 +174,7 @@ const getStatusStyles = (
     };
   if (s === "wfh" || loc === "wfh" || s === "work from home")
     return {
-      bg: "bg-[#fceed2]",
+      bg: "bg-[#d2dcfcff]",
       badge: "bg-[#6366F1]/70 text-white font-bold",
       border: "border-[#6366F1]/20",
       text: "text-[#4F46E5]",
@@ -213,6 +213,27 @@ const bgClassToHex = (bgClass: string): string => {
   const match = bgClass.match(/#([0-9a-fA-F]{3,8})/);
   if (match) return `#${match[1]}`;
   return HEX_FALLBACK[bgClass] || "#F8FAFC";
+};
+
+/* ------------------------------------------------------------
+   TEXT COLOR ENGINE
+   Mirrors MobileTimesheetHistory's approach: resolve an actual
+   hex color and apply it via inline style, instead of relying on
+   a Tailwind arbitrary-value text-[#hex] class. Those classes
+   were not reliably rendering, which is why day numbers / hours /
+   status labels were showing up black instead of the intended
+   status color (as correctly seen in the History view).
+   ------------------------------------------------------------ */
+
+const TEXT_HEX_FALLBACK: Record<string, string> = {
+  "text-gray-600": "#4b5563",
+  "text-gray-500": "#6b7280",
+};
+
+const textClassToHex = (textClass: string): string => {
+  const match = textClass.match(/#([0-9a-fA-F]{3,8})/);
+  if (match) return `#${match[1]}`;
+  return TEXT_HEX_FALLBACK[textClass] || "#4b5563";
 };
 
 const getDisplayStatus = (
@@ -493,7 +514,7 @@ const MobileTimesheet = ({
         modalHeaderTitle = "Leave";
         modalBodyText = "Hours are already assigned for this leave status and cannot be edited.";
       } else {
-        const fallbackLabel = entry?.status || "Approved Status";
+        const fallbackLabel = entry?.status || "Weekend";
         modalHeaderTitle = fallbackLabel;
         modalBodyText = `Hours are already assigned for this ${fallbackLabel.toLowerCase()} attendance and cannot be edited.`;
       }
@@ -656,7 +677,7 @@ const MobileTimesheet = ({
       >
         <AutoUpdateModal
           isOpen={showAutoUpdateModal}
-          onClose={() => { }}
+          onClose={() => setShowAutoUpdateModal(false)}
           onConfirm={confirmAutoUpdate}
           monthName={monthName}
           year={now.getFullYear()}
@@ -672,8 +693,8 @@ const MobileTimesheet = ({
 
         <div className="flex-1 overflow-visible mt-1 mb-3 flex flex-col bg-transparent p-2 shadow-none border-none">
           <div className="mobile-timesheet-toolbar bg-white rounded-[20px] px-3 py-2 shadow-sm border border-gray-50 mb-3 w-full box-border">
-            <div className="mobile-timesheet-summary-row grid grid-cols-3 items-center w-full overflow-hidden">
-              <div className="flex items-center justify-start gap-0.5">
+            <div className="mobile-timesheet-summary-row flex flex-row flex-nowrap items-center w-full overflow-visible">
+              <div className="mobile-timesheet-month-selector flex items-center justify-start gap-0.5">
                 <button
                   onClick={handlePrevMonth}
                   disabled={isAdminView || loading}
@@ -686,7 +707,7 @@ const MobileTimesheet = ({
                 >
                   <ChevronLeft size={14} strokeWidth={2.8} />
                 </button>
-                <p className="text-xs font-black text-[#2B3674] min-w-[60px] text-center whitespace-nowrap">
+                <p className="mobile-timesheet-month-label text-xs font-black text-[#2B3674] min-w-[60px] text-center whitespace-nowrap">
                   {now.toLocaleDateString("en-US", {
                     month: "short",
                     year: "numeric",
@@ -707,13 +728,13 @@ const MobileTimesheet = ({
               </div>
 
               <div className="mobile-timesheet-total flex flex-row flex-nowrap items-baseline justify-center gap-0.5 min-w-0">
-                <p className="text-[10px] tracking-tight uppercase font-black text-gray-600 leading-none whitespace-nowrap">
-                  TOTAL TRACKED:
+                <p className="mobile-timesheet-total-label text-[10px] tracking-tight uppercase font-black text-gray-600 leading-none whitespace-nowrap">
+                  TOTAL <span className="mobile-timesheet-total-label-long">TRACKED</span>:
                 </p>
-                <p className="text-base font-black text-[#4318FF] leading-none whitespace-nowrap">
+                <p className="mobile-timesheet-total-value text-base font-black text-[#4318FF] leading-none whitespace-nowrap">
                   {PlatformTotalHoursFix(monthTotalHours)}
                 </p>
-                <span className="text-[10px] font-bold text-gray-500 whitespace-nowrap">hrs</span>
+                <span className="mobile-timesheet-total-unit text-[10px] font-bold text-gray-500 whitespace-nowrap">hrs</span>
               </div>
 
               <div className="mobile-timesheet-actions flex items-center justify-end">
@@ -723,14 +744,14 @@ const MobileTimesheet = ({
                   isViewedMonthEligible && (
                     <button
                       onClick={handleAutoUpdateClick}
-                      className="flex flex-row items-center justify-center gap-1.5 py-1 px-2.5 rounded-lg font-black text-[7.5px] uppercase tracking-wide text-white transition-all active:scale-95 bg-[#4318FF] whitespace-nowrap text-left"
+                      className="mobile-timesheet-autofill-btn flex flex-row items-center justify-center gap-1.5 py-1 px-2.5 rounded-lg font-black text-[7.5px] uppercase tracking-wide text-white transition-all active:scale-95 bg-[#4318FF] whitespace-nowrap text-left"
                       title="Auto-fill working days to 9 hours"
                     >
                       <div className="flex flex-col leading-[1.1]">
                         <span>Auto</span>
                         <span>Fill</span>
                       </div>
-                      <Rocket size={11} className="flex-shrink-0" />
+                      <Rocket size={11} className="flex-shrink-0 animate-pulse" />
                     </button>
                   )}
               </div>
@@ -738,12 +759,12 @@ const MobileTimesheet = ({
           </div>
 
           <div className="p-3 flex flex-col flex-1 overflow-visible">
-            <div className="grid grid-cols-7 gap-1.5 mb-1 px-1 pb-1">
+            <div className="mobile-timesheet-weekday-row grid grid-cols-7 gap-1.5 mb-1 px-1 pb-1">
               {["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].map(
                 (dayName) => (
                   <div
                     key={dayName}
-                    className="text-center text-[10px] font-black text-[#8F9BBA] uppercase tracking-wider"
+                    className="mobile-timesheet-weekday-cell text-center text-[10px] font-black text-[#8F9BBA] uppercase tracking-wider"
                   >
                     {dayName}
                   </div>
@@ -773,6 +794,15 @@ const MobileTimesheet = ({
                   displayStatus,
                   day.workLocation,
                 );
+
+                // Resolve an actual hex color (same behavior as
+                // MobileTimesheetHistory) instead of relying on a Tailwind
+                // arbitrary text-[#hex] class, which was not rendering
+                // reliably and caused the day number / hours / status
+                // label text to fall back to black.
+                const cellTextColor = day.isToday
+                  ? "#4318FF"
+                  : textClassToHex(overallStyles.text);
 
                 const statusLabel = day.status
                   ? (day.status as string).toUpperCase()
@@ -842,25 +872,28 @@ const MobileTimesheet = ({
                   }
                 }
 
-                const cellBgClass = day.isToday
-                  ? "bg-white"
-                  : isSplitDay
-                    ? ""
-                    : overallStyles.bg;
+                const isSundayCell = day.fullDate.getDay() === 0;
+
+                const cellBgClass = isSundayCell
+                  ? "bg-[#FEE2E2]"
+                  : day.isToday
+                    ? "bg-white"
+                    : isSplitDay
+                      ? ""
+                      : overallStyles.bg;
                 const cellBorderClass = day.isToday
-                  ? "border-transparent"
+                  ? "!border-2 !border-[#4318FF]"
                   : isSplitDay
                     ? "border-transparent"
                     : overallStyles.border;
-                const cellTextClass = overallStyles.text;
 
                 return (
                   <div
                     key={index}
                     id={`day-${day.fullDate.getTime()}`}
                     className={`mobile-timesheet-day relative flex flex-col items-center justify-center rounded-xl border transition-all duration-200 cursor-pointer aspect-[4/5] sm:aspect-square w-full shadow-sm group overflow-visible
-                    ${cellBgClass} ${cellBorderClass} ${highlightClass} ${day.isToday ? "ring-2 ring-[#4318FF] ring-offset-1" : ""}
-                    ${isBlocked ? "cursor-pointer" : "active:scale-95"}`}
+                      ${cellBgClass} ${cellBorderClass} ${highlightClass}
+                      ${isBlocked ? "cursor-pointer" : "active:scale-95"}`}
                     style={splitBgStyle}
                     onClick={() => openHoursModal(index)}
                   >
@@ -873,12 +906,13 @@ const MobileTimesheet = ({
                           openBlockedModal(day);
                         }}
                       >
-                        <Lock size={9} className={`${cellTextClass} opacity-85`} />
+                        <Lock size={9} color={cellTextColor} className="opacity-85" />
                       </div>
                     )}
 
                     <span
-                      className={`text-[13px] font-extrabold ${cellTextClass} ${day.isToday ? "font-black" : ""} leading-none`}
+                      className={`mobile-timesheet-day-number text-[13px] font-extrabold ${day.isToday ? "font-black" : ""} leading-none`}
+                      style={{ color: cellTextColor }}
                     >
                       {day.date}
                     </span>
@@ -887,21 +921,27 @@ const MobileTimesheet = ({
                       day.totalHours !== undefined &&
                       Number(day.totalHours) > 0 &&
                       !isBlocked && (
-                        <span className="text-[9px] font-black opacity-80 mt-0.5 text-gray-500">
+                        <span
+                          className="mobile-timesheet-day-hours text-[9px] font-black opacity-80 mt-0.5"
+                          style={{ color: cellTextColor }}
+                        >
                           {Number(day.totalHours)}h
                         </span>
                       )}
 
                     {isBlocked && (
                       <div
-                        className="absolute inset-x-0 bottom-1 flex flex-col items-center justify-center p-0.5 text-center cursor-pointer z-20"
+                        className="mobile-timesheet-day-status-label absolute inset-x-0 bottom-1 flex flex-col items-center justify-center p-0.5 text-center cursor-pointer z-20"
                         onClick={(event) => {
                           event.preventDefault();
                           event.stopPropagation();
                           openBlockedModal(day);
                         }}
                       >
-                        <span className={`text-[6px] font-black leading-none uppercase tracking-tighter max-w-full truncate px-0.5 ${cellTextClass}`}>
+                        <span
+                          className="text-[6px] font-black leading-none uppercase tracking-tighter max-w-full truncate px-0.5"
+                          style={{ color: cellTextColor }}
+                        >
                           {statusLabel}
                         </span>
                       </div>
@@ -935,8 +975,8 @@ const MobileTimesheet = ({
                 },
                 {
                   label: "WFH",
-                  color: "bg-[#FCEED2]",
-                  border: "border-[#DDB66D]",
+                  color: "bg-[#d2dcfcff]",
+                  border: "border-[#8FA8F8]",
                 },
                 {
                   label: "Client Visit",
