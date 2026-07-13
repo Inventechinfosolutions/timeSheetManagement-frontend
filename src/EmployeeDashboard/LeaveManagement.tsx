@@ -71,8 +71,10 @@ const LeaveManagement = () => {
 
   const normalizeTypeName = (type: string): string => {
     const t = (type || "").trim();
-    if (t === LeaveRequestType.APPLY_LEAVE || t === LeaveRequestType.LEAVE) return "Leave";
-    if (t === WorkLocation.WORK_FROM_HOME || t === LeaveRequestType.WFH) return "WFH";
+    if (t === LeaveRequestType.APPLY_LEAVE || t === LeaveRequestType.LEAVE)
+      return "Leave";
+    if (t === WorkLocation.WORK_FROM_HOME || t === LeaveRequestType.WFH)
+      return "WFH";
     if (t === WorkLocation.CLIENT_VISIT) return "Client Visit";
     if (t === WorkLocation.OFFICE) return "Office";
     if (t === AttendanceStatus.HALF_DAY) return "Half Day";
@@ -105,9 +107,9 @@ const LeaveManagement = () => {
   const employeeId = isMyRoute
     ? currentUser?.employeeId || currentUser?.loginId
     : urlEmployeeId ||
-    entity?.employeeId ||
-    currentUser?.employeeId ||
-    currentUser?.loginId;
+      entity?.employeeId ||
+      currentUser?.employeeId ||
+      currentUser?.loginId;
 
   const isAdmin = currentUser?.userType === UserType.ADMIN;
   const isManager =
@@ -236,10 +238,7 @@ const LeaveManagement = () => {
   const currentYear = dayjs().year();
   const years = [
     "All",
-    ...Array.from(
-      { length: 36 },
-      (_, i) => (currentYear - 2 + i).toString()
-    ),
+    ...Array.from({ length: 36 }, (_, i) => (currentYear - 2 + i).toString()),
   ];
 
   const [errors, setErrors] = useState({
@@ -290,7 +289,7 @@ const LeaveManagement = () => {
         if (Array.isArray(ds)) {
           return ds.includes(dateStr);
         }
-      } catch (e) { }
+      } catch (e) {}
     }
     const current = dayjs(dateStr).startOf("day");
     const start = dayjs(req.fromDate).startOf("day");
@@ -912,9 +911,15 @@ const LeaveManagement = () => {
       const normalize = (t: string | null) => {
         if (!t) return "";
         const normalized = t.toLowerCase();
-        if (normalized.includes("leave") || normalized.includes("apply_leave")) return "Leave";
-        if (normalized.includes("wfh") || normalized.includes("work_from_home")) return "WFH";
-        if (normalized.includes("client_visit") || normalized.includes("client visit")) return "Client Visit";
+        if (normalized.includes("leave") || normalized.includes("apply_leave"))
+          return "Leave";
+        if (normalized.includes("wfh") || normalized.includes("work_from_home"))
+          return "WFH";
+        if (
+          normalized.includes("client_visit") ||
+          normalized.includes("client visit")
+        )
+          return "Client Visit";
         if (normalized.includes("office")) return "Office";
         return t;
       };
@@ -933,7 +938,9 @@ const LeaveManagement = () => {
         typeText = baseName || "Application";
       }
 
-      message.success(`${typeText} Request Submitted: Notification sent to Manager`);
+      message.success(
+        `${typeText} Request Submitted: Notification sent to Manager`,
+      );
     }
   }, [submitSuccess, selectedLeaveType, leaveDurationType, otherHalfType]);
 
@@ -1075,13 +1082,13 @@ const LeaveManagement = () => {
         ? fetchedItem.ccEmails
         : typeof fetchedItem.ccEmails === "string"
           ? (() => {
-            try {
-              const p = JSON.parse(fetchedItem.ccEmails);
-              return Array.isArray(p) ? p : [];
-            } catch {
-              return [];
-            }
-          })()
+              try {
+                const p = JSON.parse(fetchedItem.ccEmails);
+                return Array.isArray(p) ? p : [];
+              } catch {
+                return [];
+              }
+            })()
           : [];
       setCcEmails(parsedCc);
       setCcEmailInput("");
@@ -1391,8 +1398,8 @@ const LeaveManagement = () => {
           typeof payload === "string"
             ? payload
             : payload?.message ||
-            payload?.error ||
-            "Could not undo cancellation";
+              payload?.error ||
+              "Could not undo cancellation";
         throw new Error(
           Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg,
         );
@@ -1428,8 +1435,8 @@ const LeaveManagement = () => {
           typeof payload === "string"
             ? payload
             : payload?.message ||
-            payload?.error ||
-            "Could not undo modification";
+              payload?.error ||
+              "Could not undo modification";
         throw new Error(
           Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg,
         );
@@ -1648,7 +1655,9 @@ const LeaveManagement = () => {
       {/* Header */}
       <div className="sticky top-0 z-40 bg-[#F4F7FE] -mx-4 px-4 py-2 mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all">
         <div>
-          <h1 className="text-2xl font-bold text-[#2B3674]">Request Management</h1>
+          <h1 className="text-2xl font-bold text-[#2B3674]">
+            Request Management
+          </h1>
           <p className="text-sm text-gray-500 mt-1">
             View your request history or submit new attendance updates.
           </p>
@@ -1743,7 +1752,9 @@ const LeaveManagement = () => {
                       <span className="text-[#2B3674]">{rejected}</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-400">Cancellation Approved:</span>
+                      <span className="text-gray-400">
+                        Cancellation Approved:
+                      </span>
                       <span className="text-[#2B3674]">
                         {(rawData as any).cancelled ?? 0}
                       </span>
@@ -1754,14 +1765,15 @@ const LeaveManagement = () => {
             );
           })}
         </div>
-
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between mt-5 mb-3 gap-4">
           <h3 className="text-xl font-bold text-[#2B3674]">
             Recent Log History
           </h3>
           <div className="flex flex-wrap gap-3 items-end">
             <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-bold text-gray-400 pl-1">Month</span>
+              <span className="text-xs font-bold text-gray-400 pl-1">
+                Month
+              </span>
               <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
                 <Select
                   value={selectedMonth}
@@ -1820,7 +1832,9 @@ const LeaveManagement = () => {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-bold text-gray-400 pl-1">Status</span>
+              <span className="text-xs font-bold text-gray-400 pl-1">
+                Status
+              </span>
               <div className="relative min-w-[240px] sm:min-w-[280px]">
                 <button
                   type="button"
@@ -1885,19 +1899,19 @@ const LeaveManagement = () => {
             {(selectedMonth !== "All" ||
               selectedYear !== "All" ||
               filterStatus !== "All") && (
-                <button
-                  onClick={() => {
-                    setSelectedMonth("All");
-                    setSelectedYear("All");
-                    setFilterStatus("All");
-                  }}
-                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#5B4FFF] text-white rounded-full hover:bg-[#4318FF] active:scale-95 transition-all text-sm font-bold border border-[#4318FF]/50 whitespace-nowrap"
-                  title="Clear all filters"
-                >
-                  <X size={16} />
-                  <span>Clear All</span>
-                </button>
-              )}
+              <button
+                onClick={() => {
+                  setSelectedMonth("All");
+                  setSelectedYear("All");
+                  setFilterStatus("All");
+                }}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#5B4FFF] text-white rounded-full hover:bg-[#4318FF] active:scale-95 transition-all text-sm font-bold border border-[#4318FF]/50 whitespace-nowrap"
+                title="Clear all filters"
+              >
+                <X size={16} />
+                <span>Clear All</span>
+              </button>
+            )}
           </div>
         </div>
         <div className="bg-white rounded-[20px] shadow-[0px_18px_40px_rgba(112,144,176,0.12)] overflow-hidden border border-gray-100 mb-4">
@@ -1966,8 +1980,9 @@ const LeaveManagement = () => {
                     .map((item: any, index: number) => (
                       <tr
                         key={index}
-                        className={`group transition-all duration-200 ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"
-                          } hover:bg-gray-100`}
+                        className={`group transition-all duration-200 ${
+                          index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"
+                        } hover:bg-gray-100`}
                       >
                         <td className="py-4 pl-10 pr-4 text-[#2B3674] text-sm font-bold whitespace-nowrap">
                           {item.fullName ||
@@ -1975,10 +1990,16 @@ const LeaveManagement = () => {
                             "User"}{" "}
                           (
                           {(() => {
-                            const internId = (item as any).internId || entity?.internId;
-                            const convDate = ((item as any).conversionDate || entity?.conversionDate)
-                              ? dayjs((item as any).conversionDate || entity?.conversionDate)
-                              : null;
+                            const internId =
+                              (item as any).internId || entity?.internId;
+                            const convDate =
+                              (item as any).conversionDate ||
+                              entity?.conversionDate
+                                ? dayjs(
+                                    (item as any).conversionDate ||
+                                      entity?.conversionDate,
+                                  )
+                                : null;
                             const leaveDate = item.fromDate
                               ? dayjs(item.fromDate)
                               : null;
@@ -2001,33 +2022,81 @@ const LeaveManagement = () => {
                               {(() => {
                                 // Determine icon based on combined activities
                                 const hasWFH =
-                                  item.firstHalf === WorkLocation.WORK_FROM_HOME ||
-                                  item.secondHalf === WorkLocation.WORK_FROM_HOME;
+                                  item.firstHalf ===
+                                    WorkLocation.WORK_FROM_HOME ||
+                                  item.secondHalf ===
+                                    WorkLocation.WORK_FROM_HOME;
                                 const hasCV =
-                                  item.firstHalf === WorkLocation.CLIENT_VISIT ||
+                                  item.firstHalf ===
+                                    WorkLocation.CLIENT_VISIT ||
                                   item.secondHalf === WorkLocation.CLIENT_VISIT;
                                 const hasLeave =
                                   item.firstHalf === LeaveRequestType.LEAVE ||
                                   item.secondHalf === LeaveRequestType.LEAVE ||
-                                  item.firstHalf === LeaveRequestType.APPLY_LEAVE ||
-                                  item.secondHalf === LeaveRequestType.APPLY_LEAVE;
+                                  item.firstHalf ===
+                                    LeaveRequestType.APPLY_LEAVE ||
+                                  item.secondHalf ===
+                                    LeaveRequestType.APPLY_LEAVE;
 
                                 if (hasWFH && hasLeave)
-                                  return <Home size={16} className="text-green-600" />;
+                                  return (
+                                    <Home
+                                      size={16}
+                                      className="text-green-600"
+                                    />
+                                  );
                                 if (hasCV && hasLeave)
-                                  return <MapPin size={16} className="text-orange-600" />;
-                                if (item.requestType === WorkLocation.WORK_FROM_HOME)
-                                  return <Home size={16} className="text-green-600" />;
-                                if (item.requestType === WorkLocation.CLIENT_VISIT)
-                                  return <MapPin size={16} className="text-orange-600" />;
+                                  return (
+                                    <MapPin
+                                      size={16}
+                                      className="text-orange-600"
+                                    />
+                                  );
                                 if (
-                                  item.requestType === LeaveRequestType.APPLY_LEAVE ||
+                                  item.requestType ===
+                                  WorkLocation.WORK_FROM_HOME
+                                )
+                                  return (
+                                    <Home
+                                      size={16}
+                                      className="text-green-600"
+                                    />
+                                  );
+                                if (
+                                  item.requestType === WorkLocation.CLIENT_VISIT
+                                )
+                                  return (
+                                    <MapPin
+                                      size={16}
+                                      className="text-orange-600"
+                                    />
+                                  );
+                                if (
+                                  item.requestType ===
+                                    LeaveRequestType.APPLY_LEAVE ||
                                   item.requestType === LeaveRequestType.LEAVE
                                 )
-                                  return <Calendar size={16} className="text-blue-600" />;
-                                if (item.requestType === LeaveRequestType.HALF_DAY)
-                                  return <Calendar size={16} className="text-pink-600" />;
-                                return <Building2 size={16} className="text-gray-600" />;
+                                  return (
+                                    <Calendar
+                                      size={16}
+                                      className="text-blue-600"
+                                    />
+                                  );
+                                if (
+                                  item.requestType === LeaveRequestType.HALF_DAY
+                                )
+                                  return (
+                                    <Calendar
+                                      size={16}
+                                      className="text-pink-600"
+                                    />
+                                  );
+                                return (
+                                  <Building2
+                                    size={16}
+                                    className="text-gray-600"
+                                  />
+                                );
                               })()}
                             </div>
                             <div className="flex flex-col">
@@ -2039,19 +2108,30 @@ const LeaveManagement = () => {
                                     item.firstHalf &&
                                     item.secondHalf
                                   ) {
-                                    const first = normalizeTypeName(item.firstHalf);
-                                    const second = normalizeTypeName(item.secondHalf);
+                                    const first = normalizeTypeName(
+                                      item.firstHalf,
+                                    );
+                                    const second = normalizeTypeName(
+                                      item.secondHalf,
+                                    );
                                     // Map Leave → Half Day Leave in the table display
-                                    const displayFirst = first === "Leave" ? "Half Day Leave" : first;
-                                    const displaySecond = second === "Leave" ? "Half Day Leave" : second;
-                                    if (displayFirst === displaySecond) return displayFirst;
+                                    const displayFirst =
+                                      first === "Leave"
+                                        ? "Half Day Leave"
+                                        : first;
+                                    const displaySecond =
+                                      second === "Leave"
+                                        ? "Half Day Leave"
+                                        : second;
+                                    if (displayFirst === displaySecond)
+                                      return displayFirst;
                                     return `${displayFirst} + ${displaySecond}`;
                                   }
 
                                   // Default display
                                   if (
                                     item.requestType ===
-                                    LeaveRequestType.APPLY_LEAVE ||
+                                      LeaveRequestType.APPLY_LEAVE ||
                                     item.requestType === LeaveRequestType.LEAVE
                                   ) {
                                     return item.isHalfDay
@@ -2097,7 +2177,9 @@ const LeaveManagement = () => {
                                 item.secondHalf
                               ) {
                                 const first = normalizeTypeName(item.firstHalf);
-                                const second = normalizeTypeName(item.secondHalf);
+                                const second = normalizeTypeName(
+                                  item.secondHalf,
+                                );
 
                                 // Both halves same type → Full Day
                                 if (first === second) {
@@ -2121,7 +2203,7 @@ const LeaveManagement = () => {
                             {dayjs(item.fromDate).format("DD MMM")} -{" "}
                             {dayjs(item.toDate).format("DD MMM - YYYY")}, TOTAL:{" "}
                             {item.duration !== undefined &&
-                              item.duration !== null
+                            item.duration !== null
                               ? parseFloat(String(item.duration))
                               : 0}{" "}
                             DAY(S)
@@ -2139,45 +2221,46 @@ const LeaveManagement = () => {
                         >
                           <span
                             className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all whitespace-nowrap
-                        ${item.status === LeaveRequestStatus.APPROVED ||
-                                item.status ===
-                                LeaveRequestStatus.CANCELLATION_APPROVED ||
-                                item.status ===
-                                LeaveRequestStatus.MODIFICATION_APPROVED
-                                ? "bg-green-50 text-green-600 border-green-200"
-                                : item.status === LeaveRequestStatus.PENDING
-                                  ? "bg-yellow-50 text-yellow-600 border-yellow-200"
-                                  : item.status === LeaveRequestStatus.CANCELLED
-                                    ? "bg-yellow-50 text-yellow-600 border-yellow-200"
-                                    : item.status ===
-                                      LeaveRequestStatus.REQUESTING_FOR_CANCELLATION
-                                      ? "bg-orange-100 text-orange-600 border-orange-200"
-                                      : item.status ===
+                        ${
+                          item.status === LeaveRequestStatus.APPROVED ||
+                          item.status ===
+                            LeaveRequestStatus.CANCELLATION_APPROVED ||
+                          item.status ===
+                            LeaveRequestStatus.MODIFICATION_APPROVED
+                            ? "bg-green-50 text-green-600 border-green-200"
+                            : item.status === LeaveRequestStatus.PENDING
+                              ? "bg-yellow-50 text-yellow-600 border-yellow-200"
+                              : item.status === LeaveRequestStatus.CANCELLED
+                                ? "bg-yellow-50 text-yellow-600 border-yellow-200"
+                                : item.status ===
+                                    LeaveRequestStatus.REQUESTING_FOR_CANCELLATION
+                                  ? "bg-orange-100 text-orange-600 border-orange-200"
+                                  : item.status ===
                                         LeaveRequestStatus.REQUEST_MODIFIED ||
-                                        item.status ===
+                                      item.status ===
                                         LeaveRequestStatus.REQUESTING_FOR_MODIFICATION ||
-                                        item.status ===
+                                      item.status ===
                                         LeaveRequestStatus.MODIFICATION_CANCELLED
-                                        ? "bg-orange-100 text-orange-600 border-orange-200"
-                                        : item.status ===
+                                    ? "bg-orange-100 text-orange-600 border-orange-200"
+                                    : item.status ===
                                           LeaveRequestStatus.REJECTED ||
-                                          item.status ===
+                                        item.status ===
                                           LeaveRequestStatus.CANCELLATION_REJECTED ||
-                                          item.status ===
+                                        item.status ===
                                           LeaveRequestStatus.MODIFICATION_REJECTED
-                                          ? "bg-red-50 text-red-600 border-red-200"
-                                          : "bg-red-50 text-red-600 border-red-200"
-                              }
+                                      ? "bg-red-50 text-red-600 border-red-200"
+                                      : "bg-red-50 text-red-600 border-red-200"
+                        }
                       `}
                           >
                             {(item.status === LeaveRequestStatus.PENDING ||
                               item.status ===
-                              LeaveRequestStatus.REQUESTING_FOR_MODIFICATION) && (
-                                <RotateCcw
-                                  size={12}
-                                  className="animate-spin-slow"
-                                />
-                              )}
+                                LeaveRequestStatus.REQUESTING_FOR_MODIFICATION) && (
+                              <RotateCcw
+                                size={12}
+                                className="animate-spin-slow"
+                              />
+                            )}
 
                             {item.status}
                             {item.status ===
@@ -2213,7 +2296,7 @@ const LeaveManagement = () => {
                             </button>
                             {(item.status === LeaveRequestStatus.PENDING ||
                               item.status === LeaveRequestStatus.APPROVED) &&
-                              isCancellationAllowed(item.toDate) ? (
+                            isCancellationAllowed(item.toDate) ? (
                               <button
                                 onClick={() => handleCancel(item.id)}
                                 className="p-1.5 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
@@ -2222,7 +2305,7 @@ const LeaveManagement = () => {
                                 <XCircle size={18} />
                               </button>
                             ) : item.status ===
-                              LeaveRequestStatus.REQUESTING_FOR_CANCELLATION &&
+                                LeaveRequestStatus.REQUESTING_FOR_CANCELLATION &&
                               isUndoable(item) ? (
                               <button
                                 onClick={(e) => {
@@ -2287,10 +2370,11 @@ const LeaveManagement = () => {
                 onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
                 className={`p-2 rounded-xl border border-[#E9EDF7] transition-all flex items-center justify-center
-              ${currentPage === 1
-                    ? "bg-gray-50 text-gray-300 cursor-not-allowed"
-                    : "bg-white text-[#4318FF] hover:bg-[#4318FF]/5 active:scale-90 shadow-sm"
-                  }`}
+              ${
+                currentPage === 1
+                  ? "bg-gray-50 text-gray-300 cursor-not-allowed"
+                  : "bg-white text-[#4318FF] hover:bg-[#4318FF]/5 active:scale-90 shadow-sm"
+              }`}
               >
                 <ChevronLeft size={18} />
               </button>
@@ -2305,10 +2389,11 @@ const LeaveManagement = () => {
                 }
                 disabled={currentPage === totalPages || totalPages === 0}
                 className={`p-2 rounded-xl border border-[#E9EDF7] transition-all flex items-center justify-center
-              ${currentPage === totalPages || totalPages === 0
-                    ? "bg-gray-50 text-gray-300 cursor-not-allowed"
-                    : "bg-white text-[#4318FF] hover:bg-[#4318FF]/5 active:scale-90 shadow-sm"
-                  }`}
+              ${
+                currentPage === totalPages || totalPages === 0
+                  ? "bg-gray-50 text-gray-300 cursor-not-allowed"
+                  : "bg-white text-[#4318FF] hover:bg-[#4318FF]/5 active:scale-90 shadow-sm"
+              }`}
               >
                 <ChevronRight size={18} />
               </button>
@@ -2461,8 +2546,9 @@ const LeaveManagement = () => {
                       <input
                         type="text"
                         placeholder="e.g. Annual Vacation"
-                        className={`w-full px-5 py-3 rounded-xl bg-white border ${errors.title ? "border-red-500" : "border-gray-200"
-                          } text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400`}
+                        className={`w-full px-5 py-3 rounded-xl bg-white border ${
+                          errors.title ? "border-red-500" : "border-gray-200"
+                        } text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400`}
                         value={formData.title}
                         onChange={(e) => {
                           setFormData({ ...formData, title: e.target.value });
@@ -2536,48 +2622,48 @@ const LeaveManagement = () => {
                   {(leaveDurationType === HalfDayType.FIRST_HALF ||
                     leaveDurationType === HalfDayType.SECOND_HALF ||
                     leaveDurationType === HalfDayType.HALF_DAY) && (
-                      <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-                        <label className="text-sm font-bold text-[#2B3674] ml-1">
-                          Other Half Activity
-                        </label>
-                        <Select
-                          value={otherHalfType}
-                          onChange={(val) => setOtherHalfType(val)}
-                          className="w-full h-[48px] font-bold text-[#2B3674]"
-                          variant="borderless"
-                          dropdownStyle={{ borderRadius: "16px", padding: "8px" }}
-                          style={{
-                            backgroundColor: "#F4F7FE",
-                            borderRadius: "16px",
-                            border: "1px solid transparent",
-                          }}
-                          suffixIcon={<ChevronDown className="text-[#4318FF]" />}
-                        >
-                          <Select.Option value={WorkLocation.OFFICE}>
-                            Office
+                    <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                      <label className="text-sm font-bold text-[#2B3674] ml-1">
+                        Other Half Activity
+                      </label>
+                      <Select
+                        value={otherHalfType}
+                        onChange={(val) => setOtherHalfType(val)}
+                        className="w-full h-[48px] font-bold text-[#2B3674]"
+                        variant="borderless"
+                        dropdownStyle={{ borderRadius: "16px", padding: "8px" }}
+                        style={{
+                          backgroundColor: "#F4F7FE",
+                          borderRadius: "16px",
+                          border: "1px solid transparent",
+                        }}
+                        suffixIcon={<ChevronDown className="text-[#4318FF]" />}
+                      >
+                        <Select.Option value={WorkLocation.OFFICE}>
+                          Office
+                        </Select.Option>
+                        {selectedLeaveType !== WorkLocation.WORK_FROM_HOME && (
+                          <Select.Option value={WorkLocation.WORK_FROM_HOME}>
+                            Work From Home
                           </Select.Option>
-                          {selectedLeaveType !== WorkLocation.WORK_FROM_HOME && (
-                            <Select.Option value={WorkLocation.WORK_FROM_HOME}>
-                              Work From Home
-                            </Select.Option>
-                          )}
-                          {selectedLeaveType !== WorkLocation.CLIENT_VISIT && (
-                            <Select.Option value={WorkLocation.CLIENT_VISIT}>
-                              Client Visit
-                            </Select.Option>
-                          )}
-                          {!(
-                            selectedLeaveType === LeaveRequestType.APPLY_LEAVE ||
-                            selectedLeaveType === LeaveRequestType.LEAVE ||
-                            selectedLeaveType === LeaveRequestType.HALF_DAY
-                          ) && (
-                              <Select.Option value={LeaveRequestType.LEAVE}>
-                                Leave
-                              </Select.Option>
-                            )}
-                        </Select>
-                      </div>
-                    )}
+                        )}
+                        {selectedLeaveType !== WorkLocation.CLIENT_VISIT && (
+                          <Select.Option value={WorkLocation.CLIENT_VISIT}>
+                            Client Visit
+                          </Select.Option>
+                        )}
+                        {!(
+                          selectedLeaveType === LeaveRequestType.APPLY_LEAVE ||
+                          selectedLeaveType === LeaveRequestType.LEAVE ||
+                          selectedLeaveType === LeaveRequestType.HALF_DAY
+                        ) && (
+                          <Select.Option value={LeaveRequestType.LEAVE}>
+                            Leave
+                          </Select.Option>
+                        )}
+                      </Select>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -2692,41 +2778,41 @@ const LeaveManagement = () => {
                   <span className="bg-white px-3 py-1.5 rounded-lg shadow-sm border border-blue-100">
                     {formData.startDate && formData.endDate
                       ? (() => {
-                        if (isViewMode) {
-                          const dur = parseFloat(String(formData.duration));
-                          return `${isNaN(dur) ? 0 : dur} Day(s)`;
-                        }
-
-                        if (
-                          selectedLeaveType === WorkLocation.CLIENT_VISIT ||
-                          selectedLeaveType === WorkLocation.WORK_FROM_HOME ||
-                          selectedLeaveType ===
-                          LeaveRequestType.APPLY_LEAVE ||
-                          selectedLeaveType === LeaveRequestType.LEAVE ||
-                          selectedLeaveType === LeaveRequestType.HALF_DAY
-                        ) {
-                          const baseDur = calculateDurationExcludingWeekends(
-                            formData.startDate,
-                            formData.endDate,
-                          );
-                          const isHalf =
-                            leaveDurationType === HalfDayType.HALF_DAY ||
-                            leaveDurationType === HalfDayType.FIRST_HALF ||
-                            leaveDurationType === HalfDayType.SECOND_HALF;
-                          if (isHalf) {
-                            const factor = getDurationFactor(
-                              leaveDurationType === HalfDayType.HALF_DAY
-                                ? halfDayType
-                                : leaveDurationType,
-                              otherHalfType,
-                            );
-                            return `${baseDur * factor} Day(s)`;
+                          if (isViewMode) {
+                            const dur = parseFloat(String(formData.duration));
+                            return `${isNaN(dur) ? 0 : dur} Day(s)`;
                           }
-                          return `${baseDur} Day(s)`;
-                        } else {
-                          return `${dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1} Day(s)`;
-                        }
-                      })()
+
+                          if (
+                            selectedLeaveType === WorkLocation.CLIENT_VISIT ||
+                            selectedLeaveType === WorkLocation.WORK_FROM_HOME ||
+                            selectedLeaveType ===
+                              LeaveRequestType.APPLY_LEAVE ||
+                            selectedLeaveType === LeaveRequestType.LEAVE ||
+                            selectedLeaveType === LeaveRequestType.HALF_DAY
+                          ) {
+                            const baseDur = calculateDurationExcludingWeekends(
+                              formData.startDate,
+                              formData.endDate,
+                            );
+                            const isHalf =
+                              leaveDurationType === HalfDayType.HALF_DAY ||
+                              leaveDurationType === HalfDayType.FIRST_HALF ||
+                              leaveDurationType === HalfDayType.SECOND_HALF;
+                            if (isHalf) {
+                              const factor = getDurationFactor(
+                                leaveDurationType === HalfDayType.HALF_DAY
+                                  ? halfDayType
+                                  : leaveDurationType,
+                                otherHalfType,
+                              );
+                              return `${baseDur * factor} Day(s)`;
+                            }
+                            return `${baseDur} Day(s)`;
+                          } else {
+                            return `${dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1} Day(s)`;
+                          }
+                        })()
                       : "0 Days"}
                   </span>
                 </div>
@@ -2791,17 +2877,19 @@ const LeaveManagement = () => {
               </label>
               {isViewMode ? (
                 <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-medium text-[#2B3674] min-h-[60px] whitespace-pre-wrap break-words leading-relaxed">
-                  {formData.description || "Reason for Request is not provided."}
+                  {formData.description ||
+                    "Reason for Request is not provided."}
                 </div>
               ) : (
                 <div className="relative">
                   <textarea
                     rows={3}
                     placeholder="Please provide details about your request..."
-                    className={`w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] border ${errors.description
-                      ? "border-red-500"
-                      : "border-transparent"
-                      } focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium text-[#2B3674] placeholder:font-medium placeholder:text-gray-400 resize-none`}
+                    className={`w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] border ${
+                      errors.description
+                        ? "border-red-500"
+                        : "border-transparent"
+                    } focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium text-[#2B3674] placeholder:font-medium placeholder:text-gray-400 resize-none`}
                     value={formData.description}
                     onChange={(e) => {
                       setFormData({
@@ -2920,28 +3008,28 @@ const LeaveManagement = () => {
             </button>
             {!(
               entities.find((e: any) => e.id === cancelModal.id)?.status ===
-              LeaveRequestStatus.REQUESTING_FOR_CANCELLATION ||
+                LeaveRequestStatus.REQUESTING_FOR_CANCELLATION ||
               entities.find((e: any) => e.id === cancelModal.id)?.status ===
-              LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
+                LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
             ) && (
-                <button
-                  key="modify"
-                  onClick={() => {
-                    const request = entities.find(
-                      (e: any) => e.id === cancelModal.id,
-                    );
-                    if (
-                      request &&
-                      [
-                        LeaveRequestStatus.PENDING,
-                        LeaveRequestStatus.APPROVED,
-                      ].includes(request.status)
-                    ) {
-                      setCancelModal({ isOpen: false, id: null });
-                      const parsedCc = Array.isArray(request.ccEmails)
-                        ? request.ccEmails
-                        : typeof request.ccEmails === "string"
-                          ? (() => {
+              <button
+                key="modify"
+                onClick={() => {
+                  const request = entities.find(
+                    (e: any) => e.id === cancelModal.id,
+                  );
+                  if (
+                    request &&
+                    [
+                      LeaveRequestStatus.PENDING,
+                      LeaveRequestStatus.APPROVED,
+                    ].includes(request.status)
+                  ) {
+                    setCancelModal({ isOpen: false, id: null });
+                    const parsedCc = Array.isArray(request.ccEmails)
+                      ? request.ccEmails
+                      : typeof request.ccEmails === "string"
+                        ? (() => {
                             try {
                               const p = JSON.parse(request.ccEmails);
                               return Array.isArray(p) ? p : [];
@@ -2949,34 +3037,35 @@ const LeaveManagement = () => {
                               return [];
                             }
                           })()
-                          : [];
-                      setModifyFormData({
-                        title: request.title || "",
-                        description: request.description || "",
-                        firstHalf: request.firstHalf || WorkLocation.OFFICE,
-                        secondHalf: request.secondHalf || WorkLocation.OFFICE,
-                        ccEmails: parsedCc,
-                      });
-                      setModifyModal({
-                        isOpen: true,
-                        request,
-                        datesToModify: undefined,
-                      });
-                    }
-                  }}
-                  className="px-6 py-2.5 rounded-2xl font-bold text-white bg-[#4318FF] hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95 transform tracking-wider flex items-center justify-center gap-2"
-                >
-                  Modify Request
-                </button>
-              )}
+                        : [];
+                    setModifyFormData({
+                      title: request.title || "",
+                      description: request.description || "",
+                      firstHalf: request.firstHalf || WorkLocation.OFFICE,
+                      secondHalf: request.secondHalf || WorkLocation.OFFICE,
+                      ccEmails: parsedCc,
+                    });
+                    setModifyModal({
+                      isOpen: true,
+                      request,
+                      datesToModify: undefined,
+                    });
+                  }
+                }}
+                className="px-6 py-2.5 rounded-2xl font-bold text-white bg-[#4318FF] hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95 transform tracking-wider flex items-center justify-center gap-2"
+              >
+                Modify Request
+              </button>
+            )}
             <button
               key="submit"
               onClick={executeCancel}
               disabled={isCancelling}
-              className={`px-8 py-2.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${isCancelling
-                ? "bg-red-400 cursor-not-allowed opacity-80"
-                : "bg-red-500 hover:bg-red-600 shadow-red-200 transform active:scale-95"
-                }`}
+              className={`px-8 py-2.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${
+                isCancelling
+                  ? "bg-red-400 cursor-not-allowed opacity-80"
+                  : "bg-red-500 hover:bg-red-600 shadow-red-200 transform active:scale-95"
+              }`}
             >
               {isCancelling ? (
                 <>
@@ -3003,7 +3092,7 @@ const LeaveManagement = () => {
 
           <p className="text-gray-500 font-medium leading-relaxed">
             {entities.find((e: any) => e.id === cancelModal.id)?.status ===
-              LeaveRequestStatus.APPROVED
+            LeaveRequestStatus.APPROVED
               ? "This request is currently Approved. Cancelling it will submit a request to the Admin for approval. Are you sure?"
               : "Are you sure you want to cancel this request? You can also choose to modify it instead."}
           </p>
@@ -3015,7 +3104,9 @@ const LeaveManagement = () => {
         <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
           <div
             className="absolute inset-0 bg-[#2B3674]/40 backdrop-blur-sm transition-opacity"
-            onClick={() => !isUndoing && setUndoModal({ isOpen: false, request: null })}
+            onClick={() =>
+              !isUndoing && setUndoModal({ isOpen: false, request: null })
+            }
           />
           <div className="relative w-full max-w-md bg-white rounded-[24px] overflow-hidden shadow-[0px_20px_40px_rgba(0,0,0,0.1)] animate-in fade-in zoom-in duration-200 transform">
             <div className="p-8 text-center">
@@ -3025,14 +3116,16 @@ const LeaveManagement = () => {
 
               <h3 className="text-2xl font-black text-[#2B3674] mb-2">
                 {undoModal.request?.status ===
-                  LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
+                LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
                   ? "Withdraw Modification"
                   : "Revert Cancellation"}
               </h3>
               <p className="text-gray-500 font-medium leading-relaxed mb-8">
-                {undoModal.request?.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION ? (
+                {undoModal.request?.status ===
+                LeaveRequestStatus.REQUESTING_FOR_MODIFICATION ? (
                   <>
-                    Are you sure you want to withdraw your modification request for{" "}
+                    Are you sure you want to withdraw your modification request
+                    for{" "}
                     <span className="text-[#2B3674] font-bold">
                       "{undoModal.request?.title}"
                     </span>
@@ -3060,14 +3153,14 @@ const LeaveManagement = () => {
                   className="flex-1 py-3.5 rounded-xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
                 >
                   {undoModal.request?.status ===
-                    LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
+                  LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
                     ? "Keep Request"
                     : "No"}
                 </button>
                 <button
                   onClick={
                     undoModal.request?.status ===
-                      LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
+                    LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
                       ? executeUndoModification
                       : executeUndo
                   }
@@ -3079,16 +3172,16 @@ const LeaveManagement = () => {
                       <Loader2 size={18} className="animate-spin" />
                       <span>
                         {undoModal.request?.status ===
-                          LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
+                        LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
                           ? "Withdrawing..."
                           : "Reverting..."}
                       </span>
                     </>
+                  ) : undoModal.request?.status ===
+                    LeaveRequestStatus.REQUESTING_FOR_MODIFICATION ? (
+                    "Withdraw Request"
                   ) : (
-                    undoModal.request?.status ===
-                      LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
-                      ? "Withdraw Request"
-                      : "Yes, Revert it"
+                    "Yes, Revert it"
                   )}
                 </button>
               </div>
@@ -3193,25 +3286,26 @@ const LeaveManagement = () => {
                       });
                       setModifyErrors({ ...modifyErrors, title: "" });
                     }}
-                    className={`w-full px-5 py-3 rounded-xl border text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400 ${modifyErrors.title
-                      ? "border-red-500"
-                      : modifyFormData.firstHalf ===
-                        (modifyModal.request?.firstHalf ||
-                          modifyModal.request?.requestType) &&
-                        modifyFormData.secondHalf ===
-                        (modifyModal.request?.secondHalf ||
-                          modifyModal.request?.requestType)
-                        ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
-                        : "bg-white border-gray-200"
-                      }`}
+                    className={`w-full px-5 py-3 rounded-xl border text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400 ${
+                      modifyErrors.title
+                        ? "border-red-500"
+                        : modifyFormData.firstHalf ===
+                              (modifyModal.request?.firstHalf ||
+                                modifyModal.request?.requestType) &&
+                            modifyFormData.secondHalf ===
+                              (modifyModal.request?.secondHalf ||
+                                modifyModal.request?.requestType)
+                          ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
+                          : "bg-white border-gray-200"
+                    }`}
                     placeholder="e.g. Annual Vacation"
                     disabled={
                       modifyFormData.firstHalf ===
-                      (modifyModal.request?.firstHalf ||
-                        modifyModal.request?.requestType) &&
+                        (modifyModal.request?.firstHalf ||
+                          modifyModal.request?.requestType) &&
                       modifyFormData.secondHalf ===
-                      (modifyModal.request?.secondHalf ||
-                        modifyModal.request?.requestType)
+                        (modifyModal.request?.secondHalf ||
+                          modifyModal.request?.requestType)
                     }
                   />
                   {modifyErrors.title && (
@@ -3268,25 +3362,26 @@ const LeaveManagement = () => {
                   setModifyErrors({ ...modifyErrors, description: "" });
                 }}
                 rows={3}
-                className={`w-full px-5 py-3 border rounded-xl text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-medium text-[#2B3674] placeholder:text-gray-400 resize-none ${modifyErrors.description
-                  ? "border-red-500"
-                  : modifyFormData.firstHalf ===
-                    (modifyModal.request?.firstHalf ||
-                      modifyModal.request?.requestType) &&
-                    modifyFormData.secondHalf ===
-                    (modifyModal.request?.secondHalf ||
-                      modifyModal.request?.requestType)
-                    ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
-                    : "bg-white border-gray-200"
-                  }`}
+                className={`w-full px-5 py-3 border rounded-xl text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-medium text-[#2B3674] placeholder:text-gray-400 resize-none ${
+                  modifyErrors.description
+                    ? "border-red-500"
+                    : modifyFormData.firstHalf ===
+                          (modifyModal.request?.firstHalf ||
+                            modifyModal.request?.requestType) &&
+                        modifyFormData.secondHalf ===
+                          (modifyModal.request?.secondHalf ||
+                            modifyModal.request?.requestType)
+                      ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
+                      : "bg-white border-gray-200"
+                }`}
                 placeholder="Please provide details about your request..."
                 disabled={
                   modifyFormData.firstHalf ===
-                  (modifyModal.request?.firstHalf ||
-                    modifyModal.request?.requestType) &&
+                    (modifyModal.request?.firstHalf ||
+                      modifyModal.request?.requestType) &&
                   modifyFormData.secondHalf ===
-                  (modifyModal.request?.secondHalf ||
-                    modifyModal.request?.requestType)
+                    (modifyModal.request?.secondHalf ||
+                      modifyModal.request?.requestType)
                 }
               />
               {modifyErrors.description && (
@@ -3358,15 +3453,16 @@ const LeaveManagement = () => {
 
             {/* Document Upload Section */}
             <div
-              className={`mt-4 ${modifyFormData.firstHalf ===
-                (modifyModal.request?.firstHalf ||
-                  modifyModal.request?.requestType) &&
+              className={`mt-4 ${
+                modifyFormData.firstHalf ===
+                  (modifyModal.request?.firstHalf ||
+                    modifyModal.request?.requestType) &&
                 modifyFormData.secondHalf ===
-                (modifyModal.request?.secondHalf ||
-                  modifyModal.request?.requestType)
-                ? "opacity-50 pointer-events-none"
-                : ""
-                }`}
+                  (modifyModal.request?.secondHalf ||
+                    modifyModal.request?.requestType)
+                  ? "opacity-50 pointer-events-none"
+                  : ""
+              }`}
             >
               <label className="block text-sm font-bold text-[#2B3674] mb-2">
                 Supporting Documents (Optional)
@@ -3380,11 +3476,11 @@ const LeaveManagement = () => {
                   refType="DOCUMENT"
                   disabled={
                     modifyFormData.firstHalf ===
-                    (modifyModal.request?.firstHalf ||
-                      modifyModal.request?.requestType) &&
+                      (modifyModal.request?.firstHalf ||
+                        modifyModal.request?.requestType) &&
                     modifyFormData.secondHalf ===
-                    (modifyModal.request?.secondHalf ||
-                      modifyModal.request?.requestType)
+                      (modifyModal.request?.secondHalf ||
+                        modifyModal.request?.requestType)
                   }
                   fetchOnMount={false}
                   uploadFile={uploadLeaveRequestFile}
@@ -3465,7 +3561,7 @@ const LeaveManagement = () => {
                   !isTitleChanged &&
                   !isDescriptionChanged &&
                   JSON.stringify(modifyFormData.ccEmails || []) ===
-                  JSON.stringify(modifyModal.request.ccEmails || [])
+                    JSON.stringify(modifyModal.request.ccEmails || [])
                 ) {
                   message.warning(
                     "No changes detected. Please modify at least one field to submit.",
@@ -3487,7 +3583,9 @@ const LeaveManagement = () => {
                     }),
                   ).unwrap();
                   setModifyModal({ isOpen: false, request: null });
-                  message.success("Modification Request Submitted: Notification sent to Manager");
+                  message.success(
+                    "Modification Request Submitted: Notification sent to Manager",
+                  );
                   setUploadedDocumentKeys([]); // Reset on success
                   if (employeeId) {
                     refreshData();
@@ -3501,10 +3599,11 @@ const LeaveManagement = () => {
                 }
               }}
               disabled={isModifying}
-              className={`px-8 py-2.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${isModifying
-                ? "bg-blue-400 cursor-not-allowed"
-                : "bg-blue-500 hover:bg-blue-600 shadow-blue-200 transform active:scale-95"
-                }`}
+              className={`px-8 py-2.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${
+                isModifying
+                  ? "bg-blue-400 cursor-not-allowed"
+                  : "bg-blue-500 hover:bg-blue-600 shadow-blue-200 transform active:scale-95"
+              }`}
             >
               {isModifying ? (
                 <>
@@ -3522,9 +3621,7 @@ const LeaveManagement = () => {
       {/* Partial Cancellation Modal */}
       <Modal
         title={
-          <div className="text-lg font-bold text-gray-800">
-            Changes Request
-          </div>
+          <div className="text-lg font-bold text-gray-800">Changes Request</div>
         }
         width={560}
         open={isCancelDateModalVisible}
@@ -3541,19 +3638,19 @@ const LeaveManagement = () => {
               </button>
               {!(
                 requestToCancel?.status ===
-                LeaveRequestStatus.REQUESTING_FOR_CANCELLATION ||
+                  LeaveRequestStatus.REQUESTING_FOR_CANCELLATION ||
                 requestToCancel?.status ===
-                LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
+                  LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
               ) && (
-                  <button
-                    key="modify"
-                    onClick={() => {
-                      if (requestToCancel) {
-                        setIsCancelDateModalVisible(false);
-                        const parsedCc = Array.isArray(requestToCancel.ccEmails)
-                          ? requestToCancel.ccEmails
-                          : typeof requestToCancel.ccEmails === "string"
-                            ? (() => {
+                <button
+                  key="modify"
+                  onClick={() => {
+                    if (requestToCancel) {
+                      setIsCancelDateModalVisible(false);
+                      const parsedCc = Array.isArray(requestToCancel.ccEmails)
+                        ? requestToCancel.ccEmails
+                        : typeof requestToCancel.ccEmails === "string"
+                          ? (() => {
                               try {
                                 const p = JSON.parse(requestToCancel.ccEmails);
                                 return Array.isArray(p) ? p : [];
@@ -3561,44 +3658,46 @@ const LeaveManagement = () => {
                                 return [];
                               }
                             })()
-                            : [];
-                        setModifyFormData({
-                          title: requestToCancel.title || "",
-                          description: requestToCancel.description || "",
-                          firstHalf:
-                            requestToCancel.firstHalf || WorkLocation.OFFICE,
-                          secondHalf:
-                            requestToCancel.secondHalf || WorkLocation.OFFICE,
-                          ccEmails: parsedCc,
-                        });
-                        setUploadedDocumentKeys([]); // Reset when opening the modify modal
-                        setModifyModal({
-                          isOpen: true,
-                          request: requestToCancel,
-                          datesToModify: selectedCancelDates,
-                        });
-                      }
-                    }}
-                    disabled={selectedCancelDates.length === 0}
-                    className={`whitespace-nowrap flex-1 sm:flex-none px-6 py-2.5 rounded-xl font-bold transition-all transform active:scale-95 tracking-wider flex items-center justify-center gap-2 ${selectedCancelDates.length === 0
+                          : [];
+                      setModifyFormData({
+                        title: requestToCancel.title || "",
+                        description: requestToCancel.description || "",
+                        firstHalf:
+                          requestToCancel.firstHalf || WorkLocation.OFFICE,
+                        secondHalf:
+                          requestToCancel.secondHalf || WorkLocation.OFFICE,
+                        ccEmails: parsedCc,
+                      });
+                      setUploadedDocumentKeys([]); // Reset when opening the modify modal
+                      setModifyModal({
+                        isOpen: true,
+                        request: requestToCancel,
+                        datesToModify: selectedCancelDates,
+                      });
+                    }
+                  }}
+                  disabled={selectedCancelDates.length === 0}
+                  className={`whitespace-nowrap flex-1 sm:flex-none px-6 py-2.5 rounded-xl font-bold transition-all transform active:scale-95 tracking-wider flex items-center justify-center gap-2 ${
+                    selectedCancelDates.length === 0
                       ? "text-gray-400 bg-gray-100 cursor-not-allowed"
                       : "text-white bg-[#4318FF] hover:shadow-lg hover:shadow-blue-500/30"
-                      }`}
-                  >
-                    Modify Request
-                  </button>
-                )}
+                  }`}
+                >
+                  Modify Request
+                </button>
+              )}
             </div>
             <button
               key="submit"
               onClick={handleConfirmDateCancel}
               disabled={selectedCancelDates.length === 0 || isCancelling}
-              className={`whitespace-nowrap w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${selectedCancelDates.length === 0
-                ? "bg-gray-400 cursor-not-allowed"
-                : isCancelling
-                  ? "bg-red-400 cursor-not-allowed opacity-80"
-                  : "bg-red-500 hover:bg-red-600 shadow-red-200 transform active:scale-95"
-                }`}
+              className={`whitespace-nowrap w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${
+                selectedCancelDates.length === 0
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : isCancelling
+                    ? "bg-red-400 cursor-not-allowed opacity-80"
+                    : "bg-red-500 hover:bg-red-600 shadow-red-200 transform active:scale-95"
+              }`}
             >
               {isCancelling ? (
                 <>
@@ -3628,17 +3727,18 @@ const LeaveManagement = () => {
                 Choose the dates you want to revert.
                 {!(
                   requestToCancel?.status ===
-                  LeaveRequestStatus.REQUESTING_FOR_CANCELLATION ||
+                    LeaveRequestStatus.REQUESTING_FOR_CANCELLATION ||
                   requestToCancel?.status ===
-                  LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
+                    LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
                 ) && (
-                    <>
-                      <br />
-                      <span className="text-xs text-red-500 font-semibold">
-                        Requests can only be cancelled before 6:30 PM on the respective day.
-                      </span>
-                    </>
-                  )}
+                  <>
+                    <br />
+                    <span className="text-xs text-red-500 font-semibold">
+                      Requests can only be cancelled before 6:30 PM on the
+                      respective day.
+                    </span>
+                  </>
+                )}
               </p>
 
               {/* Select All Option */}
@@ -3647,7 +3747,7 @@ const LeaveManagement = () => {
                   <Checkbox
                     checked={
                       cancellableDates.filter((d) => d.isCancellable).length >
-                      0 &&
+                        0 &&
                       cancellableDates
                         .filter((d) => d.isCancellable)
                         .every((d) => selectedCancelDates.includes(d.date))
@@ -3667,12 +3767,13 @@ const LeaveManagement = () => {
                 {cancellableDates.map((item) => (
                   <div
                     key={item.date}
-                    className={`flex items-center justify-between p-3 rounded-lg border transition-all ${!item.isCancellable
-                      ? "bg-gray-50 border-gray-100 opacity-60"
-                      : selectedCancelDates.includes(item.date)
-                        ? "bg-red-50 border-red-200"
-                        : "bg-white border-gray-200 hover:border-blue-300"
-                      }`}
+                    className={`flex items-center justify-between p-3 rounded-lg border transition-all ${
+                      !item.isCancellable
+                        ? "bg-gray-50 border-gray-100 opacity-60"
+                        : selectedCancelDates.includes(item.date)
+                          ? "bg-red-50 border-red-200"
+                          : "bg-white border-gray-200 hover:border-blue-300"
+                    }`}
                   >
                     <div className="flex items-center gap-3">
                       <Checkbox

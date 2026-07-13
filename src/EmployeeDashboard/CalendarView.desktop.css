@@ -1,0 +1,37 @@
+.calendar-view--desktop {
+  display: flex;
+  flex-direction: column;
+}
+
+.calendar-view__surface--desktop {
+  background: #fff;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.05);
+}
+
+.calendar-view__desktop-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.calendar-view__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+.calendar-view__weekday-grid {
+  display: grid;
+  grid-template-columns: repeat(7,1fr);
+  gap: 12px;
+}
+
+.calendar-view__grid {
+  display: grid;
+  grid-template-columns: repeat(7,1fr);
+  gap: 12px;
+}
