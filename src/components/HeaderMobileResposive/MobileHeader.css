@@ -1,0 +1,191 @@
+/* Below desktop/laptop width, use the mobile/tablet header. */
+@media (max-width: 1279px) {
+  .header-container {
+    position: relative;
+    height: 56px;
+    padding: 0 8px 0 16px;
+    gap: 0;
+  }
+
+  .header-desktop-logo {
+    display: none !important;
+  }
+
+  .header-actions {
+    position: relative;
+    z-index: 2;
+    margin-left: auto;
+    width: auto;
+    justify-content: flex-end;
+    gap: 4px;
+  }
+
+  .notification-trigger,
+  .profile-trigger {
+    min-width: 34px;
+    min-height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+  }
+
+  .profile-trigger {
+    column-gap: 6px;
+    padding-left: 4px;
+    padding-right: 2px;
+  }
+
+  .profile-user-info {
+    display: none;
+  }
+
+  .notification-popover {
+    position: fixed;
+    left: 14px;
+    right: 14px;
+    top: 66px;
+    width: auto;
+    max-height: calc(100vh - 84px);
+    margin-top: 0;
+    transform-origin: top;
+  }
+
+  .panel-close-button {
+    display: inline-flex;
+  }
+
+  .profile-menu {
+    position: fixed;
+    top: 66px;
+    right: 10px;
+    left: auto;
+    width: min(280px, calc(100vw - 20px));
+    max-height: calc(100vh - 84px);
+    overflow-y: auto;
+    border-radius: 18px;
+  }
+
+  .profile-panel-header {
+    display: flex;
+  }
+
+  .profile-trigger img {
+    border-radius: 9999px;
+  }
+
+  /* Smooth, vibrant royal blue linear gradient */
+  .mobile-header {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    min-height: 56px;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #246bfd 0%, #1546cb 100%);
+    pointer-events: auto;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  }
+
+  .mobile-header__menu,
+  .mobile-header__logo {
+    pointer-events: auto;
+  }
+
+  .mobile-header__menu {
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    transition: transform 0.18s ease;
+    z-index: 2;
+  }
+
+  .mobile-header__menu:active {
+    transform: scale(0.94);
+  }
+
+  .mobile-header__logo {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    display: inline-flex;
+    padding: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    cursor: pointer;
+    z-index: 1;
+  }
+
+  .mobile-header__logo-inner {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    padding: 0;
+  }
+
+  .mobile-header__logo-img {
+    width: auto;
+    height: 32px;
+    object-fit: contain;
+  }
+}
+
+@media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
+  .mobile-header {
+    display: none !important;
+  }
+
+  .header-desktop-logo {
+    display: inline-flex !important;
+    align-items: center;
+  }
+
+  .header-container {
+    height: 72px;
+    padding: 0 28px;
+  }
+
+  .header-actions {
+    position: relative;
+    z-index: auto;
+    width: auto;
+    gap: 12px;
+  }
+
+  .notification-trigger,
+  .profile-trigger {
+    min-width: auto;
+    min-height: auto;
+  }
+
+  .profile-user-info {
+    display: flex !important;
+  }
+
+  .notification-popover {
+    position: absolute;
+    left: auto;
+    right: 0;
+    top: calc(100% + 12px);
+    width: 400px;
+    max-height: calc(100vh - 120px);
+  }
+
+  .profile-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    left: auto;
+    width: 300px;
+    max-height: calc(100vh - 120px);
+    border-radius: 12px;
+  }
+}

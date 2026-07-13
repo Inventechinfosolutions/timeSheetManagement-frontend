@@ -1,0 +1,58 @@
+.sidebar-mobile-backdrop,
+.sidebar-drawer-header,
+.app-mobile-bottom-nav {
+  display: block;
+}
+
+.sidebar-desktop-profile,
+.app-desktop-footer {
+  display: none;
+}
+
+@media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
+  .sidebar-mobile-backdrop,
+  .sidebar-drawer-header,
+  .app-mobile-bottom-nav {
+    display: none !important;
+  }
+
+  .app-sidebar {
+    position: sticky !important;
+    top: 0 !important;
+    height: 100% !important;
+    display: flex !important;
+    translate: 0 0 !important;
+    transform: translateX(0) !important;
+    z-index: 30 !important;
+  }
+
+  .app-sidebar--open {
+    width: 16rem !important;
+  }
+
+  .app-sidebar--collapsed {
+    width: 5rem !important;
+  }
+
+  .sidebar-desktop-profile {
+    display: flex !important;
+  }
+
+  .sidebar-collapsed-center {
+    justify-content: center !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .sidebar-tooltip {
+    display: block !important;
+  }
+
+  .app-main-content {
+    padding-bottom: 0 !important;
+  }
+
+  .app-desktop-footer {
+    display: block !important;
+  }
+}
