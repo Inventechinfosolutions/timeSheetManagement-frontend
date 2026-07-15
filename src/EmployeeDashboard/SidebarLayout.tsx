@@ -10,6 +10,7 @@ import {
   Eye,
   X,
   LogOut,
+  Award,
 } from "lucide-react";
 import { useAppSelector, useAppDispatch } from "../hooks";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
@@ -53,6 +54,7 @@ const SidebarLayout = ({
       case "my-profile": return "Account Settings";
       case "change-password": return "Change Password";
       case "leave-management": return "Request Management";
+      case "appraisal": return "EmployeeAppraisalDashboard";
       case "leave-balance": return "Leave Balance";
       case "about": return "About";
       default: return "Dashboard";
@@ -95,6 +97,7 @@ const SidebarLayout = ({
     { name: "My Timesheet", icon: Calendar },
     { name: "Timesheet History", icon: Eye },
     { name: "Request Management", icon: Calendar },
+    { name: "Appraisal", icon: Award },
     { name: "Account Settings", icon: User },
     { name: "About", icon: Info },
   ];
@@ -226,7 +229,10 @@ const SidebarLayout = ({
                       if (item.name === "About") {
                         if (location.pathname.includes("/manager-dashboard")) {
                           navigate("/manager-dashboard/about");
-                        } else if (location.pathname.includes("/admin-dashboard")) {
+                        } else if (location.pathname.includes("/appraisal")) {
+                          navigate("/appraisal");
+                        }
+                        else if (location.pathname.includes("/admin-dashboard")) {
                           navigate("/admin-dashboard/about");
                         } else {
                           navigate("/employee-dashboard/about");

@@ -41,6 +41,9 @@ const EmployeeLayout = () => {
       case "Request Management":
         navigate("/employee-dashboard/leave-management");
         break;
+      case "Appraisal":
+        navigate("/employee-dashboard/appraisal");
+        break;
       case "Leave Balance":
         navigate("/employee-dashboard/leave-balance");
         break;

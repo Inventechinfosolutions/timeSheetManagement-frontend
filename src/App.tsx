@@ -36,6 +36,8 @@ import ChangePassword from "./EmployeeDashboard/ChangePassword";
 import AttendanceViewWrapper from "./EmployeeDashboard/CalenderViewWrapper";
 // import MobileResponsiveCalendarPage from "./EmployeeDashboard/MobileResponsiveCalendarPage";
 import MobileTimesheetHistory from "./EmployeeDashboard/MobileTimesheetHistory/MobileTimesheetHistory";
+import EmployeeAppraisalDashboard from "./Appraisal/EmployeeApprasialDashboard/EmployeeAppraisalDashboard";
+import QuarterlyReviewForm from "./Appraisal/EmployeeApprasialDashboard/QuarterlyReviewForm";
 import LeaveManagement from "./EmployeeDashboard/LeaveManagement";
 import LeaveBalance from "./EmployeeDashboard/LeaveBalance";
 import About from "./pages/About";
@@ -75,6 +77,10 @@ const EmployeeTabWrapper = () => {
       return <MobileTimesheetHistory />;
     case "leave-management":
       return <LeaveManagement />;
+    case "appraisal":
+      return <EmployeeAppraisalDashboard />;
+    case "quarterly-review":
+      return <QuarterlyReviewForm />;
     case "leave-balance":
       return <LeaveBalance />;
     case "about":
