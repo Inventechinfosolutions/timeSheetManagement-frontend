@@ -5,7 +5,6 @@ import {
   Lock,
   AlarmClock,
   Unlock,
-  Menu,
   Bell,
   Calendar,
   Eye,
@@ -15,13 +14,14 @@ import {
   ChevronDown,
   ChevronRight,
   LogOut,
+  X,
 } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "../store";
 import { logoutUser } from "../reducers/user.reducer";
 import ApiLoadingSpinner from "../components/ApiLoadingSpinner";
-import Header from "../components/Header";
+import Header from "../components/DesktopHeader/Header";
 import Footer from "../components/Footer";
 
 interface SidebarLayoutProps {
@@ -197,27 +197,8 @@ const SidebarLayout = ({
 
   return (
     <div className="flex flex-col w-full h-screen bg-[#f8f9fa] font-sans text-[#2B3674] overflow-hidden relative">
-      <Header />
+      <Header onMobileMenuClick={() => setIsMobileOpen(true)} />
       <div className="flex flex-1 min-h-0 relative overflow-hidden">
-        {/* Mobile Menu Trigger - Floating Pulse Button */}
-        <button
-          onClick={() => setIsMobileOpen(true)}
-          className={`md:hidden fixed z-1001 left-4 top-[55px] w-11 h-11 bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 flex items-center justify-center text-[#4318FF] active:scale-90 transition-all duration-300
-                    ${isMobileOpen
-              ? "opacity-0 scale-90 pointer-events-none"
-              : "opacity-100 scale-100"
-            }
-                `}
-        >
-          <div className="relative">
-            <Menu size={22} strokeWidth={2.5} />
-            <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#4318FF] opacity-40"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#4318FF]"></span>
-            </span>
-          </div>
-        </button>
-
         {/* Premium Mobile Backdrop */}
         <div
           className={`md:hidden fixed inset-0 bg-[#111c44]/60 backdrop-blur-md z-2000 transition-all duration-500 ease-in-out
@@ -226,7 +207,6 @@ const SidebarLayout = ({
               : "opacity-0 pointer-events-none"
             }
                 `}
-          onClick={() => setIsMobileOpen(false)}
         />
 
         {/* Spacer to prevent layout shift when locked */}
@@ -253,13 +233,23 @@ const SidebarLayout = ({
           onMouseLeave={() => !isLocked && setIsHovered(false)}
         >
           {/* Mobile Drawer Navigation Header */}
-          <div className="md:hidden flex items-center gap-3 p-6 mb-2 border-b border-white/10">
-            <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl border border-white/10">
-              <AlarmClock className="w-6 h-6 text-white" />
+          <div className="md:hidden flex items-center justify-between p-6 mb-2 border-b border-white/10">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl border border-white/10">
+                <AlarmClock className="w-6 h-6 text-white" />
+              </div>
+              <span className="text-xl font-bold text-white tracking-tight">
+                {title}
+              </span>
             </div>
-            <span className="text-xl font-bold text-white tracking-tight">
-              {title}
-            </span>
+
+            <button
+              onClick={() => setIsMobileOpen(false)}
+              className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+              aria-label="Close menu"
+            >
+              <X className="w-6 h-6 text-white" />
+            </button>
           </div>
 
           {/* Branding & Lock Toggle - Desktop Only */}

@@ -1,18 +1,13 @@
 .footer {
   position: fixed;
   bottom: 0;
-  left: 0;
-  width: 100%;
+  /* Reduced from 260px to remove the gap shown in image_fc7c78.png */
+  left: 255px; 
+  /* Adjusted to perfectly match the remaining width of the screen */
+  width: calc(100% - 255px); 
   background: white;
   border-top: 1px solid #e5e7eb;
-  padding: 4px 0;
-  z-index: 50;
-}
-
-.footer.sidebar-footer {
-  position: sticky;
-  bottom: 0;
-  width: 100%;
+  padding: 8px 0; /* Slightly increased padding to match the clean look in the image */
   z-index: 50;
 }
 
@@ -20,7 +15,7 @@
   max-width: 100%;
   padding: 0 40px;
   display: flex;
-  justify-content: center;
+  justify-content: center; /* Centers the text and logo like in the image */
   align-items: center;
 }
 
@@ -32,28 +27,43 @@
 }
 
 .footer-logo {
-  height: 22px;
+  height: 12px; /* Adjusted smaller to match the tiny logo in the image */
   width: auto;
-  filter: brightness(1.05) contrast(1.1) saturate(1.2);
   display: block;
 }
 
 .footer-small {
   margin: 0;
-  color: #4b5563;
-  font-size: 9px;
+  color: #6b7280; /* A slightly softer gray to match the image */
+  font-size: 11px; /* Highly readable micro-copy font size */
   font-weight: 500;
-  letter-spacing: 0.02em;
 }
 
 .footer-brand {
-  color: blue;
-  font-weight: 700;
+  color: #2563eb; /* Matches the clean corporate blue link text in the image */
+  font-weight: 600;
   cursor: pointer;
+  text-decoration: none;
 }
 
-@media (max-width: 768px) {
+/* The fixed desktop footer belongs only to laptop/desktop layouts. */
+@media (max-width: 1279px) {
+  .footer {
+    left: 0;
+    width: 100%;
+  }
   .footer-container {
     padding: 0 20px;
+  }
+}
+
+@media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
+  .footer {
+    left: 255px;
+    width: calc(100% - 255px);
+  }
+
+  .footer-container {
+    padding: 0 40px;
   }
 }

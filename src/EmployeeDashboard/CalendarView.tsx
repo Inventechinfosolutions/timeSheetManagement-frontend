@@ -126,7 +126,9 @@ const Calendar = ({
     if (!currentEmployeeId || (isAdmin && currentEmployeeId.toLowerCase() === "admin")) return;
     if (propEntries) return;
 
-    const fetchKey = `${currentEmployeeId}-${displayDate.getMonth() + 1}-${displayDate.getFullYear()}`;
+    const fetchKey = `${currentEmployeeId}-${displayDate.getMonth() + 1
+      }-${displayDate.getFullYear()}`;
+
     if (attendanceFetchedKey.current === fetchKey) return;
     attendanceFetchedKey.current = fetchKey;
 
@@ -143,6 +145,16 @@ const Calendar = ({
     if (propEntries) return propEntries;
     return generateMonthlyEntries(displayDate, now, records);
   }, [displayDate, now, records, propEntries]);
+
+  const monthTotalHours = useMemo(
+    () =>
+      entries.reduce(
+        (sum, entry: any) =>
+          sum + (Number(entry?.totalHours ?? entry?.hours ?? 0) || 0),
+        0,
+      ),
+    [entries],
+  );
 
   const handlePrevMonth = () => {
     const newDate = new Date(displayDate.getFullYear(), displayDate.getMonth() - 1, 1);
