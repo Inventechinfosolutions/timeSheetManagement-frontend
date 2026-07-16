@@ -2,6 +2,10 @@ import { useMemo, useRef, useState } from "react";
 import dayjs from "dayjs";
 import { ChevronLeft, ChevronRight, Lock, Rocket } from "lucide-react";
 import { AttendanceStatus } from "../../enums";
+import {
+  MobileTimesheetModalMode,
+  MobileTimesheetDayTone,
+} from "./mobileTimesheet.enums";
 import AutoUpdateModal from "../AutoUpdateModal";
 import AutoUpdateSuccessModal from "../AutoUpdateSuccessModal";
 import TimesheetImg from "../../assets/TimesheetIMG.png";
@@ -13,14 +17,30 @@ import {
 } from "./mobileTimesheet.types";
 import "./MobileTimesheet.css";
 
+const WorkLocation = {
+  OFFICE: "office",
+  WFH: "wfh",
+  WORK_FROM_HOME: "work from home",
+  CLIENT: "client",
+  CLIENT_VISIT: "client visit",
+  CLIENT_PLACE: "client place",
+} as const;
+
+const APPROVED_DUTY_STATUS_VALUES = [
+  WorkLocation.WORK_FROM_HOME,
+  WorkLocation.WFH,
+  `${WorkLocation.WORK_FROM_HOME} / office`,
+  `${WorkLocation.WFH} / office`,
+  WorkLocation.CLIENT_VISIT,
+  `${WorkLocation.CLIENT_VISIT} / office`,
+];
+
 interface ExtendedInputModalState
   extends Omit<MobileTimesheetInputModalState, "entry"> {
   entry:
   | (MobileTimesheetInputModalState["entry"] & {
     isBlockedHalfDay?: boolean;
     isBlockedHalfLeave?: boolean;
-    isBlockedFullDayContext?: boolean;
-    fullDayDisplayLabel?: string;
     firstHalf?: string;
     secondHalf?: string;
   })
@@ -32,6 +52,94 @@ const emptyInputModal: ExtendedInputModalState = {
   index: null,
   value: "",
   entry: null,
+};
+interface DayToneColor {
+  bgClass: string;
+  bgHex: string;
+  textHex: string;
+  borderClass: string;
+}
+
+const DAY_TONE_COLORS: Record<MobileTimesheetDayTone, DayToneColor> = {
+  [MobileTimesheetDayTone.DEFAULT]: {
+    bgClass: "bg-[#F8FAFC]",
+    bgHex: "#F8FAFC",
+    textHex: "#64748B",
+    borderClass: "border-gray-300",
+  },
+  [MobileTimesheetDayTone.TODAY]: {
+    bgClass: "bg-white",
+    bgHex: "#FFFFFF",
+    textHex: "#4318FF",
+    borderClass: "!border-2 !border-[#4318FF]",
+  },
+  [MobileTimesheetDayTone.WEEKEND]: {
+    bgClass: "bg-[#FEE2E2]",
+    bgHex: "#FEE2E2",
+    textHex: "#EE5D50",
+    borderClass: "border-[#EE5D50]/10",
+  },
+  [MobileTimesheetDayTone.SATURDAY]: {
+    // Saturdays with no data fold into the same weekend styling as Sunday.
+    bgClass: "bg-[#FEE2E2]",
+    bgHex: "#FEE2E2",
+    textHex: "#EE5D50",
+    borderClass: "border-[#EE5D50]/10",
+  },
+  [MobileTimesheetDayTone.ABSENT_OR_LEAVE]: {
+    bgClass: "bg-[#FECACA]",
+    bgHex: "#FECACA",
+    textHex: "#DC2626",
+    borderClass: "border-[#DC2626]/20",
+  },
+  [MobileTimesheetDayTone.HALF_DAY]: {
+    bgClass: "bg-[#FEF3C7]",
+    bgHex: "#FEF3C7",
+    textHex: "#FFB020",
+    borderClass: "border-[#FFB020]/20",
+  },
+  [MobileTimesheetDayTone.HOLIDAY]: {
+    bgClass: "bg-[#DBEAFE]",
+    bgHex: "#DBEAFE",
+    textHex: "#1890FF",
+    borderClass: "border-[#1890FF]/20",
+  },
+  [MobileTimesheetDayTone.PRESENT]: {
+    bgClass: "bg-[#E6FFFA]",
+    bgHex: "#E6FFFA",
+    textHex: "#01B574",
+    borderClass: "border-[#01B574]/20",
+  },
+  [MobileTimesheetDayTone.CLIENT_VISIT]: {
+    bgClass: "bg-[#f2fcbd]",
+    bgHex: "#f2fcbd",
+    textHex: "#4318FF",
+    borderClass: "border-[#4318FF]/20",
+  },
+  [MobileTimesheetDayTone.WFH]: {
+    bgClass: "bg-[#d2dcfcff]",
+    bgHex: "#d2dcfcff",
+    textHex: "#4F46E5",
+    borderClass: "border-[#6366F1]/20",
+  },
+};
+
+/** Hours-input modal preview badge uses its own (slightly different)
+ *  palette from the grid cells, matching the original design exactly. */
+const HOURS_PREVIEW_STYLES: Record<
+  MobileTimesheetDayTone,
+  { bg: string; text: string }
+> = {
+  [MobileTimesheetDayTone.DEFAULT]: { bg: "bg-gray-100", text: "text-gray-500" },
+  [MobileTimesheetDayTone.TODAY]: { bg: "bg-white", text: "text-[#4318FF]" },
+  [MobileTimesheetDayTone.WEEKEND]: { bg: "bg-[#8F9BBA]/20", text: "text-[#8F9BBA]" },
+  [MobileTimesheetDayTone.SATURDAY]: { bg: "bg-[#8F9BBA]/20", text: "text-[#8F9BBA]" },
+  [MobileTimesheetDayTone.ABSENT_OR_LEAVE]: { bg: "bg-[#FECACA]", text: "text-[#DC2626]" },
+  [MobileTimesheetDayTone.HALF_DAY]: { bg: "bg-[#FEF3C7]", text: "text-[#FFB020]" },
+  [MobileTimesheetDayTone.HOLIDAY]: { bg: "bg-[#DBEAFE]", text: "text-[#1890FF]" },
+  [MobileTimesheetDayTone.PRESENT]: { bg: "bg-[#E6FFFA]", text: "text-[#01B574]" },
+  [MobileTimesheetDayTone.CLIENT_VISIT]: { bg: "bg-[#f2fcbd]", text: "text-[#4318FF]" },
+  [MobileTimesheetDayTone.WFH]: { bg: "bg-[#d2dcfcff]", text: "text-[#4F46E5]" },
 };
 
 const getHolidayForDate = (
@@ -45,195 +153,173 @@ const getHolidayForDate = (
   });
 };
 
-const getMobileModalPreview = (
+const getHoursPreview = (
   value: string,
   entry: ExtendedInputModalState["entry"],
 ): MobileTimesheetPreview => {
   if (!entry) {
-    return { bg: "bg-gray-100", text: "text-gray-500", label: "Enter hours" };
+    return { ...HOURS_PREVIEW_STYLES[MobileTimesheetDayTone.DEFAULT], label: "Enter hours" };
   }
 
   const hours = parseFloat(value);
-  const date = entry.fullDate ? new Date(entry.fullDate) : null;
-  const isSunday = date?.getDay() === 0;
-  const isSaturday = date?.getDay() === 6;
+  const entryDate = entry.fullDate ? new Date(entry.fullDate) : null;
+  const isSunday = entryDate?.getDay() === 0;
+  const isSaturday = entryDate?.getDay() === 6;
 
   if (hours > 9) {
     return {
-      bg: "bg-[#FECACA]",
-      text: "text-[#DC2626]",
+      ...HOURS_PREVIEW_STYLES[MobileTimesheetDayTone.ABSENT_OR_LEAVE],
       label: "Maximum 9 hours allowed",
     };
   }
 
   if (!value || Number.isNaN(hours)) {
-    if (isSunday) {
-      return {
-        bg: "bg-[#8F9BBA]/20",
-        text: "text-[#8F9BBA]",
-        label: "Week Off",
-      };
-    }
-    return { bg: "bg-gray-100", text: "text-gray-500", label: "No hours" };
+    return isSunday
+      ? { ...HOURS_PREVIEW_STYLES[MobileTimesheetDayTone.WEEKEND], label: "Week Off" }
+      : { ...HOURS_PREVIEW_STYLES[MobileTimesheetDayTone.DEFAULT], label: "No hours" };
   }
 
   if (isSunday && hours >= 1) {
-    return {
-      bg: "bg-[#E6FFFA]",
-      text: "text-[#01B574]",
-      label: "Full Day (Weekend)",
-    };
+    return { ...HOURS_PREVIEW_STYLES[MobileTimesheetDayTone.PRESENT], label: "Full Day (Weekend)" };
   }
 
   if (isSaturday && hours >= 4) {
-    return {
-      bg: "bg-[#E6FFFA]",
-      text: "text-[#01B574]",
-      label: "Full Day (Sat)",
-    };
+    return { ...HOURS_PREVIEW_STYLES[MobileTimesheetDayTone.PRESENT], label: "Full Day (Sat)" };
   }
 
   if (hours > 6) {
-    return {
-      bg: "bg-[#E6FFFA]",
-      text: "text-[#01B574]",
-      label: `Full Day - ${hours}h`,
-    };
+    return { ...HOURS_PREVIEW_STYLES[MobileTimesheetDayTone.PRESENT], label: `Full Day - ${hours}h` };
   }
 
   if (hours > 0 && hours <= 6) {
-    return {
-      bg: "bg-[#FEF3C7]",
-      text: "text-[#FFB020]",
-      label: `Half Day - ${hours}h`,
-    };
+    return { ...HOURS_PREVIEW_STYLES[MobileTimesheetDayTone.HALF_DAY], label: `Half Day - ${hours}h` };
   }
 
   if (hours === 0) {
-    return { bg: "bg-[#FECACA]", text: "text-[#DC2626]", label: "Absent" };
+    return { ...HOURS_PREVIEW_STYLES[MobileTimesheetDayTone.ABSENT_OR_LEAVE], label: "Absent" };
   }
 
-  return { bg: "bg-gray-100", text: "text-gray-500", label: "Enter hours" };
+  return { ...HOURS_PREVIEW_STYLES[MobileTimesheetDayTone.DEFAULT], label: "Enter hours" };
 };
 
-/* ============================================================
-  COLOR ENGINE — Updated for explicit WFH (Purple) & Client (Blue)
-  ============================================================ */
+const resolveDayTone = (
+  status: string | null | undefined,
+  workLocation?: string | null,
+): MobileTimesheetDayTone => {
+  const normalizedStatus = (status || "").toLowerCase().trim();
+  const normalizedLocation = (workLocation || "").toLowerCase().trim();
 
-const getStatusStyles = (
-  statusStr: string | null | undefined,
-  location?: string | null,
-) => {
-  const s = (statusStr || "").toLowerCase();
-  const loc = (location || "").toLowerCase();
+  if (normalizedStatus === AttendanceStatus.HOLIDAY.toLowerCase()) {
+    return MobileTimesheetDayTone.HOLIDAY;
+  }
+  if (
+    normalizedStatus === AttendanceStatus.WEEKEND.toLowerCase() ||
+    normalizedStatus === AttendanceStatus.LEAVE.toLowerCase()
+  ) {
+    return MobileTimesheetDayTone.ABSENT_OR_LEAVE;
+  }
+  if (
+    normalizedStatus === AttendanceStatus.FULL_DAY.toLowerCase() ||
+    normalizedStatus === "full day" ||
+    normalizedLocation === WorkLocation.OFFICE ||
+    normalizedStatus === WorkLocation.OFFICE
+  ) {
+    return MobileTimesheetDayTone.PRESENT;
+  }
+  if (normalizedStatus.includes(AttendanceStatus.HALF_DAY.toLowerCase())) {
+    return MobileTimesheetDayTone.HALF_DAY;
+  }
+  if (normalizedStatus === AttendanceStatus.ABSENT.toLowerCase()) {
+    return MobileTimesheetDayTone.ABSENT_OR_LEAVE;
+  }
+  if (
+    normalizedStatus === WorkLocation.WFH ||
+    normalizedLocation === WorkLocation.WFH ||
+    normalizedStatus === WorkLocation.WORK_FROM_HOME
+  ) {
+    return MobileTimesheetDayTone.WFH;
+  }
+  if (
+    normalizedStatus === WorkLocation.CLIENT_VISIT ||
+    normalizedLocation === WorkLocation.CLIENT_VISIT ||
+    normalizedLocation === WorkLocation.CLIENT_PLACE ||
+    normalizedStatus === WorkLocation.CLIENT
+  ) {
+    return MobileTimesheetDayTone.CLIENT_VISIT;
+  }
 
-  if (s === "blocked")
-    return {
-      bg: "bg-gray-200",
-      badge: "bg-gray-600 text-white",
-      border: "border-transparent",
-      text: "text-gray-600",
-    };
-  if (s === "holiday")
-    return {
-      bg: "bg-[#DBEAFE]",
-      badge: "bg-[#1890FF]/70 text-white font-bold",
-      border: "border-[#1890FF]/20",
-      text: "text-[#1890FF]",
-    };
+  return MobileTimesheetDayTone.DEFAULT;
+};
+
+/** Same tone vocabulary, applied to a single half-day label ("Office",
+ *  "WFH", "Leave", ...) so the split-day gradient can reuse DAY_TONE_COLORS
+ *  instead of re-deriving colors by hand. */
+const resolveHalfDayTone = (halfDayLabel: string): MobileTimesheetDayTone => {
+  const normalized = halfDayLabel.toLowerCase().trim();
+  if (normalized === WorkLocation.OFFICE) return MobileTimesheetDayTone.PRESENT;
+  if (normalized === WorkLocation.WFH || normalized === WorkLocation.WORK_FROM_HOME) {
+    return MobileTimesheetDayTone.WFH;
+  }
   if (
-    s === AttendanceStatus.WEEKEND.toLowerCase() ||
-    s === AttendanceStatus.LEAVE.toLowerCase()
-  )
-    return {
-      bg: "bg-[#FEE2E2]", // 🔴 Leave / Absent Red
-      badge: "bg-[#EE5D50]/70 text-white font-bold",
-      border: "border-[#EE5D50]/10",
-      text: "text-[#EE5D50]",
-    };
-  if (s === AttendanceStatus.FULL_DAY.toLowerCase() || s === "full day" || loc === "office" || s === "office")
-    return {
-      bg: "bg-[#E6FFFA]", // 🟢 Office / Full Day Green
-      badge: "bg-[#01B574] text-white font-bold",
-      border: "border-[#01B574]/20",
-      text: "text-[#01B574]",
-    };
-  if (s.includes("half day"))
-    return {
-      bg: "bg-[#FEF3C7]",
-      badge: "bg-[#FFB020]/80 text-white font-bold",
-      border: "border-[#FFB020]/20",
-      text: "text-[#FFB020]",
-    };
-  if (s === AttendanceStatus.ABSENT.toLowerCase())
-    return {
-      bg: "bg-[#FECACA]",
-      badge: "bg-[#DC2626]/70 text-white font-bold",
-      border: "border-[#DC2626]/20",
-      text: "text-[#DC2626]",
-    };
-  if (s === "wfh" || loc === "wfh" || s === "work from home")
-    return {
-      bg: "bg-[#d2dcfcff]",
-      badge: "bg-[#6366F1]/70 text-white font-bold",
-      border: "border-[#6366F1]/20",
-      text: "text-[#4F46E5]",
-    };
-  if (
-    s === "client visit" ||
-    loc === "client visit" ||
-    loc === "client place" ||
-    s === "client"
-  )
-    return {
-      bg: "bg-[#f2fcbd]",
-      badge: "bg-[#4318FF]/70 text-white font-bold",
-      border: "border-[#4318FF]/20",
-      text: "text-[#4318FF]",
-    };
+    normalized === WorkLocation.CLIENT ||
+    normalized === WorkLocation.CLIENT_VISIT ||
+    normalized === WorkLocation.CLIENT_PLACE
+  ) {
+    return MobileTimesheetDayTone.CLIENT_VISIT;
+  }
+  if (normalized === AttendanceStatus.LEAVE.toLowerCase()) return MobileTimesheetDayTone.ABSENT_OR_LEAVE;
+  return MobileTimesheetDayTone.DEFAULT;
+};
+
+const getSplitDayBackground = (
+  firstHalf: string,
+  secondHalf: string,
+): React.CSSProperties => {
+  const firstTone = resolveHalfDayTone(firstHalf);
+  const secondTone = resolveHalfDayTone(secondHalf);
+
+  if (firstTone === secondTone) {
+    return { background: DAY_TONE_COLORS[firstTone].bgHex };
+  }
 
   return {
-    bg: "bg-[#F8FAFC]",
-    badge: "bg-[#64748B]/90 text-white font-bold",
-    border: "border-gray-300",
-    text: "text-gray-600",
+    background: `linear-gradient(to bottom, ${DAY_TONE_COLORS[firstTone].bgHex} 50%, ${DAY_TONE_COLORS[secondTone].bgHex} 50%)`,
   };
 };
 
-const HEX_FALLBACK: Record<string, string> = {
-  "bg-gray-200": "#e5e7eb",
-  "bg-white": "#ffffff",
-  "bg-[#E6FFFA]": "#E6FFFA",
-  "bg-[#EEF2FF]": "#EEF2FF",
-  "bg-[#DBEAFE]": "#DBEAFE",
-  "bg-[#FEE2E2]": "#FEE2E2",
+/** When the API doesn't send explicit half-day labels but the combined
+ *  status string mentions both "office" and "leave", split it into an
+ *  ordered first/second half pair for display. */
+const resolveHalfDayLabels = (
+  status: string | null | undefined,
+  rawFirstHalf?: string | null,
+  rawSecondHalf?: string | null,
+): { firstHalf: string; secondHalf: string } => {
+  let firstHalf = (rawFirstHalf || "").trim();
+  let secondHalf = (rawSecondHalf || "").trim();
+
+  if (!firstHalf && !secondHalf) {
+    const normalizedStatus = (status || "").toLowerCase().trim();
+    const leaveKeyword = AttendanceStatus.LEAVE.toLowerCase();
+    if (normalizedStatus.includes(WorkLocation.OFFICE) && normalizedStatus.includes(leaveKeyword)) {
+      if (normalizedStatus.indexOf(WorkLocation.OFFICE) < normalizedStatus.indexOf(leaveKeyword)) {
+        firstHalf = "Office";
+        secondHalf = "Leave";
+      } else {
+        firstHalf = "Leave";
+        secondHalf = "Office";
+      }
+    }
+  }
+
+  return { firstHalf, secondHalf };
 };
 
-const bgClassToHex = (bgClass: string): string => {
-  const match = bgClass.match(/#([0-9a-fA-F]{3,8})/);
-  if (match) return `#${match[1]}`;
-  return HEX_FALLBACK[bgClass] || "#F8FAFC";
-};
-
-/* ------------------------------------------------------------
-   TEXT COLOR ENGINE
-   Mirrors MobileTimesheetHistory's approach: resolve an actual
-   hex color and apply it via inline style, instead of relying on
-   a Tailwind arbitrary-value text-[#hex] class. Those classes
-   were not reliably rendering, which is why day numbers / hours /
-   status labels were showing up black instead of the intended
-   status color (as correctly seen in the History view).
-   ------------------------------------------------------------ */
-
-const TEXT_HEX_FALLBACK: Record<string, string> = {
-  "text-gray-600": "#4b5563",
-  "text-gray-500": "#6b7280",
-};
-
-const textClassToHex = (textClass: string): string => {
-  const match = textClass.match(/#([0-9a-fA-F]{3,8})/);
-  if (match) return `#${match[1]}`;
-  return TEXT_HEX_FALLBACK[textClass] || "#4b5563";
+const isApprovedDutyStatus = (statusStr: string): boolean => {
+  const normalized = (statusStr || "").toLowerCase().trim();
+  return APPROVED_DUTY_STATUS_VALUES.some(
+    (target) => normalized === target || normalized.includes(target),
+  );
 };
 
 const getDisplayStatus = (
@@ -243,7 +329,7 @@ const getDisplayStatus = (
   const dayOfWeek = day.fullDate.getDay();
   const isSunday = dayOfWeek === 0;
   const isSaturday = dayOfWeek === 6;
-  const hours = Number(day.totalHours || 0);
+  const totalHoursValue = Number(day.totalHours || 0);
   const displayStatus = day.status as string;
 
   const isSaturdayWithNoData =
@@ -275,16 +361,19 @@ const getDisplayStatus = (
     displayStatus !== AttendanceStatus.LEAVE
   ) {
     const isNonWorkingFull =
-      ((isSunday || !!holidayInfo) && hours >= 1 && hours <= 9) ||
-      (isSaturday && hours >= 4 && hours <= 9);
+      ((isSunday || !!holidayInfo) && totalHoursValue >= 1 && totalHoursValue <= 9) ||
+      (isSaturday && totalHoursValue >= 4 && totalHoursValue <= 9);
 
-    return hours > 6 || isNonWorkingFull
+    return totalHoursValue > 6 || isNonWorkingFull
       ? AttendanceStatus.FULL_DAY
       : AttendanceStatus.HALF_DAY;
   }
 
   return displayStatus || AttendanceStatus.UPCOMING;
 };
+
+const formatTotalHours = (val: string | number | null | undefined): string =>
+  (Number(val) || 0).toFixed(1);
 
 const MobileTimesheet = ({
   now,
@@ -327,21 +416,6 @@ const MobileTimesheet = ({
     [now],
   );
 
-  const isApprovedDutyStatus = (statusStr: string): boolean => {
-    const normalized = (statusStr || "").toLowerCase().trim();
-    const targets = [
-      "work from home",
-      "wfh",
-      "work from home / office",
-      "wfh / office",
-      "client visit",
-      "client visit / office",
-    ];
-    return targets.some(
-      (target) => normalized === target || normalized.includes(target),
-    );
-  };
-
   const openHoursModal = (index: number) => {
     const entry = localEntries[index];
     if (!entry) return;
@@ -353,20 +427,11 @@ const MobileTimesheet = ({
       isApprovedDutyStatus(entry.status || "") ||
       isApprovedDutyStatus(entry.workLocation || "")
     ) {
-      setMobileInputModal({
-        open: true,
-        index: null,
-        value: "",
-        entry: {
-          ...entry,
-          isBlockedFullDayContext: true,
-          fullDayDisplayLabel: entry.status || entry.workLocation,
-        },
-      });
+      setMobileInputModal({ open: true, index: null, value: "", entry });
       return;
     }
 
-    if (status.includes("half day") && workLocation === "office") {
+    if (status.includes(AttendanceStatus.HALF_DAY.toLowerCase()) && workLocation === WorkLocation.OFFICE) {
       setMobileInputModal({
         open: true,
         index: null,
@@ -383,7 +448,7 @@ const MobileTimesheet = ({
         value: "",
         entry: {
           ...entry,
-          isBlockedHalfDay: status.includes("half day"),
+          isBlockedHalfDay: status.includes(AttendanceStatus.HALF_DAY.toLowerCase()),
           isBlockedHalfLeave: true,
         },
       });
@@ -410,28 +475,20 @@ const MobileTimesheet = ({
       isApprovedDutyStatus(entry.status || "") ||
       isApprovedDutyStatus(entry.workLocation || "")
     ) {
-      setMobileInputModal({
-        open: true,
-        index: null,
-        value: "",
-        entry: {
-          ...entry,
-          isBlockedFullDayContext: true,
-          fullDayDisplayLabel: entry.status || entry.workLocation,
-        },
-      });
+      setMobileInputModal({ open: true, index: null, value: "", entry });
       return;
     }
 
+    const halfDayKeyword = AttendanceStatus.HALF_DAY.toLowerCase();
     setMobileInputModal({
       open: true,
       index: null,
       value: "",
       entry: {
         ...entry,
-        isBlockedHalfDay: status.includes("half day"),
+        isBlockedHalfDay: status.includes(halfDayKeyword),
         isBlockedHalfLeave:
-          status.includes("leave") || !status.includes("half day"),
+          status.includes(AttendanceStatus.LEAVE.toLowerCase()) || !status.includes(halfDayKeyword),
       },
     });
   };
@@ -460,41 +517,37 @@ const MobileTimesheet = ({
   const renderInputModal = () => {
     if (!mobileInputModal.open) return null;
 
-    let mode = "HOURS";
-    if (
-      isApprovedDutyStatus(mobileInputModal.entry?.status || "") ||
-      isApprovedDutyStatus(mobileInputModal.entry?.workLocation || "")
-    ) {
-      mode = "BLOCKED_APPROVED_DUTY";
-    } else if (mobileInputModal.entry?.isBlockedHalfDay) {
-      mode = "BLOCKED_HALF_DAY";
-    } else if (mobileInputModal.entry?.isBlockedHalfLeave) {
-      mode = "BLOCKED_LEAVE";
-    }
-
     const entry = mobileInputModal.entry;
-    const statusLower = (entry?.status || "").toLowerCase().trim();
 
-    let firstHalf = (entry?.firstHalf || "").trim();
-    let secondHalf = (entry?.secondHalf || "").trim();
-
-    if (!firstHalf && !secondHalf) {
-      if (statusLower.includes("office") && statusLower.includes("leave")) {
-        if (statusLower.indexOf("office") < statusLower.indexOf("leave")) {
-          firstHalf = "Office";
-          secondHalf = "Leave";
-        } else {
-          firstHalf = "Leave";
-          secondHalf = "Office";
-        }
-      }
+    let mode: MobileTimesheetModalMode = MobileTimesheetModalMode.HOURS;
+    if (
+      isApprovedDutyStatus(entry?.status || "") ||
+      isApprovedDutyStatus(entry?.workLocation || "")
+    ) {
+      mode = MobileTimesheetModalMode.BLOCKED_APPROVED_DUTY;
+    } else if (entry?.isBlockedHalfDay) {
+      mode = MobileTimesheetModalMode.BLOCKED_HALF_DAY;
+    } else if (entry?.isBlockedHalfLeave) {
+      mode = MobileTimesheetModalMode.BLOCKED_LEAVE;
     }
 
-    const isFullWFH = statusLower === "wfh" || statusLower === "work from home" || statusLower === "wfh / wfh";
-    const isFullClient = statusLower === "client visit" || statusLower === "client visit / client visit";
+    const statusLower = (entry?.status || "").toLowerCase().trim();
+    const { firstHalf, secondHalf } = resolveHalfDayLabels(
+      entry?.status,
+      entry?.firstHalf,
+      entry?.secondHalf,
+    );
+
+    const isFullWFH =
+      statusLower === WorkLocation.WFH ||
+      statusLower === WorkLocation.WORK_FROM_HOME ||
+      statusLower === "wfh / wfh";
+    const isFullClient =
+      statusLower === WorkLocation.CLIENT_VISIT ||
+      statusLower === "client visit / client visit";
     const areHalvesIdentical = firstHalf.toLowerCase() === secondHalf.toLowerCase() && firstHalf !== "";
 
-    if (mode !== "HOURS") {
+    if (mode !== MobileTimesheetModalMode.HOURS) {
       let modalHeaderTitle = "Leave";
       let modalBodyText = "Hours are already assigned for this leave status and cannot be edited.";
 
@@ -510,7 +563,7 @@ const MobileTimesheet = ({
       } else if (firstHalf && secondHalf) {
         modalHeaderTitle = `Half Day (${firstHalf} / ${secondHalf})`;
         modalBodyText = `Hours are already assigned for this half day where the 1st half is "${firstHalf}" and the 2nd half is "${secondHalf}" and cannot be edited.`;
-      } else if (statusLower === "leave") {
+      } else if (statusLower === AttendanceStatus.LEAVE.toLowerCase()) {
         modalHeaderTitle = "Leave";
         modalBodyText = "Hours are already assigned for this leave status and cannot be edited.";
       } else {
@@ -547,13 +600,8 @@ const MobileTimesheet = ({
       );
     }
 
-    const preview = getMobileModalPreview(
-      mobileInputModal.value,
-      mobileInputModal.entry,
-    );
-    const entryDate = mobileInputModal.entry?.fullDate
-      ? new Date(mobileInputModal.entry.fullDate)
-      : null;
+    const preview = getHoursPreview(mobileInputModal.value, entry);
+    const entryDate = entry?.fullDate ? new Date(entry.fullDate) : null;
     const dayLabel = entryDate
       ? entryDate.toLocaleDateString("en-US", {
         weekday: "short",
@@ -732,7 +780,7 @@ const MobileTimesheet = ({
                   TOTAL <span className="mobile-timesheet-total-label-long">TRACKED</span>:
                 </p>
                 <p className="mobile-timesheet-total-value text-base font-black text-[#4318FF] leading-none whitespace-nowrap">
-                  {PlatformTotalHoursFix(monthTotalHours)}
+                  {formatTotalHours(monthTotalHours)}
                 </p>
                 <span className="mobile-timesheet-total-unit text-[10px] font-bold text-gray-500 whitespace-nowrap">hrs</span>
               </div>
@@ -790,102 +838,71 @@ const MobileTimesheet = ({
                     : "";
                 const isBlocked = isDateBlocked(day.fullDate);
 
-                const overallStyles = getStatusStyles(
-                  displayStatus,
-                  day.workLocation,
-                );
+                const dayTone = resolveDayTone(displayStatus, day.workLocation);
+                const dayToneColors = DAY_TONE_COLORS[dayTone];
 
-                // Resolve an actual hex color (same behavior as
-                // MobileTimesheetHistory) instead of relying on a Tailwind
-                // arbitrary text-[#hex] class, which was not rendering
-                // reliably and caused the day number / hours / status
-                // label text to fall back to black.
+                // Resolved as an inline hex style, not a Tailwind arbitrary
+                // text-[#hex] class — those classes weren't reliably
+                // rendering, which is why day numbers / hours / status
+                // labels were showing up black instead of the intended
+                // status color.
                 const cellTextColor = day.isToday
-                  ? "#4318FF"
-                  : textClassToHex(overallStyles.text);
+                  ? DAY_TONE_COLORS[MobileTimesheetDayTone.TODAY].textHex
+                  : dayToneColors.textHex;
 
                 const statusLabel = day.status
                   ? (day.status as string).toUpperCase()
                   : "BLOCKED";
 
-                const statusLower = (day.status || "").toLowerCase().trim();
-                let firstHalf = ((day as any).firstHalf || "").trim();
-                let secondHalf = ((day as any).secondHalf || "").trim();
-
-                if (!firstHalf && !secondHalf) {
-                  if (statusLower.includes("office") && statusLower.includes("leave")) {
-                    if (statusLower.indexOf("office") < statusLower.indexOf("leave")) {
-                      firstHalf = "Office";
-                      secondHalf = "Leave";
-                    } else {
-                      firstHalf = "Leave";
-                      secondHalf = "Office";
-                    }
-                  }
-                }
+                const { firstHalf, secondHalf } = resolveHalfDayLabels(
+                  day.status,
+                  (day as any).firstHalf,
+                  (day as any).secondHalf,
+                );
 
                 const dayOfWeek = day.fullDate.getDay();
                 const isSunday = dayOfWeek === 0;
                 const isSaturday = dayOfWeek === 6;
-                const h_val = Number(day.totalHours || 0);
+                const totalHoursValue = Number(day.totalHours || 0);
                 const isNonWorkingDay = isSunday || !!holidayInfo;
 
                 const isSplitDay =
                   !!firstHalf &&
                   !!secondHalf &&
-                  !((isNonWorkingDay && h_val >= 1) || (isSaturday && h_val >= 4));
+                  !((isNonWorkingDay && totalHoursValue >= 1) || (isSaturday && totalHoursValue >= 4));
 
-                let splitBgStyle: React.CSSProperties = {};
-                if (isSplitDay) {
-                  const normalizedFirst = firstHalf.toLowerCase();
-                  const normalizedSecond = secondHalf.toLowerCase();
+                const splitBgStyle: React.CSSProperties = isSplitDay
+                  ? getSplitDayBackground(firstHalf, secondHalf)
+                  : {};
 
-                  const checkOffice = (s: string) => s === "office";
-                  const checkWfh = (s: string) => s === "wfh" || s === "work from home";
-                  const checkClient = (s: string) => s === "client" || s === "client visit" || s === "client place";
-                  const checkLeave = (s: string) => s === "leave";
-
-                  if (checkOffice(normalizedFirst) && checkOffice(normalizedSecond)) {
-                    splitBgStyle = { background: bgClassToHex(getStatusStyles("office").bg) };
-                  } else if (checkWfh(normalizedFirst) && checkWfh(normalizedSecond)) {
-                    splitBgStyle = { background: bgClassToHex(getStatusStyles("wfh").bg) };
-                  } else if (checkClient(normalizedFirst) && checkClient(normalizedSecond)) {
-                    splitBgStyle = { background: bgClassToHex(getStatusStyles("client visit").bg) };
-                  } else {
-                    // HORIZONTAL GRADIENT SPLIT (Top Half / Bottom Half) as requested per image_cf597f.png
-                    let firstColor = bgClassToHex(getStatusStyles(firstHalf).bg);
-                    let secondColor = bgClassToHex(getStatusStyles(secondHalf).bg);
-
-                    if (checkOffice(normalizedFirst)) firstColor = bgClassToHex(getStatusStyles("office").bg);
-                    if (checkWfh(normalizedFirst)) firstColor = bgClassToHex(getStatusStyles("wfh").bg);
-                    if (checkClient(normalizedFirst)) firstColor = bgClassToHex(getStatusStyles("client visit").bg);
-                    if (checkLeave(normalizedFirst)) firstColor = bgClassToHex(getStatusStyles(AttendanceStatus.LEAVE).bg);
-
-                    if (checkOffice(normalizedSecond)) secondColor = bgClassToHex(getStatusStyles("office").bg);
-                    if (checkWfh(normalizedSecond)) secondColor = bgClassToHex(getStatusStyles("wfh").bg);
-                    if (checkClient(normalizedSecond)) secondColor = bgClassToHex(getStatusStyles("client visit").bg);
-                    if (checkLeave(normalizedSecond)) secondColor = bgClassToHex(getStatusStyles(AttendanceStatus.LEAVE).bg);
-
-                    splitBgStyle = {
-                      background: `linear-gradient(to bottom, ${firstColor} 50%, ${secondColor} 50%)`,
-                    };
-                  }
-                }
-
-                const isSundayCell = day.fullDate.getDay() === 0;
+                const isSundayCell = dayOfWeek === 0;
 
                 const cellBgClass = isSundayCell
-                  ? "bg-[#FEE2E2]"
+                  ? DAY_TONE_COLORS[MobileTimesheetDayTone.WEEKEND].bgClass
                   : day.isToday
-                    ? "bg-white"
+                    ? DAY_TONE_COLORS[MobileTimesheetDayTone.TODAY].bgClass
                     : isSplitDay
                       ? ""
-                      : overallStyles.bg;
+                      : dayToneColors.bgClass;
                 const cellBorderClass = day.isToday
-                  ? "!border-2 !border-[#4318FF]"
+                  ? DAY_TONE_COLORS[MobileTimesheetDayTone.TODAY].borderClass
                   : isSplitDay
                     ? "border-transparent"
-                    : overallStyles.border;
+                    : dayToneColors.borderClass;
+
+                // Same fix as cellTextColor above: bg-[#hex] arbitrary
+                // Tailwind classes weren't reliably applying for plain
+                // weekend cells (blank Sundays AND blank Saturdays — both
+                // resolve to AttendanceStatus.WEEKEND via getDisplayStatus),
+                // so they fell back to white. Resolve to an inline hex
+                // background for that case, like the history view does.
+                const isWeekendFallbackCell = displayStatus === AttendanceStatus.WEEKEND;
+                const cellBgStyle: React.CSSProperties = {
+                  ...splitBgStyle,
+                  ...(isWeekendFallbackCell
+                    ? { background: DAY_TONE_COLORS[MobileTimesheetDayTone.WEEKEND].bgHex }
+                    : {}),
+                };
 
                 return (
                   <div
@@ -894,7 +911,7 @@ const MobileTimesheet = ({
                     className={`mobile-timesheet-day relative flex flex-col items-center justify-center rounded-xl border transition-all duration-200 cursor-pointer aspect-[4/5] sm:aspect-square w-full shadow-sm group overflow-visible
                       ${cellBgClass} ${cellBorderClass} ${highlightClass}
                       ${isBlocked ? "cursor-pointer" : "active:scale-95"}`}
-                    style={splitBgStyle}
+                    style={cellBgStyle}
                     onClick={() => openHoursModal(index)}
                   >
                     {isBlocked && (
@@ -1033,8 +1050,5 @@ const MobileTimesheet = ({
     </>
   );
 };
-
-const PlatformTotalHoursFix = (val: string | number | null | undefined): string =>
-  (Number(val) || 0).toFixed(1);
 
 export default MobileTimesheet;

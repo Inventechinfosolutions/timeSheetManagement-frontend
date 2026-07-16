@@ -393,59 +393,59 @@
     letter-spacing: 0.03em;
 }
 
-.mobile-timesheet-legend-dot {
+.mobile-timesheet-legend-colorClass {
     width: 0.625rem;
     height: 0.625rem;
     border-radius: 9999px;
     border: 1px solid;
 }
 
-.legend-dot-fullday {
+.legend-colorClass-fullday {
     background-color: #ecfdf5;
     border-color: #34d399;
 }
 
-.legend-dot-halfday {
+.legend-colorClass-halfday {
     background-color: #fffbeb;
     border-color: #fcd34d;
 }
 
-.legend-dot-absent {
+.legend-colorClass-absent {
     background-color: #fee2e2;
     border-color: #f87171;
 }
 
-.legend-dot-leave {
+.legend-colorClass-leave {
     background-color: #fef2f2;
     border-color: #fca5a5;
 }
 
-.legend-dot-wfh {
+.legend-colorClass-wfh {
     background-color: #d2dcfc;
     border-color: #a3b3f7;
 }
 
-.legend-dot-client {
+.legend-colorClass-client {
     background-color: #f2fcbd;
     border-color: #b7d94a;
 }
 
-.legend-dot-default {
+.legend-colorClass-default {
     background-color: #f8fafc;
     border-color: #64748b;
 }
 
-.legend-dot-today {
+.legend-colorClass-today {
     background-color: #4318ff;
     border-color: transparent;
 }
 
-.legend-dot-holiday {
+.legend-colorClass-holiday {
     background-color: #ecfeff;
     border-color: #67e8f9;
 }
 
-.legend-dot-blocked {
+.legend-colorClass-blocked {
     background-color: #FEE2E2;
     border-color: #d1d5db;
 }
@@ -1036,7 +1036,7 @@
         font-weight: 800;
     }
 
-    .mobile-timesheet-legend-dot {
+    .mobile-timesheet-legend-colorClass {
         width: 0.75rem;
         height: 0.75rem;
     }
@@ -1170,7 +1170,7 @@
         font-weight: 800;
     }
 
-    .mobile-timesheet-legend-dot {
+    .mobile-timesheet-legend-colorClass {
         width: 0.8rem;
         height: 0.8rem;
     }
@@ -1501,7 +1501,7 @@
         letter-spacing: 0 !important;
     }
 
-    .mobile-timesheet-legend-dot {
+    .mobile-timesheet-legend-colorClass {
         width: clamp(7px, 1.9vw, 11px) !important;
         height: clamp(7px, 1.9vw, 11px) !important;
         flex: 0 0 auto;
