@@ -261,6 +261,7 @@ const ManagerMapping: React.FC = () => {
       await dispatch(
         createManagerMapping({
           managerName: selectedManager.fullName,
+          managerId: selectedManager.employeeId,
           employeeId: employee.employeeId,
           employeeName: employee.fullName,
           department: selectedDepartment,
