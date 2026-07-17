@@ -2,6 +2,7 @@ export enum MobileTimesheetModalMode {
   HOURS = "hours",
   BLOCKED_HALF_DAY = "blocked-half-day",
   BLOCKED_LEAVE = "blocked-leave",
+  BLOCKED_APPROVED_DUTY = "blocked-approved-duty",
 }
 
 export enum MobileTimesheetDayTone {
@@ -13,6 +14,6 @@ export enum MobileTimesheetDayTone {
   HALF_DAY = "half-day",
   HOLIDAY = "holiday",
   PRESENT = "present",
-  CLIENT_VISIT = "CLIENT_VISIT",
-  WFH = "WFH",
+  CLIENT_VISIT = "client-visit",
+  WFH = "wfh",
 }

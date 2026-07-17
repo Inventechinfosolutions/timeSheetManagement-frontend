@@ -30,6 +30,7 @@ import { AttendanceStatus, UserType } from "../../enums";
 import { generateMonthlyEntries } from "../../utils/attendanceUtils";
 import { saveAs } from "file-saver";
 import "./MobileTimesheetHistory.css";
+
 interface MobileTimesheetHistoryProps {
     employeeId?: string;
     entries?: TimesheetEntry[];
@@ -38,6 +39,7 @@ interface MobileTimesheetHistoryProps {
     onNavigateToDate?: (timestamp: number) => void;
     onBlockedClick?: () => void;
 }
+
 interface NormalizedDay {
     date: number;
     fullDate: Date;
@@ -46,60 +48,171 @@ interface NormalizedDay {
     workLocation: string | null;
     firstHalf: string;
     secondHalf: string;
-    isToday: boolean;
 }
-const getStatusStyleClass = (
-    statusStr: string | null | undefined,
-    location?: string | null,
+
+const WorkLocation = {
+    OFFICE: "office",
+    WFH: "wfh",
+    WORK_FROM_HOME: "work from home",
+    CLIENT: "client",
+    CLIENT_VISIT: "client visit",
+    CLIENT_PLACE: "client place",
+    WEEKEND: "weekend",
+} as const;
+
+const BLOCKED_STATUS_KEY = "blocked";
+
+const DAY_STATUS_CLASS = {
+    BLOCKED: "day-status-blocked",
+    HOLIDAY: "day-status-holiday",
+    WEEKEND: "day-status-weekend",
+    LEAVE: "day-status-leave",
+    FULL_DAY: "day-status-fullday",
+    HALF_DAY: "day-status-halfday",
+    ABSENT: "day-status-absent",
+    WFH: "day-status-wfh",
+    CLIENT: "day-status-client",
+    DEFAULT: "day-status-default",
+    TODAY: "day-status-today",
+} as const;
+
+const STATUS_BACKGROUND_COLOR: Record<string, string> = {
+    [WorkLocation.OFFICE]: "#E6FFFA",
+    [AttendanceStatus.FULL_DAY.toLowerCase()]: "#E6FFFA",
+    [WorkLocation.WFH]: "#d2dcfc",
+    [WorkLocation.WORK_FROM_HOME]: "#d2dcfc",
+    [WorkLocation.CLIENT]: "#f2fcbd",
+    [WorkLocation.CLIENT_VISIT]: "#f2fcbd",
+    [WorkLocation.CLIENT_PLACE]: "#f2fcbd",
+    [AttendanceStatus.LEAVE.toLowerCase()]: "#FEE2E2",
+    [WorkLocation.WEEKEND]: "#FEE2E2",
+    [AttendanceStatus.HOLIDAY.toLowerCase()]: "#DBEAFE",
+    [AttendanceStatus.ABSENT.toLowerCase()]: "#FECACA",
+    [AttendanceStatus.HALF_DAY.toLowerCase()]: "#FEF3C7",
+    default: "#F8FAFC",
+};
+
+const STATUS_CLASS_TEXT_COLOR: Record<string, string> = {
+    [DAY_STATUS_CLASS.BLOCKED]: "#4b5563",
+    [DAY_STATUS_CLASS.HOLIDAY]: "#1890FF",
+    [DAY_STATUS_CLASS.LEAVE]: "#EE5D50",
+    [DAY_STATUS_CLASS.WEEKEND]: "#EE5D50",
+    [DAY_STATUS_CLASS.FULL_DAY]: "#01B574",
+    [DAY_STATUS_CLASS.HALF_DAY]: "#FFB020",
+    [DAY_STATUS_CLASS.ABSENT]: "#DC2626",
+    [DAY_STATUS_CLASS.WFH]: "#4F46E5",
+    [DAY_STATUS_CLASS.CLIENT]: "#4318FF",
+    [DAY_STATUS_CLASS.DEFAULT]: "#141413ff",
+};
+
+
+
+const normalize = (value?: string | null) =>
+    (value || "").toLowerCase().trim();
+
+const isWfhLocation = (value?: string | null) => {
+    const normalized = normalize(value);
+
+    return (
+        normalized === WorkLocation.WFH ||
+        normalized === WorkLocation.WORK_FROM_HOME
+    );
+};
+
+const isClientLocation = (value?: string | null) => {
+    const normalized = normalize(value);
+
+    return (
+        normalized === WorkLocation.CLIENT ||
+        normalized === WorkLocation.CLIENT_VISIT ||
+        normalized === WorkLocation.CLIENT_PLACE
+    );
+};
+
+const STATUS = {
+    FULL_DAY: AttendanceStatus.FULL_DAY.toLowerCase(),
+    HALF_DAY: AttendanceStatus.HALF_DAY.toLowerCase(),
+    LEAVE: AttendanceStatus.LEAVE.toLowerCase(),
+    ABSENT: AttendanceStatus.ABSENT.toLowerCase(),
+    HOLIDAY: AttendanceStatus.HOLIDAY.toLowerCase(),
+    WEEKEND: AttendanceStatus.WEEKEND.toLowerCase(),
+    PENDING: AttendanceStatus.PENDING.toLowerCase(),
+    NOT_UPDATED: AttendanceStatus.NOT_UPDATED.toLowerCase(),
+};
+
+const getStatusTextColor = (statusClass: string): string =>
+    STATUS_CLASS_TEXT_COLOR[statusClass] || STATUS_CLASS_TEXT_COLOR[DAY_STATUS_CLASS.DEFAULT];
+
+const getStatusBackgroundColor = (statusOrLocation: string): string =>
+    STATUS_BACKGROUND_COLOR[(statusOrLocation || "").toLowerCase().trim()] || STATUS_BACKGROUND_COLOR.default;
+
+const resolveStatusClassName = (
+    status?: string | null,
+    workLocation?: string | null
 ): string => {
-    const s = (statusStr || "").toLowerCase().trim();
-    const loc = (location || "").toLowerCase().trim();
-    if (s === "blocked") return "day-status-blocked";
-    if (s === "holiday") return "day-status-holiday";
-    if (s === AttendanceStatus.WEEKEND.toLowerCase() || s === "weekend")
-        return "day-status-weekend";
-    if (s === AttendanceStatus.LEAVE.toLowerCase())
-        return "day-status-leave";
+    const normalizedStatus = normalize(status);
+    const normalizedLocation = normalize(workLocation);
+
+    if (normalizedStatus === BLOCKED_STATUS_KEY)
+        return DAY_STATUS_CLASS.BLOCKED;
+
+    if (normalizedStatus === STATUS.HOLIDAY)
+        return DAY_STATUS_CLASS.HOLIDAY;
+
+    if (normalizedStatus === STATUS.WEEKEND)
+        return DAY_STATUS_CLASS.WEEKEND;
+
+    if (normalizedStatus === STATUS.LEAVE)
+        return DAY_STATUS_CLASS.LEAVE;
+
+    if (normalizedStatus === STATUS.ABSENT)
+        return DAY_STATUS_CLASS.ABSENT;
+
     if (
-        s === AttendanceStatus.FULL_DAY.toLowerCase() ||
-        s === "full day" ||
-        loc === "office" ||
-        s === "office"
+        normalizedStatus === STATUS.HALF_DAY ||
+        normalizedStatus.includes(STATUS.HALF_DAY)
     )
-        return "day-status-fullday";
-    if (s.includes("half day")) return "day-status-halfday";
-    if (s === AttendanceStatus.ABSENT.toLowerCase()) return "day-status-absent";
-    if (s === "wfh" || loc === "wfh" || s === "work from home")
-        return "day-status-wfh";
+        return DAY_STATUS_CLASS.HALF_DAY;
+
     if (
-        s === "client visit" ||
-        loc === "client visit" ||
-        loc === "client place" ||
-        s === "client"
+        normalizedStatus === STATUS.FULL_DAY ||
+        normalizedLocation === WorkLocation.OFFICE
     )
-        return "day-status-client";
-    return "day-status-default";
+        return DAY_STATUS_CLASS.FULL_DAY;
+
+    if (
+        isWfhLocation(normalizedStatus) ||
+        isWfhLocation(normalizedLocation)
+    )
+        return DAY_STATUS_CLASS.WFH;
+
+    if (
+        isClientLocation(normalizedStatus) ||
+        isClientLocation(normalizedLocation)
+    )
+        return DAY_STATUS_CLASS.CLIENT;
+
+    return DAY_STATUS_CLASS.DEFAULT;
 };
-const getStatusLabel = (displayStatus: string): string => {
-    const s = (displayStatus || "").toLowerCase().trim();
-    if (s === "blocked") return "BLOCKED";
-    if (s === AttendanceStatus.FULL_DAY.toLowerCase() || s === "full day")
-        return "FULL DAY";
-    if (s.includes("half day")) return "HALF DAY";
-    if (s === AttendanceStatus.LEAVE.toLowerCase()) return "LEAVE";
-    if (s === AttendanceStatus.ABSENT.toLowerCase()) return "ABSENT";
-    if (s === AttendanceStatus.HOLIDAY.toLowerCase() || s === "holiday")
-        return "HOLIDAY";
-    if (s === AttendanceStatus.WEEKEND.toLowerCase() || s === "weekend")
-        return "WEEKEND";
-    if (s === "wfh" || s === "work from home") return "WFH";
-    if (s === "client visit" || s === "client") return "CLIENT VISIT";
-    return "NOT UPDATED";
+
+const resolveStatusLabel = (displayStatus: string): string => {
+    const normalized = (displayStatus || "").toLowerCase().trim();
+    if (normalized === BLOCKED_STATUS_KEY) return "BLOCKED";
+    if (normalized === AttendanceStatus.FULL_DAY.toLowerCase()) return "FULL DAY";
+    if (normalized.includes(AttendanceStatus.HALF_DAY.toLowerCase())) return "HALF DAY";
+    if (normalized === AttendanceStatus.LEAVE.toLowerCase()) return "LEAVE";
+    if (normalized === AttendanceStatus.ABSENT.toLowerCase()) return "ABSENT";
+    if (normalized === AttendanceStatus.HOLIDAY.toLowerCase()) return "HOLIDAY";
+    if (normalized === AttendanceStatus.WEEKEND.toLowerCase()) return "WEEKEND";
+    if (normalized === WorkLocation.WFH || normalized === WorkLocation.WORK_FROM_HOME) return "WFH";
+    if (normalized === WorkLocation.CLIENT || normalized === WorkLocation.CLIENT_VISIT) return "CLIENT VISIT";
+    return AttendanceStatus.NOT_UPDATED.toUpperCase();
 };
-const getDisplayStatus = (
+
+const resolveDisplayStatus = (
     day: NormalizedDay,
-    holiday: any,
-    manualBlocker: any,
+    holiday: HolidayEntry | null,
+    manualBlocker: BlockerEntry | null,
 ): string => {
     const status = (day.status || "").trim();
     const dayOfWeek = day.fullDate.getDay();
@@ -123,9 +236,6 @@ const getDisplayStatus = (
         status !== AttendanceStatus.LEAVE;
 
     if (isWeekendDay) {
-        // Weekend cells are driven by whether hours are currently present,
-        // so the color updates the moment data is entered, edited,
-        // resubmitted, approved, or cleared — never stuck on stale status.
         if (hasRealStatus) return status;
         if (hasWorkingHours) {
             const isNonWorkingFull =
@@ -140,47 +250,16 @@ const getDisplayStatus = (
 
     // Non-weekend days: unchanged from existing behavior.
     if (hasRealStatus) return status;
-    if (manualBlocker) return "blocked";
+    if (manualBlocker) return BLOCKED_STATUS_KEY;
     return AttendanceStatus.NOT_UPDATED;
 };
-const STATUS_HEX: Record<string, string> = {
-    office: "#E6FFFA",
-    "full day": "#E6FFFA",
-    wfh: "#d2dcfc",
-    "work from home": "#d2dcfc",
-    client: "#f2fcbd",
-    "client visit": "#f2fcbd",
-    "client place": "#f2fcbd",
-    leave: "#FEE2E2",
-    weekend: "#FEE2E2",
-    holiday: "#DBEAFE",
-    absent: "#FECACA",
-    "half day": "#FEF3C7",
-    default: "#F8FAFC",
-};
-const STATUS_TEXT_HEX: Record<string, string> = {
-    "day-status-blocked": "#4b5563",
-    "day-status-holiday": "#1890FF",
-    "day-status-leave": "#EE5D50",
-    "day-status-weekend": "#EE5D50",
-    "day-status-fullday": "#01B574",
-    "day-status-halfday": "#FFB020",
-    "day-status-absent": "#DC2626",
-    "day-status-wfh": "#4F46E5",
-    "day-status-client": "#4318FF",
-    "day-status-default": "#141413ff",
-};
-const getStatusTextColor = (statusClass: string): string =>
-    STATUS_TEXT_HEX[statusClass] || STATUS_TEXT_HEX["day-status-default"];
-const hexForStatus = (s: string): string =>
-    STATUS_HEX[(s || "").toLowerCase().trim()] || STATUS_HEX.default;
+
 const MobileTimesheetHistory = ({
     employeeId: propEmployeeId,
     entries: propEntries,
     currentDate: propCurrentDate,
     hideMonthNavigation = false,
     onNavigateToDate,
-    onBlockedClick,
 }: MobileTimesheetHistoryProps) => {
     const dispatch = useAppDispatch();
     const { records } = useAppSelector((state: RootState) => state.attendance);
@@ -189,14 +268,14 @@ const MobileTimesheetHistory = ({
     const isAdmin = currentUser?.userType === UserType.ADMIN;
     const isManager =
         currentUser?.userType === UserType.MANAGER ||
-        (currentUser?.role &&
-            currentUser.role.toUpperCase().includes(UserType.MANAGER));
+        (currentUser?.role && currentUser.role.toUpperCase().includes(UserType.MANAGER));
     const { holidays } = useAppSelector(
         (state: RootState) => state.masterHolidays || { holidays: [] }
     );
     const { blockers } = useAppSelector(
         (state: RootState) => state.timesheetBlocker || { blockers: [] }
     );
+
     const location = useLocation();
     const isMyRoute =
         location.pathname.includes("my-dashboard") ||
@@ -209,21 +288,26 @@ const MobileTimesheetHistory = ({
         (isMyRoute
             ? currentUser?.employeeId || currentUser?.loginId
             : entity?.employeeId || currentUser?.employeeId || currentUser?.loginId);
+
     const attendanceFetchedKey = useRef<string | null>(null);
     const [currentDate, setCurrentDate] = useState(() => propCurrentDate || new Date());
-    const now = new Date();
+    const today = new Date();
+
     useEffect(() => {
         if (propCurrentDate) {
             setCurrentDate(propCurrentDate);
         }
     }, [propCurrentDate]);
+
     const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
     const [downloadDateRange, setDownloadDateRange] = useState({ from: "", to: "" });
     const [isDownloading, setIsDownloading] = useState(false);
+
     useEffect(() => {
         if (propEntries) return;
         dispatch(fetchHolidays());
     }, [dispatch, propEntries]);
+
     useEffect(() => {
         if (!currentEmployeeId || propEntries) return;
         const fetchKey = `${currentEmployeeId}-${currentDate.getMonth() + 1}-${currentDate.getFullYear()}`;
@@ -237,56 +321,70 @@ const MobileTimesheetHistory = ({
             })
         );
     }, [dispatch, currentEmployeeId, currentDate, propEntries]);
-    const { monthDays, blanks, daysOfWeek, entries } = useMemo(() => {
+
+    const { monthDays, blankCells, weekdayLabels, entries } = useMemo(() => {
         const year = currentDate.getFullYear();
         const month = currentDate.getMonth();
-        const firstDay = new Date(year, month, 1).getDay();
+        const firstWeekdayOfMonth = new Date(year, month, 1).getDay();
         const daysInMonth = new Date(year, month + 1, 0).getDate();
-        const blanksArr = Array.from({ length: firstDay }, (_, i) => i);
-        const monthDaysArr = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-        const generatedEntries = generateMonthlyEntries(currentDate, now, records);
+        const generatedEntries = generateMonthlyEntries(currentDate, today, records);
         return {
-            monthDays: monthDaysArr,
-            blanks: blanksArr,
-            daysOfWeek: ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"],
+            monthDays: Array.from({ length: daysInMonth }, (_, i) => i + 1),
+            blankCells: Array.from({ length: firstWeekdayOfMonth }, (_, i) => i),
+            weekdayLabels: ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"],
             entries: propEntries || generatedEntries,
         };
-    }, [currentDate, records, propEntries, now]);
-    const monthTotalHours = useMemo(() => {
-        return entries.reduce((sum, e: any) => sum + (Number(e?.totalHours ?? e?.hours ?? 0) || 0), 0);
-    }, [entries]);
-    const getBlocker = (day: number): any => {
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentDate, records, propEntries]);
+
+    const monthTotalHours = useMemo(
+        () => entries.reduce((sum, e: any) => sum + (Number(e?.totalHours ?? e?.hours ?? 0) || 0), 0),
+        [entries]
+    );
+
+    const findBlockerForDay = (day: number): BlockerEntry | null => {
         if (!blockers || blockers.length === 0) return null;
         const targetDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
         targetDate.setHours(0, 0, 0, 0);
-        return blockers.find((b: any) => {
-            const start = new Date(b.blockedFrom);
-            start.setHours(0, 0, 0, 0);
-            const end = new Date(b.blockedTo);
-            end.setHours(0, 0, 0, 0);
-            return targetDate >= start && targetDate <= end;
-        }) || null;
+        return (
+            blockers.find((b: BlockerEntry) => {
+                const start = new Date(b.blockedFrom);
+                start.setHours(0, 0, 0, 0);
+                const end = new Date(b.blockedTo);
+                end.setHours(0, 0, 0, 0);
+                return targetDate >= start && targetDate <= end;
+            }) || null
+        );
     };
-    const checkIsHoliday = (day: number): any => {
+
+    const findHolidayForDay = (day: number): HolidayEntry | null => {
         if (!holidays || holidays.length === 0) return null;
         const dateStr = dayjs(new Date(currentDate.getFullYear(), currentDate.getMonth(), day)).format("YYYY-MM-DD");
-        return holidays.find(
-            (h: any) => h.holidayDate === dateStr || h.date === dateStr
-        ) || null;
+        return holidays.find((h: HolidayEntry) => h.holidayDate === dateStr || h.date === dateStr) || null;
     };
+
+    const entryMap = useMemo(
+        () =>
+            new Map(
+                entries.map((item: any) => [item.date, item])
+            ),
+        [entries]
+    );
+
     const dayMetaList = useMemo(() => {
         return monthDays.map((day) => {
-            const entry = entries.find((e: any) => e.date === day);
-            const holidayInfo = checkIsHoliday(day);
-            const manualBlocker = getBlocker(day);
+            const entry = entryMap.get(day);
+            const holidayInfo = findHolidayForDay(day);
+            const manualBlocker = findBlockerForDay(day);
             const fullDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
             const dayOfWeek = fullDate.getDay();
             const isSunday = dayOfWeek === 0;
             const isSaturday = dayOfWeek === 6;
             const isToday =
-                day === now.getDate() &&
-                currentDate.getMonth() === now.getMonth() &&
-                currentDate.getFullYear() === now.getFullYear();
+                day === today.getDate() &&
+                currentDate.getMonth() === today.getMonth() &&
+                currentDate.getFullYear() === today.getFullYear();
+
             const normalized: NormalizedDay = {
                 date: day,
                 fullDate,
@@ -295,86 +393,88 @@ const MobileTimesheetHistory = ({
                 workLocation: (entry as any)?.workLocation ?? null,
                 firstHalf: ((entry as any)?.firstHalf || "").trim(),
                 secondHalf: ((entry as any)?.secondHalf || "").trim(),
-                isToday,
             };
-            const displayStatus = getDisplayStatus(normalized, holidayInfo, manualBlocker);
-            const isDeptBlocked = isSunday || (isSaturday && displayStatus === AttendanceStatus.WEEKEND);
+
+            const displayStatus = resolveDisplayStatus(normalized, holidayInfo, manualBlocker);
+            const isDeptBlockedWeekendDay = isSunday || (isSaturday && displayStatus === AttendanceStatus.WEEKEND);
             const isBlocked =
                 !!manualBlocker ||
                 (!isAdmin &&
                     !isManager &&
-                    (normalized.status === AttendanceStatus.LEAVE || isDeptBlocked || !!holidayInfo));
-            const statusLabel = getStatusLabel(displayStatus);
+                    (normalized.status === AttendanceStatus.LEAVE || isDeptBlockedWeekendDay || !!holidayInfo));
+            const statusLabel = resolveStatusLabel(displayStatus);
+
             const isPastMonth =
-                currentDate.getFullYear() < now.getFullYear() ||
-                (currentDate.getFullYear() === now.getFullYear() && currentDate.getMonth() < now.getMonth());
+                currentDate.getFullYear() < today.getFullYear() ||
+                (currentDate.getFullYear() === today.getFullYear() && currentDate.getMonth() < today.getMonth());
             const isPastDayInCurrentMonth =
-                currentDate.getFullYear() === now.getFullYear() &&
-                currentDate.getMonth() === now.getMonth() &&
-                day < now.getDate();
-            const isPast = isPastMonth || isPastDayInCurrentMonth;
+                currentDate.getFullYear() === today.getFullYear() &&
+                currentDate.getMonth() === today.getMonth() &&
+                day < today.getDate();
+            const isPastDay = isPastMonth || isPastDayInCurrentMonth;
             const isPendingUpdate =
-                isPast &&
+                isPastDay &&
                 !isBlocked &&
                 !holidayInfo &&
                 !(entry as any)?.isWeekend &&
                 (normalized.status === AttendanceStatus.NOT_UPDATED || normalized.status === AttendanceStatus.PENDING);
-            const hoursVal = Number(normalized.totalHours || 0);
+
+            const totalHoursValue = Number(normalized.totalHours || 0);
             const isNonWorkingDay = isSunday || !!holidayInfo;
             const isSplitDay =
                 !!normalized.firstHalf &&
                 !!normalized.secondHalf &&
-                !((isNonWorkingDay && hoursVal >= 1) || (isSaturday && hoursVal >= 4));
-            let splitBgStyle: React.CSSProperties = {};
+                !((isNonWorkingDay && totalHoursValue >= 1) || (isSaturday && totalHoursValue >= 4));
+
+            let splitBackgroundStyle: React.CSSProperties = {};
             if (isSplitDay) {
-                const nf = normalized.firstHalf.toLowerCase();
-                const ns = normalized.secondHalf.toLowerCase();
-                const checkOffice = (s: string) => s === "office";
-                const checkWfh = (s: string) => s === "wfh" || s === "work from home";
-                const checkClient = (s: string) => s === "client" || s === "client visit" || s === "client place";
-                const checkWeekend = (s: string) => s === "weekend";
-                if (checkOffice(nf) && checkOffice(ns)) {
-                    splitBgStyle = { background: hexForStatus("office") };
-                } else if (checkWfh(nf) && checkWfh(ns)) {
-                    splitBgStyle = { background: hexForStatus("wfh") };
-                } else if (checkClient(nf) && checkClient(ns)) {
-                    splitBgStyle = { background: hexForStatus("client") };
-                } else if (checkWeekend(nf) && checkWeekend(ns)) {
-                    splitBgStyle = { background: hexForStatus("weekend") };
+                const firstHalfLocation = normalize(normalized.firstHalf);
+                const secondHalfLocation = normalize(normalized.secondHalf);
+                const isOffice = (halfDayLocation: string) => halfDayLocation === WorkLocation.OFFICE;
+                const isWfh = (halfDayLocation: string) =>
+                    halfDayLocation === WorkLocation.WFH || halfDayLocation === WorkLocation.WORK_FROM_HOME;
+                const isClient = (halfDayLocation: string) =>
+                    halfDayLocation === WorkLocation.CLIENT ||
+                    halfDayLocation === WorkLocation.CLIENT_VISIT ||
+                    halfDayLocation === WorkLocation.CLIENT_PLACE;
+                const isWeekendLocation = (halfDayLocation: string) => halfDayLocation === WorkLocation.WEEKEND;
+
+                if (isOffice(firstHalfLocation) && isOffice(secondHalfLocation)) {
+                    splitBackgroundStyle = { background: getStatusBackgroundColor(WorkLocation.OFFICE) };
+                } else if (isWfh(firstHalfLocation) && isWfh(secondHalfLocation)) {
+                    splitBackgroundStyle = { background: getStatusBackgroundColor(WorkLocation.WFH) };
+                } else if (isClient(firstHalfLocation) && isClient(secondHalfLocation)) {
+                    splitBackgroundStyle = { background: getStatusBackgroundColor(WorkLocation.CLIENT) };
+                } else if (isWeekendLocation(firstHalfLocation) && isWeekendLocation(secondHalfLocation)) {
+                    splitBackgroundStyle = { background: getStatusBackgroundColor(WorkLocation.WEEKEND) };
                 } else {
-                    const firstColor = hexForStatus(nf);
-                    const secondColor = hexForStatus(ns);
-                    splitBgStyle = {
+                    const firstColor = getStatusBackgroundColor(firstHalfLocation);
+                    const secondColor = getStatusBackgroundColor(secondHalfLocation);
+                    splitBackgroundStyle = {
                         background: `linear-gradient(to bottom, ${firstColor} 50%, ${secondColor} 50%)`,
                     };
                 }
             }
-            const rawStatusClass = getStatusStyleClass(displayStatus, normalized.workLocation);
-            const cellStatusClass = isToday
-                ? "day-status-today"
-                : isSplitDay
-                    ? ""
-                    : rawStatusClass;
+
+            const rawStatusClass = resolveStatusClassName(displayStatus, normalized.workLocation);
+            const cellStatusClass = isToday ? DAY_STATUS_CLASS.TODAY : isSplitDay ? "" : rawStatusClass;
             const cellTextColor = isToday ? "#4318FF" : getStatusTextColor(cellStatusClass || rawStatusClass);
-            const isSundayCell = fullDate.getDay() === 0;
+            const isSundayCell = dayOfWeek === 0;
             const cellStyle: React.CSSProperties = {
-                ...splitBgStyle,
+                ...splitBackgroundStyle,
                 color: cellTextColor,
-                ...(isSundayCell ? { background: hexForStatus("weekend") } : {}),
+                ...(isSundayCell ? { background: getStatusBackgroundColor(WorkLocation.WEEKEND) } : {}),
             };
             const showLockBadge = isBlocked && !isToday;
+
             return {
                 day,
                 fullDate,
                 normalized,
-                holidayInfo,
-                manualBlocker,
                 isBlocked,
                 displayStatus,
                 statusLabel,
                 isPendingUpdate,
-                isSplitDay,
-                splitBgStyle,
                 rawStatusClass,
                 cellStatusClass,
                 cellTextColor,
@@ -383,19 +483,9 @@ const MobileTimesheetHistory = ({
                 isToday,
             };
         });
-    }, [monthDays, entries, holidays, blockers, currentDate, isAdmin, isManager, now]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [monthDays, entries, holidays, blockers, currentDate, isAdmin, isManager]);
 
-    useEffect(() => {
-        dayMetaList.forEach((d) => {
-            console.log(
-                d.day,
-                d.normalized.status,
-                d.normalized.firstHalf,
-                d.normalized.secondHalf,
-                d.normalized.workLocation
-            );
-        });
-    }, [dayMetaList]);
     const attendanceSummary = useMemo(() => {
         const summary = {
             present: 0,
@@ -405,59 +495,55 @@ const MobileTimesheetHistory = ({
             holiday: 0,
             clientVisit: 0,
         };
+
+        const normalizeHalfDayLocation = (location: string) => {
+            switch (location) {
+                case WorkLocation.OFFICE:
+                    return WorkLocation.OFFICE;
+                case WorkLocation.WFH:
+                case WorkLocation.WORK_FROM_HOME:
+                    return WorkLocation.WFH;
+                case WorkLocation.CLIENT:
+                case WorkLocation.CLIENT_VISIT:
+                case WorkLocation.CLIENT_PLACE:
+                    return WorkLocation.CLIENT;
+                case AttendanceStatus.LEAVE.toLowerCase():
+                    return AttendanceStatus.LEAVE.toLowerCase();
+                default:
+                    return "";
+            }
+        };
+
         dayMetaList.forEach(({ normalized, rawStatusClass, displayStatus }) => {
-            const firstHalf = (normalized.firstHalf || "").toLowerCase().trim();
-            const secondHalf = (normalized.secondHalf || "").toLowerCase().trim();
-            if (rawStatusClass === "day-status-holiday") {
+            if (rawStatusClass === DAY_STATUS_CLASS.HOLIDAY) {
                 summary.holiday++;
                 return;
             }
-            if (
-                rawStatusClass === "day-status-leave" &&
-                displayStatus === AttendanceStatus.LEAVE
-            ) {
+            if (rawStatusClass === DAY_STATUS_CLASS.LEAVE && displayStatus === AttendanceStatus.LEAVE) {
                 summary.leave++;
                 return;
             }
-            const normalizeStatus = (status: string) => {
-                switch (status) {
-                    case "office":
-                        return "office";
 
-                    case "wfh":
-                    case "work from home":
-                        return "wfh";
+            const firstHalf = normalizeHalfDayLocation(
+                normalize(normalized.firstHalf)
+            );
 
-                    case "client":
-                    case "client visit":
-                    case "client place":
-                        return "client";
-
-                    case "leave":
-                        return "leave";
-
-                    default:
-                        return "";
-                }
-            };
-            const first = normalizeStatus(firstHalf);
-            const second = normalizeStatus(secondHalf);
-            if (first && second) {
-                if (first === second) {
-                    switch (first) {
-                        case "office":
+            const secondHalf = normalizeHalfDayLocation(
+                normalize(normalized.secondHalf)
+            );
+            if (firstHalf && secondHalf) {
+                if (firstHalf === secondHalf) {
+                    switch (firstHalf) {
+                        case WorkLocation.OFFICE:
                             summary.present++;
                             break;
-
-                        case "wfh":
+                        case WorkLocation.WFH:
                             summary.wfh++;
                             break;
-
-                        case "client":
+                        case WorkLocation.CLIENT:
                             summary.clientVisit++;
                             break;
-
-                        case "leave":
+                        case AttendanceStatus.LEAVE.toLowerCase():
                             summary.leave++;
                             break;
                     }
@@ -466,35 +552,38 @@ const MobileTimesheetHistory = ({
                 }
                 return;
             }
+
             switch (rawStatusClass) {
-                case "day-status-fullday":
+                case DAY_STATUS_CLASS.FULL_DAY:
                     summary.present++;
                     break;
-
-                case "day-status-wfh":
+                case DAY_STATUS_CLASS.WFH:
                     summary.wfh++;
                     break;
-
-                case "day-status-client":
+                case DAY_STATUS_CLASS.CLIENT:
                     summary.clientVisit++;
                     break;
-
-                case "day-status-halfday":
+                case DAY_STATUS_CLASS.HALF_DAY:
                     summary.halfDay++;
                     break;
             }
         });
+
         return summary;
     }, [dayMetaList]);
+
     const handlePrevMonth = () => {
         setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
     };
+
     const handleNextMonth = () => {
         setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
     };
-    const isNextDisabled =
-        currentDate.getFullYear() > now.getFullYear() ||
-        (currentDate.getFullYear() === now.getFullYear() && currentDate.getMonth() >= now.getMonth());
+
+    const isNextMonthDisabled =
+        currentDate.getFullYear() > today.getFullYear() ||
+        (currentDate.getFullYear() === today.getFullYear() && currentDate.getMonth() >= today.getMonth());
+
     const handleDownload = () => {
         const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
         const end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
@@ -502,6 +591,7 @@ const MobileTimesheetHistory = ({
         setDownloadDateRange({ from: format(start), to: format(end) });
         setIsDownloadModalOpen(true);
     };
+
     const handleConfirmDownload = async () => {
         if (!currentEmployeeId) return;
         try {
@@ -524,6 +614,7 @@ const MobileTimesheetHistory = ({
             setIsDownloading(false);
         }
     };
+
     const navigate = useNavigate();
     const handleDayClick = (day: number) => {
         const targetDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
@@ -533,7 +624,6 @@ const MobileTimesheetHistory = ({
             return;
         }
         const dateStr = dayjs(targetDate).format("YYYY-MM-DD");
-
         const basePath = location.pathname.startsWith("/manager-dashboard")
             ? "/manager-dashboard"
             : location.pathname.startsWith("/admin-dashboard")
@@ -546,6 +636,7 @@ const MobileTimesheetHistory = ({
             },
         });
     };
+
     return (
         <div className="mobile-timesheet-shell">
             <div className="calendar-header flex flex-col gap-5">
@@ -585,8 +676,8 @@ const MobileTimesheetHistory = ({
                                 </p>
                                 <button
                                     onClick={handleNextMonth}
-                                    disabled={isNextDisabled}
-                                    className={`mobile-timesheet-nav-btn ${isNextDisabled ? "is-disabled" : ""}`}
+                                    disabled={isNextMonthDisabled}
+                                    className={`mobile-timesheet-nav-btn ${isNextMonthDisabled ? "is-disabled" : ""}`}
                                 >
                                     <ChevronRight size={14} strokeWidth={2.8} />
                                 </button>
@@ -602,14 +693,14 @@ const MobileTimesheetHistory = ({
                 )}
                 <div className="mobile-timesheet-content">
                     <div className="mobile-timesheet-weekday-row">
-                        {daysOfWeek.map((dayName) => (
+                        {weekdayLabels.map((dayName) => (
                             <div key={dayName} className="mobile-timesheet-weekday-cell">
                                 {dayName}
                             </div>
                         ))}
                     </div>
                     <div className="mobile-timesheet-grid">
-                        {blanks.map((b) => (
+                        {blankCells.map((b) => (
                             <div key={`p-${b}`} className="mobile-timesheet-pad" />
                         ))}
                         {dayMetaList.map((meta) => {
@@ -639,26 +730,19 @@ const MobileTimesheetHistory = ({
                                             <Lock size={9} strokeWidth={2.8} />
                                         </div>
                                     )}
-
                                     {isPendingUpdate && (
                                         <div className="day-alert-badge">
                                             <AlertCircle size={10} strokeWidth={3} />
                                         </div>
                                     )}
-                                    <span
-                                        className="mobile-timesheet-day-number"
-                                        style={{ color: cellTextColor }}
-                                    >
+                                    <span className="mobile-timesheet-day-number" style={{ color: cellTextColor }}>
                                         {day}
                                     </span>
                                     {normalized.totalHours !== null &&
                                         normalized.totalHours !== undefined &&
                                         Number(normalized.totalHours) > 0 &&
                                         !isBlocked && (
-                                            <span
-                                                className="mobile-timesheet-day-hours"
-                                                style={{ color: cellTextColor }}
-                                            >
+                                            <span className="mobile-timesheet-day-hours" style={{ color: cellTextColor }}>
                                                 {Number(normalized.totalHours)}h
                                             </span>
                                         )}
@@ -667,6 +751,11 @@ const MobileTimesheetHistory = ({
                                             <span style={{ color: cellTextColor }}>{statusLabel}</span>
                                         </div>
                                     )}
+                                    {/* <div className="mobile-timesheet-day-status-label">
+                                        <span style={{ color: cellTextColor }}>
+                                            {statusLabel}
+                                        </span>
+                                    </div> */}
                                 </div>
                             );
                         })}
@@ -705,20 +794,20 @@ const MobileTimesheetHistory = ({
                     </div>
                     <div className="mobile-timesheet-legend">
                         {[
-                            { label: AttendanceStatus.FULL_DAY, dot: "legend-dot-fullday" },
-                            { label: "Half Day Leave", dot: "legend-dot-halfday" },
-                            { label: AttendanceStatus.ABSENT, dot: "legend-dot-absent" },
-                            { label: AttendanceStatus.LEAVE, dot: "legend-dot-leave" },
-                            { label: "WFH", dot: "legend-dot-wfh" },
-                            { label: "Client Visit", dot: "legend-dot-client" },
-                            { label: AttendanceStatus.NOT_UPDATED, dot: "legend-dot-default" },
-                            { label: "Today", dot: "legend-dot-today" },
-                            { label: AttendanceStatus.HOLIDAY, dot: "legend-dot-holiday" },
-                            { label: "Upcoming", dot: "legend-dot-default" },
-                            { label: "Blocked", dot: "legend-dot-blocked" },
+                            { label: AttendanceStatus.FULL_DAY, colorClass: "legend-colorClass-fullday" },
+                            { label: "Half Day Leave", colorClass: "legend-colorClass-halfday" },
+                            { label: AttendanceStatus.ABSENT, colorClass: "legend-colorClass-absent" },
+                            { label: AttendanceStatus.LEAVE, colorClass: "legend-colorClass-leave" },
+                            { label: "WFH", colorClass: "legend-colorClass-wfh" },
+                            { label: "Client Visit", colorClass: "legend-colorClass-client" },
+                            { label: AttendanceStatus.NOT_UPDATED, colorClass: "legend-colorClass-default" },
+                            { label: "Today", colorClass: "legend-colorClass-today" },
+                            { label: AttendanceStatus.HOLIDAY, colorClass: "legend-colorClass-holiday" },
+                            { label: "Upcoming", colorClass: "legend-colorClass-default" },
+                            { label: "Blocked", colorClass: "legend-colorClass-blocked" },
                         ].map((item) => (
                             <div key={item.label} className="mobile-timesheet-legend-item">
-                                <div className={`mobile-timesheet-legend-dot ${item.dot}`} />
+                                <div className={`mobile-timesheet-legend-colorClass ${item.colorClass}`} />
                                 <span>{item.label}</span>
                             </div>
                         ))}
@@ -737,7 +826,6 @@ const MobileTimesheetHistory = ({
                                 <X size={20} />
                             </button>
                         </div>
-
                         <div className="modal-body">
                             <div className="input-group">
                                 <label className="input-label">From Date</label>
@@ -760,7 +848,6 @@ const MobileTimesheetHistory = ({
                                     <CalendarIcon size={18} className="input-icon" />
                                 </div>
                             </div>
-
                             <div className="input-group">
                                 <label className="input-label">To Date</label>
                                 <div className="input-wrapper">
@@ -774,7 +861,6 @@ const MobileTimesheetHistory = ({
                                     <CalendarIcon size={18} className="input-icon" />
                                 </div>
                             </div>
-
                             <button
                                 disabled={isDownloading || !downloadDateRange.from || !downloadDateRange.to}
                                 onClick={handleConfirmDownload}
@@ -799,4 +885,5 @@ const MobileTimesheetHistory = ({
         </div>
     );
 };
+
 export default MobileTimesheetHistory;
