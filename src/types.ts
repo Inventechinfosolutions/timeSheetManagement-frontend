@@ -23,3 +23,12 @@ export interface TimesheetEntry {
     firstHalf?: string | WorkLocation | null;
     secondHalf?: string | WorkLocation | null;
 }
+export interface BlockerEntry {
+  blockedFrom: string;
+  blockedTo: string;
+  blockedBy?: string;
+}
+export interface HolidayEntry {
+  holidayDate?: string;
+  date?: string;
+}
