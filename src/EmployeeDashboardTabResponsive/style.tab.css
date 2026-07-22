@@ -539,13 +539,7 @@
 }
 
 .today-attendance-tab__content {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 0 24px 28px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+  padding: 0 12px 28px; /* was 0 24px 28px */
 }
 
 /* Charts side by side — tablet has the width for it */
@@ -635,7 +629,9 @@
 }
 
 .today-attendance-tab__list-body {
-  padding: 16px;
+  padding: 12px;
+  display: flex;
+  justify-content: center;
 }
 
 /* ── Calendar View — Tab ── */
@@ -646,6 +642,9 @@
   background: #ffffff;
   border: 1px solid #f3f4f6;
   box-shadow: 0 8px 30px rgb(0 0 0 / 0.04);
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
 }
  
 @media (min-width: 768px) and (max-width: 1024px) {

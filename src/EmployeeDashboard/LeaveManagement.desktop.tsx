@@ -78,7 +78,6 @@ import type {
 const MOBILE_QUERY = "(max-width:640px)";
 const TABLET_QUERY = "(min-width:641px) and (max-width:1023px)";
 
-
 const useResponsive = () => {
   const getIsMobile = () =>
     typeof window !== "undefined" && window.matchMedia(MOBILE_QUERY).matches;
@@ -111,6 +110,9 @@ const useResponsive = () => {
 
   return { isMobile, isTablet };
 };
+
+const REPORTING_MANAGER_EMAIL = "vadiraj.karanam@inventechinfo.com";
+const HR_EMAIL = "timesheetattendance@inventechinfo.com";
 
 const LeaveManagementDesktop = () => {
   const navigate = useNavigate();
@@ -228,8 +230,8 @@ const LeaveManagementDesktop = () => {
     ccEmails: [],
   });
   const [emailConfig, setEmailConfig] = useState<LeaveManagementEmailConfig>({
-    assignedManagerEmail: null,
-    hrEmail: null,
+    assignedManagerEmail: REPORTING_MANAGER_EMAIL,
+    hrEmail: HR_EMAIL,
   });
   const [ccEmails, setCcEmails] = useState<string[]>([]);
   const [ccEmailInput, setCcEmailInput] = useState("");
@@ -1692,7 +1694,7 @@ const LeaveManagementDesktop = () => {
     );
   }
 
- if (isTablet) {
+  if (isTablet) {
     return (
       <LeaveManagementTab
         navigate={navigate}
@@ -2459,7 +2461,7 @@ const LeaveManagementDesktop = () => {
                         <td
                           className={`py-4 px-3 sticky right-0 w-[140px] min-w-[140px] max-w-[140px] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}
                         >
-                          <div className="flex items-center justify-center gap-2">
+                          <div className="grid grid-cols-2 items-center justify-items-center gap-2 w-[76px] mx-auto">
                             <button
                               onClick={() => handleViewApplication(item)}
                               className="p-1.5 text-blue-600 bg-blue-50/50 hover:bg-blue-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-blue-200 active:scale-90"
@@ -2502,9 +2504,7 @@ const LeaveManagementDesktop = () => {
                               >
                                 <RotateCcw size={18} />
                               </button>
-                            ) : (
-                              <div className="w-[18px]" />
-                            )}
+                            ) : null}
                           </div>
                         </td>
                       </tr>
@@ -2610,20 +2610,19 @@ const LeaveManagementDesktop = () => {
                 </label>
                 <div className="space-y-4">
                   <div className="flex flex-wrap gap-4 items-start">
-                    {emailConfig.assignedManagerEmail && (
-                      <div className="min-w-0 flex-1">
-                        <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
-                          Reporting Manager
-                        </span>
-                        <input
-                          type="text"
-                          readOnly
-                          disabled
-                          value={emailConfig.assignedManagerEmail}
-                          className="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-gray-50 text-gray-700 cursor-not-allowed"
-                        />
-                      </div>
-                    )}
+                    <div className="min-w-0 flex-1">
+                      <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
+                        Reporting Manager
+                      </span>
+                      <input
+                        type="text"
+                        readOnly
+                        disabled
+                        value={REPORTING_MANAGER_EMAIL}
+                        placeholder="Not configured"
+                        className="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-gray-50 text-gray-700 cursor-not-allowed"
+                      />
+                    </div>
                     <div className="min-w-0 flex-1">
                       <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
                         HR
@@ -2632,7 +2631,7 @@ const LeaveManagementDesktop = () => {
                         type="text"
                         readOnly
                         disabled
-                        value={emailConfig.hrEmail || ""}
+                        value={HR_EMAIL}
                         placeholder="Not configured"
                         className="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-gray-50 text-gray-700 cursor-not-allowed"
                       />
@@ -3396,20 +3395,18 @@ const LeaveManagementDesktop = () => {
                 </label>
                 <div className="space-y-4">
                   <div className="flex flex-wrap gap-4 items-start">
-                    {emailConfig.assignedManagerEmail && (
-                      <div className="min-w-0 flex-1">
-                        <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
-                          Reporting Manager
-                        </span>
-                        <input
-                          type="text"
-                          readOnly
-                          disabled
-                          value={emailConfig.assignedManagerEmail}
-                          className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-gray-700 cursor-not-allowed"
-                        />
-                      </div>
-                    )}
+                    <div className="min-w-0 flex-1">
+                      <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
+                        Reporting Manager
+                      </span>
+                      <input
+                        type="text"
+                        readOnly
+                        disabled
+                        value={REPORTING_MANAGER_EMAIL}
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-gray-700 cursor-not-allowed"
+                      />
+                    </div>
                     <div className="min-w-0 flex-1">
                       <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
                         HR
@@ -3418,7 +3415,7 @@ const LeaveManagementDesktop = () => {
                         type="text"
                         readOnly
                         disabled
-                        value={emailConfig.hrEmail || ""}
+                        value={HR_EMAIL}
                         placeholder="Not configured"
                         className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-gray-700 cursor-not-allowed"
                       />

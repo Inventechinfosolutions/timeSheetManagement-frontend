@@ -51,6 +51,9 @@ import {
   modifyLeaveRequest,
 } from "../reducers/leaveRequest.reducer";
 
+const REPORTING_MANAGER_EMAIL = "vadiraj.karanam@inventechinfo.com";
+const HR_EMAIL = "timesheetattendance@inventechinfo.com";
+
 export interface LeaveManagementTabProps {
   navigate: any;
   location: any;
@@ -1123,22 +1126,20 @@ const LeaveManagementTab: React.FC<LeaveManagementTabProps> = ({
                     Email recipients
                   </label>
                   <div className="space-y-4">
-                    <div className="flex flex-wrap gap-4 items-start">
-                      {emailConfig.assignedManagerEmail && (
-                        <div className="min-w-0 flex-1">
-                          <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
-                            Reporting Manager
-                          </span>
-                          <input
-                            type="text"
-                            readOnly
-                            disabled
-                            value={emailConfig.assignedManagerEmail}
-                            className="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-gray-50 text-gray-700 cursor-not-allowed"
-                          />
-                        </div>
-                      )}
-                      <div className="min-w-0 flex-1">
+                    <div className="flex flex-col gap-4">
+                      <div className="w-full">
+                        <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
+                          Reporting Manager
+                        </span>
+                        <input
+                          type="text"
+                          readOnly
+                          disabled
+                          value={REPORTING_MANAGER_EMAIL}
+                          className="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-gray-50 text-gray-700 cursor-not-allowed text-sm whitespace-nowrap overflow-hidden text-ellipsis"
+                        />
+                      </div>
+                      <div className="w-full">
                         <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
                           HR
                         </span>
@@ -1146,9 +1147,9 @@ const LeaveManagementTab: React.FC<LeaveManagementTabProps> = ({
                           type="text"
                           readOnly
                           disabled
-                          value={emailConfig.hrEmail || ""}
+                          value={HR_EMAIL}
                           placeholder="Not configured"
-                          className="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-gray-50 text-gray-700 cursor-not-allowed"
+                          className="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-gray-50 text-gray-700 cursor-not-allowed text-sm whitespace-nowrap overflow-hidden text-ellipsis"
                         />
                       </div>
                     </div>
@@ -1927,22 +1928,20 @@ const LeaveManagementTab: React.FC<LeaveManagementTabProps> = ({
                     Email recipients
                   </label>
                   <div className="space-y-4">
-                    <div className="flex flex-wrap gap-4 items-start">
-                      {emailConfig.assignedManagerEmail && (
-                        <div className="min-w-0 flex-1">
-                          <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
-                            Reporting Manager
-                          </span>
-                          <input
-                            type="text"
-                            readOnly
-                            disabled
-                            value={emailConfig.assignedManagerEmail}
-                            className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-gray-700 cursor-not-allowed"
-                          />
-                        </div>
-                      )}
-                      <div className="min-w-0 flex-1">
+                    <div className="flex flex-col gap-4">
+                      <div className="w-full">
+                        <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
+                          Reporting Manager
+                        </span>
+                        <input
+                          type="text"
+                          readOnly
+                          disabled
+                          value={REPORTING_MANAGER_EMAIL}
+                          className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-gray-700 cursor-not-allowed text-sm whitespace-nowrap overflow-hidden text-ellipsis"
+                        />
+                      </div>
+                      <div className="w-full">
                         <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
                           HR
                         </span>
@@ -1950,9 +1949,9 @@ const LeaveManagementTab: React.FC<LeaveManagementTabProps> = ({
                           type="text"
                           readOnly
                           disabled
-                          value={emailConfig.hrEmail || ""}
+                          value={HR_EMAIL}
                           placeholder="Not configured"
-                          className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-gray-700 cursor-not-allowed"
+                          className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-gray-700 cursor-not-allowed text-sm whitespace-nowrap overflow-hidden text-ellipsis"
                         />
                       </div>
                     </div>
