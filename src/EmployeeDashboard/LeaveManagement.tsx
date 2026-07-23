@@ -1946,19 +1946,21 @@ const LeaveManagement = () => {
                 ) : (
                   [...entities]
                     .sort((a: any, b: any) => {
-                      const timeA = Math.max(
-                        a.created_at ? new Date(a.created_at).getTime() : 0,
-                        a.updated_at ? new Date(a.updated_at).getTime() : 0,
-                        a.createdAt ? new Date(a.createdAt).getTime() : 0,
-                        a.updatedAt ? new Date(a.updatedAt).getTime() : 0,
-                      );
-                      const timeB = Math.max(
-                        b.created_at ? new Date(b.created_at).getTime() : 0,
-                        b.updated_at ? new Date(b.updated_at).getTime() : 0,
-                        b.createdAt ? new Date(b.createdAt).getTime() : 0,
-                        b.updatedAt ? new Date(b.updatedAt).getTime() : 0,
-                      );
-                      if (timeA === 0 && timeB === 0) {
+                      const timeA = a.submittedDate
+                        ? new Date(a.submittedDate).getTime()
+                        : a.createdAt
+                          ? new Date(a.createdAt).getTime()
+                          : a.created_at
+                            ? new Date(a.created_at).getTime()
+                            : 0;
+                      const timeB = b.submittedDate
+                        ? new Date(b.submittedDate).getTime()
+                        : b.createdAt
+                          ? new Date(b.createdAt).getTime()
+                          : b.created_at
+                            ? new Date(b.created_at).getTime()
+                            : 0;
+                      if (timeA === timeB) {
                         return (b.id || 0) - (a.id || 0);
                       }
                       return timeB - timeA;
