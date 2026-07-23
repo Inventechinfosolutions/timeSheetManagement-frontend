@@ -1,16 +1,17 @@
 import { useMemo, useCallback, useState, useEffect, useRef } from "react";
 import dayjs from "dayjs";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
-import { useAppDispatch, useAppSelector } from "../hooks";           // ✅
-import { AttendanceStatus, UserType } from "../enums";              // ✅
-import { fetchEmployeeDashboard } from "../reducers/employeeAttendance.reducer";  // ✅
-import { getEntity, setCurrentUser } from "../reducers/employeeDetails.reducer";  // ✅
-import { generateMonthlyEntries } from "../utils/attendanceUtils";  // ✅
-import { RootState } from "../store";                               // ✅
-import TodayAttendanceDesktop from "./TodayAttendance.desktop";     // ✅
-import TodayAttendanceMobile from "../EmployeeDashboardMobileResponsive/TodayAttendance.mobile";       // ✅
-import type { TodayAttendanceProps } from "./TodayAttendance.types"; // ✅
-import "./employeeDashboard.css";                                   // ✅
+import { useAppDispatch, useAppSelector } from "../hooks";           
+import { AttendanceStatus, UserType } from "../enums";             
+import { fetchEmployeeDashboard } from "../reducers/employeeAttendance.reducer";  
+import { getEntity, setCurrentUser } from "../reducers/employeeDetails.reducer";  
+import { generateMonthlyEntries } from "../utils/attendanceUtils";  
+import { RootState } from "../store";                               
+import TodayAttendanceDesktop from "./TodayAttendance.desktop";    
+import TodayAttendanceMobile from "../EmployeeDashboardMobileResponsive/TodayAttendance.mobile";
+import TodayAttendanceTab from "../EmployeeDashboardTabResponsive/TodayAttendance.tab";       
+import type { TodayAttendanceProps } from "./TodayAttendance.types"; 
+import "./employeeDashboard.css";                                   
 
 
 const TodayAttendance = ({
@@ -191,6 +192,7 @@ const TodayAttendance = ({
   return (
     <div className="flex flex-col h-full w-full overflow-hidden bg-[#F4F7FE]">
       <TodayAttendanceDesktop {...viewProps} />
+      <TodayAttendanceTab {...viewProps} />
       <TodayAttendanceMobile {...viewProps} />
     </div>
   );

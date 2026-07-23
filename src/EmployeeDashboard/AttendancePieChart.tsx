@@ -3,6 +3,7 @@ import { Sector } from "recharts";
 import { AttendanceStatus, WorkLocation } from "../enums";
 import AttendancePieChartDesktop from "./AttendancePieChart.desktop";
 import AttendancePieChartMobile from "../EmployeeDashboardMobileResponsive/AttendancePieChart.mobile";
+import AttendancePieChartTab from "../EmployeeDashboardTabResponsive/AttendancePieChart.tab";
 import { ATTENDANCE_PIE_CHART_ITEMS } from "./AttendancePieChart.enums";
 
 interface Props {
@@ -142,6 +143,7 @@ const AttendancePieChart = ({ data, currentMonth }: Props) => {
   return (
     <>
       <AttendancePieChartMobile {...viewProps} />
+      <AttendancePieChartTab {...viewProps} />
       <AttendancePieChartDesktop {...viewProps} />
     </>
   );

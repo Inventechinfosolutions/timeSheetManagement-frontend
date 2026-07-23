@@ -15,12 +15,14 @@ import {
 import { generateMonthlyEntries, isEditableMonth } from "../utils/attendanceUtils";
 import CalendarViewDesktop from "./CalendarView.desktop";
 import CalendarViewMobile from "../EmployeeDashboardMobileResponsive/CalendarView.mobile";
+import CalendarViewTab from "../EmployeeDashboardTabResponsive/CalendarView.tab";
 import {
   CALENDAR_DAYS_OF_WEEK,
   CalendarVariant,
   isRestrictedActivityHalf,
 } from "./CalendarView.enums";
 import "./CalendarView.css";
+import "./CalendarView.desktop.css";
 
 interface CalendarProps {
   now?: Date;
@@ -411,8 +413,10 @@ const Calendar = ({
       {isSmall || isSidebar ? (
         <CalendarViewMobile {...viewProps} />
       ) : (
-        <CalendarViewDesktop {...viewProps} />
+        <CalendarViewTab {...viewProps} />
       )}
+        <CalendarViewDesktop {...viewProps} />
+      
 
       {isDownloadModalOpen && (
         <div className="calendar-view__modal fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
