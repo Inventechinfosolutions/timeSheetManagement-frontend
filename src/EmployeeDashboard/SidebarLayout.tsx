@@ -60,7 +60,6 @@ const SidebarLayout = ({
       default: return "Dashboard";
     }
   }, [tab, activeTab]);
-
   const isOpen = isHovered || isLocked;
 
   const navItemClass = (isActive: boolean, expanded = true) =>

@@ -4,7 +4,7 @@
   display: none;
 }
 
-@media (min-width: 640px) {
+@media (min-width: 1025px) {
   .work-trends-desktop {
     display: flex;
     flex-direction: column;
@@ -23,7 +23,7 @@
   display: none;
 }
 
-@media (min-width: 640px) {
+@media (min-width: 1025px) {
   .work-trends-desktop__loading {
     display: flex;
     flex-direction: column;

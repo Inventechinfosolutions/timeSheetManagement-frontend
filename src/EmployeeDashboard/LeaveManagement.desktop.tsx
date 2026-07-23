@@ -1,0 +1,3990 @@
+import { useState, useEffect, useRef } from "react";
+import { useAppDispatch, useAppSelector } from "../hooks";
+import { useLocation, useParams, useNavigate } from "react-router-dom";
+import { DatePicker, ConfigProvider, Checkbox, Modal, Select } from "antd";
+import dayjs from "dayjs";
+import {
+  getLeaveHistory,
+  getLeaveStats,
+  submitLeaveRequest,
+  resetSubmitSuccess,
+  updateLeaveRequestStatus,
+  uploadLeaveRequestFile,
+  downloadLeaveRequestFile,
+  previewLeaveRequestFile,
+  deleteLeaveRequestFile,
+  getLeaveRequestFiles,
+  getLeaveRequestById,
+  getLeaveCancellableDates,
+  cancelRequestDates,
+  undoCancellationRequest,
+  undoModificationRequest,
+  getLeaveDurationTypes,
+  modifyLeaveRequest,
+  getLeaveRequestEmailConfig,
+} from "../reducers/leaveRequest.reducer";
+import { fetchHolidays } from "../reducers/masterHoliday.reducer";
+import { fetchAttendanceByDateRange } from "../reducers/employeeAttendance.reducer";
+import {
+  LeaveRequestStatus,
+  AttendanceStatus,
+  WorkLocation,
+  UserType,
+  LeaveRequestType,
+  HalfDayType,
+} from "../enums";
+import {
+  Home,
+  MapPin,
+  X,
+  XCircle,
+  Calendar,
+  Eye,
+  RotateCcw,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  Clock,
+  ArrowRightLeft,
+  ArrowLeft,
+  Building2,
+  Filter,
+} from "lucide-react";
+import { message } from "antd";
+import CommonMultipleUploader from "./CommonMultipleUploader";
+import LeaveManagementMobile from "../EmployeeDashboardMobileResponsive/LeaveManagement.mobile";
+import LeaveManagementTab from "../EmployeeDashboardTabResponsive/LeaveManagement.tab";
+import {
+  buildLeaveYearOptions,
+  LEAVE_APPLY_OPTIONS,
+  LEAVE_DATE_PICKER_THEME,
+  LEAVE_FILTER_STATUS_OPTIONS,
+  LEAVE_MONTH_OPTIONS,
+  LEAVE_STATS_CARD_CONFIG,
+} from "./LeaveManagement.enums";
+import type {
+  CancellableLeaveDate,
+  LeaveManagementEmailConfig,
+  LeaveManagementFieldErrors,
+  LeaveManagementFormData,
+  ModifyLeaveErrors,
+  ModifyLeaveFormData,
+  ModifyRequestModalState,
+  RequestIdModalState,
+  RequestModalState,
+} from "./LeaveManagement.types";
+
+const MOBILE_QUERY = "(max-width:640px)";
+const TABLET_QUERY = "(min-width:641px) and (max-width:1023px)";
+
+const useResponsive = () => {
+  const getIsMobile = () =>
+    typeof window !== "undefined" && window.matchMedia(MOBILE_QUERY).matches;
+
+  const getIsTablet = () =>
+    typeof window !== "undefined" && window.matchMedia(TABLET_QUERY).matches;
+
+  const [isMobile, setIsMobile] = useState(getIsMobile);
+  const [isTablet, setIsTablet] = useState(getIsTablet);
+
+  useEffect(() => {
+    const mobile = window.matchMedia(MOBILE_QUERY);
+    const tablet = window.matchMedia(TABLET_QUERY);
+
+    const handler = () => {
+      setIsMobile(mobile.matches);
+      setIsTablet(tablet.matches);
+    };
+
+    handler();
+
+    mobile.addEventListener("change", handler);
+    tablet.addEventListener("change", handler);
+
+    return () => {
+      mobile.removeEventListener("change", handler);
+      tablet.removeEventListener("change", handler);
+    };
+  }, []);
+
+  return { isMobile, isTablet };
+};
+
+const REPORTING_MANAGER_EMAIL = "vadiraj.karanam@inventechinfo.com";
+const HR_EMAIL = "timesheetattendance@inventechinfo.com";
+
+const LeaveManagementDesktop = () => {
+  const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+
+  const { isMobile, isTablet } = useResponsive();
+
+  const normalizeTypeName = (type: string): string => {
+    const t = (type || "").trim();
+    if (t === LeaveRequestType.APPLY_LEAVE || t === LeaveRequestType.LEAVE)
+      return "Leave";
+    if (t === WorkLocation.WORK_FROM_HOME || t === LeaveRequestType.WFH)
+      return "WFH";
+    if (t === WorkLocation.CLIENT_VISIT) return "Client Visit";
+    if (t === WorkLocation.OFFICE) return "Office";
+    if (t === AttendanceStatus.HALF_DAY) return "Half Day";
+    return t;
+  };
+  const {
+    entities = [],
+    totalItems,
+    totalPages: totalPagesFromRedux,
+    stats = null,
+    loading,
+    submitSuccess,
+    error,
+  } = useAppSelector((state) => state.leaveRequest || {});
+  const { entity } = useAppSelector((state) => state.employeeDetails);
+  const currentUser = useAppSelector((state) => state.user.currentUser);
+  const { holidays = [] } = useAppSelector(
+    (state: any) => state.masterHolidays || {},
+  );
+  const location = useLocation();
+  const { employeeId: urlEmployeeId } = useParams<{ employeeId: string }>();
+
+  const isMyRoute =
+    location.pathname.includes("/employee-dashboard") ||
+    location.pathname.includes("/manager-dashboard/leave-management") ||
+    location.pathname.includes("/admin-dashboard/leave-management") ||
+    location.pathname.includes("my-dashboard") ||
+    location.pathname.includes("my-timesheet");
+
+  const employeeId = isMyRoute
+    ? currentUser?.employeeId || currentUser?.loginId
+    : urlEmployeeId ||
+      entity?.employeeId ||
+      currentUser?.employeeId ||
+      currentUser?.loginId;
+
+  const isAdmin = currentUser?.userType === UserType.ADMIN;
+  const isManager =
+    currentUser?.userType === UserType.MANAGER ||
+    (currentUser?.role &&
+      currentUser.role.toUpperCase().includes(UserType.MANAGER));
+  const isPrivileged = isAdmin || isManager;
+
+  const isCancellationAllowed = (toDate: string) => {
+    if (isPrivileged) return true;
+    const cutoff = dayjs(toDate).hour(18).minute(30).second(0);
+    return dayjs().isBefore(cutoff);
+  };
+
+  const [dateRangeAttendanceRecords, setDateRangeAttendanceRecords] = useState<
+    any[]
+  >([]);
+
+  // Configure AntD message position to be below the header
+  useEffect(() => {
+    message.config({
+      top: 70,
+      duration: 3,
+    });
+  }, []);
+
+  // --- Partial Cancellation State ---
+  const [isCancelDateModalVisible, setIsCancelDateModalVisible] =
+    useState(false);
+  const [cancellableDates, setCancellableDates] = useState<
+    CancellableLeaveDate[]
+  >([]);
+  const [selectedCancelDates, setSelectedCancelDates] = useState<string[]>([]);
+  const [requestToCancel, setRequestToCancel] = useState<any>(null);
+  const [isLoadingDates, setIsLoadingDates] = useState(false);
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [viewDetailsLoading, setViewDetailsLoading] = useState(false);
+  const [isViewMode, setIsViewMode] = useState(false);
+  const [selectedRequestId, setSelectedRequestId] = useState<number | null>(
+    null,
+  );
+  const [uploaderKey, setUploaderKey] = useState(0);
+  const titleRef = useRef<HTMLDivElement>(null);
+  const startDateRef = useRef<HTMLDivElement>(null);
+  const endDateRef = useRef<HTMLDivElement>(null);
+  const descriptionRef = useRef<HTMLDivElement>(null);
+  const [cancelModal, setCancelModal] = useState<RequestIdModalState>({
+    isOpen: false,
+    id: null,
+  });
+  const [undoModal, setUndoModal] = useState<RequestModalState>({
+    isOpen: false,
+    request: null,
+  });
+  const [isUndoing, setIsUndoing] = useState(false);
+  const [modifyModal, setModifyModal] = useState<ModifyRequestModalState>({
+    isOpen: false,
+    request: null,
+  });
+  const [isModifying, setIsModifying] = useState(false);
+  const [modifyFormData, setModifyFormData] = useState<ModifyLeaveFormData>({
+    title: "",
+    description: "",
+    firstHalf: "",
+    secondHalf: "",
+    ccEmails: [],
+  });
+  const [emailConfig, setEmailConfig] = useState<LeaveManagementEmailConfig>({
+    assignedManagerEmail: REPORTING_MANAGER_EMAIL,
+    hrEmail: HR_EMAIL,
+  });
+  const [ccEmails, setCcEmails] = useState<string[]>([]);
+  const [ccEmailInput, setCcEmailInput] = useState("");
+  const [ccEmailError, setCcEmailError] = useState("");
+  const [modifyCcInput, setModifyCcInput] = useState("");
+  const [modifyCcError, setModifyCcError] = useState("");
+  const [modifyErrors, setModifyErrors] = useState<ModifyLeaveErrors>({
+    title: "",
+    description: "",
+  });
+  const [selectedLeaveType, setSelectedLeaveType] = useState("");
+  const [formData, setFormData] = useState<LeaveManagementFormData>({
+    title: "",
+    description: "",
+    startDate: "",
+    endDate: "",
+    duration: 0,
+  });
+  const [leaveDurationType, setLeaveDurationType] = useState(
+    HalfDayType.FULL_DAY,
+  );
+  const [halfDayType, setHalfDayType] = useState<string | null>(null);
+  const [otherHalfType, setOtherHalfType] = useState<string | null>(null);
+  const [isHalfDay, setIsHalfDay] = useState<boolean>(false);
+  const [uploadedDocumentKeys, setUploadedDocumentKeys] = useState<string[]>(
+    [],
+  );
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [filterStatus, setFilterStatus] = useState("All");
+  const [isStatusOpen, setIsStatusOpen] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState<string>("All");
+  const [selectedYear, setSelectedYear] = useState<string>("All");
+  const itemsPerPage = 10;
+
+  const months = LEAVE_MONTH_OPTIONS;
+  const years = buildLeaveYearOptions(dayjs().year());
+
+  const [errors, setErrors] = useState<LeaveManagementFieldErrors>({
+    title: "",
+    description: "",
+    startDate: "",
+    endDate: "",
+  });
+
+  const refreshData = (page?: number, limit?: number) => {
+    if (!employeeId) return;
+    dispatch(
+      getLeaveHistory({
+        employeeId,
+        status: filterStatus,
+        month: selectedMonth,
+        year: selectedYear,
+        page: page || currentPage,
+        limit: limit || itemsPerPage,
+      }),
+    );
+    dispatch(getLeaveStats({ employeeId }));
+  };
+
+  useEffect(() => {
+    if (modifyModal.isOpen && modifyModal.request?.employeeId) {
+      dispatch(getLeaveRequestEmailConfig(modifyModal.request.employeeId))
+        .unwrap()
+        .then((data) =>
+          setEmailConfig({
+            assignedManagerEmail: data?.assignedManagerEmail ?? null,
+            hrEmail: data?.hrEmail ?? null,
+          }),
+        )
+        .catch(() =>
+          setEmailConfig({ assignedManagerEmail: null, hrEmail: null }),
+        );
+    }
+  }, [modifyModal.isOpen, modifyModal.request?.employeeId, dispatch]);
+
+  const checkDateInReq = (req: any, dateStr: string): boolean => {
+    if (req.availableDates) {
+      try {
+        const ds: string[] =
+          typeof req.availableDates === "string"
+            ? JSON.parse(req.availableDates)
+            : req.availableDates;
+        if (Array.isArray(ds)) {
+          return ds.includes(dateStr);
+        }
+      } catch (e) {}
+    }
+    const current = dayjs(dateStr).startOf("day");
+    const start = dayjs(req.fromDate).startOf("day");
+    const end = dayjs(req.toDate).startOf("day");
+    return (
+      (current.isSame(start) || current.isAfter(start)) &&
+      (current.isSame(end) || current.isBefore(end))
+    );
+  };
+
+  const disabledDate = (current: any) => {
+    if (!current) return false;
+    const dateStr = current.format("YYYY-MM-DD");
+
+    // URL: Disable Master Holidays for ALL request types
+    if (isHoliday(current)) {
+      return true;
+    }
+
+    // Normalize current date to start of day for comparison
+    const currentDate = current.startOf("day");
+    const today = dayjs().startOf("day");
+
+    if (!isPrivileged) {
+      if (selectedLeaveType === WorkLocation.CLIENT_VISIT) {
+        // Any past date allowed for Client Visit
+      } else if (
+        selectedLeaveType === WorkLocation.WFH ||
+        selectedLeaveType === WorkLocation.WORK_FROM_HOME ||
+        selectedLeaveType === LeaveRequestType.APPLY_LEAVE ||
+        selectedLeaveType === AttendanceStatus.HALF_DAY ||
+        selectedLeaveType === AttendanceStatus.LEAVE
+      ) {
+        // Only past 7 days for Leave/WFH
+        const sevenDaysAgo = today.subtract(7, "day");
+        if (currentDate.isBefore(sevenDaysAgo)) {
+          return true;
+        }
+      } else if (currentDate.isBefore(today)) {
+        // Default past date restriction for unidentified types
+        return true;
+      }
+    }
+
+    // Weekends (Saturday, Sunday) are enabled for Leave, WFH, and Client Visit calendar selection.
+
+    // Check if this date is explicitly covered by a Cancellation request (Finalized or Pending)
+    // If so, we enable it (return false), overriding any overlapping LeaveRequestStatus.APPROVED parent request.
+    const isCancelledDate = (entities || []).some((req: any) => {
+      const isCancelled =
+        req.status === LeaveRequestStatus.CANCELLATION_APPROVED ||
+        req.status === LeaveRequestStatus.REJECTED;
+      if (!isCancelled) return false;
+
+      return checkDateInReq(req, dateStr);
+    });
+
+    if (isCancelledDate) return false;
+
+    return (entities || []).some((req: any) => {
+      // Exclude Rejected, Cancelled, and Request Modified (requested to be enabled)
+      if (
+        !req ||
+        req.status === LeaveRequestStatus.REJECTED ||
+        req.status === LeaveRequestStatus.CANCELLED ||
+        req.status === LeaveRequestStatus.CANCELLATION_APPROVED ||
+        req.status === LeaveRequestStatus.REQUEST_MODIFIED
+      )
+        return false;
+
+      // Exclude the current request if we're viewing/editing it
+      if (isViewMode && selectedRequestId && req.id === selectedRequestId)
+        return false;
+
+      const isDateInRange = checkDateInReq(req, dateStr);
+
+      if (!isDateInRange) return false;
+
+      // If request is Pending, block the date completely
+      if (req.status === LeaveRequestStatus.PENDING) {
+        return true;
+      }
+
+      const existingRequestType = req.requestType;
+
+      // REFINED CONFLICT RULES
+      // Rule 1: Existing Leave/Half Day blocks EVERYTHING
+      if (
+        existingRequestType === LeaveRequestType.APPLY_LEAVE ||
+        existingRequestType === AttendanceStatus.LEAVE ||
+        existingRequestType === AttendanceStatus.HALF_DAY
+      ) {
+        return true;
+      }
+
+      // Rule 2: If we are CURRENTLY APPLYING for Leave/Half Day, we are ONLY blocked by other Leaves/Half Days
+      // (This allows applying for Leave even if a CV/WFH exists on that date)
+      const isApplyingForLeave =
+        selectedLeaveType === LeaveRequestType.APPLY_LEAVE ||
+        selectedLeaveType === AttendanceStatus.LEAVE ||
+        selectedLeaveType === AttendanceStatus.HALF_DAY;
+      if (isApplyingForLeave) {
+        // We already checked if existing was Leave above. So if we reach here, existing is WFH/CV.
+        // Thus, no conflict for applying Leave.
+        return false;
+      }
+
+      // Rule 3: Remote work (WFH/CV) is blocked by same-type requests
+      if (existingRequestType === selectedLeaveType) {
+        return true;
+      }
+
+      return false; // Otherwise allow overlapping (e.g. WFH and CV)
+    });
+  };
+
+  const disabledEndDate = (current: any) => {
+    // Always check if date has Leave or WFH applied (regardless of request type)
+    if (disabledDate(current)) return true;
+
+    // Privileged users and Client Visit always allowed past dates
+    if (isPrivileged || selectedLeaveType === WorkLocation.CLIENT_VISIT) {
+      // Don't allow end date before start date
+      if (formData.startDate) {
+        return (
+          current && current.isBefore(dayjs(formData.startDate).startOf("day"))
+        );
+      }
+      return false;
+    }
+
+    const today = dayjs().startOf("day");
+    const currentDate = current.startOf("day");
+
+    if (
+      selectedLeaveType === WorkLocation.WFH ||
+      selectedLeaveType === WorkLocation.WORK_FROM_HOME ||
+      selectedLeaveType === LeaveRequestType.APPLY_LEAVE ||
+      selectedLeaveType === AttendanceStatus.HALF_DAY ||
+      selectedLeaveType === AttendanceStatus.LEAVE
+    ) {
+      const sevenDaysAgo = today.subtract(7, "day");
+      if (currentDate.isBefore(sevenDaysAgo)) return true;
+    } else if (currentDate.isBefore(today)) {
+      return true;
+    }
+
+    // Don't allow end date before start date
+    if (formData.startDate) {
+      return (
+        current && current.isBefore(dayjs(formData.startDate).startOf("day"))
+      );
+    }
+    return false;
+  };
+
+  // Helper to determine if a request type/half day choice is "Away" (deductible)
+  const isAway = (type: string | null | undefined): boolean => {
+    if (!type) return false;
+    const t = type.toLowerCase();
+    // Things that are NOT away: Office, Present
+    if (
+      t === "office" ||
+      t === "present" ||
+      t === (WorkLocation.OFFICE as string).toLowerCase() ||
+      t === (WorkLocation.PRESENT as string).toLowerCase()
+    ) {
+      return false;
+    }
+    return true;
+  };
+
+  const getDurationFactor = (
+    h1: string | null | undefined,
+    h2: string | null | undefined,
+  ): number => {
+    return isAway(h1) && isAway(h2) ? 1.0 : 0.5;
+  };
+
+  const validateForm = (shouldScroll = false) => {
+    let isValid = true;
+    const newErrors = {
+      title: "",
+      description: "",
+      startDate: "",
+      endDate: "",
+    };
+
+    if (!formData.title.trim()) {
+      newErrors.title = "Subject is required";
+      isValid = false;
+    }
+    if (!formData.startDate) {
+      newErrors.startDate = "Start date is required";
+      isValid = false;
+    }
+    if (!formData.endDate) {
+      newErrors.endDate = "End date is required";
+      isValid = false;
+    }
+    if (!formData.description.trim()) {
+      newErrors.description = "Description is required";
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+
+    if (!isValid && shouldScroll) {
+      setTimeout(() => {
+        if (newErrors.title && titleRef.current) {
+          titleRef.current.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        } else if (newErrors.startDate && startDateRef.current) {
+          startDateRef.current.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        } else if (newErrors.endDate && endDateRef.current) {
+          endDateRef.current.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        } else if (newErrors.description && descriptionRef.current) {
+          descriptionRef.current.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        }
+      }, 100);
+    }
+
+    return isValid;
+  };
+  // Helper function to check if a date is a weekend
+  const isWeekend = (date: dayjs.Dayjs): boolean => {
+    const day = date.day(); // 0 = Sunday
+    // Block Saturday (6) and Sunday (0) for EVERYONE
+    return day === 0 || day === 6;
+  };
+
+  // Helper function to check if a date is a master holiday
+  const isHoliday = (date: dayjs.Dayjs): boolean => {
+    const dateStr = date.format("YYYY-MM-DD");
+    return holidays.some((h: any) => {
+      const hDate = h.date || h.holidayDate || h.workingDate || h.working_date;
+      if (!hDate) return false;
+      const normalizedHDate = dayjs(hDate).format("YYYY-MM-DD");
+      return normalizedHDate === dateStr;
+    });
+  };
+
+  // Helper function to check if a date has an existing leave record
+  const hasExistingLeave = (
+    date: dayjs.Dayjs,
+    records: any[] = dateRangeAttendanceRecords,
+  ): boolean => {
+    const dateStr = date.format("YYYY-MM-DD");
+    return records.some((record: any) => {
+      const recordDate =
+        record.workingDate || record.working_date || record.date;
+      if (!recordDate) return false;
+      const normalizedRecordDate = dayjs(recordDate).format("YYYY-MM-DD");
+      // Check if the record has Leave status
+      const status = record.status || record.attendance_status;
+      return (
+        normalizedRecordDate === dateStr &&
+        (status === AttendanceStatus.LEAVE ||
+          status === LeaveRequestType.LEAVE ||
+          status === "LEAVE")
+      );
+    });
+  };
+
+  // Helper function to check if a date is a barrier (Approved Leave, Half Day, or Same Type)
+  const isBarrierDate = (
+    date: dayjs.Dayjs,
+    targetType: string,
+    records: any[] = dateRangeAttendanceRecords,
+  ): boolean => {
+    const dateStr = date.format("YYYY-MM-DD");
+
+    // Check attendance records (for approved leaves)
+    const isAttendanceBarrier = records.some((record: any) => {
+      const recordDate =
+        record.workingDate || record.working_date || record.date;
+      if (!recordDate) return false;
+      const normalizedRecordDate = dayjs(recordDate).format("YYYY-MM-DD");
+
+      const status = record.status || record.attendance_status;
+      const sourceRequestId =
+        record.sourceRequestId || record.source_request_id || record.requestId;
+
+      const isLeave =
+        status === AttendanceStatus.LEAVE ||
+        String(status).toLowerCase() === "leave";
+      const isHalfDay =
+        status === AttendanceStatus.HALF_DAY ||
+        String(status).toLowerCase() === "half day";
+
+      // A date is a barrier if it's a Full Leave or Half Day
+      // AND it is officially linked to an active request.
+      if (
+        normalizedRecordDate === dateStr &&
+        (isLeave || isHalfDay) &&
+        sourceRequestId
+      ) {
+        return true;
+      }
+      return false;
+    });
+
+    if (isAttendanceBarrier) return true;
+
+    // Check existing leave requests (for pending or approved leaves not yet in attendance)
+    // This is CRITICAL for WorkLocation.CLIENT_VISIT and "WFH" splitting to avoid backend conflict errors
+    return (entities || []).some((req: any) => {
+      // Barrier if it's Pending or Approved and it matches our conflict types
+      if (
+        req.status !== LeaveRequestStatus.PENDING &&
+        req.status !== LeaveRequestStatus.APPROVED
+      )
+        return false;
+
+      // Rule: Pending requests prioritize global rules for splitting too
+      if (req.status === LeaveRequestStatus.PENDING) {
+        const isInRange = checkDateInReq(req, dateStr);
+
+        if (!isInRange) return false;
+
+        const existingType = req.requestType || "";
+        // Same logic as disabledDate for Pending
+        if (
+          existingType === LeaveRequestType.APPLY_LEAVE ||
+          existingType === LeaveRequestType.LEAVE ||
+          existingType === LeaveRequestType.HALF_DAY
+        )
+          return true;
+
+        // If applying for Leave, only other leaves block us
+        const isApplyingForLeave =
+          targetType === LeaveRequestType.APPLY_LEAVE ||
+          targetType === LeaveRequestType.LEAVE ||
+          targetType === LeaveRequestType.HALF_DAY;
+        if (isApplyingForLeave) return false;
+
+        // Remote types block themselves
+        if (existingType === targetType) return true;
+
+        return false;
+      }
+
+      // Determine if this Approved request blocks the targetType
+      const existingType = req.requestType || "";
+      let isConflicting = false;
+
+      // Rule 1: Approved Leave blocks everything
+      if (
+        existingType === LeaveRequestType.APPLY_LEAVE ||
+        existingType === LeaveRequestType.LEAVE ||
+        existingType === LeaveRequestType.HALF_DAY
+      ) {
+        isConflicting = true;
+      }
+      // Rule 2: If applying for remote work, it's blocked by same-type
+      else if (existingType === targetType) {
+        isConflicting = true;
+      }
+
+      if (!isConflicting) return false;
+
+      return checkDateInReq(req, dateStr);
+    });
+  };
+
+  // Helper function to split a date range into segments based on barriers
+  const getSplitSegments = (
+    startDate: string,
+    endDate: string,
+    targetType: string,
+    records: any[],
+  ): { fromDate: string; toDate: string }[] => {
+    const start = dayjs(startDate);
+    const end = dayjs(endDate);
+    const segments: { fromDate: string; toDate: string }[] = [];
+    let currentSegmentStart: dayjs.Dayjs | null = null;
+    let current = start;
+
+    while (current.isBefore(end) || current.isSame(end, "day")) {
+      const isBarrier = isBarrierDate(current, targetType, records);
+
+      if (!isBarrier) {
+        if (!currentSegmentStart) {
+          currentSegmentStart = current;
+        }
+      } else {
+        if (currentSegmentStart) {
+          segments.push({
+            fromDate: currentSegmentStart.format("YYYY-MM-DD"),
+            toDate: current.subtract(1, "day").format("YYYY-MM-DD"),
+          });
+          currentSegmentStart = null;
+        }
+      }
+      current = current.add(1, "day");
+    }
+
+    if (currentSegmentStart) {
+      segments.push({
+        fromDate: currentSegmentStart.format("YYYY-MM-DD"),
+        toDate: end.format("YYYY-MM-DD"),
+      });
+    }
+
+    return segments;
+  };
+
+  // Helper function to calculate duration excluding weekends, holidays, and existing leaves
+  const calculateDurationExcludingWeekends = (
+    startDate: string,
+    endDate: string,
+    records?: any[],
+  ): number => {
+    if (!startDate || !endDate) return 0;
+
+    const start = dayjs(startDate);
+    const end = dayjs(endDate);
+    let count = 0;
+    let current = start;
+    const recordsToUse = records || dateRangeAttendanceRecords;
+
+    while (current.isBefore(end) || current.isSame(end, "day")) {
+      // Exclude weekends, holidays, and existing leave records
+      if (
+        !isWeekend(current) &&
+        !isHoliday(current) &&
+        !hasExistingLeave(current, recordsToUse)
+      ) {
+        count++;
+      }
+      current = current.add(1, "day");
+    }
+
+    return count;
+  };
+
+  const handleSubmit = async () => {
+    if (validateForm(true)) {
+      // Determine the actual request type and duration factor
+      let finalRequestType = selectedLeaveType;
+      const isSplitRequest =
+        leaveDurationType === HalfDayType.HALF_DAY ||
+        leaveDurationType === HalfDayType.FIRST_HALF ||
+        leaveDurationType === HalfDayType.SECOND_HALF;
+
+      if (
+        selectedLeaveType === LeaveRequestType.APPLY_LEAVE ||
+        selectedLeaveType === LeaveRequestType.LEAVE ||
+        selectedLeaveType === LeaveRequestType.HALF_DAY
+      ) {
+        finalRequestType = isSplitRequest
+          ? LeaveRequestType.HALF_DAY
+          : LeaveRequestType.APPLY_LEAVE;
+      }
+
+      // For Client Visit, WFH, and Leave (including Half Day), fetch attendance records first to check for existing leaves
+      if (
+        (finalRequestType as string) === WorkLocation.CLIENT_VISIT ||
+        (finalRequestType as string) === WorkLocation.WORK_FROM_HOME ||
+        (finalRequestType as string) === LeaveRequestType.APPLY_LEAVE ||
+        (finalRequestType as string) === LeaveRequestType.LEAVE ||
+        (finalRequestType as string) === LeaveRequestType.HALF_DAY
+      ) {
+        // Fetch attendance records synchronously before processing
+        const attendanceAction = await dispatch(
+          fetchAttendanceByDateRange({
+            employeeId: employeeId!,
+            startDate: formData.startDate,
+            endDate: formData.endDate,
+          }),
+        );
+
+        let records: any[] = [];
+        if (fetchAttendanceByDateRange.fulfilled.match(attendanceAction)) {
+          records =
+            attendanceAction.payload.data || attendanceAction.payload || [];
+          setDateRangeAttendanceRecords(records);
+        }
+
+        if (
+          finalRequestType === WorkLocation.CLIENT_VISIT ||
+          finalRequestType === WorkLocation.WORK_FROM_HOME
+        ) {
+          const segments = getSplitSegments(
+            formData.startDate,
+            formData.endDate,
+            finalRequestType,
+            records,
+          );
+
+          if (segments.length > 1) {
+            // Submit each segment separately
+            for (const segment of segments) {
+              const segmentDuration = calculateDurationExcludingWeekends(
+                segment.fromDate,
+                segment.toDate,
+                records,
+              );
+              if (segmentDuration > 0) {
+                let duration = segmentDuration;
+                if (isSplitRequest) {
+                  duration =
+                    segmentDuration *
+                    getDurationFactor(halfDayType, otherHalfType);
+                }
+
+                await dispatch(
+                  submitLeaveRequest({
+                    employeeId,
+                    requestType: finalRequestType,
+                    title: formData.title,
+                    description: formData.description,
+                    fromDate: segment.fromDate,
+                    toDate: segment.toDate,
+                    duration,
+                    isHalfDay: isSplitRequest,
+                    halfDayType: isSplitRequest ? halfDayType : null,
+                    otherHalfType: isSplitRequest ? otherHalfType : null,
+                    firstHalf: isSplitRequest ? halfDayType : finalRequestType,
+                    secondHalf: isSplitRequest
+                      ? otherHalfType
+                      : finalRequestType,
+                    submittedDate: dayjs().format("YYYY-MM-DD"),
+                    ccEmails: ccEmails && ccEmails.length > 0 ? ccEmails : [],
+                    documentKeys: uploadedDocumentKeys,
+                  }),
+                );
+              }
+            }
+            message.info(
+              `Your ${finalRequestType} request was split into ${segments.length} parts to avoid existing Leave/Half Day approvals.`,
+            );
+            return; // Exit handleSubmit as we've done multiple submissions
+          }
+        }
+
+        // Standard Single Submission Logic
+        const baseDuration = calculateDurationExcludingWeekends(
+          formData.startDate,
+          formData.endDate,
+          records,
+        );
+
+        let duration = baseDuration;
+        if (isSplitRequest) {
+          duration =
+            baseDuration * getDurationFactor(halfDayType, otherHalfType);
+        }
+
+        dispatch(
+          submitLeaveRequest({
+            employeeId,
+            requestType: finalRequestType,
+            title: formData.title,
+            description: formData.description,
+            fromDate: formData.startDate,
+            toDate: formData.endDate,
+            duration,
+            isHalfDay: isSplitRequest,
+            halfDayType: isSplitRequest ? halfDayType : null,
+            otherHalfType: isSplitRequest ? otherHalfType : null,
+            firstHalf: isSplitRequest ? halfDayType : finalRequestType,
+            secondHalf: isSplitRequest ? otherHalfType : finalRequestType,
+            submittedDate: dayjs().format("YYYY-MM-DD"),
+            ccEmails: ccEmails && ccEmails.length > 0 ? ccEmails : [],
+            documentKeys: uploadedDocumentKeys,
+          }),
+        );
+      } else {
+        const baseDuration =
+          formData.startDate && formData.endDate
+            ? dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1
+            : 0;
+        const duration = isSplitRequest
+          ? baseDuration * getDurationFactor(halfDayType, otherHalfType)
+          : baseDuration;
+
+        dispatch(
+          submitLeaveRequest({
+            employeeId,
+            requestType: finalRequestType,
+            title: formData.title,
+            description: formData.description,
+            fromDate: formData.startDate,
+            toDate: formData.endDate,
+            duration,
+            halfDayType: isSplitRequest ? halfDayType : null,
+            otherHalfType: isSplitRequest ? otherHalfType : null,
+            firstHalf: isSplitRequest ? halfDayType : finalRequestType,
+            secondHalf: isSplitRequest ? otherHalfType : finalRequestType,
+            submittedDate: dayjs().format("YYYY-MM-DD"),
+            ccEmails: ccEmails && ccEmails.length > 0 ? ccEmails : [],
+            documentKeys: uploadedDocumentKeys,
+          }),
+        );
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (submitSuccess) {
+      const isSplit =
+        leaveDurationType === HalfDayType.HALF_DAY ||
+        leaveDurationType === HalfDayType.FIRST_HALF ||
+        leaveDurationType === HalfDayType.SECOND_HALF;
+
+      // Normalize names
+      const normalize = (t: string | null) => {
+        if (!t) return "";
+        const normalized = t.toLowerCase();
+        if (normalized.includes("leave") || normalized.includes("apply_leave"))
+          return "Leave";
+        if (normalized.includes("wfh") || normalized.includes("work_from_home"))
+          return "WFH";
+        if (
+          normalized.includes("client_visit") ||
+          normalized.includes("client visit")
+        )
+          return "Client Visit";
+        if (normalized.includes("office")) return "Office";
+        return t;
+      };
+
+      const baseName = normalize(selectedLeaveType);
+      let typeText = "";
+
+      if (isSplit && otherHalfType) {
+        const otherName = normalize(otherHalfType);
+        if (baseName && otherName && baseName !== otherName) {
+          typeText = `${baseName} & ${otherName}`;
+        } else {
+          typeText = baseName || otherName || "Application";
+        }
+      } else {
+        typeText = baseName || "Application";
+      }
+
+      message.success(
+        `${typeText} Request Submitted: Notification sent to Manager`,
+      );
+    }
+  }, [submitSuccess, selectedLeaveType, leaveDurationType, otherHalfType]);
+
+  // Fetch master holidays on mount
+  useEffect(() => {
+    dispatch(fetchHolidays());
+  }, [dispatch]);
+
+  // Fetch leave types when modal opens
+  useEffect(() => {
+    if (isModalOpen) {
+      dispatch(getLeaveDurationTypes());
+    }
+  }, [dispatch, isModalOpen]);
+
+  // Fetch attendance records for the selected date range to check for existing leaves
+  useEffect(() => {
+    if (!isViewMode && employeeId && formData.startDate && formData.endDate) {
+      dispatch(
+        fetchAttendanceByDateRange({
+          employeeId,
+          startDate: formData.startDate,
+          endDate: formData.endDate,
+        }),
+      ).then((action: any) => {
+        if (fetchAttendanceByDateRange.fulfilled.match(action)) {
+          setDateRangeAttendanceRecords(
+            action.payload.data || action.payload || [],
+          );
+        }
+      });
+    } else if (!isViewMode) {
+      setDateRangeAttendanceRecords([]);
+    }
+  }, [dispatch, employeeId, formData.startDate, formData.endDate, isViewMode]);
+
+  useEffect(() => {
+    refreshData();
+  }, [
+    dispatch,
+    employeeId,
+    currentPage,
+    filterStatus,
+    selectedMonth,
+    selectedYear,
+  ]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterStatus, selectedMonth, selectedYear]);
+
+  useEffect(() => {
+    if (submitSuccess && employeeId) {
+      setIsModalOpen(false);
+      refreshData(1);
+      if (currentPage !== 1) setCurrentPage(1);
+      dispatch(resetSubmitSuccess());
+      setFormData({
+        title: "",
+        description: "",
+        startDate: "",
+        endDate: "",
+        duration: 0,
+      });
+      setErrors({ title: "", description: "", startDate: "", endDate: "" });
+      setSelectedLeaveType("");
+      setSelectedRequestId(null);
+      setIsViewMode(false);
+      setUploadedDocumentKeys([]);
+    }
+  }, [submitSuccess, dispatch, employeeId]);
+
+  const totalPages = totalPagesFromRedux || 0;
+
+  const handleOpenModal = (label: string) => {
+    setIsViewMode(false);
+    setSelectedRequestId(null);
+    setUploaderKey((prev) => prev + 1); // Increment to reset uploader
+    setSelectedLeaveType(
+      label === LeaveRequestType.LEAVE || label === LeaveRequestType.APPLY_LEAVE
+        ? LeaveRequestType.APPLY_LEAVE
+        : label,
+    );
+    setIsModalOpen(true);
+    setErrors({ title: "", description: "", startDate: "", endDate: "" });
+    setFormData({
+      title: "",
+      description: "",
+      startDate: "",
+      endDate: "",
+      duration: 0,
+    }); // Explicitly clear any stale data
+    setUploadedDocumentKeys([]);
+    if (label === LeaveRequestType.HALF_DAY) {
+      setLeaveDurationType(HalfDayType.FIRST_HALF);
+      setIsHalfDay(true);
+      setHalfDayType(HalfDayType.FIRST_HALF);
+    } else {
+      setLeaveDurationType(HalfDayType.FULL_DAY);
+      setIsHalfDay(false);
+      setHalfDayType(null);
+    }
+    setOtherHalfType(WorkLocation.OFFICE);
+    setCcEmails([]);
+    setCcEmailInput("");
+    setCcEmailError("");
+    // Clear any previous global errors from the store
+    dispatch(resetSubmitSuccess());
+    if (employeeId) {
+      dispatch(getLeaveRequestEmailConfig(employeeId))
+        .unwrap()
+        .then((data) =>
+          setEmailConfig({
+            assignedManagerEmail: data?.assignedManagerEmail ?? null,
+            hrEmail: data?.hrEmail ?? null,
+          }),
+        )
+        .catch(() =>
+          setEmailConfig({ assignedManagerEmail: null, hrEmail: null }),
+        );
+    }
+  };
+
+  const handleViewApplication = async (item: any) => {
+    const action = await dispatch(getLeaveRequestById(item.id));
+    if (getLeaveRequestById.fulfilled.match(action)) {
+      const fetchedItem = action.payload;
+      setIsViewMode(true);
+      setSelectedRequestId(fetchedItem.id);
+      setSelectedLeaveType(fetchedItem.requestType);
+      setFormData({
+        title: fetchedItem.title,
+        description: fetchedItem.description,
+        startDate: fetchedItem.fromDate,
+        endDate: fetchedItem.toDate,
+        duration: fetchedItem.duration,
+      });
+      const parsedCc = Array.isArray(fetchedItem.ccEmails)
+        ? fetchedItem.ccEmails
+        : typeof fetchedItem.ccEmails === "string"
+          ? (() => {
+              try {
+                const p = JSON.parse(fetchedItem.ccEmails);
+                return Array.isArray(p) ? p : [];
+              } catch {
+                return [];
+              }
+            })()
+          : [];
+      setCcEmails(parsedCc);
+      setCcEmailInput("");
+      setCcEmailError("");
+      setUploadedDocumentKeys([]);
+      if (fetchedItem.employeeId) {
+        dispatch(getLeaveRequestEmailConfig(fetchedItem.employeeId))
+          .unwrap()
+          .then((data) =>
+            setEmailConfig({
+              assignedManagerEmail: data?.assignedManagerEmail ?? null,
+              hrEmail: data?.hrEmail ?? null,
+            }),
+          )
+          .catch(() =>
+            setEmailConfig({ assignedManagerEmail: null, hrEmail: null }),
+          );
+      }
+      setIsModalOpen(true);
+      setErrors({ title: "", description: "", startDate: "", endDate: "" });
+    } else {
+      message.error("Failed to fetch request details");
+    }
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setIsViewMode(false);
+    setSelectedRequestId(null);
+    setSelectedLeaveType("");
+    setFormData({
+      title: "",
+      description: "",
+      startDate: "",
+      endDate: "",
+      duration: 0,
+    });
+    setCcEmails([]);
+    setCcEmailInput("");
+    setCcEmailError("");
+    setErrors({ title: "", description: "", startDate: "", endDate: "" });
+    setUploadedDocumentKeys([]);
+    dispatch(resetSubmitSuccess());
+  };
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const addCcEmail = (email: string) => {
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed) return;
+    if (!emailRegex.test(trimmed)) {
+      setCcEmailError("Please enter a valid email address.");
+      return;
+    }
+    setCcEmailError("");
+    if (!ccEmails.includes(trimmed)) setCcEmails([...ccEmails, trimmed]);
+    setCcEmailInput("");
+  };
+  const removeCcEmail = (email: string) =>
+    setCcEmails(ccEmails.filter((e) => e !== email));
+
+  const addModifyCcEmail = (email: string) => {
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed) return;
+    if (!emailRegex.test(trimmed)) {
+      setModifyCcError("Please enter a valid email address.");
+      return;
+    }
+    setModifyCcError("");
+    const current = modifyFormData.ccEmails || [];
+    if (!current.includes(trimmed))
+      setModifyFormData({ ...modifyFormData, ccEmails: [...current, trimmed] });
+    setModifyCcInput("");
+  };
+  const removeModifyCcEmail = (email: string) => {
+    setModifyFormData({
+      ...modifyFormData,
+      ccEmails: (modifyFormData.ccEmails || []).filter((e) => e !== email),
+    });
+  };
+
+  const handleCancelClick = async (request: any) => {
+    setRequestToCancel(request);
+    setIsLoadingDates(true);
+    setIsCancelDateModalVisible(true);
+    setCancellableDates([]);
+    setSelectedCancelDates([]);
+
+    try {
+      const action = await dispatch(
+        getLeaveCancellableDates({
+          id: request.id,
+          employeeId: request.employeeId,
+        }),
+      );
+      if (getLeaveCancellableDates.fulfilled.match(action)) {
+        const apiDates = action.payload || [];
+
+        const lockedDates = new Set<string>();
+        entities?.forEach((req: any) => {
+          // Lock dates if the other request is an in-flight or completed child (linked via
+          // requestModifiedFrom) that has already handled these dates.
+          if (
+            req.id !== request.id &&
+            (req.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION ||
+              req.status === "Requesting For Modification" ||
+              req.status === LeaveRequestStatus.REQUESTING_FOR_CANCELLATION ||
+              req.status === "Requesting For Cancellation" ||
+              req.status === LeaveRequestStatus.MODIFICATION_APPROVED ||
+              req.status === LeaveRequestStatus.CANCELLATION_APPROVED ||
+              req.status === LeaveRequestStatus.CANCELLED ||
+              req.status === LeaveRequestStatus.REQUEST_MODIFIED) &&
+            req.requestModifiedFrom &&
+            Number(String(req.requestModifiedFrom).split(":")[0]) === request.id
+          ) {
+            if (req.availableDates) {
+              try {
+                const datesInChild = JSON.parse(req.availableDates);
+                if (Array.isArray(datesInChild)) {
+                  datesInChild.forEach((dateStr) => lockedDates.add(dateStr));
+                }
+              } catch (e) {
+                // Fallback to range
+                let start = dayjs(req.fromDate);
+                const end = dayjs(req.toDate);
+                while (start.isBefore(end) || start.isSame(end, "day")) {
+                  lockedDates.add(start.format("YYYY-MM-DD"));
+                  start = start.add(1, "day");
+                }
+              }
+            } else {
+              let start = dayjs(req.fromDate);
+              const end = dayjs(req.toDate);
+              while (start.isBefore(end) || start.isSame(end, "day")) {
+                lockedDates.add(start.format("YYYY-MM-DD"));
+                start = start.add(1, "day");
+              }
+            }
+          }
+        });
+
+        // Mark dates as locked if already handled. Admins bypass deadlines, but NOT locks.
+        const processedDates = apiDates.map((d: any) => {
+          const dateStr = dayjs(d.date).format("YYYY-MM-DD");
+
+          // Check for 6:30 PM cutoff for regular users
+          const cutoff = dayjs(d.date).hour(18).minute(30).second(0);
+          const isTimePassed = dayjs().isAfter(cutoff);
+
+          if (lockedDates.has(dateStr)) {
+            return {
+              ...d,
+              isCancellable: false,
+              reason: "Already Modified or Cancelled",
+            };
+          }
+
+          if (isPrivileged) {
+            return {
+              ...d,
+              isCancellable: true,
+              reason: d.reason.includes("Deadline")
+                ? "Admin/Manager Bypass"
+                : d.reason,
+            };
+          }
+
+          if (isTimePassed) {
+            return {
+              ...d,
+              isCancellable: false,
+              reason: "Deadline Passed (6:30 PM)",
+            };
+          }
+
+          return d;
+        });
+
+        setCancellableDates(processedDates);
+      } else {
+        // Explicitly throw or handle potential error payload
+        const payload = action.payload as any;
+        const errorMsg =
+          typeof payload === "string"
+            ? payload
+            : payload?.message || payload?.error || "Failed to fetch";
+        throw new Error(
+          Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg,
+        );
+      }
+    } catch (err) {
+      message.error("Failed to fetch cancellable dates");
+      setIsCancelDateModalVisible(false);
+    } finally {
+      setIsLoadingDates(false);
+    }
+  };
+
+  const handleConfirmDateCancel = async () => {
+    if (!requestToCancel) return;
+    if (selectedCancelDates.length === 0) {
+      message.warning("Please select at least one date to cancel.");
+      return;
+    }
+
+    setIsCancelling(true);
+    try {
+      const action = await dispatch(
+        cancelRequestDates({
+          id: requestToCancel.id,
+          employeeId: requestToCancel.employeeId,
+          dates: selectedCancelDates,
+        }),
+      );
+
+      if (cancelRequestDates.fulfilled.match(action)) {
+        const msg =
+          requestToCancel?.status === LeaveRequestStatus.PENDING
+            ? "Dates cancelled successfully"
+            : "Cancellation Request Submitted: Notification";
+        message.success(msg);
+        setIsCancelDateModalVisible(false);
+        refreshData(1, 10);
+      } else {
+        const payload = action.payload as any;
+        const errorMsg =
+          typeof payload === "string"
+            ? payload
+            : payload?.message || payload?.error || "Cancellation failed";
+        throw new Error(
+          Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg,
+        );
+      }
+    } catch (err: any) {
+      message.error(err.message || "Cancellation failed");
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
+  const toggleDateSelection = (date: string) => {
+    if (selectedCancelDates.includes(date)) {
+      setSelectedCancelDates(selectedCancelDates.filter((d) => d !== date));
+    } else {
+      setSelectedCancelDates([...selectedCancelDates, date]);
+    }
+  };
+
+  const toggleSelectAll = () => {
+    const availableDates = cancellableDates
+      .filter((d) => d.isCancellable)
+      .map((d) => d.date);
+
+    if (availableDates.length === 0) return;
+
+    const areAllSelected = availableDates.every((date) =>
+      selectedCancelDates.includes(date),
+    );
+
+    if (areAllSelected) {
+      setSelectedCancelDates([]);
+    } else {
+      setSelectedCancelDates(availableDates);
+    }
+  };
+
+  const formatModalDate = (dateStr: string) =>
+    dayjs(dateStr).format("DD MMM YYYY");
+
+  // Modified handleCancel to use the date-picker cancellation flow for both Approved and Pending requests
+  const handleCancel = (id: number) => {
+    const req = entities.find((e: any) => e.id === id);
+    if (
+      req?.status === LeaveRequestStatus.APPROVED ||
+      req?.status === LeaveRequestStatus.PENDING
+    ) {
+      handleCancelClick(req);
+    } else {
+      // For other statuses, use the original full cancellation flow
+      setCancelModal({ isOpen: true, id });
+    }
+  };
+
+  // Logic to undo (revoke) a pending cancellation request
+  const handleUndoCancellation = (req: any) => {
+    setUndoModal({ isOpen: true, request: req });
+  };
+
+  const executeUndo = async () => {
+    if (!undoModal.request || !employeeId) return;
+
+    setIsUndoing(true);
+    try {
+      const action = await dispatch(
+        undoCancellationRequest({
+          id: undoModal.request.id,
+          employeeId: employeeId!,
+        }),
+      );
+
+      if (undoCancellationRequest.fulfilled.match(action)) {
+        refreshData();
+        message.success("Cancellation Revoked");
+        setUndoModal({ isOpen: false, request: null });
+      } else {
+        const payload = action.payload as any;
+        const errorMsg =
+          typeof payload === "string"
+            ? payload
+            : payload?.message ||
+              payload?.error ||
+              "Could not undo cancellation";
+        throw new Error(
+          Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg,
+        );
+      }
+    } catch (err: any) {
+      message.error(
+        `Undo Failed: ${err.message || "Could not undo cancellation."}`,
+      );
+    } finally {
+      setIsUndoing(false);
+    }
+  };
+
+  const executeUndoModification = async () => {
+    if (!undoModal.request || !employeeId) return;
+
+    setIsUndoing(true);
+    try {
+      const action = await dispatch(
+        undoModificationRequest({
+          id: undoModal.request.id,
+          employeeId: employeeId!,
+        }),
+      );
+
+      if (undoModificationRequest.fulfilled.match(action)) {
+        refreshData();
+        message.success("Modification Revoked");
+        setUndoModal({ isOpen: false, request: null });
+      } else {
+        const payload = action.payload as any;
+        const errorMsg =
+          typeof payload === "string"
+            ? payload
+            : payload?.message ||
+              payload?.error ||
+              "Could not undo modification";
+        throw new Error(
+          Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg,
+        );
+      }
+    } catch (err: any) {
+      message.error(
+        `Undo Failed: ${err.message || "Could not undo modification."}`,
+      );
+    } finally {
+      setIsUndoing(false);
+    }
+  };
+
+  const isUndoable = (req: any) => {
+    // Rule: Next Day 10 AM
+    const submissionTime = dayjs(req.submittedDate || req.created_at);
+    const deadline = submissionTime.add(1, "day").hour(10).minute(0).second(0);
+    return dayjs().isBefore(deadline);
+  };
+
+  const executeCancel = () => {
+    if (cancelModal.id && employeeId) {
+      setIsCancelling(true);
+
+      const requestToCancel = entities.find(
+        (e: any) => e.id === cancelModal.id,
+      );
+      const isApproved =
+        requestToCancel?.status === LeaveRequestStatus.APPROVED; // This check is now mostly for the message, as Approved requests go through handleCancelClick
+
+      // This part of executeCancel should now primarily handle non-Approved requests (e.g., Pending)
+      // If an Approved request somehow reaches here, it means the `handleCancel` logic above needs refinement.
+      // For now, assuming this path is for non-Approved requests.
+      const action = dispatch(
+        updateLeaveRequestStatus({
+          id: cancelModal.id,
+          status: LeaveRequestStatus.CANCELLED,
+        }),
+      );
+
+      action
+        .then((result: any) => {
+          if (updateLeaveRequestStatus.fulfilled.match(result)) {
+            dispatch(
+              getLeaveStats({
+                employeeId,
+                month: selectedMonth,
+                year: selectedYear,
+              }),
+            );
+            refreshData(1);
+            setCancelModal({ isOpen: false, id: null });
+            message.success("Request Cancelled");
+          } else {
+            // Handle error
+            message.error(
+              `Cancellation Failed: ${result.payload?.message || "Failed to cancel request."}`,
+            );
+          }
+        })
+        .finally(() => {
+          setIsCancelling(false);
+        });
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case LeaveRequestStatus.APPROVED:
+      case LeaveRequestStatus.CANCELLATION_APPROVED:
+      case LeaveRequestStatus.MODIFICATION_APPROVED:
+        return "bg-green-50 text-green-600 border-green-200";
+      case LeaveRequestStatus.MODIFICATION_CANCELLED:
+        return "bg-orange-100 text-orange-600 border-orange-200";
+      case LeaveRequestStatus.REJECTED:
+      case LeaveRequestStatus.CANCELLATION_REJECTED:
+      case LeaveRequestStatus.MODIFICATION_REJECTED:
+      case LeaveRequestStatus.CANCELLED:
+        return "bg-red-50 text-red-600 border-red-200";
+      case LeaveRequestStatus.CANCELLATION_REVERTED:
+        return "bg-yellow-50 text-yellow-600 border-yellow-200";
+      case LeaveRequestStatus.REQUESTING_FOR_CANCELLATION:
+      case LeaveRequestStatus.REQUESTING_FOR_MODIFICATION:
+      case LeaveRequestStatus.REQUEST_MODIFIED:
+        return "bg-orange-100 text-orange-600 border-orange-200";
+      default:
+        return "bg-yellow-50 text-yellow-600 border-yellow-200";
+    }
+  };
+
+  const filterStatusTagClass = (status: string, isSelected: boolean) => {
+    if (isSelected) {
+      if (status === "All") {
+        return "bg-[#4318FF] text-white border-[#4318FF] shadow-sm";
+      }
+      switch (status) {
+        case LeaveRequestStatus.APPROVED:
+        case LeaveRequestStatus.CANCELLATION_APPROVED:
+        case LeaveRequestStatus.MODIFICATION_APPROVED:
+          return "bg-green-500 text-white border-green-500 shadow-sm";
+        case LeaveRequestStatus.REJECTED:
+        case LeaveRequestStatus.CANCELLATION_REJECTED:
+        case LeaveRequestStatus.MODIFICATION_REJECTED:
+        case LeaveRequestStatus.CANCELLED:
+          return "bg-red-500 text-white border-red-500 shadow-sm";
+        case LeaveRequestStatus.REQUESTING_FOR_CANCELLATION:
+        case LeaveRequestStatus.REQUESTING_FOR_MODIFICATION:
+        case LeaveRequestStatus.REQUEST_MODIFIED:
+        case LeaveRequestStatus.MODIFICATION_CANCELLED:
+          return "bg-orange-500 text-white border-orange-500 shadow-sm";
+        case LeaveRequestStatus.CANCELLATION_REVERTED:
+          return "bg-amber-500 text-white border-amber-500 shadow-sm";
+        default:
+          return "bg-amber-500 text-white border-amber-500 shadow-sm";
+      }
+    }
+    if (status === "All") {
+      return "bg-gray-50 text-[#475569] border-gray-200 hover:bg-gray-100";
+    }
+    return `${getStatusColor(status)} hover:opacity-90`;
+  };
+
+  if (isMobile) {
+    return (
+      <LeaveManagementMobile
+        navigate={navigate}
+        location={location}
+        currentUser={currentUser}
+        entity={entity}
+        handleOpenModal={handleOpenModal}
+        stats={stats}
+        selectedMonth={selectedMonth}
+        setSelectedMonth={setSelectedMonth}
+        months={months}
+        selectedYear={selectedYear}
+        setSelectedYear={setSelectedYear}
+        years={years}
+        isStatusOpen={isStatusOpen}
+        setIsStatusOpen={setIsStatusOpen}
+        filterStatus={filterStatus}
+        setFilterStatus={setFilterStatus}
+        filterStatusTagClass={filterStatusTagClass}
+        getStatusColor={getStatusColor}
+        entities={entities}
+        normalizeTypeName={normalizeTypeName}
+        handleViewApplication={handleViewApplication}
+        isCancellationAllowed={isCancellationAllowed}
+        handleCancel={handleCancel}
+        isUndoable={isUndoable}
+        handleUndoCancellation={handleUndoCancellation}
+        setUndoModal={setUndoModal}
+        totalItems={totalItems}
+        currentPage={currentPage}
+        itemsPerPage={itemsPerPage}
+        setCurrentPage={setCurrentPage}
+        totalPages={totalPages}
+        isModalOpen={isModalOpen}
+        handleCloseModal={handleCloseModal}
+        selectedLeaveType={selectedLeaveType}
+        emailConfig={emailConfig}
+        isViewMode={isViewMode}
+        ccEmails={ccEmails}
+        removeCcEmail={removeCcEmail}
+        ccEmailInput={ccEmailInput}
+        setCcEmailInput={setCcEmailInput}
+        ccEmailError={ccEmailError}
+        addCcEmail={addCcEmail}
+        titleRef={titleRef}
+        errors={errors}
+        formData={formData}
+        setFormData={setFormData}
+        setErrors={setErrors}
+        leaveDurationType={leaveDurationType}
+        setLeaveDurationType={setLeaveDurationType}
+        setIsHalfDay={setIsHalfDay}
+        setHalfDayType={setHalfDayType}
+        otherHalfType={otherHalfType}
+        setOtherHalfType={setOtherHalfType}
+        halfDayType={halfDayType}
+        startDateRef={startDateRef}
+        disabledDate={disabledDate}
+        endDateRef={endDateRef}
+        disabledEndDate={disabledEndDate}
+        calculateDurationExcludingWeekends={calculateDurationExcludingWeekends}
+        getDurationFactor={getDurationFactor}
+        selectedRequestId={selectedRequestId}
+        descriptionRef={descriptionRef}
+        uploaderKey={uploaderKey}
+        setUploadedDocumentKeys={setUploadedDocumentKeys}
+        error={error}
+        loading={loading}
+        handleSubmit={handleSubmit}
+        cancelModal={cancelModal}
+        setCancelModal={setCancelModal}
+        executeCancel={executeCancel}
+        isCancelling={isCancelling}
+        undoModal={undoModal}
+        isUndoing={isUndoing}
+        executeUndoModification={executeUndoModification}
+        executeUndo={executeUndo}
+        modifyModal={modifyModal}
+        setModifyModal={setModifyModal}
+        setModifyErrors={setModifyErrors}
+        isModifying={isModifying}
+        modifyFormData={modifyFormData}
+        setModifyFormData={setModifyFormData}
+        modifyErrors={modifyErrors}
+        isCancelDateModalVisible={isCancelDateModalVisible}
+        setIsCancelDateModalVisible={setIsCancelDateModalVisible}
+        handleConfirmDateCancel={handleConfirmDateCancel}
+        selectedCancelDates={selectedCancelDates}
+        isLoadingDates={isLoadingDates}
+        cancellableDates={cancellableDates}
+        toggleSelectAll={toggleSelectAll}
+        toggleDateSelection={toggleDateSelection}
+        formatModalDate={formatModalDate}
+        isPrivileged={isPrivileged}
+        addModifyCcEmail={addModifyCcEmail}
+        removeModifyCcEmail={removeModifyCcEmail}
+        modifyCcInput={modifyCcInput}
+        setModifyCcInput={setModifyCcInput}
+        modifyCcError={modifyCcError}
+        uploadedDocumentKeys={uploadedDocumentKeys}
+        refreshData={refreshData}
+      />
+    );
+  }
+
+  if (isTablet) {
+    return (
+      <LeaveManagementTab
+        navigate={navigate}
+        location={location}
+        currentUser={currentUser}
+        entity={entity}
+        handleOpenModal={handleOpenModal}
+        stats={stats}
+        selectedMonth={selectedMonth}
+        setSelectedMonth={setSelectedMonth}
+        months={months}
+        selectedYear={selectedYear}
+        setSelectedYear={setSelectedYear}
+        years={years}
+        isStatusOpen={isStatusOpen}
+        setIsStatusOpen={setIsStatusOpen}
+        filterStatus={filterStatus}
+        setFilterStatus={setFilterStatus}
+        filterStatusTagClass={filterStatusTagClass}
+        getStatusColor={getStatusColor}
+        entities={entities}
+        normalizeTypeName={normalizeTypeName}
+        handleViewApplication={handleViewApplication}
+        isCancellationAllowed={isCancellationAllowed}
+        handleCancel={handleCancel}
+        isUndoable={isUndoable}
+        handleUndoCancellation={handleUndoCancellation}
+        setUndoModal={setUndoModal}
+        totalItems={totalItems}
+        currentPage={currentPage}
+        itemsPerPage={itemsPerPage}
+        setCurrentPage={setCurrentPage}
+        totalPages={totalPages}
+        isModalOpen={isModalOpen}
+        handleCloseModal={handleCloseModal}
+        selectedLeaveType={selectedLeaveType}
+        emailConfig={emailConfig}
+        isViewMode={isViewMode}
+        ccEmails={ccEmails}
+        removeCcEmail={removeCcEmail}
+        ccEmailInput={ccEmailInput}
+        setCcEmailInput={setCcEmailInput}
+        ccEmailError={ccEmailError}
+        setCcEmailError={setCcEmailError}
+        addCcEmail={addCcEmail}
+        titleRef={titleRef}
+        errors={errors}
+        formData={formData}
+        setFormData={setFormData}
+        setErrors={setErrors}
+        leaveDurationType={leaveDurationType}
+        setLeaveDurationType={setLeaveDurationType}
+        setIsHalfDay={setIsHalfDay}
+        setHalfDayType={setHalfDayType}
+        otherHalfType={otherHalfType}
+        setOtherHalfType={setOtherHalfType}
+        halfDayType={halfDayType}
+        startDateRef={startDateRef}
+        disabledDate={disabledDate}
+        endDateRef={endDateRef}
+        disabledEndDate={disabledEndDate}
+        calculateDurationExcludingWeekends={calculateDurationExcludingWeekends}
+        getDurationFactor={getDurationFactor}
+        selectedRequestId={selectedRequestId}
+        descriptionRef={descriptionRef}
+        uploaderKey={uploaderKey}
+        setUploadedDocumentKeys={setUploadedDocumentKeys}
+        error={error}
+        loading={loading}
+        handleSubmit={handleSubmit}
+        cancelModal={cancelModal}
+        setCancelModal={setCancelModal}
+        requestToCancel={requestToCancel}
+        executeCancel={executeCancel}
+        isCancelling={isCancelling}
+        undoModal={undoModal}
+        isUndoing={isUndoing}
+        executeUndoModification={executeUndoModification}
+        executeUndo={executeUndo}
+        modifyModal={modifyModal}
+        setModifyModal={setModifyModal}
+        setModifyErrors={setModifyErrors}
+        isModifying={isModifying}
+        setIsModifying={setIsModifying}
+        modifyFormData={modifyFormData}
+        setModifyFormData={setModifyFormData}
+        modifyErrors={modifyErrors}
+        isCancelDateModalVisible={isCancelDateModalVisible}
+        setIsCancelDateModalVisible={setIsCancelDateModalVisible}
+        handleConfirmDateCancel={handleConfirmDateCancel}
+        selectedCancelDates={selectedCancelDates}
+        isLoadingDates={isLoadingDates}
+        cancellableDates={cancellableDates}
+        toggleSelectAll={toggleSelectAll}
+        toggleDateSelection={toggleDateSelection}
+        formatModalDate={formatModalDate}
+        isPrivileged={isPrivileged}
+        addModifyCcEmail={addModifyCcEmail}
+        removeModifyCcEmail={removeModifyCcEmail}
+        modifyCcInput={modifyCcInput}
+        setModifyCcInput={setModifyCcInput}
+        modifyCcError={modifyCcError}
+        uploadedDocumentKeys={uploadedDocumentKeys}
+        refreshData={refreshData}
+      />
+    );
+  }
+
+  return (
+    <div className="leave-management-page p-4 md:px-8 md:pb-0 md:pt-0 bg-[#F4F7FE] flex flex-col font-sans text-[#2B3674]">
+      {/* Back Button */}
+      <button
+        onClick={() => {
+          const path = location.pathname;
+          if (path.includes("/manager-dashboard")) {
+            if (
+              path.includes("/timesheet/") ||
+              path.includes("/working-details/")
+            ) {
+              navigate("/manager-dashboard/timesheet-list");
+            } else if (
+              path.includes("/employee-details/") ||
+              path.includes("/view-attendance/")
+            ) {
+              navigate("/manager-dashboard/employees");
+            } else {
+              navigate("/manager-dashboard/my-dashboard");
+            }
+          } else if (path.includes("/admin-dashboard")) {
+            if (
+              path.includes("/timesheet/") ||
+              path.includes("/working-details/")
+            ) {
+              navigate("/admin-dashboard/timesheet-list");
+            } else if (
+              path.includes("/employee-details/") ||
+              path.includes("/view-attendance/")
+            ) {
+              navigate("/admin-dashboard/employees");
+            } else {
+              navigate("/admin-dashboard");
+            }
+          } else {
+            navigate("/employee-dashboard");
+          }
+        }}
+        className="group flex items-center gap-2 text-[#A3AED0] hover:text-[#4318FF] transition-all mb-2 w-fit mt-4"
+      >
+        <ArrowLeft
+          size={16}
+          className="group-hover:-translate-x-1 transition-transform"
+        />
+        <span className="text-[11px] font-black uppercase tracking-widest pl-1">
+          Back
+        </span>
+      </button>
+      {/* AntD message context handled via global config */}
+      {/* Header */}
+      <div className="sticky top-0 z-40 bg-[#F4F7FE] -mx-4 px-4 py-2 mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all">
+        <div>
+          <h1 className="text-2xl font-bold text-[#2B3674]">
+            Request Management
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">
+            View your request history or submit new attendance updates.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3 shrink-0">
+          {LEAVE_APPLY_OPTIONS.map((option, idx) => (
+            <button
+              key={idx}
+              onClick={() => handleOpenModal(option.label)}
+              className={`group relative overflow-hidden border ${option.border} bg-linear-to-br ${option.cardBg} p-2.5 rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col items-center justify-center gap-2 w-[88px] h-[88px] cursor-pointer`}
+            >
+              <div
+                className={`h-10 w-10 rounded-xl flex items-center justify-center text-white shadow-sm transition-transform duration-200 group-hover:scale-105 ${option.iconBg}`}
+              >
+                <option.icon size={20} />
+              </div>
+              <span className="text-[#2B3674] font-bold text-[10px] leading-tight text-center">
+                {option.label}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Scrollable Content Container */}
+      <div className="flex-1 min-h-0 overflow-y-auto pr-1 custom-scrollbar pb-6 space-y-4">
+        {/* Request Stats Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+          {LEAVE_STATS_CARD_CONFIG.map((config, idx) => {
+            // Normalize data access to be resilient to backend naming (case sensitivity)
+            // We check config.key (lowercase) and also common variations
+            const rawData =
+              (stats as any)?.[config.key] ||
+              (stats as any)?.[config.label] ||
+              {};
+            const applied = rawData.applied ?? rawData.Applied ?? 0;
+            const approved = rawData.approved ?? rawData.Approved ?? 0;
+            const rejected = rawData.rejected ?? rawData.Rejected ?? 0;
+
+            return (
+              <div
+                key={idx}
+                className="bg-white rounded-2xl p-3.5 shadow-[0px_8px_24px_rgba(112,144,176,0.1)] relative overflow-hidden group hover:shadow-md transition-all"
+              >
+                <div className="relative z-10">
+                  <div className="flex justify-between items-start mb-2">
+                    <div
+                      className={`p-2 rounded-lg ${config.color} text-white shadow-sm`}
+                    >
+                      <config.icon size={16} />
+                    </div>
+                    <span className="text-xl font-black text-[#2B3674]">
+                      {applied}
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-bold text-[#2B3674] leading-tight">
+                    {config.label}
+                  </h3>
+                  <div className="mt-2 flex flex-col gap-0.5 text-[9px] font-bold uppercase tracking-tight">
+                    <div className="flex items-center gap-1">
+                      <span className="text-[#28a745]">Approved:</span>
+                      <span className="text-[#2B3674]">{approved}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[#dc3545]">Rejected:</span>
+                      <span className="text-[#2B3674]">{rejected}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-gray-400">
+                        Cancellation Approved:
+                      </span>
+                      <span className="text-[#2B3674]">
+                        {(rawData as any).cancelled ?? 0}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mt-5 mb-3 gap-4">
+          <h3 className="text-xl font-bold text-[#2B3674]">
+            Recent Log History
+          </h3>
+          <div className="flex flex-wrap gap-3 items-end">
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-bold text-gray-400 pl-1">
+                Month
+              </span>
+              <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
+                <Select
+                  value={selectedMonth}
+                  onChange={(val) => setSelectedMonth(val)}
+                  className={`w-36 h-10 font-bold text-sm ${selectedMonth !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+                  variant="borderless"
+                  dropdownStyle={{ borderRadius: "16px" }}
+                  suffixIcon={
+                    <ChevronDown
+                      size={18}
+                      className={
+                        selectedMonth !== "All"
+                          ? "text-[#4318FF]"
+                          : "text-gray-400"
+                      }
+                    />
+                  }
+                >
+                  <Select.Option value="All">All Months</Select.Option>
+                  {months.map((m) => (
+                    <Select.Option key={m.value} value={m.value}>
+                      {m.label}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-bold text-gray-400 pl-1">Year</span>
+              <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
+                <Select
+                  value={selectedYear}
+                  onChange={(val) => setSelectedYear(val)}
+                  className={`w-28 h-10 font-bold text-sm ${selectedYear !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+                  variant="borderless"
+                  dropdownStyle={{ borderRadius: "16px" }}
+                  suffixIcon={
+                    <ChevronDown
+                      size={18}
+                      className={
+                        selectedYear !== "All"
+                          ? "text-[#4318FF]"
+                          : "text-gray-400"
+                      }
+                    />
+                  }
+                >
+                  {years.map((y) => (
+                    <Select.Option key={y} value={y}>
+                      {y === "All" ? "All Years" : y}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-bold text-gray-400 pl-1">
+                Status
+              </span>
+              <div className="relative min-w-[240px] sm:min-w-[280px]">
+                <button
+                  type="button"
+                  onClick={() => setIsStatusOpen(!isStatusOpen)}
+                  className="w-full flex items-center justify-between gap-3 px-4 py-2.5 bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all text-sm font-bold text-[#2B3674]"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Filter
+                      size={16}
+                      className={
+                        filterStatus !== "All"
+                          ? "text-[#4318FF] shrink-0"
+                          : "text-gray-400 shrink-0"
+                      }
+                    />
+                    <span
+                      className={`truncate px-2.5 py-0.5 rounded-full text-xs font-bold border ${filterStatus === "All" ? "bg-gray-50 text-[#475569] border-gray-200" : getStatusColor(filterStatus)}`}
+                    >
+                      {filterStatus === "All" ? "All Status" : filterStatus}
+                    </span>
+                  </div>
+                  <ChevronDown
+                    size={18}
+                    className={`shrink-0 text-gray-400 transition-transform duration-300 ${isStatusOpen ? "rotate-180" : ""}`}
+                  />
+                </button>
+
+                {isStatusOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setIsStatusOpen(false)}
+                    />
+                    <div className="absolute left-0 mt-2 w-full min-w-full bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-gray-100 p-3 z-50 max-h-72 overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="mb-2">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-[#A3AED0]">
+                          Status
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        {LEAVE_FILTER_STATUS_OPTIONS.map((status) => (
+                          <button
+                            key={status}
+                            type="button"
+                            onClick={() => {
+                              setFilterStatus(status);
+                              setIsStatusOpen(false);
+                            }}
+                            className={`w-full flex items-center justify-center px-3 py-2 rounded-full text-xs font-bold border transition-all text-center ${filterStatusTagClass(status, filterStatus === status)}`}
+                          >
+                            {status === "All" ? "All Status" : status}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Clear All Button */}
+            {(selectedMonth !== "All" ||
+              selectedYear !== "All" ||
+              filterStatus !== "All") && (
+              <button
+                onClick={() => {
+                  setSelectedMonth("All");
+                  setSelectedYear("All");
+                  setFilterStatus("All");
+                }}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#5B4FFF] text-white rounded-full hover:bg-[#4318FF] active:scale-95 transition-all text-sm font-bold border border-[#4318FF]/50 whitespace-nowrap"
+                title="Clear all filters"
+              >
+                <X size={16} />
+                <span>Clear All</span>
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="bg-white rounded-[20px] shadow-[0px_18px_40px_rgba(112,144,176,0.12)] overflow-hidden border border-gray-100 mb-4">
+          <div className="overflow-x-auto overflow-y-visible custom-scrollbar">
+            <table className="w-full min-w-[900px] border-separate border-spacing-0">
+              <thead>
+                <tr className="bg-[#4318FF] text-white">
+                  <th className="py-4 pl-10 pr-4 text-[13px] font-bold uppercase tracking-wider text-left whitespace-nowrap">
+                    Employee
+                  </th>
+                  <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
+                    Request Type
+                  </th>
+                  <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
+                    Type
+                  </th>
+                  <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
+                    Department
+                  </th>
+                  <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
+                    Date Range
+                  </th>
+                  <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
+                    Submitted
+                  </th>
+                  <th className="px-3 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap sticky right-[140px] w-[260px] min-w-[260px] max-w-[260px] bg-[#4318FF] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)]">
+                    Status
+                  </th>
+                  <th className="px-3 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap sticky right-0 w-[140px] min-w-[140px] max-w-[140px] bg-[#4318FF] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)]">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {entities.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-8 text-center text-gray-400">
+                      <div className="flex flex-col items-center justify-center gap-3">
+                        <div className="bg-gray-50 p-4 rounded-full">
+                          <Calendar size={32} className="text-gray-300" />
+                        </div>
+                        <p className="font-medium text-sm">No Request found</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  [...entities]
+                    .sort((a: any, b: any) => {
+                      const timeA = Math.max(
+                        a.created_at ? new Date(a.created_at).getTime() : 0,
+                        a.updated_at ? new Date(a.updated_at).getTime() : 0,
+                        a.createdAt ? new Date(a.createdAt).getTime() : 0,
+                        a.updatedAt ? new Date(a.updatedAt).getTime() : 0,
+                      );
+                      const timeB = Math.max(
+                        b.created_at ? new Date(b.created_at).getTime() : 0,
+                        b.updated_at ? new Date(b.updated_at).getTime() : 0,
+                        b.createdAt ? new Date(b.createdAt).getTime() : 0,
+                        b.updatedAt ? new Date(b.updatedAt).getTime() : 0,
+                      );
+                      if (timeA === 0 && timeB === 0) {
+                        return (b.id || 0) - (a.id || 0);
+                      }
+                      return timeB - timeA;
+                    })
+                    .map((item: any, index: number) => (
+                      <tr
+                        key={index}
+                        className={`group transition-all duration-200 ${
+                          index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"
+                        } hover:bg-gray-100`}
+                      >
+                        <td className="py-4 pl-10 pr-4 text-[#2B3674] text-sm font-bold whitespace-nowrap">
+                          {item.fullName ||
+                            currentUser?.aliasLoginName ||
+                            "User"}{" "}
+                          (
+                          {(() => {
+                            const internId =
+                              (item as any).internId || entity?.internId;
+                            const convDate =
+                              (item as any).conversionDate ||
+                              entity?.conversionDate
+                                ? dayjs(
+                                    (item as any).conversionDate ||
+                                      entity?.conversionDate,
+                                  )
+                                : null;
+                            const leaveDate = item.fromDate
+                              ? dayjs(item.fromDate)
+                              : null;
+                            if (
+                              internId &&
+                              convDate &&
+                              convDate.isValid() &&
+                              leaveDate &&
+                              leaveDate.isBefore(convDate, "day")
+                            ) {
+                              return internId;
+                            }
+                            return item.employeeId;
+                          })()}
+                          )
+                        </td>
+                        <td className="py-4 px-4 text-center whitespace-nowrap">
+                          <div className="flex items-center justify-center gap-3">
+                            <div className="p-1.5 bg-gray-50 rounded-lg group-hover:bg-white transition-colors">
+                              {(() => {
+                                // Determine icon based on combined activities
+                                const hasWFH =
+                                  item.firstHalf ===
+                                    WorkLocation.WORK_FROM_HOME ||
+                                  item.secondHalf ===
+                                    WorkLocation.WORK_FROM_HOME;
+                                const hasCV =
+                                  item.firstHalf ===
+                                    WorkLocation.CLIENT_VISIT ||
+                                  item.secondHalf === WorkLocation.CLIENT_VISIT;
+                                const hasLeave =
+                                  item.firstHalf === LeaveRequestType.LEAVE ||
+                                  item.secondHalf === LeaveRequestType.LEAVE ||
+                                  item.firstHalf ===
+                                    LeaveRequestType.APPLY_LEAVE ||
+                                  item.secondHalf ===
+                                    LeaveRequestType.APPLY_LEAVE;
+
+                                if (hasWFH && hasLeave)
+                                  return (
+                                    <Home
+                                      size={16}
+                                      className="text-green-600"
+                                    />
+                                  );
+                                if (hasCV && hasLeave)
+                                  return (
+                                    <MapPin
+                                      size={16}
+                                      className="text-orange-600"
+                                    />
+                                  );
+                                if (
+                                  item.requestType ===
+                                  WorkLocation.WORK_FROM_HOME
+                                )
+                                  return (
+                                    <Home
+                                      size={16}
+                                      className="text-green-600"
+                                    />
+                                  );
+                                if (
+                                  item.requestType === WorkLocation.CLIENT_VISIT
+                                )
+                                  return (
+                                    <MapPin
+                                      size={16}
+                                      className="text-orange-600"
+                                    />
+                                  );
+                                if (
+                                  item.requestType ===
+                                    LeaveRequestType.APPLY_LEAVE ||
+                                  item.requestType === LeaveRequestType.LEAVE
+                                )
+                                  return (
+                                    <Calendar
+                                      size={16}
+                                      className="text-blue-600"
+                                    />
+                                  );
+                                if (
+                                  item.requestType === LeaveRequestType.HALF_DAY
+                                )
+                                  return (
+                                    <Calendar
+                                      size={16}
+                                      className="text-pink-600"
+                                    />
+                                  );
+                                return (
+                                  <Building2
+                                    size={16}
+                                    className="text-gray-600"
+                                  />
+                                );
+                              })()}
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-[#2B3674] text-sm font-bold flex items-center gap-2">
+                                {(() => {
+                                  // Show combined activities for split-day requests
+                                  if (
+                                    item.isHalfDay &&
+                                    item.firstHalf &&
+                                    item.secondHalf
+                                  ) {
+                                    const first = normalizeTypeName(
+                                      item.firstHalf,
+                                    );
+                                    const second = normalizeTypeName(
+                                      item.secondHalf,
+                                    );
+                                    // Map Leave → Half Day Leave in the table display
+                                    const displayFirst =
+                                      first === "Leave"
+                                        ? "Half Day Leave"
+                                        : first;
+                                    const displaySecond =
+                                      second === "Leave"
+                                        ? "Half Day Leave"
+                                        : second;
+                                    if (displayFirst === displaySecond)
+                                      return displayFirst;
+                                    return `${displayFirst} + ${displaySecond}`;
+                                  }
+
+                                  // Default display
+                                  if (
+                                    item.requestType ===
+                                      LeaveRequestType.APPLY_LEAVE ||
+                                    item.requestType === LeaveRequestType.LEAVE
+                                  ) {
+                                    return item.isHalfDay
+                                      ? "Half Day Leave"
+                                      : LeaveRequestType.LEAVE;
+                                  }
+                                  if (
+                                    item.requestType ===
+                                    LeaveRequestType.HALF_DAY
+                                  )
+                                    return "Half Day Leave";
+                                  return normalizeTypeName(item.requestType);
+                                })()}
+                                {item.isModified && (
+                                  <span className="bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter shadow-sm border border-orange-200">
+                                    Modified
+                                  </span>
+                                )}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4 text-center whitespace-nowrap">
+                          <span
+                            className={`text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap ${(() => {
+                              if (
+                                item.isHalfDay &&
+                                item.firstHalf &&
+                                item.secondHalf
+                              ) {
+                                const isSame =
+                                  item.firstHalf === item.secondHalf;
+                                if (isSame) return "bg-blue-100 text-blue-700";
+                                return "bg-purple-100 text-purple-700";
+                              }
+                              return "bg-blue-100 text-blue-700";
+                            })()}`}
+                          >
+                            {(() => {
+                              if (
+                                item.isHalfDay &&
+                                item.firstHalf &&
+                                item.secondHalf
+                              ) {
+                                const first = normalizeTypeName(item.firstHalf);
+                                const second = normalizeTypeName(
+                                  item.secondHalf,
+                                );
+
+                                // Both halves same type → Full Day
+                                if (first === second) {
+                                  return AttendanceStatus.FULL_DAY;
+                                }
+
+                                // Build "First Half = X & Second Half = Y"
+                                return `First Half = ${first} & Second Half = ${second}`;
+                              }
+                              return AttendanceStatus.FULL_DAY;
+                            })()}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4 text-center whitespace-nowrap">
+                          <span className="text-xs font-bold text-gray-500 bg-gray-100/50 px-2 py-1 rounded-md">
+                            {item.department || "N/A"}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4 text-center whitespace-nowrap">
+                          <span className="text-sm font-bold text-[#2B3674]">
+                            {dayjs(item.fromDate).format("DD MMM")} -{" "}
+                            {dayjs(item.toDate).format("DD MMM - YYYY")}, TOTAL:{" "}
+                            {item.duration !== undefined &&
+                            item.duration !== null
+                              ? parseFloat(String(item.duration))
+                              : 0}{" "}
+                            DAY(S)
+                          </span>
+                        </td>
+                        <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold whitespace-nowrap">
+                          {item.submittedDate
+                            ? dayjs(item.submittedDate).format("DD MMM - YYYY")
+                            : item.created_at
+                              ? dayjs(item.created_at).format("DD MMM - YYYY")
+                              : "-"}
+                        </td>
+                        <td
+                          className={`py-4 px-3 text-center sticky right-[140px] w-[260px] min-w-[260px] max-w-[260px] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}
+                        >
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all whitespace-nowrap
+                        ${
+                          item.status === LeaveRequestStatus.APPROVED ||
+                          item.status ===
+                            LeaveRequestStatus.CANCELLATION_APPROVED ||
+                          item.status ===
+                            LeaveRequestStatus.MODIFICATION_APPROVED
+                            ? "bg-green-50 text-green-600 border-green-200"
+                            : item.status === LeaveRequestStatus.PENDING
+                              ? "bg-yellow-50 text-yellow-600 border-yellow-200"
+                              : item.status === LeaveRequestStatus.CANCELLED
+                                ? "bg-yellow-50 text-yellow-600 border-yellow-200"
+                                : item.status ===
+                                    LeaveRequestStatus.REQUESTING_FOR_CANCELLATION
+                                  ? "bg-orange-100 text-orange-600 border-orange-200"
+                                  : item.status ===
+                                        LeaveRequestStatus.REQUEST_MODIFIED ||
+                                      item.status ===
+                                        LeaveRequestStatus.REQUESTING_FOR_MODIFICATION ||
+                                      item.status ===
+                                        LeaveRequestStatus.MODIFICATION_CANCELLED
+                                    ? "bg-orange-100 text-orange-600 border-orange-200"
+                                    : item.status ===
+                                          LeaveRequestStatus.REJECTED ||
+                                        item.status ===
+                                          LeaveRequestStatus.CANCELLATION_REJECTED ||
+                                        item.status ===
+                                          LeaveRequestStatus.MODIFICATION_REJECTED
+                                      ? "bg-red-50 text-red-600 border-red-200"
+                                      : "bg-red-50 text-red-600 border-red-200"
+                        }
+                      `}
+                          >
+                            {(item.status === LeaveRequestStatus.PENDING ||
+                              item.status ===
+                                LeaveRequestStatus.REQUESTING_FOR_MODIFICATION) && (
+                              <RotateCcw
+                                size={12}
+                                className="animate-spin-slow"
+                              />
+                            )}
+
+                            {item.status}
+                            {item.status ===
+                              LeaveRequestStatus.REQUEST_MODIFIED &&
+                              item.requestModifiedFrom && (
+                                <span className="opacity-70 border-l border-orange-300 pl-1.5 ml-1 text-[9px] font-bold">
+                                  (TO{" "}
+                                  {(() => {
+                                    const displayPart =
+                                      item.requestModifiedFrom.includes(":")
+                                        ? item.requestModifiedFrom.split(":")[1]
+                                        : item.requestModifiedFrom;
+                                    return displayPart ===
+                                      LeaveRequestType.APPLY_LEAVE
+                                      ? "LEAVE"
+                                      : displayPart.toUpperCase();
+                                  })()}
+                                  )
+                                </span>
+                              )}
+                          </span>
+                        </td>
+                        <td
+                          className={`py-4 px-3 sticky right-0 w-[140px] min-w-[140px] max-w-[140px] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}
+                        >
+                          <div className="grid grid-cols-2 items-center justify-items-center gap-2 w-[76px] mx-auto">
+                            <button
+                              onClick={() => handleViewApplication(item)}
+                              className="p-1.5 text-blue-600 bg-blue-50/50 hover:bg-blue-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-blue-200 active:scale-90"
+                              title="View Application"
+                            >
+                              <Eye size={18} />
+                            </button>
+                            {(item.status === LeaveRequestStatus.PENDING ||
+                              item.status === LeaveRequestStatus.APPROVED) &&
+                            isCancellationAllowed(item.toDate) ? (
+                              <button
+                                onClick={() => handleCancel(item.id)}
+                                className="p-1.5 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
+                                title="Cancel Request"
+                              >
+                                <XCircle size={18} />
+                              </button>
+                            ) : item.status ===
+                                LeaveRequestStatus.REQUESTING_FOR_CANCELLATION &&
+                              isUndoable(item) ? (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleUndoCancellation(item);
+                                }}
+                                className="p-1.5 text-amber-600 bg-amber-50/50 hover:bg-amber-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-amber-200 active:scale-90"
+                                title="Undo Cancellation"
+                              >
+                                <RotateCcw size={18} />
+                              </button>
+                            ) : item.status ===
+                              LeaveRequestStatus.REQUESTING_FOR_MODIFICATION ? (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setUndoModal({ isOpen: true, request: item });
+                                }}
+                                className="p-1.5 text-orange-600 bg-orange-50/50 hover:bg-orange-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-orange-200 active:scale-90"
+                                title="Undo Modification"
+                              >
+                                <RotateCcw size={18} />
+                              </button>
+                            ) : null}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Horizontal Scroll Indicator */}
+          <div className="flex justify-center items-center py-2 bg-gray-50/30 border-t border-gray-100">
+            <div className="flex items-center gap-2 text-[#A3AED0] opacity-80">
+              <ArrowRightLeft size={14} className="animate-pulse" />
+              <span className="text-[10px] font-black uppercase tracking-widest">
+                Scroll table horizontally to view all columns
+              </span>
+            </div>
+          </div>
+
+          {/* Pagination Controls */}
+          <div className="flex flex-col sm:flex-row justify-between items-center p-4 lg:px-10 lg:pb-6 gap-4">
+            <div className="text-sm font-bold text-[#A3AED0] text-center sm:text-left">
+              Showing{" "}
+              <span className="text-[#2B3674]">
+                {totalItems > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}
+              </span>{" "}
+              to{" "}
+              <span className="text-[#2B3674]">
+                {Math.min(currentPage * itemsPerPage, totalItems)}
+              </span>{" "}
+              of <span className="text-[#2B3674]">{totalItems}</span> entries
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className={`p-2 rounded-xl border border-[#E9EDF7] transition-all flex items-center justify-center
+              ${
+                currentPage === 1
+                  ? "bg-gray-50 text-gray-300 cursor-not-allowed"
+                  : "bg-white text-[#4318FF] hover:bg-[#4318FF]/5 active:scale-90 shadow-sm"
+              }`}
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <div className="bg-[#F4F7FE] px-4 py-1.5 rounded-xl border border-transparent">
+                <span className="text-xs font-black text-[#2B3674] tracking-widest">
+                  {currentPage} / {totalPages > 0 ? totalPages : 1}
+                </span>
+              </div>
+              <button
+                onClick={() =>
+                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                }
+                disabled={currentPage === totalPages || totalPages === 0}
+                className={`p-2 rounded-xl border border-[#E9EDF7] transition-all flex items-center justify-center
+              ${
+                currentPage === totalPages || totalPages === 0
+                  ? "bg-gray-50 text-gray-300 cursor-not-allowed"
+                  : "bg-white text-[#4318FF] hover:bg-[#4318FF]/5 active:scale-90 shadow-sm"
+              }`}
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Application Modal */}
+      {/* Application Modal */}
+      <Modal
+        open={isModalOpen}
+        onCancel={handleCloseModal}
+        footer={null}
+        closable={true}
+        centered
+        width={750}
+        className="application-modal"
+      >
+        <div className="relative overflow-hidden bg-white flex flex-col max-h-[82vh]">
+          {/* Modal Header */}
+          <div className="pt-5 pb-3 px-6 border-b border-gray-100 shrink-0">
+            <div className="flex justify-between items-start">
+              <h2 className="text-xl md:text-2xl font-bold text-[#2B3674] tracking-tight">
+                {selectedLeaveType === LeaveRequestType.APPLY_LEAVE
+                  ? LeaveRequestType.LEAVE
+                  : selectedLeaveType === LeaveRequestType.HALF_DAY
+                    ? "Half Day Leave"
+                    : selectedLeaveType}
+              </h2>
+            </div>
+          </div>
+
+          {/* Modal Body */}
+          <div className="p-6 space-y-5 overflow-y-auto flex-1 custom-scrollbar">
+            {/* Email recipients - in card */}
+            <div className="rounded-2xl border border-[#E0E7FF] bg-[#F8FAFC] p-4 shadow-sm">
+              <div className="space-y-3">
+                <label className="text-sm font-bold text-[#2B3674] ml-1 block">
+                  Email recipients
+                </label>
+                <div className="space-y-4">
+                  <div className="flex flex-wrap gap-4 items-start">
+                    <div className="min-w-0 flex-1">
+                      <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
+                        Reporting Manager
+                      </span>
+                      <input
+                        type="text"
+                        readOnly
+                        disabled
+                        value={REPORTING_MANAGER_EMAIL}
+                        placeholder="Not configured"
+                        className="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-gray-50 text-gray-700 cursor-not-allowed"
+                      />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
+                        HR
+                      </span>
+                      <input
+                        type="text"
+                        readOnly
+                        disabled
+                        value={HR_EMAIL}
+                        placeholder="Not configured"
+                        className="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-gray-50 text-gray-700 cursor-not-allowed"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
+                      CC
+                    </span>
+                    <div className="flex flex-wrap gap-2 items-center">
+                      {isViewMode ? (
+                        ccEmails.length > 0 ? (
+                          ccEmails.map((email) => (
+                            <span
+                              key={email}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-200 text-gray-700 text-sm font-medium"
+                            >
+                              {email}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-sm text-gray-500">—</span>
+                        )
+                      ) : (
+                        <>
+                          {ccEmails.map((email) => (
+                            <span
+                              key={email}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-200 text-gray-700 text-sm font-medium"
+                            >
+                              {email}
+                              <button
+                                type="button"
+                                onClick={() => removeCcEmail(email)}
+                                className="text-gray-500 hover:text-red-600 focus:outline-none"
+                                aria-label={`Remove ${email}`}
+                              >
+                                ×
+                              </button>
+                            </span>
+                          ))}
+                          <input
+                            type="text"
+                            value={ccEmailInput}
+                            onChange={(e) => {
+                              setCcEmailInput(e.target.value);
+                              if (ccEmailError) setCcEmailError("");
+                            }}
+                            onKeyDown={(e) => {
+                              if (
+                                e.key === "Enter" ||
+                                e.key === "," ||
+                                e.key === " "
+                              ) {
+                                e.preventDefault();
+                                addCcEmail(ccEmailInput);
+                              }
+                            }}
+                            onBlur={() => addCcEmail(ccEmailInput)}
+                            placeholder="Add email and press Enter"
+                            className="min-w-[200px] flex-1 px-3 py-2 border border-gray-200 rounded-xl bg-white text-gray-700 text-sm placeholder-gray-400 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none"
+                          />
+                          {ccEmailError && (
+                            <p className="text-red-500 text-xs mt-1 ml-1 w-full">
+                              {ccEmailError}
+                            </p>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                {/* Subject - inside card */}
+                <div className="space-y-2 pt-2" ref={titleRef}>
+                  <label className="text-sm font-bold text-[#2B3674] ml-1">
+                    Subject <span className="text-red-500">*</span>
+                  </label>
+                  {isViewMode ? (
+                    <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none break-words">
+                      {formData.title}
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="e.g. Annual Vacation"
+                        className={`w-full px-5 py-3 rounded-xl bg-white border ${
+                          errors.title ? "border-red-500" : "border-gray-200"
+                        } text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400`}
+                        value={formData.title}
+                        onChange={(e) => {
+                          setFormData({ ...formData, title: e.target.value });
+                          if (errors.title) setErrors({ ...errors, title: "" });
+                        }}
+                      />
+                      {errors.title && (
+                        <p className="text-red-500 text-xs mt-1 ml-2">
+                          {errors.title}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Duration Type & Split-Day Selection */}
+            {!isViewMode &&
+              (selectedLeaveType === LeaveRequestType.APPLY_LEAVE ||
+                selectedLeaveType === LeaveRequestType.LEAVE ||
+                selectedLeaveType === WorkLocation.WORK_FROM_HOME ||
+                selectedLeaveType === WorkLocation.CLIENT_VISIT ||
+                selectedLeaveType === LeaveRequestType.HALF_DAY) && (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-[#2B3674] ml-1">
+                      Type
+                    </label>
+                    <Select
+                      value={leaveDurationType}
+                      onChange={(val) => {
+                        setLeaveDurationType(val);
+                        const isHalf =
+                          val === HalfDayType.FIRST_HALF ||
+                          val === HalfDayType.SECOND_HALF ||
+                          val === HalfDayType.HALF_DAY;
+                        setIsHalfDay(isHalf);
+                        if (
+                          val === HalfDayType.FIRST_HALF ||
+                          val === HalfDayType.SECOND_HALF
+                        ) {
+                          setHalfDayType(val);
+                        } else {
+                          setHalfDayType(null);
+                        }
+                      }}
+                      className="w-full h-[48px] font-bold text-[#2B3674]"
+                      variant="borderless"
+                      dropdownStyle={{ borderRadius: "16px", padding: "8px" }}
+                      style={{
+                        backgroundColor: "#F4F7FE",
+                        borderRadius: "16px",
+                        border: "1px solid transparent",
+                      }}
+                      suffixIcon={<ChevronDown className="text-[#4318FF]" />}
+                    >
+                      <Select.Option value={HalfDayType.FULL_DAY}>
+                        Full Day
+                      </Select.Option>
+                      <Select.Option value={HalfDayType.FIRST_HALF}>
+                        First Half
+                      </Select.Option>
+                      <Select.Option value={HalfDayType.SECOND_HALF}>
+                        Second Half
+                      </Select.Option>
+                    </Select>
+                  </div>
+
+                  {/* Other Half Activity (Shown if not Full Day) */}
+                  {(leaveDurationType === HalfDayType.FIRST_HALF ||
+                    leaveDurationType === HalfDayType.SECOND_HALF ||
+                    leaveDurationType === HalfDayType.HALF_DAY) && (
+                    <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                      <label className="text-sm font-bold text-[#2B3674] ml-1">
+                        Other Half Activity
+                      </label>
+                      <Select
+                        value={otherHalfType}
+                        onChange={(val) => setOtherHalfType(val)}
+                        className="w-full h-[48px] font-bold text-[#2B3674]"
+                        variant="borderless"
+                        dropdownStyle={{ borderRadius: "16px", padding: "8px" }}
+                        style={{
+                          backgroundColor: "#F4F7FE",
+                          borderRadius: "16px",
+                          border: "1px solid transparent",
+                        }}
+                        suffixIcon={<ChevronDown className="text-[#4318FF]" />}
+                      >
+                        <Select.Option value={WorkLocation.OFFICE}>
+                          Office
+                        </Select.Option>
+                        {selectedLeaveType !== WorkLocation.WORK_FROM_HOME && (
+                          <Select.Option value={WorkLocation.WORK_FROM_HOME}>
+                            Work From Home
+                          </Select.Option>
+                        )}
+                        {selectedLeaveType !== WorkLocation.CLIENT_VISIT && (
+                          <Select.Option value={WorkLocation.CLIENT_VISIT}>
+                            Client Visit
+                          </Select.Option>
+                        )}
+                        {!(
+                          selectedLeaveType === LeaveRequestType.APPLY_LEAVE ||
+                          selectedLeaveType === LeaveRequestType.LEAVE ||
+                          selectedLeaveType === LeaveRequestType.HALF_DAY
+                        ) && (
+                          <Select.Option value={LeaveRequestType.LEAVE}>
+                            Leave
+                          </Select.Option>
+                        )}
+                      </Select>
+                    </div>
+                  )}
+                </div>
+              )}
+
+            {/* Dates Row + Total Days */}
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-4 items-end">
+              <div className="space-y-2" ref={startDateRef}>
+                <label className="text-sm font-bold text-[#2B3674] ml-1">
+                  From <span className="text-red-500">*</span>
+                </label>
+                {isViewMode ? (
+                  <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] text-center">
+                    {dayjs(formData.startDate).format("DD-MM-YYYY")}
+                  </div>
+                ) : (
+                  <>
+                    <ConfigProvider theme={LEAVE_DATE_PICKER_THEME}>
+                      <DatePicker
+                        inputReadOnly={true}
+                        classNames={{
+                          popup: "hide-other-months show-weekdays",
+                        }}
+                        disabledDate={disabledDate}
+                        className={`w-full px-5! py-3! rounded-[20px]! bg-[#F4F7FE]! border-none! focus:bg-white! focus:border-[#4318FF]! transition-all font-bold! text-[#2B3674]! shadow-none`}
+                        value={
+                          formData.startDate ? dayjs(formData.startDate) : null
+                        }
+                        onChange={(date) => {
+                          const newStartDate = date
+                            ? date.format("YYYY-MM-DD")
+                            : "";
+                          setFormData((prev) => {
+                            const newData = {
+                              ...prev,
+                              startDate: newStartDate,
+                            };
+                            if (
+                              newData.endDate &&
+                              newData.startDate &&
+                              dayjs(newData.endDate).isBefore(
+                                dayjs(newData.startDate),
+                              )
+                            ) {
+                              newData.endDate = "";
+                            }
+                            return newData;
+                          });
+                          if (errors.startDate)
+                            setErrors({ ...errors, startDate: "" });
+                        }}
+                        format="DD-MM-YYYY"
+                        placeholder="dd-mm-yyyy"
+                        suffixIcon={null}
+                        getPopupContainer={(trigger: any) => trigger.parentNode}
+                      />
+                    </ConfigProvider>
+                    {errors.startDate && (
+                      <p className="text-red-500 text-xs mt-1 ml-2">
+                        {errors.startDate}
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+              <div className="space-y-2" ref={endDateRef}>
+                <label className="text-sm font-bold text-[#2B3674] ml-1">
+                  To <span className="text-red-500">*</span>
+                </label>
+                {isViewMode ? (
+                  <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] text-center">
+                    {dayjs(formData.endDate).format("DD-MM-YYYY")}
+                  </div>
+                ) : (
+                  <>
+                    <ConfigProvider theme={LEAVE_DATE_PICKER_THEME}>
+                      <DatePicker
+                        inputReadOnly={true}
+                        classNames={{
+                          popup: "hide-other-months show-weekdays",
+                        }}
+                        disabledDate={disabledEndDate}
+                        className={`w-full px-5! py-3! rounded-[20px]! bg-[#F4F7FE]! border-none! focus:bg-white! focus:border-[#4318FF]! transition-all font-bold! text-[#2B3674]! shadow-none`}
+                        value={
+                          formData.endDate ? dayjs(formData.endDate) : null
+                        }
+                        onChange={(date) => {
+                          setFormData({
+                            ...formData,
+                            endDate: date ? date.format("YYYY-MM-DD") : "",
+                          });
+                          if (errors.endDate)
+                            setErrors({ ...errors, endDate: "" });
+                        }}
+                        format="DD-MM-YYYY"
+                        placeholder="dd-mm-yyyy"
+                        suffixIcon={null}
+                        getPopupContainer={(trigger: any) => trigger.parentNode}
+                      />
+                    </ConfigProvider>
+                    {errors.endDate && (
+                      <p className="text-red-500 text-xs mt-1 ml-2">
+                        {errors.endDate}
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+              <div className="space-y-2 flex flex-col justify-end">
+                <label className="text-sm font-bold text-[#2B3674] ml-1">
+                  Duration:
+                </label>
+                <div className="px-4 py-3 rounded-2xl bg-[#F4F7FE] font-bold text-[#4318FF] inline-flex items-center gap-2 min-h-[48px]">
+                  <span className="bg-white px-3 py-1.5 rounded-lg shadow-sm border border-blue-100">
+                    {formData.startDate && formData.endDate
+                      ? (() => {
+                          if (isViewMode) {
+                            const dur = parseFloat(String(formData.duration));
+                            return `${isNaN(dur) ? 0 : dur} Day(s)`;
+                          }
+
+                          if (
+                            selectedLeaveType === WorkLocation.CLIENT_VISIT ||
+                            selectedLeaveType === WorkLocation.WORK_FROM_HOME ||
+                            selectedLeaveType ===
+                              LeaveRequestType.APPLY_LEAVE ||
+                            selectedLeaveType === LeaveRequestType.LEAVE ||
+                            selectedLeaveType === LeaveRequestType.HALF_DAY
+                          ) {
+                            const baseDur = calculateDurationExcludingWeekends(
+                              formData.startDate,
+                              formData.endDate,
+                            );
+                            const isHalf =
+                              leaveDurationType === HalfDayType.HALF_DAY ||
+                              leaveDurationType === HalfDayType.FIRST_HALF ||
+                              leaveDurationType === HalfDayType.SECOND_HALF;
+                            if (isHalf) {
+                              const factor = getDurationFactor(
+                                leaveDurationType === HalfDayType.HALF_DAY
+                                  ? halfDayType
+                                  : leaveDurationType,
+                                otherHalfType,
+                              );
+                              return `${baseDur * factor} Day(s)`;
+                            }
+                            return `${baseDur} Day(s)`;
+                          } else {
+                            return `${dayjs(formData.endDate).diff(dayjs(formData.startDate), "day") + 1} Day(s)`;
+                          }
+                        })()
+                      : "0 Days"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Split-Day Information (View Mode Only) */}
+            {isViewMode &&
+              selectedRequestId !== null &&
+              (() => {
+                const viewedRequest = entities.find(
+                  (e: any) => e.id === selectedRequestId,
+                );
+                const isBothSame =
+                  viewedRequest?.firstHalf === viewedRequest?.secondHalf;
+                return (viewedRequest as any)?.isHalfDay &&
+                  (viewedRequest?.firstHalf || viewedRequest?.secondHalf) ? (
+                  <div className="space-y-2 p-4 bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-50 rounded-2xl border-2 border-blue-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Clock size={18} className="text-blue-600" />
+                      <label className="text-sm font-black text-blue-900 uppercase tracking-wider">
+                        Day Details
+                      </label>
+                    </div>
+                    {isBothSame ? (
+                      <div className="bg-white p-3 rounded-xl shadow-sm border border-blue-100 flex items-center justify-between">
+                        <p className="text-sm font-extrabold text-blue-700">
+                          Full Day
+                        </p>
+                        <span className="text-xs font-bold text-blue-500 bg-blue-50 px-3 py-1 rounded-lg">
+                          {viewedRequest.firstHalf}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-white p-3 rounded-xl shadow-sm border border-blue-100">
+                          <p className="text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wide">
+                            First Half
+                          </p>
+                          <p className="text-sm font-extrabold text-blue-700">
+                            {viewedRequest.firstHalf || "N/A"}
+                          </p>
+                        </div>
+                        <div className="bg-white p-3 rounded-xl shadow-sm border border-purple-100">
+                          <p className="text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wide">
+                            Second Half
+                          </p>
+                          <p className="text-sm font-extrabold text-purple-700">
+                            {viewedRequest.secondHalf || "N/A"}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : null;
+              })()}
+
+            {/* Description Field */}
+            <div className="space-y-2" ref={descriptionRef}>
+              <label className="text-sm font-bold text-[#2B3674] ml-1">
+                Reason for Request<span className="text-red-500">*</span>
+              </label>
+              {isViewMode ? (
+                <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-medium text-[#2B3674] min-h-[60px] whitespace-pre-wrap break-words leading-relaxed">
+                  {formData.description ||
+                    "Reason for Request is not provided."}
+                </div>
+              ) : (
+                <div className="relative">
+                  <textarea
+                    rows={3}
+                    placeholder="Please provide details about your request..."
+                    className={`w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] border ${
+                      errors.description
+                        ? "border-red-500"
+                        : "border-transparent"
+                    } focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium text-[#2B3674] placeholder:font-medium placeholder:text-gray-400 resize-none`}
+                    value={formData.description}
+                    onChange={(e) => {
+                      setFormData({
+                        ...formData,
+                        description: e.target.value,
+                      });
+                      if (errors.description)
+                        setErrors({ ...errors, description: "" });
+                    }}
+                  />
+                  {errors.description && (
+                    <p className="text-red-500 text-xs mt-1 ml-2">
+                      {errors.description}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Document Upload Section */}
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-[#2B3674] ml-1">
+                Attachments {isViewMode ? "" : "(Optional)"}
+              </label>
+              {!isViewMode && (
+                <p className="text-xs text-gray-500 ml-1 mb-1">
+                  Accepted formats: PDF, JPG, PNG, JPEG (Max 5 files, 5MB per
+                  file)
+                </p>
+              )}
+              <div className="bg-[#F4F7FE] rounded-2xl p-2 border border-blue-50">
+                <CommonMultipleUploader
+                  key={isViewMode ? selectedRequestId : uploaderKey}
+                  entityType="LEAVE_REQUEST"
+                  entityId={Number(entity?.id || 0)}
+                  refId={isViewMode ? selectedRequestId || 0 : 0}
+                  refType="DOCUMENT"
+                  fetchOnMount={isViewMode}
+                  uploadFile={uploadLeaveRequestFile}
+                  downloadFile={downloadLeaveRequestFile}
+                  previewFile={previewLeaveRequestFile}
+                  deleteFile={deleteLeaveRequestFile}
+                  getFiles={getLeaveRequestFiles}
+                  maxFiles={5}
+                  maxFileSize={5 * 1024 * 1024}
+                  allowedTypes={["images", "pdf"]}
+                  successMessage="Document uploaded successfully"
+                  deleteMessage="Document deleted successfully"
+                  disabled={isViewMode}
+                  onFileUpload={(file) =>
+                    setUploadedDocumentKeys((prev) => [...prev, file.key])
+                  }
+                  onFileDelete={(fileKey) =>
+                    setUploadedDocumentKeys((prev) =>
+                      prev.filter((k) => k !== fileKey),
+                    )
+                  }
+                />
+              </div>
+            </div>
+
+            {/* Error Message - shown above buttons */}
+            {error && (
+              <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+                <XCircle size={20} className="text-red-500 shrink-0" />
+                <p className="text-xs font-bold text-red-600 leading-tight">
+                  {typeof error === "string"
+                    ? error
+                    : (error as any)?.message || JSON.stringify(error)}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Actions Footer */}
+          {!isViewMode && (
+            <div className="p-4 bg-white border-t border-gray-100 flex gap-4 shrink-0">
+              <button
+                onClick={handleCloseModal}
+                className="flex-1 py-2.5 rounded-xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 transition-all active:scale-95 text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={loading}
+                className="flex-1 py-2.5 rounded-xl font-bold text-white bg-[#4318FF] hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95 disabled:opacity-80 text-sm flex items-center justify-center"
+              >
+                {loading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <Loader2 className="animate-spin" size={18} />
+                    <span>Submitting...</span>
+                  </div>
+                ) : (
+                  "Submit Request"
+                )}
+              </button>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* Cancel Confirmation Modal */}
+      <Modal
+        open={cancelModal.isOpen}
+        width={600}
+        onCancel={() => setCancelModal({ isOpen: false, id: null })}
+        footer={
+          <div className="flex justify-center gap-3 pb-2 flex-wrap">
+            <button
+              key="back"
+              onClick={() => setCancelModal({ isOpen: false, id: null })}
+              className="px-6 py-2.5 rounded-xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 transition-colors"
+            >
+              No, Keep It
+            </button>
+            {!(
+              entities.find((e: any) => e.id === cancelModal.id)?.status ===
+                LeaveRequestStatus.REQUESTING_FOR_CANCELLATION ||
+              entities.find((e: any) => e.id === cancelModal.id)?.status ===
+                LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
+            ) && (
+              <button
+                key="modify"
+                onClick={() => {
+                  const request = entities.find(
+                    (e: any) => e.id === cancelModal.id,
+                  );
+                  if (
+                    request &&
+                    [
+                      LeaveRequestStatus.PENDING,
+                      LeaveRequestStatus.APPROVED,
+                    ].includes(request.status)
+                  ) {
+                    setCancelModal({ isOpen: false, id: null });
+                    const parsedCc = Array.isArray(request.ccEmails)
+                      ? request.ccEmails
+                      : typeof request.ccEmails === "string"
+                        ? (() => {
+                            try {
+                              const p = JSON.parse(request.ccEmails);
+                              return Array.isArray(p) ? p : [];
+                            } catch {
+                              return [];
+                            }
+                          })()
+                        : [];
+                    setModifyFormData({
+                      title: request.title || "",
+                      description: request.description || "",
+                      firstHalf: request.firstHalf || WorkLocation.OFFICE,
+                      secondHalf: request.secondHalf || WorkLocation.OFFICE,
+                      ccEmails: parsedCc,
+                    });
+                    setModifyModal({
+                      isOpen: true,
+                      request,
+                      datesToModify: undefined,
+                    });
+                  }
+                }}
+                className="px-6 py-2.5 rounded-2xl font-bold text-white bg-[#4318FF] hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95 transform tracking-wider flex items-center justify-center gap-2"
+              >
+                Modify Request
+              </button>
+            )}
+            <button
+              key="submit"
+              onClick={executeCancel}
+              disabled={isCancelling}
+              className={`px-8 py-2.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${
+                isCancelling
+                  ? "bg-red-400 cursor-not-allowed opacity-80"
+                  : "bg-red-500 hover:bg-red-600 shadow-red-200 transform active:scale-95"
+              }`}
+            >
+              {isCancelling ? (
+                <>
+                  <Loader2 className="animate-spin" size={18} />
+                  Processing...
+                </>
+              ) : (
+                "Yes, Cancel Request"
+              )}
+            </button>
+          </div>
+        }
+        centered
+        closable={!isCancelling}
+      >
+        <div className="text-center py-4">
+          <div className="mx-auto w-16 h-16 rounded-full bg-red-50 text-red-500 flex items-center justify-center mb-6">
+            <XCircle size={32} strokeWidth={2.5} />
+          </div>
+
+          <h3 className="text-2xl font-black text-[#2B3674] mb-2">
+            Cancel Request?
+          </h3>
+
+          <p className="text-gray-500 font-medium leading-relaxed">
+            {entities.find((e: any) => e.id === cancelModal.id)?.status ===
+            LeaveRequestStatus.APPROVED
+              ? "This request is currently Approved. Cancelling it will submit a request to the Admin for approval. Are you sure?"
+              : "Are you sure you want to cancel this request? You can also choose to modify it instead."}
+          </p>
+        </div>
+      </Modal>
+
+      {/* Undo Confirmation Modal */}
+      {undoModal.isOpen && (
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-[#2B3674]/40 backdrop-blur-sm transition-opacity"
+            onClick={() =>
+              !isUndoing && setUndoModal({ isOpen: false, request: null })
+            }
+          />
+          <div className="relative w-full max-w-md bg-white rounded-[24px] overflow-hidden shadow-[0px_20px_40px_rgba(0,0,0,0.1)] animate-in fade-in zoom-in duration-200 transform">
+            <div className="p-8 text-center">
+              <div className="mx-auto w-16 h-16 rounded-full bg-blue-50 text-[#4318FF] flex items-center justify-center mb-6">
+                <RotateCcw size={32} />
+              </div>
+
+              <h3 className="text-2xl font-black text-[#2B3674] mb-2">
+                {undoModal.request?.status ===
+                LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
+                  ? "Withdraw Modification"
+                  : "Revert Cancellation"}
+              </h3>
+              <p className="text-gray-500 font-medium leading-relaxed mb-8">
+                {undoModal.request?.status ===
+                LeaveRequestStatus.REQUESTING_FOR_MODIFICATION ? (
+                  <>
+                    Are you sure you want to withdraw your modification request
+                    for{" "}
+                    <span className="text-[#2B3674] font-bold">
+                      "{undoModal.request?.title}"
+                    </span>
+                    ? This will cancel your pending changes.
+                  </>
+                ) : (
+                  <>
+                    Are you sure you want to revert the cancellation for{" "}
+                    <span className="text-[#2B3674] font-bold">
+                      "{undoModal.request?.title}"
+                    </span>
+                    ? This will restore your original request status to{" "}
+                    <span className="text-green-600 font-bold uppercase tracking-wider">
+                      Approved
+                    </span>
+                    .
+                  </>
+                )}
+              </p>
+
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setUndoModal({ isOpen: false, request: null })}
+                  disabled={isUndoing}
+                  className="flex-1 py-3.5 rounded-xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
+                >
+                  {undoModal.request?.status ===
+                  LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
+                    ? "Keep Request"
+                    : "No"}
+                </button>
+                <button
+                  onClick={
+                    undoModal.request?.status ===
+                    LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
+                      ? executeUndoModification
+                      : executeUndo
+                  }
+                  disabled={isUndoing}
+                  className="flex-1 py-3.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed transform active:scale-95 bg-[#4318FF] hover:bg-indigo-700 shadow-indigo-200 active:scale-95"
+                >
+                  {isUndoing ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin" />
+                      <span>
+                        {undoModal.request?.status ===
+                        LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
+                          ? "Withdrawing..."
+                          : "Reverting..."}
+                      </span>
+                    </>
+                  ) : undoModal.request?.status ===
+                    LeaveRequestStatus.REQUESTING_FOR_MODIFICATION ? (
+                    "Withdraw Request"
+                  ) : (
+                    "Yes, Revert it"
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modification Modal */}
+      <Modal
+        open={modifyModal.isOpen}
+        onCancel={() => {
+          !isModifying && setModifyModal({ isOpen: false, request: null });
+          setModifyErrors({ title: "", description: "" });
+        }}
+        footer={null}
+        closable={true}
+        centered
+        width={750}
+        className="application-modal"
+      >
+        <div className="relative overflow-hidden bg-white flex flex-col max-h-[82vh]">
+          {/* Modal Header */}
+          <div className="pt-5 pb-3 px-6 border-b border-gray-100 shrink-0">
+            <div className="flex justify-between items-start">
+              <h2 className="text-xl md:text-2xl font-bold text-[#2B3674] tracking-tight">
+                Modify Request
+              </h2>
+            </div>
+          </div>
+
+          {/* Modal Body */}
+          <div className="p-6 space-y-5 overflow-y-auto flex-1 custom-scrollbar px-1">
+            {/* Email recipients + Subject card - same as Create */}
+            <div className="rounded-2xl border border-[#E0E7FF] bg-[#F8FAFC] p-4 shadow-sm">
+              <div className="space-y-3">
+                <label className="text-sm font-bold text-[#2B3674] ml-1 block">
+                  Email recipients
+                </label>
+                <div className="space-y-4">
+                  <div className="flex flex-wrap gap-4 items-start">
+                    <div className="min-w-0 flex-1">
+                      <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
+                        Reporting Manager
+                      </span>
+                      <input
+                        type="text"
+                        readOnly
+                        disabled
+                        value={REPORTING_MANAGER_EMAIL}
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-gray-700 cursor-not-allowed"
+                      />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
+                        HR
+                      </span>
+                      <input
+                        type="text"
+                        readOnly
+                        disabled
+                        value={HR_EMAIL}
+                        placeholder="Not configured"
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-gray-700 cursor-not-allowed"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
+                      CC
+                    </span>
+                    <div className="flex flex-wrap gap-2 items-center">
+                      {(modifyFormData.ccEmails || []).length > 0 ? (
+                        (modifyFormData.ccEmails || []).map((email: string) => (
+                          <span
+                            key={email}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-200 text-gray-700 text-sm font-medium"
+                          >
+                            {email}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-sm text-gray-500">—</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                {/* Subject - inside card */}
+                <div className="space-y-2 pt-2 border-t border-[#E0E7FF]">
+                  <label className="text-sm font-bold text-[#2B3674] ml-1">
+                    Subject <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={modifyFormData.title}
+                    onChange={(e) => {
+                      setModifyFormData({
+                        ...modifyFormData,
+                        title: e.target.value,
+                      });
+                      setModifyErrors({ ...modifyErrors, title: "" });
+                    }}
+                    className={`w-full px-5 py-3 rounded-xl border text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400 ${
+                      modifyErrors.title
+                        ? "border-red-500"
+                        : modifyFormData.firstHalf ===
+                              (modifyModal.request?.firstHalf ||
+                                modifyModal.request?.requestType) &&
+                            modifyFormData.secondHalf ===
+                              (modifyModal.request?.secondHalf ||
+                                modifyModal.request?.requestType)
+                          ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
+                          : "bg-white border-gray-200"
+                    }`}
+                    placeholder="e.g. Annual Vacation"
+                    disabled={
+                      modifyFormData.firstHalf ===
+                        (modifyModal.request?.firstHalf ||
+                          modifyModal.request?.requestType) &&
+                      modifyFormData.secondHalf ===
+                        (modifyModal.request?.secondHalf ||
+                          modifyModal.request?.requestType)
+                    }
+                  />
+                  {modifyErrors.title && (
+                    <p className="text-red-500 text-xs mt-1 ml-1">
+                      {modifyErrors.title}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3">
+              <p className="text-sm text-yellow-800 font-semibold">
+                📅{" "}
+                {modifyModal.datesToModify
+                  ? `Modifying ${modifyModal.datesToModify.length} selected date(s).`
+                  : "Dates are locked and cannot be modified."}
+              </p>
+              {!modifyModal.datesToModify && (
+                <p className="text-xs text-yellow-700 mt-1">
+                  From:{" "}
+                  <strong>
+                    {dayjs(modifyModal.request?.fromDate).format("DD-MM-YYYY")}
+                  </strong>{" "}
+                  → To:{" "}
+                  <strong>
+                    {dayjs(modifyModal.request?.toDate).format("DD-MM-YYYY")}
+                  </strong>
+                </p>
+              )}
+              {modifyModal.datesToModify && (
+                <p className="text-xs text-yellow-700 mt-1">
+                  Selected:{" "}
+                  <strong>
+                    {modifyModal.datesToModify
+                      .map((d) => dayjs(d).format("DD MMM"))
+                      .join(", ")}
+                  </strong>
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-[#2B3674] mb-2">
+                Description <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={modifyFormData.description}
+                onChange={(e) => {
+                  setModifyFormData({
+                    ...modifyFormData,
+                    description: e.target.value,
+                  });
+                  setModifyErrors({ ...modifyErrors, description: "" });
+                }}
+                rows={3}
+                className={`w-full px-5 py-3 border rounded-xl text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-medium text-[#2B3674] placeholder:text-gray-400 resize-none ${
+                  modifyErrors.description
+                    ? "border-red-500"
+                    : modifyFormData.firstHalf ===
+                          (modifyModal.request?.firstHalf ||
+                            modifyModal.request?.requestType) &&
+                        modifyFormData.secondHalf ===
+                          (modifyModal.request?.secondHalf ||
+                            modifyModal.request?.requestType)
+                      ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
+                      : "bg-white border-gray-200"
+                }`}
+                placeholder="Please provide details about your request..."
+                disabled={
+                  modifyFormData.firstHalf ===
+                    (modifyModal.request?.firstHalf ||
+                      modifyModal.request?.requestType) &&
+                  modifyFormData.secondHalf ===
+                    (modifyModal.request?.secondHalf ||
+                      modifyModal.request?.requestType)
+                }
+              />
+              {modifyErrors.description && (
+                <p className="text-red-500 text-xs mt-1 ml-1">
+                  {modifyErrors.description}
+                </p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold text-[#2B3674] mb-2">
+                  First Half
+                </label>
+                <Select
+                  value={modifyFormData.firstHalf}
+                  onChange={(value) =>
+                    setModifyFormData({ ...modifyFormData, firstHalf: value })
+                  }
+                  className="w-full"
+                  size="large"
+                  options={[
+                    { label: WorkLocation.OFFICE, value: WorkLocation.OFFICE },
+                    {
+                      label: LeaveRequestType.LEAVE,
+                      value: LeaveRequestType.LEAVE,
+                    },
+                    {
+                      label: WorkLocation.WORK_FROM_HOME,
+                      value: WorkLocation.WORK_FROM_HOME,
+                    },
+                    {
+                      label: WorkLocation.CLIENT_VISIT,
+                      value: WorkLocation.CLIENT_VISIT,
+                    },
+                  ]}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-[#2B3674] mb-2">
+                  Second Half
+                </label>
+                <Select
+                  value={modifyFormData.secondHalf}
+                  onChange={(value) =>
+                    setModifyFormData({ ...modifyFormData, secondHalf: value })
+                  }
+                  className="w-full"
+                  size="large"
+                  options={[
+                    { label: WorkLocation.OFFICE, value: WorkLocation.OFFICE },
+                    {
+                      label: LeaveRequestType.LEAVE,
+                      value: LeaveRequestType.LEAVE,
+                    },
+                    {
+                      label: WorkLocation.WORK_FROM_HOME,
+                      value: WorkLocation.WORK_FROM_HOME,
+                    },
+                    {
+                      label: WorkLocation.CLIENT_VISIT,
+                      value: WorkLocation.CLIENT_VISIT,
+                    },
+                  ]}
+                />
+              </div>
+            </div>
+
+            {/* Document Upload Section */}
+            <div
+              className={`mt-4 ${
+                modifyFormData.firstHalf ===
+                  (modifyModal.request?.firstHalf ||
+                    modifyModal.request?.requestType) &&
+                modifyFormData.secondHalf ===
+                  (modifyModal.request?.secondHalf ||
+                    modifyModal.request?.requestType)
+                  ? "opacity-50 pointer-events-none"
+                  : ""
+              }`}
+            >
+              <label className="block text-sm font-bold text-[#2B3674] mb-2">
+                Supporting Documents (Optional)
+              </label>
+              <div className="bg-[#F4F7FE] rounded-2xl p-2 border border-blue-50">
+                <CommonMultipleUploader
+                  key={`modify-uploader-${modifyModal.request?.id}`}
+                  entityType="LEAVE_REQUEST"
+                  entityId={Number(entity?.id || 0)}
+                  refId={0}
+                  refType="DOCUMENT"
+                  disabled={
+                    modifyFormData.firstHalf ===
+                      (modifyModal.request?.firstHalf ||
+                        modifyModal.request?.requestType) &&
+                    modifyFormData.secondHalf ===
+                      (modifyModal.request?.secondHalf ||
+                        modifyModal.request?.requestType)
+                  }
+                  fetchOnMount={false}
+                  uploadFile={uploadLeaveRequestFile}
+                  deleteFile={deleteLeaveRequestFile}
+                  getFiles={getLeaveRequestFiles}
+                  previewFile={previewLeaveRequestFile}
+                  downloadFile={downloadLeaveRequestFile}
+                  onFileUpload={(file) =>
+                    setUploadedDocumentKeys((prev) => [...prev, file.key])
+                  }
+                  onFileDelete={(fileKey) =>
+                    setUploadedDocumentKeys((prev) =>
+                      prev.filter((k) => k !== fileKey),
+                    )
+                  }
+                  maxFiles={5}
+                  maxFileSize={5 * 1024 * 1024}
+                  allowedTypes={["images", "pdf"]}
+                  successMessage="Document added successfully"
+                  deleteMessage="Document removed successfully"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Modal Footer */}
+          <div className="flex justify-end gap-3 pt-4 px-6 pb-5 border-t border-gray-100 shrink-0">
+            <button
+              onClick={() => setModifyModal({ isOpen: false, request: null })}
+              disabled={isModifying}
+              className="px-6 py-2.5 rounded-xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={async () => {
+                if (!modifyModal.request) return;
+
+                // Validation: Check if title and description are not empty
+                const newErrors = { title: "", description: "" };
+                let isValid = true;
+
+                if (!modifyFormData.title.trim()) {
+                  newErrors.title = "Subject is required";
+                  isValid = false;
+                }
+                if (!modifyFormData.description.trim()) {
+                  newErrors.description = "Description is required";
+                  isValid = false;
+                }
+
+                if (!isValid) {
+                  setModifyErrors(newErrors);
+                  return;
+                }
+
+                // Validation: Check if any change was made
+                const originalFirstHalf =
+                  modifyModal.request.firstHalf ||
+                  modifyModal.request.requestType;
+                const originalSecondHalf =
+                  modifyModal.request.secondHalf ||
+                  modifyModal.request.requestType;
+
+                const isFirstHalfChanged =
+                  modifyFormData.firstHalf !== originalFirstHalf;
+                const isSecondHalfChanged =
+                  modifyFormData.secondHalf !== originalSecondHalf;
+                const isTitleChanged =
+                  modifyFormData.title !== (modifyModal.request.title || "");
+                const isDescriptionChanged =
+                  modifyFormData.description !==
+                  (modifyModal.request.description || "");
+
+                if (
+                  !isFirstHalfChanged &&
+                  !isSecondHalfChanged &&
+                  !isTitleChanged &&
+                  !isDescriptionChanged &&
+                  JSON.stringify(modifyFormData.ccEmails || []) ===
+                    JSON.stringify(modifyModal.request.ccEmails || [])
+                ) {
+                  message.warning(
+                    "No changes detected. Please modify at least one field to submit.",
+                  );
+                  return;
+                }
+
+                setIsModifying(true);
+                try {
+                  await dispatch(
+                    modifyLeaveRequest({
+                      id: modifyModal.request.id,
+                      employeeId: modifyModal.request.employeeId,
+                      updateData: {
+                        ...modifyFormData,
+                        datesToModify: modifyModal.datesToModify,
+                        documentKeys: uploadedDocumentKeys,
+                      },
+                    }),
+                  ).unwrap();
+                  setModifyModal({ isOpen: false, request: null });
+                  message.success(
+                    "Modification Request Submitted: Notification sent to Manager",
+                  );
+                  setUploadedDocumentKeys([]); // Reset on success
+                  if (employeeId) {
+                    refreshData();
+                  }
+                } catch (err: any) {
+                  message.error(
+                    `Modification Failed: ${err.message || "Failed to modify request."}`,
+                  );
+                } finally {
+                  setIsModifying(false);
+                }
+              }}
+              disabled={isModifying}
+              className={`px-8 py-2.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${
+                isModifying
+                  ? "bg-blue-400 cursor-not-allowed"
+                  : "bg-blue-500 hover:bg-blue-600 shadow-blue-200 transform active:scale-95"
+              }`}
+            >
+              {isModifying ? (
+                <>
+                  <Loader2 className="animate-spin" size={18} />
+                  Processing...
+                </>
+              ) : (
+                "Submit Request"
+              )}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Partial Cancellation Modal */}
+      <Modal
+        title={
+          <div className="text-lg font-bold text-gray-800">Changes Request</div>
+        }
+        width={560}
+        open={isCancelDateModalVisible}
+        onCancel={() => setIsCancelDateModalVisible(false)}
+        footer={
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 py-2 px-1">
+            <div className="flex gap-2 w-full sm:w-auto">
+              <button
+                key="back"
+                onClick={() => setIsCancelDateModalVisible(false)}
+                className="whitespace-nowrap flex-1 sm:flex-none px-6 py-2.5 rounded-xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 transition-colors"
+              >
+                Close
+              </button>
+              {!(
+                requestToCancel?.status ===
+                  LeaveRequestStatus.REQUESTING_FOR_CANCELLATION ||
+                requestToCancel?.status ===
+                  LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
+              ) && (
+                <button
+                  key="modify"
+                  onClick={() => {
+                    if (requestToCancel) {
+                      setIsCancelDateModalVisible(false);
+                      const parsedCc = Array.isArray(requestToCancel.ccEmails)
+                        ? requestToCancel.ccEmails
+                        : typeof requestToCancel.ccEmails === "string"
+                          ? (() => {
+                              try {
+                                const p = JSON.parse(requestToCancel.ccEmails);
+                                return Array.isArray(p) ? p : [];
+                              } catch {
+                                return [];
+                              }
+                            })()
+                          : [];
+                      setModifyFormData({
+                        title: requestToCancel.title || "",
+                        description: requestToCancel.description || "",
+                        firstHalf:
+                          requestToCancel.firstHalf || WorkLocation.OFFICE,
+                        secondHalf:
+                          requestToCancel.secondHalf || WorkLocation.OFFICE,
+                        ccEmails: parsedCc,
+                      });
+                      setUploadedDocumentKeys([]); // Reset when opening the modify modal
+                      setModifyModal({
+                        isOpen: true,
+                        request: requestToCancel,
+                        datesToModify: selectedCancelDates,
+                      });
+                    }
+                  }}
+                  disabled={selectedCancelDates.length === 0}
+                  className={`whitespace-nowrap flex-1 sm:flex-none px-6 py-2.5 rounded-xl font-bold transition-all transform active:scale-95 tracking-wider flex items-center justify-center gap-2 ${
+                    selectedCancelDates.length === 0
+                      ? "text-gray-400 bg-gray-100 cursor-not-allowed"
+                      : "text-white bg-[#4318FF] hover:shadow-lg hover:shadow-blue-500/30"
+                  }`}
+                >
+                  Modify Request
+                </button>
+              )}
+            </div>
+            <button
+              key="submit"
+              onClick={handleConfirmDateCancel}
+              disabled={selectedCancelDates.length === 0 || isCancelling}
+              className={`whitespace-nowrap w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${
+                selectedCancelDates.length === 0
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : isCancelling
+                    ? "bg-red-400 cursor-not-allowed opacity-80"
+                    : "bg-red-500 hover:bg-red-600 shadow-red-200 transform active:scale-95"
+              }`}
+            >
+              {isCancelling ? (
+                <>
+                  <Loader2 className="animate-spin" size={18} />
+                  Processing...
+                </>
+              ) : (
+                `Confirm Cancellation (${selectedCancelDates.length})`
+              )}
+            </button>
+          </div>
+        }
+      >
+        <div className="py-4">
+          {isLoadingDates ? (
+            <div className="flex justify-center p-8">
+              <Loader2 className="animate-spin text-blue-600" />
+            </div>
+          ) : cancellableDates.length === 0 ? (
+            <p className="text-gray-500 text-center">
+              All dates are already modified or cancelled, check table for
+              dates.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-100">
+                Choose the dates you want to revert.
+                {!(
+                  requestToCancel?.status ===
+                    LeaveRequestStatus.REQUESTING_FOR_CANCELLATION ||
+                  requestToCancel?.status ===
+                    LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
+                ) && (
+                  <>
+                    <br />
+                    <span className="text-xs text-red-500 font-semibold">
+                      Requests can only be cancelled before 6:30 PM on the
+                      respective day.
+                    </span>
+                  </>
+                )}
+              </p>
+
+              {/* Select All Option */}
+              {cancellableDates.some((d) => d.isCancellable) && (
+                <div className="flex items-center gap-3 px-3 py-2">
+                  <Checkbox
+                    checked={
+                      cancellableDates.filter((d) => d.isCancellable).length >
+                        0 &&
+                      cancellableDates
+                        .filter((d) => d.isCancellable)
+                        .every((d) => selectedCancelDates.includes(d.date))
+                    }
+                    onChange={toggleSelectAll}
+                  />
+                  <span
+                    onClick={toggleSelectAll}
+                    className="text-sm font-bold text-[#2B3674] cursor-pointer hover:text-[#4318FF] select-none"
+                  >
+                    Select All
+                  </span>
+                </div>
+              )}
+
+              <div className="max-h-[300px] overflow-y-auto border rounded-xl p-2 space-y-1">
+                {cancellableDates.map((item) => (
+                  <div
+                    key={item.date}
+                    className={`flex items-center justify-between p-3 rounded-lg border transition-all ${
+                      !item.isCancellable
+                        ? "bg-gray-50 border-gray-100 opacity-60"
+                        : selectedCancelDates.includes(item.date)
+                          ? "bg-red-50 border-red-200"
+                          : "bg-white border-gray-200 hover:border-blue-300"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Checkbox
+                        disabled={!item.isCancellable}
+                        checked={selectedCancelDates.includes(item.date)}
+                        onChange={() => toggleDateSelection(item.date)}
+                      />
+                      <div className="flex flex-col">
+                        <span
+                          className={`font-semibold ${!item.isCancellable ? "text-gray-400" : "text-gray-800"}`}
+                        >
+                          {formatModalDate(item.date)}
+                        </span>
+                        {!item.isCancellable && !isPrivileged && (
+                          <span className="text-xs text-red-500 flex items-center gap-1">
+                            <XCircle size={10} /> {item.reason}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {item.isCancellable && (
+                      <span className="text-xs text-green-600 font-medium px-2 py-0.5 bg-green-50 rounded">
+                        Eligible
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {/* Summary */}
+              <div className="flex justify-between items-center text-sm font-medium pt-2 border-t">
+                <span>Selected:</span>
+                <span className="text-red-600">
+                  {selectedCancelDates.length}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      </Modal>
+    </div>
+  );
+};
+
+export default LeaveManagementDesktop;

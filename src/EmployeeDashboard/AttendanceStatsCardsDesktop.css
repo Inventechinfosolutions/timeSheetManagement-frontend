@@ -1,13 +1,14 @@
 /* ── Attendance Stats — Desktop ── */
 
 .attendance-stats-desktop {
-  display: none;
+    display: none;
+    margin-top: 0;
 }
 
-@media (min-width: 640px) {
+@media (min-width: 1025px) {
   .attendance-stats-desktop {
     display: block;
-    margin-top: 6px;
+    margin-top: 0px;
   }
 
   .attendance-stats-grid--desktop {
@@ -17,60 +18,63 @@
     gap: 12px;
   }
 
-  /* desktop stat card */
-  .attendance-stats-desktop .attendance-stat-card {
-    min-height: 88px;
-    flex: 1 1 0;
-    width: 0;              /* NEW — forces flex-basis to drive width, ignoring content size */
-    min-width: 0;           /* NEW — prevents text/content from pushing card wider than siblings */
-    box-sizing: border-box; /* NEW — ensures padding is included in the flex-basis calculation */
-    border-radius: 16px;
-    padding: 10px 12px;
-    box-shadow: 0 10px 15px -3px rgb(229 231 235 / 0.5);
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    gap: 6px;
-  }
+  /* Desktop stat card */
+.attendance-stats-desktop .attendance-stat-card {
+  min-height: 116px;          /* Reduced from 125px */
+  flex: 1 1 0;
+  width: 0;
+  min-width: 0;
+  box-sizing: border-box;
+  border-radius: 16px;
+  padding: 16px;              /* Reduced from 20px */
+  box-shadow: 0 10px 15px -3px rgb(229 231 235 / 0.5);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 10px;
+}
 
-  .attendance-stats-desktop .attendance-stat-icon {
-    width: 32px;
-    height: 32px;
-  }
+.attendance-stats-desktop .attendance-stat-icon {
+  width: 34px;
+  height: 34px;
+}
 
-  .attendance-stats-desktop .attendance-stat-label {
-    font-size: 9px;
-    margin: 0;
-  }
+.attendance-stats-desktop .attendance-stat-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  margin: 0;
+}
 
-  .attendance-stats-desktop .attendance-stat-value {
-    font-size: 20px;
-    margin: 0;
-    line-height: 1.1;
-  }
+.attendance-stats-desktop .attendance-stat-value {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  margin: 0;
+}
 
-  .attendance-stats-desktop .attendance-stat-caption {
-    font-size: 9px;
-    margin-top: -2px;
-  }
+.attendance-stats-desktop .attendance-stat-caption {
+  font-size: 10px;
+  color: #8f9bba;
+  margin-top: -2px;
+}
 
-  /* ── desktop balance card — blue gradient ── */
   .attendance-stats-desktop .attendance-balance-card {
-    min-height: 88px;
-    flex: 1 1 0;
-    width: 0;              /* NEW — same fix, matches the 4 stat cards exactly */
-    min-width: 0;           /* NEW */
-    box-sizing: border-box; /* NEW */
-    border-radius: 16px;
-    padding: 10px 12px;
-    background: linear-gradient(135deg, #6938ef 0%, #4318ff 100%);
-    box-shadow: 0 10px 15px -3px rgba(67, 24, 255, 0.35);
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    position: relative;
-    overflow: hidden;
-  }
+  min-height: 116px;
+  flex: 1 1 0;
+  width: 0;
+  min-width: 0;
+  box-sizing: border-box;
+  border-radius: 16px;
+  padding: 16px;
+  background: linear-gradient(135deg, #6938ef 0%, #4318ff 100%);
+  box-shadow: 0 10px 15px -3px rgba(67, 24, 255, 0.35);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  position: relative;
+  overflow: hidden;
+}
 
   .attendance-stats-desktop .attendance-balance-orb--top,
   .attendance-stats-desktop .attendance-balance-orb--bottom {
@@ -105,21 +109,18 @@
   }
 
   .attendance-stats-desktop .attendance-balance-icon {
-    width: 32px;
-    height: 32px;
+    width: 34px;
+    height: 34px;
     border-radius: 10px;
     background: rgba(255, 255, 255, 0.18);
     color: #ffffff;
   }
 
   .attendance-stats-desktop .attendance-balance-card .attendance-stat-label {
-    font-size: 9px;
-    font-weight: 600;
-    letter-spacing: 0.4px;
-    text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.8);
-    margin: 0;
-  }
+  font-size: 10px;
+  font-weight: 600;
+  color: white;
+}
 
   .attendance-stats-desktop .attendance-balance-row {
     display: flex;
@@ -128,18 +129,12 @@
   }
 
   .attendance-stats-desktop .attendance-balance-card .attendance-balance-row span {
-    font-size: 20px !important;
-    font-weight: 700;
-    line-height: 1.1;
-    letter-spacing: 0;
-    font-family: inherit;
-    color: #fff;
-    margin: 0;
-  }
+  font-size: 22px !important;
+  font-weight: 700;
+}
 
   .attendance-stats-desktop .attendance-balance-row small {
-    font-size: 10px;
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.7);
-  }
+  font-size: 10px;
+  font-weight: 600;
+}
 }

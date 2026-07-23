@@ -3,14 +3,19 @@ import { HeaderProps } from "./EmployeeDashboard.types";
 import "./DashboardHeaderDesktop.css";
 
 export default function DashboardHeaderDesktop({
-  currentUser, entity, isMyRoute, displayEntry,
-  calendarDate, setCalendarDate, UserType,
+  currentUser,
+  entity,
+  isMyRoute,
+  displayEntry,
+  calendarDate,
+  setCalendarDate,
+  UserType,
 }: HeaderProps) {
   return (
     <div className="dashboard-header-desktop">
+      {/* Header Card */}
       <div className="dashboard-header-desktop__card">
         <div className="dashboard-header-desktop__row">
-
           {/* Left */}
           <div className="dashboard-header-desktop__left">
             <h1 className="dashboard-header-desktop__title">
@@ -18,6 +23,7 @@ export default function DashboardHeaderDesktop({
                 ? "Manager Dashboard"
                 : "Employee Dashboard"}
             </h1>
+
             <p className="dashboard-header-desktop__subtitle">
               Welcome back,{" "}
               <span className="dashboard-header-desktop__username">
@@ -37,53 +43,54 @@ export default function DashboardHeaderDesktop({
             {currentUser?.userType !== UserType.MANAGER && displayEntry && (
               <div className="dashboard-header-desktop__date-pill">
                 <CalendarIcon
-                  size={13}
+                  size={14}
                   className="dashboard-header-desktop__date-pill-icon"
                 />
-                <p className="dashboard-header-desktop__date-pill-text">
+
+                <span className="dashboard-header-desktop__date-pill-text">
                   {displayEntry.fullDate.toLocaleDateString("en-US", {
-                    weekday: "short",
+                    weekday: "long",
                     month: "short",
                     day: "numeric",
                   })}
-                </p>
+                </span>
               </div>
             )}
-
-            <div className="dashboard-header-desktop__month-nav">
-              <button
-                className="dashboard-header-desktop__month-btn"
-                onClick={() => {
-                  const p = new Date(calendarDate);
-                  p.setMonth(p.getMonth() - 1);
-                  setCalendarDate(p);
-                }}
-                aria-label="Previous month"
-              >
-                <ChevronLeft size={10} strokeWidth={2.5} />
-              </button>
-
-              <span className="dashboard-header-desktop__month-label">
-                {calendarDate.toLocaleString("default", {
-                  month: "short",
-                  year: "numeric",
-                })}
-              </span>
-
-              <button
-                className="dashboard-header-desktop__month-btn"
-                onClick={() => {
-                  const n = new Date(calendarDate);
-                  n.setMonth(n.getMonth() + 1);
-                  setCalendarDate(n);
-                }}
-                aria-label="Next month"
-              >
-                <ChevronRight size={10} strokeWidth={2.5} />
-              </button>
-            </div>
           </div>
+        </div>
+      </div>
 
+      {/* Month Navigation */}
+      <div className="dashboard-header-desktop__month-nav-wrap">
+        <div className="dashboard-header-desktop__month-nav">
+          <button
+            className="dashboard-header-desktop__month-btn"
+            onClick={() => {
+              const prev = new Date(calendarDate);
+              prev.setMonth(prev.getMonth() - 1);
+              setCalendarDate(prev);
+            }}
+          >
+            <ChevronLeft size={13} />
+          </button>
+
+          <span className="dashboard-header-desktop__month-label">
+            {calendarDate.toLocaleString("default", {
+              month: "long",
+              year: "numeric",
+            })}
+          </span>
+
+          <button
+            className="dashboard-header-desktop__month-btn"
+            onClick={() => {
+              const next = new Date(calendarDate);
+              next.setMonth(next.getMonth() + 1);
+              setCalendarDate(next);
+            }}
+          >
+            <ChevronRight size={13} />
+          </button>
         </div>
       </div>
     </div>
