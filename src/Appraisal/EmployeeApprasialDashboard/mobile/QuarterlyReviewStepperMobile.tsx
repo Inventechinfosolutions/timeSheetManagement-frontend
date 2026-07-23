@@ -1,67 +1,69 @@
 import React from 'react';
-import { FileText, Award, AlertCircle, Compass, CheckCircle } from 'lucide-react';
 
 interface StepperProps {
   currentStep: number;
   onChangeStep: (step: number) => void;
 }
 
+const STEP_LABELS = [
+  { title: 'Overview' },
+  { title: 'Achievements' },
+  { title: 'Challenges' },
+  { title: 'Goals' },
+  { title: 'Review' },
+];
+
 export const QuarterlyReviewStepperMobile: React.FC<StepperProps> = ({
   currentStep,
   onChangeStep,
 }) => {
-  const steps = [
-    { title: 'Overview',          icon: FileText,      color: 'text-indigo-600',  bg: 'bg-indigo-50 border-indigo-200'  },
-    { title: 'Achievements',      icon: Award,         color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200' },
-    { title: 'Challenges',        icon: AlertCircle,   color: 'text-amber-600',   bg: 'bg-amber-50 border-amber-200'    },
-    { title: 'Learning & Goals',  icon: Compass,       color: 'text-indigo-600',  bg: 'bg-indigo-50 border-indigo-200'  },
-    { title: 'Review',            icon: CheckCircle,   color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200' },
-  ];
-
-  const currentStepInfo = steps[currentStep];
-  const progressPercent = ((currentStep + 1) / steps.length) * 100;
-
   return (
-    <div className="bg-white border border-slate-100 p-4 rounded-2xl mb-6 shadow-sm">
-      {/* Progress Info */}
-      <div className="flex justify-between items-center mb-3">
-        <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-          Step {currentStep + 1} of {steps.length}
-        </span>
-        <span className="text-sm font-bold text-slate-800">
-          {currentStepInfo.title}
-        </span>
-      </div>
+    <div className="bg-white border border-slate-100 p-3 sm:p-4 rounded-2xl mb-6 shadow-sm w-full">
+      {/* 5-Column Grid layout prevents overflow without scrollbars */}
+      <div className="relative grid grid-cols-5 w-full">
 
-      {/* Progress Bar */}
-      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden mb-4">
+        {/* Background Progress Line */}
+        <div className="absolute top-4 left-[10%] right-[10%] h-[2px] bg-slate-200 -z-0" />
+
+        {/* Active Progress Line */}
         <div
-          className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full transition-all duration-300 ease-out"
-          style={{ width: `${progressPercent}%` }}
+          className="absolute top-4 left-[10%] h-[2px] bg-indigo-600 transition-all duration-300 -z-0"
+          style={{
+            width: `${(currentStep / (STEP_LABELS.length - 1)) * 80}%`
+          }}
         />
-      </div>
 
-      {/* Step Indicator Icons */}
-      <div className="flex justify-between items-center px-2">
-        {steps.map((step, idx) => {
-          const StepIcon = step.icon;
+        {STEP_LABELS.map((step, idx) => {
           const isCompleted = idx < currentStep;
           const isActive = idx === currentStep;
 
           return (
-            <button
-              key={idx}
-              onClick={() => onChangeStep(idx)}
-              className={`flex items-center justify-center w-10 h-10 rounded-xl border transition-all duration-200 ${
-                isActive
-                  ? `${step.bg} border-2 scale-110 shadow-sm`
+            <div key={idx} className="flex flex-col items-center z-10 w-full px-0.5">
+              <button
+                type="button"
+                onClick={() => onChangeStep(idx)}
+                className={`flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 font-bold text-xs sm:text-sm transition-all duration-200 bg-white ${isActive
+                  ? 'border-indigo-600 text-indigo-600 shadow-sm scale-105'
                   : isCompleted
-                    ? 'bg-indigo-50/50 border-indigo-100 text-indigo-500'
-                    : 'bg-slate-50 border-slate-100 text-slate-400'
-              }`}
-            >
-              <StepIcon className={`w-5 h-5 ${isActive ? step.color : ''}`} />
-            </button>
+                    ? 'border-indigo-600 bg-indigo-50 text-indigo-600'
+                    : 'border-slate-300 text-slate-400'
+                  }`}
+              >
+                {isCompleted ? '✓' : idx + 1}
+              </button>
+
+              {/* Step Title Below Circle */}
+              <span
+                className={`text-[10px] sm:text-[11px] mt-1.5 text-center leading-tight break-words max-w-full ${isActive
+                  ? 'text-indigo-600 font-bold'
+                  : isCompleted
+                    ? 'text-slate-700 font-semibold'
+                    : 'text-slate-400 font-normal'
+                  }`}
+              >
+                {step.title}
+              </span>
+            </div>
           );
         })}
       </div>

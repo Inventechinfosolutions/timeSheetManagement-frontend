@@ -54,7 +54,7 @@ const SidebarLayout = ({
       case "my-profile": return "Account Settings";
       case "change-password": return "Change Password";
       case "leave-management": return "Request Management";
-      case "appraisal": return "EmployeeAppraisalDashboard";
+      case "appraisal": return "Appraisal";
       case "leave-balance": return "Leave Balance";
       case "about": return "About";
       default: return "Dashboard";

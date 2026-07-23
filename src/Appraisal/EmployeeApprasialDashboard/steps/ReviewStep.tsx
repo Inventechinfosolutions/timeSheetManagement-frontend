@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, Divider } from 'antd';
-import { FileText, Award, AlertCircle, Compass, CheckCircle, User } from 'lucide-react';
+import { User } from 'lucide-react';
 interface ReviewItem {
     title: string;
     details: string;
@@ -16,12 +16,13 @@ interface ReviewStepProps {
     managerName?: string | null;
 }
 interface SummaryCardProps {
-    icon: React.ReactNode;
+    // icon: React.ReactNode;
     title: string;
     value?: string | ReviewItem[];
     color: string;
+    showProjectTitle?: boolean;
 }
-const SummaryCard: React.FC<SummaryCardProps> = ({ icon, title, value, color }) => {
+const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, color, showProjectTitle = false }) => {
     const renderContent = () => {
         if (Array.isArray(value)) {
             if (value.length === 0) {
@@ -30,11 +31,35 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ icon, title, value, color }) 
             return (
                 <div className="flex flex-col gap-3">
                     {value.map((item, idx) => (
-                        <div key={idx} className="border-l-2 border-slate-200 pl-3 py-0.5">
-                            <div className="font-semibold text-slate-750 text-sm">{item.title}</div>
-                            <div className="text-slate-600 text-sm whitespace-pre-wrap mt-1 leading-relaxed">
-                                {item.details}
-                            </div>
+                        <div
+                            key={idx}
+                            className="rounded-lg border border-slate-200 p-4 bg-slate-50"
+                        >
+                            {showProjectTitle ? (
+                                <>
+                                    <div className="font-semibold text-indigo-700 mb-3">
+                                        Project: {(idx + 1).toString().padStart(2, "0")}
+                                    </div>
+
+                                    <div className="mb-2">
+                                        <span className="font-medium">Title:</span>
+                                        <p>{item.title}</p>
+                                    </div>
+
+                                    <div>
+                                        <span className="font-medium">Description:</span>
+                                        <p>{item.details}</p>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="font-semibold text-indigo-700 mb-2">
+                                        Goal {(idx + 1).toString().padStart(2, "0")}
+                                    </div>
+
+                                    <p className="whitespace-pre-wrap">{item.details}</p>
+                                </>
+                            )}
                         </div>
                     ))}
                 </div>
@@ -47,10 +72,24 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ icon, title, value, color }) 
                     return (
                         <div className="flex flex-col gap-3">
                             {parsed.map((item: any, idx: number) => (
-                                <div key={idx} className="border-l-2 border-slate-200 pl-3 py-0.5">
-                                    <div className="font-semibold text-slate-750 text-sm">{item.title}</div>
-                                    <div className="text-slate-600 text-sm whitespace-pre-wrap mt-1 leading-relaxed">
-                                        {item.details}
+                                <div
+                                    key={idx}
+                                    className="rounded-lg border border-slate-200 p-4 bg-slate-50"
+                                >
+                                    <div className="font-semibold text-indigo-700 mb-3">
+                                        Project: {(idx + 1).toString().padStart(2, "0")}
+                                    </div>
+
+                                    <div className="mb-2">
+                                        <span className="font-medium text-slate-700">Title:</span>
+                                        <p className="text-slate-600 mt-1 mb-0">{item.title}</p>
+                                    </div>
+
+                                    <div>
+                                        <span className="font-medium text-slate-700">Description:</span>
+                                        <p className="text-slate-600 mt-1 mb-0 whitespace-pre-wrap">
+                                            {item.details}
+                                        </p>
                                     </div>
                                 </div>
                             ))}
@@ -71,7 +110,6 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ icon, title, value, color }) 
     return (
         <div className={`rounded-2xl border p-4 bg-white mb-4 ${color}`}>
             <div className="flex items-center gap-2 mb-3">
-                {icon}
                 <span className="font-semibold text-slate-800 text-sm">{title}</span>
             </div>
             <div className="text-slate-600 text-sm leading-relaxed">
@@ -86,14 +124,13 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ values, quarter, manager
             className="shadow-md border border-slate-100 rounded-2xl bg-white/80 backdrop-blur-sm"
             title={
                 <div className="flex items-center gap-2 text-slate-800 font-semibold text-lg">
-                    <CheckCircle className="w-5 h-5 text-emerald-500" />
                     <span>5. Review & Confirm</span>
                 </div>
             }
         >
             <div className="mb-4 p-3 bg-indigo-50 rounded-xl border border-indigo-100 flex flex-col gap-2">
                 <p className="text-indigo-700 text-sm font-medium mb-0">
-                    📋 You're reviewing your quarterly submission for <strong>{quarter}</strong>.
+                    You're reviewing your quarterly submission for <strong>{quarter}</strong>.
                     Please check all entries carefully before saving or submitting.
                 </p>
                 {managerName && (
@@ -104,28 +141,26 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ values, quarter, manager
                 )}
             </div>
             <SummaryCard
-                icon={<FileText className="w-4 h-4 text-indigo-500" />}
                 title="1. Quarter Overview"
                 value={values.overview}
-                color="border-indigo-100"
-            />
-            <SummaryCard
-                icon={<Award className="w-4 h-4 text-emerald-500" />}
-                title="2. Key Achievements"
-                value={values.achievements}
                 color="border-emerald-100"
             />
             <SummaryCard
-                icon={<AlertCircle className="w-4 h-4 text-amber-500" />}
-                title="3. Challenges Faced & Blockers"
-                value={values.challenges}
-                color="border-amber-100"
+                title="2. Key Achievements"
+                value={values.achievements}
+                color="border-emerald-100"
+                showProjectTitle
             />
             <SummaryCard
-                icon={<Compass className="w-4 h-4 text-indigo-500" />}
+                title="3. Challenges Faced & Blockers"
+                value={values.challenges}
+                color="border-emerald-100"
+                showProjectTitle
+            />
+            <SummaryCard
                 title="4. Learning & Future Goals"
                 value={values.learningGoals}
-                color="border-indigo-100"
+                color="border-emerald-100"
             />
             <Divider className="my-4" />
             <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500 leading-relaxed">

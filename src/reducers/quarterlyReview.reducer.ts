@@ -7,10 +7,16 @@ import {
 } from '@reduxjs/toolkit';
 import axios from 'axios';
 import { ReviewStatus } from '../Appraisal/EmployeeApprasialDashboard/enums/Appraisal.enums';
+import { quarterToSlug } from '../Appraisal/EmployeeApprasialDashboard/utils/fyQuarter.utils';
 
 const apiUrl = '/api/quarterly-review';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+//  Types 
+
+export interface ReviewItem {
+  title?: string;
+  details: string;
+}
 
 export interface QuarterlyReview {
   id?: number;
@@ -18,9 +24,9 @@ export interface QuarterlyReview {
   quarter: string;
   status: ReviewStatus;
   overview: string;
-  achievements: string;
-  challenges: string;
-  learningGoals: string;
+  achievements: ReviewItem[] | string;
+  challenges: ReviewItem[] | string;
+  learningGoals: ReviewItem[] | string;
   submittedDate?: string | null;
   managerName?: string | null;
   reviewStatus?: string | null;
@@ -36,9 +42,9 @@ export interface SaveOrSubmitPayload {
   quarter: string;
   status: ReviewStatus;
   overview: string;
-  achievements: string;
-  challenges: string;
-  learningGoals: string;
+  achievements: ReviewItem[];
+  challenges: ReviewItem[];
+  learningGoals: ReviewItem[];
 }
 
 interface QuarterlyReviewState {
@@ -66,8 +72,6 @@ interface ThunkConfig {
   state: any;
   rejectValue: string;
 }
-
-// ─── Thunks ───────────────────────────────────────────────────────────────────
 
 /** GET /api/quarterly-review/current-quarter */
 export const getCurrentQuarter = createAsyncThunk<string, void, ThunkConfig>(
@@ -100,7 +104,7 @@ export const getReviewByQuarter = createAsyncThunk<QuarterlyReview | null, strin
   'quarterlyReview/fetch_by_quarter',
   async (quarter, { rejectWithValue }) => {
     try {
-      const response = await axios.get(`${apiUrl}/quarter/${encodeURIComponent(quarter)}`);
+      const response = await axios.get(`${apiUrl}/quarter/${quarterToSlug(quarter)}`);
       return (response.data?.data || null) as QuarterlyReview | null;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || error.message || 'Request failed');
@@ -121,7 +125,7 @@ export const saveOrSubmitReview = createAsyncThunk<QuarterlyReview, SaveOrSubmit
   }
 );
 
-// ─── Slice ────────────────────────────────────────────────────────────────────
+//  Slice 
 
 export const QuarterlyReviewSlice = createSlice({
   name: 'quarterlyReview',

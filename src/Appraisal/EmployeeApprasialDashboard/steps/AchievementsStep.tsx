@@ -12,7 +12,6 @@ export const AchievementsStep: React.FC<StepProps> = ({ disabled }) => {
       className="shadow-md border border-slate-100 rounded-2xl p-4 bg-white/80 backdrop-blur-sm"
       title={
         <div className="flex items-center gap-2 text-slate-800 font-semibold text-lg">
-          <Award className="w-5 h-5 text-emerald-500" />
           <span>2. Key Achievements</span>
         </div>
       }
@@ -22,18 +21,7 @@ export const AchievementsStep: React.FC<StepProps> = ({ disabled }) => {
         your standard objectives.
       </p>
 
-      <Form.List
-        name="achievements"
-        rules={[
-          {
-            validator: async (_, names) => {
-              if (!names || names.length === 0) {
-                return Promise.reject(new Error('At least one achievement project is required.'));
-              }
-            },
-          },
-        ]}
-      >
+      <Form.List name="achievements">
         {(fields, { add, remove }, { errors }) => (
           <>
             <div className="flex flex-col gap-4">
@@ -42,18 +30,25 @@ export const AchievementsStep: React.FC<StepProps> = ({ disabled }) => {
                   key={key}
                   className="border border-slate-100 rounded-2xl p-6 bg-slate-50/50 relative"
                 >
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="font-semibold text-slate-700 text-sm flex items-center gap-2">
-                      <Award className="w-4 h-4 text-emerald-500" />
-                      Project Title<span className="text-rose-500">*</span>
-                    </span>
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="text-base font-bold text-slate-800">
+                        Project: {String(idx + 1).padStart(2, "0")}
+                      </h3>
+
+                      <span className="font-semibold text-slate-700 text-sm flex items-center gap-1 mt-2">
+                        <span className="text-rose-500">*</span>
+                        Project Title
+                      </span>
+                    </div>
+
                     {!disabled && (
                       <Button
                         type="text"
                         danger
                         onClick={() => remove(name)}
                         icon={<Trash2 className="w-4 h-4 text-rose-500" />}
-                        className="flex items-center gap-1.5 px-2 py-1 h-auto text-rose-500 hover:text-rose-600 hover:bg-rose-50 font-semibold"
+                        className="flex items-center gap-1.5 px-2 py-1 h-auto"
                       >
                         Remove
                       </Button>
@@ -63,7 +58,6 @@ export const AchievementsStep: React.FC<StepProps> = ({ disabled }) => {
                   <Form.Item
                     {...restField}
                     name={[name, 'title']}
-                    rules={[{ required: true, message: 'Please provide a project title.' }]}
                     className="mb-4"
                   >
                     <Input
@@ -79,19 +73,15 @@ export const AchievementsStep: React.FC<StepProps> = ({ disabled }) => {
                   </Form.Item>
 
                   <div className="mb-2">
-                    <span className="font-semibold text-slate-700 text-sm flex items-center gap-2">
-                      <Award className="w-4 h-4 text-emerald-500" />
-                      What did you accomplish?<span className="text-rose-500">*</span>
+                    <span className="font-semibold text-slate-700 text-sm flex items-center gap-1">
+                      <span className="text-rose-500">*</span>
+                      <span>What did you accomplish?</span>
                     </span>
                   </div>
 
                   <Form.Item
                     {...restField}
                     name={[name, 'details']}
-                    rules={[
-                      { required: true, message: 'Please provide details of your accomplishment.' },
-                      { min: 10, message: 'Accomplishment details must be at least 10 characters long.' },
-                    ]}
                     className="mb-0"
                   >
                     <Input.TextArea

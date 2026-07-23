@@ -78,3 +78,20 @@ export function getFinancialYear(q: string): string {
   const { fyStartYear } = parsed;
   return `FY ${fyStartYear}-${String(fyStartYear + 1).slice(2)}`;
 }
+
+/** "Q2 FY2026-27" → "Q2-FY2026-27" */
+export function quarterToSlug(q: string): string {
+  if (!q) return '';
+  return q.trim().replace(/\s+/g, '-');
+}
+
+/** "Q2-FY2026-27" → "Q2 FY2026-27" */
+export function slugToQuarter(slug: string): string {
+  if (!slug) return '';
+  // Convert "Q2-FY2026-27" back to "Q2 FY2026-27"
+  if (/^Q\d-FY\d{4}-\d{2}$/i.test(slug)) {
+    return slug.replace(/^(Q\d)-(FY\d{4}-\d{2})$/i, '$1 $2');
+  }
+  return slug;
+}
+

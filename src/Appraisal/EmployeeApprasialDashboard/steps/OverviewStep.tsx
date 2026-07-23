@@ -1,6 +1,5 @@
 import React from 'react';
 import { Form, Input, Card } from 'antd';
-import { FileText } from 'lucide-react';
 
 interface StepProps {
   disabled?: boolean;
@@ -12,7 +11,6 @@ export const OverviewStep: React.FC<StepProps> = ({ disabled }) => {
       className="shadow-md border border-slate-100 rounded-2xl p-4 bg-white/80 backdrop-blur-sm"
       title={
         <div className="flex items-center gap-2 text-slate-800 font-semibold text-lg">
-          <FileText className="w-5 h-5 text-indigo-500" />
           <span>1. Quarter Overview</span>
         </div>
       }
@@ -26,10 +24,10 @@ export const OverviewStep: React.FC<StepProps> = ({ disabled }) => {
         name="overview"
         label={<span className="font-medium text-slate-700">Quarterly Overview Summary</span>}
         labelCol={{ span: 24 }}
-        rules={[
-          { required: true, message: 'Please provide your overview summary.' },
-          { min: 10, message: 'Overview must be at least 10 characters long.' },
-        ]}
+      // rules={[
+      //   { required: true, message: 'Please provide your overview summary.' },
+      //   // { min: 10, message: 'Overview must be at least 10 characters long.' },
+      // ]}
       >
         <Input.TextArea
           rows={6}

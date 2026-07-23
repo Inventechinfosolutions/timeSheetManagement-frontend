@@ -5,8 +5,9 @@ import {
   ClipboardList,
   User,
   Info,
+  Award,
 } from "lucide-react";
-
+// import { Label } from "recharts";
 interface MobileBottomNavProps {
   activeTab: string;
   onTabChange?: (tab: string) => void;
@@ -23,14 +24,12 @@ const MobileBottomNav = ({
     { name: "My Timesheet", icon: Calendar, label: "Timesheet" },
     { name: "Timesheet History", icon: Eye, label: "History" },
     { name: "Request Management", icon: ClipboardList, label: "Requests" },
+    { name: "Appraisal", icon: Award, label: "Appraisal" },
     { name: "Account Settings", icon: User, label: "Profile" },
     { name: "About", icon: Info, label: "About" },
   ];
 
   return (
-    /* FIXED: Changed to xl:hidden (hides on screens >= 1280px, e.g., laptops/desktops)
-      Added pb-safe to handle iOS notch/home indicator spacing gracefully.
-    */
     <div
       className={`xl:hidden fixed bottom-0 left-0 right-0 z-[9999]
         bg-white border-t border-gray-200 pb-safe
@@ -44,7 +43,7 @@ const MobileBottomNav = ({
       {/* Grid Layout adjustments:
         - Clean grid layout that balances across small phones up to large tablets (iPad Pro).
       */}
-      <div className="grid grid-cols-6 h-16 sm:h-20 lg:h-22 items-center px-2">
+      <div className="grid grid-cols-7 h-16 sm:h-20 lg:h-22 items-center px-2">
         {items.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.name;
