@@ -2328,11 +2328,6 @@ const AdminLeaveManagement = () => {
                                       return "Half Day Leave";
                                     return normalizeTypeName(item.requestType);
                                   })()}
-                                  {item.isModified && (
-                                    <span className="bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter shadow-sm border border-orange-200">
-                                      Modified
-                                    </span>
-                                  )}
                                 </span>
                               </div>
                             </td>

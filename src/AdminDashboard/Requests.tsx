@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { RootState } from "../store";
@@ -22,9 +22,12 @@ import {
   Calendar,
   RotateCcw,
   ArrowRightLeft,
+  Download,
 } from "lucide-react";
 import {
   getAllLeaveRequests,
+  downloadLeaveRequestsExcel,
+  fetchLeaveRequestTypes,
   updateLeaveRequestStatus,
   getLeaveRequestById,
   getLeaveRequestFiles,
@@ -52,6 +55,7 @@ import CommonMultipleUploader from "../EmployeeDashboard/CommonMultipleUploader"
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import { message, Select, Modal } from "antd";
 import { fetchDepartments } from "../reducers/masterDepartment.reducer";
+import { saveAs } from "file-saver";
 
 const Requests = () => {
   const navigate = useNavigate();
@@ -80,10 +84,8 @@ const Requests = () => {
   >([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState("All");
   const [selectedDept, setSelectedDept] = useState("All");
   const [isDeptOpen, setIsDeptOpen] = useState(false);
-  const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [selectedOwnerId, setSelectedOwnerId] = useState<number | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -123,10 +125,17 @@ const Requests = () => {
   const normalizeTypeName = (type: string): string => {
     const t = (type || "").trim();
     if (t === LeaveRequestType.APPLY_LEAVE || t === LeaveRequestType.LEAVE) return "Leave";
-    if (t === WorkLocation.WORK_FROM_HOME || t === LeaveRequestType.WFH) return "WFH";
+    if (t === WorkLocation.WORK_FROM_HOME || t === LeaveRequestType.WFH) return "Work From Home";
     if (t === WorkLocation.CLIENT_VISIT) return "Client Visit";
     if (t === WorkLocation.OFFICE) return "Office";
-    if (t === AttendanceStatus.HALF_DAY) return "Half Day";
+    if (
+      t === AttendanceStatus.HALF_DAY ||
+      t === LeaveRequestType.HALF_DAY ||
+      t.toLowerCase() === "half day" ||
+      t.toLowerCase() === "half day leave"
+    ) {
+      return "Half Day Leave";
+    }
     return t;
   };
 
@@ -135,15 +144,32 @@ const Requests = () => {
     requestType?: string;
     firstHalf?: string;
     secondHalf?: string;
-    isHalfDay?: boolean;
+    isHalfDay?: boolean | number | string;
   }): string => {
-    if (req.isHalfDay && req.firstHalf && req.secondHalf) {
-      const first = normalizeTypeName(req.firstHalf);
-      const second = normalizeTypeName(req.secondHalf);
+    const isHalf =
+      req.isHalfDay === true ||
+      req.isHalfDay === 1 ||
+      req.isHalfDay === "1";
+    if (isHalf && req.firstHalf && req.secondHalf) {
+      let first = normalizeTypeName(req.firstHalf);
+      let second = normalizeTypeName(req.secondHalf);
+      if (first === "Leave") first = "Half Day Leave";
+      if (second === "Leave") second = "Half Day Leave";
       if (first === second) return first;
-      return `${first} & ${second}`;
+      return `${first} + ${second}`;
     }
-    return normalizeTypeName(req.requestType || "");
+    const raw = req.requestType || "";
+    if (raw === LeaveRequestType.APPLY_LEAVE || raw === LeaveRequestType.LEAVE) {
+      return "Leave";
+    }
+    if (
+      raw === AttendanceStatus.HALF_DAY ||
+      raw === LeaveRequestType.HALF_DAY ||
+      raw.toLowerCase() === "half day"
+    ) {
+      return "Half Day Leave";
+    }
+    return normalizeTypeName(raw);
   };
 
   const handleUpdateStatus = (
@@ -172,6 +198,51 @@ const Requests = () => {
 
   const [selectedMonth, setSelectedMonth] = useState<string>("All");
   const [selectedYear, setSelectedYear] = useState<string>("All");
+  const [selectedRequestType, setSelectedRequestType] = useState<string>("All");
+  const [selectedStatus, setSelectedStatus] = useState<string>("All");
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState<boolean>(false);
+  const statusDropdownRef = useRef<HTMLDivElement>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        statusDropdownRef.current &&
+        !statusDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsStatusDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const statusOptions = [
+    { label: "All Status", value: "All", style: "bg-blue-50 text-[#4318FF] border-blue-200 hover:bg-blue-100" },
+    { label: "Pending", value: LeaveRequestStatus.PENDING, style: "bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100" },
+    { label: "Approved", value: LeaveRequestStatus.APPROVED, style: "bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100" },
+    { label: "Rejected", value: LeaveRequestStatus.REJECTED, style: "bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100" },
+    { label: "Cancellation Requested", value: LeaveRequestStatus.REQUESTING_FOR_CANCELLATION, style: "bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100" },
+    { label: "Cancellation Approved", value: LeaveRequestStatus.CANCELLATION_APPROVED, style: "bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100" },
+    { label: "Cancellation Rejected", value: LeaveRequestStatus.CANCELLATION_REJECTED, style: "bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100" },
+    { label: "Modification Requested", value: LeaveRequestStatus.REQUESTING_FOR_MODIFICATION, style: "bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100" },
+    { label: "Request Modified", value: LeaveRequestStatus.REQUEST_MODIFIED, style: "bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100" },
+    { label: "Modification Approved", value: LeaveRequestStatus.MODIFICATION_APPROVED, style: "bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100" },
+    { label: "Modification Cancelled", value: LeaveRequestStatus.MODIFICATION_CANCELLED, style: "bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100" },
+    { label: "Modification Rejected", value: LeaveRequestStatus.MODIFICATION_REJECTED, style: "bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100" },
+    { label: "Cancellation Reverted", value: "Cancellation Reverted", style: "bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100" },
+    { label: "Cancelled", value: LeaveRequestStatus.CANCELLED, style: "bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100" },
+  ];
+
+  const [requestTypeOptions, setRequestTypeOptions] = useState<
+    { label: string; value: string }[]
+  >([
+    { label: "All Request Types", value: "All" },
+    { label: "Leave", value: "Leave" },
+    { label: "Work From Home", value: "Work From Home" },
+    { label: "Client Visit", value: "Client Visit" },
+    { label: "Half Day Leave", value: "Half Day Leave" },
+  ]);
 
   const months = [
     { label: "January", value: "1" },
@@ -212,6 +283,19 @@ const Requests = () => {
     dispatch(clearRequests());
     dispatch(fetchHolidays());
     dispatch(fetchDepartments());
+    fetchLeaveRequestTypes()
+      .then((types) => {
+        const cleaned = types
+          .map((t) => (t.toLowerCase() === "half day" ? "Half Day Leave" : t))
+          .filter((t, i, arr) => arr.indexOf(t) === i); // unique
+        setRequestTypeOptions([
+          { label: "All Request Types", value: "All" },
+          ...cleaned.map((t) => ({ label: t, value: t })),
+        ]);
+      })
+      .catch(() => {
+        // keep default options
+      });
     return () => {
       dispatch(clearRequests());
     };
@@ -259,10 +343,11 @@ const Requests = () => {
     dispatch(
       getAllLeaveRequests({
         department: selectedDept,
-        status: filterStatus,
         search: debouncedSearchTerm,
         month: selectedMonth,
         year: selectedYear,
+        requestType: selectedRequestType,
+        status: selectedStatus,
         page: currentPage,
         limit: itemsPerPage,
       }),
@@ -270,16 +355,42 @@ const Requests = () => {
   }, [
     dispatch,
     selectedDept,
-    filterStatus,
     debouncedSearchTerm,
     currentPage,
     selectedMonth,
     selectedYear,
+    selectedRequestType,
+    selectedStatus,
   ]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedDept, filterStatus, selectedMonth, selectedYear]);
+  }, [selectedDept, selectedMonth, selectedYear, selectedRequestType, selectedStatus]);
+
+  const handleDownloadExcel = async () => {
+    setIsDownloading(true);
+    try {
+      const blob = await downloadLeaveRequestsExcel({
+        department: selectedDept,
+        search: debouncedSearchTerm,
+        month: selectedMonth,
+        year: selectedYear,
+        requestType: selectedRequestType,
+        status: selectedStatus,
+      });
+      const stamp = dayjs().format("YYYY-MM-DD");
+      saveAs(blob, `Employee_Requests_${stamp}.xlsx`);
+      message.success("Excel downloaded successfully");
+    } catch (error: any) {
+      message.error(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Failed to download Excel",
+      );
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   const filteredRequests = (entities || []).filter((req) => {
     if (!debouncedSearchTerm) return true;
@@ -452,10 +563,10 @@ const Requests = () => {
           dispatch(
             getAllLeaveRequests({
               department: selectedDept,
-              status: filterStatus,
               search: debouncedSearchTerm,
               month: selectedMonth,
               year: selectedYear,
+              requestType: selectedRequestType,
               page: currentPage,
               limit: itemsPerPage,
             }),
@@ -765,10 +876,10 @@ const Requests = () => {
       dispatch(
         getAllLeaveRequests({
           department: selectedDept,
-          status: filterStatus,
           search: debouncedSearchTerm,
           month: selectedMonth,
           year: selectedYear,
+          requestType: selectedRequestType,
           page: currentPage,
           limit: itemsPerPage,
         }),
@@ -835,55 +946,6 @@ const Requests = () => {
         ? "bg-gray-50 text-[#475569] border-gray-200 hover:bg-gray-100"
         : "bg-[#F4F7FE] text-[#4318FF] border-[#4318FF]/15 hover:bg-[#4318FF]/10";
 
-  const filterStatusOptions = [
-    "All",
-    LeaveRequestStatus.PENDING,
-    LeaveRequestStatus.APPROVED,
-    LeaveRequestStatus.REJECTED,
-    LeaveRequestStatus.REQUESTING_FOR_CANCELLATION,
-    LeaveRequestStatus.CANCELLATION_APPROVED,
-    LeaveRequestStatus.CANCELLATION_REJECTED,
-    LeaveRequestStatus.REQUESTING_FOR_MODIFICATION,
-    LeaveRequestStatus.REQUEST_MODIFIED,
-    LeaveRequestStatus.MODIFICATION_APPROVED,
-    LeaveRequestStatus.MODIFICATION_CANCELLED,
-    LeaveRequestStatus.MODIFICATION_REJECTED,
-    LeaveRequestStatus.CANCELLATION_REVERTED,
-    LeaveRequestStatus.CANCELLED,
-  ];
-
-  const filterStatusTagClass = (status: string, isSelected: boolean) => {
-    if (isSelected) {
-      if (status === "All") {
-        return "bg-[#4318FF] text-white border-[#4318FF] shadow-sm";
-      }
-      switch (status) {
-        case LeaveRequestStatus.APPROVED:
-        case LeaveRequestStatus.CANCELLATION_APPROVED:
-        case LeaveRequestStatus.MODIFICATION_APPROVED:
-          return "bg-green-500 text-white border-green-500 shadow-sm";
-        case LeaveRequestStatus.REJECTED:
-        case LeaveRequestStatus.CANCELLATION_REJECTED:
-        case LeaveRequestStatus.MODIFICATION_REJECTED:
-        case LeaveRequestStatus.CANCELLED:
-          return "bg-red-500 text-white border-red-500 shadow-sm";
-        case LeaveRequestStatus.REQUESTING_FOR_CANCELLATION:
-        case LeaveRequestStatus.REQUESTING_FOR_MODIFICATION:
-        case LeaveRequestStatus.REQUEST_MODIFIED:
-        case LeaveRequestStatus.MODIFICATION_CANCELLED:
-          return "bg-orange-500 text-white border-orange-500 shadow-sm";
-        case LeaveRequestStatus.CANCELLATION_REVERTED:
-          return "bg-amber-500 text-white border-amber-500 shadow-sm";
-        default:
-          return "bg-amber-500 text-white border-amber-500 shadow-sm";
-      }
-    }
-    if (status === "All") {
-      return "bg-gray-50 text-[#475569] border-gray-200 hover:bg-gray-100";
-    }
-    return `${getStatusColor(status)} hover:opacity-90`;
-  };
-
   return (
     <div className="p-4 md:p-8 bg-[#F4F7FE] font-sans">
       {/* Header + Search */}
@@ -932,7 +994,6 @@ const Requests = () => {
                 <button
                   onClick={() => {
                     setIsDeptOpen(!isDeptOpen);
-                    setIsStatusOpen(false);
                   }}
                   className={`w-full flex items-center justify-between gap-3 px-5 py-3 bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all text-sm font-bold ${selectedDept !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
                 >
@@ -1053,63 +1114,105 @@ const Requests = () => {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-xs font-bold text-gray-400 pl-1">Status</span>
-            <div className="relative min-w-[240px] sm:min-w-[280px] md:min-w-[320px]">
-              <button
-                onClick={() => {
-                  setIsStatusOpen(!isStatusOpen);
-                  setIsDeptOpen(false);
-                }}
-                className={`w-full flex items-center justify-between gap-3 px-5 py-3 bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all text-sm font-bold ${filterStatus !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <Filter
+            <span className="text-xs font-bold text-gray-400 pl-1">Request Type</span>
+            <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden min-w-[220px]">
+              <Select
+                value={selectedRequestType}
+                onChange={(val) => setSelectedRequestType(val)}
+                className={`w-56 h-12 font-bold text-sm ${selectedRequestType !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+                variant="borderless"
+                dropdownStyle={{ borderRadius: "16px", minWidth: 280 }}
+                suffixIcon={
+                  <ChevronDown
                     size={18}
                     className={
-                      filterStatus !== "All" ? "text-[#4318FF]" : "text-gray-400"
+                      selectedRequestType !== "All" ? "text-[#4318FF]" : "text-gray-400"
                     }
                   />
-                  <span className="truncate">
-                    {filterStatus === "All" ? "All Status" : filterStatus}
-                  </span>
+                }
+              >
+                {requestTypeOptions.map((opt) => (
+                  <Select.Option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </Select.Option>
+                ))}
+              </Select>
+            </div>
+          </div>
+
+          {/* Status Dropdown Filter */}
+          <div className="flex flex-col gap-1.5 relative" ref={statusDropdownRef}>
+            <span className="text-xs font-bold text-gray-400 pl-1">Status</span>
+            <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden min-w-[200px] h-12">
+              <button
+                type="button"
+                onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
+                className={`w-full flex items-center justify-between gap-2 font-bold text-sm ${
+                  selectedStatus !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Filter size={16} className={selectedStatus !== "All" ? "text-[#4318FF]" : "text-gray-400"} />
+                  <span>{selectedStatus === "All" ? "All Status" : selectedStatus}</span>
                 </div>
                 <ChevronDown
                   size={18}
-                  className={`shrink-0 transition-transform duration-300 ${isStatusOpen ? "rotate-180" : ""}`}
+                  className={`transition-transform duration-200 ${
+                    isStatusDropdownOpen ? "rotate-180 text-[#4318FF]" : "text-gray-400"
+                  }`}
                 />
               </button>
-
-              {isStatusOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-40"
-                    onClick={() => setIsStatusOpen(false)}
-                  />
-                  <div className="absolute left-0 mt-3 w-full min-w-full bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-gray-100 p-3 z-50 max-h-72 overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="mb-2">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-[#A3AED0]">
-                        Status
-                      </span>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      {filterStatusOptions.map((status) => (
-                        <button
-                          key={status}
-                          onClick={() => {
-                            setFilterStatus(status);
-                            setIsStatusOpen(false);
-                            setCurrentPage(1);
-                          }}
-                          className={`w-full flex items-center justify-center px-3 py-2 rounded-full text-xs font-bold border transition-all text-center ${filterStatusTagClass(status, filterStatus === status)}`}
-                        >
-                          {status === "All" ? "All Status" : status}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
             </div>
+
+            {isStatusDropdownOpen && (
+              <div className="absolute top-full left-0 mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-gray-100 p-4 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="mb-3">
+                  <span className="text-[11px] font-black text-gray-400 uppercase tracking-wider">
+                    STATUS
+                  </span>
+                </div>
+                <div className="max-h-72 overflow-y-auto pr-1 flex flex-col gap-2">
+                  {statusOptions.map((opt) => {
+                    const isSelected = selectedStatus === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => {
+                          setSelectedStatus(opt.value);
+                          setIsStatusDropdownOpen(false);
+                          setCurrentPage(1);
+                        }}
+                        className={`w-full py-2 px-4 rounded-full text-sm font-bold border transition-all text-center ${
+                          isSelected
+                            ? "bg-[#4318FF] text-white border-[#4318FF] shadow-md scale-[1.02]"
+                            : opt.style
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-bold text-gray-400 pl-1 opacity-0">Download</span>
+            <button
+              onClick={handleDownloadExcel}
+              disabled={isDownloading}
+              className="flex items-center justify-center gap-2 px-5 h-12 bg-[#107C41] hover:bg-[#0E6C38] text-white rounded-2xl shadow-md border border-[#107C41]/30 transition-all text-sm font-bold whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed active:scale-95"
+              title="Download filtered requests as Excel"
+            >
+              {isDownloading ? (
+                <Loader2 size={18} className="animate-spin text-white" />
+              ) : (
+                <Download size={18} className="text-white" />
+              )}
+              <span>{isDownloading ? "Downloading..." : "Download Excel"}</span>
+            </button>
           </div>
 
           {/* Clear Filters Button */}
@@ -1117,17 +1220,19 @@ const Requests = () => {
             selectedDept !== "All" ||
             selectedMonth !== "All" ||
             selectedYear !== "All" ||
-            filterStatus !== "All") && (
+            selectedRequestType !== "All" ||
+            selectedStatus !== "All") && (
               <button
                 onClick={() => {
                   setSearchTerm("");
                   setSelectedDept("All");
                   setSelectedMonth("All");
                   setSelectedYear("All");
-                  setFilterStatus("All");
+                  setSelectedRequestType("All");
+                  setSelectedStatus("All");
                   setCurrentPage(1);
                 }}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#5B4FFF] text-white rounded-full hover:bg-[#4318FF] active:scale-95 transition-all text-sm font-bold border border-[#4318FF]/50 whitespace-nowrap"
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#5B4FFF] text-white rounded-full hover:bg-[#4318FF] active:scale-95 transition-all text-sm font-bold border border-[#4318FF]/50 whitespace-nowrap self-end mb-0.5"
                 title="Clear all filters"
               >
                 <X size={16} />
@@ -1326,41 +1431,7 @@ const Requests = () => {
                             })()}
                           </div>
                           <span className="text-sm font-semibold text-[#2B3674] flex items-center gap-2">
-                            {(() => {
-                              // Show combined activities for split-day requests
-                              if (
-                                req.isHalfDay &&
-                                req.firstHalf &&
-                                req.secondHalf
-                              ) {
-                                const first = normalizeTypeName(req.firstHalf);
-                                const second = normalizeTypeName(req.secondHalf);
-                                // Map Leave → Half Day Leave in the table display
-                                const displayFirst = first === "Leave" ? "Half Day Leave" : first;
-                                const displaySecond = second === "Leave" ? "Half Day Leave" : second;
-                                if (displayFirst === displaySecond) return displayFirst;
-                                return `${displayFirst} + ${displaySecond}`;
-                              }
-
-                              // Default display
-                              if (
-                                req.requestType ===
-                                LeaveRequestType.APPLY_LEAVE ||
-                                req.requestType === LeaveRequestType.LEAVE
-                              ) {
-                                return req.isHalfDay
-                                  ? "Half Day Leave"
-                                  : LeaveRequestType.LEAVE;
-                              }
-                              if (req.requestType === AttendanceStatus.HALF_DAY)
-                                return "Half Day Leave";
-                              return normalizeTypeName(req.requestType);
-                            })()}
-                            {req.isModified && (
-                              <span className="bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter shadow-sm border border-orange-200">
-                                Modified
-                              </span>
-                            )}
+                            {getRequestTypeLabel(req)}
                           </span>
                         </div>
                       </td>
