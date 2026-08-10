@@ -414,7 +414,7 @@ function AppContent() {
                   ))}
 
                 {mainComponentConfigs
-                  .filter((c) => c && ["/about", "/dashboard"].includes(c.path))
+                  .filter((c) => c && c.path === "/dashboard")
                   .map((config) => (
                     <Route
                       key={config.path}
@@ -422,7 +422,7 @@ function AppContent() {
                       element={
                         <Suspense
                           fallback={
-                            <div className="flex items-center justify-center min-h-screen">
+                            <div className="flex items-center justify-center flex-1 w-full h-full">
                               <Spin size="large" />
                             </div>
                           }

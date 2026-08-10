@@ -18,15 +18,36 @@ export interface ReviewItem {
   details: string;
 }
 
+export interface ProjectItem {
+  projectTitle: string;
+  achievement: string;
+  challenge: string;
+  attachment?: any;
+}
+
+export interface TeamContributionItem {
+  category: string;
+  rating: number;
+}
+
+export interface CompanyEnvironment {
+  workCultureFeedback: string;
+  workLifeBalance: string;
+  suggestions: string;
+  rating: number;
+}
+
 export interface QuarterlyReview {
   id?: number;
   employeeId: string;
   quarter: string;
   status: ReviewStatus;
   overview: string;
-  achievements: ReviewItem[] | string;
-  challenges: ReviewItem[] | string;
+  projects?: ProjectItem[];
   learningGoals: ReviewItem[] | string;
+  teamContribution?: TeamContributionItem[];
+  averageRating?: number | null;
+  companyEnvironment?: CompanyEnvironment;
   submittedDate?: string | null;
   managerName?: string | null;
   reviewStatus?: string | null;
@@ -42,9 +63,11 @@ export interface SaveOrSubmitPayload {
   quarter: string;
   status: ReviewStatus;
   overview: string;
-  achievements: ReviewItem[];
-  challenges: ReviewItem[];
+  projects?: ProjectItem[];
   learningGoals: ReviewItem[];
+  teamContribution?: TeamContributionItem[];
+  averageRating?: number | null;
+  companyEnvironment?: CompanyEnvironment;
 }
 
 interface QuarterlyReviewState {
@@ -86,12 +109,13 @@ export const getCurrentQuarter = createAsyncThunk<string, void, ThunkConfig>(
   }
 );
 
-/** GET /api/quarterly-review */
-export const getAllReviews = createAsyncThunk<QuarterlyReview[], void, ThunkConfig>(
+/** GET /api/quarterly-review?financialYear=FY2026-27 (financialYear is optional) */
+export const getAllReviews = createAsyncThunk<QuarterlyReview[], string | undefined, ThunkConfig>(
   'quarterlyReview/fetch_all',
-  async (_, { rejectWithValue }) => {
+  async (financialYear, { rejectWithValue }) => {
     try {
-      const response = await axios.get(apiUrl);
+      const params = financialYear ? { financialYear } : {};
+      const response = await axios.get(apiUrl, { params });
       return (response.data?.data || []) as QuarterlyReview[];
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || error.message || 'Request failed');
@@ -124,6 +148,100 @@ export const saveOrSubmitReview = createAsyncThunk<QuarterlyReview, SaveOrSubmit
     }
   }
 );
+
+// File Upload Actions
+export const uploadQuarterlyReviewFile = createAsyncThunk(
+  "quarterlyReview/uploadFile",
+  async ({ entityId, refId, refType, entityType, formData }: any, { rejectWithValue }) => {
+    try {
+      const response = await axios.post(
+        `${apiUrl}/upload-file/entityId/${entityId}/refId/${refId}?refType=${refType}&entityType=${entityType}`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to upload file");
+    }
+  }
+);
+
+export const downloadQuarterlyReviewFile = createAsyncThunk(
+  "quarterlyReview/downloadFile",
+  async ({ entityId, refId, refType, entityType, key }: any, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(
+        `${apiUrl}/entityId/${entityId}/refId/${refId}/download-file?key=${key}&refType=${refType}&entityType=${entityType}`,
+        {
+          responseType: "blob",
+        }
+      );
+      return {
+        data: response.data,
+        headers: response.headers,
+      };
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to download file");
+    }
+  }
+);
+
+export const previewQuarterlyReviewFile = createAsyncThunk(
+  "quarterlyReview/previewFile",
+  async ({ entityId, refId, refType, entityType, key }: any, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(
+        `${apiUrl}/entityId/${entityId}/refId/${refId}/view?key=${key}&refType=${refType}&entityType=${entityType}`,
+        {
+          responseType: "blob",
+        }
+      );
+      return {
+        data: response.data,
+        headers: response.headers,
+      };
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to preview file");
+    }
+  }
+);
+
+export const deleteQuarterlyReviewFile = createAsyncThunk(
+  "quarterlyReview/deleteFile",
+  async ({ entityId, refId, refType, entityType, key }: any, { rejectWithValue }) => {
+    try {
+      await axios.delete(
+        `${apiUrl}/entityId/${entityId}/refId/${refId}/delete?key=${key}&refType=${refType}&entityType=${entityType}`
+      );
+      return key;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to delete file");
+    }
+  }
+);
+
+export const getQuarterlyReviewFiles = createAsyncThunk(
+  "quarterlyReview/getFiles",
+  async ({ entityId, refId, refType, entityType }: any, { rejectWithValue }) => {
+    try {
+      const queryParams = new URLSearchParams();
+      if (refType) queryParams.append("refType", refType);
+      queryParams.append("entityType", entityType);
+
+      const response = await axios.get(
+        `${apiUrl}/entityId/${entityId}/refId/${refId}/get-files?${queryParams.toString()}`
+      );
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to fetch files");
+    }
+  }
+);
+
 
 //  Slice 
 

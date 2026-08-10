@@ -5,15 +5,36 @@ export interface ReviewItem {
     details: string;
 }
 
+export interface ProjectItem {
+    projectTitle: string;
+    achievement: string;
+    challenge: string;
+    attachment?: any;
+}
+
+export interface TeamContributionItem {
+    category: string;
+    rating: number;
+}
+
+export interface CompanyEnvironment {
+    workCultureFeedback: string;
+    workLifeBalance: string;
+    suggestions: string;
+    rating: number;
+}
+
 export interface QuarterlyReview {
     id?: number;
     employeeId: string;
     quarter: string;
     status: ReviewStatus;
     overview: string;
-    achievements: ReviewItem[] | string;
-    challenges: ReviewItem[] | string;
+    projects?: ProjectItem[];
     learningGoals: ReviewItem[] | string;
+    teamContribution?: TeamContributionItem[];
+    averageRating?: number | null;
+    companyEnvironment?: CompanyEnvironment;
     submittedDate?: string | null;
     managerName?: string | null;
     // Manager-side fields (read-only from employee perspective)
@@ -35,8 +56,10 @@ export type StatusStyle = {
 
 export interface QuarterlyReviewFormValues {
     overview: string;
-    achievements: ReviewItem[];
-    challenges: ReviewItem[];
+    projects: ProjectItem[];
     learningGoals: ReviewItem[];
+    teamContribution: TeamContributionItem[];
+    averageRating?: number | null;
+    companyEnvironment?: CompanyEnvironment;
 }
 
