@@ -1,0 +1,190 @@
+/* MobileAchievementsAndChallengesStep.css */
+
+.mobile-achievements-card {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgb(241 245 249);
+  border-radius: 1rem;
+  padding: 1rem;
+  background-color: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(4px);
+}
+
+.mobile-achievements-card__title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.mobile-achievements-card__subtitle {
+  color: rgb(100 116 139);
+  font-size: 0.8125rem;
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.mobile-achievements-card__list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.mobile-achievements-card__add-wrap {
+  margin-top: 1rem;
+}
+
+.mobile-achievements-card__add-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 2.75rem;
+  width: 100%;
+  justify-content: center;
+  padding: 0 1rem;
+  border-radius: 0.75rem;
+  border: 2px dashed rgb(226 232 240);
+  background-color: #ffffff;
+  color: rgb(51 65 85);
+  font-weight: 600;
+}
+
+.mobile-achievements-card__add-btn:hover {
+  border-color: rgb(203 213 225);
+  background-color: rgb(248 250 252);
+  color: rgb(15 23 42);
+}
+
+/* Item */
+
+.mobile-achievements-item {
+  background-color: rgb(248 250 252);
+  padding: 1.25rem;
+  border-radius: 1rem;
+  position: relative;
+  border: 1px solid rgb(241 245 249);
+  transition: background-color 0.2s ease;
+}
+
+.mobile-achievements-item__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  gap: 12px;
+  flex-wrap: nowrap;
+}
+
+.mobile-achievements-item__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: rgb(30 41 59);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.mobile-achievements-item__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  margin-left: auto;
+}
+
+.mobile-achievements-item__remove-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.5rem;
+  height: auto;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgb(244 63 94);
+}
+
+.mobile-achievements-item__remove-btn:hover {
+  color: rgb(225 29 72);
+  background-color: rgb(255 241 242);
+}
+
+.mobile-achievements-item__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mobile-achievements-item__label {
+  font-weight: 600;
+  color: rgb(51 65 85);
+  font-size: 0.8125rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-bottom: 0.375rem;
+}
+
+.mobile-achievements-item__required {
+  color: rgb(244 63 94);
+}
+
+.mobile-achievements-item__input {
+  border-radius: 0.75rem;
+  border-color: rgb(226 232 240);
+  height: 2.5rem;
+  padding: 0 0.75rem;
+  color: rgb(15 23 42);
+  background-color: #ffffff;
+  transition: all 0.2s ease;
+}
+
+.mobile-achievements-item__input:hover {
+  border-color: rgb(148 163 184);
+}
+
+.mobile-achievements-item__input:focus {
+  border-color: rgb(37 99 235);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+.mobile-achievements-item__textarea {
+  border-radius: 0.75rem;
+  border-color: rgb(226 232 240);
+  padding: 0.75rem;
+  color: rgb(15 23 42);
+  background-color: #ffffff;
+  transition: all 0.2s ease;
+}
+
+.mobile-achievements-item__textarea:hover {
+  border-color: rgb(148 163 184);
+}
+
+.mobile-achievements-item__textarea:focus {
+  border-color: rgb(37 99 235);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+.mobile-achievements-item__uploader {
+  margin-top: 0.25rem;
+}
+
+/* Hide scrollbar on mobile textareas */
+
+.mobile-achievements-item__scrollbar-hide textarea {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.mobile-achievements-item__scrollbar-hide textarea::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+.mobile-achievements-item__scrollbar-hide textarea::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+
+.mobile-achievements-item__scrollbar-hide textarea::-webkit-scrollbar-track {
+  background: transparent;
+}
