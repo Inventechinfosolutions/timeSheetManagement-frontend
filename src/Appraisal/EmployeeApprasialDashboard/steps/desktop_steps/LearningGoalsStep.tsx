@@ -83,7 +83,7 @@ export const LearningGoalsStep: React.FC<StepProps> = ({ disabled }) => {
                         danger
                         onClick={() => remove(name)}
                         icon={<Trash2 className="w-4 h-4 text-rose-500" />}
-                        className="flex items-center gap-1.5 px-2 py-1 h-auto text-rose-500 hover:text-rose-600 hover:bg-rose-50 font-semibold"
+                        className="flex items-center gap-1.5 px-2 py-1 h-auto text-rose-500 hover:text-rose-600 hover:bg-rose-50 font-semibold hover:-translate-y-0.5"
                       >
                         Remove
                       </Button>
@@ -99,11 +99,18 @@ export const LearningGoalsStep: React.FC<StepProps> = ({ disabled }) => {
                       rows={4}
                       disabled={disabled}
                       placeholder="List skills to develop, certifications to pursue, and goals for next quarter."
-                      className="rounded-xl border-slate-200 hover:border-indigo-400 focus:border-indigo-500 focus:shadow-[0_0_0_2px_rgba(99,102,241,0.1)] transition-all duration-200 p-3 hide-scrollbar"
+                      className="rounded-xl border-slate-200 hover:border-indigo-400 focus:border-indigo-500 focus:shadow-[0_0_0_2px_rgba(99,102,241,0.1)] transition-all duration-200 p-3 hide-scrollbar hover:-translate-y-0.5"
+                      style={{
+                        borderRadius: '12px',
+                        backgroundColor: '#fff',
+                        borderColor: '#e2e8f0',
+                      }}
                       styles={{
                         textarea: {
                           color: "#000",
                           resize: "none",
+                          backgroundColor: '#fff',
+                          borderRadius: '12px',
                         },
                       }}
                       showCount

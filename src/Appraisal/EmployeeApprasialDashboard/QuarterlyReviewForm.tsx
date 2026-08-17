@@ -559,14 +559,29 @@ const QuarterlyReviewForm = () => {
     );
   }
 
-  const quarterRange = formatQuarterRange(quarter);
+  // const quarterRange = formatQuarterRange(quarter);
 
   return (
     <div className="pb-8 mt-2 px-1">
-      <div ref={rootRef} className="w-full px-2.5 py-2">
+      <style>{`
+        .quarterly-review-form-wrapper .ant-input-disabled,
+        .quarterly-review-form-wrapper .ant-input[disabled],
+        .quarterly-review-form-wrapper textarea.ant-input-disabled,
+        .quarterly-review-form-wrapper textarea.ant-input[disabled] {
+          background-color: #ffffff !important;
+          color: #0f172a !important;
+          border-color: #e2e8f0 !important;
+        }
+
+        .quarterly-review-form-wrapper .ant-input,
+        .quarterly-review-form-wrapper textarea.ant-input {
+          border-radius: 12px !important;
+        }
+      `}</style>
+      <div ref={rootRef} className="w-full px-2.5 py-2 quarterly-review-form-wrapper">
         <button
           onClick={() => navigate('/employee-dashboard/appraisal')}
-          className="hidden lg:inline-flex items-center gap-1.5 text-[#A3AED0] hover:text-[#3311CC] font-bold text-sm transition-colors cursor-pointer"
+          className="hidden lg:inline-flex items-center gap-1.5 text-[#A3AED0] hover:text-[#3311CC] font-semibold text-sm transition-colors cursor-pointer"
         >
           <ChevronLeft className="w-4 h-4" />
           Back
@@ -576,7 +591,7 @@ const QuarterlyReviewForm = () => {
           <div className="flex items-center justify-between mb-4">
             {/* Left */}
             <div className="flex items-center gap-2 text-nowrap">
-              <h1 className="text-2xl font-bold text-slate-900">
+              <h1 className="text-2xl font-semibold text-slate-900">
                 Quarterly Review
               </h1>
 
@@ -617,13 +632,13 @@ const QuarterlyReviewForm = () => {
         {isReadOnly ? (
           <Form key={`ro-${formKey}`} form={form} layout="vertical" className="mb-8" initialValues={formData}>
             {managerName && (
-              <div className="mb-6 flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-2xl px-5 py-4 shadow-sm max-w-3xl">
+              <div className="mb-6 flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-2xl px-5 py-4 shadow-sm w-">
                 <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
                   <User className="w-5 h-5 text-blue-600" />
                 </div>
                 <div>
                   <p className="text-xs text-slate-500 leading-none mb-1 font-semibold uppercase tracking-wider">Submitted to Manager</p>
-                  <p className="text-base font-bold text-slate-800 mb-0">{managerName}</p>
+                  <p className="text-base font-semibold text-slate-800 mb-0">{managerName}</p>
                 </div>
               </div>
             )}
@@ -662,7 +677,7 @@ const QuarterlyReviewForm = () => {
                 <Button
                   icon={<ArrowLeft className="w-4 h-4" />}
                   onClick={handleBack}
-                  className="h-10 px-3 rounded-xl whitespace-nowrap flex-shrink-0"
+                  className="h-10 px-3 rounded-xl whitespace-nowrap flex-shrink-0 hover:-translate-x-0.5"
                 >
                   Previous
                 </Button>
@@ -673,7 +688,7 @@ const QuarterlyReviewForm = () => {
                   onClick={handleSaveDraft}
                   loading={saving}
                   icon={<Save className="w-4 h-4" />}
-                  className="h-10 px-5 rounded-xl border-blue-600 text-blue-600 hover:text-blue-700 hover:border-blue-700 bg-white font-semibold"
+                  className="h-10 px-5 rounded-xl border-blue-600 text-blue-600 hover:text-blue-700 hover:border-blue-700 bg-white font-semibold  hover:-translate-y-0.5"
                 >
                   Save Draft
                 </Button>
@@ -683,7 +698,7 @@ const QuarterlyReviewForm = () => {
                     type="primary"
                     onClick={handleNext}
                     disabled={!isNextEnabled}
-                    className="h-10 px-6 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold flex items-center gap-2 border-0 shadow-md shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    className="h-10 px-6 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold flex items-center gap-2 border-0 shadow-md shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer hover:translate-x-0.5"
                   >
                     Next <ArrowRight className="w-4 h-4" />
                   </Button>
@@ -706,7 +721,7 @@ const QuarterlyReviewForm = () => {
         {/* Confirmation Modal */}
         <Modal
           title={
-            <div className="flex items-center gap-2 text-slate-800 font-bold text-lg">
+            <div className="flex items-center gap-2 text-slate-800 font-semibold text-lg">
               <CheckCircle2 className="w-5 h-5 text-emerald-500" />
               Confirm Final Submission
             </div>
@@ -743,7 +758,7 @@ const QuarterlyReviewForm = () => {
         {/* No Manager Modal */}
         <Modal
           title={
-            <div className="flex items-center gap-2 text-rose-600 font-bold text-lg">
+            <div className="flex items-center gap-2 text-rose-600 font-semibold text-lg">
               <UserX className="w-5 h-5 text-rose-500" />
               No Assigned Manager Found
             </div>

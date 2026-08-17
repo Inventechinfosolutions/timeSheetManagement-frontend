@@ -11,7 +11,8 @@ import {
   FileTextOutlined,
   FileUnknownOutlined,
   CloseOutlined,
-  EditOutlined,
+  PaperClipOutlined,
+  PictureOutlined,
 } from "@ant-design/icons";
 import styled, { createGlobalStyle } from "styled-components";
 import { useDispatch } from "react-redux";
@@ -19,6 +20,52 @@ import { useDispatch } from "react-redux";
 const StyledWrapper = styled.div`
   width: 100%;
 `;
+
+const FileNameWithExtension: React.FC<{
+  name: string;
+  style?: React.CSSProperties;
+}> = ({ name, style }) => {
+  if (!name) return null;
+  const lastDotIndex = name.lastIndexOf(".");
+  if (lastDotIndex > 0 && name.length - lastDotIndex <= 8) {
+    const baseName = name.substring(0, lastDotIndex);
+    const extension = name.substring(lastDotIndex);
+    return (
+      <div
+        style={{
+          display: "inline-flex",
+          maxWidth: "100%",
+          alignItems: "center",
+          overflow: "hidden",
+          ...style,
+        }}
+        title={name}
+      ><span
+          style={{
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            minWidth: 0,
+            flex: "0 1 auto",
+          }}
+        >{baseName}</span><span style={{ flexShrink: 0, whiteSpace: "nowrap" }}>{extension}</span></div>
+    );
+  }
+  return (
+    <div
+      style={{
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap",
+        width: "100%",
+        ...style,
+      }}
+      title={name}
+    >
+      {name}
+    </div>
+  );
+};
 
 const StyledUploadButton = styled(Button)`
   width: 100%;
@@ -85,26 +132,60 @@ const StyledAddFileChipButton = styled(Button)`
   background: #ffffff !important;
   border: 1.5px solid #2563eb !important;
   color: #2563eb !important;
-  border-radius: 20px !important;
+  border-radius: 12px !important;
   padding: 0 14px !important;
-  height: 32px !important;
+  height: 44px !important;
   font-size: 12px !important;
   font-weight: 600 !important;
   box-shadow: none !important;
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
 
-  &:hover {
+  @media (max-width: 767px) {
+    width: 100% !important;
+  }
+
+  &:hover:not(:disabled) {
     background: #eff6ff !important;
     color: #1d4ed8 !important;
     border-color: #1d4ed8 !important;
   }
+
+  &:disabled,
+  &[disabled] {
+    background: #f8fafc !important;
+    border-color: #e2e8f0 !important;
+    color: #94a3b8 !important;
+    cursor: not-allowed !important;
+    opacity: 0.7 !important;
+  }
 `;
 
-const StyledFileCardList = styled.div`
+/* Horizontal row for desktop/tablet/ipad (>= 768px), and stacked one-by-one on mobile (< 768px) */
+const StyledFileRow = styled.div`
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: row;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 8px;
   width: 100%;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  box-sizing: border-box;
+  /* Hide scrollbar but allow smooth scrolling */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  @media (max-width: 767px) {
+    flex-direction: column;
+    align-items: stretch;
+    flex-wrap: nowrap;
+    overflow-x: visible;
+    gap: 8px;
+  }
 `;
 
 const StyledFileCard = styled.div`
@@ -114,30 +195,30 @@ const StyledFileCard = styled.div`
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-  padding: 5px 8px;
-  flex: 0 1 calc(20% - 7px);
-  min-width: 165px;
-  max-width: 220px;
+  padding: 5px 12px;
+  /* Fixed width in one line on desktop and tab/ipad */
+  flex: 0 0 250px;
+  width: 250px;
+  min-width: 250px;
+  max-width: 250px;
   gap: 6px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
   transition: all 0.2s ease;
+  height: 44px;
+  box-sizing: border-box;
+  overflow: hidden;
+  flex-shrink: 0;
+
+  @media (max-width: 767px) {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
 
   &:hover {
     border-color: #cbd5e1;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  }
-
-  @media (max-width: 1200px) {
-    flex: 0 1 calc(25% - 6px);
-  }
-
-  @media (max-width: 900px) {
-    flex: 0 1 calc(33.33% - 6px);
-  }
-
-  @media (max-width: 600px) {
-    flex: 1 1 100%;
-    max-width: 100%;
   }
 `;
 
@@ -147,13 +228,14 @@ const StyledFileCardLeft = styled.div`
   gap: 6px;
   min-width: 0;
   flex: 1;
+  overflow: hidden;
 `;
 
 const StyledIconBox = styled.div`
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background-color: #ecfdf5;
+  background-color: #f1f5f9;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -165,6 +247,7 @@ const StyledFileCardText = styled.div`
   flex-direction: column;
   min-width: 0;
   flex: 1;
+  overflow: hidden;
 `;
 
 const StyledFileCardTitle = styled.div`
@@ -191,12 +274,13 @@ const StyledFileCardActions = styled.div`
   align-items: center;
   gap: 2px;
   flex-shrink: 0;
+  margin-left: auto;
 
   .ant-btn {
     padding: 0 !important;
-    width: 22px;
-    height: 22px;
-    min-width: 22px;
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
     display: flex !important;
     align-items: center;
     justify-content: center;
@@ -421,6 +505,52 @@ const _getDocColors = (ext: string) => {
   return { header: "#667eea", light: "#f0f4ff" };
 };
 
+const getFileCardIcon = (fileName: string) => {
+  const name = (fileName || "").toLowerCase();
+
+  if (
+    [".png", ".jpg", ".jpeg", ".webp", ".gif"].some(
+      (ext) => name.endsWith(ext) || name.includes(ext)
+    )
+  ) {
+    return (
+      <PictureOutlined
+        style={{ color: "#2563eb", fontSize: 16 }}
+      />
+    );
+  }
+
+  if (name.endsWith(".pdf") || name.includes(".pdf")) {
+    return (
+      <FilePdfOutlined
+        style={{ color: "#dc2626", fontSize: 16 }}
+      />
+    );
+  }
+
+  if (name.endsWith(".doc") || name.endsWith(".docx")) {
+    return (
+      <FileWordOutlined
+        style={{ color: "#2563eb", fontSize: 16 }}
+      />
+    );
+  }
+
+  if (name.endsWith(".xls") || name.endsWith(".xlsx")) {
+    return (
+      <FileExcelOutlined
+        style={{ color: "#16a34a", fontSize: 16 }}
+      />
+    );
+  }
+
+  return (
+    <FileTextOutlined
+      style={{ color: "#050796", fontSize: 16 }}
+    />
+  );
+};
+
 const renderFileChipIcon = (fileName: string) => {
   const name = (fileName || "").toLowerCase();
   if (name.endsWith(".pdf") || name.includes(".pdf")) {
@@ -555,7 +685,7 @@ const ImageThumbnailCard: React.FC<{
     let cancelled = false;
     getUrl()
       .then((url) => { if (!cancelled && url) setSrc(url); })
-      .catch(() => {});
+      .catch(() => { });
     return () => { cancelled = true; };
   }, []);
 
@@ -1364,7 +1494,7 @@ const CommonMultipleUploader = forwardRef<CommonMultipleUploaderRef, CommonMulti
       <UploaderGlobalStyles />
       {contextHolder}
 
-      {!disabled && !hideUploadButton && (
+      {variant !== "chip" && !disabled && !hideUploadButton && (
         <StyledUploadButton
           type="primary"
           icon={<UploadOutlined />}
@@ -1389,7 +1519,19 @@ const CommonMultipleUploader = forwardRef<CommonMultipleUploaderRef, CommonMulti
       />
 
       {variant === "chip" ? (
-        <StyledFileCardList>
+        <StyledFileRow>
+          {!hideUploadButton && (
+            <StyledAddFileChipButton
+              type="default"
+              icon={<PaperClipOutlined style={{ fontSize: 14 }} />}
+              onClick={handleUploadButtonClick}
+              loading={uploading}
+              disabled={disabled || existingFiles.length >= maxFiles || uploading}
+            >
+              Upload file
+            </StyledAddFileChipButton>
+          )}
+
           {uploadingFiles.map((file, index) => (
             <StyledFileCard key={`uploading-card-${file.uid}-${index}`}>
               <StyledFileCardLeft>
@@ -1397,9 +1539,10 @@ const CommonMultipleUploader = forwardRef<CommonMultipleUploaderRef, CommonMulti
                   <FileTextOutlined style={{ color: "#059669", fontSize: 16 }} />
                 </StyledIconBox>
                 <StyledFileCardText>
-                  <StyledFileCardTitle title={file.name}>
-                    {file.name}
-                  </StyledFileCardTitle>
+                  <FileNameWithExtension
+                    name={file.name}
+                    style={{ fontSize: 12, fontWeight: 700, color: "#0f172a" }}
+                  />
                   <StyledFileCardSubtitle style={{ color: "#94a3b8" }}>
                     Uploading...
                   </StyledFileCardSubtitle>
@@ -1412,15 +1555,14 @@ const CommonMultipleUploader = forwardRef<CommonMultipleUploaderRef, CommonMulti
             <StyledFileCard key={`existing-card-${file.uid}-${index}`}>
               <StyledFileCardLeft>
                 <StyledIconBox>
-                  <FileTextOutlined style={{ color: "#059669", fontSize: 16 }} />
+                  {getFileCardIcon(file.name)}
                 </StyledIconBox>
+
                 <StyledFileCardText>
-                  <StyledFileCardTitle title={file.name}>
-                    {file.name}
-                  </StyledFileCardTitle>
-                  {/* <StyledFileCardSubtitle>
-                    Site Master Document
-                  </StyledFileCardSubtitle> */}
+                  <FileNameWithExtension
+                    name={file.name}
+                    style={{ fontSize: 12, fontWeight: 700, color: "#0f172a" }}
+                  />
                 </StyledFileCardText>
               </StyledFileCardLeft>
 
@@ -1428,23 +1570,24 @@ const CommonMultipleUploader = forwardRef<CommonMultipleUploaderRef, CommonMulti
                 {showPreview && (
                   <Button
                     type="text"
-                    icon={<EyeOutlined style={{ color: "#2563eb", fontSize: 14 }} />}
+                    icon={
+                      <EyeOutlined
+                        style={{ color: "#2563eb", fontSize: 18 }}
+                      />
+                    }
                     onClick={(e) => handlePreview(file, e)}
                     title="View"
                   />
                 )}
-                {showDownload && (
-                  <Button
-                    type="text"
-                    icon={<DownloadOutlined style={{ color: "#059669", fontSize: 14 }} />}
-                    onClick={(e) => handleDownload(file, e)}
-                    title="Download"
-                  />
-                )}
+
                 {finalShowDelete && (
                   <Button
                     type="text"
-                    icon={<DeleteOutlined style={{ color: "#ef4444", fontSize: 14 }} />}
+                    icon={
+                      <CloseOutlined
+                        style={{ color: "#ef4444", fontSize: 16, fontWeight: 700 }}
+                      />
+                    }
                     onClick={(e) => handleDelete(file, e)}
                     title="Delete"
                   />
@@ -1452,18 +1595,7 @@ const CommonMultipleUploader = forwardRef<CommonMultipleUploaderRef, CommonMulti
               </StyledFileCardActions>
             </StyledFileCard>
           ))}
-
-          {!disabled && existingFiles.length < maxFiles && (
-            <StyledAddFileChipButton
-              type="default"
-              icon={<EditOutlined style={{ fontSize: 12 }} />}
-              onClick={handleUploadButtonClick}
-              loading={uploading}
-            >
-              Add file
-            </StyledAddFileChipButton>
-          )}
-        </StyledFileCardList>
+        </StyledFileRow>
       ) : existingFiles.length > 0 || uploadingFiles.length > 0 ? (
         <StyledGalleryContainer>
           {uploadingFiles.map((file, index) =>
@@ -1501,7 +1633,9 @@ const CommonMultipleUploader = forwardRef<CommonMultipleUploaderRef, CommonMulti
             ) : (
               <StyledNonImageCard key={`uploading-nonimg-${file.uid}-${index}`}>
                 <DocFileMockup fileName={file.name} isUploading />
-                <StyledFileName title={file.name}>{file.name}</StyledFileName>
+                <StyledFileName title={file.name}>
+                  <FileNameWithExtension name={file.name} style={{ fontSize: 9, color: "white" }} />
+                </StyledFileName>
               </StyledNonImageCard>
             )
           )}
@@ -1516,7 +1650,9 @@ const CommonMultipleUploader = forwardRef<CommonMultipleUploaderRef, CommonMulti
                   />
                 </StyledImageWrapper>
 
-                <StyledFileName title={file.name}>{file.name}</StyledFileName>
+                <StyledFileName title={file.name}>
+                  <FileNameWithExtension name={file.name} style={{ fontSize: 9, color: "white" }} />
+                </StyledFileName>
 
                 <StyledOverlay>
                   <StyledActionButtons>
@@ -1524,7 +1660,7 @@ const CommonMultipleUploader = forwardRef<CommonMultipleUploaderRef, CommonMulti
                       <Button
                         type="text"
                         className="action-btn-view"
-                        icon={<EyeOutlined />}
+                        icon={<EyeOutlined style={{ fontSize: 20 }} />}
                         onClick={(e) => handlePreview(file, e)}
                         title="View"
                       />
@@ -1533,7 +1669,7 @@ const CommonMultipleUploader = forwardRef<CommonMultipleUploaderRef, CommonMulti
                       <Button
                         type="text"
                         className="action-btn-download"
-                        icon={<DownloadOutlined />}
+                        icon={<DownloadOutlined style={{ fontSize: 18 }} />}
                         onClick={(e) => handleDownload(file, e)}
                         title="Download"
                       />
@@ -1542,7 +1678,7 @@ const CommonMultipleUploader = forwardRef<CommonMultipleUploaderRef, CommonMulti
                       <Button
                         type="text"
                         className="action-btn-delete"
-                        icon={<DeleteOutlined />}
+                        icon={<CloseOutlined style={{ fontSize: 18, fontWeight: 700 }} />}
                         onClick={(e) => handleDelete(file, e)}
                         title="Delete"
                       />
@@ -1554,7 +1690,9 @@ const CommonMultipleUploader = forwardRef<CommonMultipleUploaderRef, CommonMulti
               <StyledNonImageCard key={`existing-nonimg-${file.uid}-${index}`}>
                 <DocFileMockup fileName={file.name} />
 
-                <StyledFileName title={file.name}>{file.name}</StyledFileName>
+                <StyledFileName title={file.name}>
+                  <FileNameWithExtension name={file.name} style={{ fontSize: 9, color: "white" }} />
+                </StyledFileName>
 
                 <StyledOverlay>
                   <StyledActionButtons>
@@ -1562,7 +1700,7 @@ const CommonMultipleUploader = forwardRef<CommonMultipleUploaderRef, CommonMulti
                       <Button
                         type="text"
                         className="action-btn-view"
-                        icon={<EyeOutlined />}
+                        icon={<EyeOutlined style={{ fontSize: 20 }} />}
                         onClick={(e) => handlePreview(file, e)}
                         title="View"
                       />
@@ -1571,7 +1709,7 @@ const CommonMultipleUploader = forwardRef<CommonMultipleUploaderRef, CommonMulti
                       <Button
                         type="text"
                         className="action-btn-download"
-                        icon={<DownloadOutlined />}
+                        icon={<DownloadOutlined style={{ fontSize: 18 }} />}
                         onClick={(e) => handleDownload(file, e)}
                         title="Download"
                       />
@@ -1580,7 +1718,7 @@ const CommonMultipleUploader = forwardRef<CommonMultipleUploaderRef, CommonMulti
                       <Button
                         type="text"
                         className="action-btn-delete"
-                        icon={<DeleteOutlined />}
+                        icon={<CloseOutlined style={{ fontSize: 18, fontWeight: 700 }} />}
                         onClick={(e) => handleDelete(file, e)}
                         title="Delete"
                       />

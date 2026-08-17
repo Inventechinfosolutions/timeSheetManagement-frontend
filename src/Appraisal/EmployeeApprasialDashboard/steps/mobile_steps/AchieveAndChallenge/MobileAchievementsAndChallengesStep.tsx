@@ -51,7 +51,7 @@ export const MobileAchievementsAndChallengesStep: React.FC<StepProps> = ({
             <>
               <div className="mobile-achievements-card__list">
                 {fields.map(({ key, name, ...restField }, idx) => (
-                  <div key={key} className="mobile-achievements-item">
+                  <div key={key} className="border border-slate-100 rounded-2xl py-3 px-2 bg-slate-50/50 relative">
                     {/* Item Header */}
                     <div className="mobile-achievements-item__header">
                       <h3 className="mobile-achievements-item__title">
@@ -96,6 +96,18 @@ export const MobileAchievementsAndChallengesStep: React.FC<StepProps> = ({
                             disabled={disabled}
                             placeholder="Enter project title"
                             className="mobile-achievements-item__input"
+                            style={{
+                              backgroundColor: '#ffffff',
+                              borderRadius: '12px',
+                              borderColor: '#e2e8f0',
+                            }}
+                            styles={{
+                              input: {
+                                color: '#000',
+                                backgroundColor: '#ffffff',
+                                borderRadius: '12px',
+                              },
+                            }}
                           />
                         </Form.Item>
                       </div>
@@ -121,6 +133,8 @@ export const MobileAchievementsAndChallengesStep: React.FC<StepProps> = ({
                             styles={{
                               textarea: {
                                 resize: 'none',
+                                backgroundColor: '#fff',
+                                color: '#000',
                               },
                             }}
                           />
@@ -148,6 +162,8 @@ export const MobileAchievementsAndChallengesStep: React.FC<StepProps> = ({
                             styles={{
                               textarea: {
                                 resize: 'none',
+                                backgroundColor: '#fff',
+                                color: '#000',
                               },
                             }}
                           />
@@ -176,7 +192,7 @@ export const MobileAchievementsAndChallengesStep: React.FC<StepProps> = ({
                           disabled={disabled}
                           maxFiles={5}
                           allowedTypes={["images", "pdf", "docs"]}
-                          hideUploadButton={true}
+                          hideUploadButton={disabled}
                           hideEmptyState={true}
                           fetchOnMount={Boolean(reviewId && reviewId > 0)}
                           onFilesChange={(files) => {

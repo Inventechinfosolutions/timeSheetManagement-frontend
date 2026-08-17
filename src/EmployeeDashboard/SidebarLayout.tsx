@@ -48,18 +48,36 @@ const SidebarLayout = ({
   const derivedActiveTab = useMemo(() => {
     if (activeTab && activeTab !== "Dashboard") return activeTab;
 
+    const path = location.pathname.toLowerCase();
+    if (path.includes("/quarterly-review") || path.includes("/appraisal")) return "Appraisal";
+    if (path.includes("/my-timesheet") || path.includes("/mobile-timesheet")) return "My Timesheet";
+    if (path.includes("/timesheet-view") || path.includes("/calendar-view")) return "Timesheet History";
+    if (path.includes("/my-profile") || path.includes("/change-password")) return "Account Settings";
+    if (path.includes("/leave-management") || path.includes("/leave-balance")) return "Request Management";
+    if (path.includes("/about")) return "About";
+
     switch (tab) {
-      case "my-timesheet": return "My Timesheet";
-      case "timesheet-view": return "Timesheet History";
-      case "my-profile": return "Account Settings";
-      case "change-password": return "Change Password";
-      case "leave-management": return "Request Management";
-      case "appraisal": return "Appraisal";
-      case "leave-balance": return "Leave Balance";
-      case "about": return "About";
-      default: return "Dashboard";
+      case "my-timesheet":
+      case "mobile-timesheet":
+        return "My Timesheet";
+      case "timesheet-view":
+      case "calendar-view":
+        return "Timesheet History";
+      case "my-profile":
+      case "change-password":
+        return "Account Settings";
+      case "leave-management":
+      case "leave-balance":
+        return "Request Management";
+      case "appraisal":
+      case "quarterly-review":
+        return "Appraisal";
+      case "about":
+        return "About";
+      default:
+        return "Dashboard";
     }
-  }, [tab, activeTab]);
+  }, [tab, activeTab, location.pathname]);
   const isOpen = isHovered || isLocked;
 
   const navItemClass = (isActive: boolean, expanded = true) =>
@@ -228,10 +246,7 @@ const SidebarLayout = ({
                       if (item.name === "About") {
                         if (location.pathname.includes("/manager-dashboard")) {
                           navigate("/manager-dashboard/about");
-                        } else if (location.pathname.includes("/appraisal")) {
-                          navigate("/appraisal");
-                        }
-                        else if (location.pathname.includes("/admin-dashboard")) {
+                        } else if (location.pathname.includes("/admin-dashboard")) {
                           navigate("/admin-dashboard/about");
                         } else {
                           navigate("/employee-dashboard/about");
@@ -275,36 +290,52 @@ const SidebarLayout = ({
 
           {/* Logout Action Footer Component */}
           <div className="px-4 pb-6 mt-2 border-t border-white/10 pt-4">
-            <div className="relative group">
-              <button
-                onClick={handleLogout}
-                className={`w-full flex items-center p-3 rounded-2xl cursor-pointer transition-all duration-300 relative overflow-hidden group bg-white text-red-600 hover:bg-red-50
-                  ${isOpen || isMobileOpen ? "gap-4 px-4" : "xl:justify-center xl:px-0 gap-0"}
-                `}
-              >
-                <div className="shrink-0 relative z-10 transition-transform duration-300 text-red-600">
-                  <LogOut className="w-5 h-5 transition-colors duration-300 group-hover:scale-110" />
-                </div>
-                <span
-                  className={`text-sm font-semibold whitespace-nowrap transition-all duration-300 relative z-10
-                    ${isOpen || isMobileOpen
-                      ? "opacity-100 translate-x-0 w-auto"
-                      : "opacity-0 -translate-x-4 w-0 overflow-hidden absolute"
-                    }
-                  `}
-                >
-                  Logout
-                </span>
-              </button>
+  <div className="relative group">
+    <button
+      onClick={handleLogout}
+      className={`w-full flex items-center p-3 rounded-2xl cursor-pointer transition-all duration-300 relative overflow-hidden
+        text-white hover:bg-white hover:text-red-600
+        ${isOpen || isMobileOpen
+          ? "gap-4 px-4"
+          : "xl:justify-center xl:px-0 gap-0"
+        }
+      `}
+    >
+      <div
+        className="
+          shrink-0 relative z-10
+          text-white
+          transition-all duration-300
+          group-hover:text-red-600
+          group-hover:scale-110
+        "
+      >
+        <LogOut className="w-5 h-5 transition-colors duration-300" />
+      </div>
 
-              {!isOpen && !isMobileOpen && (
-                <div className="sidebar-tooltip hidden xl:block absolute left-[calc(100%+10px)] top-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#111c44] text-white text-xs font-bold rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 whitespace-nowrap z-50">
-                  Logout
-                  <div className="absolute top-1/2 -left-1 -translate-y-1/2 border-4 border-r-[#111c44] border-l-transparent border-t-transparent border-b-transparent"></div>
-                </div>
-              )}
-            </div>
-          </div>
+      <span
+        className={`text-md font-semibold whitespace-nowrap
+          transition-all duration-300 relative z-10
+          text-white group-hover:text-red-600
+          ${
+            isOpen || isMobileOpen
+              ? "opacity-100 translate-x-0 w-auto"
+              : "opacity-0 -translate-x-4 w-0 overflow-hidden absolute"
+          }
+        `}
+      >
+        Logout
+      </span>
+    </button>
+
+    {!isOpen && !isMobileOpen && (
+      <div className="sidebar-tooltip hidden xl:block absolute left-[calc(100%+10px)] top-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#111c44] text-white text-md font-bold rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 whitespace-nowrap z-50">
+        Logout
+        <div className="absolute top-1/2 -left-1 -translate-y-1/2 border-4 border-r-[#111c44] border-l-transparent border-t-transparent border-b-transparent"></div>
+      </div>
+    )}
+  </div>
+</div>
         </aside>
 
         {/* Content Render Main Target Pane */}

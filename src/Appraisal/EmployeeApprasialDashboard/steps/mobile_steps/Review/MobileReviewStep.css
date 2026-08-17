@@ -58,9 +58,9 @@
 
 .mobile-review-card {
   border-radius: 1rem;
-  border: 1px solid rgb(120, 180, 253);
+  border: 1px solid rgb(241, 245, 249);
   padding: 1rem;
-  background-color: #fff;
+  background-color: rgba(248, 250, 252, 0.6);
   margin-bottom: 1rem;
 }
 
@@ -100,6 +100,11 @@
 }
 
 .mobile-review-plain-text {
+  background-color: #ffffff;
+  border: 1px solid rgb(241, 245, 249);
+  border-radius: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  color: rgb(71, 85, 105);
   white-space: pre-wrap;
   margin-bottom: 0;
 }
@@ -113,10 +118,10 @@
 }
 
 .mobile-review-goal-item {
-  border-radius: 0.5rem;
-  border: 1px solid rgb(226 232 240);
+  border-radius: 0.75rem;
+  border: 1px solid rgb(241, 245, 249);
   padding: 1rem;
-  background-color: rgb(248 250 252);
+  background-color: #ffffff;
 }
 
 .mobile-review-goal-item__title {
@@ -140,9 +145,9 @@
 
 .mobile-review-project-item {
   border-radius: 0.75rem;
-  border: 1px solid rgba(226, 232, 240, 0.8);
+  border: 1px solid rgb(241, 245, 249);
   padding: 1rem;
-  background-color: rgba(248, 250, 252, 0.6);
+  background-color: #ffffff;
 }
 
 .mobile-review-project-item__title {
@@ -173,6 +178,106 @@
   white-space: pre-wrap;
 }
 
+/* Attachment file cards inside project items - vertical stack, full width */
+
+.mobile-review-attachment-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin-top: 0.25rem;
+}
+
+.mobile-review-file-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 5px 8px;
+  width: 100%;
+  gap: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+  height: 44px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.mobile-review-file-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.mobile-review-file-card__left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.mobile-review-file-card__icon-box {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background-color: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.mobile-review-file-card__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.mobile-review-file-card__name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-review-file-card__ext {
+  font-size: 10px;
+  font-weight: 400;
+  color: #64748b;
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-review-file-card__eye-btn {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  transition: background 0.2s ease;
+  margin-left: auto;
+}
+
+.mobile-review-file-card__eye-btn:hover {
+  background: #f1f5f9;
+}
+
+
 /* Team contribution */
 
 .mobile-review-avg-badge {
@@ -181,7 +286,7 @@
   gap: 0.375rem;
   background-color: rgb(255 251 235);
   border: 1px solid rgb(253 230 138);
-  border-radius: 0.75rem;
+  border-radius: 6px;
   padding: 0.25rem 0.75rem;
   font-size: 0.75rem;
   font-weight: 700;
@@ -198,10 +303,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem;
+  padding: 0.75rem 1rem;
   border-radius: 0.75rem;
-  border: 1px solid rgba(226, 232, 240, 0.8);
-  background-color: rgba(248, 250, 252, 0.6);
+  border: 1px solid rgb(241, 245, 249);
+  background-color: #ffffff;
 }
 
 .mobile-review-tc-item__label {
@@ -217,16 +322,6 @@
 
 /* Company environment */
 
-.mobile-review-rating-badge {
-  background-color: rgb(239 246 255);
-  border: 1px solid rgb(191 219 254);
-  color: rgb(30 64 175);
-  font-weight: 700;
-  padding: 0.25rem 0.75rem;
-  border-radius: 0.75rem;
-  font-size: 0.75rem;
-}
-
 .mobile-review-env-fields {
   display: flex;
   flex-direction: column;
@@ -236,6 +331,7 @@
   color: rgb(71 85 105);
 }
 
+
 .mobile-review-env-fields__label {
   font-weight: 600;
   color: rgb(51 65 85);
@@ -243,13 +339,67 @@
   margin-bottom: 0.25rem;
 }
 
+
 .mobile-review-env-fields__text {
-  background-color: rgba(248, 250, 252, 0.6);
-  padding: 0.625rem;
+  background-color: #ffffff;
+  padding: 0.625rem 0.75rem;
   border-radius: 0.75rem;
-  border: 1px solid rgb(241 245 249);
+  border: 1px solid rgb(241, 245, 249);
   margin-bottom: 0;
   white-space: pre-wrap;
+}
+
+
+/* Selected Company Environment Rating */
+
+.mobile-review-env-rating {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin-top: 0.75rem;
+}
+
+
+.mobile-review-env-rating__label {
+  font-weight: 600;
+  color: rgb(51 65 85);
+  font-size: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.mobile-review-emoji-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.mobile-review-emoji-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 18%;
+  min-width: 50px;
+  height: 64px;
+  border-radius: 6px;
+  border-width: 1px;
+  border-style: solid;
+  transition: all 0.2s ease;
+}
+
+
+.mobile-review-env-rating__emoji {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+
+.mobile-review-env-rating__text {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgb(71 85 105);
 }
 
 /* Footer */

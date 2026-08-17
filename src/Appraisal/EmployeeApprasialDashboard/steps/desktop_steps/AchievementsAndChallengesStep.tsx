@@ -72,6 +72,20 @@ export const AchievementsAndChallengesStep: React.FC<StepProps> = ({
         .hide-scrollbar textarea::-webkit-scrollbar-track {
           background: transparent;
         }
+
+        .ant-input-disabled,
+        .ant-input[disabled],
+        textarea.ant-input-disabled,
+        textarea.ant-input[disabled] {
+          background-color: #ffffff !important;
+          color: #0f172a !important;
+          border-color: #e2e8f0 !important;
+        }
+
+        .ant-input,
+        textarea.ant-input {
+          border-radius: 12px !important;
+        }
       `}</style>
       <Card
         className="shadow-md border border-slate-100 rounded-2xl p-4 bg-white/80 backdrop-blur-sm"
@@ -94,10 +108,10 @@ export const AchievementsAndChallengesStep: React.FC<StepProps> = ({
                 {fields.map(({ key, name, ...restField }, idx) => (
                   <div
                     key={key}
-                    className="bg-slate-50 p-6 rounded-2xl relative border border-slate-200/80 transition-all"
+                    className="bg-slate-50/50  p-6 rounded-2xl relative border border-slate-200/80 transition-all"
                   >
                     {/* Item Header */}
-                    <div className="flex justify-between items-center mb-4 pb-2">
+                    <div className="flex justify-between items-center mb-1">
                       <h3 className="text-base font-bold text-slate-800 mb-0">
                         Project {idx + 1}
                       </h3>
@@ -108,7 +122,7 @@ export const AchievementsAndChallengesStep: React.FC<StepProps> = ({
                           danger
                           onClick={() => remove(name)}
                           icon={<Trash2 className="w-4 h-4 text-red-500" />}
-                          className="flex items-center gap-1.5 px-2 py-1 h-auto text-xs font-semibold text-red-500 hover:text-red-600 hover:bg-red-50 cursor-pointer"
+                          className="flex items-center gap-1.5 px-2 py-1 h-auto text-xs font-semibold text-red-500 hover:text-red-600 hover:bg-red-50 cursor-pointer hover:-translate-y-0.5"
                         >
                           Remove
                         </Button>
@@ -130,7 +144,19 @@ export const AchievementsAndChallengesStep: React.FC<StepProps> = ({
                         <Input
                           disabled={disabled}
                           placeholder="Enter project title"
-                          className="rounded-xl border-slate-200 focus:border-blue-500 h-10 px-3 text-slate-900 bg-white"
+                          className="rounded-xl border-slate-200 focus:border-blue-500 h-10 px-3 text-slate-900 bg-white hover:-translate-y-0.5"
+                          style={{
+                            backgroundColor: '#ffffff',
+                            borderRadius: '12px',
+                            borderColor: '#e2e8f0',
+                          }}
+                          styles={{
+                            input: {
+                              color: "#000",
+                              backgroundColor: '#ffffff',
+                              borderRadius: '12px',
+                            },
+                          }}
                         />
                       </Form.Item>
                     </div>
@@ -153,12 +179,20 @@ export const AchievementsAndChallengesStep: React.FC<StepProps> = ({
                             rows={4}
                             disabled={disabled}
                             placeholder="List your key accomplishments..."
-                            className="rounded-xl border-slate-200 focus:border-blue-500 p-3 text-slate-900 hide-scrollbar bg-white"
+                            className="rounded-xl border-slate-200 focus:border-blue-500 p-3 text-slate-900 hide-scrollbar bg-white hover:-translate-y-0.5"
+                            style={{
+                              borderRadius: '12px',
+                              backgroundColor: '#fff',
+                              borderColor: '#e2e8f0',
+                            }}
                             showCount
                             maxLength={2000}
                             styles={{
                               textarea: {
+                                color: "#000",
                                 resize: 'none',
+                                backgroundColor: '#fff',
+                                borderRadius: '12px',
                               },
                             }}
                           />
@@ -181,12 +215,20 @@ export const AchievementsAndChallengesStep: React.FC<StepProps> = ({
                             rows={4}
                             disabled={disabled}
                             placeholder="Describe any challenges faced..."
-                            className="rounded-xl border-slate-200 focus:border-blue-500 p-3 text-slate-900 hide-scrollbar bg-white"
+                            className="rounded-xl border-slate-200 focus:border-blue-500 p-3 text-slate-900 hide-scrollbar bg-white hover:-translate-y-0.5"
+                            style={{
+                              borderRadius: '12px',
+                              backgroundColor: '#fff',
+                              borderColor: '#e2e8f0',
+                            }}
                             showCount
                             maxLength={2000}
                             styles={{
                               textarea: {
+                                color: "#000",
                                 resize: 'none',
+                                backgroundColor: '#fff',
+                                borderRadius: '12px',
                               },
                             }}
                           />
@@ -212,9 +254,9 @@ export const AchievementsAndChallengesStep: React.FC<StepProps> = ({
                         deleteFile={deleteQuarterlyReviewFile}
                         getFiles={getQuarterlyReviewFiles}
                         disabled={disabled}
-                        maxFiles={5}
+                        maxFiles={3}
                         allowedTypes={["images", "pdf", "docs"]}
-                        hideUploadButton={true}
+                        hideUploadButton={disabled}
                         hideEmptyState={true}
                         fetchOnMount={Boolean(reviewId && reviewId > 0)}
                         onFilesChange={(files) => {

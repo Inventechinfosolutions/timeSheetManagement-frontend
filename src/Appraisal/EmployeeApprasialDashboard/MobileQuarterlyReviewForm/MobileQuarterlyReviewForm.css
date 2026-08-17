@@ -10,7 +10,7 @@
     align-items: center;
     gap: 6px;
     color: #a3aed0;
-    font-weight: 700;
+    font-weight: 500;
     font-size: 14px;
     transition: color 0.2s ease;
     cursor: pointer;
@@ -35,7 +35,7 @@
 
 .mobile-qr-header-title {
     font-size: 18px;
-    font-weight: 700;
+    font-weight: 500;
     color: #1e293b;
     margin: 0;
 }
@@ -67,7 +67,7 @@
     border-radius: 9999px;
     padding: 4px 10px;
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 500;
 }
 
 .mobile-qr-readonly-manager-banner {
@@ -102,7 +102,7 @@
 
 .mobile-qr-manager-name {
     font-size: 14px;
-    font-weight: 700;
+    font-weight: 500;
     color: #1e293b;
     margin: 0;
 }
@@ -157,4 +157,18 @@
     50% {
         opacity: 0.5;
     }
+}
+
+.mobile-qr-container .ant-input-disabled,
+.mobile-qr-container .ant-input[disabled],
+.mobile-qr-container textarea.ant-input-disabled,
+.mobile-qr-container textarea.ant-input[disabled] {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    border-color: #e2e8f0 !important;
+}
+
+.mobile-qr-container .ant-input,
+.mobile-qr-container textarea.ant-input {
+    border-radius: 12px !important;
 }
