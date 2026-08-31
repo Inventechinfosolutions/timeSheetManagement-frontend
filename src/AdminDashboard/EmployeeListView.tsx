@@ -42,6 +42,7 @@ import Toast from "../components/Toast";
 import { UserType, EmploymentType, UserStatus } from "../enums";
 
 const EmployeeListView = () => {
+
   const navigate = useNavigate();
   const location = useLocation();
 

@@ -107,6 +107,7 @@ export const getAllLeaveRequests = createAsyncThunk(
       search?: string;
       month?: string;
       year?: string;
+      requestType?: string;
       page?: number;
       limit?: number
     } = {},
@@ -120,6 +121,9 @@ export const getAllLeaveRequests = createAsyncThunk(
       if (filters.search) params.append("search", filters.search);
       if (filters.month) params.append("month", filters.month);
       if (filters.year) params.append("year", filters.year);
+      if (filters.requestType && filters.requestType !== "All") {
+        params.append("requestType", filters.requestType);
+      }
       if (filters.page) params.append("page", filters.page.toString());
       if (filters.limit) params.append("limit", filters.limit.toString());
       params.append("_t", new Date().getTime().toString()); // Cache buster
@@ -131,6 +135,40 @@ export const getAllLeaveRequests = createAsyncThunk(
     }
   }
 );
+
+export const downloadLeaveRequestsExcel = async (filters: {
+  employeeId?: string;
+  department?: string;
+  status?: string;
+  search?: string;
+  month?: string;
+  year?: string;
+  requestType?: string;
+} = {}) => {
+  const params: Record<string, string> = {};
+  if (filters.employeeId) params.employeeId = filters.employeeId;
+  if (filters.department && filters.department !== "All") {
+    params.department = filters.department;
+  }
+  if (filters.status && filters.status !== "All") params.status = filters.status;
+  if (filters.search) params.search = filters.search;
+  if (filters.month) params.month = filters.month;
+  if (filters.year) params.year = filters.year;
+  if (filters.requestType && filters.requestType !== "All") {
+    params.requestType = filters.requestType;
+  }
+
+  const response = await axios.get(`${apiUrl}/download-excel`, {
+    params,
+    responseType: "blob",
+  });
+  return response.data;
+};
+
+export const fetchLeaveRequestTypes = async (): Promise<string[]> => {
+  const response = await axios.get(`${apiUrl}/request-types`);
+  return Array.isArray(response.data) ? response.data : [];
+};
 
 // Keep these as aliases for backward compatibility, pointing to the unified method or its logic
 export const getLeaveHistory = getAllLeaveRequests;
