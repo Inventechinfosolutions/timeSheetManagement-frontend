@@ -6,86 +6,166 @@
     width: 100%;
     background-color: #F4F7FE;
     position: relative;
-    /* FULL-BLEED FIX: break out of any parent route padding so the card
-       stretches edge-to-edge like it does on the Dashboard (Image 2)
-       instead of floating with a gutter (Image 1). */
     max-width: 100vw;
     margin-left: calc(50% - 50vw);
     margin-right: calc(50% - 50vw);
+
+    /* Single source of truth for header/toolbar corner radius */
+    --mth-card-radius: 14px;
+
+    /* Fluid scaling scale — replaces every discrete breakpoint block */
+    --mth-page-pad: clamp(6px, 2.4vw, 20px);
+    --mth-grid-gap: clamp(5px, 1.9vw, 16px);
+    --mth-day-radius: clamp(9px, 2.6vw, 18px);
+    --mth-day-min-height: clamp(38px, 11.4vw, 84px);
+    --mth-weekday-size: clamp(8px, 1.8vw, 15px);
+    --mth-day-number-size: clamp(11px, 3vw, 20px);
+    --mth-day-hours-size: clamp(8px, 2vw, 14px);
+    --mth-status-size: clamp(5.5px, 1.45vw, 9px);
+    --mth-legend-size: clamp(7.25px, 1.75vw, 15px);
+    --mth-legend-pad: clamp(9px, 2.6vw, 18px);
+    --mth-legend-radius: clamp(10px, 2.8vw, 18px);
+    --mth-legend-gap-row: clamp(6px, 1.8vw, 18px);
+    --mth-legend-gap-col: clamp(8px, 2.6vw, 22px);
+    --mth-legend-dot: clamp(7px, 1.9vw, 13px);
+    --mth-month-size: clamp(10px, 2.3vw, 18px);
+    --mth-month-min-width: clamp(50px, 14vw, 100px);
+    --mth-total-label-size: clamp(7.5px, 1.5vw, 13px);
+    --mth-total-value-size: clamp(15px, 3.2vw, 24px);
+    --mth-header-title-size: 15px;
+    --mth-header-subtitle-size: 11px;
+    --mth-content-pad-y: clamp(8px, 4vw, 52px);
+    --mth-content-pad-x: clamp(2px, 1.2vw, 8px);
+    --mth-toolbar-radius: clamp(14px, 4vw, 22px);
+    --mth-toolbar-pad-y: clamp(7px, 2vw, 15px);
+    --mth-toolbar-pad-x: clamp(8px, 2.8vw, 22px);
+    --mth-toolbar-margin-b: clamp(8px, 2.4vw, 16px);
+    --mth-badge-size: 9px;
+    --mth-summary-gap: clamp(4px, 1.8vw, 14px);
+    --mth-summary-margin: clamp(14px, 3.5vw, 28px);
+    --mth-card-pad: clamp(6px, 1.9vw, 16px);
+    --mth-card-radius-sm: clamp(8px, 2.5vw, 14px);
+    --mth-card-svg: clamp(14px, 3.5vw, 22px);
+    --mth-card-h3: clamp(13px, 3.4vw, 24px);
+    --mth-card-span: clamp(6.5px, 1.55vw, 12px);
+    --mth-modal-max-width: clamp(22rem, 30vw, 34rem);
+    --mth-modal-title: clamp(1.1rem, 2vw, 1.55rem);
+    --mth-input-pad-y: clamp(0.75rem, 1.2vw, 0.95rem);
+    --mth-input-font: clamp(1rem, 1vw, 1.05rem);
+    --mth-submit-pad: clamp(1rem, 1.2vw, 1.1rem);
+    --mth-submit-font: clamp(1rem, 1vw, 1.1rem);
+    --bottom-nav-height: 40px;
+
+    padding-left: var(--mth-page-pad);
+    padding-right: var(--mth-page-pad);
+    padding-bottom: var(--bottom-nav-height);
 }
 
 .calendar-header {
-    padding: 1rem 1.25rem;
-    background: linear-gradient(to right, #f0fdf4, #f8fafc, #ffffff);
-    border-bottom: 1px solid #f1f5f9;
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 2% 2%;
+    background: linear-gradient(90deg, #f0fdf4 0%, #f8fafc 55%, #ffffff 100%);
+    border-radius: var(--mth-card-radius);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    margin: 10px 0 2px;
+    box-sizing: border-box;
 }
 
 .header-top {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 0.75rem;
+    width: 100%;
+    gap: 12px;
+    margin-bottom: 0;
+}
+
+.header-left-group,
+.calendar-header .header-top>div:first-child {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+}
+
+.calendar-icon-box,
+.calendar-header .header-top>div:first-child>div:first-child {
+    width: 32px;
+    height: 32px;
+    border-radius: 0.65rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #eef2ff;
+    flex-shrink: 0;
+    margin-left: 3%;
 }
 
 .header-title {
-    font-size: 1.25rem;
-    font-weight: 700;
+    margin: 0;
+    font-size: var(--mth-header-title-size);
+    font-weight: 800;
     color: #1b2559;
+    line-height: 1.15;
+    letter-spacing: 0;
 }
 
 .header-subtitle {
-    font-size: 0.75rem;
+    margin-top: 2px;
+    font-size: var(--mth-header-subtitle-size);
+    font-weight: 600;
     color: #64748b;
-    font-weight: 500;
+    line-height: 1.25;
 }
 
 .download-btn {
-    padding: 0.625rem;
+    margin-right: 3%;
     background-color: #4318ff;
     color: #ffffff;
-    border-radius: 0.75rem;
+    border-radius: 0.65rem;
     box-shadow: 0 10px 15px -3px rgba(67, 24, 255, 0.3);
     transition: all 0.2s;
-    border: none;
-    cursor: pointer;
+    height: 32px;
+    flex: 0 0 auto;
 }
 
 .download-btn:active {
     transform: scale(0.95);
 }
 
-/* BODY WRAPPER*/
+/* BODY WRAPPER */
 
 .mobile-timesheet-body {
-    flex: 1;
     margin-top: 0.25rem;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0;
     display: flex;
     flex-direction: column;
     background: transparent;
-    padding: 0.5rem;
+    padding: clamp(6px, 2.2vw, 14px) 0;
 }
 
-/* TOOLBAR (month nav + total tracked) — matches MobileTimesheet.tsx*/
+/* TOOLBAR (month nav + total tracked) — matches MobileTimesheet.tsx */
 
 .mobile-timesheet-toolbar {
     background-color: #ffffff;
-    border-radius: 20px;
-    padding: 0.5rem 0.75rem;
+    border-radius: var(--mth-toolbar-radius);
+    padding: var(--mth-toolbar-pad-y) var(--mth-toolbar-pad-x);
     box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     border: 1px solid #f9fafb;
-    margin-bottom: 0.75rem;
-    width: 100%;
+    margin-bottom: var(--mth-toolbar-margin-b);
     box-sizing: border-box;
 }
 
 .mobile-timesheet-summary-row {
-    display: flex;                  
+    display: grid;
+    grid-template-columns: minmax(74px, auto) minmax(0, 1fr) minmax(12px, auto);
+    column-gap: clamp(4px, 1.4vw, 12px);
     align-items: center;
-    justify-content: space-between;
     width: 100%;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .mobile-timesheet-nav-group {
@@ -93,7 +173,7 @@
     align-items: center;
     justify-content: flex-start;
     gap: 0.125rem;
-    flex-shrink: 0;                
+    flex-shrink: 0;
 }
 
 .mobile-timesheet-nav-btn {
@@ -115,12 +195,13 @@
 }
 
 .mobile-timesheet-month-label {
-    font-size: 0.75rem;
+    font-size: var(--mth-month-size);
     font-weight: 900;
     color: #2b3674;
-    min-width: 60px;
+    min-width: var(--mth-month-min-width);
     text-align: center;
     white-space: nowrap;
+    letter-spacing: 0;
 }
 
 .mobile-timesheet-total {
@@ -128,15 +209,15 @@
     flex-direction: row;
     flex-wrap: nowrap;
     align-items: baseline;
-    justify-content: flex-end;    
-    gap: 0.125rem;
+    justify-content: center;
+    gap: 2px;
     min-width: 0;
-    margin-left: auto;            
+    white-space: nowrap;
 }
 
 .mobile-timesheet-total-label {
-    font-size: 10px;
-    letter-spacing: -0.01em;
+    font-size: var(--mth-total-label-size);
+    letter-spacing: 0;
     text-transform: uppercase;
     font-weight: 900;
     color: #4b5563;
@@ -145,7 +226,7 @@
 }
 
 .mobile-timesheet-total-value {
-    font-size: 1rem;
+    font-size: var(--mth-total-value-size);
     font-weight: 900;
     color: #4318ff;
     line-height: 1;
@@ -153,7 +234,7 @@
 }
 
 .mobile-timesheet-total-unit {
-    font-size: 20px;
+    font-size: var(--mth-total-label-size);
     font-weight: 700;
     color: #6b7280;
     white-space: nowrap;
@@ -165,47 +246,47 @@
     justify-content: flex-end;
 }
 
-/* GRID CONTENT*/
+/* GRID CONTENT */
 
 .mobile-timesheet-content {
-    padding: 0.75rem;
+    padding: var(--mth-content-pad-y) var(--mth-content-pad-x);
     display: flex;
     flex-direction: column;
-    flex: 1;
+    /* flex: 0; */
     overflow: visible;
 }
 
 .mobile-timesheet-weekday-row {
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap: 0.375rem;
+    gap: var(--mth-grid-gap);
     margin-bottom: 0.25rem;
     padding: 0 0.25rem 0.25rem;
 }
 
 .mobile-timesheet-weekday-cell {
     text-align: center;
-    font-size: 10px;
+    font-size: var(--mth-weekday-size);
     font-weight: 900;
     color: #8F9BBA;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0;
 }
 
 .mobile-timesheet-grid {
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap: 0.5rem;
+    gap: var(--mth-grid-gap);
     overflow: visible;
     padding: 0.25rem 0;
     width: 100%;
 }
 
 .mobile-timesheet-pad {
-    min-height: 40px;
+    min-height: var(--mth-day-min-height);
 }
 
-/* DAY CELL*/
+/* DAY CELL */
 
 .mobile-timesheet-day {
     position: relative;
@@ -213,19 +294,14 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    border-radius: 0.75rem;
+    border-radius: var(--mth-day-radius);
     border: 1px solid transparent;
     transition: all 0.2s;
     aspect-ratio: 4 / 5;
     width: 100%;
+    min-height: var(--mth-day-min-height);
     box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     overflow: visible;
-}
-
-@media (min-width: 640px) {
-    .mobile-timesheet-day {
-        aspect-ratio: 1 / 1;
-    }
 }
 
 .mobile-timesheet-day.is-clickable {
@@ -241,7 +317,7 @@
 }
 
 .mobile-timesheet-day-number {
-    font-size: 13px;
+    font-size: var(--mth-day-number-size);
     font-weight: 800;
     line-height: 1;
     color: inherit;
@@ -252,7 +328,7 @@
 }
 
 .mobile-timesheet-day-hours {
-    font-size: 9px;
+    font-size: var(--mth-day-hours-size);
     font-weight: 900;
     opacity: 0.8;
     margin-top: 0.125rem;
@@ -272,11 +348,11 @@
 }
 
 .mobile-timesheet-day-status-label span {
-    font-size: 6px;
+    font-size: var(--mth-status-size);
     font-weight: 900;
     line-height: 1;
     text-transform: uppercase;
-    letter-spacing: -0.03em;
+    letter-spacing: 0;
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -286,8 +362,8 @@
 
 .day-lock-badge {
     position: absolute;
-    top: 6px;
-    right: 6px;
+    top: 5%;
+    right: 3%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -296,17 +372,50 @@
     color: inherit;
 }
 
+.day-lock-badge svg,
+.day-alert-badge svg {
+    width: var(--mth-badge-size);
+    height: var(--mth-badge-size);
+}
+
 .day-alert-badge {
     position: absolute;
-    top: 4px;
-    right: 4px;
+    top: 5%;
+    right: 3%;
     color: #f59e0b;
     z-index: 5;
 }
 
+/* Split-day background — rendered as two crisp solid h-1/2 blocks instead
+   of a CSS gradient, matching MobileTimesheet.tsx exactly. A hard-stop
+   gradient can rasterize with a blurry/uneven seam at small cell sizes or
+   device pixel ratios; two real elements each pinned to 50% height keep the
+   divide always even and crisp. */
+.split-day-bg {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.split-day-bg-half {
+    position: absolute;
+    inset-inline: 0;
+    height: 50%;
+}
+
+.split-day-bg-top {
+    top: 0;
+}
+
+.split-day-bg-bottom {
+    bottom: 0;
+}
+
 .day-status-blocked {
-    background-color: #e5e7eb;
-    border-color: transparent;
+    background-color: #F3F4F6;
+    border-color: #D1D5DB;
     color: #4b5563;
 }
 
@@ -317,9 +426,9 @@
 }
 
 .day-status-leave {
-    background-color: #FEE2E2;
-    border-color: rgba(238, 93, 80, 0.15);
-    color: #EE5D50;
+    background-color: #FECACA;
+    border-color: rgba(220, 38, 38, 0.2);
+    color: #DC2626;
 }
 
 .day-status-fullday {
@@ -341,7 +450,7 @@
 }
 
 .day-status-wfh {
-    background-color: #d2dcfc;
+    background-color: #d2dcfcff;
     border-color: rgba(99, 102, 241, 0.2);
     color: #4F46E5;
 }
@@ -354,7 +463,7 @@
 
 .day-status-default {
     background-color: #F8FAFC;
-    border-color: #d1d5db;
+    /* border-color: #d1d5db; */
     color: #64748b;
 }
 
@@ -365,17 +474,23 @@
     font-weight: 800;
 }
 
-/* LEGEND*/
+.day-status-weekend {
+    background-color: #FEE2E2;
+    border-color: rgba(238, 93, 80, 0.1);
+    color: #9CA3AF;
+}
+
+/* LEGEND */
 
 .mobile-timesheet-legend {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.75rem 1rem;
-    padding: 0.75rem 1rem;
-    margin-bottom: 1rem;
+    gap: var(--mth-legend-gap-row) var(--mth-legend-gap-col);
+    padding: var(--mth-legend-pad);
+    /* margin-bottom: 1rem; */
     background-color: #ffffff;
     border: 1px solid #FEE2E2;
-    border-radius: 0.75rem;
+    border-radius: var(--mth-legend-radius);
     box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     align-items: center;
     justify-content: flex-start;
@@ -384,20 +499,21 @@
 .mobile-timesheet-legend-item {
     display: flex;
     align-items: center;
-    gap: 0.375rem;
-    font-size: 10px;
-    font-weight: 700;
+    gap: clamp(4px, 1.4vw, 7px);
+    font-size: var(--mth-legend-size);
+    font-weight: 800;
     color: #475569;
     white-space: nowrap;
     text-transform: uppercase;
-    letter-spacing: 0.03em;
+    letter-spacing: 0;
 }
 
 .mobile-timesheet-legend-colorClass {
-    width: 0.625rem;
-    height: 0.625rem;
+    width: var(--mth-legend-dot);
+    height: var(--mth-legend-dot);
     border-radius: 9999px;
     border: 1px solid;
+    flex: 0 0 auto;
 }
 
 .legend-colorClass-fullday {
@@ -422,7 +538,7 @@
 
 .legend-colorClass-wfh {
     background-color: #d2dcfc;
-    border-color: #a3b3f7;
+    border-color: #8FA8F8;
 }
 
 .legend-colorClass-client {
@@ -446,11 +562,11 @@
 }
 
 .legend-colorClass-blocked {
-    background-color: #FEE2E2;
+    background-color: #F3F4F6;
     border-color: #d1d5db;
 }
 
-/* BOTTOM BANNER IMAGE*/
+/* BOTTOM BANNER IMAGE */
 
 .mobile-timesheet-banner {
     width: 100%;
@@ -465,7 +581,77 @@
     border-radius: 1rem;
 }
 
-/* DOWNLOAD MODAL (existing feature — unchanged)*/
+/* ATTENDANCE SUMMARY CARDS (6 in a row) */
+
+.attendance-summary-cards {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: var(--mth-summary-gap);
+    margin: var(--mth-summary-margin) 0;
+    width: 100%;
+}
+
+.summary-card {
+    background: #1e5ee3;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--mth-card-radius-sm);
+    padding: var(--mth-card-pad) 3px;
+    min-height: clamp(54px, 13vw, 82px);
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(30, 94, 227, 0.2);
+    transition: all 0.2s ease;
+    min-width: 0;
+}
+
+.summary-card:hover {
+    transform: translateY(-2px);
+    background: #1a52c7;
+    box-shadow: 0 6px 16px rgba(30, 94, 227, 0.3);
+}
+
+.summary-card svg {
+    width: var(--mth-card-svg);
+    height: var(--mth-card-svg);
+    margin: 0 auto clamp(3px, 1.2vw, 6px);
+    color: #ffffff;
+}
+
+.summary-card h3 {
+    margin: 0;
+    font-size: var(--mth-card-h3);
+    font-weight: 800;
+    line-height: 1;
+    color: #ffffff;
+}
+
+.summary-card span {
+    display: block;
+    margin-top: 4px;
+    font-size: var(--mth-card-span);
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.8);
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.summary-card.office svg,
+.summary-card.office h3,
+.summary-card.wfh svg,
+.summary-card.wfh h3,
+.summary-card.halfday svg,
+.summary-card.halfday h3,
+.summary-card.leave svg,
+.summary-card.leave h3,
+.summary-card.holiday svg,
+.summary-card.holiday h3,
+.summary-card.client svg,
+.summary-card.client h3 {
+    color: #ffffff;
+}
+
+/* DOWNLOAD MODAL (existing feature — unchanged) */
 
 .modal-overlay {
     position: fixed;
@@ -484,7 +670,7 @@
     border-radius: 20px;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     width: 100%;
-    max-width: 24rem;
+    max-width: var(--mth-modal-max-width);
     border: 1px solid #f1f5f9;
     overflow: hidden;
 }
@@ -498,7 +684,7 @@
 }
 
 .modal-title {
-    font-size: 1.125rem;
+    font-size: var(--mth-modal-title);
     font-weight: 700;
     color: #2b3674;
     display: flex;
@@ -541,166 +727,15 @@
     position: relative;
 }
 
-.calendar-header {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.header-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.header-left-group {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-.calendar-icon-box {
-    background-color: #e0e7ff;
-    color: #4f46e5;
-    padding: 12px;
-    border-radius: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.header-title {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: #1e293b;
-    margin: 0;
-}
-
-.header-subtitle {
-    font-size: 0.875rem;
-    color: #94a3b8;
-    margin: 4px 0 0 0;
-}
-.day-status-weekend {
-    background-color: #FEE2E2;
-    border-color: #E5E7EB;
-    color: #9CA3AF;
-}
-
-.download-btn {
-    background-color: #4f46e5;
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 44px;
-    height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.2);
-    transition: background-color 0.2s;
-}
-
-.download-btn:hover {
-    background-color: #4338ca;
-}
-
-/*Attendance Summary Cards (6 in a row) */
-
-.attendance-summary-cards {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 6px;
-    margin: 18px 0;
-    width: 100%;
-}
-
-.summary-card {
-    background: #1e5ee3;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-    padding: 8px 2px;
-    text-align: center;
-    box-shadow: 0 4px 12px rgba(30, 94, 227, 0.2);
-    transition: all 0.2s ease;
-    min-width: 0;
-}
-
-.summary-card:hover {
-    transform: translateY(-2px);
-    background: #1a52c7;
-    box-shadow: 0 6px 16px rgba(30, 94, 227, 0.3);
-}
-
-.summary-card svg {
-    width: 16px;
-    height: 16px;
-    margin: 0 auto 4px;
-    color: #ffffff;
-}
-
-.summary-card h3 {
-    margin: 0;
-    font-size: 16px;
-    font-weight: 700;
-    line-height: 1;
-    color: #ffffff;
-}
-
-.summary-card span {
-    display: block;
-    margin-top: 4px;
-    font-size: 8px;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.8);
-    text-transform: uppercase;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.summary-card.office svg,
-.summary-card.office h3,
-.summary-card.wfh svg,
-.summary-card.wfh h3,
-.summary-card.halfday svg,
-.summary-card.halfday h3,
-.summary-card.leave svg,
-.summary-card.leave h3,
-.summary-card.holiday svg,
-.summary-card.holiday h3,
-.summary-card.client svg,
-.summary-card.client h3 {
-    color: #ffffff;
-}
-
-@media (max-width: 480px) {
-    .attendance-summary-cards {
-        gap: 4px;
-    }
-
-    .summary-card {
-        padding: 6px 1px;
-    }
-
-    .summary-card h3 {
-        font-size: 14px;
-    }
-
-    .summary-card span {
-        font-size: 7.5px;
-    }
-}
-
 .date-input {
     width: 100%;
-    padding: 0.75rem 3rem 0.75rem 1rem;
+    padding: var(--mth-input-pad-y) 3rem var(--mth-input-pad-y) 1rem;
     background-color: #f4f7fe;
     border: none;
     border-radius: 0.75rem;
     color: #2b3674;
     font-weight: 700;
+    font-size: var(--mth-input-font);
     outline: none;
 }
 
@@ -719,10 +754,11 @@
 
 .submit-btn {
     width: 100%;
-    padding: 1rem;
+    padding: var(--mth-submit-pad);
     border-radius: 0.75rem;
     color: #ffffff;
     font-weight: 700;
+    font-size: var(--mth-submit-font);
     border: none;
     cursor: pointer;
     display: flex;
@@ -744,790 +780,81 @@
 }
 
 /* =========================================================================
-   RESPONSIVE SCALING — small phones, large phones, tablets & iPad
-   The visual design (colors, layout structure, card styles) stays exactly
-   the same at every size. Only spacing, sizing, and font-size/font-weight
-   scale up or down so the same design reads well from a small phone up to
-   an iPad Pro landscape screen. Rules are appended so they win over the
-   base rules above at equal selector specificity.
+   STRUCTURAL BREAKPOINTS ONLY
+   Everything above scales fluidly with clamp(). The four rules below are
+   the only genuine layout-mode switches (shape/visibility changes, not
+   just size), so they're the only @media queries left, each declared once.
    ========================================================================= */
 
-/* ---- 1. Extra-small phones (iPhone SE and similar, <= 359px) ---- */
-@media (max-width: 359px) {
-    .header-title {
-        font-size: 1.05rem;
-        font-weight: 700;
-    }
-
-    .header-subtitle {
-        font-size: 0.68rem;
-    }
-
-    .download-btn {
-        width: 40px;
-        height: 40px;
-        padding: 0.5rem;
-    }
-
-    .mobile-timesheet-month-label {
-        font-size: 0.68rem;
-        min-width: 52px;
-    }
-
-    .mobile-timesheet-total-label,
-    .mobile-timesheet-total-unit {
-        font-size: 9px;
-    }
-
-    .mobile-timesheet-total-value {
-        font-size: 0.9rem;
-    }
-
-    .mobile-timesheet-weekday-cell {
-        font-size: 9px;
-    }
-
-    .mobile-timesheet-day-number {
-        font-size: 11.5px;
-    }
-
-    .mobile-timesheet-day-hours {
-        font-size: 8px;
-    }
-
-    .mobile-timesheet-day-status-label span {
-        font-size: 5.5px;
-    }
-
-    .summary-card h3 {
-        font-size: 13px;
-    }
-
-    .summary-card span {
-        font-size: 7px;
-    }
-
-    .mobile-timesheet-legend-item {
-        font-size: 9px;
+/* Day cell: portrait (4:5) on narrow phones -> square from 640px up */
+@media (min-width: 640px) {
+    .mobile-timesheet-day {
+        aspect-ratio: 1 / 1;
     }
 }
 
-/* ---- 2. Standard phones (360px – 480px): baseline, matches original design ---- */
-
-/* ---- 3. Large phones / phablets (481px – 640px) ---- */
-@media (min-width: 481px) and (max-width: 640px) {
-    .header-title {
-        font-size: 1.3rem;
+/* Download button: icon-only square below 640px... */
+@media (max-width: 640px) {
+    .download-btn {
+        width: 32px !important;
+        height: 32px !important;
+        padding: 0 !important;
+        gap: 0 !important;
     }
 
-    .header-subtitle {
-        font-size: 0.8rem;
+    .download-btn-label {
+        display: none !important;
     }
 
-    .mobile-timesheet-month-label {
-        font-size: 0.8rem;
-    }
-
-    .mobile-timesheet-total-value {
-        font-size: 1.05rem;
-    }
-
-    .mobile-timesheet-day-number {
-        font-size: 14px;
-    }
-
-    .mobile-timesheet-day-hours {
-        font-size: 9.5px;
-    }
-
-    .mobile-timesheet-day-status-label span {
-        font-size: 6.5px;
-    }
-
-    .summary-card h3 {
-        font-size: 17px;
-    }
-
-    .summary-card span {
-        font-size: 8.5px;
-    }
-
-    .mobile-timesheet-legend-item {
-        font-size: 10.5px;
+    .download-btn-icon {
+        width: 16px !important;
+        height: 16px !important;
+        color: #fff !important;
+        stroke: #fff !important;
     }
 }
 
-/* ---- 4. Tablets in portrait / small iPad (641px – 767px) ---- */
-@media (min-width: 641px) and (max-width: 767px) {
-    .header-title {
-        font-size: 1.4rem;
-        font-weight: 800;
-    }
-
-    .header-subtitle {
-        font-size: 0.85rem;
-        font-weight: 600;
-    }
-
+/* ...pill with visible label from 641px up */
+@media (min-width: 641px) {
     .download-btn {
-        width: 48px;
-        height: 48px;
-    }
-
-    .mobile-timesheet-month-label {
-        font-size: 0.9rem;
-        min-width: 72px;
-    }
-
-    .mobile-timesheet-total-label,
-    .mobile-timesheet-total-unit {
-        font-size: 11px;
-    }
-
-    .mobile-timesheet-total-value {
-        font-size: 1.15rem;
-    }
-
-    .mobile-timesheet-weekday-cell {
-        font-size: 11.5px;
-    }
-
-    .mobile-timesheet-grid {
-        gap: 0.65rem;
-    }
-
-    .mobile-timesheet-day-number {
-        font-size: 15.5px;
-        font-weight: 800;
-    }
-
-    .mobile-timesheet-day-hours {
-        font-size: 10.5px;
-    }
-
-    .mobile-timesheet-day-status-label span {
-        font-size: 7px;
-    }
-
-    .summary-card h3 {
-        font-size: 19px;
-        font-weight: 800;
-    }
-
-    .summary-card span {
-        font-size: 9.5px;
-    }
-
-    .mobile-timesheet-legend-item {
-        font-size: 11.5px;
-    }
-
-    .modal-title {
-        font-size: 1.2rem;
-    }
-
-    .modal-content {
-        max-width: 26rem;
-    }
-}
-
-/* ---- 5. iPad portrait / standard tablet (768px – 1023px) ---- */
-@media (min-width: 768px) and (max-width: 1023px) {
-    .calendar-header {
-        padding: 1.25rem 1.75rem;
-    }
-
-    .header-title {
-        font-size: 1.55rem;
-        font-weight: 800;
-    }
-
-    .header-subtitle {
-        font-size: 0.9rem;
-        font-weight: 600;
-    }
-
-    .download-btn {
-        width: 50px;
-        height: 50px;
-    }
-
-    .mobile-timesheet-toolbar {
-        padding: 0.75rem 1.1rem;
-    }
-
-    .mobile-timesheet-month-label {
-        font-size: 0.98rem;
-        min-width: 82px;
-        font-weight: 900;
-    }
-
-    .mobile-timesheet-total-label,
-    .mobile-timesheet-total-unit {
-        font-size: 11.5px;
-    }
-
-    .mobile-timesheet-total-value {
-        font-size: 1.3rem;
-    }
-
-    .mobile-timesheet-content {
-        padding: 1.1rem;
-    }
-
-    .mobile-timesheet-weekday-cell {
-        font-size: 12.5px;
-        font-weight: 800;
-    }
-
-    .mobile-timesheet-grid {
-        gap: 0.8rem;
-    }
-
-    .mobile-timesheet-day-number {
-        font-size: 17px;
-        font-weight: 800;
-    }
-
-    .mobile-timesheet-day-hours {
-        font-size: 11.5px;
-    }
-
-    .mobile-timesheet-day-status-label span {
-        font-size: 7.5px;
-    }
-
-    .day-lock-badge svg,
-    .day-alert-badge svg {
-        width: 11px;
-        height: 11px;
-    }
-
-    .attendance-summary-cards {
-        gap: 10px;
-        margin: 22px 0;
-    }
-
-    .summary-card {
-        padding: 12px 4px;
-    }
-
-    .summary-card svg {
-        width: 19px;
-        height: 19px;
-    }
-
-    .summary-card h3 {
-        font-size: 21px;
-        font-weight: 800;
-    }
-
-    .summary-card span {
-        font-size: 10.5px;
-    }
-
-    .mobile-timesheet-legend {
-        padding: 1rem 1.25rem;
-        gap: 1rem 1.4rem;
-    }
-
-    .mobile-timesheet-legend-item {
-        font-size: 12.5px;
-        font-weight: 800;
-    }
-
-    .mobile-timesheet-legend-colorClass {
-        width: 0.75rem;
-        height: 0.75rem;
-    }
-
-    .modal-content {
-        max-width: 28rem;
-    }
-
-    .modal-title {
-        font-size: 1.3rem;
-    }
-
-    .input-label {
-        font-size: 0.85rem;
-    }
-
-    .date-input {
-        padding: 0.9rem 3rem 0.9rem 1.1rem;
-        font-size: 1rem;
-    }
-
-    .submit-btn {
-        padding: 1.1rem;
-        font-size: 1.05rem;
-    }
-}
-
-/* ---- 6. iPad landscape / large tablet (1024px – 1279px) ---- */
-@media (min-width: 1024px) and (max-width: 1279px) {
-    .calendar-header {
-        padding: 1.5rem 2rem;
-    }
-
-    .header-title {
-        font-size: 1.75rem;
-        font-weight: 800;
-    }
-
-    .header-subtitle {
-        font-size: 0.98rem;
-        font-weight: 600;
-    }
-
-    .download-btn {
-        width: 54px;
-        height: 54px;
-    }
-
-    .mobile-timesheet-toolbar {
-        padding: 0.85rem 1.25rem;
-    }
-
-    .mobile-timesheet-month-label {
-        font-size: 1.08rem;
-        min-width: 92px;
-        font-weight: 900;
-    }
-
-    .mobile-timesheet-total-label,
-    .mobile-timesheet-total-unit {
-        font-size: 12.5px;
-    }
-
-    .mobile-timesheet-total-value {
-        font-size: 1.45rem;
-    }
-
-    .mobile-timesheet-content {
-        padding: 1.35rem;
-    }
-
-    .mobile-timesheet-weekday-cell {
-        font-size: 13.5px;
-        font-weight: 800;
-    }
-
-    .mobile-timesheet-grid {
-        gap: 0.95rem;
-    }
-
-    .mobile-timesheet-day-number {
-        font-size: 18.5px;
-        font-weight: 800;
-    }
-
-    .mobile-timesheet-day-hours {
-        font-size: 12.5px;
-    }
-
-    .mobile-timesheet-day-status-label span {
-        font-size: 8px;
-    }
-
-    .day-lock-badge svg,
-    .day-alert-badge svg {
-        width: 12px;
-        height: 12px;
-    }
-
-    .attendance-summary-cards {
-        gap: 12px;
-        margin: 26px 0;
-    }
-
-    .summary-card {
-        padding: 14px 4px;
-        border-radius: 12px;
-    }
-
-    .summary-card svg {
-        width: 21px;
-        height: 21px;
-    }
-
-    .summary-card h3 {
-        font-size: 23px;
-        font-weight: 800;
-    }
-
-    .summary-card span {
-        font-size: 11.5px;
-    }
-
-    .mobile-timesheet-legend {
-        padding: 1.1rem 1.4rem;
-        gap: 1.1rem 1.6rem;
-    }
-
-    .mobile-timesheet-legend-item {
-        font-size: 13.5px;
-        font-weight: 800;
-    }
-
-    .mobile-timesheet-legend-colorClass {
-        width: 0.8rem;
-        height: 0.8rem;
-    }
-
-    .modal-content {
-        max-width: 30rem;
-    }
-
-    .modal-title {
-        font-size: 1.4rem;
-    }
-
-    .date-input {
-        font-size: 1.05rem;
-    }
-
-    .submit-btn {
-        font-size: 1.1rem;
-    }
-}
-
-/* ---- 7. Large tablets / iPad Pro landscape and up (>= 1280px) ---- */
-@media (min-width: 1280px) {
-    .calendar-header {
-        padding: 1.75rem 2.25rem;
-    }
-
-    .header-title {
-        font-size: 1.9rem;
-        font-weight: 800;
-    }
-
-    .header-subtitle {
-        font-size: 1.02rem;
-        font-weight: 600;
-    }
-
-    .download-btn {
-        width: 56px;
-        height: 56px;
-    }
-
-    .mobile-timesheet-toolbar {
-        padding: 0.95rem 1.35rem;
-    }
-
-    .mobile-timesheet-month-label {
-        font-size: 1.15rem;
-        min-width: 100px;
-        font-weight: 900;
-    }
-
-    .mobile-timesheet-total-label,
-    .mobile-timesheet-total-unit {
-        font-size: 13px;
-    }
-
-    .mobile-timesheet-total-value {
-        font-size: 1.55rem;
-    }
-
-    .mobile-timesheet-content {
-        padding: 1.5rem;
-    }
-
-    .mobile-timesheet-weekday-cell {
-        font-size: 14px;
-        font-weight: 800;
-    }
-
-    .mobile-timesheet-grid {
-        gap: 1.05rem;
-    }
-
-    .mobile-timesheet-day-number {
-        font-size: 19.5px;
-        font-weight: 800;
-    }
-
-    .mobile-timesheet-day-hours {
-        font-size: 13px;
-    }
-
-    .mobile-timesheet-day-status-label span {
-        font-size: 8.5px;
-    }
-
-    .attendance-summary-cards {
-        gap: 14px;
-        margin: 28px 0;
-    }
-
-    .summary-card {
-        padding: 16px 4px;
+        width: auto !important;
+        height: 32px !important;
+        padding: 0 18px !important;
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        gap: 10px !important;
         border-radius: 14px;
     }
 
-    .summary-card svg {
-        width: 22px;
-        height: 22px;
+    .download-btn-label {
+        display: block !important;
     }
 
-    .summary-card h3 {
-        font-size: 24px;
-        font-weight: 800;
+    .download-btn-label span {
+        font-size: 15px !important;
+        font-weight: 700 !important;
+        text-transform: none !important;
+        letter-spacing: normal !important;
     }
 
-    .summary-card span {
-        font-size: 12px;
-    }
-
-    .mobile-timesheet-legend-item {
-        font-size: 14px;
-        font-weight: 800;
-    }
-
-    .modal-content {
-        max-width: 32rem;
-    }
-
-    .modal-title {
-        font-size: 1.5rem;
+    .download-btn-icon {
+        width: 22px !important;
+        height: 22px !important;
+        color: #fff !important;
+        stroke: #fff !important;
+        flex-shrink: 0;
     }
 }
 
-/* ---- Respect device font-scaling settings while keeping the layout intact ---- */
+/* Respect device font-scaling settings while keeping the layout intact */
 @media (prefers-reduced-motion: reduce) {
+
     .mobile-timesheet-day,
     .mobile-timesheet-nav-btn,
     .download-btn,
     .summary-card,
     .mobile-timesheet-day.is-clickable {
         transition: none;
-    }
-}
-
-/* Final mobile/tablet/iPad sizing pass. These rules are intentionally limited
-   to touch-sized layouts so desktop routes keep their existing behavior. */
-@media (max-width: 1279px) {
-    .mobile-timesheet-shell {
-        --mth-page-pad: clamp(6px, 2.2vw, 18px);
-        --mth-grid-gap: clamp(5px, 1.8vw, 12px);
-        --mth-day-radius: clamp(9px, 2.6vw, 16px);
-        --mth-weekday-size: clamp(8px, 1.7vw, 12px);
-        --mth-day-number-size: clamp(11px, 3vw, 18px);
-        --mth-day-hours-size: clamp(8px, 2vw, 12px);
-        --mth-status-size: clamp(5.5px, 1.45vw, 8px);
-        --mth-legend-size: clamp(7.25px, 1.75vw, 12px);
-        --mth-month-size: clamp(10px, 2.2vw, 16px);
-        --mth-total-label-size: clamp(7.5px, 1.45vw, 12px);
-        --mth-total-value-size: clamp(15px, 3.2vw, 22px);
-        padding-left: var(--mth-page-pad);
-        padding-right: var(--mth-page-pad);
-        padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
-    }
-
-    .calendar-header {
-        padding: clamp(12px, 3.5vw, 22px) clamp(12px, 4vw, 28px);
-        gap: clamp(10px, 3vw, 18px);
-    }
-
-    .header-left-group,
-    .calendar-header .header-top > div:first-child {
-        gap: clamp(10px, 3vw, 16px);
-        min-width: 0;
-    }
-
-    .calendar-icon-box,
-    .calendar-header .header-top > div:first-child > div:first-child {
-        width: clamp(40px, 10.5vw, 52px);
-        height: clamp(40px, 10.5vw, 52px);
-        padding: clamp(8px, 2.5vw, 12px);
-        border-radius: clamp(12px, 3.5vw, 16px);
-        flex: 0 0 auto;
-    }
-
-    .header-title {
-        font-size: clamp(16px, 4.2vw, 25px) !important;
-        font-weight: 800 !important;
-        line-height: 1.15;
-        letter-spacing: 0 !important;
-    }
-
-    .header-subtitle {
-        font-size: clamp(11px, 2.6vw, 15px) !important;
-        font-weight: 600 !important;
-        line-height: 1.25;
-    }
-
-    .download-btn {
-        width: clamp(40px, 10.8vw, 54px) !important;
-        height: clamp(40px, 10.8vw, 54px) !important;
-        padding: clamp(8px, 2.5vw, 12px) !important;
-        flex: 0 0 auto;
-    }
-
-    .mobile-timesheet-body {
-        padding: clamp(6px, 2.2vw, 14px);
-        margin-bottom: 0;
-    }
-
-    .mobile-timesheet-toolbar {
-        border-radius: clamp(14px, 4vw, 20px);
-        padding: clamp(7px, 2vw, 12px) clamp(8px, 2.8vw, 18px);
-        margin-bottom: clamp(8px, 2.4vw, 14px);
-    }
-
-    .mobile-timesheet-summary-row {
-        display: grid !important;
-        grid-template-columns: minmax(74px, auto) minmax(0, 1fr) minmax(12px, auto) !important;
-        column-gap: clamp(4px, 1.4vw, 12px) !important;
-        align-items: center !important;
-    }
-
-    .mobile-timesheet-month-label {
-        min-width: clamp(50px, 15vw, 86px) !important;
-        font-size: var(--mth-month-size) !important;
-        font-weight: 900 !important;
-        letter-spacing: 0 !important;
-    }
-
-    .mobile-timesheet-total {
-        justify-content: center !important;
-        gap: 2px !important;
-        min-width: 0 !important;
-    }
-
-    .mobile-timesheet-total-label,
-    .mobile-timesheet-total-unit {
-        font-size: var(--mth-total-label-size) !important;
-        font-weight: 900 !important;
-        letter-spacing: 0 !important;
-        line-height: 1;
-    }
-
-    .mobile-timesheet-total-value {
-        font-size: var(--mth-total-value-size) !important;
-        font-weight: 900 !important;
-        letter-spacing: 0 !important;
-        line-height: 1;
-    }
-
-    .mobile-timesheet-content {
-        padding: clamp(8px, 2.8vw, 18px);
-    }
-
-    .mobile-timesheet-weekday-row,
-    .mobile-timesheet-grid {
-        gap: var(--mth-grid-gap) !important;
-    }
-
-    .mobile-timesheet-weekday-cell {
-        font-size: var(--mth-weekday-size) !important;
-        font-weight: 900 !important;
-        letter-spacing: 0 !important;
-    }
-
-    .mobile-timesheet-day,
-    .mobile-timesheet-pad {
-        min-height: clamp(38px, 11.4vw, 72px) !important;
-    }
-
-    .mobile-timesheet-day {
-        border-radius: var(--mth-day-radius) !important;
-        aspect-ratio: 1 / 1.12;
-    }
-
-    .mobile-timesheet-day-number {
-        font-size: var(--mth-day-number-size) !important;
-        font-weight: 800 !important;
-        line-height: 1 !important;
-    }
-
-    .mobile-timesheet-day-hours {
-        font-size: var(--mth-day-hours-size) !important;
-        font-weight: 900 !important;
-        line-height: 1 !important;
-    }
-
-    .mobile-timesheet-day-status-label span {
-        font-size: var(--mth-status-size) !important;
-        font-weight: 900 !important;
-        letter-spacing: 0 !important;
-        line-height: 1 !important;
-    }
-
-    .attendance-summary-cards {
-        gap: clamp(4px, 1.8vw, 12px);
-        margin: clamp(14px, 3.5vw, 24px) 0;
-    }
-
-    .summary-card {
-        min-height: clamp(54px, 13vw, 82px);
-        padding: clamp(6px, 1.9vw, 12px) 3px;
-        border-radius: clamp(8px, 2.5vw, 12px);
-    }
-
-    .summary-card svg {
-        width: clamp(14px, 3.5vw, 21px);
-        height: clamp(14px, 3.5vw, 21px);
-        margin-bottom: clamp(3px, 1.2vw, 6px);
-    }
-
-    .summary-card h3 {
-        font-size: clamp(13px, 3.4vw, 23px) !important;
-        font-weight: 800 !important;
-        line-height: 1;
-    }
-
-    .summary-card span {
-        font-size: clamp(6.5px, 1.55vw, 11px) !important;
-        font-weight: 700 !important;
-        line-height: 1.1;
-        letter-spacing: 0 !important;
-    }
-
-    .mobile-timesheet-legend {
-        gap: clamp(6px, 1.8vw, 14px) clamp(8px, 2.6vw, 18px) !important;
-        padding: clamp(9px, 2.6vw, 16px) !important;
-        border-radius: clamp(10px, 2.8vw, 16px) !important;
-        margin-bottom: 0;
-    }
-
-    .mobile-timesheet-legend-item {
-        gap: clamp(4px, 1.4vw, 7px) !important;
-        font-size: var(--mth-legend-size) !important;
-        font-weight: 800 !important;
-        letter-spacing: 0 !important;
-    }
-
-    .mobile-timesheet-legend-colorClass {
-        width: clamp(7px, 1.9vw, 11px) !important;
-        height: clamp(7px, 1.9vw, 11px) !important;
-        flex: 0 0 auto;
-    }
-}
-
-@media (max-width: 360px) {
-    .mobile-timesheet-shell {
-        --mth-grid-gap: 5px;
-        --mth-day-number-size: 10.5px;
-        --mth-day-hours-size: 7.5px;
-        --mth-status-size: 5px;
-        --mth-legend-size: 6.75px;
-    }
-
-    .mobile-timesheet-summary-row {
-        grid-template-columns: minmax(68px, auto) minmax(0, 1fr) 1px !important;
-    }
-
-    .attendance-summary-cards {
-        gap: 4px;
-    }
-
-    .summary-card {
-        min-height: 50px;
-        padding-left: 2px;
-        padding-right: 2px;
     }
 }

@@ -33,6 +33,21 @@ interface MobileMyTimesheetProps {
   containerClassName?: string;
 }
 
+// Text colors matched to MobileTimesheetHistory's STATUS_TEXT_HEX map,
+// so both views render the same font color per status.
+const STATUS_TEXT_HEX = {
+  today: "#4318FF",
+  blocked: "#464a50ff",
+  wfh: "#4F46E5",
+  fullDay: "#01B574",
+  client: "#4318FF",
+  halfDay: "#FFB020",
+  leave: "#EE5D50",
+  weekend: "#EE5D50",
+  holiday: "#1890FF",
+  default: "#141413",
+};
+
 const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
   currentWeekEntries,
   onPrevWeek,
@@ -94,9 +109,9 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
             </span>
           </div>
         </div>
-      {(!readOnly || isAdmin || (isManager && !isManagerView)) && (
+        {(!readOnly || isAdmin || (isManager && !isManagerView)) && (
           <div className="flex gap-2">
-             {onAutoUpdate && (
+            {onAutoUpdate && (
               <button
                 onClick={onAutoUpdate}
                 className="flex items-center justify-center p-3 bg-white text-[#4318FF] border border-[#4318FF]/20 rounded-2xl shadow-sm active:scale-95 transition-all"
@@ -153,57 +168,71 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
 
               const manualBlocker = blocker;
               const isStatusLeave = entry.status === AttendanceStatus.LEAVE;
-              
+
               // Dept Block list usually blocks Sundays entirely. 
               // We need to allow Sunday if it's a workday now.
               let isDeptBlocked = false;
               // if (dayOfWeek === 0) isDeptBlocked = true; // REMOVED: Allow Sunday editing
 
               const isBlocked = !!manualBlocker || (!isAdmin && !isManager && (isStatusLeave || isDeptBlocked));
-              
+
               const isEditable =
                 (isAdmin || !readOnly) &&
                 (isAdmin || isEditableMonth(entry.fullDate)) &&
                 !isBlocked;
 
-              // Styling logic (Matching MobileResponsiveCalendarPage)
-              let bg = "bg-white text-gray-600 border-gray-200"; // Default
+              // Styling logic (background/border unchanged; font color now matched to MobileTimesheetHistory)
+              let bg = "bg-white border-gray-200"; // Default
+              let textColor: string = STATUS_TEXT_HEX.default;
               const isHolidayDate = isHoliday(entry.fullDate);
+              const statusLower = (entry.status || "").toLowerCase();
 
               if (entry.isToday) {
                 bg =
-                  "bg-white ring-2 ring-[#4318FF] text-[#4318FF] border-transparent font-extrabold shadow-md";
+                  "bg-white ring-2 ring-[#4318FF] border-transparent font-extrabold shadow-md";
+                textColor = STATUS_TEXT_HEX.today;
               } else if (isBlocked) {
                 bg =
-                  "bg-gray-200 border border-gray-400 text-gray-500 font-bold";
-              } else if (
-                (entry.status || "").toLowerCase().includes("wfh") || 
-                (entry.status || "").toLowerCase().includes("work from home") ||
-                (entry.status || "").toLowerCase().includes("full day")
-              ) {
+                  "bg-gray-200 border border-gray-400 font-bold";
+                textColor = STATUS_TEXT_HEX.blocked;
+              } else if (statusLower.includes("wfh") || statusLower.includes("work from home")) {
                 bg =
-                  "bg-green-100 border border-green-500 text-black font-bold";
+                  "bg-green-100 border border-green-500 font-bold";
+                textColor = STATUS_TEXT_HEX.wfh;
+              } else if (statusLower.includes("full day")) {
+                bg =
+                  "bg-green-100 border border-green-500 font-bold";
+                textColor = STATUS_TEXT_HEX.fullDay;
+              } else if (statusLower.includes("client")) {
+                bg =
+                  "bg-green-100 border border-green-500 font-bold";
+                textColor = STATUS_TEXT_HEX.client;
               } else if (entry.status === AttendanceStatus.HALF_DAY) {
                 bg =
-                  "bg-orange-100 border border-orange-600 text-black font-bold";
+                  "bg-orange-100 border border-orange-600 font-bold";
+                textColor = STATUS_TEXT_HEX.halfDay;
               } else if (entry.status === AttendanceStatus.LEAVE) {
-                bg = "bg-red-200 border border-red-600 text-black font-bold";
+                bg = "bg-red-200 border border-red-600 font-bold";
+                textColor = STATUS_TEXT_HEX.leave;
               } else if (isHolidayDate || entry.status === AttendanceStatus.HOLIDAY) {
-                bg = "bg-blue-100 border border-blue-500 text-black font-bold";
+                bg = "bg-blue-100 border border-blue-500 font-bold";
+                textColor = STATUS_TEXT_HEX.holiday;
               } else if (entry.isWeekend) {
-                bg = "bg-pink-100 border border-pink-400 text-black font-bold";
+                bg = "bg-pink-100 border border-pink-400 font-bold";
+                textColor = STATUS_TEXT_HEX.weekend;
               } else if (
                 entry.status === AttendanceStatus.NOT_UPDATED ||
                 entry.status === AttendanceStatus.PENDING
               ) {
-                bg = "bg-white border border-gray-300 text-gray-600 font-bold";
+                bg = "bg-white border border-gray-300 font-bold";
+                textColor = STATUS_TEXT_HEX.default;
               }
 
               // Highlighting logic from navigation
               const isDateHighlighted =
                 selectedDateId &&
                 new Date(selectedDateId).toDateString() ===
-                  entry.fullDate.toDateString() &&
+                entry.fullDate.toDateString() &&
                 isHighlighted;
 
               // Special centering for Saturday (last day in Sun-Sat week)
@@ -212,16 +241,14 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
               return (
                 <div
                   key={originalIndex}
-                  className={`flex flex-col items-center gap-2 ${
-                    isSaturday ? "col-start-2" : ""
-                  } ${isDateHighlighted ? "z-50" : ""}`}
+                  className={`flex flex-col items-center gap-2 ${isSaturday ? "col-start-2" : ""
+                    } ${isDateHighlighted ? "z-50" : ""}`}
                 >
                   <span
-                    className={`text-sm font-bold ${
-                      isDateHighlighted
+                    className={`text-sm font-bold ${isDateHighlighted
                         ? "text-[#4318FF] scale-110 transition-transform"
                         : "text-[#2B3674]"
-                    }`}
+                      }`}
                   >
                     {entry.fullDate.toLocaleDateString("en-US", {
                       weekday: "short",
@@ -230,12 +257,12 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
                   <div
                     className={`relative w-[64px] h-[48px] sm:w-20 sm:h-14 rounded-xl flex items-center justify-center transition-all shadow-sm border ${bg} 
                       ${entry.isToday ? "ring-2 ring-[#4318FF] shadow-md" : ""}
-                      ${
-                        isDateHighlighted
-                          ? "date-highlight ring-4 ring-[#4318FF] ring-offset-2 scale-110 shadow-xl"
-                          : ""
+                      ${isDateHighlighted
+                        ? "date-highlight ring-4 ring-[#4318FF] ring-offset-2 scale-110 shadow-xl"
+                        : ""
                       }
                     `}
+                    style={{ color: textColor }}
                     onClick={() => {
                       if (isBlocked && isAdmin && onBlockedClick)
                         onBlockedClick();
@@ -251,15 +278,16 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
 
                     {/* Lock Icon for Admin Blockers or Month-end Locks */}
                     {(isBlocked || (!isAdmin && !isEditableMonth(entry.fullDate))) && (
-                        <div className="absolute -top-1 -left-1 p-1 rounded-full bg-red-50 text-red-500 border border-red-100 z-10">
-                            <Lock size={8} strokeWidth={3} />
-                        </div>
+                      <div className="absolute -top-1 -left-1 p-1 rounded-full bg-red-50 text-red-500 border border-red-100 z-10">
+                        <Lock size={8} strokeWidth={3} />
+                      </div>
                     )}
 
                     <input
                       type="text"
                       disabled={!isEditable}
                       className="w-full h-full bg-transparent text-center text-xl font-bold focus:outline-none placeholder:text-gray-300"
+                      style={{ color: textColor }}
                       value={inputValue}
                       onChange={(e) => {
                         const val = e.target.value;
@@ -272,12 +300,12 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
                     />
                     {isBlocked && (
                       <div className="absolute inset-0 z-20 bg-black/40 backdrop-blur-[2px] rounded-xl flex flex-col items-center justify-center p-1 text-center pointer-events-none">
-                         <Lock size={12} className="text-white mb-0.5" />
-                         <span className="text-[7px] font-black text-white leading-none uppercase tracking-tighter">
-                           {manualBlocker 
-                             ? (isAdmin || isManager ? "Unblock" : `Contact ${manualBlocker.blockedBy || "Admin"}`)
-                             : "On Leave"}
-                         </span>
+                        <Lock size={12} className="text-white mb-0.5" />
+                        <span className="text-[7px] font-black text-white leading-none uppercase tracking-tighter">
+                          {manualBlocker
+                            ? (isAdmin || isManager ? "Unblock" : `Contact ${manualBlocker.blockedBy || "Admin"}`)
+                            : "On Leave"}
+                        </span>
                       </div>
                     )}
                   </div>

@@ -139,5 +139,10 @@
 }
 
 .today-attendance-desktop__list-body {
-  padding: 16px;
+  width: 100%;
+  overflow: visible;
+  padding: 0.25rem 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
