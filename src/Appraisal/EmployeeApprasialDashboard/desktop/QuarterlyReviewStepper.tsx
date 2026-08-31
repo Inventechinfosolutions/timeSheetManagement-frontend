@@ -95,25 +95,9 @@ export const QuarterlyReviewStepper: React.FC<StepperProps> = ({
                     </button>
 
                     {/* Title */}
-                    <div className="mt-3 text-center w-max max-w-[140px]">
+                    <div className="text-center w-max max-w-[140px]">
                       <div className="font-bold text-sm whitespace-nowrap">
                         {step.title}
-                      </div>
-
-                      <div
-                        className={`text-xs mt-1 ${
-                          state === ReviewStatus.COMPLETED
-                            ? 'text-emerald-600'
-                            : state === ReviewStatus.ACTIVE
-                              ? 'text-indigo-600'
-                              : 'text-slate-400'
-                        }`}
-                      >
-                        {state === ReviewStatus.COMPLETED
-                          ? ReviewStatus.COMPLETED
-                          : state === ReviewStatus.ACTIVE
-                            ? ReviewStatus.IN_PROGRESS
-                            : ReviewStatus.UPCOMING}
                       </div>
                     </div>
                   </div>

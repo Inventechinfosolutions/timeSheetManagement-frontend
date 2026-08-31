@@ -9,7 +9,7 @@
   display: none;
 }
 
-@media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
+@media (min-width: 1280px) {
   .sidebar-mobile-backdrop,
   .sidebar-drawer-header,
   .app-mobile-bottom-nav {

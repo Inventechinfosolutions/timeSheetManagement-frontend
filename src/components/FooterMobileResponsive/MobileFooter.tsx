@@ -7,7 +7,10 @@ import {
   Info,
   Award,
 } from "lucide-react";
+import { useEffect, useState } from "react";
+
 // import { Label } from "recharts";
+
 interface MobileBottomNavProps {
   activeTab: string;
   onTabChange?: (tab: string) => void;
@@ -19,11 +22,45 @@ const MobileBottomNav = ({
   onTabChange,
   isSidebarOpen = false,
 }: MobileBottomNavProps) => {
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+
+  // Detect mobile keyboard
+  useEffect(() => {
+    const visualViewport = window.visualViewport;
+
+    if (!visualViewport) return;
+
+    const handleViewportResize = () => {
+      const keyboardHeight =
+        window.innerHeight - visualViewport.height;
+
+      setIsKeyboardOpen(keyboardHeight > 150);
+    };
+
+    handleViewportResize();
+
+    visualViewport.addEventListener(
+      "resize",
+      handleViewportResize
+    );
+
+    return () => {
+      visualViewport.removeEventListener(
+        "resize",
+        handleViewportResize
+      );
+    };
+  }, []);
+
   const items = [
     { name: "Dashboard", icon: LayoutGrid, label: "Dashboard" },
     { name: "My Timesheet", icon: Calendar, label: "Timesheet" },
     { name: "Timesheet History", icon: Eye, label: "History" },
-    { name: "Request Management", icon: ClipboardList, label: "Requests" },
+    {
+      name: "Request Management",
+      icon: ClipboardList,
+      label: "Requests",
+    },
     { name: "Appraisal", icon: Award, label: "Appraisal" },
     { name: "Account Settings", icon: User, label: "Profile" },
     { name: "About", icon: Info, label: "About" },
@@ -35,7 +72,7 @@ const MobileBottomNav = ({
         bg-white border-t border-gray-200 pb-safe
         shadow-[0_-4px_20px_rgba(0,0,0,0.08)]
         transition-all duration-300
-        ${isSidebarOpen
+        ${isSidebarOpen || isKeyboardOpen
           ? "translate-y-full opacity-0 pointer-events-none"
           : "translate-y-0 opacity-100"
         }`}
@@ -55,12 +92,16 @@ const MobileBottomNav = ({
               className="flex flex-col items-center justify-center gap-1 p-1 h-full rounded-xl active:bg-gray-50 transition-colors"
             >
               <Icon
-                className={`w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 transition-colors ${isActive ? "text-[#4318FF]" : "text-[#A3AED0]"
+                className={`w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 transition-colors ${isActive
+                    ? "text-[#4318FF]"
+                    : "text-[#A3AED0]"
                   }`}
               />
 
               <span
-                className={`text-[9px] sm:text-xs lg:text-sm tracking-tight transition-all truncate w-full text-center ${isActive ? "text-[#4318FF]" : "text-[#A3AED0]"
+                className={`text-[9px] sm:text-xs lg:text-sm tracking-tight transition-all truncate w-full text-center ${isActive
+                    ? "text-[#4318FF]"
+                    : "text-[#A3AED0]"
                   }`}
               >
                 {item.label}

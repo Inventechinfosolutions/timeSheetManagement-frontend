@@ -61,7 +61,7 @@ export const OverviewStep: React.FC<StepProps> = ({ disabled }) => {
         <p className="text-slate-500 text-sm mb-6 leading-relaxed">
           Provide a summary of your performance, key responsibilities, and contributions during this review period.
         </p>
-
+        <div className="border border-slate-100 rounded-2xl py-3 px-2 bg-slate-50/50 relative">
         <Form.Item
           name="overview"
           label={<span className="font-medium text-slate-700"><span className="text-rose-500">*</span>Performance Summary</span>}
@@ -75,17 +75,25 @@ export const OverviewStep: React.FC<StepProps> = ({ disabled }) => {
             rows={6}
             disabled={disabled}
             placeholder="Summarize your performance, key responsibilities, and contributions during this review period...."
-            className="rounded-xl border-slate-200 hover:border-indigo-400 focus:border-indigo-500 focus:shadow-[0_0_0_2px_rgba(99,102,241,0.1)] transition-all duration-200 p-3 hide-scrollbar"
+            className="rounded-xl border-slate-200 hover:border-indigo-400 focus:border-indigo-500 focus:shadow-[0_0_0_2px_rgba(99,102,241,0.1)] transition-all duration-200 p-3 hide-scrollbar hover:-translate-y-0.5"
+            style={{
+              borderRadius: '12px',
+              backgroundColor: '#fff',
+              borderColor: '#e2e8f0',
+            }}
             styles={{
               textarea: {
                 color: "#000",
-                 resize: 'none',
+                resize: 'none',
+                backgroundColor: '#fff',
+                borderRadius: '12px',
               },
             }}
             showCount
             maxLength={2000}
           />
         </Form.Item>
+        </div>
       </Card>
     </>
   );

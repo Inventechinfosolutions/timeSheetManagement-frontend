@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Card, Form, Rate } from 'antd';
+import { Card, Form, Rate, Tooltip } from 'antd';
 import {
   Star,
   MessageCircle,
@@ -7,6 +7,7 @@ import {
   Users,
   Lightbulb,
   Award,
+  CircleHelp,
   type LucideIcon,
 } from 'lucide-react';
 import './MobileTeamContributionStep.css';
@@ -23,7 +24,7 @@ const CATEGORIES = [
   'Leadership',
 ];
 
-// Icon per category (falls back to a generic star icon if a category isn't mapped)
+// Icon per category
 const CATEGORY_ICON_MAP: Record<string, LucideIcon> = {
   Communication: MessageCircle,
   Ownership: UserCircle2,
@@ -32,16 +33,53 @@ const CATEGORY_ICON_MAP: Record<string, LucideIcon> = {
   Leadership: Award,
 };
 
-export const MobileTeamContributionStep: React.FC<StepProps> = ({ disabled }) => {
+// Tooltip content for each category
+const CATEGORY_TOOLTIP_MAP: Record<string, string> = {
+  Communication:
+    'Ability to communicate clearly and effectively with team members and stakeholders.',
+  Ownership:
+    'Takes responsibility for assigned tasks, commitments, and outcomes.',
+  Collaboration:
+    'Works effectively with team members and contributes to a positive team environment.',
+  'Problem Solving':
+    'Identifies problems, analyzes situations, and finds effective solutions.',
+  Leadership:
+    'Guides, supports, and motivates team members when leadership is required.',
+};
+
+export const MobileTeamContributionStep: React.FC<StepProps> = ({
+  disabled,
+}) => {
   const form = Form.useFormInstance();
   const teamContribution = Form.useWatch('teamContribution', form) || [];
 
   // Calculate live average rating
   const averageRating = useMemo(() => {
-    if (!Array.isArray(teamContribution) || teamContribution.length === 0) return 0;
-    const validRatings = teamContribution.map((item: any) => Number(item?.rating) || 0).filter((r: number) => r > 0);
-    if (validRatings.length === 0) return 0;
-    return Math.round((validRatings.reduce((acc: number, curr: number) => acc + curr, 0) / validRatings.length) * 10) / 10;
+    if (
+      !Array.isArray(teamContribution) ||
+      teamContribution.length === 0
+    ) {
+      return 0;
+    }
+
+    const validRatings = teamContribution
+      .map((item: any) => Number(item?.rating) || 0)
+      .filter((rating: number) => rating > 0);
+
+    if (validRatings.length === 0) {
+      return 0;
+    }
+
+    return (
+      Math.round(
+        (validRatings.reduce(
+          (acc: number, curr: number) => acc + curr,
+          0
+        ) /
+          validRatings.length) *
+        10
+      ) / 10
+    );
   }, [teamContribution]);
 
   return (
@@ -49,61 +87,109 @@ export const MobileTeamContributionStep: React.FC<StepProps> = ({ disabled }) =>
       className="mobile-tcs-card-wrapper"
       styles={{
         body: {
-          padding: '10px',
+          padding: '8px',
           textAlign: 'left',
         },
       }}
     >
-      <div className="mobile-info-width">
-        <div className="mobile-tcs-header">
-          <div>
-            <h1 className="mobile-tcs-header__title">4. Team Contribution</h1>
-            <p className="mobile-tcs-header__subtitle">
-              Rate your workplace competencies for this quarter.
-            </p>
-          </div>
+      {/* Header */}
+      <div className="mobile-tcs-header">
+        <div>
+          <h1 className="mobile-tcs-header__title">
+            4. Team Contribution
+          </h1>
 
-          {/* Live Average Rating Badge */}
-          <div key={averageRating} className="mobile-tcs-badge-pop mobile-tcs-badge">
-            <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
-            <div className="mobile-tcs-badge__text">
-              <span className="mobile-tcs-badge__label">Average Rating</span>
-              <span className="mobile-tcs-badge__value">
-                {averageRating > 0 ? averageRating.toFixed(1) : '0.0'} <span className="mobile-tcs-badge__max">/ 5.0</span>
-              </span>
-            </div>
-          </div>
+          <p className="mobile-tcs-header__subtitle">
+            Provide a self-assessment of your core competencies and team
+            contribution.
+          </p>
         </div>
 
-        <div>
+        {/* Average Rating */}
+        <div
+          key={averageRating}
+          className="mobile-tcs-badge-pop mobile-tcs-badge"
+        >
+          <Star className="mobile-tcs-badge__star" />
 
-          <div className="mobile-tcs-section-header">
-            <span className="mobile-tcs-card__required">*</span>
-            <h2 className="mobile-tcs-section-title">Team Contribution Self-Rating</h2>
+          <div className="mobile-tcs-badge__text">
+            <span className="mobile-tcs-badge__label">
+              Average Rating
+            </span>
+
+            <span className="mobile-tcs-badge__value">
+              {averageRating > 0
+                ? averageRating.toFixed(1)
+                : '0.0'}{' '}
+              <span className="mobile-tcs-badge__max">
+                / 5.0
+              </span>
+            </span>
           </div>
+        </div>
+      </div>
 
+      {/* Section */}
+      <div>
+        <h2 className="mobile-tcs-section-title">
+          Team Contribution Self-Rating
+        </h2>
+
+        {/* Expanded Gray Container */}
+        <div className="mobile-tcs-list-container">
           <Form.List name="teamContribution">
             {(fields) => (
               <div className="mobile-tcs-list">
-                {fields.map(({ key, name, ...restField }, index) => {
-                  const categoryName = form.getFieldValue(['teamContribution', name, 'category']) || CATEGORIES[index];
-                  const Icon = CATEGORY_ICON_MAP[categoryName] || Star;
-                  const currentRating = Number(teamContribution?.[name]?.rating) || 0;
+                {fields.map(
+                  ({ key, name, ...restField }, index) => {
+                    const categoryName =
+                      form.getFieldValue([
+                        'teamContribution',
+                        name,
+                        'category',
+                      ]) || CATEGORIES[index];
 
-                  return (
-                    <div
-                      key={key}
-                      className="mobile-tcs-row mobile-tcs-row-enter"
-                      style={{ ['--tcs-delay' as any]: `${index * 110}ms` }}
-                    >
-                      <div className="mobile-tcs-row__icon-circle">
-                        <Icon className="w-5 h-5 text-blue-600" />
-                      </div>
+                    const Icon =
+                      CATEGORY_ICON_MAP[categoryName] || Star;
 
-                      <div className="mobile-tcs-row__body">
-                        <span className="mobile-tcs-row__label">{categoryName}</span>
+                    const tooltipText =
+                      CATEGORY_TOOLTIP_MAP[categoryName] ||
+                      'Rate your contribution in this area.';
 
-                        {/* Form Item for hidden category field */}
+                    return (
+                      <div
+                        key={key}
+                        className="mobile-tcs-row mobile-tcs-row-enter"
+                        style={{
+                          ['--tcs-delay' as any]: `${index * 80}ms`,
+                        }}
+                      >
+                        {/* Left side */}
+                        <div className="mobile-tcs-row__left">
+                          {/* Category Icon */}
+                          <div className="mobile-tcs-row__icon-circle">
+                            <Icon className="mobile-tcs-row__icon" />
+                          </div>
+
+                          {/* Category Name + Tooltip */}
+                          <div className="mobile-tcs-row__category">
+                            <span className="mobile-tcs-row__label">
+                              {categoryName}
+                            </span>
+
+                            <Tooltip
+                              title={tooltipText}
+                              placement="top"
+                            >
+                              <CircleHelp
+                                className="mobile-tcs-tooltip-icon"
+                                strokeWidth={2}
+                              />
+                            </Tooltip>
+                          </div>
+                        </div>
+
+                        {/* Hidden category field */}
                         <Form.Item
                           {...restField}
                           name={[name, 'category']}
@@ -111,24 +197,28 @@ export const MobileTeamContributionStep: React.FC<StepProps> = ({ disabled }) =>
                           initialValue={categoryName}
                         />
 
-                        {/* Star Rating Control */}
+                        {/* Star Rating */}
                         <Form.Item
                           {...restField}
                           name={[name, 'rating']}
-                          className="mb-0"
-                          rules={[{ required: true, message: 'Please select a rating' }]}
+                          className="mobile-tcs-rating-form-item"
+                          rules={[
+                            {
+                              required: true,
+                              message: 'Please select a rating',
+                            },
+                          ]}
                         >
                           <Rate
-                            key={currentRating}
                             disabled={disabled}
                             allowClear={false}
-                            className="mobile-tcs-row__rate mobile-tcs-rate-pop"
+                            className="mobile-tcs-row__rate"
                           />
                         </Form.Item>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  }
+                )}
               </div>
             )}
           </Form.List>

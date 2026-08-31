@@ -11,7 +11,7 @@
 
 .mobile-learning-goals-card__title {
     font-size: 1.125rem;
-    font-weight: 600;
+    font-weight: 500;
     margin-bottom: 0.5rem;
 }
 
@@ -36,21 +36,21 @@
     display: flex;
     align-items: center;
     gap: 0.375rem;
-    height: 2.5rem;
+    height: 2.75rem;
     width: 100%;
     justify-content: center;
     padding: 0 1rem;
     border-radius: 0.75rem;
-    border: 2px dashed rgb(191 219 254);
-    background-color: rgba(239, 246, 255, 0.4);
-    color: rgb(37 99 235);
-    font-weight: 600;
+    border: 2px dashed rgb(226 232 240);
+    background-color: #ffffff;
+    color: rgb(51 65 85);
+    font-weight: 500;
 }
 
 .mobile-learning-goals-card__add-btn:hover {
-    border-color: rgb(96 165 250);
-    background-color: rgba(239, 246, 255, 0.6);
-    color: rgb(29 78 216);
+    border-color: rgb(203 213 225);
+    background-color: rgb(248 250 252);
+    color: rgb(15 23 42);
 }
 
 /* Item */
@@ -73,7 +73,7 @@
 }
 
 .mobile-learning-goals-item__label {
-    font-weight: 600;
+    font-weight: 500;
     color: rgb(51 65 85);
     font-size: 0.8125rem;
     display: flex;
@@ -92,7 +92,7 @@
     padding: 0.25rem 0.5rem;
     height: auto;
     color: rgb(244 63 94);
-    font-weight: 600;
+    font-weight: 500;
 }
 
 .mobile-learning-goals-item__remove-btn:hover {

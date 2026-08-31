@@ -5,12 +5,12 @@ import { useSelector, useDispatch } from 'react-redux';
 import { Save, Send, ArrowLeft, ArrowRight, ChevronLeft, ChevronDown, CheckCircle2, User, UserX, Star, Clock3, CalendarRange, Trophy } from 'lucide-react';
 
 import { QuarterlyReviewStepper } from './desktop/QuarterlyReviewStepper';
-import { OverviewStep } from './steps/desktop_steps/OverviewStep';
-import { AchievementsAndChallengesStep } from './steps/desktop_steps/AchievementsAndChallengesStep';
-import { LearningGoalsStep } from './steps/desktop_steps/LearningGoalsStep';
-import { TeamContributionStep, DEFAULT_TEAM_CONTRIBUTION } from './steps/desktop_steps/TeamContributionStep';
-import { CompanyEnvironmentStep } from './steps/desktop_steps/CompanyEnvironmentStep';
-import { ReviewStep } from './steps/desktop_steps/ReviewStep';
+import { QuarterlyReviewStepperMobile } from './mobile/QuarterlyReviewStepperMobile';
+import { OverviewStep } from './steps/OverviewStep';
+import { AchievementsStep } from './steps/AchievementsStep';
+import { ChallengesStep } from './steps/ChallengesStep';
+import { LearningGoalsStep } from './steps/LearningGoalsStep';
+import { ReviewStep } from './steps/ReviewStep';
 import { ReviewStatus } from './enums/Appraisal.enums';
 import {
   isQuarterOver,
@@ -26,31 +26,9 @@ import {
 } from '../../reducers/quarterlyReview.reducer';
 import { getManagerMappingByEmployeeId } from '../../reducers/managerMapping.reducer';
 
-// Fixed import path: MobileQuarterlyReviewForm lives in the sibling `mobile` folder.
-import MobileQuarterlyReviewForm from './MobileQuarterlyReviewForm/MobileQuarterlyReviewForm';
-
 interface ReviewItem {
   title?: string;
   details: string;
-}
-
-interface ProjectItem {
-  projectTitle: string;
-  achievement: string;
-  challenge: string;
-  attachment?: any;
-}
-
-interface TeamContributionItem {
-  category: string;
-  rating: number;
-}
-
-interface CompanyEnvironment {
-  workCultureFeedback?: string;
-  workLifeBalance?: string;
-  suggestions?: string;
-  rating?: number;
 }
 
 const parseJsonArray = (val: any, defaultTitle: string): ReviewItem[] => {
@@ -65,28 +43,7 @@ const parseJsonArray = (val: any, defaultTitle: string): ReviewItem[] => {
   return typeof val === 'string' ? [{ title: defaultTitle, details: val }] : [];
 };
 
-const parseProjectsArray = (val: any, achievementsRaw?: any, challengesRaw?: any): ProjectItem[] => {
-  if (val) {
-    if (Array.isArray(val)) return val;
-    try {
-      const parsed = typeof val === 'string' ? JSON.parse(val) : val;
-      if (Array.isArray(parsed)) return parsed;
-    } catch { }
-  }
-  const achs = parseJsonArray(achievementsRaw, 'Achievement');
-  const chs = parseJsonArray(challengesRaw, 'Challenge');
-  if (achs.length === 0 && chs.length === 0) return [];
-  return achs.map(ach => {
-    const title = ach.title || '';
-    const matchingCh = chs.find(c => c.title === title || c.title?.trim() === title.trim());
-    return {
-      projectTitle: title,
-      achievement: ach.details || '',
-      challenge: matchingCh?.details || '',
-      attachment: null,
-    };
-  });
-};
+const TOTAL_STEPS = 5;
 
 //  Manager Evaluation panel (right column of the read-only view) 
 // NOTE: field names here (`ratings.productivity`, `finalRating`, `strengths`,
@@ -138,8 +95,20 @@ const StarRow = ({ value = 0, max = 5 }: { value?: number; max?: number }) => (
 );
 
 // Shared heading style for every section/sub-section title in this panel
+// (and, to match, the step headings in OverviewStep / AchievementsStep /
+// ChallengesStep / LearningGoalsStep — apply this same className there:
+// "text-base font-semibold text-slate-800")
 const SECTION_HEADING_CLASS = 'text-base font-semibold text-slate-800';
 
+// Collapsible, icon-led feedback card for a manager's free-text field
+// (Strengths / Improvements / Remarks). Each field gets its own bordered
+// card with a header row (icon + title + expand/collapse chevron) and a
+// capped-height, scrollable body so a long (up to 1000-char) piece of
+// feedback scrolls internally instead of growing the card without bound.
+// Color accent presets for the left border + icon of each feedback card,
+// so each field (Strengths / Improvements / Remarks) reads as its own
+// distinct category at a glance — mirrors the colored left-border accent
+// on the reference "Due Date" card.
 const FEEDBACK_ACCENTS = {
   emerald: { border: 'border-l-emerald-400', icon: 'text-emerald-500' },
   amber: { border: 'border-l-amber-400', icon: 'text-amber-500' },
@@ -183,6 +152,9 @@ const ManagerFeedbackCard = ({
   );
 };
 
+// Small encouragement footer shown under a completed manager evaluation —
+// mirrors the illustrated "keep it up" panel from the reference design,
+// built from existing icon primitives rather than a raster illustration.
 const EncouragementCard = () => (
   <div className="bg-gradient-to-b from-indigo-50/60 to-white border border-indigo-100 rounded-2xl px-5 py-6 flex flex-col items-center text-center gap-2">
     <div className="w-14 h-14 rounded-full bg-indigo-100 flex items-center justify-center mb-1">
@@ -222,6 +194,9 @@ const ManagerEvaluationPanel = ({ review }: { review: ManagerReviewData | null }
 
   return (
     <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+      {/* Header — px-5 py-4.5 matches the left-column card header height
+          (p-5, single-line title) so both cards' top edges/content align
+          on the same baseline instead of the right card sitting lower. */}
       <div className="flex items-center justify-between gap-3 px-5 py-[18px] border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
         <h3 className={`${SECTION_HEADING_CLASS} tracking-tight whitespace-nowrap`}>
           Manager Evaluation & Rating
@@ -236,6 +211,7 @@ const ManagerEvaluationPanel = ({ review }: { review: ManagerReviewData | null }
         </div>
       </div>
 
+      {/* Category ratings */}
       <div className="px-4 py-2.5 flex flex-col gap-1.5 border-b border-slate-100">
         {RATING_CATEGORIES.map((cat) => (
           <div key={cat.key} className="flex items-center justify-between gap-3">
@@ -245,6 +221,7 @@ const ManagerEvaluationPanel = ({ review }: { review: ManagerReviewData | null }
         ))}
       </div>
 
+      {/* Final rating */}
       <div className="px-4 py-2.5 border-b border-slate-100">
         <p className={`${SECTION_HEADING_CLASS} mb-1`}>
           Final Performance Rating
@@ -258,6 +235,7 @@ const ManagerEvaluationPanel = ({ review }: { review: ManagerReviewData | null }
         )}
       </div>
 
+      {/* Text feedback — each field is its own collapsible card */}
       <div className="px-4 py-2.5 flex flex-col gap-2.5">
         <ManagerFeedbackCard label="Performance Strengths" value={review.strengths} accent="emerald" />
         <ManagerFeedbackCard label="Areas for Improvement" value={review.improvements} accent="amber" />
@@ -265,42 +243,6 @@ const ManagerEvaluationPanel = ({ review }: { review: ManagerReviewData | null }
       </div>
     </div>
   );
-};
-
-const parseTeamContribution = (val: any): TeamContributionItem[] => {
-  if (Array.isArray(val) && val.length > 0) return val;
-  if (typeof val === 'string') {
-    try {
-      const parsed = JSON.parse(val);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    } catch { }
-  }
-  return DEFAULT_TEAM_CONTRIBUTION;
-};
-
-const TOTAL_STEPS = 6;
-
-const useIsMobile = (breakpoint: number = 1024): boolean => {
-  const [isMobile, setIsMobile] = useState<boolean>(
-    typeof window !== 'undefined' ? window.innerWidth < breakpoint : false
-  );
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const mediaQuery = window.matchMedia(`(max-width: ${breakpoint - 1}px)`);
-    const handleChange = () => setIsMobile(mediaQuery.matches);
-    handleChange();
-
-    if (mediaQuery.addEventListener) {
-      mediaQuery.addEventListener('change', handleChange);
-      return () => mediaQuery.removeEventListener('change', handleChange);
-    } else {
-      mediaQuery.addListener(handleChange);
-      return () => mediaQuery.removeListener(handleChange);
-    }
-  }, [breakpoint]);
-
-  return isMobile;
 };
 
 const QuarterlyReviewForm = () => {
@@ -315,30 +257,25 @@ const QuarterlyReviewForm = () => {
   const currentUser = useSelector((state: RootState) => state.user.currentUser);
   const employeeId = currentUser?.loginId ?? '';
 
-  // Local UI state 
-  const [formKey, setFormKey] = useState(0);
+  //  Local UI state 
+  const [formKey, setFormKey] = useState(0); // bump to re-mount Form with fresh initialValues
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
   const [isNextEnabled, setIsNextEnabled] = useState(false);
   const [quarter, setQuarter] = useState<string>('');
-  const [reviewId, setReviewId] = useState<number | undefined>(undefined);
   const [backendStatus, setBackendStatus] = useState<ReviewStatus | null>(null);
   const [formData, setFormData] = useState<{
     overview: string;
-    projects: ProjectItem[];
+    achievements: ReviewItem[];
+    challenges: ReviewItem[];
     learningGoals: ReviewItem[];
-    teamContribution: TeamContributionItem[];
-    averageRating?: number | null;
-    companyEnvironment?: CompanyEnvironment;
   }>({
     overview: '',
-    projects: [],
+    achievements: [],
+    challenges: [],
     learningGoals: [],
-    teamContribution: DEFAULT_TEAM_CONTRIBUTION,
-    averageRating: null,
-    companyEnvironment: undefined,
   });
 
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
@@ -350,8 +287,6 @@ const QuarterlyReviewForm = () => {
   // Root element reference for handling scroll-to-top on step changes.
   const rootRef = useRef<HTMLDivElement>(null);
 
-  // Screen-size detection — used only to decide which UI tree to render.
-  const isMobile = useIsMobile(1024);
 
   const quarterOver = quarter ? isQuarterOver(quarter) : false;
   const isReadOnly =
@@ -359,17 +294,11 @@ const QuarterlyReviewForm = () => {
     searchParams.get('mode') === ReviewStatus.VIEW;
 
   useEffect(() => {
-    // MobileQuarterlyReviewForm is self-contained and fetches its own data.
-    // Skip the desktop init entirely on mobile to avoid duplicate API calls.
-    if (isMobile) {
-      setLoading(false);
-      return;
-    }
-
     const init = async () => {
       try {
         setLoading(true);
 
+        // 1. Resolve the quarter (from URL param or from backend)
         let resolvedQuarter = quarterParam ?? '';
         if (!resolvedQuarter) {
           const res = await dispatch(getCurrentQuarter()).unwrap();
@@ -377,43 +306,42 @@ const QuarterlyReviewForm = () => {
         }
         setQuarter(resolvedQuarter);
 
+        // 2. Load existing review for that quarter (try direct fetch first, fall back to getAllReviews)
         let existing: any = null;
         try {
           existing = await dispatch(getReviewByQuarter(resolvedQuarter)).unwrap();
+          console.log('[QRForm] getReviewByQuarter result:', existing);
         } catch (fetchErr) {
-          console.warn('[QRForm] getReviewByQuarter failed, trying fallback', fetchErr);
+          console.warn('[QRForm] getReviewByQuarter failed, will try getAllReviews fallback', fetchErr);
         }
 
+        // Fallback: if direct fetch returned null, search in the full list
         if (!existing) {
           try {
             const allReviews = await dispatch(getAllReviews()).unwrap();
+            console.log('[QRForm] getAllReviews result:', allReviews);
             existing = allReviews.find(
               (r: any) =>
                 r.quarter === resolvedQuarter ||
                 r.quarter?.trim() === resolvedQuarter?.trim()
             ) ?? null;
+            console.log('[QRForm] Fallback matched review:', existing);
           } catch (allErr) {
-            console.warn('[QRForm] getAllReviews fallback failed', allErr);
+            console.warn('[QRForm] getAllReviews fallback also failed', allErr);
           }
         }
 
         if (existing) {
-          if (existing.id) setReviewId(existing.id);
           setBackendStatus(existing.status);
-          const parseCompanyEnvironment = (val: any): CompanyEnvironment | undefined => {
-            if (!val) return undefined;
-            if (typeof val === 'object') return val;
-            try { return JSON.parse(val); } catch { return undefined; }
-          };
           const initialVals = {
             overview: existing.overview ?? '',
-            projects: parseProjectsArray(existing.projects, existing.achievements, existing.challenges),
+            achievements: parseJsonArray(existing.achievements, 'Achievement'),
+            challenges: parseJsonArray(existing.challenges, 'Challenge / Blocker'),
             learningGoals: parseJsonArray(existing.learningGoals, 'Learning Goal'),
-            teamContribution: parseTeamContribution(existing.teamContribution),
-            averageRating: existing.averageRating ?? null,
-            companyEnvironment: parseCompanyEnvironment(existing.companyEnvironment),
           };
+          console.log('[QRForm] Setting form data:', initialVals);
           setFormData(initialVals);
+          // Bump key so the Form re-mounts with these as initialValues
           setFormKey(k => k + 1);
           if (existing.managerName) {
             setManagerName(existing.managerName);
@@ -447,56 +375,54 @@ const QuarterlyReviewForm = () => {
       }
     };
     init();
-  }, [quarterParam, isMobile]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quarterParam]);
 
+  //  Compute whether Next is enabled for the current step 
+  // Returns the "required" field value for the active step so we can check ≥10 chars.
   const getStepRequiredValue = useCallback(
     (step: number, allValues: any): boolean => {
       if (step === 0) {
-        return (allValues.overview ?? '').trim().length >= 1;
+        return (allValues.overview ?? '').trim().length >= 10;
       }
 
       if (step === 1) {
-        const list = allValues.projects ?? [];
+        const list = allValues.achievements ?? [];
+
         return (
           list.length > 0 &&
           list.every(
             (item: any) =>
-              item?.projectTitle?.trim() &&
-              item?.achievement?.trim().length >= 1 &&
-              item?.challenge?.trim().length >= 1
+              item?.title?.trim() &&
+              item?.details?.trim().length >= 10
           )
         );
       }
 
       if (step === 2) {
-        const list = allValues.learningGoals ?? [];
+        const list = allValues.challenges ?? [];
+
         return (
           list.length > 0 &&
           list.every(
-            (item: any) => item?.details?.trim().length >= 1
+            (item: any) =>
+              item?.title?.trim() &&
+              item?.details?.trim().length >= 10
           )
         );
       }
 
       if (step === 3) {
-        const list = allValues.teamContribution ?? [];
+        const list = allValues.learningGoals ?? [];
+
         return (
           list.length > 0 &&
           list.every(
-            (item: any) => Number(item?.rating) > 0
+            (item: any) =>
+              item?.details?.trim().length >= 10
           )
         );
       }
-
-      if (step === 4) {
-        const env = allValues.companyEnvironment ?? {};
-        const wc = (env.workCultureFeedback ?? '').trim();
-        const wl = (env.workLifeBalance ?? '').trim();
-        const sg = (env.suggestions ?? '').trim();
-        const rt = Number(env.rating ?? 0);
-        return wc.length >= 1 && wl.length >= 1 && sg.length >= 1 && rt >= 1 && rt <= 5;
-      }
-
       return true;
     },
     []
@@ -520,12 +446,14 @@ const QuarterlyReviewForm = () => {
     }
   }, [loading, formKey]);
 
+  // Re-evaluate whenever step, formData, or form values change
   const watchedValues = Form.useWatch([], form);
 
   useEffect(() => {
     evaluateNextEnabled(currentStep, watchedValues || {});
   }, [currentStep, watchedValues, evaluateNextEnabled]);
 
+  // Helper to ensure clean array of items without AntD Form.List metadata
   const cleanReviewItems = (raw: any): ReviewItem[] => {
     if (!Array.isArray(raw)) return [];
     return raw
@@ -538,86 +466,76 @@ const QuarterlyReviewForm = () => {
 
   const scrollToTop = () => {
     requestAnimationFrame(() => {
-      rootRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      rootRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth',
+      });
     });
   };
 
   const getFormPayload = (status: ReviewStatus) => {
     const formValues = form.getFieldsValue(true);
-    const rawProjects = formValues.projects ?? formData.projects ?? [];
-    const cleanProjects = Array.isArray(rawProjects)
-      ? rawProjects.map((item: any) => ({
-        projectTitle: String(item?.projectTitle ?? ''),
-        achievement: String(item?.achievement ?? ''),
-        challenge: String(item?.challenge ?? ''),
-        attachment: item?.attachment ?? null,
-      }))
-      : [];
-
-    const tcList = formValues.teamContribution ?? formData.teamContribution ?? DEFAULT_TEAM_CONTRIBUTION;
-    const cleanTc = Array.isArray(tcList)
-      ? tcList.map((item: any) => ({
-        category: String(item?.category ?? ''),
-        rating: Number(item?.rating) || 0,
-      }))
-      : [];
-
-    const validRatings = cleanTc.map(t => t.rating).filter(r => r > 0);
-    const avgRating = validRatings.length > 0
-      ? Math.round((validRatings.reduce((a, b) => a + b, 0) / validRatings.length) * 10) / 10
-      : 0;
-
-    const rawEnv = formValues.companyEnvironment ?? formData.companyEnvironment ?? {};
-    const cleanEnv = {
-      workCultureFeedback: String(rawEnv?.workCultureFeedback ?? ''),
-      workLifeBalance: String(rawEnv?.workLifeBalance ?? ''),
-      suggestions: String(rawEnv?.suggestions ?? ''),
-      rating: Number(rawEnv?.rating ?? 0) || 0,
-    };
+    const overviewVal = formValues.overview ?? formData.overview ?? '';
+    const achievementsVal = formValues.achievements ?? formData.achievements;
+    const challengesVal = formValues.challenges ?? formData.challenges;
+    const learningGoalsVal = formValues.learningGoals ?? formData.learningGoals;
 
     return {
       quarter,
       status,
-      overview: formValues.overview ?? formData.overview ?? '',
-      projects: cleanProjects,
-      learningGoals: cleanReviewItems(formValues.learningGoals ?? formData.learningGoals),
-      teamContribution: cleanTc,
-      averageRating: avgRating,
-      companyEnvironment: cleanEnv,
+      overview: overviewVal,
+      achievements: cleanReviewItems(achievementsVal),
+      challenges: cleanReviewItems(challengesVal),
+      learningGoals: cleanReviewItems(learningGoalsVal),
     };
   };
 
+  //  Silent draft save (on every Next) 
   const silentSaveDraft = useCallback(async () => {
     if (isReadOnly) return;
     try {
       setAutoSaving(true);
       const payload = getFormPayload(ReviewStatus.DRAFT);
       const result = await dispatch(saveOrSubmitReview(payload)).unwrap();
-      if (result?.id) setReviewId(result.id);
       setBackendStatus(result.status);
     } catch {
-      // Non-blocking draft save
+      // Non-blocking — don't interrupt the user flow
     } finally {
       setAutoSaving(false);
     }
   }, [form, quarter, isReadOnly, formData, dispatch]);
 
-  const handleBack = async () => {
-    if (!isReadOnly) {
-      await silentSaveDraft();
-    }
+  // const handleBack = () => setCurrentStep(prev => Math.max(prev - 1, 0));
+  const handleBack = () => {
     setCurrentStep(prev => {
       const next = Math.max(prev - 1, 0);
-      requestAnimationFrame(() => scrollToTop());
+
+      requestAnimationFrame(() => {
+        scrollToTop();
+      });
+
       return next;
     });
   };
 
   const handleNext = async () => {
-    if (currentStep === 1) {
+    if (currentStep === 2) {
       try {
-        await form.validateFields();
+        const challengesList = form.getFieldValue('challenges') || [];
+        const fieldsToValidate = challengesList.map((_: any, idx: number) => [
+          'challenges',
+          idx,
+          'title',
+        ]);
+
+        if (fieldsToValidate.length > 0) {
+          await form.validateFields(fieldsToValidate);
+        }
       } catch {
         return;
       }
@@ -629,7 +547,11 @@ const QuarterlyReviewForm = () => {
 
     setCurrentStep(prev => {
       const next = Math.min(prev + 1, TOTAL_STEPS - 1);
-      requestAnimationFrame(() => scrollToTop());
+
+      requestAnimationFrame(() => {
+        scrollToTop();
+      });
+
       return next;
     });
   };
@@ -637,23 +559,33 @@ const QuarterlyReviewForm = () => {
   const handleStepChange = async (targetStep: number) => {
     if (targetStep > currentStep) {
       if (!isNextEnabled) return;
-      if (currentStep === 1) {
+      if (currentStep === 2) {
         try {
-          await form.validateFields();
+          const challengesList = form.getFieldValue('challenges') || [];
+          const fieldsToValidate = challengesList.map((_: any, idx: number) => ['challenges', idx, 'title']);
+          if (fieldsToValidate.length > 0) {
+            await form.validateFields(fieldsToValidate);
+          }
         } catch {
           return;
         }
       }
       if (!isReadOnly) await silentSaveDraft();
       setCurrentStep(targetStep);
-      requestAnimationFrame(() => scrollToTop());
+
+      requestAnimationFrame(() => {
+        scrollToTop();
+      });
     } else {
-      if (!isReadOnly) await silentSaveDraft();
       setCurrentStep(targetStep);
-      requestAnimationFrame(() => scrollToTop());
+
+      requestAnimationFrame(() => {
+        scrollToTop();
+      });
     }
   };
 
+  //  Explicit "Save Draft" 
   const handleSaveDraft = async () => {
     try {
       setSaving(true);
@@ -669,7 +601,9 @@ const QuarterlyReviewForm = () => {
     }
   };
 
+  //  "Submit Review" click — validate then fetch manager via Redux 
   const handleSubmitClick = async () => {
+    // Step 1: validate all fields
     try {
       await form.validateFields();
     } catch {
@@ -677,30 +611,37 @@ const QuarterlyReviewForm = () => {
       return;
     }
 
+    // Step 2: guard employee identity
     if (!employeeId) {
       message.error('Unable to identify your employee ID. Please re-login and try again.');
       return;
     }
 
+    // Step 3: fetch assigned manager from backend via existing Redux thunk
     try {
       setFetchingManager(true);
       const result = await dispatch(getManagerMappingByEmployeeId(employeeId)).unwrap();
       const fetchedManagerName: string | undefined = result?.managerName;
 
       if (!fetchedManagerName) {
-        setNoManagerModalOpen(true);
+        showNoManagerError();
         return;
       }
 
       setManagerName(fetchedManagerName);
       setConfirmModalOpen(true);
     } catch {
-      setNoManagerModalOpen(true);
+      // Thunk rejected means no mapping exists or network error
+      showNoManagerError();
     } finally {
       setFetchingManager(false);
     }
   };
+  const showNoManagerError = () => {
+    setNoManagerModalOpen(true);
+  };
 
+  //  Confirmed submit — call backend via Redux 
   const handleConfirmedSubmit = async () => {
     try {
       setSaving(true);
@@ -717,36 +658,29 @@ const QuarterlyReviewForm = () => {
     }
   };
 
+
+  //  Step content 
   const renderStepContent = () => {
     const disabled = isReadOnly;
     const formValues = { ...formData, ...form.getFieldsValue(true) };
     switch (currentStep) {
       case 0: return <OverviewStep disabled={disabled} />;
-      case 1:
+      case 1: return <AchievementsStep disabled={disabled} />;
+      case 2:
         return (
-          <AchievementsAndChallengesStep
+          <ChallengesStep
             disabled={disabled}
-            reviewId={reviewId}
-            onDataChange={() => evaluateNextEnabled(currentStep, form.getFieldsValue(true))}
+            achievements={form.getFieldValue("achievements") || []}
+            onDataChange={() => {
+              evaluateNextEnabled(currentStep, form.getFieldsValue(true));
+            }}
           />
         );
-      case 2: return <LearningGoalsStep disabled={disabled} />;
-      case 3: return <TeamContributionStep disabled={disabled} />;
-      case 4: return <CompanyEnvironmentStep disabled={disabled} />;
-      case 5: return <ReviewStep values={formValues} quarter={quarter} managerName={managerName} />;
+      case 3: return <LearningGoalsStep disabled={disabled} />;
+      case 4: return <ReviewStep values={formValues} quarter={quarter} managerName={managerName} />;
       default: return null;
     }
   };
-
-  // --- Mobile branch ---------------------------------------------------
-  // Rendered when the viewport is under 1024px. MobileQuarterlyReviewForm is
-  // a fully self-contained component (its own data fetching, validation,
-  // save/submit flow, and modals), so none of the desktop logic above is
-  // reused or altered — it simply isn't rendered on mobile.
-  if (isMobile) {
-    return <MobileQuarterlyReviewForm />;
-  }
-  // ----------------------------------------------------------------------
 
   if (loading) {
     return (
@@ -759,15 +693,15 @@ const QuarterlyReviewForm = () => {
   const quarterRange = formatQuarterRange(quarter);
 
   return (
-    <div className="pb-8 mt-2 px-1">
-      <div ref={rootRef} className="w-full px-2.5 py-2">
-        <button
-          onClick={() => navigate('/employee-dashboard/appraisal')}
-          className="hidden lg:inline-flex items-center gap-1.5 text-[#A3AED0] hover:text-[#3311CC] font-bold text-sm transition-colors cursor-pointer"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          Back
-        </button>
+    <div ref={rootRef} className="w-full px-6 py-6 pb-12">
+      {/* Back link */}
+      <button
+        onClick={() => navigate('/employee-dashboard/appraisal')}
+        className="flex items-center gap-1.5 text-slate-500 hover:text-indigo-600 transition-colors text-sm font-medium mb-6"
+      >
+        <ChevronLeft className="w-4 h-4" />
+        Back
+      </button>
 
       {/* Header Card */}
       <div className="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-sm ring-1 ring-slate-100 mb-4">
@@ -784,11 +718,11 @@ const QuarterlyReviewForm = () => {
                 <CalendarRange className="w-3.5 h-3.5" />
                 {quarter}
               </span>
-              {quarterRange && <span className="text-slate-400 text-xs">{quarterRange}</span>}
+              <span className="text-slate-400 text-xs">{quarterRange}</span>
             </div>
           </div>
 
-          {/* Top-right actions */}
+          {/* Top-right: Submitted-to-Manager card (read-only mode) / Save Draft button (edit mode). */}
           <div className="flex flex-col items-start sm:items-end gap-2">
             {isReadOnly && managerName && (
               <div className="w-full sm:w-72 flex items-center gap-3 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl px-4 py-3">
@@ -802,54 +736,38 @@ const QuarterlyReviewForm = () => {
               </div>
             )}
 
-            <div className="flex items-center gap-3 shrink-0">
-              {autoSaving && (
-                <span className="text-slate-400 text-xs animate-pulse">
-                  Auto-saving...
-                </span>
-              )}
+            {!isReadOnly && (
+              <div className="w-full sm:w-48 flex gap-3 items-center justify-end">
+                {autoSaving && (
+                  <span className="text-slate-400 text-xs animate-pulse mr-2">Auto-saving…</span>
+                )}
 
-              {!isReadOnly ? (
+                {/* Save Draft — header only */}
                 <Button
                   onClick={handleSaveDraft}
                   loading={saving}
-                  icon={<Save className="w-4 h-4" />}
-                  className="h-10 px-5 rounded-xl border-blue-600 text-blue-600 hover:text-blue-700 hover:border-blue-700 bg-white font-semibold"
+                  className="w-full h-10 px-5 rounded-xl border-blue-600 text-blue-600 hover:text-blue-700 hover:border-blue-700 bg-white font-semibold"
                 >
                   Save Draft
                 </Button>
-              ) : (
-                <span className="bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-full px-3.5 py-1.5 text-xs font-semibold">
-                  ✓ {backendStatus === ReviewStatus.SUBMITTED ? "Submitted" : "Draft"} — Read Only
-                </span>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {isReadOnly ? (
-        // Split layout: employee's submitted answers on the left, manager's evaluation on the right
+        // Split layout: employee's submitted answers on the left,
+        // manager's evaluation & rating on the right. Stacks to a single
+        // column below the `lg` breakpoint.
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-4 items-start mb-8">
           {/* Left column — employee submission */}
           <Form key={`ro-${formKey}`} form={form} layout="vertical" initialValues={formData}>
-            {managerName && (
-              <div className="mb-4 flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-2xl px-5 py-4 shadow-sm">
-                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-                  <User className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500 leading-none mb-1 font-semibold uppercase tracking-wider">Submitted to Manager</p>
-                  <p className="text-base font-bold text-slate-800 mb-0">{managerName}</p>
-                </div>
-              </div>
-            )}
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-4">
               <OverviewStep disabled={true} />
-              <AchievementsAndChallengesStep disabled={true} reviewId={reviewId} />
+              <AchievementsStep disabled={true} />
+              <ChallengesStep disabled={true} />
               <LearningGoalsStep disabled={true} />
-              <TeamContributionStep disabled={true} />
-              <CompanyEnvironmentStep disabled={true} />
             </div>
           </Form>
 
@@ -863,8 +781,17 @@ const QuarterlyReviewForm = () => {
         </div>
       ) : (
         <>
-          <QuarterlyReviewStepper currentStep={currentStep} onChangeStep={handleStepChange} />
+          {/* Desktop Stepper */}
+          <div className="hidden md:block">
+            <QuarterlyReviewStepper currentStep={currentStep} onChangeStep={handleStepChange} />
+          </div>
 
+          {/* Mobile Stepper */}
+          <div className="md:hidden">
+            <QuarterlyReviewStepperMobile currentStep={currentStep} onChangeStep={handleStepChange} />
+          </div>
+
+          {/* Form */}
           <Form
             key={`edit-${formKey}`}
             form={form}
@@ -880,124 +807,158 @@ const QuarterlyReviewForm = () => {
             {renderStepContent()}
           </Form>
 
-          <div
-            className={`bg-white border border-slate-100 rounded-2xl p-4 mb-4 mt-2 shadow-sm flex items-center ${currentStep === 0 ? "justify-center" : "justify-between"
-              }`}
-          >
+          {/* Footer navigation */}
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+            {/* Previous */}
             {currentStep > 0 && (
               <Button
                 icon={<ArrowLeft className="w-4 h-4" />}
                 onClick={handleBack}
-                className="h-10 px-3 rounded-xl whitespace-nowrap flex-shrink-0"
+                className="flex items-center gap-1.5 rounded-xl border-slate-200 text-slate-600 h-10 px-5"
               >
                 Previous
               </Button>
             )}
 
-            <div className="flex items-center gap-3">
+            {/* Right-side actions */}
+            <div className={`flex gap-3 flex-wrap justify-center ${currentStep === 0 ? 'sm:ml-auto' : ''}`}>
+              {/* Save Draft */}
               <Button
-                onClick={handleSaveDraft}
-                loading={saving}
                 icon={<Save className="w-4 h-4" />}
-                className="h-10 px-5 rounded-xl border-blue-600 text-blue-600 hover:text-blue-700 hover:border-blue-700 bg-white font-semibold"
+                loading={saving}
+                onClick={handleSaveDraft}
+                className="flex items-center gap-1.5 rounded-xl border-slate-300 text-slate-700 hover:border-indigo-400 hover:text-indigo-600 h-10 px-5"
               >
                 Save Draft
               </Button>
 
+              {/* Next (steps 1–4) / Submit Review (last step only) */}
               {currentStep < TOTAL_STEPS - 1 ? (
                 <Button
                   type="primary"
+                  icon={<ArrowRight className="w-4 h-4" />}
                   onClick={handleNext}
                   disabled={!isNextEnabled}
-                  className="h-10 px-6 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold flex items-center gap-2 border-0 shadow-md shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 border-none rounded-xl text-white h-10 px-6 disabled:bg-slate-200 disabled:text-slate-400 disabled:border-none"
                 >
-                  Next <ArrowRight className="w-4 h-4" />
+                  Next
                 </Button>
               ) : (
                 <Button
                   type="primary"
-                  onClick={handleSubmitClick}
-                  loading={saving || fetchingManager}
                   icon={<Send className="w-4 h-4" />}
-                  className="h-10 px-6 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold flex items-center gap-2 border-0 shadow-md shadow-emerald-500/20 cursor-pointer"
+                  loading={fetchingManager || saving}
+                  onClick={handleSubmitClick}
+                  className="flex items-center gap-1.5 border-none rounded-xl text-white h-10 px-6 bg-emerald-600 hover:bg-emerald-700 shadow-[0_4px_12px_rgba(16,185,129,0.2)]"
                 >
-                  Submit Final Review
+                  Submit Review
                 </Button>
               )}
             </div>
           </div>
         </>
       )}
-
-        {/* Confirmation Modal */}
-        <Modal
-          title={
-            <div className="flex items-center gap-2 text-slate-800 font-bold text-lg">
-              <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-              Confirm Final Submission
+      {/* No Manager Assigned Modal */}
+      <Modal
+        open={noManagerModalOpen}
+        onCancel={() => setNoManagerModalOpen(false)}
+        footer={null}
+        centered
+        width={480}
+        styles={{ body: { padding: '0' } }}
+      >
+        <div className="p-6 sm:p-8">
+          <div className="flex items-start gap-5">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center shrink-0">
+              <UserX className="w-8 h-8 text-orange-500" />
             </div>
-          }
-          open={confirmModalOpen}
-          onOk={handleConfirmedSubmit}
-          onCancel={() => setConfirmModalOpen(false)}
-          okText="Yes, Submit Review"
-          // cancelText="Review Again"
-          confirmLoading={saving}
-          okButtonProps={{
-            className: "bg-emerald-500 hover:bg-emerald-600 font-semibold rounded-xl h-10 px-5",
-          }}
-          cancelButtonProps={{
-             style: { display: "none" },
-          }}
-        >
-          <p className="text-slate-600 text-sm mt-3 leading-relaxed">
-            Are you sure you want to submit your quarterly performance review for <strong>{quarter}</strong>?
-          </p>
-
-          {managerName && (
-            <div className="mt-3 p-3 bg-blue-50 border border-blue-100 rounded-xl flex items-center gap-2.5 text-xs text-blue-800">
-              <User className="w-4 h-4 text-blue-600 shrink-0" />
-              <span>Assigned Manager: <strong>{managerName}</strong></span>
+            <div className="flex-1 pt-1">
+              <h2 className="text-xl font-bold text-slate-800 mb-2">No Manager Assigned</h2>
+              <div className="w-10 h-1 bg-orange-400 rounded-full mb-3" />
+              <p className="text-slate-500 text-sm leading-relaxed">
+                You do not have an assigned manager. Please contact the HR team to
+                assign a manager before submitting your quarterly review.
+              </p>
             </div>
-          )}
-
-          <div className="mt-3 p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-500 leading-relaxed">
-            <strong>Note:</strong> Once submitted, your review cannot be edited and will be sent to your manager for evaluation.
           </div>
-        </Modal>
 
-        {/* No Manager Modal */}
-        <Modal
-          title={
-            <div className="flex items-center gap-2 text-rose-600 font-bold text-lg">
-              <UserX className="w-5 h-5 text-rose-500" />
-              No Assigned Manager Found
-            </div>
-          }
-          open={noManagerModalOpen}
-          onCancel={() => setNoManagerModalOpen(false)}
-          footer={[
+          <div className="flex justify-end mt-6">
             <Button
-              key="close"
               type="primary"
+              icon={<CheckCircle2 className="w-4 h-4" />}
               onClick={() => setNoManagerModalOpen(false)}
-              className="bg-slate-700 hover:bg-slate-800 font-semibold rounded-xl h-10 px-5"
+              className="h-11 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 border-none font-semibold flex items-center gap-2"
             >
-              Got it
-            </Button>,
-          ]}
-        >
-          <p className="text-slate-600 text-sm mt-3 leading-relaxed">
-            You currently do not have an active manager assigned in the system.
-          </p>
-          <p className="text-slate-600 text-sm leading-relaxed">
-            Please contact your HR Administrator or Manager to set up your manager mapping before submitting your quarterly appraisal.
-          </p>
-          <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 leading-relaxed">
-            <strong>Tip:</strong> You can click <strong>Save Draft</strong> at the top right to save your progress in the meantime.
+              Understood
+            </Button>
           </div>
-        </Modal>
-      </div>
+        </div>
+      </Modal>
+
+      {/*  Submission Confirmation Modal  */}
+      <Modal
+        open={confirmModalOpen}
+        onCancel={() => setConfirmModalOpen(false)}
+        footer={null}
+        centered
+        width={480}
+        closable={!saving}
+        maskClosable={!saving}
+        styles={{ body: { padding: '0' } }}
+      >
+        <div className="p-6">
+          {/* Icon + Title */}
+          <div className="flex flex-col items-center text-center mb-6">
+            <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center mb-4">
+              <CheckCircle2 className="w-7 h-7 text-emerald-500" />
+            </div>
+            <h2 className="text-lg font-bold text-slate-800">Submit Quarterly Review?</h2>
+            <p className="text-slate-500 text-sm mt-1.5">
+              Once submitted, your review will be sent for evaluation. You will not be able to
+              edit it afterwards.
+            </p>
+          </div>
+
+          {/* Manager info */}
+          <div className="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 mb-4">
+            <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+              <User className="w-4 h-4 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-xs text-slate-500 leading-none mb-0.5">Review will be sent to</p>
+              <p className="text-sm font-semibold text-slate-800">{managerName}</p>
+            </div>
+          </div>
+
+          {/* Quarter info */}
+          <div className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 mb-6 text-sm text-slate-600">
+            <span className="font-medium text-slate-700">Period:</span>{' '}
+            {quarter}&nbsp;·&nbsp;{quarterRange}
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex gap-3">
+            <Button
+              block
+              onClick={() => setConfirmModalOpen(false)}
+              disabled={saving}
+              className="h-10 rounded-xl border-slate-300 text-slate-600 font-medium"
+            >
+              Cancel
+            </Button>
+            <Button
+              block
+              type="primary"
+              loading={saving}
+              icon={<Send className="w-4 h-4" />}
+              onClick={handleConfirmedSubmit}
+              className="h-10 rounded-xl border-none bg-emerald-600 hover:bg-emerald-700 font-semibold flex items-center justify-center gap-1.5"
+            >
+              Confirm & Submit
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

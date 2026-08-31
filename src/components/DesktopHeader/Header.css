@@ -9,8 +9,8 @@
 
 .header-container {
   width: 100%;
-  max-width: 1920px;
-  margin: 0 auto;
+  max-width: 100%;
+  margin: 0;
   padding: 0 20px;
   height: 72px;
   display: flex;
@@ -20,7 +20,8 @@
 }
 
 .header-desktop-logo {
-  display: none;
+  display: inline-flex;
+  align-items: center;
   flex-shrink: 0;
 }
 
@@ -30,23 +31,9 @@
   margin-left: auto;
 }
 
-/* DESKTOP */
+/* DESKTOP MEDIA QUERIES */
 
 @media (min-width: 1280px) {
-  .panel-close-button,
-  .profile-panel-header {
-    display: none;
-  }
-
-  .mobile-header {
-    display: none !important;
-  }
-
-  .header-desktop-logo {
-    display: inline-flex;
-    align-items: center;
-  }
-
   .header-desktop-logo-img {
     width: auto;
     height: 38px;
@@ -81,7 +68,6 @@
   }
 }
 
-
 @media (min-width: 1366px) {
   .header-container {
     padding: 0 28px;
@@ -95,7 +81,6 @@
     height: 40px;
   }
 }
-
 
 @media (min-width: 1440px) {
   .header-container {
@@ -114,10 +99,6 @@
     width: 310px;
   }
 }
-
-/* ===========================
-   1600px+
-=========================== */
 
 @media (min-width: 1600px) {
   .header-container {
@@ -138,10 +119,9 @@
   }
 }
 
-
 @media (min-width: 1920px) {
   .header-container {
-    max-width: 1920px;
+    max-width: 100%;
     padding: 0 48px;
   }
 
@@ -154,10 +134,9 @@
   }
 }
 
-
 @media (min-width: 2560px) {
   .header-container {
-    max-width: 2400px;
+    max-width: 100%;
     padding: 0 64px;
     height: 80px;
   }
@@ -200,7 +179,6 @@
   font-weight: 600;
 }
 
-
 .header-nav {
   display: flex;
   align-items: center;
@@ -241,49 +219,4 @@
 
 .nav-button:active {
   transform: translateY(0);
-}
-
-@media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
-  .panel-close-button,
-  .profile-panel-header,
-  .mobile-header {
-    display: none !important;
-  }
-
-  .header-container {
-    height: 72px;
-    padding: 0 28px;
-  }
-
-  .header-desktop-logo {
-    display: inline-flex !important;
-    align-items: center;
-  }
-
-  .header-actions {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-left: auto;
-  }
-
-  .profile-user-info {
-    display: flex !important;
-  }
-
-  .notification-popover {
-    position: absolute;
-    top: calc(100% + 12px);
-    right: 0;
-    width: 400px;
-    max-height: calc(100vh - 120px);
-    transform-origin: top right;
-  }
-
-  .profile-menu {
-    position: absolute;
-    top: calc(100% + 8px);
-    right: 0;
-    width: 300px;
-  }
 }

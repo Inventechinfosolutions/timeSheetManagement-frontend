@@ -69,6 +69,7 @@ export const MobileLearningGoalsStep: React.FC<StepProps> = ({ disabled }) => {
                           textarea: {
                             color: '#000',
                             resize: 'none',
+                            backgroundColor: '#ffffff',
                           },
                         }}
                         showCount

@@ -11,36 +11,51 @@ const EMOJIS = [
     value: 1,
     label: 'Very Bad',
     icon: '😡',
-    idle: 'border-rose-200 bg-rose-50/40 text-rose-500',
-    selected: 'border-rose-500 bg-rose-100 text-rose-700',
+    color: 'text-rose-500',
+    bg: 'bg-rose-50',
+    border: 'border-rose-200',
+    selectedBg: 'bg-rose-500',
+    ring: 'ring-rose-400',
   },
   {
     value: 2,
     label: 'Bad',
     icon: '🙁',
-    idle: 'border-orange-200 bg-orange-50/40 text-orange-500',
-    selected: 'border-orange-500 bg-orange-100 text-orange-700',
+    color: 'text-orange-500',
+    bg: 'bg-orange-50',
+    border: 'border-orange-200',
+    selectedBg: 'bg-orange-500',
+    ring: 'ring-orange-400',
   },
   {
     value: 3,
     label: 'Neutral',
     icon: '😐',
-    idle: 'border-slate-200 bg-slate-50/60 text-slate-500',
-    selected: 'border-slate-500 bg-slate-200 text-slate-700',
+    color: 'text-slate-500',
+    bg: 'bg-slate-50',
+    border: 'border-slate-200',
+    selectedBg: 'bg-slate-500',
+    ring: 'ring-slate-400',
   },
   {
     value: 4,
     label: 'Good',
     icon: '🙂',
-    idle: 'border-emerald-200 bg-emerald-50/40 text-emerald-500',
-    selected: 'border-emerald-500 bg-emerald-100 text-emerald-700',
+    color: 'text-emerald-500',
+    bg: 'bg-emerald-50',
+    border: 'border-emerald-200',
+    selectedBg: 'bg-emerald-500',
+    ring: 'ring-emerald-400',
   },
   {
     value: 5,
     label: 'Excellent',
     icon: '🤩',
-    idle: 'border-violet-200 bg-violet-50/40 text-violet-500',
-    selected: 'border-violet-500 bg-violet-100 text-violet-700',
+    color: 'text-violet-500',
+    bg: 'bg-violet-50',
+    border: 'border-violet-200',
+    selectedBg: 'bg-violet-500',
+    ring: 'ring-violet-400',
   },
 ];
 
@@ -119,132 +134,152 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({ disabled }) => {
         Provide feedback on your experience with the company culture, work-life balance, and make suggestions for overall improvement.
       </p>
 
-      <div className="flex flex-col gap-5">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Work Culture Feedback */}
-          <div
-            className="ces-card-enter rounded-xl border border-slate-200 bg-white p-4 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5"
-            style={{ animationDelay: '0ms' }}
-          >
-            <span className="font-semibold text-slate-700 text-sm flex items-center gap-1 mb-1">
-              <span className="text-rose-500">*</span>
-              Feedback on Work Culture
-            </span>
-            {/* <p className="text-slate-500 text-xs mb-2 leading-relaxed">
-              How do you feel about the team collaboration, support, transparency, and environment?
-            </p> */}
-            <Form.Item
-              name={['companyEnvironment', 'workCultureFeedback']}
-              className="mb-0"
-              rules={[
-                { required: true, message: 'Please enter feedback on work culture' },
-              ]}
-            >
-              <Input.TextArea
-                rows={3}
-                disabled={disabled}
-                placeholder="Share your workplace experience and suggestions...."
-                className="hide-scrollbar rounded-xl border-slate-200 hover:border-emerald-400 focus:border-emerald-500 focus:shadow-[0_0_0_2px_rgba(16,185,129,0.1)] transition-all duration-200 p-3 text-slate-900"
-                showCount
-                maxLength={2000}
-                styles={{
-                  textarea: {
-                    resize: 'none',
-                  },
-                }}
-              />
-            </Form.Item>
-          </div>
+      <div className="flex flex-col gap-5 border border-slate-100 rounded-2xl py-3 px-2 bg-slate-50/50 relative">
+     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  {/* Work Culture Feedback */}
+  <div>
+    <span className="font-semibold text-slate-700 text-sm flex items-center gap-1 mb-1">
+      <span className="text-rose-500">*</span>
+      Feedback on Work Culture
+    </span>
 
-          {/* Work-Life Balance */}
-          <div
-            className="ces-card-enter rounded-xl border border-slate-200 bg-white p-4 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5"
-            style={{ animationDelay: '80ms' }}
-          >
-            <span className="font-semibold text-slate-700 text-sm flex items-center gap-1 mb-1">
-              <span className="text-rose-500">*</span>
-              Work-Life Balance
-            </span>
-            {/* <p className="text-slate-500 text-xs mb-2 leading-relaxed">
-              Are you able to maintain a healthy work-life balance? Share any challenges or positive experiences.
-            </p> */}
-            <Form.Item
-              name={['companyEnvironment', 'workLifeBalance']}
-              className="mb-0"
-              rules={[
-                { required: true, message: 'Please enter feedback on work-life balance' },
-              ]}
-            >
-              <Input.TextArea
-                rows={3}
-                disabled={disabled}
-                placeholder="Share your work-life balance experience...."
-                className="hide-scrollbar rounded-xl border-slate-200 hover:border-emerald-400 focus:border-emerald-500 focus:shadow-[0_0_0_2px_rgba(16,185,129,0.1)] transition-all duration-200 p-3 text-slate-900"
-                showCount
-                maxLength={2000}
-                 styles={{
-                  textarea: {
-                    resize: 'none',
-                  },
-                }}
-              />
-            </Form.Item>
-          </div>
+    <Form.Item
+      name={['companyEnvironment', 'workCultureFeedback']}
+      className="mb-0"
+      rules={[
+        {
+          required: true,
+          message: 'Please enter feedback on work culture',
+        },
+      ]}
+    >
+      <Input.TextArea
+        rows={3}
+        disabled={disabled}
+        placeholder="Share your workplace experience and suggestions...."
+        className="hide-scrollbar rounded-xl border-slate-200 hover:border-emerald-400 focus:border-emerald-500 focus:shadow-[0_0_0_2px_rgba(16,185,129,0.1)] transition-all duration-200 p-3 text-slate-900  hover:-translate-y-0.5"
+        style={{
+          borderRadius: '12px',
+          backgroundColor: '#fff',
+          borderColor: '#e2e8f0',
+        }}
+        showCount
+        maxLength={2000}
+        styles={{
+          textarea: {
+            resize: 'none',
+            backgroundColor: '#fff',
+            color: '#000',
+            borderRadius: '12px',
+          },
+        }}
+      />
+    </Form.Item>
+  </div>
 
-          {/* Suggestions for Improvement */}
-          <div
-            className="ces-card-enter rounded-xl border border-slate-200 bg-white p-4 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 md:col-span-2"
-            style={{ animationDelay: '160ms' }}
-          >
-            <span className="font-semibold text-slate-700 text-sm flex items-center gap-1 mb-1">
-              <span className="text-rose-500">*</span>
-              Suggestions for Improvement
-            </span>
-            {/* <p className="text-slate-500 text-xs mb-2 leading-relaxed">
-              What constructive suggestions do you have to improve processes, facilities, or policies?
-            </p> */}
-            <Form.Item
-              name={['companyEnvironment', 'suggestions']}
-              className="mb-0"
-              rules={[
-                { required: true, message: 'Please provide suggestions for improvement' },
-              ]}
-            >
-              <Input.TextArea
-                rows={3}
-                disabled={disabled}
-                placeholder="Share your suggestions for improvement...."
-                className="hide-scrollbar rounded-xl border-slate-200 hover:border-emerald-400 focus:border-emerald-500 focus:shadow-[0_0_0_2px_rgba(16,185,129,0.1)] transition-all duration-200 p-3 text-slate-900"
-                showCount
-                maxLength={2000}
-                styles={{
-                  textarea: {
-                    resize: 'none',
-                  },
-                }}
-              />
-            </Form.Item>
-          </div>
-        </div>
+  {/* Work-Life Balance */}
+  <div>
+    <span className="font-semibold text-slate-700 text-sm flex items-center gap-1 mb-1">
+      <span className="text-rose-500">*</span>
+      Work-Life Balance
+    </span>
 
-        {/* Rate the Company Environment (Smiley Emojis Only) */}
-        <div
-          className="ces-card-enter"
-          style={{ animationDelay: '240ms' }}
-        >
-          <span className="font-semibold text-slate-700 text-sm flex items-center gap-1 mb-3">
-            <span className="text-rose-500">*</span>
-            Rate the Company Environment
-          </span>
+    <Form.Item
+      name={['companyEnvironment', 'workLifeBalance']}
+      className="mb-0"
+      rules={[
+        {
+          required: true,
+          message: 'Please enter feedback on work-life balance',
+        },
+      ]}
+    >
+      <Input.TextArea
+        rows={3}
+        disabled={disabled}
+        placeholder="Share your work-life balance experience...."
+        className="hide-scrollbar rounded-xl border-slate-200 hover:border-emerald-400 focus:border-emerald-500 focus:shadow-[0_0_0_2px_rgba(16,185,129,0.1)] transition-all duration-200 p-3 text-slate-900  hover:-translate-y-0.5"
+        style={{
+          borderRadius: '12px',
+          backgroundColor: '#fff',
+          borderColor: '#e2e8f0',
+        }}
+        showCount
+        maxLength={2000}
+        styles={{
+          textarea: {
+            resize: 'none',
+            backgroundColor: '#fff',
+            color: '#000',
+            borderRadius: '12px',
+          },
+        }}
+      />
+    </Form.Item>
+  </div>
 
-          <Form.Item
-            name={['companyEnvironment', 'rating']}
-            className="mb-0"
-            rules={[{ required: true, message: 'Please rate the company environment' }]}
-          >
-            <EmojiRating disabled={disabled} />
-          </Form.Item>
-        </div>
+  {/* Suggestions for Improvement */}
+  <div>
+    <span className="font-semibold text-slate-700 text-sm flex items-center gap-1 mb-1 -mt-6">
+      <span className="text-rose-500">*</span>
+      Suggestions for Improvement
+    </span>
+
+    <Form.Item
+      name={['companyEnvironment', 'suggestions']}
+      className="mb-0"
+      rules={[
+        {
+          required: true,
+          message: 'Please provide suggestions for improvement',
+        },
+      ]}
+    >
+      <Input.TextArea
+        rows={3}
+        disabled={disabled}
+        placeholder="Share your suggestions for improvement...."
+        className="hide-scrollbar rounded-xl border-slate-200 hover:border-emerald-400 focus:border-emerald-500 focus:shadow-[0_0_0_2px_rgba(16,185,129,0.1)] transition-all duration-200 p-3 text-slate-900  hover:-translate-y-0.5"
+        style={{
+          borderRadius: '12px',
+          backgroundColor: '#fff',
+          borderColor: '#e2e8f0',
+        }}
+        showCount
+        maxLength={2000}
+        styles={{
+          textarea: {
+            resize: 'none',
+            backgroundColor: '#fff',
+            color: '#000',
+            borderRadius: '12px',
+          },
+        }}
+      />
+    </Form.Item>
+  </div>
+
+  {/* Rate the Company Environment */}
+  <div>
+    <span className="font-semibold text-slate-700 text-sm flex items-center gap-1 mb-1 -mt-6">
+      <span className="text-rose-500">*</span>
+      Rate the Company Environment
+    </span>
+
+    <Form.Item
+      name={['companyEnvironment', 'rating']}
+      className="mb-0"
+      rules={[
+        {
+          required: true,
+          message: 'Please rate the company environment',
+        },
+      ]}
+    >
+      <EmojiRating disabled={disabled} />
+    </Form.Item>
+  </div>
+</div>
       </div>
     </Card>
   );
@@ -257,26 +292,63 @@ interface EmojiRatingProps {
   disabled?: boolean;
 }
 
-const EmojiRating: React.FC<EmojiRatingProps> = ({ value, onChange, disabled }) => {
+const EmojiRating: React.FC<EmojiRatingProps> = ({
+  value,
+  onChange,
+  disabled,
+}) => {
   return (
-    <div className="flex flex-wrap items-center gap-2.5">
-      {EMOJIS.map((emoji, index) => {
-        const isSelected = value === emoji.value;
-        return (
-          <button
-            key={emoji.value}
-            type="button"
-            disabled={disabled}
-            onClick={() => onChange?.(emoji.value)}
-            className={`ces-card-enter flex items-center gap-2 py-1.5 px-3 rounded-full border transition-all duration-200 cursor-pointer ${isSelected ? `ces-emoji-selected font-bold shadow-sm ${emoji.selected}` : `hover:-translate-y-0.5 hover:shadow-sm ${emoji.idle}`
-              } ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}
-            style={{ animationDelay: `${300 + index * 60}ms` }}
-          >
-            <span className="text-lg leading-none">{emoji.icon}</span>
-            <span className="text-[11px] uppercase tracking-wider font-semibold whitespace-nowrap">{emoji.label}</span>
-          </button>
-        );
-      })}
+    <div className="w-full">
+      <div className="flex items-center justify-between gap-1.5">
+        {EMOJIS.map((emoji) => {
+          const isSelected = value === emoji.value;
+
+          return (
+            <button
+              key={emoji.value}
+              type="button"
+              disabled={disabled}
+              onClick={() => onChange?.(emoji.value)}
+              className={`
+                group flex flex-col items-center justify-center
+                w-22 h-16 rounded-md border
+                transition-all duration-200
+                ${
+                  isSelected
+                    ? `${emoji.selectedBg} border-transparent shadow-lg scale-105 opacity-100 ring-2 ${emoji.ring} ring-offset-1 z-10 font-bold`
+                    : `${emoji.bg} ${emoji.border} ${disabled ? 'opacity-40' : 'hover:scale-105 hover:shadow-sm'}`
+                }
+                ${disabled ? 'cursor-default' : 'cursor-pointer'}
+              `}
+              style={{
+                borderRadius: '6px',
+              }}
+            >
+              <span
+                className={`
+                  text-2xl leading-none transition-transform duration-200
+                  ${isSelected ? 'scale-110 drop-shadow' : 'group-hover:scale-110'}
+                `}
+              >
+                {emoji.icon}
+              </span>
+
+              <span
+                className={`
+                  mt-1 text-[12px] font-bold whitespace-nowrap
+                  ${
+                    isSelected
+                      ? 'text-white'
+                      : emoji.color
+                  }
+                `}
+              >
+                {emoji.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 };
