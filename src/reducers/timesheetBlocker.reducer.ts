@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import axios from 'axios';
+import { fetchMyTimesheet } from './employeeAttendance.reducer';
 
 export interface TimesheetBlocker {
   id?: number;
@@ -70,6 +71,10 @@ const blockerSlice = createSlice({
       .addCase(fetchBlockers.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message || 'Failed to fetch blockers';
+      })
+      .addCase(fetchMyTimesheet.fulfilled, (state, action) => {
+        state.loading = false;
+        state.blockers = action.payload.blockers || [];
       })
       .addCase(applyBlocker.fulfilled, (state, action: PayloadAction<TimesheetBlocker>) => {
         state.blockers.push(action.payload);

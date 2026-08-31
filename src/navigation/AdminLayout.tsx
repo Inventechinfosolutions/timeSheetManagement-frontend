@@ -20,7 +20,7 @@ const AdminLayout = () => {
       path.includes("/admin-dashboard/employee-details/") ||
       path.includes("/admin-dashboard/view-attendance/")
     ) {
-      return "Employee Details";
+      return "Employee Directory";
     }
     if (
       path.includes("/admin-dashboard/timesheet/") ||
@@ -33,7 +33,7 @@ const AdminLayout = () => {
       return "Working Details";
     }
     if (path.includes("/admin-dashboard/work-management")) {
-      return "Work Management";
+      return "Request Management";
     }
     if (path.includes("/admin-dashboard/leave-balance")) {
       return "Leave Balance";
@@ -50,7 +50,7 @@ const AdminLayout = () => {
         return "User & Role Management";
       case "employees":
       case "employee-details":
-        return "Employee Details";
+        return "Employee Directory";
       case "requests":
         return "Notification";
       case "timesheet-list":
@@ -58,24 +58,24 @@ const AdminLayout = () => {
       case "working-details":
         return "Employee Timesheet";
       case "work-management":
-        return "Work Management";
+        return "Request Management";
       case "leave-balance":
         return "Leave Balance";
       case "manager-mapping":
         return "Manager Mapping";
       default:
-        return "System Dashboard";
+        return "Admin Dashboard";
     }
   };
 
   const dispatch = useAppDispatch();
   const handleTabChange = (tabName: string) => {
-    if (tabName === "System Dashboard") {
+    if (tabName === "Admin Dashboard") {
       dispatch(fetchUnreadNotifications());
       navigate("/admin-dashboard");
     } else if (tabName === "User & Role Management") {
       navigate("/admin-dashboard/registration");
-    } else if (tabName === "Employee Details") {
+    } else if (tabName === "Employee Directory") {
       navigate("/admin-dashboard/employees");
     } else if (tabName === "Employee Timesheet") {
       navigate("/admin-dashboard/timesheet-list");
@@ -85,7 +85,7 @@ const AdminLayout = () => {
       navigate("/admin-dashboard/working-details");
     } else if (tabName === "Notification") {
       navigate("/admin-dashboard/requests");
-    } else if (tabName === "Work Management") {
+    } else if (tabName === "Request Management") {
       navigate("/admin-dashboard/work-management");
     } else if (tabName === "Leave Balance") {
       navigate("/admin-dashboard/leave-balance");

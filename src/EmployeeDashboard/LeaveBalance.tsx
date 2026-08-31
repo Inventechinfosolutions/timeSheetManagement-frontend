@@ -14,6 +14,10 @@ import {
 import { Calendar, CheckCircle, Clock, TrendingUp, Ban } from "lucide-react";
 import { Select } from "antd";
 import { ChevronDown } from "lucide-react";
+import {
+  getEmploymentProfile,
+  isInternForPeriod,
+} from "../utils/employmentUtils";
 
 // Fallback entitlement when backend balance API is not used
 const ENTITLEMENT = {
@@ -80,15 +84,31 @@ const LeaveBalance = () => {
     );
   }, [dispatch, employeeId, selectedYear]);
 
-  const isIntern = useMemo(() => {
-    const designation = (entity?.designation ?? entity?.designation_name ?? "")
-      .toString()
-      .toLowerCase();
-    const employmentType = (entity?.employmentType ?? "")
-      .toString()
-      .toUpperCase();
-    return designation.includes("intern") || employmentType === "INTERN";
-  }, [entity?.designation, entity?.designation_name, entity?.employmentType]);
+  const employmentProfile = useMemo(
+    () =>
+      getEmploymentProfile(
+        {
+          employmentType: entity?.employmentType,
+          designation: entity?.designation ?? entity?.designation_name,
+          conversionDate: entity?.conversionDate,
+        },
+        {
+          employmentType: (currentUser as any)?.employmentType,
+          designation: (currentUser as any)?.designation,
+          conversionDate: (currentUser as any)?.conversionDate,
+        },
+      ),
+    [entity, currentUser],
+  );
+
+  const referenceMonth =
+    selectedYear === currentYear ? new Date().getMonth() + 1 : 12;
+
+  const isIntern = useMemo(
+    () =>
+      isInternForPeriod(employmentProfile, selectedYear, referenceMonth),
+    [employmentProfile, selectedYear, referenceMonth],
+  );
   const entitlementLabel = isIntern
     ? "Intern (1 per month)"
     : "Full timer (1.5 per month)";

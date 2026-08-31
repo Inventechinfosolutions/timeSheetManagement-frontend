@@ -6,15 +6,15 @@ const About = () => {
   const navigate = useNavigate()
 
   return (
-    <div className="min-h-screen bg-[#F4F7FE] pb-20">
+    <div className="min-h-screen bg-[#F4F7FE] flex flex-col">
 
       {/* Hero Section */}
       {/* Hero Section */}
-      <div className="bg-[#d1d2dd] text-[#1B2559] py-16 sm:py-24 px-4 sm:px-6 relative overflow-hidden">
+      <div className="bg-[#d1d2dd] text-[#1B2559] pt-16 sm:pt-24 pb-72 sm:pb-80 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-blue-100/50 rounded-full -mr-32 -mt-32 blur-3xl"></div>
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-[#00A3C4]/10 rounded-full -ml-32 -mb-32 blur-3xl"></div>
 
-        <div className="max-w-5xl mx-auto relative z-10 text-center lg:text-left">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 relative z-10 text-center lg:text-left">
           <button
             onClick={() => navigate(-1)}
             className="mb-8 inline-flex items-center text-white transition-all duration-200 text-sm font-bold bg-[#4318FF] hover:bg-[#3311CC] px-6 py-2.5 rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5"
@@ -129,7 +129,7 @@ const About = () => {
         </div>
 
         {/* Conclusion / Business Value */}
-        <div className="mt-12 bg-linear-to-br from-[#2B3674] to-[#121841] rounded-2xl p-8 sm:p-12 text-white shadow-2xl relative overflow-hidden">
+        <div className="mt-12 mb-12 bg-linear-to-br from-[#2B3674] to-[#121841] rounded-2xl p-8 sm:p-12 text-white shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full -mr-48 -mt-48 blur-3xl"></div>
 
           <div className="relative z-10 max-w-4xl mx-auto text-center">
@@ -156,10 +156,10 @@ const About = () => {
             </div>
           </div>
         </div>
-        {/* Footer */}
-        <div className="mt-12">
-          <Footer />
-        </div>
+      </div>
+      {/* Footer - full width at page bottom */}
+      <div className="mt-auto">
+        <Footer />
       </div>
     </div>
   )

@@ -342,11 +342,21 @@ const Registration = () => {
                       required
                     >
                       <option value="">Select Role</option>
-                      {roles.map((role) => (
-                        <option key={role} value={role}>
-                          {role}
-                        </option>
-                      ))}
+                      {roles
+                        .filter((role) => {
+                          const normalized = role.toUpperCase().trim();
+                          return (
+                            normalized !== "ADMIN" &&
+                            normalized !== "RECEPTIONIST" &&
+                            normalized !== "TEAM LEAD" &&
+                            normalized !== "TEAMLEAD"
+                          );
+                        })
+                        .map((role) => (
+                          <option key={role} value={role}>
+                            {role}
+                          </option>
+                        ))}
                     </select>
                     <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                     <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -482,7 +492,7 @@ const Registration = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full relative overflow-hidden bg-linear-to-r from-[#4318FF] to-[#868CFF] text-white font-black py-4 px-6 rounded-2xl transition-all shadow-xl shadow-blue-500/30 hover:shadow-blue-500/40 text-sm sm:text-base transform hover:-translate-y-1 group disabled:opacity-70 disabled:cursor-not-allowed tracking-widest uppercase active:scale-95"
+                className="w-full relative overflow-hidden bg-[#4318FF] text-white font-black py-4 px-6 rounded-2xl transition-all shadow-xl shadow-blue-500/30 hover:shadow-blue-500/40 text-sm sm:text-base transform hover:-translate-y-1 group disabled:opacity-70 disabled:cursor-not-allowed tracking-widest uppercase active:scale-95"
               >
                 {/* Shimmer Effect */}
                 {!loading && (

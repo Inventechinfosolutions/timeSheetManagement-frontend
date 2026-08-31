@@ -6,10 +6,16 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
+  X,
+  User,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { RootState } from "../store";
-import { getAllManagerMappings } from "../reducers/managerMapping.reducer";
+import { getAllManagerMappings, reset as resetMappings } from "../reducers/managerMapping.reducer";
+import {
+  getEntity as getEmployeeEntity,
+  reset as resetEmployeeDetails,
+} from "../reducers/employeeDetails.reducer";
 import { UserStatus } from "../enums";
 
 const ManagerEmployeesView: React.FC = () => {
@@ -22,11 +28,73 @@ const ManagerEmployeesView: React.FC = () => {
     totalItems,
   } = useAppSelector((state: RootState) => state.managerMapping);
 
+  const managerEntity = useAppSelector(
+    (state: RootState) => state.employeeDetails.entity
+  );
+
   // Pagination and Search State
   const [teamSearch, setTeamSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [teamPage, setTeamPage] = useState(1);
   const itemsPerPage = 10;
+
+  const [unfilteredTotal, setUnfilteredTotal] = useState<number>(0);
+  const [managerNameState, setManagerNameState] = useState<string>("");
+
+  // Clear cached states and fetch manager details when switching managers (managerId changes)
+  // to prevent displaying a mismatched/stale manager name.
+  useEffect(() => {
+    dispatch(resetMappings());
+    dispatch(resetEmployeeDetails());
+    if (managerId) {
+      dispatch(getEmployeeEntity(managerId));
+    }
+    setManagerNameState("");
+    setUnfilteredTotal(0);
+    setTeamSearch("");
+    setDebouncedSearch("");
+    setTeamPage(1);
+
+    return () => {
+      dispatch(resetMappings());
+      dispatch(resetEmployeeDetails());
+    };
+  }, [managerId, dispatch]);
+
+  useEffect(() => {
+    if (!debouncedSearch && !loading && totalItems > 0) {
+      setUnfilteredTotal(totalItems);
+    }
+  }, [debouncedSearch, loading, totalItems]);
+
+  useEffect(() => {
+    if (mappings.length > 0 && !managerNameState) {
+      // Find the best manager name candidate from all mapping records
+      const names = mappings
+        .map((m: any) => m.managerName)
+        .filter((name: any): name is string => 
+          typeof name === 'string' && 
+          name.trim() !== '' && 
+          name !== managerId
+        );
+
+      if (names.length > 0) {
+        const cleanNames = names.filter((name: string) => {
+          const lower = name.toLowerCase().trim();
+          // Exclude repeated characters like "gggg" or placeholders
+          if (/^(.)\1+$/.test(lower)) return false;
+          if (['test', 'testing', 'admin', 'manager', 'null', 'undefined'].includes(lower)) return false;
+          return true;
+        });
+
+        const bestName = cleanNames.length > 0
+          ? cleanNames.reduce((longest, current) => current.length > longest.length ? current : longest, cleanNames[0])
+          : names[0];
+
+        setManagerNameState(bestName);
+      }
+    }
+  }, [mappings, managerId, managerNameState]);
 
   // Debounce search
   useEffect(() => {
@@ -51,57 +119,103 @@ const ManagerEmployeesView: React.FC = () => {
     }
   }, [dispatch, managerId, teamPage, debouncedSearch]);
 
-  const managerName = mappings[0]?.managerName || managerId;
+  const managerName = useMemo(() => {
+    if (managerEntity?.fullName) return managerEntity.fullName;
+    if (managerNameState) return managerNameState;
+    if (mappings.length === 0) return managerId;
+
+    const names = mappings
+      .map((m: any) => m.managerName)
+      .filter((name: any): name is string => 
+        typeof name === 'string' && 
+        name.trim() !== '' && 
+        name !== managerId
+      );
+
+    if (names.length === 0) return mappings[0]?.managerName || managerId;
+
+    const cleanNames = names.filter((name: string) => {
+      const lower = name.toLowerCase().trim();
+      if (/^(.)\1+$/.test(lower)) return false;
+      if (['test', 'testing', 'admin', 'manager', 'null', 'undefined'].includes(lower)) return false;
+      return true;
+    });
+
+    return cleanNames.length > 0
+      ? cleanNames.reduce((longest, current) => current.length > longest.length ? current : longest, cleanNames[0])
+      : names[0];
+  }, [managerEntity?.fullName, managerNameState, mappings, managerId]);
 
   return (
-    <div className="p-4 md:p-8 bg-[#F4F7FE] min-h-screen font-['DM_Sans',sans-serif]">
-      {/* Header */}
-      <div className="flex items-center gap-4 mb-8">
+    <div className="p-4 md:p-8 bg-[#F4F7FE] font-['DM_Sans',sans-serif]">
+      {/* Navigation Back */}
+      <div className="flex items-center mb-4">
         <button
           onClick={() => navigate(-1)}
-          className="p-2 bg-white rounded-xl shadow-sm text-[#2B3674] hover:text-[#4318FF] transition-all"
+          className="flex items-center gap-1.5 text-gray-400 hover:text-[#4318FF] transition-colors group"
         >
-          <ArrowLeft size={20} />
+          <ArrowLeft
+            size={14}
+            className="group-hover:-translate-x-1 transition-transform"
+          />
+          <span className="text-xs font-bold tracking-wider uppercase text-[#A3AED0] group-hover:text-[#4318FF]">
+            Back
+          </span>
         </button>
-        <div>
-          <h1 className="text-2xl font-bold text-[#2B3674]">
-            Team Details: {managerName}
-          </h1>
-          <p className="text-sm text-[#A3AED0] font-medium">
-            List of employees assigned to the manager
-          </p>
-        </div>
       </div>
 
-      {/* Top Section: Stats */}
-      <div className="mb-6">
+      {/* Top Header & Stats Section */}
+      <div className="flex flex-wrap items-center gap-4 mb-8 justify-start">
+
+        {/* Team Details Card */}
+        <div className="bg-white rounded-[20px] p-4 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] flex items-center gap-3 w-full sm:w-auto min-w-[240px] shrink-0 border border-gray-50">
+          <div className="w-10 h-10 bg-[#4318FF]/10 rounded-xl flex items-center justify-center text-[#4318FF] shrink-0">
+            <User size={20} />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-[#2B3674] leading-tight">
+              {managerName || "Team Details"}
+            </h3>
+            <p className="text-xs text-[#A3AED0] font-medium mt-1">
+              Manager ID: {managerId}
+            </p>
+          </div>
+        </div>
+
         {/* Stats Card */}
-        <div className="bg-white rounded-[24px] p-6 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] flex items-center gap-4 max-w-sm">
-          <div className="w-12 h-12 bg-[#4318FF]/10 rounded-xl flex items-center justify-center text-[#4318FF]">
+        <div className="bg-white rounded-[20px] p-4 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] flex items-center gap-3 w-full sm:w-[220px] shrink-0 border border-gray-50">
+          <div className="w-10 h-10 bg-[#4318FF]/10 rounded-xl flex items-center justify-center text-[#4318FF] shrink-0">
             <div className="metric-icon">
-              <Users size={24} />
+              <Users size={20} />
             </div>
           </div>
           <div>
-            <p className="text-sm text-[#A3AED0] font-medium">Total Managed</p>
-            <h3 className="text-xl font-bold text-[#2B3674]">
-              {totalItems} Employees
+            <p className="text-xs text-[#A3AED0] font-medium">Total Managed</p>
+            <h3 className="text-base font-bold text-[#2B3674] leading-tight">
+              {unfilteredTotal || totalItems} Employees
             </h3>
           </div>
         </div>
-      </div>
 
-      {/* Search Bar Section */}
-      <div className="mb-8">
-        <div className="flex items-center bg-white rounded-[24px] px-6 py-4 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] w-full md:max-w-md border border-transparent focus-within:border-[#4318FF]/20 transition-all">
-          <Search size={20} className="text-[#A3AED0] mr-3" />
+        {/* Search Bar next to Card */}
+        <div className="flex items-center bg-white rounded-full px-5 py-2.5 border border-gray-200 focus-within:border-[#4318FF]/40 transition-all w-full sm:max-w-xs h-[52px]">
+          <Search size={18} className="text-[#A3AED0] mr-2 shrink-0" />
           <input
             type="text"
             placeholder="Search employees..."
             value={teamSearch}
             onChange={(e) => setTeamSearch(e.target.value)}
-            className="border-none outline-none bg-transparent text-[#2B3674] w-full text-base font-medium placeholder:text-[#A3AED0]/60"
+            className="border-none outline-none bg-transparent text-[#2B3674] w-full text-sm font-semibold placeholder:text-[#A3AED0]/60"
           />
+          {teamSearch && (
+            <button
+              onClick={() => setTeamSearch("")}
+              className="text-[#A3AED0] hover:text-[#4318FF] transition-colors focus:outline-none ml-2 flex items-center justify-center shrink-0"
+              type="button"
+            >
+              <X size={18} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -168,13 +282,12 @@ const ManagerEmployeesView: React.FC = () => {
                         </td>
                         <td className="py-4 pl-4 pr-10 text-center">
                           <span
-                            className={`inline-flex px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider border ${
-                              m.status === UserStatus.ACTIVE
+                            className={`inline-flex px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider border ${m.status === UserStatus.ACTIVE
                                 ? "bg-green-50 text-green-500 border-green-100"
                                 : m.status === UserStatus.INACTIVE
                                   ? "bg-red-50 text-red-500 border-red-100"
                                   : "bg-gray-50 text-gray-500 border-gray-100"
-                            }`}
+                              }`}
                           >
                             {m.status}
                           </span>

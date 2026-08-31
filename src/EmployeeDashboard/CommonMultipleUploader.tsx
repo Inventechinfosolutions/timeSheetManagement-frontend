@@ -29,7 +29,7 @@ const StyledUploadButton = styled(Button)`
 
 const StyledGalleryContainer = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 12px;
   margin-top: 4px;
   @media (max-width: 768px) {
@@ -337,17 +337,17 @@ const CommonMultipleUploader: React.FC<CommonMultipleUploaderProps> = ({
       // Previously only entityId was used, so same employee's different requests showed the same docs.
       const cacheKey = `${entityId}_${refId}`;
 
+      // Skip only if we already fetched/processed for this exact entityId + refId combination
+      if (lastFetchedIdRef.current === cacheKey) {
+        return;
+      }
+
       // If fetchOnMount is false, we should never fetch in this effect (e.g. new leave form).
       // This allows the component to start with an empty list for new applications.
       if (!fetchOnMount) {
         lastFetchedIdRef.current = cacheKey;
         setExistingFiles([]);
         setFileList([]);
-        return;
-      }
-
-      // Skip only if we already fetched for this exact entityId + refId combination
-      if (lastFetchedIdRef.current === cacheKey) {
         return;
       }
 
@@ -475,7 +475,19 @@ const CommonMultipleUploader: React.FC<CommonMultipleUploaderProps> = ({
 
           const localUrl = URL.createObjectURL(file);
           const backendUrl = uploadedData.url || uploadedData.image_url;
-          const finalUrl = isValidUrl(backendUrl) ? backendUrl : localUrl;
+          // At creation time (refId is 0 or invalid), we must use the local blob URL (localUrl)
+          // as the backend URL will return 404 until the request is saved to the database.
+          const isRefIdValid = refId && Number(refId) !== 0 && !isNaN(Number(refId));
+          const finalUrl = (isValidUrl(backendUrl) && isRefIdValid) ? backendUrl : localUrl;
+
+          // Track localUrl in blobUrls so it gets cleaned up/revoked when component unmounts
+          if (finalUrl === localUrl) {
+            setBlobUrls((prev) => {
+              const newMap = new Map(prev);
+              newMap.set(uploadedData.key, localUrl);
+              return newMap;
+            });
+          }
 
           const newUploadFile: UploadFile = {
             uid: uploadedData.key,
@@ -604,7 +616,7 @@ const CommonMultipleUploader: React.FC<CommonMultipleUploaderProps> = ({
     }
 
     if (isImageFile(file.name)) {
-      if (isValidUrl(file.url)) {
+      if (file.url && isValidUrl(file.url) && !file.url.includes("/api/")) {
         setPreviewImage(file.url!);
         setPreviewTitle(file.name || "Image Preview");
         setPreviewOpen(true);
@@ -731,7 +743,7 @@ const CommonMultipleUploader: React.FC<CommonMultipleUploaderProps> = ({
         return blobUrlsRef.current.get(file.uid) || "";
       }
 
-      const selectedFile = fileListRef.current.find((f) => f.key === file.uid);
+      const selectedFile = fileList.find((f) => f.key === file.uid);
       if (!selectedFile) return file.url || "";
 
       try {
@@ -762,12 +774,12 @@ const CommonMultipleUploader: React.FC<CommonMultipleUploaderProps> = ({
         return file.url || "";
       }
     },
-    [dispatch, previewFile], // fileList and blobUrls removed from dependencies
+    [dispatch, previewFile, fileList],
   );
 
   const getImageUrl = useCallback(
     async (file: UploadFile): Promise<string> => {
-      if (file.url) {
+      if (file.url && !file.url.includes("/api/")) {
         return file.url;
       }
       return (await loadImageAsBlob(file)) || "";

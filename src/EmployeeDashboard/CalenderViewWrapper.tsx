@@ -14,6 +14,7 @@ interface AttendanceViewWrapperProps {
   variant?: "small" | "large" | "sidebar";
   viewOnly?: boolean;
   hideMonthNavigation?: boolean;
+  hideBackButton?: boolean;
 }
 
 const AttendanceViewWrapper = (props: AttendanceViewWrapperProps) => {
@@ -34,6 +35,9 @@ const AttendanceViewWrapper = (props: AttendanceViewWrapperProps) => {
     return (
       <MobileResponsiveCalendarPage
         employeeId={props.employeeId}
+        entries={props.entries}
+        currentDate={props.currentDate}
+        hideMonthNavigation={props.hideMonthNavigation}
         onNavigateToDate={props.onNavigateToDate}
       />
     );

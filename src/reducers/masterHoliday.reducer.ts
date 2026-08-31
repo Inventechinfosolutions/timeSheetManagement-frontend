@@ -1,7 +1,8 @@
 // redux/slices/masterHolidaySlice.ts
 
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import axios from 'axios'; 
+import axios from 'axios';
+import { fetchEmployeeDashboard } from './employeeAttendance.reducer'; 
 import { 
   MasterHolidayState, 
   CreateHolidayPayload, 
@@ -235,6 +236,9 @@ const masterHolidaySlice = createSlice({
       .addCase(fetchHolidays.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
+      })
+      .addCase(fetchEmployeeDashboard.fulfilled, (state, action) => {
+        state.holidays = action.payload.holidays || [];
       });
 
     // Fetch Holidays By Range

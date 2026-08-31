@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { RootState } from "../store";
@@ -22,9 +22,12 @@ import {
   Calendar,
   RotateCcw,
   ArrowRightLeft,
+  Download,
 } from "lucide-react";
 import {
   getAllLeaveRequests,
+  downloadLeaveRequestsExcel,
+  fetchLeaveRequestTypes,
   updateLeaveRequestStatus,
   getLeaveRequestById,
   getLeaveRequestFiles,
@@ -52,6 +55,7 @@ import CommonMultipleUploader from "../EmployeeDashboard/CommonMultipleUploader"
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import { message, Select, Modal } from "antd";
 import { fetchDepartments } from "../reducers/masterDepartment.reducer";
+import { saveAs } from "file-saver";
 
 const Requests = () => {
   const navigate = useNavigate();
@@ -80,7 +84,6 @@ const Requests = () => {
   >([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState("All");
   const [selectedDept, setSelectedDept] = useState("All");
   const [isDeptOpen, setIsDeptOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
@@ -112,7 +115,62 @@ const Requests = () => {
     | LeaveRequestStatus.MODIFICATION_REJECTED
     | null;
     employeeName: string;
+    requestType?: string;
+    firstHalf?: string;
+    secondHalf?: string;
+    isHalfDay?: boolean;
   }>({ isOpen: false, id: null, status: null, employeeName: "" });
+
+  // Converts a raw request type string to a display-friendly label
+  const normalizeTypeName = (type: string): string => {
+    const t = (type || "").trim();
+    if (t === LeaveRequestType.APPLY_LEAVE || t === LeaveRequestType.LEAVE) return "Leave";
+    if (t === WorkLocation.WORK_FROM_HOME || t === LeaveRequestType.WFH) return "Work From Home";
+    if (t === WorkLocation.CLIENT_VISIT) return "Client Visit";
+    if (t === WorkLocation.OFFICE) return "Office";
+    if (
+      t === AttendanceStatus.HALF_DAY ||
+      t === LeaveRequestType.HALF_DAY ||
+      t.toLowerCase() === "half day" ||
+      t.toLowerCase() === "half day leave"
+    ) {
+      return "Half Day Leave";
+    }
+    return t;
+  };
+
+  // Returns a human-readable request type label, handling split (half-day) combos
+  const getRequestTypeLabel = (req: {
+    requestType?: string;
+    firstHalf?: string;
+    secondHalf?: string;
+    isHalfDay?: boolean | number | string;
+  }): string => {
+    const isHalf =
+      req.isHalfDay === true ||
+      req.isHalfDay === 1 ||
+      req.isHalfDay === "1";
+    if (isHalf && req.firstHalf && req.secondHalf) {
+      let first = normalizeTypeName(req.firstHalf);
+      let second = normalizeTypeName(req.secondHalf);
+      if (first === "Leave") first = "Half Day Leave";
+      if (second === "Leave") second = "Half Day Leave";
+      if (first === second) return first;
+      return `${first} + ${second}`;
+    }
+    const raw = req.requestType || "";
+    if (raw === LeaveRequestType.APPLY_LEAVE || raw === LeaveRequestType.LEAVE) {
+      return "Leave";
+    }
+    if (
+      raw === AttendanceStatus.HALF_DAY ||
+      raw === LeaveRequestType.HALF_DAY ||
+      raw.toLowerCase() === "half day"
+    ) {
+      return "Half Day Leave";
+    }
+    return normalizeTypeName(raw);
+  };
 
   const handleUpdateStatus = (
     id: number,
@@ -124,12 +182,67 @@ const Requests = () => {
       | LeaveRequestStatus.MODIFICATION_APPROVED
       | LeaveRequestStatus.MODIFICATION_REJECTED,
     employeeName: string,
+    req?: any,
   ) => {
-    setConfirmModal({ isOpen: true, id, status, employeeName });
+    setConfirmModal({
+      isOpen: true,
+      id,
+      status,
+      employeeName,
+      requestType: req?.requestType,
+      firstHalf: req?.firstHalf,
+      secondHalf: req?.secondHalf,
+      isHalfDay: req?.isHalfDay,
+    });
   };
 
   const [selectedMonth, setSelectedMonth] = useState<string>("All");
   const [selectedYear, setSelectedYear] = useState<string>("All");
+  const [selectedRequestType, setSelectedRequestType] = useState<string>("All");
+  const [selectedStatus, setSelectedStatus] = useState<string>("All");
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState<boolean>(false);
+  const statusDropdownRef = useRef<HTMLDivElement>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        statusDropdownRef.current &&
+        !statusDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsStatusDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const statusOptions = [
+    { label: "All Status", value: "All", style: "bg-blue-50 text-[#4318FF] border-blue-200 hover:bg-blue-100" },
+    { label: "Pending", value: LeaveRequestStatus.PENDING, style: "bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100" },
+    { label: "Approved", value: LeaveRequestStatus.APPROVED, style: "bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100" },
+    { label: "Rejected", value: LeaveRequestStatus.REJECTED, style: "bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100" },
+    { label: "Cancellation Requested", value: LeaveRequestStatus.REQUESTING_FOR_CANCELLATION, style: "bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100" },
+    { label: "Cancellation Approved", value: LeaveRequestStatus.CANCELLATION_APPROVED, style: "bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100" },
+    { label: "Cancellation Rejected", value: LeaveRequestStatus.CANCELLATION_REJECTED, style: "bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100" },
+    { label: "Modification Requested", value: LeaveRequestStatus.REQUESTING_FOR_MODIFICATION, style: "bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100" },
+    { label: "Request Modified", value: LeaveRequestStatus.REQUEST_MODIFIED, style: "bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100" },
+    { label: "Modification Approved", value: LeaveRequestStatus.MODIFICATION_APPROVED, style: "bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100" },
+    { label: "Modification Cancelled", value: LeaveRequestStatus.MODIFICATION_CANCELLED, style: "bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100" },
+    { label: "Modification Rejected", value: LeaveRequestStatus.MODIFICATION_REJECTED, style: "bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100" },
+    { label: "Cancellation Reverted", value: "Cancellation Reverted", style: "bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100" },
+    { label: "Cancelled", value: LeaveRequestStatus.CANCELLED, style: "bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100" },
+  ];
+
+  const [requestTypeOptions, setRequestTypeOptions] = useState<
+    { label: string; value: string }[]
+  >([
+    { label: "All Request Types", value: "All" },
+    { label: "Leave", value: "Leave" },
+    { label: "Work From Home", value: "Work From Home" },
+    { label: "Client Visit", value: "Client Visit" },
+    { label: "Half Day Leave", value: "Half Day Leave" },
+  ]);
 
   const months = [
     { label: "January", value: "1" },
@@ -149,7 +262,10 @@ const Requests = () => {
   const currentYear = dayjs().year();
   const years = [
     "All",
-    ...Array.from({ length: 6 }, (_, i) => (currentYear + i).toString()),
+    ...Array.from(
+      { length: 36 },
+      (_, i) => (currentYear - 2 + i).toString()
+    ),
   ];
 
   // const departments = [
@@ -167,6 +283,19 @@ const Requests = () => {
     dispatch(clearRequests());
     dispatch(fetchHolidays());
     dispatch(fetchDepartments());
+    fetchLeaveRequestTypes()
+      .then((types) => {
+        const cleaned = types
+          .map((t) => (t.toLowerCase() === "half day" ? "Half Day Leave" : t))
+          .filter((t, i, arr) => arr.indexOf(t) === i); // unique
+        setRequestTypeOptions([
+          { label: "All Request Types", value: "All" },
+          ...cleaned.map((t) => ({ label: t, value: t })),
+        ]);
+      })
+      .catch(() => {
+        // keep default options
+      });
     return () => {
       dispatch(clearRequests());
     };
@@ -214,10 +343,11 @@ const Requests = () => {
     dispatch(
       getAllLeaveRequests({
         department: selectedDept,
-        status: filterStatus,
         search: debouncedSearchTerm,
         month: selectedMonth,
         year: selectedYear,
+        requestType: selectedRequestType,
+        status: selectedStatus,
         page: currentPage,
         limit: itemsPerPage,
       }),
@@ -225,16 +355,42 @@ const Requests = () => {
   }, [
     dispatch,
     selectedDept,
-    filterStatus,
     debouncedSearchTerm,
     currentPage,
     selectedMonth,
     selectedYear,
+    selectedRequestType,
+    selectedStatus,
   ]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedDept, filterStatus, selectedMonth, selectedYear]);
+  }, [selectedDept, selectedMonth, selectedYear, selectedRequestType, selectedStatus]);
+
+  const handleDownloadExcel = async () => {
+    setIsDownloading(true);
+    try {
+      const blob = await downloadLeaveRequestsExcel({
+        department: selectedDept,
+        search: debouncedSearchTerm,
+        month: selectedMonth,
+        year: selectedYear,
+        requestType: selectedRequestType,
+        status: selectedStatus,
+      });
+      const stamp = dayjs().format("YYYY-MM-DD");
+      saveAs(blob, `Employee_Requests_${stamp}.xlsx`);
+      message.success("Excel downloaded successfully");
+    } catch (error: any) {
+      message.error(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Failed to download Excel",
+      );
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   const filteredRequests = (entities || []).filter((req) => {
     if (!debouncedSearchTerm) return true;
@@ -282,7 +438,7 @@ const Requests = () => {
     return holidays.some((h: any) => {
       const hDate = h.date || h.holidayDate;
       if (!hDate) return false;
-          const normalizedHDate = dayjs(hDate).format("YYYY-MM-DD");
+      const normalizedHDate = dayjs(hDate).format("YYYY-MM-DD");
       return normalizedHDate === dateStr;
     });
   };
@@ -293,7 +449,7 @@ const Requests = () => {
     return dateRangeAttendanceRecords.some((record: any) => {
       const recordDate = record.workingDate || record.working_date;
       if (!recordDate) return false;
-        const normalizedRecordDate = dayjs(recordDate).format("YYYY-MM-DD");
+      const normalizedRecordDate = dayjs(recordDate).format("YYYY-MM-DD");
       // Check if the record has Leave status
       const status = record.status || record.attendance_status;
       return (
@@ -308,13 +464,21 @@ const Requests = () => {
     if (!type) return false;
     const t = type.toLowerCase();
     // Things that are NOT away: Office, Present
-    if (t === "office" || t === "present" || t === (WorkLocation.OFFICE as string).toLowerCase() || t === (WorkLocation.PRESENT as string).toLowerCase()) {
+    if (
+      t === "office" ||
+      t === "present" ||
+      t === (WorkLocation.OFFICE as string).toLowerCase() ||
+      t === (WorkLocation.PRESENT as string).toLowerCase()
+    ) {
       return false;
     }
     return true;
   };
 
-  const getDurationFactor = (h1: string | null | undefined, h2: string | null | undefined): number => {
+  const getDurationFactor = (
+    h1: string | null | undefined,
+    h2: string | null | undefined,
+  ): number => {
     return isAway(h1) && isAway(h2) ? 1.0 : 0.5;
   };
 
@@ -367,7 +531,10 @@ const Requests = () => {
   const getEffectiveDates = (req: any): string[] => {
     if (req.availableDates) {
       try {
-        const ds: string[] = typeof req.availableDates === "string" ? JSON.parse(req.availableDates) : req.availableDates;
+        const ds: string[] =
+          typeof req.availableDates === "string"
+            ? JSON.parse(req.availableDates)
+            : req.availableDates;
         if (Array.isArray(ds)) return ds;
       } catch (e) { }
     }
@@ -390,7 +557,20 @@ const Requests = () => {
             rejectCancellationRequest({ id, employeeId: request.employeeId }),
           ).unwrap();
 
-          message.success("Cancellation Rejected");
+          message.error("Cancellation Request Rejected");
+
+          // Refresh the list to show new statuses
+          dispatch(
+            getAllLeaveRequests({
+              department: selectedDept,
+              search: debouncedSearchTerm,
+              month: selectedMonth,
+              year: selectedYear,
+              requestType: selectedRequestType,
+              page: currentPage,
+              limit: itemsPerPage,
+            }),
+          );
         }
         setConfirmModal({
           isOpen: false,
@@ -426,14 +606,39 @@ const Requests = () => {
       // [REMOVED] Redundant frontend attendance updates.
       // Synchronization is now handled exclusively by the backend in LeaveRequestsService.updateStatus.
 
-      const statusMessages: Record<string, string> = {
-        [LeaveRequestStatus.APPROVED]: "Request Approved",
-        [LeaveRequestStatus.REJECTED]: "Request Rejected",
-        [LeaveRequestStatus.MODIFICATION_APPROVED]: "Modification Approved",
-        [LeaveRequestStatus.MODIFICATION_REJECTED]: "Modification Rejected",
-        [LeaveRequestStatus.CANCELLATION_APPROVED]: "Cancellation Approved",
-        [LeaveRequestStatus.CANCELLATION_REJECTED]: "Cancellation Rejected",
-      };
+      const typeLabel = getRequestTypeLabel({
+        requestType: confirmModal.requestType,
+        firstHalf: confirmModal.firstHalf,
+        secondHalf: confirmModal.secondHalf,
+        isHalfDay: confirmModal.isHalfDay,
+      });
+
+      let bannerMsg = "";
+      let isSuccess = true;
+      const checkStatus = status as any;
+
+      if (checkStatus === LeaveRequestStatus.APPROVED) {
+        bannerMsg = `${typeLabel} Request Approved`;
+        isSuccess = true;
+      } else if (checkStatus === LeaveRequestStatus.REJECTED) {
+        bannerMsg = `${typeLabel} Request Rejected`;
+        isSuccess = false;
+      } else if (checkStatus === LeaveRequestStatus.CANCELLATION_APPROVED) {
+        bannerMsg = "Cancellation Request Approved";
+        isSuccess = true;
+      } else if (checkStatus === LeaveRequestStatus.CANCELLATION_REJECTED) {
+        bannerMsg = "Cancellation Request Rejected";
+        isSuccess = false;
+      } else if (checkStatus === LeaveRequestStatus.MODIFICATION_APPROVED) {
+        bannerMsg = "Modified Request Approved";
+        isSuccess = true;
+      } else if (checkStatus === LeaveRequestStatus.MODIFICATION_REJECTED) {
+        bannerMsg = "Modified Request Rejected";
+        isSuccess = false;
+      } else {
+        bannerMsg = `Request ${status}`;
+        isSuccess = true;
+      }
 
       // 3. SMART OVERLAP HANDLING (Victim Logic)
       if (status === LeaveRequestStatus.APPROVED) {
@@ -492,22 +697,42 @@ const Requests = () => {
                   payload: {
                     fromDate: iStart,
                     toDate: iEnd,
-                    duration: datesNeedingModification.length * (victim.isHalfDay ? getDurationFactor(victim.firstHalf, victim.secondHalf) : 1.0),
-                    firstHalf: victim.isHalfDay ? victim.firstHalf : victim.requestType,
-                    secondHalf: victim.isHalfDay ? victim.secondHalf : victim.requestType,
+                    duration:
+                      datesNeedingModification.length *
+                      (victim.isHalfDay
+                        ? getDurationFactor(victim.firstHalf, victim.secondHalf)
+                        : 1.0),
+                    firstHalf: victim.isHalfDay
+                      ? victim.firstHalf
+                      : victim.requestType,
+                    secondHalf: victim.isHalfDay
+                      ? victim.secondHalf
+                      : victim.requestType,
                     sourceRequestId: id,
                     sourceRequestType: reqType,
                   },
                 }),
               ).unwrap();
 
-              modificationHandledDates = [...new Set([...modificationHandledDates, ...datesNeedingModification])];
+              modificationHandledDates = [
+                ...new Set([
+                  ...modificationHandledDates,
+                  ...datesNeedingModification,
+                ]),
+              ];
             }
 
-            const remainingVictimDates = victimWorkingDates.filter((d) => !intersectionDates.includes(d));
+            const remainingVictimDates = victimWorkingDates.filter(
+              (d) => !intersectionDates.includes(d),
+            );
 
             if (remainingVictimDates.length === 0) {
-              await dispatch(updateLeaveRequestStatus({ id: victim.id, status: LeaveRequestStatus.CANCELLED })).unwrap();
+              await dispatch(
+                updateLeaveRequestStatus({
+                  id: victim.id,
+                  status: LeaveRequestStatus.CANCELLED,
+                }),
+              ).unwrap();
             } else {
               const segments: string[][] = [];
               let currentSegment: string[] = [];
@@ -517,9 +742,14 @@ const Requests = () => {
                 if (currentSegment.length === 0) {
                   currentSegment.push(remainingVictimDates[i]);
                 } else {
-                  const prevDate = dayjs(currentSegment[currentSegment.length - 1]);
+                  const prevDate = dayjs(
+                    currentSegment[currentSegment.length - 1],
+                  );
                   let nextWorkingDay = prevDate.add(1, "day");
-                  while (isWeekend(nextWorkingDay) || isHoliday(nextWorkingDay)) {
+                  while (
+                    isWeekend(nextWorkingDay) ||
+                    isHoliday(nextWorkingDay)
+                  ) {
                     nextWorkingDay = nextWorkingDay.add(1, "day");
                   }
                   if (date.isSame(nextWorkingDay, "day")) {
@@ -536,13 +766,23 @@ const Requests = () => {
                 await dispatch(
                   updateParentRequest({
                     parentId: victim.id,
-                    duration: remainingVictimDates.length * (victim.isHalfDay ? getDurationFactor(victim.firstHalf, victim.secondHalf) : 1.0),
+                    duration:
+                      remainingVictimDates.length *
+                      (victim.isHalfDay
+                        ? getDurationFactor(victim.firstHalf, victim.secondHalf)
+                        : 1.0),
                     fromDate: remainingVictimDates[0],
-                    toDate: remainingVictimDates[remainingVictimDates.length - 1],
+                    toDate:
+                      remainingVictimDates[remainingVictimDates.length - 1],
                   }),
                 ).unwrap();
               } else {
-                await dispatch(updateLeaveRequestStatus({ id: victim.id, status: LeaveRequestStatus.CANCELLED })).unwrap();
+                await dispatch(
+                  updateLeaveRequestStatus({
+                    id: victim.id,
+                    status: LeaveRequestStatus.CANCELLED,
+                  }),
+                ).unwrap();
                 for (const segment of segments) {
                   await dispatch(
                     submitRequestModification({
@@ -550,7 +790,14 @@ const Requests = () => {
                       payload: {
                         fromDate: segment[0],
                         toDate: segment[segment.length - 1],
-                        duration: segment.length * (victim.isHalfDay ? getDurationFactor(victim.firstHalf, victim.secondHalf) : 1.0),
+                        duration:
+                          segment.length *
+                          (victim.isHalfDay
+                            ? getDurationFactor(
+                              victim.firstHalf,
+                              victim.secondHalf,
+                            )
+                            : 1.0),
                         sourceRequestId: id,
                         sourceRequestType: reqType,
                         overrideStatus: LeaveRequestStatus.APPROVED,
@@ -565,25 +812,42 @@ const Requests = () => {
       }
 
       // 4. SMART CANCELLATION LOGIC (Refining Parent Duration)
-      if (status === LeaveRequestStatus.CANCELLATION_APPROVED || status === LeaveRequestStatus.MODIFICATION_APPROVED) {
+      if (
+        status === LeaveRequestStatus.CANCELLATION_APPROVED ||
+        status === LeaveRequestStatus.MODIFICATION_APPROVED
+      ) {
         if (request.requestModifiedFrom) {
           try {
-            const parentId = Number(String(request.requestModifiedFrom).split(":")[0]);
+            const parentId = Number(
+              String(request.requestModifiedFrom).split(":")[0],
+            );
             const parent = entities.find((e: any) => e.id === parentId);
             if (parent) {
               const cancelledDates = getEffectiveDates(request);
               const parentDates = getEffectiveDates(parent);
-              const remainingParentDates = parentDates.filter((d: string) => !cancelledDates.includes(d));
+              const remainingParentDates = parentDates.filter(
+                (d: string) => !cancelledDates.includes(d),
+              );
 
               if (remainingParentDates.length === 0) {
-                await dispatch(updateLeaveRequestStatus({ id: parentId, status: LeaveRequestStatus.CANCELLED })).unwrap();
+                await dispatch(
+                  updateLeaveRequestStatus({
+                    id: parentId,
+                    status: LeaveRequestStatus.CANCELLED,
+                  }),
+                ).unwrap();
               } else {
                 await dispatch(
                   updateParentRequest({
                     parentId,
-                    duration: remainingParentDates.length * (parent.isHalfDay ? getDurationFactor(parent.firstHalf, parent.secondHalf) : 1.0),
+                    duration:
+                      remainingParentDates.length *
+                      (parent.isHalfDay
+                        ? getDurationFactor(parent.firstHalf, parent.secondHalf)
+                        : 1.0),
                     fromDate: remainingParentDates[0],
-                    toDate: remainingParentDates[remainingParentDates.length - 1],
+                    toDate:
+                      remainingParentDates[remainingParentDates.length - 1],
                   }),
                 ).unwrap();
               }
@@ -594,7 +858,11 @@ const Requests = () => {
         }
       }
 
-      message.success(statusMessages[status] || `Request ${status}`);
+      if (isSuccess) {
+        message.success(bannerMsg);
+      } else {
+        message.error(bannerMsg);
+      }
 
       // Close modal
       setConfirmModal({
@@ -608,16 +876,18 @@ const Requests = () => {
       dispatch(
         getAllLeaveRequests({
           department: selectedDept,
-          status: filterStatus,
           search: debouncedSearchTerm,
           month: selectedMonth,
           year: selectedYear,
+          requestType: selectedRequestType,
           page: currentPage,
           limit: itemsPerPage,
         }),
       );
     } catch (err: any) {
-      message.error(`Update Failed: ${err.message || "Failed to update request status"}`);
+      message.error(
+        `Update Failed: ${err.message || "Failed to update request status"}`,
+      );
     } finally {
       setIsProcessing(false);
     }
@@ -664,23 +934,32 @@ const Requests = () => {
     }
   };
 
+  const isRejectionAction =
+    confirmModal.status === LeaveRequestStatus.REJECTED ||
+    confirmModal.status === LeaveRequestStatus.CANCELLATION_REJECTED ||
+    confirmModal.status === LeaveRequestStatus.MODIFICATION_REJECTED;
+
+  const departmentTagClass = (name: string, isSelected: boolean) =>
+    isSelected
+      ? "bg-[#4318FF] text-white border-[#4318FF] shadow-sm"
+      : name === "All"
+        ? "bg-gray-50 text-[#475569] border-gray-200 hover:bg-gray-100"
+        : "bg-[#F4F7FE] text-[#4318FF] border-[#4318FF]/15 hover:bg-[#4318FF]/10";
+
   return (
-    <div className="p-4 md:p-8 bg-[#F4F7FE] min-h-screen font-sans">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#2B3674]">
+    <div className="p-4 md:p-8 bg-[#F4F7FE] font-sans">
+      {/* Header + Search */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div className="shrink-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-[#2B3674]">
             Employee Requests
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Review and manage all employee work-related requests
+          <p className="text-xs sm:text-sm text-gray-500 mt-1">
+            Review, approve, or decline employee attendance and time-off requests.
           </p>
         </div>
-      </div>
 
-      {/* Filters Area */}
-      <div className="flex flex-col gap-4 mb-6">
-        {/* Search Bar Row */}
-        <div className="relative w-full md:w-[400px] group">
+        <div className="relative w-full sm:w-auto sm:min-w-[300px] md:min-w-[360px] lg:min-w-[400px] sm:max-w-[480px] group">
           <Search
             className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#4318FF] transition-colors"
             size={20}
@@ -701,169 +980,239 @@ const Requests = () => {
             </button>
           )}
         </div>
+      </div>
 
+      {/* Filters Area */}
+      <div className="flex flex-col gap-4 mb-6">
         {/* Filters Row */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-end gap-3">
           {/* Department Filter Dropdown */}
           {basePath === "/admin-dashboard" && (
-            <div className="relative">
-              <button
-                onClick={() => setIsDeptOpen(!isDeptOpen)}
-                className={`flex items-center gap-3 px-5 py-3 bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all text-sm font-bold ${selectedDept !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
-              >
-                <Filter
-                  size={18}
-                  className={
-                    selectedDept !== "All" ? "text-[#4318FF]" : "text-gray-400"
-                  }
-                />
-                <span>
-                  {selectedDept === "All" ? "All Departments" : selectedDept}
-                </span>
-                <ChevronDown
-                  size={18}
-                  className={`transition-transform duration-300 ${isDeptOpen ? "rotate-180" : ""}`}
-                />
-              </button>
-
-              {isDeptOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-40"
-                    onClick={() => setIsDeptOpen(false)}
-                  ></div>
-                  <div className="absolute left-0 mt-3 w-56 bg-white rounded-3xl shadow-2xl border border-blue-50 py-3 z-50 overflow-hidden animate-in fade-in zoom-in duration-200 origin-top-left">
-                    <div className="px-5 py-2 mb-1">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-                        Departments
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setSelectedDept("All");
-                        setIsDeptOpen(false);
-                        setCurrentPage(1);
-                      }}
-                      className={`w-full flex items-center px-5 py-2.5 text-sm font-bold transition-all relative ${selectedDept === "All"
-                        ? "text-[#4318FF] bg-blue-50/50"
-                        : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
-                        }`}
-                    >
-                      {selectedDept === "All" && (
-                        <div className="absolute left-0 w-1 h-6 bg-[#4318FF] rounded-r-full"></div>
-                      )}
-                      All Departments
-                    </button>
-                    {departments.map((dept: any) => (
-                      <button
-                        key={dept.id}
-                        onClick={() => {
-                          setSelectedDept(dept.departmentName);
-                          setIsDeptOpen(false);
-                        }}
-                        className={`w-full flex items-center px-5 py-2.5 text-sm font-bold transition-all relative ${selectedDept === dept.departmentName
-                          ? "text-[#4318FF] bg-blue-50/50"
-                          : "text-[#2B3674] hover:bg-gray-50 hover:text-[#4318FF]"
-                          }`}
-                      >
-                        {selectedDept === dept.departmentName && (
-                          <div className="absolute left-0 w-1 h-6 bg-[#4318FF] rounded-r-full"></div>
-                        )}
-                        {dept.departmentName}
-                      </button>
-                    ))}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-bold text-gray-400 pl-1">Department</span>
+              <div className="relative min-w-[240px] sm:min-w-[280px] md:min-w-[320px]">
+                <button
+                  onClick={() => {
+                    setIsDeptOpen(!isDeptOpen);
+                  }}
+                  className={`w-full flex items-center justify-between gap-3 px-5 py-3 bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all text-sm font-bold ${selectedDept !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Filter
+                      size={18}
+                      className={
+                        selectedDept !== "All" ? "text-[#4318FF]" : "text-gray-400"
+                      }
+                    />
+                    <span className="truncate">
+                      {selectedDept === "All" ? "All Departments" : selectedDept}
+                    </span>
                   </div>
-                </>
-              )}
+                  <ChevronDown
+                    size={18}
+                    className={`shrink-0 transition-transform duration-300 ${isDeptOpen ? "rotate-180" : ""}`}
+                  />
+                </button>
+
+                {isDeptOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setIsDeptOpen(false)}
+                    ></div>
+                    <div className="absolute left-0 mt-3 w-full min-w-full bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-gray-100 p-3 z-50 max-h-64 overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="mb-2">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-[#A3AED0]">
+                          Departments
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedDept("All");
+                            setIsDeptOpen(false);
+                            setCurrentPage(1);
+                          }}
+                          className={`w-full flex items-center justify-center px-3 py-2 rounded-full text-xs font-bold border transition-all ${departmentTagClass("All", selectedDept === "All")}`}
+                        >
+                          All Departments
+                        </button>
+                        {departments.map((dept: any) => (
+                          <button
+                            key={dept.id}
+                            onClick={() => {
+                              setSelectedDept(dept.departmentName);
+                              setIsDeptOpen(false);
+                              setCurrentPage(1);
+                            }}
+                            className={`w-full flex items-center justify-center px-3 py-2 rounded-full text-xs font-bold border transition-all text-center ${departmentTagClass(dept.departmentName, selectedDept === dept.departmentName)}`}
+                          >
+                            {dept.departmentName}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           )}
 
-          <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
-            <Select
-              value={selectedMonth}
-              onChange={(val) => setSelectedMonth(val)}
-              className={`w-36 h-12 font-bold text-sm ${selectedMonth !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
-              variant="borderless"
-              dropdownStyle={{ borderRadius: "16px" }}
-              suffixIcon={
-                <ChevronDown
-                  size={18}
-                  className={
-                    selectedMonth !== "All" ? "text-[#4318FF]" : "text-gray-400"
-                  }
-                />
-              }
-            >
-              <Select.Option value="All">All Months</Select.Option>
-              {months.map((m) => (
-                <Select.Option key={m.value} value={m.value}>
-                  {m.label}
-                </Select.Option>
-              ))}
-            </Select>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-bold text-gray-400 pl-1">Months</span>
+            <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
+              <Select
+                value={selectedMonth}
+                onChange={(val) => setSelectedMonth(val)}
+                className={`w-36 h-12 font-bold text-sm ${selectedMonth !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+                variant="borderless"
+                dropdownStyle={{ borderRadius: "16px" }}
+                suffixIcon={
+                  <ChevronDown
+                    size={18}
+                    className={
+                      selectedMonth !== "All" ? "text-[#4318FF]" : "text-gray-400"
+                    }
+                  />
+                }
+              >
+                <Select.Option value="All">All Months</Select.Option>
+                {months.map((m) => (
+                  <Select.Option key={m.value} value={m.value}>
+                    {m.label}
+                  </Select.Option>
+                ))}
+              </Select>
+            </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
-            <Select
-              value={selectedYear}
-              onChange={(val) => setSelectedYear(val)}
-              className={`w-28 h-12 font-bold text-sm ${selectedYear !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
-              variant="borderless"
-              dropdownStyle={{ borderRadius: "16px" }}
-              suffixIcon={
-                <ChevronDown
-                  size={18}
-                  className={
-                    selectedYear !== "All" ? "text-[#4318FF]" : "text-gray-400"
-                  }
-                />
-              }
-            >
-              {years.map((y) => (
-                <Select.Option key={y} value={y}>
-                  {y === "All" ? "All Years" : y}
-                </Select.Option>
-              ))}
-            </Select>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-bold text-gray-400 pl-1">Years</span>
+            <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
+              <Select
+                value={selectedYear}
+                onChange={(val) => setSelectedYear(val)}
+                className={`w-28 h-12 font-bold text-sm ${selectedYear !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+                variant="borderless"
+                dropdownStyle={{ borderRadius: "16px" }}
+                suffixIcon={
+                  <ChevronDown
+                    size={18}
+                    className={
+                      selectedYear !== "All" ? "text-[#4318FF]" : "text-gray-400"
+                    }
+                  />
+                }
+              >
+                {years.map((y) => (
+                  <Select.Option key={y} value={y}>
+                    {y === "All" ? "All Years" : y}
+                  </Select.Option>
+                ))}
+              </Select>
+            </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
-            <Select
-              value={filterStatus}
-              onChange={(val) => setFilterStatus(val)}
-              className={`w-60 h-12 font-bold text-sm ${filterStatus !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
-              variant="borderless"
-              dropdownStyle={{ borderRadius: "16px" }}
-              suffixIcon={
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-bold text-gray-400 pl-1">Request Type</span>
+            <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden min-w-[220px]">
+              <Select
+                value={selectedRequestType}
+                onChange={(val) => setSelectedRequestType(val)}
+                className={`w-56 h-12 font-bold text-sm ${selectedRequestType !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+                variant="borderless"
+                dropdownStyle={{ borderRadius: "16px", minWidth: 280 }}
+                suffixIcon={
+                  <ChevronDown
+                    size={18}
+                    className={
+                      selectedRequestType !== "All" ? "text-[#4318FF]" : "text-gray-400"
+                    }
+                  />
+                }
+              >
+                {requestTypeOptions.map((opt) => (
+                  <Select.Option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </Select.Option>
+                ))}
+              </Select>
+            </div>
+          </div>
+
+          {/* Status Dropdown Filter */}
+          <div className="flex flex-col gap-1.5 relative" ref={statusDropdownRef}>
+            <span className="text-xs font-bold text-gray-400 pl-1">Status</span>
+            <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden min-w-[200px] h-12">
+              <button
+                type="button"
+                onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
+                className={`w-full flex items-center justify-between gap-2 font-bold text-sm ${
+                  selectedStatus !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Filter size={16} className={selectedStatus !== "All" ? "text-[#4318FF]" : "text-gray-400"} />
+                  <span>{selectedStatus === "All" ? "All Status" : selectedStatus}</span>
+                </div>
                 <ChevronDown
                   size={18}
-                  className={
-                    filterStatus !== "All" ? "text-[#4318FF]" : "text-gray-400"
-                  }
+                  className={`transition-transform duration-200 ${
+                    isStatusDropdownOpen ? "rotate-180 text-[#4318FF]" : "text-gray-400"
+                  }`}
                 />
-              }
+              </button>
+            </div>
+
+            {isStatusDropdownOpen && (
+              <div className="absolute top-full left-0 mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-gray-100 p-4 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="mb-3">
+                  <span className="text-[11px] font-black text-gray-400 uppercase tracking-wider">
+                    STATUS
+                  </span>
+                </div>
+                <div className="max-h-72 overflow-y-auto pr-1 flex flex-col gap-2">
+                  {statusOptions.map((opt) => {
+                    const isSelected = selectedStatus === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => {
+                          setSelectedStatus(opt.value);
+                          setIsStatusDropdownOpen(false);
+                          setCurrentPage(1);
+                        }}
+                        className={`w-full py-2 px-4 rounded-full text-sm font-bold border transition-all text-center ${
+                          isSelected
+                            ? "bg-[#4318FF] text-white border-[#4318FF] shadow-md scale-[1.02]"
+                            : opt.style
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-bold text-gray-400 pl-1 opacity-0">Download</span>
+            <button
+              onClick={handleDownloadExcel}
+              disabled={isDownloading}
+              className="flex items-center justify-center gap-2 px-5 h-12 bg-[#107C41] hover:bg-[#0E6C38] text-white rounded-2xl shadow-md border border-[#107C41]/30 transition-all text-sm font-bold whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed active:scale-95"
+              title="Download filtered requests as Excel"
             >
-              {[
-                "All",
-                LeaveRequestStatus.PENDING,
-                LeaveRequestStatus.APPROVED,
-                LeaveRequestStatus.REJECTED,
-                LeaveRequestStatus.REQUESTING_FOR_CANCELLATION,
-                LeaveRequestStatus.CANCELLATION_APPROVED,
-                LeaveRequestStatus.CANCELLATION_REJECTED,
-                LeaveRequestStatus.REQUESTING_FOR_MODIFICATION,
-                LeaveRequestStatus.REQUEST_MODIFIED,
-                LeaveRequestStatus.MODIFICATION_APPROVED,
-                LeaveRequestStatus.MODIFICATION_CANCELLED,
-                LeaveRequestStatus.MODIFICATION_REJECTED,
-                LeaveRequestStatus.CANCELLATION_REVERTED,
-                LeaveRequestStatus.CANCELLED,
-              ].map((status) => (
-                <Select.Option key={status} value={status}>
-                  {status === "All" ? "All Status" : status}
-                </Select.Option>
-              ))}
-            </Select>
+              {isDownloading ? (
+                <Loader2 size={18} className="animate-spin text-white" />
+              ) : (
+                <Download size={18} className="text-white" />
+              )}
+              <span>{isDownloading ? "Downloading..." : "Download Excel"}</span>
+            </button>
           </div>
 
           {/* Clear Filters Button */}
@@ -871,17 +1220,19 @@ const Requests = () => {
             selectedDept !== "All" ||
             selectedMonth !== "All" ||
             selectedYear !== "All" ||
-            filterStatus !== "All") && (
+            selectedRequestType !== "All" ||
+            selectedStatus !== "All") && (
               <button
                 onClick={() => {
                   setSearchTerm("");
                   setSelectedDept("All");
                   setSelectedMonth("All");
                   setSelectedYear("All");
-                  setFilterStatus("All");
+                  setSelectedRequestType("All");
+                  setSelectedStatus("All");
                   setCurrentPage(1);
                 }}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#5B4FFF] text-white rounded-full hover:bg-[#4318FF] active:scale-95 transition-all text-sm font-bold border border-[#4318FF]/50 whitespace-nowrap"
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#5B4FFF] text-white rounded-full hover:bg-[#4318FF] active:scale-95 transition-all text-sm font-bold border border-[#4318FF]/50 whitespace-nowrap self-end mb-0.5"
                 title="Clear all filters"
               >
                 <X size={16} />
@@ -897,7 +1248,7 @@ const Requests = () => {
           <table className="w-full min-w-[900px] border-separate border-spacing-0">
             <thead>
               <tr className="bg-[#4318FF] text-white">
-                <th className="py-4 pl-10 pr-4 text-[13px] font-bold uppercase tracking-wider text-left whitespace-nowrap">
+                <th className="py-4 pl-6 pr-4 text-[13px] font-bold uppercase tracking-wider text-left whitespace-nowrap min-w-[200px]">
                   Employee
                 </th>
                 <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
@@ -915,10 +1266,10 @@ const Requests = () => {
                 <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
                   Submitted Date
                 </th>
-                <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap sticky right-[120px] w-[160px] min-w-[160px] bg-[#4318FF] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)]">
+                <th className="px-3 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap sticky right-[140px] w-[260px] min-w-[260px] max-w-[260px] bg-[#4318FF] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)]">
                   Status
                 </th>
-                <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap sticky right-0 w-[120px] min-w-[120px] bg-[#4318FF] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)]">
+                <th className="px-3 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap sticky right-0 w-[140px] min-w-[140px] max-w-[140px] bg-[#4318FF] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)]">
                   Actions
                 </th>
               </tr>
@@ -948,19 +1299,21 @@ const Requests = () => {
               ) : (
                 [...filteredRequests]
                   .sort((a: any, b: any) => {
-                    const timeA = Math.max(
-                      a.created_at ? new Date(a.created_at).getTime() : 0,
-                      a.updated_at ? new Date(a.updated_at).getTime() : 0,
-                      a.createdAt ? new Date(a.createdAt).getTime() : 0,
-                      a.updatedAt ? new Date(a.updatedAt).getTime() : 0,
-                    );
-                    const timeB = Math.max(
-                      b.created_at ? new Date(b.created_at).getTime() : 0,
-                      b.updated_at ? new Date(b.updated_at).getTime() : 0,
-                      b.createdAt ? new Date(b.createdAt).getTime() : 0,
-                      b.updatedAt ? new Date(b.updatedAt).getTime() : 0,
-                    );
-                    if (timeA === 0 && timeB === 0) {
+                    const timeA = a.submittedDate
+                      ? new Date(a.submittedDate).getTime()
+                      : a.createdAt
+                        ? new Date(a.createdAt).getTime()
+                        : a.created_at
+                          ? new Date(a.created_at).getTime()
+                          : 0;
+                    const timeB = b.submittedDate
+                      ? new Date(b.submittedDate).getTime()
+                      : b.createdAt
+                        ? new Date(b.createdAt).getTime()
+                        : b.created_at
+                          ? new Date(b.created_at).getTime()
+                          : 0;
+                    if (timeA === timeB) {
                       return (b.id || 0) - (a.id || 0);
                     }
                     return timeB - timeA;
@@ -971,7 +1324,7 @@ const Requests = () => {
                       className={`group transition-all duration-200 ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"
                         } hover:bg-gray-100`}
                     >
-                      <td className="py-4 pl-10 pr-4">
+                      <td className="py-3 pl-6 pr-4 align-middle">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-[#4318FF] font-bold text-xs ring-2 ring-blue-50">
                             {req.fullName ? (
@@ -985,7 +1338,25 @@ const Requests = () => {
                               {req.fullName || "Unknown"}
                             </p>
                             <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">
-                              {req.employeeId}
+                              {(() => {
+                                const internId = (req as any).internId;
+                                const convDate = (req as any).conversionDate
+                                  ? dayjs((req as any).conversionDate)
+                                  : null;
+                                const leaveDate = req.fromDate
+                                  ? dayjs(req.fromDate)
+                                  : null;
+                                if (
+                                  internId &&
+                                  convDate &&
+                                  convDate.isValid() &&
+                                  leaveDate &&
+                                  leaveDate.isBefore(convDate, "day")
+                                ) {
+                                  return internId;
+                                }
+                                return req.employeeId;
+                              })()}
                             </p>
                           </div>
                         </div>
@@ -1060,66 +1431,7 @@ const Requests = () => {
                             })()}
                           </div>
                           <span className="text-sm font-semibold text-[#2B3674] flex items-center gap-2">
-                            {(() => {
-                              // Show combined activities for split-day requests
-                              if (
-                                req.isHalfDay &&
-                                req.firstHalf &&
-                                req.secondHalf
-                              ) {
-                                const activities = [
-                                  req.firstHalf,
-                                  req.secondHalf,
-                                ]
-                                  .map((a) =>
-                                    a === LeaveRequestType.APPLY_LEAVE
-                                      ? LeaveRequestType.LEAVE
-                                      : a,
-                                  )
-                                  .filter((a) => a && a !== WorkLocation.OFFICE)
-                                  .filter(
-                                    (value, index, self) =>
-                                      self.indexOf(value) === index,
-                                  );
-
-                                if (activities.length > 1) {
-                                  // Replace "Leave" with "Half Day Leave" in combined activities
-                                  return activities
-                                    .map((a) =>
-                                      a === LeaveRequestType.LEAVE
-                                        ? "Half Day Leave"
-                                        : a,
-                                    )
-                                    .join(" + ");
-                                }
-                                if (activities.length === 1) {
-                                  // For single activity that is "Leave", show "Half Day Leave"
-                                  return activities[0] ===
-                                    LeaveRequestType.LEAVE
-                                    ? "Half Day Leave"
-                                    : activities[0];
-                                }
-                              }
-
-                              // Default display
-                              if (
-                                req.requestType ===
-                                LeaveRequestType.APPLY_LEAVE ||
-                                req.requestType === LeaveRequestType.LEAVE
-                              ) {
-                                return req.isHalfDay
-                                  ? "Half Day Leave"
-                                  : LeaveRequestType.LEAVE;
-                              }
-                              if (req.requestType === AttendanceStatus.HALF_DAY)
-                                return "Half Day Leave";
-                              return req.requestType;
-                            })()}
-                            {req.isModified && (
-                              <span className="bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter shadow-sm border border-orange-200">
-                                Modified
-                              </span>
-                            )}
+                            {getRequestTypeLabel(req)}
                           </span>
                         </div>
                       </td>
@@ -1144,38 +1456,16 @@ const Requests = () => {
                               req.firstHalf &&
                               req.secondHalf
                             ) {
-                              const first =
-                                req.firstHalf === LeaveRequestType.APPLY_LEAVE
-                                  ? LeaveRequestType.LEAVE
-                                  : req.firstHalf;
-                              const second =
-                                req.secondHalf === LeaveRequestType.APPLY_LEAVE
-                                  ? LeaveRequestType.LEAVE
-                                  : req.secondHalf;
+                              const first = normalizeTypeName(req.firstHalf);
+                              const second = normalizeTypeName(req.secondHalf);
 
-                              if (
-                                first === second &&
-                                first !== WorkLocation.OFFICE
-                              ) {
+                              // Both halves same type → Full Day
+                              if (first === second) {
                                 return AttendanceStatus.FULL_DAY;
                               }
 
-                              // Filter out Office
-                              const validActivities = [first, second].filter(
-                                (a) => a && a !== WorkLocation.OFFICE,
-                              );
-                              if (validActivities.length === 0) {
-                                return WorkLocation.OFFICE;
-                              }
-
-                              const parts = [];
-                              if (first && first !== WorkLocation.OFFICE)
-                                parts.push(`First Half = ${first}`);
-                              if (second && second !== WorkLocation.OFFICE)
-                                parts.push(`Second Half = ${second}`);
-
-                              if (parts.length > 0) return parts.join(" & ");
-                              return AttendanceStatus.FULL_DAY;
+                              // Build "First Half = X & Second Half = Y"
+                              return `First Half = ${first} & Second Half = ${second}`;
                             }
                             return AttendanceStatus.FULL_DAY;
                           })()}
@@ -1204,7 +1494,7 @@ const Requests = () => {
                             : "N/A"}
                       </td>
                       <td
-                        className={`py-4 px-4 text-center sticky right-[120px] w-[160px] min-w-[160px] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}
+                        className={`py-4 px-3 text-center sticky right-[140px] w-[260px] min-w-[260px] max-w-[260px] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}
                       >
                         <span
                           className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase border tracking-wider transition-all inline-flex items-center gap-1.5 whitespace-nowrap ${getStatusColor(req.status)}`}
@@ -1223,17 +1513,23 @@ const Requests = () => {
                               <span className="opacity-70 border-l border-orange-300 pl-1.5 ml-1 text-[9px] font-bold">
                                 MODIFIED FROM:{" "}
                                 {(() => {
-                                  const displayPart = req.requestModifiedFrom.includes(":") ? req.requestModifiedFrom.split(":")[1] : req.requestModifiedFrom;
-                                  return displayPart === LeaveRequestType.APPLY_LEAVE ? "LEAVE" : displayPart.toUpperCase();
+                                  const displayPart =
+                                    req.requestModifiedFrom.includes(":")
+                                      ? req.requestModifiedFrom.split(":")[1]
+                                      : req.requestModifiedFrom;
+                                  return displayPart ===
+                                    LeaveRequestType.APPLY_LEAVE
+                                    ? "LEAVE"
+                                    : displayPart.toUpperCase();
                                 })()}
                               </span>
                             )}
                         </span>
                       </td>
                       <td
-                        className={`py-4 px-4 sticky right-0 w-[120px] min-w-[120px] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}
+                        className={`py-4 px-3 sticky right-0 w-[140px] min-w-[140px] max-w-[140px] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}
                       >
-                        <div className="flex items-center justify-center gap-3">
+                        <div className="flex items-center justify-center gap-2">
                           <button
                             onClick={async () => {
                               try {
@@ -1264,61 +1560,73 @@ const Requests = () => {
                                 setCcEmails(parsedCc);
 
                                 if (req.employeeId) {
-                                  dispatch(getLeaveRequestEmailConfig(req.employeeId))
+                                  dispatch(
+                                    getLeaveRequestEmailConfig(req.employeeId),
+                                  )
                                     .unwrap()
                                     .then((config) => {
                                       setEmailConfig({
-                                        assignedManagerEmail: config?.assignedManagerEmail ?? null,
+                                        assignedManagerEmail:
+                                          config?.assignedManagerEmail ?? null,
                                         hrEmail: config?.hrEmail ?? null,
                                       });
                                     })
                                     .catch(() => {
-                                      setEmailConfig({ assignedManagerEmail: null, hrEmail: null });
+                                      setEmailConfig({
+                                        assignedManagerEmail: null,
+                                        hrEmail: null,
+                                      });
                                     });
                                 }
 
                                 setSelectedRequest(data);
                                 setIsViewModalOpen(true);
                               } catch (err) {
-                                message.error("Failed to fetch request details");
+                                message.error(
+                                  "Failed to fetch request details",
+                                );
                               }
                             }}
-                            className="p-2 text-blue-600 bg-blue-50/50 hover:bg-blue-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-blue-200 active:scale-90"
+                            className="p-1.5 text-blue-600 bg-blue-50/50 hover:bg-blue-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-blue-200 active:scale-90"
                             title="View Details"
                           >
-                            <Eye size={20} />
+                            <Eye size={18} />
                           </button>
-                          {!isReceptionist && req.status === LeaveRequestStatus.PENDING && (
-                            <>
-                              <button
-                                onClick={() =>
-                                  handleUpdateStatus(
-                                    req.id,
-                                    LeaveRequestStatus.APPROVED,
-                                    req.fullName || "Employee",
-                                  )
-                                }
-                                className="p-2 text-green-600 bg-green-50/50 hover:bg-green-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-green-200 active:scale-90"
-                                title="Approve"
-                              >
-                                <CheckCircle size={20} />
-                              </button>
-                              <button
-                                onClick={() =>
-                                  handleUpdateStatus(
-                                    req.id,
-                                    LeaveRequestStatus.REJECTED,
-                                    req.fullName || "Employee",
-                                  )
-                                }
-                                className="p-2 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
-                                title="Reject"
-                              >
-                                <XCircle size={20} />
-                              </button>
-                            </>
-                          )}
-                          {!isReceptionist && req.status ===
+                          {!isReceptionist &&
+                            req.status === LeaveRequestStatus.PENDING && (
+                              <>
+                                <button
+                                  onClick={() =>
+                                    handleUpdateStatus(
+                                      req.id,
+                                      LeaveRequestStatus.APPROVED,
+                                      req.fullName || "Employee",
+                                      req,
+                                    )
+                                  }
+                                  className="p-1.5 text-green-600 bg-green-50/50 hover:bg-green-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-green-200 active:scale-90"
+                                  title="Approve"
+                                >
+                                  <CheckCircle size={18} />
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    handleUpdateStatus(
+                                      req.id,
+                                      LeaveRequestStatus.REJECTED,
+                                      req.fullName || "Employee",
+                                      req,
+                                    )
+                                  }
+                                  className="p-1.5 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
+                                  title="Reject"
+                                >
+                                  <XCircle size={18} />
+                                </button>
+                              </>
+                            )}
+                          {!isReceptionist &&
+                            req.status ===
                             LeaveRequestStatus.REQUESTING_FOR_CANCELLATION && (
                               <>
                                 <button
@@ -1327,12 +1635,13 @@ const Requests = () => {
                                       req.id,
                                       LeaveRequestStatus.CANCELLATION_APPROVED,
                                       req.fullName || "Employee",
+                                      req,
                                     )
                                   }
-                                  className="p-2 text-green-600 bg-green-50/50 hover:bg-green-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-green-200 active:scale-90"
+                                  className="p-1.5 text-green-600 bg-green-50/50 hover:bg-green-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-green-200 active:scale-90"
                                   title="Approve Cancellation"
                                 >
-                                  <CheckCircle size={20} />
+                                  <CheckCircle size={18} />
                                 </button>
                                 <button
                                   onClick={() =>
@@ -1340,16 +1649,18 @@ const Requests = () => {
                                       req.id,
                                       LeaveRequestStatus.CANCELLATION_REJECTED,
                                       req.fullName || "Employee",
+                                      req,
                                     )
                                   }
-                                  className="p-2 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
+                                  className="p-1.5 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
                                   title="Reject Cancellation"
                                 >
-                                  <XCircle size={20} />
+                                  <XCircle size={18} />
                                 </button>
                               </>
                             )}
-                          {!isReceptionist && req.status ===
+                          {!isReceptionist &&
+                            req.status ===
                             LeaveRequestStatus.REQUESTING_FOR_MODIFICATION && (
                               <>
                                 <button
@@ -1358,12 +1669,13 @@ const Requests = () => {
                                       req.id,
                                       LeaveRequestStatus.MODIFICATION_APPROVED,
                                       req.fullName || "Employee",
+                                      req,
                                     )
                                   }
-                                  className="p-2 text-green-600 bg-green-50/50 hover:bg-green-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-green-200 active:scale-90"
+                                  className="p-1.5 text-green-600 bg-green-50/50 hover:bg-green-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-green-200 active:scale-90"
                                   title="Approve Modification"
                                 >
-                                  <CheckCircle size={20} />
+                                  <CheckCircle size={18} />
                                 </button>
                                 <button
                                   onClick={() =>
@@ -1371,12 +1683,13 @@ const Requests = () => {
                                       req.id,
                                       LeaveRequestStatus.MODIFICATION_REJECTED,
                                       req.fullName || "Employee",
+                                      req,
                                     )
                                   }
-                                  className="p-2 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
+                                  className="p-1.5 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
                                   title="Reject Modification"
                                 >
-                                  <XCircle size={20} />
+                                  <XCircle size={18} />
                                 </button>
                               </>
                             )}
@@ -1393,7 +1706,9 @@ const Requests = () => {
         <div className="flex justify-center items-center py-2 bg-gray-50/30 border-t border-gray-100">
           <div className="flex items-center gap-2 text-[#A3AED0] opacity-80">
             <ArrowRightLeft size={14} className="animate-pulse" />
-            <span className="text-[10px] font-black uppercase tracking-widest">Scroll table horizontally to view all columns</span>
+            <span className="text-[10px] font-black uppercase tracking-widest">
+              Scroll table horizontally to view all columns
+            </span>
           </div>
         </div>
 
@@ -1455,77 +1770,61 @@ const Requests = () => {
           <div className="relative w-full max-w-md bg-white rounded-[24px] overflow-hidden shadow-[0px_20px_40px_rgba(0,0,0,0.1)] animate-in fade-in zoom-in duration-200 transform">
             <div className="p-8 text-center">
               <div
-                className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-6 ${confirmModal.status === LeaveRequestStatus.APPROVED &&
-                  entities.find((e) => e.id === confirmModal.id)?.status ===
-                  LeaveRequestStatus.REQUESTING_FOR_CANCELLATION
-                  ? "bg-red-50 text-red-500" // Rejecting Cancellation
-                  : confirmModal.status === LeaveRequestStatus.APPROVED ||
-                    confirmModal.status ===
-                    LeaveRequestStatus.CANCELLATION_APPROVED
-                    ? "bg-green-50 text-green-500"
-                    : "bg-red-50 text-red-500"
+                className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-6 ${isRejectionAction
+                    ? "bg-red-50 text-red-500"
+                    : "bg-green-50 text-green-500"
                   }`}
               >
-                {confirmModal.status === LeaveRequestStatus.APPROVED ||
-                  confirmModal.status ===
-                  LeaveRequestStatus.CANCELLATION_APPROVED ? (
-                  <CheckCircle size={32} strokeWidth={2.5} />
-                ) : (
+                {isRejectionAction ? (
                   <XCircle size={32} strokeWidth={2.5} />
+                ) : (
+                  <CheckCircle size={32} strokeWidth={2.5} />
                 )}
               </div>
 
-              <h3 className="text-2xl font-black text-[#2B3674] mb-2">
-                {confirmModal.status === LeaveRequestStatus.APPROVED
-                  ? entities.find((e) => e.id === confirmModal.id)?.status ===
-                    LeaveRequestStatus.REQUESTING_FOR_CANCELLATION
-                    ? "Reject Request?"
-                    : "Approve Request?"
-                  : confirmModal.status === LeaveRequestStatus.REJECTED ||
-                    confirmModal.status === LeaveRequestStatus.CANCELLATION_REJECTED
-                    ? "Reject Request?"
-                    : "Approve Request?"}
-              </h3>
-
-              <p className="text-gray-500 font-medium leading-relaxed mb-8">
-                Are you sure you want to{" "}
-                <span
-                  className={`font-bold ${confirmModal.status === LeaveRequestStatus.APPROVED &&
-                    entities.find((e) => e.id === confirmModal.id)?.status ===
-                    LeaveRequestStatus.REQUESTING_FOR_CANCELLATION
-                    ? "text-red-600"
-                    : confirmModal.status === LeaveRequestStatus.APPROVED ||
-                      confirmModal.status ===
-                      LeaveRequestStatus.CANCELLATION_APPROVED
-                      ? "text-green-600"
-                      : "text-red-600"
-                    }`}
-                >
-                  {confirmModal.status === LeaveRequestStatus.APPROVED
-                    ? entities.find((e) => e.id === confirmModal.id)?.status ===
-                      LeaveRequestStatus.REQUESTING_FOR_CANCELLATION
-                      ? "Reject"
-                      : "Approve"
-                    : confirmModal.status === LeaveRequestStatus.REJECTED ||
-                      confirmModal.status === LeaveRequestStatus.CANCELLATION_REJECTED
-                      ? "Reject"
-                      : "Approve"}
-                </span>{" "}
-                this request for{" "}
-                <span className="text-[#2B3674] font-bold">
-                  {confirmModal.employeeName}
-                </span>
-                ?
-                {confirmModal.status === LeaveRequestStatus.APPROVED &&
-                  " This will automatically update attendance records."}
-                {confirmModal.status ===
-                  LeaveRequestStatus.CANCELLATION_APPROVED &&
-                  " This will revert any associated attendance records."}
-                {confirmModal.status === LeaveRequestStatus.APPROVED && // This handles the case where we are rejecting the cancellation (reverting locally to Approved)
-                  entities.find((e) => e.id === confirmModal.id)?.status ===
-                  LeaveRequestStatus.REQUESTING_FOR_CANCELLATION &&
-                  " This will reject the cancellation request and keep the request as Approved."}
-              </p>
+              {(() => {
+                const typeLabel = getRequestTypeLabel({
+                  requestType: confirmModal.requestType,
+                  firstHalf: confirmModal.firstHalf,
+                  secondHalf: confirmModal.secondHalf,
+                  isHalfDay: confirmModal.isHalfDay,
+                });
+                const hasType = typeLabel.length > 0;
+                const action = isRejectionAction ? "Reject" : "Approve";
+                const title = hasType
+                  ? `${action} ${typeLabel}?`
+                  : `${action} Request`;
+                const bodyTypePhrase = hasType
+                  ? `the ${typeLabel} request`
+                  : "this request";
+                return (
+                  <>
+                    <h3 className="text-2xl font-black text-[#2B3674] mb-2">
+                      {title}
+                    </h3>
+                    <p className="text-gray-500 font-medium leading-relaxed mb-8">
+                      Are you sure you want to{" "}
+                      <span
+                        className={`font-bold ${isRejectionAction ? "text-red-600" : "text-green-600"
+                          }`}
+                      >
+                        {isRejectionAction ? "reject" : "approve"}
+                      </span>{" "}
+                      {bodyTypePhrase} for{" "}
+                      <span className="text-[#2B3674] font-bold">
+                        {confirmModal.employeeName}
+                      </span>
+                      ?{" "}
+                      {isRejectionAction ? (
+                        confirmModal.status === LeaveRequestStatus.CANCELLATION_REJECTED &&
+                        "This will reject the cancellation request and keep the request as Approved."
+                      ) : (
+                        "This will automatically update attendance records."
+                      )}
+                    </p>
+                  </>
+                );
+              })()}
 
               <div className="flex gap-4">
                 <button
@@ -1541,19 +1840,11 @@ const Requests = () => {
                   onClick={executeStatusUpdate}
                   disabled={isProcessing}
                   className={`flex-1 py-3.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${isProcessing
-                    ? "opacity-70 cursor-not-allowed"
-                    : "transform active:scale-95"
-                    } ${confirmModal.status === LeaveRequestStatus.APPROVED &&
-                      entities.find((e) => e.id === confirmModal.id)?.status ===
-                      LeaveRequestStatus.REQUESTING_FOR_CANCELLATION
+                      ? "opacity-70 cursor-not-allowed"
+                      : "transform active:scale-95"
+                    } ${isRejectionAction
                       ? "bg-red-500 hover:bg-red-600 shadow-red-200 active:scale-95"
-                      : confirmModal.status === LeaveRequestStatus.APPROVED ||
-                        confirmModal.status ===
-                        LeaveRequestStatus.CANCELLATION_APPROVED ||
-                        confirmModal.status ===
-                        LeaveRequestStatus.MODIFICATION_APPROVED
-                        ? "bg-green-500 hover:bg-green-600 shadow-green-200 active:scale-95"
-                        : "bg-red-500 hover:bg-red-600 shadow-red-200 active:scale-95"
+                      : "bg-green-500 hover:bg-green-600 shadow-green-200 active:scale-95"
                     }`}
                 >
                   {isProcessing ? (
@@ -1563,20 +1854,7 @@ const Requests = () => {
                     </>
                   ) : (
                     <>
-                      {confirmModal.status === LeaveRequestStatus.APPROVED ||
-                        confirmModal.status ===
-                        LeaveRequestStatus.MODIFICATION_APPROVED
-                        ? entities.find((e) => e.id === confirmModal.id)
-                          ?.status ===
-                          LeaveRequestStatus.REQUESTING_FOR_CANCELLATION
-                          ? "Confirm Reject" // Special text for this specific case
-                          : "Confirm Approve"
-                        : confirmModal.status === LeaveRequestStatus.REJECTED ||
-                          confirmModal.status === LeaveRequestStatus.CANCELLATION_REJECTED ||
-                          confirmModal.status ===
-                          LeaveRequestStatus.MODIFICATION_REJECTED
-                          ? "Confirm Reject"
-                          : "Confirm Approve"}
+                      {isRejectionAction ? "Yes, Reject" : "Confirm Approval"}
                     </>
                   )}
                 </button>
@@ -1592,14 +1870,15 @@ const Requests = () => {
         footer={null}
         closable={false}
         centered
-        width={1092}
+        width={720}
+        style={{ maxWidth: "95vw" }}
         className="application-modal"
       >
-        <div className="relative overflow-hidden bg-white rounded-[16px]">
+        <div className="relative flex flex-col bg-white rounded-[16px] max-h-[85vh]">
           {/* Modal Header */}
-          <div className="pt-6 px-8 pb-4 shrink-0">
-            <div className="flex justify-between items-start">
-              <h2 className="text-[32px] font-black text-[#1B2559] leading-tight">
+          <div className="pt-5 px-6 pb-3 shrink-0 border-b border-gray-100">
+            <div className="flex justify-between items-center">
+              <h2 className="text-[26px] font-black text-[#1B2559] leading-tight">
                 {selectedRequest &&
                   (selectedRequest.requestType === LeaveRequestType.APPLY_LEAVE
                     ? AttendanceStatus.LEAVE
@@ -1610,19 +1889,18 @@ const Requests = () => {
               <button
                 onClick={() => setIsViewModalOpen(false)}
                 className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
-                style={{ marginTop: '-8px', marginRight: '-8px' }}
               >
-                <X size={24} className="text-[#8F9BBA]" />
+                <X size={22} className="text-[#8F9BBA]" />
               </button>
             </div>
           </div>
 
           {/* Modal Body */}
-          <div className="px-8 pb-8 pt-2 space-y-6 overflow-y-auto custom-scrollbar max-h-[90vh]">
+          <div className="px-6 pb-6 pt-4 space-y-5 overflow-y-auto custom-scrollbar flex-1 min-h-0">
             {selectedRequest && (
               <>
                 {/* Email recipients - in card */}
-                <div className="rounded-[20px] border border-[#E0E7FF] bg-white p-6 shadow-[0px_18px_40px_rgba(112,144,176,0.12)]">
+                <div className="rounded-[20px] border border-[#E0E7FF] bg-white p-6">
                   <div className="space-y-4">
                     <label className="text-sm font-bold text-[#1B2559] block">
                       Email recipients
@@ -1686,19 +1964,19 @@ const Requests = () => {
                 </div>
 
                 {/* Dates & Duration Row */}
-                <div className="flex items-end justify-between gap-6">
-                  <div className="flex gap-4 flex-1">
-                    <div className="flex-1 space-y-2">
+                <div className="flex flex-wrap items-end justify-between gap-4">
+                  <div className="flex flex-wrap gap-4 flex-1 min-w-0">
+                    <div className="flex-1 min-w-[130px] space-y-2">
                       <label className="text-base font-bold text-[#1B2559] ml-1">
-                        Start Date
+                        From
                       </label>
                       <div className="w-full px-5 py-4 rounded-[20px] bg-[#F4F7FE] font-bold text-[#1B2559] text-center">
                         {dayjs(selectedRequest.fromDate).format("DD-MM-YYYY")}
                       </div>
                     </div>
-                    <div className="flex-1 space-y-2">
+                    <div className="flex-1 min-w-[130px] space-y-2">
                       <label className="text-base font-bold text-[#1B2559] ml-1">
-                        End Date
+                        To
                       </label>
                       <div className="w-full px-5 py-4 rounded-[20px] bg-[#F4F7FE] font-bold text-[#1B2559] text-center">
                         {dayjs(selectedRequest.toDate).format("DD-MM-YYYY")}
@@ -1707,11 +1985,15 @@ const Requests = () => {
                   </div>
 
                   <div className="flex items-center gap-4 mb-3">
-                    <span className="text-sm font-bold text-[#1B2559] whitespace-nowrap">Total Days:</span>
-                    <div className="bg-white px-6 py-3 rounded-[16px] shadow-[0px_10px_20px_rgba(0,0,0,0.05)] border border-[#E0E7FF] min-w-[100px] text-center">
+                    <span className="text-sm font-bold text-[#1B2559] whitespace-nowrap">
+                      Duration:
+                    </span>
+                    <div className="bg-white px-6 py-3 rounded-[16px] border border-[#E0E7FF] min-w-[100px] text-center">
                       <span className="text-[#4318FF] font-black">
                         {(() => {
-                          const dur = parseFloat(String(selectedRequest.duration));
+                          const dur = parseFloat(
+                            String(selectedRequest.duration),
+                          );
                           return !isNaN(dur) ? dur : 0;
                         })()}{" "}
                         Day(s)
@@ -1719,7 +2001,6 @@ const Requests = () => {
                     </div>
                   </div>
                 </div>
-
 
                 {/* Split-Day Information (View Mode Only) */}
                 {!!selectedRequest?.isHalfDay &&
@@ -1780,8 +2061,6 @@ const Requests = () => {
 
                 {/* Supporting Documents (Gallery View) */}
                 <div className="space-y-3">
-
-
                   <label className="text-base font-bold text-[#1B2559] ml-1">
                     Supporting Documents
                   </label>

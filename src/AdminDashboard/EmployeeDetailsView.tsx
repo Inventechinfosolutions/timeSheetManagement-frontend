@@ -9,6 +9,7 @@ import {
   updateEntity,
   clearErrorMessage,
 } from "../reducers/employeeDetails.reducer";
+import { authMe } from "../reducers/user.reducer";
 import {
   User,
   Users,
@@ -226,6 +227,20 @@ const EmployeeDetailsView = () => {
       return;
     }
 
+    // Validate that if employment type is modified, employee ID and designation must be modified too
+    if (employee && editedData.employmentType !== employee.employmentType) {
+      const originalEmployeeId = String(employee.employeeId || employee.id || "");
+      if (
+        editedData.employeeId === originalEmployeeId ||
+        editedData.designation === (employee.designation || "")
+      ) {
+        setValidationError(
+          "When changing the Employment Type, you must also update the Employee ID and the Designation."
+        );
+        return;
+      }
+    }
+
     setShowConfirm(true);
   };
 
@@ -252,6 +267,10 @@ const EmployeeDetailsView = () => {
         // Refresh the entity with current employee ID
         dispatch(getEntity(employeeId!));
       }
+
+      // Refresh the logged-in user's Redux state so that aliasLoginName
+      // (used in the header / avatar) reflects the updated name immediately.
+      dispatch(authMe());
 
       // Hide success message after 3 seconds
       setTimeout(() => {
@@ -353,7 +372,7 @@ const EmployeeDetailsView = () => {
       </div>
 
       {/* Top Card - User Header with Gradient */}
-      <div className="relative overflow-hidden rounded-2xl md:rounded-[24px] shadow-[0px_20px_50px_0px_#111c440d] border border-gray-100">
+      <div className="relative overflow-hidden rounded-2xl md:rounded-[24px] shadow-[0px_10px_30px_0px_rgba(17,28,68,0.04)] border border-gray-100">
         {/* Gradient Background */}
         <div
           className="absolute inset-0 opacity-100"
@@ -412,7 +431,7 @@ const EmployeeDetailsView = () => {
       </div>
 
       {/* Personal Information Card */}
-      <div className="bg-white rounded-2xl md:rounded-[24px] p-5 sm:p-6 md:p-8 shadow-[0px_20px_50px_0px_#111c440d] border border-gray-100 mb-4 md:mb-8">
+      <div className="bg-white rounded-2xl md:rounded-[24px] p-5 sm:p-6 md:p-8 shadow-[0px_10px_30px_0px_rgba(17,28,68,0.04)] border border-gray-100 mb-6 md:mb-8">
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#667eea] to-[#764ba2] flex items-center justify-center shadow-lg shadow-purple-200">
@@ -620,8 +639,8 @@ const EmployeeDetailsView = () => {
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
               Employment Type <span className="text-red-500">*</span>
             </label>
-            <div className="relative group">
-              {isEditing ? (
+            <div className="relative group" title={isEditing && employee?.employmentType === "FULL_TIMER" ? "Employment type cannot be changed for full-time employees" : undefined}>
+              {isEditing && employee?.employmentType !== "FULL_TIMER" ? (
                 <select
                   value={editedData.employmentType}
                   onChange={(e) => {
@@ -648,7 +667,7 @@ const EmployeeDetailsView = () => {
                         ? "Intern"
                         : ""
                   }
-                  className="w-full pl-11 pr-4 py-2.5 border-2 border-gray-100 rounded-xl bg-gray-50/50 text-[#1B2559] text-sm font-semibold transition-all"
+                  className={`w-full pl-11 pr-4 py-2.5 border-2 border-gray-100 rounded-xl bg-gray-50/50 text-[#1B2559] text-sm font-semibold transition-all ${isEditing && employee?.employmentType === "FULL_TIMER" ? "cursor-not-allowed" : ""}`}
                 />
               )}
               <div className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-purple-50 flex items-center justify-center">
@@ -871,7 +890,7 @@ const EmployeeDetailsView = () => {
 
                   <button
                     type="submit"
-                    className="w-full py-3 mt-2 bg-gradient-to-r from-[#4318FF] to-[#868CFF] text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all active:scale-95"
+                    className="w-full py-3 mt-2 bg-[#4318FF] text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all active:scale-95"
                   >
                     Update Password
                   </button>

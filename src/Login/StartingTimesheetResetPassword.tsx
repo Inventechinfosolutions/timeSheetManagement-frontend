@@ -22,7 +22,7 @@ import {
   logoutUser,
 } from "../reducers/user.reducer";
 import { AppDispatch, RootState } from "../store";
-import inventLogo from "../assets/invent-logo.svg";
+import worksphereLogo from "../assets/worksphere_white.svg";
 
 const TimesheetResetPassword: React.FC = () => {
   const navigate = useNavigate();
@@ -186,8 +186,8 @@ const TimesheetResetPassword: React.FC = () => {
       <div className="w-full max-w-[540px] bg-white rounded-[18px] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-500 relative z-10 p-8 md:p-12">
         <div className="mb-8 text-center">
           <img
-            src={inventLogo}
-            alt="Invent Logo"
+            src={worksphereLogo}
+            alt="WorkSphere Logo"
             className="h-14 mx-auto mb-6"
           />
           <h1 className="text-3xl font-black text-[#2D3748] mb-2 tracking-tight">

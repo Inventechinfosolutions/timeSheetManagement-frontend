@@ -16,25 +16,8 @@ import {
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { AttendanceStatus, UserType } from "../enums";
-import {
-  fetchMonthlyAttendance,
-  fetchDashboardStats,
-  fetchAttendanceByDateRange,
-  autoUpdateTimesheet,
-  fetchWorkTrendsDetailed,
-} from "../reducers/employeeAttendance.reducer";
+import { fetchEmployeeDashboard } from "../reducers/employeeAttendance.reducer";
 import { getEntity, setCurrentUser } from "../reducers/employeeDetails.reducer";
-import {
-  fetchEmployeeUpdates,
-  fetchUnreadNotifications,
-} from "../reducers/leaveNotification.reducer";
-import { fetchNotifications } from "../reducers/notification.reducer";
-import {
-  getAllLeaveRequests,
-  getLeaveBalance,
-  getMonthlyLeaveBalance,
-  getLeaveStats,
-} from "../reducers/leaveRequest.reducer";
 import { generateMonthlyEntries } from "../utils/attendanceUtils";
 import AttendanceViewWrapper from "./CalenderViewWrapper";
 import AttendancePieChart from "./AttendancePieChart";
@@ -70,8 +53,6 @@ const TodayAttendance = ({
     (state: RootState) => state.masterHolidays,
   );
 
-  // Leave Balance State
-  // Leave Balance State
   const {
     leaveBalance,
     monthlyLeaveBalance,
@@ -91,54 +72,32 @@ const TodayAttendance = ({
       currentUser?.employeeId ||
       currentUser?.loginId;
 
-  // Debug log for manager dashboard data issue
-  useEffect(() => {
-    if (isMyRoute) {
-      console.log("My Route Debug:", {
-        pathname: location.pathname,
-        "currentUser.loginId": currentUser?.loginId,
-        "currentUser.employeeId": currentUser?.employeeId,
-        currentEmployeeId,
-      });
-    }
-  }, [location.pathname, currentUser, currentEmployeeId, isMyRoute]);
-
   const detailsFetched = useRef(false);
+  const dashboardFetchedKey = useRef<string | null>(null);
+  const prevEmployeeId = useRef<string | undefined>();
 
   const [now] = useState(() => new Date());
   const [calendarDate, setCalendarDate] = useState(new Date());
-  const selectedYear = calendarDate.getFullYear();
 
 
-  const fetchAttendanceData = useCallback(
+  const fetchDashboardData = useCallback(
     (date: Date) => {
       if (!currentEmployeeId || currentEmployeeId === "Admin") return;
 
+      const month = (date.getMonth() + 1).toString().padStart(2, "0");
+      const year = date.getFullYear().toString();
+      const fetchKey = `${currentEmployeeId}-${month}-${year}`;
+
+      if (dashboardFetchedKey.current === fetchKey) return;
+      dashboardFetchedKey.current = fetchKey;
+
       dispatch(
-        fetchMonthlyAttendance({
+        fetchEmployeeDashboard({
           employeeId: currentEmployeeId,
-          month: (date.getMonth() + 1).toString().padStart(2, "0"),
-          year: date.getFullYear().toString(),
+          month,
+          year,
         }),
       );
-
-      // Trigger auto-update dry-run only for current or past months (not future)
-      const today = new Date();
-      const isFutureMonth =
-        date.getFullYear() > today.getFullYear() ||
-        (date.getFullYear() === today.getFullYear() &&
-          date.getMonth() > today.getMonth());
-
-      if (!isFutureMonth) {
-        dispatch(
-          autoUpdateTimesheet({
-            employeeId: currentEmployeeId,
-            month: (date.getMonth() + 1).toString().padStart(2, "0"),
-            year: date.getFullYear().toString(),
-            dryRun: true,
-          }),
-        );
-      }
     },
     [dispatch, currentEmployeeId],
   );
@@ -177,78 +136,15 @@ const TodayAttendance = ({
     }
   }, [dispatch, entity, currentEmployeeId, currentUser, viewOnly]);
 
-  // Refresh updates whenever dashboard is accessed
   useEffect(() => {
     if (currentEmployeeId && currentEmployeeId !== "Admin") {
-      dispatch(fetchEmployeeUpdates(currentEmployeeId));
-      dispatch(fetchNotifications(currentEmployeeId));
-      dispatch(fetchUnreadNotifications());
-      dispatch(fetchDashboardStats({ employeeId: currentEmployeeId }));
-      dispatch(
-        fetchDashboardStats({
-          employeeId: currentEmployeeId,
-          month: (calendarDate.getMonth() + 1).toString().padStart(2, "0"),
-          year: calendarDate.getFullYear().toString(),
-        }),
-      );
-
-      // Leave Balance Refresh
-      dispatch(
-        getLeaveBalance({ employeeId: currentEmployeeId, year: selectedYear }),
-      );
-      dispatch(
-        getLeaveStats({
-          employeeId: currentEmployeeId,
-          year: String(selectedYear),
-        }),
-      );
-      dispatch(
-        getMonthlyLeaveBalance({
-          employeeId: currentEmployeeId,
-          month: calendarDate.getMonth() + 1,
-          year: selectedYear,
-        }),
-      );
-      dispatch(
-        getAllLeaveRequests({
-          employeeId: currentEmployeeId,
-          year: String(selectedYear),
-          limit: 500,
-        }),
-      );
-
-      // Fetch Annual Attendance for Stats
-      const startOfYear = `${selectedYear}-01-01`;
-      const endOfYear = `${selectedYear}-12-31`;
-      dispatch(
-        fetchAttendanceByDateRange({
-          employeeId: currentEmployeeId,
-          startDate: startOfYear,
-          endDate: endOfYear,
-        }),
-      );
-
-      // Fetch Trends for Stats Cards accuracy
-      const lastDayOfMonth = new Date(
-        selectedYear,
-        calendarDate.getMonth() + 1,
-        0,
-      );
-      const endDateStr = dayjs(lastDayOfMonth).format("YYYY-MM-DD");
-      const startDateStr = dayjs(calendarDate).startOf("month").format("YYYY-MM-DD");
-
-      dispatch(
-        fetchWorkTrendsDetailed({
-          employeeId: currentEmployeeId,
-          endDate: endDateStr,
-          startDate: startDateStr,
-        }),
-      );
-
-      // Centralized Attendance Fetch for the selected month
-      fetchAttendanceData(calendarDate);
+      if (prevEmployeeId.current !== currentEmployeeId) {
+        dashboardFetchedKey.current = null;
+        prevEmployeeId.current = currentEmployeeId;
+      }
+      fetchDashboardData(calendarDate);
     }
-  }, [dispatch, currentEmployeeId, calendarDate, selectedYear, fetchAttendanceData]);
+  }, [currentEmployeeId, calendarDate, fetchDashboardData]);
 
   // Leave Balance Logic
   const isIntern = useMemo(() => {
@@ -261,10 +157,39 @@ const TodayAttendance = ({
     return designation.includes("intern") || employmentType === "INTERN";
   }, [entity?.designation, entity?.designation_name, entity?.employmentType]);
 
-  // Whether we are viewing the current real-time month
-  const isViewingCurrentMonth =
-    calendarDate.getMonth() === now.getMonth() &&
-    calendarDate.getFullYear() === now.getFullYear();
+  const showInternDataBanner = useMemo(() => {
+    if (!entity?.internId || !entity?.conversionDate) return false;
+
+    const convDate = dayjs(entity.conversionDate);
+    if (!convDate.isValid()) return false;
+
+    const selectedDate = dayjs(calendarDate);
+    const convYear = convDate.year();
+    const convMonth = convDate.month() + 1;
+    const selectedYear = selectedDate.year();
+    const selectedMonth = selectedDate.month() + 1;
+
+    if (selectedYear < convYear) return true;
+    if (selectedYear === convYear && selectedMonth < convMonth) return true;
+
+    return false;
+  }, [entity, calendarDate]);
+
+  const showConversionBanner = useMemo(() => {
+    if (!entity?.conversionDate) return false;
+
+    const convDate = dayjs(entity.conversionDate);
+    if (!convDate.isValid()) return false;
+
+    const selectedDate = dayjs(calendarDate);
+    const convYear = convDate.year();
+    const convMonth = convDate.month() + 1;
+    const selectedYear = selectedDate.year();
+    const selectedMonth = selectedDate.month() + 1;
+
+    return selectedYear === convYear && selectedMonth === convMonth;
+  }, [entity, calendarDate]);
+
 
   // 1. Separate "Today's" Data - ALWAYS based on current real-time Month
   const todayStatsEntry = useMemo(() => {
@@ -411,56 +336,84 @@ const TodayAttendance = ({
     );
 
   return (
-    <div className="flex flex-col h-full w-full overflow-hidden bg-gray-50/50">
+    <div className="flex flex-col h-full w-full overflow-hidden bg-[#F4F7FE]">
       {/* Header */}
       {!viewOnly && (
-        <div className="px-6 py-5 bg-linear-to-r from-blue-100 via-blue-50 to-white border-b border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-[#1B2559]">
-              {currentUser?.userType === UserType.MANAGER
-                ? "Manager Dashboard"
-                : "Employee Dashboard"}
-            </h1>
-            <p className="text-sm text-gray-500 font-medium mt-1">
-              Welcome back,{" "}
-              {(isMyRoute
-                ? currentUser?.aliasLoginName || currentUser?.loginId
-                : null) ||
-                entity?.firstName ||
-                entity?.fullName ||
-                currentUser?.aliasLoginName ||
-                "Employee"}
-            </p>
-          </div>
+        <div className="px-4 md:px-8 pt-4 md:pt-6 pb-2">
+          <div className="bg-white rounded-2xl p-4 md:p-5 shadow-[0px_8px_24px_rgba(112,144,176,0.1)] border border-gray-100/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-xl md:text-2xl font-bold text-[#2B3674]">
+                {currentUser?.userType === UserType.MANAGER
+                  ? "Manager Dashboard"
+                  : "Employee Dashboard"}
+              </h1>
+              <p className="text-sm text-gray-500 mt-1">
+                Welcome back,{" "}
+                <span className="font-semibold text-[#4318FF]">
+                  {(isMyRoute
+                    ? currentUser?.aliasLoginName || currentUser?.loginId
+                    : null) ||
+                    entity?.firstName ||
+                    entity?.fullName ||
+                    currentUser?.aliasLoginName ||
+                    "Employee"}
+                </span>
+              </p>
+            </div>
 
-          <div className="flex items-center gap-3">
-            <div className="px-4 py-2 bg-[#F4F7FE] rounded-lg text-sm font-bold text-[#2B3674]">
-              {displayEntry.fullDate.toLocaleDateString("en-US", {
-                weekday: "long",
-                month: "long",
-                day: "numeric",
-              })}
+            <div className="flex items-center gap-2 px-4 py-2 bg-[#F4F7FE] rounded-xl border border-[#4318FF]/10">
+              <CalendarIcon size={16} className="text-[#4318FF] shrink-0" />
+              <span className="text-sm font-bold text-[#2B3674]">
+                {displayEntry.fullDate.toLocaleDateString("en-US", {
+                  weekday: "long",
+                  month: "long",
+                  day: "numeric",
+                })}
+              </span>
             </div>
           </div>
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 md:px-8 pb-6 space-y-5 custom-scrollbar">
         {/* Month Selector Section */}
-        <div className="flex justify-center md:justify-end mb-2">
-          <div className="inline-flex items-center bg-white rounded-full px-6 py-2 shadow-sm border border-gray-100/50 gap-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+          {/* Historical Intern / Congratulations Alert Badge */}
+          <div className="flex-1 min-w-[200px] flex items-center justify-start">
+            {showInternDataBanner && (
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-blue-50/70 border border-blue-200/50 backdrop-blur-md rounded-full text-blue-800 shadow-xs transition-all duration-300 mr-3">
+                <span className="text-xs font-extrabold uppercase tracking-wider text-blue-600">Intern Period</span>
+                <span className="h-3.5 w-px bg-blue-200"></span>
+                <p className="text-sm font-semibold text-blue-900/90 leading-tight">
+                  Showing Internship details of <strong className="font-bold">{entity?.fullName || "Employee"}</strong>. Internship successfully completed on <strong className="font-bold">{entity?.conversionDate ? dayjs(entity.conversionDate).format("MMM D, YYYY") : "N/A"}</strong>.
+                </p>
+              </div>
+            )}
+
+            {showConversionBanner && (
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-green-50/70 border border-green-200/50 backdrop-blur-md rounded-full text-green-800 shadow-xs transition-all duration-300 whitespace-nowrap mr-3">
+                <span className="text-xs font-extrabold uppercase tracking-wider text-green-600 animate-pulse">Congratulations!</span>
+                <span className="h-3.5 w-px bg-green-200"></span>
+                <p className="text-sm font-semibold text-green-900/90 leading-tight whitespace-nowrap">
+                  🎉 Congratulations, <strong className="font-bold">{entity?.fullName || "Employee"}</strong>, on your transition to a Full-Time role!
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="inline-flex items-center bg-white rounded-full px-3 py-1 shadow-sm border border-gray-100/50 gap-2 self-end">
             <button
               onClick={() => {
                 const prev = new Date(calendarDate);
                 prev.setMonth(prev.getMonth() - 1);
                 setCalendarDate(prev);
               }}
-              className="p-1.5 hover:bg-gray-50 rounded-full transition-colors text-[#4318FF] hover:scale-110 active:scale-95"
+              className="p-1 hover:bg-gray-50 rounded-full transition-colors text-[#4318FF] hover:scale-110 active:scale-95"
             >
-              <ChevronLeft size={20} strokeWidth={2.5} />
+              <ChevronLeft size={16} strokeWidth={2.5} />
             </button>
 
-            <span className="text-[#1B2559] font-bold min-w-[140px] text-center text-sm md:text-base selection:bg-none tracking-tight">
+            <span className="text-[#1B2559] font-bold min-w-[90px] text-center text-xs md:text-sm selection:bg-none tracking-tight">
               {calendarDate.toLocaleString("default", {
                 month: "long",
                 year: "numeric",
@@ -473,9 +426,9 @@ const TodayAttendance = ({
                 next.setMonth(next.getMonth() + 1);
                 setCalendarDate(next);
               }}
-              className="p-1.5 hover:bg-gray-50 rounded-full transition-colors text-[#4318FF] hover:scale-110 active:scale-95"
+              className="p-1 hover:bg-gray-50 rounded-full transition-colors text-[#4318FF] hover:scale-110 active:scale-95"
             >
-              <ChevronRight size={20} strokeWidth={2.5} />
+              <ChevronRight size={16} strokeWidth={2.5} />
             </button>
           </div>
         </div>
@@ -488,6 +441,7 @@ const TodayAttendance = ({
           attendanceRecords={yearlyRecords}
           isIntern={isIntern}
           joiningDate={entity?.joiningDate || (currentUser as any)?.joiningDate}
+          conversionDate={entity?.conversionDate || (currentUser as any)?.conversionDate}
           trends={trends}
           monthlyLeaveBalance={monthlyLeaveBalance}
           loading={leaveLoading}
@@ -513,25 +467,28 @@ const TodayAttendance = ({
           <div className="flex justify-center">
             <button
               onClick={() => handleNavigate(now.getTime())}
-              className="px-8 py-3 rounded-xl text-white font-bold bg-linear-to-r from-[#868CFF] to-[#4318FF] shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all flex items-center gap-2 transform active:scale-95"
+              className="px-8 py-3 rounded-xl text-white font-bold bg-[#4318FF] shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all flex items-center gap-2 transform active:scale-95"
             >
               <Edit size={18} />
-              <span>Update Today's Attendance</span>
+              <span>Log Today's Hours</span>
             </button>
           </div>
         )}
 
         {/* Bottom Section: Calendar/List */}
-        <div className="bg-white rounded-xl shadow-[0px_10px_30px_rgba(0,0,0,0.02)] border border-gray-100/50 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-            <h3 className="text-lg font-bold text-[#1B2559]">
-              Attendance List
-            </h3>
-            <div className="flex gap-2">
-              <div className="text-xs px-3 py-1 bg-gray-50 rounded-full text-gray-500 border border-gray-100">
-                All Statuses
-              </div>
+        <div className="bg-white rounded-2xl shadow-[0px_8px_24px_rgba(112,144,176,0.1)] border border-gray-100/80 overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div>
+              <h3 className="text-base font-bold text-[#2B3674]">
+                Attendance List
+              </h3>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Monthly attendance records
+              </p>
             </div>
+            <span className="text-xs px-3 py-1.5 bg-[#F4F7FE] rounded-full text-[#4318FF] font-bold border border-[#4318FF]/15">
+              All Statuses
+            </span>
           </div>
           <div className="p-4">
             <AttendanceViewWrapper
@@ -540,12 +497,14 @@ const TodayAttendance = ({
               entries={currentMonthEntries as any}
               onMonthChange={(date) => {
                 setCalendarDate(date);
-                fetchAttendanceData(date);
+                dashboardFetchedKey.current = null;
+                fetchDashboardData(date);
               }}
               onNavigateToDate={(timestamp) => {
                 handleNavigate(timestamp);
               }}
               hideMonthNavigation={true}
+              hideBackButton={true}
             />
           </div>
         </div>

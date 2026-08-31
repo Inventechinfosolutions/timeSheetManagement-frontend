@@ -224,7 +224,7 @@ const DailyStatus = () => {
 
   const styles = {
     container:
-      "p-4 md:p-8 bg-[#F4F7FE] min-h-screen font-['DM_Sans',sans-serif]",
+      "p-4 md:p-8 bg-[#F4F7FE] font-['DM_Sans',sans-serif]",
     tableWrapper:
       "bg-white rounded-[20px] p-0 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] overflow-hidden border border-gray-100",
     th: "py-4 px-4 text-[13px] font-bold uppercase tracking-wider",
@@ -355,7 +355,7 @@ const DailyStatus = () => {
 
         <button
           onClick={() => setIsExportModalOpen(true)}
-          className="w-full lg:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-[#4318FF] to-[#868CFF] text-white rounded-xl text-[11px] font-black shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 tracking-widest uppercase group flex-shrink-0"
+          className="w-full lg:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-[#4318FF] text-white rounded-xl text-[11px] font-black shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 tracking-widest uppercase group flex-shrink-0"
         >
           <Download size={16} className="group-hover:animate-bounce" />
           <span>Export Data</span>
@@ -761,7 +761,7 @@ const DailyStatus = () => {
                       <button
                         onClick={handleBulkExport}
                         disabled={isExporting}
-                        className="flex items-center gap-4 px-10 py-4 bg-gradient-to-r from-[#4318FF] to-[#868CFF] text-white rounded-[16px] font-black text-[11px] shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:-translate-y-1 active:scale-95 transition-all disabled:opacity-70 flex-shrink-0 tracking-widest uppercase"
+                        className="flex items-center gap-4 px-10 py-4 bg-[#4318FF] text-white rounded-[16px] font-black text-[11px] shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:-translate-y-1 active:scale-95 transition-all disabled:opacity-70 flex-shrink-0 tracking-widest uppercase"
                       >
                         <span>
                           {isExporting ? "GENERATING..." : "DOWNLOAD PDF"}

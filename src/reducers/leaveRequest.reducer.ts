@@ -1,6 +1,7 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
 import { LeaveRequestStatus } from "../enums";
+import { fetchEmployeeDashboard } from "./employeeAttendance.reducer";
 
 const apiUrl = "/api/leave-requests";
 
@@ -106,6 +107,7 @@ export const getAllLeaveRequests = createAsyncThunk(
       search?: string;
       month?: string;
       year?: string;
+      requestType?: string;
       page?: number;
       limit?: number
     } = {},
@@ -119,6 +121,9 @@ export const getAllLeaveRequests = createAsyncThunk(
       if (filters.search) params.append("search", filters.search);
       if (filters.month) params.append("month", filters.month);
       if (filters.year) params.append("year", filters.year);
+      if (filters.requestType && filters.requestType !== "All") {
+        params.append("requestType", filters.requestType);
+      }
       if (filters.page) params.append("page", filters.page.toString());
       if (filters.limit) params.append("limit", filters.limit.toString());
       params.append("_t", new Date().getTime().toString()); // Cache buster
@@ -130,6 +135,40 @@ export const getAllLeaveRequests = createAsyncThunk(
     }
   }
 );
+
+export const downloadLeaveRequestsExcel = async (filters: {
+  employeeId?: string;
+  department?: string;
+  status?: string;
+  search?: string;
+  month?: string;
+  year?: string;
+  requestType?: string;
+} = {}) => {
+  const params: Record<string, string> = {};
+  if (filters.employeeId) params.employeeId = filters.employeeId;
+  if (filters.department && filters.department !== "All") {
+    params.department = filters.department;
+  }
+  if (filters.status && filters.status !== "All") params.status = filters.status;
+  if (filters.search) params.search = filters.search;
+  if (filters.month) params.month = filters.month;
+  if (filters.year) params.year = filters.year;
+  if (filters.requestType && filters.requestType !== "All") {
+    params.requestType = filters.requestType;
+  }
+
+  const response = await axios.get(`${apiUrl}/download-excel`, {
+    params,
+    responseType: "blob",
+  });
+  return response.data;
+};
+
+export const fetchLeaveRequestTypes = async (): Promise<string[]> => {
+  const response = await axios.get(`${apiUrl}/request-types`);
+  return Array.isArray(response.data) ? response.data : [];
+};
 
 // Keep these as aliases for backward compatibility, pointing to the unified method or its logic
 export const getLeaveHistory = getAllLeaveRequests;
@@ -550,8 +589,23 @@ const leaveRequestSlice = createSlice({
     });
 
     // Get Leave Balance
+    builder.addCase(getLeaveBalance.fulfilled, (state, action) => {
+      state.leaveBalance = action.payload;
+    });
     builder.addCase(getLeaveBalance.rejected, (state) => {
       state.leaveBalance = null;
+    });
+
+    builder.addCase(fetchEmployeeDashboard.pending, (state) => {
+      state.loading = true;
+    });
+    builder.addCase(fetchEmployeeDashboard.fulfilled, (state, action) => {
+      state.loading = false;
+      state.leaveBalance = action.payload.leaveBalance;
+      state.monthlyLeaveBalance = action.payload.monthlyLeaveBalance;
+    });
+    builder.addCase(fetchEmployeeDashboard.rejected, (state) => {
+      state.loading = false;
     });
 
     // Get Monthly Leave Balance
@@ -602,6 +656,15 @@ const leaveRequestSlice = createSlice({
     // Cancel Approved Request
     builder.addCase(cancelApprovedLeaveRequest.fulfilled, (state, action) => {
       const updatedItem = action.payload;
+      const index = state.entities.findIndex((item) => item.id === updatedItem.id);
+      if (index !== -1) {
+        state.entities[index].status = updatedItem.status;
+      }
+    });
+
+    // Reject Cancellation Request
+    builder.addCase(rejectCancellationRequest.fulfilled, (state, action) => {
+      const updatedItem = action.payload.request || action.payload;
       const index = state.entities.findIndex((item) => item.id === updatedItem.id);
       if (index !== -1) {
         state.entities[index].status = updatedItem.status;
