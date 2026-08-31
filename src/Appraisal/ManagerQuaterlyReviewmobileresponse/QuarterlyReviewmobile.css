@@ -1,0 +1,944 @@
+/**
+ * FONT CONTROL — single source of truth
+ * ----------------------------------------------------------------
+ * Everything below is scoped under ".quarterly-review-mobile-view",
+ * which is already the wrapper class on the outer <div> in the TSX
+ * file — no JSX changes needed. Two things are controlled from
+ * exactly one place:
+ *
+ * 1) FONT FAMILY -> the `font-family` rule right below, on
+ *    ".quarterly-review-mobile-view, .quarterly-review-mobile-view *"
+ * 2) FONT SIZE   -> the `--mrb-scale` CSS variable declared on
+ *    ".quarterly-review-mobile-view"
+ *
+ * This file already uses a deliberate type scale (page title, stat
+ * labels/values, card fields, table text, badges, etc.) tuned
+ * specifically for phone widths — see the comments elsewhere in this
+ * file about text-[9px]-style tight fits. Rather than flattening that
+ * hierarchy, every existing font-size below has been re-expressed as
+ * `calc(base-px * var(--mrb-scale))`, so changing ONE number
+ * (--mrb-scale) scales all of it up or down together, while
+ * preserving the relative hierarchy and the mobile-specific fits.
+ *
+ * To resize everything:   change --mrb-scale (e.g. 1.1 = 10% bigger)
+ * To change the typeface: edit the font-family stack below
+ *
+ * TEXT COLOR — single source of truth (NEW)
+ * ----------------------------------------------------------------
+ * All plain/informational text (page title, subtitle, stat labels &
+ * values, filter heading, inactive filter tab, submission title/
+ * subtitle, card field values, empty-state copy, table text)
+ * now shares ONE color: var(--mrb-text-color), defined below as
+ * #0f172a. To change it, edit that one variable.
+ *
+ * Card field LABELS (EMPLOYEE ID / QUARTER / FINAL RATING / LAST
+ * MODIFIED on the mobile card) are intentionally a separate, lighter
+ * grey (#64748b) so they read as secondary/metadata next to the
+ * darker values — see .mobile-card-field-label below.
+ *
+ * Left OUT of this unification on purpose, because they carry
+ * meaning rather than just displaying information:
+ *   - Status badges (Reviewed / green, Under Review / purple,
+ *     Pending / amber)
+ *   - Star rating value (amber)
+ *   - The ACTIVE filter tab (indigo) — distinguishes it from the
+ *     inactive tabs, which ARE unified
+ *   - Buttons (Evaluate Now / View Review) and avatar initials —
+ *     brand color, not body copy
+ *   - Icon colors inside the stat cards / calendar icon
+ *   - "—" empty-value placeholders (table empty cell, empty rating)
+ *     — kept muted so they still read as "no data" rather than a
+ *     real value
+ */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+.quarterly-review-mobile-view,
+.quarterly-review-mobile-view * {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+}
+
+/* NEW: antd renders Select/DatePicker dropdowns and tooltips into a
+   portal appended to document.body, OUTSIDE this component's DOM tree
+   — so the scoped ".quarterly-review-mobile-view *" rule above never
+   reaches them and they were falling back to antd's default font,
+   looking visually inconsistent with the rest of the page. Applying
+   Inter to these portal classes directly fixes that. */
+.ant-select-dropdown,
+.ant-select-dropdown *,
+.ant-picker-dropdown,
+.ant-picker-dropdown *,
+.ant-tooltip,
+.ant-tooltip *,
+.ant-message,
+.ant-message * {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+}
+
+.quarterly-review-mobile-view {
+  --mrb-scale: 1; /* <-- change this ONE value to resize all text in the mobile view */
+  --mrb-text-color: #0f172a; /* <-- change this ONE value to recolor all unified body text */
+}
+
+.quarterly-review-mobile-view {
+  width: 100%;
+  min-height: 100vh;
+  background-color: #f8fafc;
+  padding: 0.75rem 0.75rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.quarterly-review-mobile-view .mobile-page-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.quarterly-review-mobile-view .mobile-page-header-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.quarterly-review-mobile-view .mobile-page-header-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.quarterly-review-mobile-view .mobile-page-header-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.quarterly-review-mobile-view .mobile-page-title {
+  font-size: calc(20px * var(--mrb-scale)) !important;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+  font-weight: 800 !important;
+  color: var(--mrb-text-color) !important;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+/* Title + description column. min-width: 0 lets the description shrink
+   and wrap correctly inside the flex layout instead of overflowing. */
+.quarterly-review-mobile-view .mobile-title-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.quarterly-review-mobile-view .mobile-page-subtitle {
+  font-size: calc(12px * var(--mrb-scale)) !important;
+  line-height: 1.4;
+  color: var(--mrb-text-color);
+  margin: 0;
+}
+
+.quarterly-review-mobile-view .mobile-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+/* Restyled to match the flat, uniform-border card look (icon square +
+   label + value, no colored left accent bar) requested for all 4 stat
+   cards — design only, no markup/logic changes. */
+.quarterly-review-mobile-view .mobile-stat-card {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.875rem;
+  padding: 0.625rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.quarterly-review-mobile-view .mobile-stat-icon-wrap {
+  padding: 0.625rem;
+  border-radius: 0.875rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.quarterly-review-mobile-view .mobile-stat-icon-wrap.indigo {
+  background-color: #eef2ff;
+}
+
+.quarterly-review-mobile-view .mobile-stat-icon-wrap.amber {
+  background-color: #fffbeb;
+}
+
+.quarterly-review-mobile-view .mobile-stat-icon-wrap.blue {
+  background-color: #eff6ff;
+}
+
+.quarterly-review-mobile-view .mobile-stat-icon-wrap.emerald {
+  background-color: #ecfdf5;
+}
+
+.quarterly-review-mobile-view .mobile-filter-bar {
+  background-color: #ffffff;
+  border: 1px solid #f1f5f9;
+  border-radius: 0.875rem;
+  padding: 0.75rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+/* NEW: subheading shown above the "All Reviews" filter tabs, inside the
+   filter bar card. */
+.quarterly-review-mobile-view .mobile-filter-heading {
+  font-size: calc(16px * var(--mrb-scale)) !important;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+  font-weight: 800 !important;
+  color: var(--mrb-text-color) !important;
+  letter-spacing: -0.01em;
+  margin: 0 0 0.125rem;
+}
+
+.quarterly-review-mobile-view .mobile-stat-content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.quarterly-review-mobile-view .mobile-stat-label {
+  font-size: calc(10px * var(--mrb-scale)) !important;
+  font-weight: 700;
+  color: var(--mrb-text-color);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+}
+
+.quarterly-review-mobile-view .mobile-stat-value {
+  font-size: calc(16px * var(--mrb-scale)) !important;
+  font-weight: 800;
+  color: var(--mrb-text-color);
+  margin-top: 0.125rem;
+}
+
+.quarterly-review-mobile-view .mobile-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+/* NEW: sizing for the stat-card icons (this class was referenced in the
+   TSX but had no rule, so icons were rendering unstyled/oversized).
+   Colors tie each icon to its wrap's accent, matching the reference
+   design. */
+.quarterly-review-mobile-view .mobile-stat-icon {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.quarterly-review-mobile-view .mobile-stat-icon-wrap.indigo .mobile-stat-icon {
+  color: #4f46e5;
+}
+
+.quarterly-review-mobile-view .mobile-stat-icon-wrap.amber .mobile-stat-icon {
+  color: #f59e0b;
+}
+
+.quarterly-review-mobile-view .mobile-stat-icon-wrap.blue .mobile-stat-icon {
+  color: #3b82f6;
+}
+
+.quarterly-review-mobile-view .mobile-stat-icon-wrap.emerald .mobile-stat-icon {
+  color: #10b981;
+}
+
+.quarterly-review-mobile-view .mobile-search-icon {
+  width: 1rem;
+  height: 1rem;
+  color: #94a3b8;
+}
+
+/* Financial Year select. Full width, same visual language (rounded,
+   neutral border) as the search input and quarter select. */
+.quarterly-review-mobile-view .mobile-year-select-full {
+  width: 100%;
+}
+
+.quarterly-review-mobile-view .mobile-year-select-full .ant-select-selector {
+  border-radius: 0.75rem;
+  border-color: #e2e8f0;
+  box-shadow: none;
+  height: 2.25rem !important;
+  display: flex;
+  align-items: center;
+}
+
+.quarterly-review-mobile-view .mobile-year-select-full .ant-select-selection-item {
+  line-height: 2.25rem !important;
+  font-size: calc(14px * var(--mrb-scale)) !important;
+  color: var(--mrb-text-color) !important;
+}
+
+/* NEW: calendar icon inside the Financial Year select's suffix. Sized
+   and colored to match the rest of the filter bar's icon language. */
+.quarterly-review-mobile-view .mobile-select-calendar-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  color: #4f46e5;
+}
+
+/* Filter tabs (All Reviews / Pending / In Review / Completed).
+   justify-content: center added so that if the tab row's total width is
+   narrower than the card (or it needs to shrink to fit), the group sits
+   centered instead of left-anchored with slack drifting to the right —
+   this was the "shifted right" look on iPhone SE (375px). */
+.quarterly-review-mobile-view .mobile-filter-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  overflow-x: auto;
+  background-color: #f1f5f9;
+  border-radius: 0.875rem;
+  padding: 0.25rem;
+}
+
+.quarterly-review-mobile-view .mobile-filter-tab {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0.4rem 0.75rem;
+  border-radius: 0.75rem;
+  font-size: calc(11px * var(--mrb-scale)) !important;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  background-color: transparent;
+  color: var(--mrb-text-color); /* inactive tab — unified; .active below keeps its indigo */
+  border: none;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.quarterly-review-mobile-view .mobile-filter-tab.active {
+  background-color: #ffffff;
+  color: #4338ca;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+}
+
+/* NEW: on very narrow phones (iPhone SE = 375px) the 4 tabs with their
+   default padding/font don't all fit on one line, which pushes the row
+   into horizontal overflow and reads as shifted right. Tighten just for
+   this breakpoint so all 4 labels fit without overflow. */
+@media (max-width: 380px) {
+  .quarterly-review-mobile-view .mobile-filter-tabs {
+    gap: 0.25rem;
+  }
+
+  .quarterly-review-mobile-view .mobile-filter-tab {
+    padding: 0.3rem 0.4rem;
+    font-size: calc(9.5px * var(--mrb-scale)) !important;
+  }
+
+  .quarterly-review-mobile-view .mobile-page-title {
+    font-size: calc(17px * var(--mrb-scale)) !important;
+  }
+}
+
+.quarterly-review-mobile-view .mobile-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  width: 100%;
+}
+
+.quarterly-review-mobile-view .mobile-input .ant-input,
+.quarterly-review-mobile-view .mobile-select .ant-select-selector {
+  border-radius: 0.75rem;
+  border-color: #e2e8f0;
+  box-shadow: none;
+  color: var(--mrb-text-color);
+}
+
+.quarterly-review-mobile-view .mobile-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.quarterly-review-mobile-view .mobile-table-shell {
+  display: none;
+}
+
+/* Pagination control below the mobile/tablet card list. Kept compact
+   ("simple" antd mode: "< 1 / 2 >") rather than the full page-number
+   bar, since a wide numbered pager doesn't fit comfortably on a phone
+   and duplicates the desktop <Table>'s own pagination unnecessarily. */
+.quarterly-review-mobile-view .mobile-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0.625rem 0;
+  margin: 0.25rem 0 0.5rem;
+}
+
+.quarterly-review-mobile-view .mobile-pagination .ant-pagination {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.quarterly-review-mobile-view .mobile-pagination .ant-pagination-simple-pager input {
+  border-radius: 0.5rem;
+  border-color: #e2e8f0;
+  color: var(--mrb-text-color);
+}
+
+.quarterly-review-mobile-view .mobile-pagination .ant-pagination-prev,
+.quarterly-review-mobile-view .mobile-pagination .ant-pagination-next {
+  color: var(--mrb-text-color);
+}
+
+.quarterly-review-mobile-view .mobile-submission-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.875rem;
+  padding: 0.75rem 0.875rem;
+  background-color: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.quarterly-review-mobile-view .mobile-submission-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.quarterly-review-mobile-view .mobile-submission-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.quarterly-review-mobile-view .mobile-avatar {
+  background-color: #e0e7ff !important;
+  color: #4338ca; /* avatar initials — brand accent, left as-is */
+  font-weight: 700;
+}
+
+.quarterly-review-mobile-view .mobile-submission-title {
+  font-size: calc(14px * var(--mrb-scale)) !important; /* UPDATED per type spec: employee name 14px/600 */
+  font-weight: 600 !important;
+  color: var(--mrb-text-color);
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-transform: capitalize;
+}
+
+.quarterly-review-mobile-view .mobile-submission-subtitle {
+  font-size: calc(12px * var(--mrb-scale)) !important; /* within 11–12px spec range */
+  font-weight: 400 !important; /* UPDATED per type spec: employee role 400 (made explicit) */
+  color: var(--mrb-text-color);
+  margin: 0.125rem 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-transform: capitalize;
+}
+
+.quarterly-review-mobile-view .mobile-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.625rem;
+  border-radius: 999px;
+  font-size: calc(11px * var(--mrb-scale)) !important; /* UPDATED per type spec: status badge 10–11px */
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+/* Status badges keep their semantic colors on purpose — they're the
+   at-a-glance signal for review state, not plain body text. */
+.quarterly-review-mobile-view .mobile-status-badge-success {
+  background-color: #ecfdf5;
+  color: #047857;
+  border-color: #a7f3d0;
+}
+
+.quarterly-review-mobile-view .mobile-status-badge-purple {
+  background-color: #f5f3ff;
+  color: #6d28d9;
+  border-color: #ddd6fe;
+}
+
+.quarterly-review-mobile-view .mobile-status-badge-amber {
+  background-color: #fffbeb;
+  color: #b45309;
+  border-color: #fde68a;
+}
+
+.quarterly-review-mobile-view .mobile-status-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background-color: currentColor;
+  opacity: 0.85;
+}
+
+.quarterly-review-mobile-view .mobile-card-body {
+  margin-top: 0.375rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding-left: 3.25rem; /* aligns under the name text, past the avatar (2.5rem) + its gap (0.75rem) */
+}
+
+.quarterly-review-mobile-view .mobile-card-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.2rem 0;
+}
+
+.quarterly-review-mobile-view .mobile-card-field-label {
+  font-size: calc(11px * var(--mrb-scale)) !important; /* UPDATED per type spec: detail labels 10–11px/600 */
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b !important; /* CHANGED: was var(--mrb-text-color) — labels now a lighter slate grey, values stay dark, giving label/value contrast */
+  flex-shrink: 0;
+}
+
+.quarterly-review-mobile-view .mobile-card-field-value {
+  font-size: calc(13px * var(--mrb-scale)) !important; /* UPDATED per type spec: detail values 12–13px/500 */
+  color: var(--mrb-text-color);
+  text-align: right;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-right: 0.625rem; /* matches the status badge's own right padding so values line up under it */
+}
+
+.quarterly-review-mobile-view .mobile-card-field-value strong {
+  color: var(--mrb-text-color);
+}
+
+/* The LAST MODIFIED date (and potentially other field values) can
+   come through as an antd Typography/Link element, which carries its
+   own theme color + underline by default. Since that element lives
+   inside .mobile-card-field-value, this wildcard forces every field
+   value — and anything nested inside it — to the same unified color
+   as the rest of the card fields, so nothing reads as a link or
+   stands out in a different color.
+   UPDATED: ".mobile-card-list" added as an ancestor to raise this
+   rule's specificity above component-level color classes (e.g.
+   .ant-typography-secondary), which were still winning and leaving
+   the date tinted purple instead of the unified dark color. */
+.quarterly-review-mobile-view .mobile-card-list .mobile-card-field-value,
+.quarterly-review-mobile-view .mobile-card-list .mobile-card-field-value * {
+  font-size: calc(13px * var(--mrb-scale)) !important; /* UPDATED per type spec: detail values 12–13px, and still forces EMPLOYEE ID / QUARTER / FINAL RATING / LAST MODIFIED to the same size even if one comes through as a nested element with its own size */
+  color: var(--mrb-text-color) !important;
+  font-weight: 500 !important; /* UPDATED per type spec: detail values weight 500 (was 400) */
+  text-decoration: none !important;
+}
+
+/* NEW: extra-targeted in case the date renders via an antd Typography/
+   Link component, whose own theme color class can otherwise
+   out-specificity the generic wildcard above. */
+.quarterly-review-mobile-view .mobile-card-field-value .ant-typography,
+.quarterly-review-mobile-view .mobile-card-field-value a,
+.quarterly-review-mobile-view .mobile-card-field-value .ant-typography-secondary {
+  color: var(--mrb-text-color) !important;
+}
+
+.quarterly-review-mobile-view .mobile-card-field-value strong {
+  font-weight: 700 !important;
+  color: var(--mrb-text-color) !important;
+}
+
+.quarterly-review-mobile-view .mobile-submission-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.375rem;
+  padding-top: 0.375rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.quarterly-review-mobile-view .mobile-submission-actions .ant-btn {
+  min-width: 70%;
+  justify-content: center;
+  height: 2rem !important;
+  padding: 0 0.75rem !important;
+  line-height: 1 !important;
+}
+
+/* Buttons keep their brand colors — not part of the plain-text unification. */
+.quarterly-review-mobile-view .mobile-button-primary.ant-btn-primary,
+.quarterly-review-mobile-view .mobile-button-primary.ant-btn {
+  background-color: #4f46e5;
+  border-color: #4f46e5;
+  color: #ffffff;
+  border-radius: 0.75rem;
+  font-size: calc(13px * var(--mrb-scale)) !important; /* NEW per type spec: button text 12–13px (was inheriting antd's default size) */
+  font-weight: 600; /* UPDATED per type spec: button text 600 (was 700) */
+}
+
+.quarterly-review-mobile-view .mobile-button-secondary.ant-btn-default,
+.quarterly-review-mobile-view .mobile-button-secondary.ant-btn {
+  background-color: #ffffff;
+  border-color: #c7d2fe;
+  color: #4338ca;
+  border-radius: 0.75rem;
+  font-size: calc(13px * var(--mrb-scale)) !important; /* NEW per type spec: button text 12–13px */
+  font-weight: 600; /* UPDATED per type spec: button text 600 (was 700) */
+}
+
+.quarterly-review-mobile-view .mobile-empty-state,
+.quarterly-review-mobile-view .mobile-loading-state {
+  background-color: #ffffff;
+  border: 1px solid #f1f5f9;
+  border-radius: 1rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  overflow: hidden;
+}
+
+.quarterly-review-mobile-view .mobile-empty-state-inner,
+.quarterly-review-mobile-view .mobile-loading-state-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 1rem;
+  text-align: center;
+}
+
+.quarterly-review-mobile-view .mobile-empty-icon {
+  width: 3rem;
+  height: 3rem;
+  color: #cbd5e1;
+  margin-bottom: 0.75rem;
+}
+
+.quarterly-review-mobile-view .mobile-empty-title {
+  font-size: calc(16px * var(--mrb-scale)) !important;
+  font-weight: 700;
+  color: var(--mrb-text-color);
+  margin: 0;
+}
+
+.quarterly-review-mobile-view .mobile-empty-copy {
+  font-size: calc(14px * var(--mrb-scale)) !important;
+  color: var(--mrb-text-color);
+  margin: 0.4rem 0 0;
+  max-width: 28rem;
+}
+
+.quarterly-review-mobile-view .mobile-card-field-strong {
+  font-weight: 700 !important; /* !important required: the .mobile-card-field-value wildcard rule above forces font-weight:400 on every descendant, including this one, unless overridden with equal-or-higher priority */
+  color: var(--mrb-text-color) !important;
+}
+
+.quarterly-review-mobile-view .mobile-table-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  justify-content: flex-start;
+}
+
+.quarterly-review-mobile-view .mobile-table-avatar {
+  flex-shrink: 0;
+}
+
+.quarterly-review-mobile-view .mobile-table-name {
+  margin: 0;
+  font-weight: 700;
+  color: var(--mrb-text-color);
+}
+
+.quarterly-review-mobile-view .mobile-table-text {
+  font-size: calc(14px * var(--mrb-scale)) !important;
+  color: var(--mrb-text-color);
+}
+
+.quarterly-review-mobile-view .mobile-table-last-modified {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  font-size: calc(12.8px * var(--mrb-scale)) !important;
+  color: var(--mrb-text-color);
+}
+
+/* "No data" placeholder — kept muted on purpose so it still reads as
+   an absence of a value rather than a real value in the unified color. */
+.quarterly-review-mobile-view .mobile-table-empty {
+  color: #94a3b8;
+}
+
+.quarterly-review-mobile-view .mobile-table-action-group {
+  display: flex;
+  justify-content: center;
+}
+
+/* Star rating — now styled as a pill badge (light background + border),
+   matching the "4.5 ★" reference look, instead of plain inline text.
+   The star stays amber on purpose, same reasoning as the status badges;
+   the "4.5" number is forced to the unified text color by the
+   .mobile-card-field-value wildcard rule above. */
+.quarterly-review-mobile-view .mobile-rating-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 999px;
+  background-color: #eef2ff;
+  border: 1px solid #c7d2fe;
+  font-size: calc(13px * var(--mrb-scale)) !important;
+  font-weight: 700 !important;
+  color: #4338ca !important; /* !important needed to beat the .mobile-card-field-value wildcard rule above, since this badge lives inside a card-field-value */
+}
+
+.quarterly-review-mobile-view .mobile-rating-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  fill: #f59e0b;
+  stroke: #f59e0b !important; /* removes the default dark outline so it matches the flat gold desktop star */
+  color: #f59e0b !important;
+  flex-shrink: 0;
+}
+
+/* "No rating yet" placeholder — kept muted, same reasoning as mobile-table-empty. */
+.quarterly-review-mobile-view .mobile-rating-empty {
+  color: #94a3b8;
+}
+
+.quarterly-review-mobile-view .custom-table .ant-table-thead > tr > th {
+  background-color: #eef2ff !important;
+  color: #4338ca !important; /* table header — brand accent, matches active tab / calendar icon */
+  font-weight: 700 !important;
+  font-size: calc(11px * var(--mrb-scale)) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  border-bottom: 1px solid #e0e7ff !important;
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+}
+
+.quarterly-review-mobile-view .custom-table .ant-table-thead > tr > th::before {
+  display: none !important;
+}
+
+.quarterly-review-mobile-view .custom-table .ant-table-tbody > tr > td {
+  text-align: center !important;
+  color: var(--mrb-text-color);
+}
+
+.quarterly-review-mobile-view .custom-table .ant-table-thead > tr > th:first-child,
+.quarterly-review-mobile-view .custom-table .ant-table-tbody > tr > td:first-child {
+  text-align: left !important;
+}
+
+@media (min-width: 640px) {
+  .quarterly-review-mobile-view {
+    padding: 1.5rem 1.5rem 1.5rem 1.5rem;
+    gap: 1.25rem;
+  }
+
+  .quarterly-review-mobile-view .mobile-page-header-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  /* NEW: 4 stat cards in a single row on tablet/desktop, matching the
+     reference screenshot (2 columns is kept for narrow phones above). */
+  .quarterly-review-mobile-view .mobile-stat-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .quarterly-review-mobile-view .mobile-toolbar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: auto;
+  }
+
+  .quarterly-review-mobile-view .mobile-year-select-full {
+    width: 12rem;
+  }
+
+  /* Search -> FY -> Quarter must stay in this fixed vertical order
+     regardless of viewport width, so the 3-filter toolbar keeps
+     stacking as a column even on tablet/desktop instead of switching
+     to the horizontal row layout above (.mobile-toolbar). */
+  .quarterly-review-mobile-view .mobile-toolbar-stacked {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .quarterly-review-mobile-view .mobile-toolbar-stacked .mobile-year-select-full {
+    width: 100%;
+  }
+
+  /* NOTE: the card-list <-> table-shell toggle used to live here and
+     flipped to the table as soon as the viewport crossed 640px — which
+     also caught tablet widths, causing the table (built for desktop,
+     with a horizontal scroll) to show up on tablet instead of the
+     mobile-style cards. That toggle now lives in its own, larger
+     breakpoint below (min-width: 1024px), so tablets keep the card
+     list and only true desktop widths get the table. */
+}
+
+/* Card list <-> table switch, isolated at a desktop-only breakpoint.
+   Tablet widths (640px–1023px) now keep showing cards (redesigned
+   below); the table only takes over at 1024px+. */
+@media (min-width: 1024px) {
+  .quarterly-review-mobile-view .mobile-card-list {
+    display: none;
+  }
+
+  .quarterly-review-mobile-view .mobile-table-shell {
+    display: block;
+  }
+
+  /* The <Table>'s own pagination takes over at this breakpoint, so
+     the card-list's compact pager is hidden here to avoid showing
+     two paginators at once. */
+  .quarterly-review-mobile-view .mobile-pagination {
+    display: none;
+  }
+}
+
+/* NEW: tablet-only card redesign (640px–1023px). Phones below 640px
+   keep the original single-column, stacked-field card untouched;
+   desktop (1024px+) shows the table instead of cards at all. This
+   block ONLY changes layout for the tablet range in between:
+   - card list becomes a 2-column grid instead of a single stacked column
+   - each card's fields become a 2x2 grid (label above value) instead
+     of stacked label-left/value-right rows
+   - the evaluate/view button goes full width under a divider
+   No TSX/markup changes needed — same components, CSS-only relayout. */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .quarterly-review-mobile-view .mobile-card-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .quarterly-review-mobile-view .mobile-submission-card {
+    padding: 0.75rem 1rem;
+  }
+
+  .quarterly-review-mobile-view .mobile-submission-actions .ant-btn {
+    min-width: 100%;
+  }
+
+  /* NEW: search / FY / Quarter on one row at tablet width. Search
+     gets more of the row (flex: 2), FY and Quarter split the rest
+     evenly between them (flex: 1 each, so they end up the same
+     width as one another). */
+  .quarterly-review-mobile-view .mobile-toolbar-stacked {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.625rem;
+  }
+
+  .quarterly-review-mobile-view .mobile-toolbar-stacked .mobile-input {
+    flex: 2 1 0;
+    min-width: 0;
+  }
+
+  .quarterly-review-mobile-view .mobile-toolbar-stacked .mobile-year-select-full,
+  .quarterly-review-mobile-view .mobile-toolbar-stacked .mobile-select {
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto;
+  }
+
+  /* UPDATED: tablet now sits at the TOP of each type-spec range
+     (phone stays at the values it already had — untouched). Every
+     rule in this block is scoped to this 640–1023px query only, so
+     none of it reaches the phone breakpoint below 640px. */
+  .quarterly-review-mobile-view .mobile-page-title {
+    font-size: calc(20px * var(--mrb-scale)) !important; /* spec: page title 18–20px */
+  }
+
+  .quarterly-review-mobile-view .mobile-filter-heading {
+    font-size: calc(18px * var(--mrb-scale)) !important; /* spec: section title 16–18px */
+  }
+
+  .quarterly-review-mobile-view .mobile-submission-title {
+    font-size: calc(15px * var(--mrb-scale)) !important; /* spec: employee name 14–15px */
+    font-weight: 600 !important;
+  }
+
+  .quarterly-review-mobile-view .mobile-submission-subtitle {
+    font-size: calc(12px * var(--mrb-scale)) !important; /* spec: role 11–12px */
+  }
+
+  .quarterly-review-mobile-view .mobile-status-badge {
+    font-size: calc(11px * var(--mrb-scale)) !important; /* spec: status badge 10–11px */
+  }
+
+  .quarterly-review-mobile-view .mobile-button-primary.ant-btn-primary,
+  .quarterly-review-mobile-view .mobile-button-primary.ant-btn,
+  .quarterly-review-mobile-view .mobile-button-secondary.ant-btn-default,
+  .quarterly-review-mobile-view .mobile-button-secondary.ant-btn {
+    font-size: calc(13px * var(--mrb-scale)) !important; /* spec: button text 12–13px */
+  }
+
+  .quarterly-review-mobile-view .mobile-stat-value {
+    font-size: calc(18px * var(--mrb-scale)) !important; /* spec: summary number 16–18px */
+  }
+
+  /* The field block becomes a 2-column grid at tablet, with each
+     field's label stacked above its value, instead of the phone's
+     tight single-line label-left/value-right row — for readability/
+     breathing room. Font sizes stay identical to phone (see above). */
+  .quarterly-review-mobile-view .mobile-card-body {
+    padding-left: 0;
+    margin-top: 0.75rem;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: 0.75rem;
+    column-gap: 1rem;
+  }
+
+  .quarterly-review-mobile-view .mobile-card-field {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 0.25rem;
+    padding: 0;
+  }
+
+  .quarterly-review-mobile-view .mobile-card-field-label {
+    font-size: calc(11px * var(--mrb-scale)) !important; /* same as phone */
+  }
+
+  .quarterly-review-mobile-view .mobile-card-list .mobile-card-field-value,
+  .quarterly-review-mobile-view .mobile-card-list .mobile-card-field-value * {
+    font-size: calc(13px * var(--mrb-scale)) !important; /* UPDATED: was 15px — now matches phone's 13px exactly */
+  }
+
+  .quarterly-review-mobile-view .mobile-card-field-value {
+    text-align: left;
+    padding-right: 0;
+    white-space: normal;
+  }
+}
