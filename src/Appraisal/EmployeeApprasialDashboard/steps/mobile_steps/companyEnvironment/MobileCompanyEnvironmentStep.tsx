@@ -44,7 +44,9 @@ const EMOJIS = [
     },
 ];
 
-export const MobileCompanyEnvironmentStep: React.FC<StepProps> = ({ disabled }) => {
+export const MobileCompanyEnvironmentStep: React.FC<StepProps> = ({
+    disabled,
+}) => {
     return (
         <Card
             className="mobile-ces-card"
@@ -55,29 +57,29 @@ export const MobileCompanyEnvironmentStep: React.FC<StepProps> = ({ disabled }) 
                 },
             }}
         >
-            <div className="mobile-info-width">
-                <h1 className="mobile-ces-card__title">5. Company Environment</h1>
+            <div className="mobile-width">
+                <h1 className="mobile-ces-card__title">
+                    5. Company Environment
+                </h1>
+
                 <p className="mobile-ces-card__subtitle">
                     Share your feedback on culture, work-life balance, and improvements.
                 </p>
 
+                {/* Gray container */}
                 <div className="mobile-ces-fields">
+
                     {/* Work Culture Feedback */}
-                    <div className="mobile-ces-field-card">
                         <span className="mobile-ces-field-card__label">
-                            <span className="mobile-ces-field-card__required">*</span>
+                            <span className="mobile-ces-field-card__required">
+                                *
+                            </span>
                             Feedback on Work Culture
                         </span>
-                        {/* <p className="mobile-ces-field-card__hint">
-                            How would you rate team collaboration and support?
-                        </p> */}
+
                         <Form.Item
                             name={['companyEnvironment', 'workCultureFeedback']}
                             className="mb-0"
-                        // rules={[
-                        //     { required: true, message: 'Please enter feedback on work culture' },
-                        //     { min: 10, message: 'Feedback must be at least 10 characters long' },
-                        // ]}
                         >
                             <Input.TextArea
                                 rows={3}
@@ -86,31 +88,27 @@ export const MobileCompanyEnvironmentStep: React.FC<StepProps> = ({ disabled }) 
                                 className="mobile-ces-textarea"
                                 showCount
                                 maxLength={2000}
-                                  styles={{
+                                styles={{
                                     textarea: {
                                         resize: 'none',
+                                        backgroundColor: '#ffffff',
+                                        color: '#000',
                                     },
                                 }}
                             />
                         </Form.Item>
-                    </div>
 
                     {/* Work-Life Balance */}
-                    <div className="mobile-ces-field-card">
                         <span className="mobile-ces-field-card__label">
-                            <span className="mobile-ces-field-card__required">*</span>
+                            <span className="mobile-ces-field-card__required">
+                                *
+                            </span>
                             Work-Life Balance
                         </span>
-                        {/* <p className="mobile-ces-field-card__hint">
-                            How would you rate your work-life balance? Share any challenges or positives.
-                        </p> */}
+
                         <Form.Item
                             name={['companyEnvironment', 'workLifeBalance']}
                             className="mb-0"
-                        // rules={[
-                        //     { required: true, message: 'Please enter feedback on work-life balance' },
-                        //     { min: 10, message: 'Feedback must be at least 10 characters long' },
-                        // ]}
                         >
                             <Input.TextArea
                                 rows={3}
@@ -122,28 +120,25 @@ export const MobileCompanyEnvironmentStep: React.FC<StepProps> = ({ disabled }) 
                                 styles={{
                                     textarea: {
                                         resize: 'none',
+                                        backgroundColor: '#ffffff',
+                                        color: '#000',
                                     },
                                 }}
                             />
                         </Form.Item>
-                    </div>
+                    
 
                     {/* Suggestions for Improvement */}
-                    <div className="mobile-ces-field-card">
                         <span className="mobile-ces-field-card__label">
-                            <span className="mobile-ces-field-card__required">*</span>
+                            <span className="mobile-ces-field-card__required">
+                                *
+                            </span>
                             Suggestions for Improvement
                         </span>
-                        {/* <p className="mobile-ces-field-card__hint">
-                            What constructive suggestions do you have to improve processes, facilities, or policies?
-                        </p> */}
+
                         <Form.Item
                             name={['companyEnvironment', 'suggestions']}
                             className="mb-0"
-                        // rules={[
-                        //     { required: true, message: 'Please provide suggestions for improvement' },
-                        //     { min: 10, message: 'Suggestions must be at least 10 characters long' },
-                        // ]}
                         >
                             <Input.TextArea
                                 rows={3}
@@ -152,26 +147,28 @@ export const MobileCompanyEnvironmentStep: React.FC<StepProps> = ({ disabled }) 
                                 className="mobile-ces-textarea"
                                 showCount
                                 maxLength={2000}
-                                  styles={{
+                                styles={{
                                     textarea: {
                                         resize: 'none',
+                                        backgroundColor: '#ffffff',
+                                        color: '#000',
                                     },
                                 }}
                             />
                         </Form.Item>
-                    </div>
 
-                    {/* Rate the Company Environment (Smiley Emojis Only) */}
-                    <div>
+                    {/* Rate the Company Environment */}
+                    <div className="mobile-ces-rating-section">
                         <span className="mobile-ces-field-card__label mobile-ces-rating-label">
-                            <span className="mobile-ces-field-card__required">*</span>
+                            <span className="mobile-ces-field-card__required">
+                                *
+                            </span>
                             Rate the Company Environment
                         </span>
 
                         <Form.Item
                             name={['companyEnvironment', 'rating']}
                             className="mb-0"
-                        // rules={[{ required: true, message: 'Please rate the company environment' }]}
                         >
                             <EmojiRating disabled={disabled} />
                         </Form.Item>
@@ -182,32 +179,57 @@ export const MobileCompanyEnvironmentStep: React.FC<StepProps> = ({ disabled }) 
     );
 };
 
-/* Interactive Emoji Rating Component */
+
+/* =========================================
+   Interactive Emoji Rating
+   Same style as CompanyEnvironmentStep
+   ========================================= */
+
 interface EmojiRatingProps {
     value?: number;
     onChange?: (val: number) => void;
     disabled?: boolean;
 }
 
-const EmojiRating: React.FC<EmojiRatingProps> = ({ value, onChange, disabled }) => {
+const EmojiRating: React.FC<EmojiRatingProps> = ({
+    value,
+    onChange,
+    disabled,
+}) => {
     return (
-        <div className="mobile-ces-emoji-row">
-            {EMOJIS.map((emoji) => {
-                const isSelected = value === emoji.value;
-                return (
-                    <button
-                        key={emoji.value}
-                        type="button"
-                        disabled={disabled}
-                        onClick={() => onChange?.(emoji.value)}
-                        className={`mobile-ces-emoji ${isSelected ? `mobile-ces-emoji--selected ${emoji.selected}` : emoji.idle} ${disabled ? 'mobile-ces-emoji--disabled' : ''
-                            }`}
-                    >
-                        <span className="mobile-ces-emoji__icon">{emoji.icon}</span>
-                        <span className="mobile-ces-emoji__label">{emoji.label}</span>
-                    </button>
-                );
-            })}
+        <div className="mobile-ces-emoji-wrapper">
+            <div className="mobile-ces-emoji-row">
+                {EMOJIS.map((emoji) => {
+                    const isSelected = value === emoji.value;
+
+                    return (
+                        <button
+                            key={emoji.value}
+                            type="button"
+                            disabled={disabled}
+                            onClick={() => onChange?.(emoji.value)}
+                            className={`mobile-ces-emoji ${isSelected
+                                    ? `mobile-ces-emoji--selected ${emoji.selected}`
+                                    : emoji.idle
+                                } ${disabled
+                                    ? 'mobile-ces-emoji--disabled'
+                                    : ''
+                                }`}
+                            style={{
+                                borderRadius: '6px',
+                            }}
+                        >
+                            <span className="mobile-ces-emoji__icon">
+                                {emoji.icon}
+                            </span>
+
+                            <span className="mobile-ces-emoji__label">
+                                {emoji.label}
+                            </span>
+                        </button>
+                    );
+                })}
+            </div>
         </div>
     );
 };

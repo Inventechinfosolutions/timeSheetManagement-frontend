@@ -105,7 +105,7 @@ const AttendancePieChartDesktop = ({
                     fontSize: "10px",
                     fontWeight: "700",
                     fill: "#A3AED0",
-                    fontFamily: "Plus Jakarta Sans, Inter, sans-serif",
+                    // fontFamily: "Plus Jakarta Sans, Inter, sans-serif",
                     textTransform: "uppercase",
                     letterSpacing: "0.05em",
                   }}
@@ -121,7 +121,7 @@ const AttendancePieChartDesktop = ({
                     fontSize: "24px",
                     fontWeight: "800",
                     fill: "#006CF1",
-                    fontFamily: "Plus Jakarta Sans, Inter, sans-serif",
+                    // fontFamily: "Plus Jakarta Sans, Inter, sans-serif",
                   }}
                 >
                   {activeIndex !== null && chartData[activeIndex]

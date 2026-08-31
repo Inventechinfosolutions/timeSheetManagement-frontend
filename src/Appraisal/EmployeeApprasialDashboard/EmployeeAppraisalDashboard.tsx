@@ -139,57 +139,10 @@ transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg"
         <div className={`${accentMap.iconBg} w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3`}>
           {icon}
         </div>
-        <p className="text-xs text-darkgray-400 font-bold uppercase tracking-wider">{label}</p>
+        <p className="text-xs text-darkgray-400 font-semibold uppercase tracking-wider">{label}</p>
       </div>
       <div className="mt-2 min-h-[28px] flex items-center">{value}</div>
       <p className="text-xs text-slate-400 mt-1.5">{subtext}</p>
-      {/* Bottom decorative wave */}
-      <svg
-        className="absolute bottom-0 left-0 w-full h-[28px] pointer-events-none"
-        viewBox="0 0 300 28"
-        preserveAspectRatio="none"
-      >
-        <path
-          d="
-      M0 25
-      C45 25, 65 24, 95 20
-      C135 15, 165 23, 205 14
-      C240 7, 265 10, 300 3
-      L300 28
-      L0 28
-      Z
-    "
-          fill={
-            accent === 'blue'
-              ? '#EFF6FF'
-              : accent === 'emerald'
-                ? '#ECFDF5'
-                : accent === 'indigo'
-                  ? '#EEF2FF'
-                  : '#FFFBEB'
-          }
-        />
-
-        <path
-          d="
-      M0 25
-      C45 25, 65 24, 95 20
-      C135 15, 165 23, 205 14
-      C240 7, 265 10, 300 3
-    "
-          fill="none"
-          stroke={
-            accent === 'blue'
-              ? '#BFDBFE'
-              : accent === 'emerald'
-                ? '#A7F3D0'
-                : accent === 'indigo'
-                  ? '#C7D2FE'
-                  : '#FDE68A'
-          }
-          strokeWidth="1"
-        />
-      </svg>
     </div>
   );
 };
@@ -220,6 +173,7 @@ const EmployeeAppraisalDashboard: React.FC = () => {
   const [fyOptions, setFyOptions] = useState<string[]>([]);
   const [selectedFY, setSelectedFY] = useState<string>('');
   const [fyLoading, setFyLoading] = useState(false);
+  const [messageApi, contextHolder] = message.useMessage();
 
   useEffect(() => {
     const fetch = async () => {
@@ -288,7 +242,8 @@ const EmployeeAppraisalDashboard: React.FC = () => {
     ? 'Your quarterly submission'
     : 'Not yet submitted';
 
-  const actionButton = !hasCurrentQuarterReview ? (
+  // const [messageApi, contextHolder] = message.useMessage();
+  const actionButton = (
     <Button
       type="primary"
       icon={
@@ -296,19 +251,37 @@ const EmployeeAppraisalDashboard: React.FC = () => {
           <Plus className="!w-4 !h-4" />
         </span>
       }
-      onClick={() =>
+      onClick={() => {
+        if (hasCurrentQuarterReview) {
+          messageApi.info(
+            "You have already created a review for the current quarter."
+          );
+          return;
+        }
+
         navigate(
           currentQuarter
             ? `/employee-dashboard/quarterly-review/${quarterToSlug(currentQuarter)}`
             : "/employee-dashboard/quarterly-review"
-        )
-      }
-      className="!flex !items-center !justify-center !gap-2 !h-9 !px-4 !rounded-xl !bg-blue-600 hover:!bg-blue-700 !text-white !border-none !font-semibold !text-sm !shadow-sm !transition-all !duration-300 hover:!-translate-y-0.5 hover:!shadow-md"
+        );
+      }}
+      aria-disabled={hasCurrentQuarterReview}
+      className={`
+      !flex !items-center !justify-center !gap-2
+      !h-9 !px-4 !rounded-xl
+      !font-semibold !text-sm
+      !border-none
+      !transition-all !duration-300
+
+      ${hasCurrentQuarterReview
+          ? "!bg-gray-300 !text-gray-500 !cursor-not-allowed !shadow-none"
+          : "!bg-blue-600 hover:!bg-blue-700 !text-white !shadow-sm hover:!-translate-y-0.5 hover:!shadow-md"
+        }
+    `}
     >
       Create
     </Button>
-  ) : null;
-
+  );
   const columns = [
     {
       title: 'Quarter',
@@ -434,9 +407,11 @@ const EmployeeAppraisalDashboard: React.FC = () => {
   }
 
   return (
-    <div className="pb-8 mt-2 px-1">
-      <>
-        <style>{`
+    <>
+      {contextHolder}
+      <div className="pb-8 mt-2 px-1">
+        <>
+          <style>{`
 .compact-filter {
   width: 180px !important;
 }
@@ -482,141 +457,141 @@ const EmployeeAppraisalDashboard: React.FC = () => {
   }
 }
 `}</style>
-        <div
-          className="w-full min-h-screen bg-slate-50 px-4 py-4 flex flex-col"
-        >
-          {/* Top Header */}
-          <div className="mb-4">
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-                Quarterly Review
-              </h1>
-            </div>
+          <div
+            className="w-full min-h-screen bg-slate-50 px-4 py-4 flex flex-col"
+          >
+            {/* Top Header */}
+            <div className="mb-4">
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">
+                  Quarterly Review
+                </h1>
+              </div>
 
-            <div className="mt-1 flex items-center justify-between">
-              <p className="text-slate-500 text-sm">
-                Submit your quarterly achievements and view your performance review status.
-              </p>
+              <div className="mt-1 flex items-center justify-between">
+                <p className="text-slate-500 text-sm">
+                  Submit your quarterly achievements and view your performance review status.
+                </p>
 
-              <div className="shrink-0 ml-4">
-                {actionButton}
+                <div className="shrink-0 ml-4">
+                  {actionButton}
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Main Content */}
-          <div className="flex flex-col gap-4 flex-1 min-h-0">
-            {/* Current Quarter bar: FY / quarter range on the left, badge pinned to the right */}
-            <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm shrink-0 flex items-center justify-between gap-4">
-              <div className="flex flex-col leading-none">
-                <span className="text-[12px] font-bold text-slate-900 mb-1">
-                  {getFinancialYear(currentQuarter)}
-                </span>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-[15px] font-bold text-slate-900">
-                    {currentQuarter?.split(' ')[0] || '—'}
+            {/* Main Content */}
+            <div className="flex flex-col gap-4 flex-1 min-h-0">
+              {/* Current Quarter bar: FY / quarter range on the left, badge pinned to the right */}
+              <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm shrink-0 flex items-center justify-between gap-4">
+                <div className="flex flex-col leading-none">
+                  <span className="text-[12px] font-semibold text-slate-900 mb-1">
+                    {getFinancialYear(currentQuarter)}
                   </span>
-                  {quarterRange && (
-                    <span className="text-[15px] font-bold text-slate-900">
-                      • {quarterRange}
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-[15px] font-semibold text-slate-900">
+                      {currentQuarter?.split(' ')[0] || '—'}
                     </span>
+                    {quarterRange && (
+                      <span className="text-[15px] font-semibold text-slate-900">
+                        • {quarterRange}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <span className="inline-block w-fit bg-indigo-100 text-indigo-700 text-[11px] font-semibold tracking-wider px-4 py-2 rounded-full uppercase shrink-0">
+                  Current Quarter
+                </span>
+              </div>
+
+              {/* Four uniform stat cards, in their own row */}
+              <div className="grid grid-cols-4 gap-4 shrink-0">
+                <StatCard
+                  accent="blue"
+                  icon={<FileCheck2 className="w-5 h-5 text-blue-500" />}
+                  label="Submission Status"
+                  value={<StatusBadge status={currentStatus} />}
+                  subtext={submissionSubtext}
+                  delay={0}
+                />
+                <StatCard
+                  accent="emerald"
+                  icon={<Calendar className="w-5 h-5 text-emerald-500" />}
+                  label="Due Date"
+                  value={
+                    <span className="text-slate-800 font-medium text-lg">
+                      {currentStatus === ReviewStatus.NOT_STARTED || !currentQuarter ? '—' : quarterEndDate}
+                    </span>
+                  }
+                  subtext={quarterOver ? 'Quarter ended' : 'Draft editable until then'}
+                  delay={80}
+                />
+                <StatCard
+                  accent="indigo"
+                  icon={<ClipboardList className="w-5 h-5 text-indigo-500" />}
+                  label="Review Status"
+                  value={
+                    <span className="text-slate-800 font-medium text-lg">
+                      {currentReview?.reviewStatus ?? '—'}
+                    </span>
+                  }
+                  subtext="Manager evaluation"
+                  delay={160}
+                />
+                <StatCard
+                  accent="amber"
+                  icon={<Star className="w-5 h-5 text-amber-400" />}
+                  label="Final Rating"
+                  value={
+                    <span className="text-slate-800 font-medium text-lg">
+                      {currentReview?.finalRating ?? '—'}
+                    </span>
+                  }
+                  subtext={
+                    currentReview?.reviewedOn
+                      ? `Reviewed ${new Date(currentReview.reviewedOn).toLocaleDateString('en-IN')}`
+                      : 'Not Available'
+                  }
+                  delay={240}
+                />
+              </div>
+
+              {/* History Table */}
+              <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden flex-1 min-h-0">
+                <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className="bg-indigo-50 text-indigo-600 w-7 h-7 rounded-full flex items-center justify-center shrink-0">
+                      <BarChart3 className="w-3.5 h-3.5" />
+                    </span>
+                    <h2 className="font-semibold text-slate-800 text-base">Quarterly Review History</h2>
+                  </div>
+                  {fyOptions.length > 0 && (
+                    <Select
+                      className="compact-filter"
+                      value={selectedFY || undefined}
+                      onChange={handleFYChange}
+                      loading={fyLoading}
+                      placeholder="Financial Year"
+                      allowClear
+                      variant="outlined"
+                      prefix={<Calendar className="w-4 h-4 text-indigo-500" />}
+                      popupMatchSelectWidth
+                      style={{ width: 180 }}
+                      options={fyOptions.map((fy) => ({
+                        label: fy,
+                        value: fy,
+                      }))}
+                    />
                   )}
                 </div>
-              </div>
 
-              <span className="inline-block w-fit bg-indigo-100 text-indigo-700 text-[11px] font-bold tracking-wider px-4 py-2 rounded-full uppercase shrink-0">
-                Current Quarter
-              </span>
-            </div>
-
-            {/* Four uniform stat cards, in their own row */}
-            <div className="grid grid-cols-4 gap-4 shrink-0">
-              <StatCard
-                accent="blue"
-                icon={<FileCheck2 className="w-5 h-5 text-blue-500" />}
-                label="Submission Status"
-                value={<StatusBadge status={currentStatus} />}
-                subtext={submissionSubtext}
-                delay={0}
-              />
-              <StatCard
-                accent="emerald"
-                icon={<Calendar className="w-5 h-5 text-emerald-500" />}
-                label="Due Date"
-                value={
-                  <span className="text-slate-800 font-bold text-lg">
-                    {currentStatus === ReviewStatus.NOT_STARTED || !currentQuarter ? '—' : quarterEndDate}
-                  </span>
-                }
-                subtext={quarterOver ? 'Quarter ended' : 'Draft editable until then'}
-                delay={80}
-              />
-              <StatCard
-                accent="indigo"
-                icon={<ClipboardList className="w-5 h-5 text-indigo-500" />}
-                label="Review Status"
-                value={
-                  <span className="text-slate-800 font-bold text-lg">
-                    {currentReview?.reviewStatus ?? '—'}
-                  </span>
-                }
-                subtext="Manager evaluation"
-                delay={160}
-              />
-              <StatCard
-                accent="amber"
-                icon={<Star className="w-5 h-5 text-amber-400" />}
-                label="Final Rating"
-                value={
-                  <span className="text-slate-800 font-bold text-lg">
-                    {currentReview?.finalRating ?? '—'}
-                  </span>
-                }
-                subtext={
-                  currentReview?.reviewedOn
-                    ? `Reviewed ${new Date(currentReview.reviewedOn).toLocaleDateString('en-IN')}`
-                    : 'Not Available'
-                }
-                delay={240}
-              />
-            </div>
-
-            {/* History Table */}
-            <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden flex-1 min-h-0">
-              <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5">
-                  <span className="bg-indigo-50 text-indigo-600 w-7 h-7 rounded-full flex items-center justify-center shrink-0">
-                    <BarChart3 className="w-3.5 h-3.5" />
-                  </span>
-                  <h2 className="font-bold text-slate-900 text-base">Quarterly Review History</h2>
-                </div>
-                {fyOptions.length > 0 && (
-                  <Select
-                    className="compact-filter"
-                    value={selectedFY || undefined}
-                    onChange={handleFYChange}
-                    loading={fyLoading}
-                    placeholder="Financial Year"
-                    allowClear
-                    variant="outlined"
-                    prefix={<Calendar className="w-4 h-4 text-indigo-500" />}
-                    popupMatchSelectWidth
-                    style={{ width: 180 }}
-                    options={fyOptions.map((fy) => ({
-                      label: fy,
-                      value: fy,
-                    }))}
-                  />
-                )}
-              </div>
-
-              {reviews.length > 0 ? (
-                <div className="overflow-x-auto table-scroll-area">
-                  <style>{`
+                {reviews.length > 0 ? (
+                  <div className="overflow-x-auto table-scroll-area">
+                    <style>{`
                 .custom-table .ant-table {
                   background: transparent;
                   table-layout: fixed;
-                  min-width: 760px;
+                  width: 100%;
                 }
                 .custom-table .ant-table-thead > tr > th {
                   background: #EEF2FF;
@@ -671,33 +646,34 @@ const EmployeeAppraisalDashboard: React.FC = () => {
                   background: transparent;
                 }
               `}</style>
-                  <Table
-                    columns={columns}
-                    dataSource={reviews}
-                    loading={fyLoading}
-                    rowKey={(r) => r.quarter}
-                    pagination={false}
-                    size="middle"
-                    tableLayout="fixed"
-                    className="custom-table"
-                  />
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-5 px-4 text-center">
-                  <img
-                    src={EmptyReviewImage}
-                    alt="No quarterly reviews"
-                    className="w-12px h-50 object-contain opacity-70"
-                  />
-                  <p className="text-slate-500 font-semibold text-base">No quarterly reviews found.</p>
-                  <p className="text-slate-400 text-sm mt-1">Create your first quarterly review to get started.</p>
-                </div>
-              )}
+                    <Table
+                      columns={columns}
+                      dataSource={reviews}
+                      loading={fyLoading}
+                      rowKey={(r) => r.quarter}
+                      pagination={false}
+                      size="middle"
+                      tableLayout="fixed"
+                      className="custom-table"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-5 px-4 text-center">
+                    <img
+                      src={EmptyReviewImage}
+                      alt="No quarterly reviews"
+                      className="w-12px h-50 object-contain opacity-70"
+                    />
+                    <p className="text-slate-500 font-semibold text-base">No quarterly reviews found.</p>
+                    <p className="text-slate-400 text-sm mt-1">Create your first quarterly review to get started.</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      </>
-    </div>
+        </>
+      </div>
+    </>
   );
 };
 

@@ -26,7 +26,7 @@
 
 .mobile-title {
   font-size: 1.4rem;
-  font-weight: 800;
+  font-weight: 500;
   color: #0f172a;
   letter-spacing: -0.025em;
   margin: 0;
@@ -100,7 +100,7 @@
   background-color: #e0e7ff;
   color: #4338ca;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.05em;
   padding: 4px 10px;
   white-space: nowrap;
@@ -120,7 +120,7 @@
 .mobile-status-caption {
   margin: 0;
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #94a3b8;
@@ -180,7 +180,7 @@
 
 .mobile-submission-label {
   font-size: 0.9rem;
-  font-weight: 700;
+  font-weight: 500;
   color: #0f172a;
 }
 
@@ -285,7 +285,7 @@
 .mobile-info-row-label {
   margin: 0;
   font-size: 0.9rem;
-  font-weight: 700;
+  font-weight: 500;
   color: #0f172a;
 }
 
@@ -297,7 +297,7 @@
 
 .mobile-info-row-value {
   font-size: 0.9rem;
-  font-weight: 700;
+  font-weight: 500;
   color: #1e293b;
   white-space: nowrap;
   flex-shrink: 0;
@@ -368,7 +368,7 @@
 }
 
 .mobile-history-title {
-  font-weight: 700;
+  font-weight: 500;
   color: #0f172a;
   font-size: 1rem;
   margin: 0;
@@ -426,7 +426,7 @@
 }
 
 .mobile-review-quarter-line {
-  font-weight: 700;
+  font-weight: 500;
   color: #0f172a;
   font-size: 0.95rem;
   margin: 0;
@@ -517,7 +517,7 @@
 .mobile-review-statcol-label {
   margin: 0;
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: #595a5a;

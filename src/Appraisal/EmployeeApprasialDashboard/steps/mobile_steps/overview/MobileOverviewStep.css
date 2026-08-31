@@ -14,7 +14,7 @@
 
 .mobile-overview-card__title {
   font-size: clamp(10px 1vw 12px);
-  font-weight: 900;
+  font-weight: 600;
   margin-bottom: 0.5rem;
 }
 

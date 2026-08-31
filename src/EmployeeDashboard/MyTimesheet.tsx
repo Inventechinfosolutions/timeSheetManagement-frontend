@@ -1864,7 +1864,7 @@ const MyTimesheet = ({
         year={now.getFullYear()}
       />
 
-      <div className="flex-1 bg-white rounded-[20px] p-3 lg:p-4 xl:p-5 shadow-[0px_20px_50px_0px_#111c440d] border border-gray-100 overflow-hidden mt-1 mb-3 lg:mb-4 flex flex-col mx-auto w-full max-w-[1600px]">
+      <div className="flex-1 bg-white rounded-[20px] p-3 lg:p-4 xl:p-5 shadow-[0px_20px_50px_0px_#111c440d] border border-gray-100 overflow-hidden mt-1 mb-3 lg:mb-4 flex flex-col w-full">
         {/* Header Controls */}
         <div className="flex flex-row justify-between items-center mb-4 gap-4 px-2 flex-wrap">
           <div className="flex items-center gap-4">

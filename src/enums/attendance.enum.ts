@@ -25,6 +25,8 @@ export enum WorkLocationKeyword {
     WFH = 'wfh',
     WORK_FROM_HOME = 'work from home',
     CLIENT_VISIT = 'client visit',
+    CLIENT = 'client',
+    CLIENT_PLACE = 'client place',
     OFFICE = 'office',
     PRESENT = 'present',
 }
