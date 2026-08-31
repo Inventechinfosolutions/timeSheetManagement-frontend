@@ -65,6 +65,38 @@ const STATUS_STYLES: Record<string, StatusStyle> = {
 
 const DEFAULT_STATUS_STYLE = { bg: 'bg-slate-100', text: 'text-slate-500', border: 'border-slate-200', indicatorColor: 'bg-slate-400' };
 
+// Maps the Final Rating text label (e.g. "Meets Expectations") to a representative
+// numeric score, using the same scale boundaries as the manager evaluation form:
+//   Outstanding = 5.0, Exceeds Expectations = 4.0-4.9 (mid 4.5),
+//   Meets Expectations = 3.0-3.9 (mid 3.5), Needs Improvement = 2.0-2.9 (mid 2.5),
+//   Unsatisfactory = 1.0-1.9 (mid 1.5)
+// NOTE: this is a derived display value only — swap this out for a real numeric
+// field (e.g. finalScore) from the API if/when one becomes available.
+const getScoreFromRatingLabel = (label?: string | null): number | null => {
+  if (!label) return null;
+  const l = label.toLowerCase();
+  if (l.includes('outstanding')) return 5.0;
+  if (l.includes('exceeds')) return 4.5;
+  if (l.includes('meets')) return 3.5;
+  if (l.includes('needs improvement')) return 2.5;
+  if (l.includes('unsatisfactory')) return 1.5;
+  return null;
+};
+
+// Small inline star + score badge, styled to match the manager review table.
+const RatingBadge: React.FC<{ label?: string | null }> = ({ label }) => {
+  const score = getScoreFromRatingLabel(label);
+  if (score == null) {
+    return <span className="text-slate-400 text-sm">—</span>;
+  }
+  return (
+    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-bold text-xs border border-indigo-100">
+      <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+      {score}
+    </span>
+  );
+};
+
 const StatusBadge: React.FC<{
   status?: string | null;
   showStatusIndicator?: boolean;
@@ -183,11 +215,7 @@ const ReviewCard: React.FC<{
           <StatusBadge status={record.reviewStatus} showStatusIndicator={false} />
         </CardField>
         <CardField label="Final Rating">
-          {record.finalRating ? (
-            <span className="font-semibold text-indigo-700">{record.finalRating}</span>
-          ) : (
-            '—'
-          )}
+          <RatingBadge label={record.finalRating} />
         </CardField>
         <CardField label="Reviewed On">
           {record.reviewedOn ? new Date(record.reviewedOn).toLocaleDateString('en-IN') : '—'}
@@ -324,12 +352,7 @@ const EmployeeAppraisalDashboard: React.FC = () => {
       dataIndex: 'finalRating',
       key: 'finalRating',
       width: '12%',
-      render: (r: string | null) =>
-        r ? (
-          <span className="font-semibold text-indigo-700">{r}</span>
-        ) : (
-          <span className="text-slate-400 text-sm">—</span>
-        ),
+      render: (r: string | null) => <RatingBadge label={r} />,
     },
     {
       title: 'Reviewed On',
@@ -499,7 +522,11 @@ const EmployeeAppraisalDashboard: React.FC = () => {
                 accent="amber"
                 icon={<Star className="w-5 h-5 text-amber-400" />}
                 label="Final Rating"
-                value={currentReview?.finalRating ?? '—'}
+               value={
+                  currentReview?.finalRating
+                   ? <RatingBadge label={currentReview.finalRating} />
+                             : '—'
+                        }
                 subtext={
                   currentReview?.reviewedOn
                     ? `Reviewed ${new Date(currentReview.reviewedOn).toLocaleDateString('en-IN')}`

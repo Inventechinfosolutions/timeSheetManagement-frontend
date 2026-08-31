@@ -60,6 +60,8 @@ import AdminLeaveManagement from "./AdminDashboard/AdminLeaveManagement";
 import ManagerMapping from "./ManagerMapping/ManagerMapping";
 import ManagerEmployeesView from "./AdminDashboard/ManagerEmployeesView";
 import MobileTimesheet from "./EmployeeDashboard/MyTimesheetMobileResponsive/MobileTimesheet";
+import QuarterlyReviewResponsive from "./Appraisal/ManagerQuaterlyReview/QuarterlyReviewResponsive";
+
 
 const EmployeeTabWrapper = () => {
   const { tab } = useParams<{ tab: string }>();
@@ -372,6 +374,10 @@ function AppContent() {
                   <Route
                     path="manager-employees/:managerId"
                     element={<ManagerEmployeesView />}
+                  />
+                  <Route
+                    path="quarterly-review/:employeeId?"
+                    element={<QuarterlyReviewResponsive />}
                   />
                   <Route path=":tab/:date?" element={<AdminTabWrapper />} />
                 </Route>

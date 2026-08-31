@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { Form, Button, message, Spin, Modal } from 'antd';
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { Save, Send, ArrowLeft, ArrowRight, ChevronLeft, CheckCircle2, User, UserX } from 'lucide-react';
+import { Save, Send, ArrowLeft, ArrowRight, ChevronLeft, ChevronDown, CheckCircle2, User, UserX, Star, Clock3, CalendarRange, Trophy } from 'lucide-react';
 
 import { QuarterlyReviewStepper } from './desktop/QuarterlyReviewStepper';
 import { QuarterlyReviewStepperMobile } from './mobile/QuarterlyReviewStepperMobile';
@@ -45,6 +45,205 @@ const parseJsonArray = (val: any, defaultTitle: string): ReviewItem[] => {
 
 const TOTAL_STEPS = 5;
 
+//  Manager Evaluation panel (right column of the read-only view) 
+// NOTE: field names here (`ratings.productivity`, `finalRating`, `strengths`,
+// `improvements`, `remarks`) are assumed to mirror the `ManagerReviewItem`
+// shape used in the manager-side quarterly review board. If your
+// `getReviewByQuarter` response uses different keys, adjust the
+// `ManagerReviewRatings` / `ManagerReviewData` types and the `init()` mapping
+// below — the panel itself doesn't need to change.
+interface ManagerReviewRatings {
+  productivity?: number;
+  quality?: number;
+  ownership?: number;
+  communication?: number;
+  collaboration?: number;
+  innovation?: number;
+}
+
+interface ManagerReviewData {
+  ratings?: ManagerReviewRatings;
+  finalRating?: string;
+  strengths?: string;
+  improvements?: string;
+  remarks?: string;
+  reviewedAt?: string | null;
+}
+
+const RATING_CATEGORIES: { key: keyof ManagerReviewRatings; label: string }[] = [
+  { key: 'productivity', label: 'Productivity & Output' },
+  { key: 'quality', label: 'Quality of Work' },
+  { key: 'ownership', label: 'Ownership & Accountability' },
+  { key: 'communication', label: 'Communication Skills' },
+  { key: 'collaboration', label: 'Team Collaboration' },
+  { key: 'innovation', label: 'Innovation & Initiative' },
+];
+
+const StarRow = ({ value = 0, max = 5 }: { value?: number; max?: number }) => (
+  <div className="flex items-center gap-0.5">
+    {Array.from({ length: max }).map((_, i) => (
+      <Star
+        key={i}
+        className={`w-4 h-4 ${
+          i < Math.round(value)
+            ? 'fill-amber-400 text-amber-400'
+            : 'fill-slate-200 text-slate-200'
+        }`}
+      />
+    ))}
+  </div>
+);
+
+// Shared heading style for every section/sub-section title in this panel
+// (and, to match, the step headings in OverviewStep / AchievementsStep /
+// ChallengesStep / LearningGoalsStep — apply this same className there:
+// "text-base font-semibold text-slate-800")
+const SECTION_HEADING_CLASS = 'text-base font-semibold text-slate-800';
+
+// Collapsible, icon-led feedback card for a manager's free-text field
+// (Strengths / Improvements / Remarks). Each field gets its own bordered
+// card with a header row (icon + title + expand/collapse chevron) and a
+// capped-height, scrollable body so a long (up to 1000-char) piece of
+// feedback scrolls internally instead of growing the card without bound.
+// Color accent presets for the left border + icon of each feedback card,
+// so each field (Strengths / Improvements / Remarks) reads as its own
+// distinct category at a glance — mirrors the colored left-border accent
+// on the reference "Due Date" card.
+const FEEDBACK_ACCENTS = {
+  emerald: { border: 'border-l-emerald-400', icon: 'text-emerald-500' },
+  amber: { border: 'border-l-amber-400', icon: 'text-amber-500' },
+  indigo: { border: 'border-l-indigo-400', icon: 'text-indigo-500' },
+} as const;
+
+const ManagerFeedbackCard = ({
+  label,
+  value,
+  accent = 'indigo',
+}: {
+  label: string;
+  value?: string;
+  accent?: keyof typeof FEEDBACK_ACCENTS;
+}) => {
+  const [open, setOpen] = useState(false);
+  const { border } = FEEDBACK_ACCENTS[accent];
+
+  return (
+    <div className={`bg-white border border-slate-200 border-l-4 ${border} rounded-xl overflow-hidden`}>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+        title={open ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`}
+        className="w-full flex items-center justify-between gap-3 px-3.5 py-3 hover:bg-slate-50 transition-colors"
+      >
+        <span className={SECTION_HEADING_CLASS}>{label}</span>
+        <ChevronDown
+          className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+      {open && (
+        <div className="px-3.5 pb-3.5">
+          <div className="text-sm text-slate-600 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
+            {value?.trim() ? value : <span className="text-slate-400">—</span>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Small encouragement footer shown under a completed manager evaluation —
+// mirrors the illustrated "keep it up" panel from the reference design,
+// built from existing icon primitives rather than a raster illustration.
+const EncouragementCard = () => (
+  <div className="bg-gradient-to-b from-indigo-50/60 to-white border border-indigo-100 rounded-2xl px-5 py-6 flex flex-col items-center text-center gap-2">
+    <div className="w-14 h-14 rounded-full bg-indigo-100 flex items-center justify-center mb-1">
+      <Trophy className="w-7 h-7 text-indigo-500" />
+    </div>
+    <p className="text-sm font-bold text-slate-800">Keep up the great work!</p>
+    <p className="text-xs text-slate-500 max-w-[220px]">
+      Your dedication and performance make a real difference.
+    </p>
+  </div>
+);
+
+const ManagerEvaluationPanel = ({ review }: { review: ManagerReviewData | null }) => {
+  const ratings = review?.ratings ?? {};
+  const ratingValues = RATING_CATEGORIES.map((c) => ratings[c.key] ?? 0);
+  const hasAnyRating = ratingValues.some((v) => v > 0);
+  const avgScore = hasAnyRating
+    ? (ratingValues.reduce((a, b) => a + b, 0) / RATING_CATEGORIES.length).toFixed(1)
+    : '0.0';
+
+  if (!review || (!hasAnyRating && !review.finalRating && !review.strengths)) {
+    return (
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 flex flex-col items-center text-center gap-3">
+        <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">
+          <Clock3 className="w-6 h-6 text-slate-400" />
+        </div>
+        <div>
+          <p className="text-sm font-bold text-slate-700">Manager review pending</p>
+          <p className="text-xs text-slate-500 mt-1">
+            Your manager hasn't evaluated this submission yet. Ratings and
+            feedback will show up here once they do.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+      {/* Header — px-5 py-4.5 matches the left-column card header height
+          (p-5, single-line title) so both cards' top edges/content align
+          on the same baseline instead of the right card sitting lower. */}
+      <div className="flex items-center justify-between gap-3 px-5 py-[18px] border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
+        <h3 className={`${SECTION_HEADING_CLASS} tracking-tight whitespace-nowrap`}>
+          Manager Evaluation & Rating
+        </h3>
+        <div className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-100 rounded-lg px-2.5 py-1 text-right shrink-0">
+          <p className="text-[9px] font-bold uppercase tracking-wider text-indigo-400 leading-none">
+            Avg Score
+          </p>
+          <p className="text-sm font-extrabold text-indigo-600 leading-tight">
+            {avgScore} / 5.0
+          </p>
+        </div>
+      </div>
+
+      {/* Category ratings */}
+      <div className="px-4 py-2.5 flex flex-col gap-1.5 border-b border-slate-100">
+        {RATING_CATEGORIES.map((cat) => (
+          <div key={cat.key} className="flex items-center justify-between gap-3">
+            <span className="text-xs text-slate-600">{cat.label}</span>
+            <StarRow value={ratings[cat.key] ?? 0} />
+          </div>
+        ))}
+      </div>
+
+      {/* Final rating */}
+      <div className="px-4 py-2.5 border-b border-slate-100">
+        <p className={`${SECTION_HEADING_CLASS} mb-1`}>
+          Final Performance Rating
+        </p>
+        {review.finalRating ? (
+          <span className="inline-flex items-center bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg px-3 py-1.5 text-xs font-bold">
+            {review.finalRating}
+          </span>
+        ) : (
+          <span className="text-sm text-slate-400">—</span>
+        )}
+      </div>
+
+      {/* Text feedback — each field is its own collapsible card */}
+      <div className="px-4 py-2.5 flex flex-col gap-2.5">
+        <ManagerFeedbackCard label="Performance Strengths" value={review.strengths} accent="emerald" />
+        <ManagerFeedbackCard label="Areas for Improvement" value={review.improvements} accent="amber" />
+        <ManagerFeedbackCard label="Manager Feedback & Remarks" value={review.remarks} accent="indigo" />
+      </div>
+    </div>
+  );
+};
 
 const QuarterlyReviewForm = () => {
   const navigate = useNavigate();
@@ -83,6 +282,8 @@ const QuarterlyReviewForm = () => {
   const [noManagerModalOpen, setNoManagerModalOpen] = useState(false);
   const [managerName, setManagerName] = useState<string | null>(null);
   const [fetchingManager, setFetchingManager] = useState(false);
+  // Manager's evaluation/rating for this submission (read-only view, right column).
+  const [managerReview, setManagerReview] = useState<ManagerReviewData | null>(null);
   // Root element reference for handling scroll-to-top on step changes.
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -144,6 +345,27 @@ const QuarterlyReviewForm = () => {
           setFormKey(k => k + 1);
           if (existing.managerName) {
             setManagerName(existing.managerName);
+          }
+
+          // Manager evaluation data — see the ManagerReviewData note above
+          // if these field names don't match your API response.
+          const hasManagerData =
+            existing.ratings ||
+            existing.finalRating ||
+            existing.strengths ||
+            existing.improvements ||
+            existing.remarks;
+          if (hasManagerData) {
+            setManagerReview({
+              ratings: existing.ratings ?? {},
+              finalRating: existing.finalRating ?? '',
+              strengths: existing.strengths ?? '',
+              improvements: existing.improvements ?? '',
+              remarks: existing.remarks ?? '',
+              reviewedAt: existing.reviewedAt ?? null,
+            });
+          } else {
+            setManagerReview(null);
           }
         }
       } catch {
@@ -482,63 +704,81 @@ const QuarterlyReviewForm = () => {
       </button>
 
       {/* Header Card */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm mb-8">
+      <div className="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-sm ring-1 ring-slate-100 mb-4">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-indigo-500 mb-1">
+              Performance Review
+            </p>
             <h1 className="text-xl sm:text-2xl font-bold text-slate-800">
               Quarterly Performance Review
             </h1>
-            <p className="text-slate-500 text-sm mt-1">
-              {quarter}&nbsp;·&nbsp;{quarterRange}
-            </p>
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              <span className="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-600 rounded-lg px-2.5 py-1 text-xs font-semibold">
+                <CalendarRange className="w-3.5 h-3.5" />
+                {quarter}
+              </span>
+              <span className="text-slate-400 text-xs">{quarterRange}</span>
+            </div>
           </div>
 
-          <div className="flex gap-3 items-center">
-            {autoSaving && (
-              <span className="text-slate-400 text-xs animate-pulse mr-2">Auto-saving…</span>
+          {/* Top-right: Submitted-to-Manager card (read-only mode) / Save Draft button (edit mode). */}
+          <div className="flex flex-col items-start sm:items-end gap-2">
+            {isReadOnly && managerName && (
+              <div className="w-full sm:w-72 flex items-center gap-3 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl px-4 py-3">
+                <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                </div>
+                <div className="text-left leading-tight">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-0.5">Submitted to Manager</p>
+                  <p className="text-base font-bold text-slate-800">{managerName}</p>
+                </div>
+              </div>
             )}
 
-            {/* Save Draft — header only */}
             {!isReadOnly && (
-              <Button
-                onClick={handleSaveDraft}
-                loading={saving}
-                className="h-10 px-5 rounded-xl border-blue-600 text-blue-600 hover:text-blue-700 hover:border-blue-700 bg-white font-semibold"
-              >
-                Save Draft
-              </Button>
-            )}
+              <div className="w-full sm:w-48 flex gap-3 items-center justify-end">
+                {autoSaving && (
+                  <span className="text-slate-400 text-xs animate-pulse mr-2">Auto-saving…</span>
+                )}
 
-            {/* Read-Only badge */}
-            {isReadOnly && (
-              <span className="bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-full px-3 py-1.5 text-xs font-bold">
-                ✓ {backendStatus === ReviewStatus.SUBMITTED ? 'Submitted' : 'Draft'} — Read Only
-              </span>
+                {/* Save Draft — header only */}
+                <Button
+                  onClick={handleSaveDraft}
+                  loading={saving}
+                  className="w-full h-10 px-5 rounded-xl border-blue-600 text-blue-600 hover:text-blue-700 hover:border-blue-700 bg-white font-semibold"
+                >
+                  Save Draft
+                </Button>
+              </div>
             )}
           </div>
         </div>
       </div>
 
       {isReadOnly ? (
-        <Form key={`ro-${formKey}`} form={form} layout="vertical" className="mb-8" initialValues={formData}>
-          {managerName && (
-            <div className="mb-6 flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-2xl px-5 py-4 shadow-sm max-w-3xl">
-              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-                <User className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-xs text-slate-500 leading-none mb-1 font-semibold uppercase tracking-wider">Submitted to Manager</p>
-                <p className="text-base font-bold text-slate-800 mb-0">{managerName}</p>
-              </div>
+        // Split layout: employee's submitted answers on the left,
+        // manager's evaluation & rating on the right. Stacks to a single
+        // column below the `lg` breakpoint.
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-4 items-start mb-8">
+          {/* Left column — employee submission */}
+          <Form key={`ro-${formKey}`} form={form} layout="vertical" initialValues={formData}>
+            <div className="flex flex-col gap-4">
+              <OverviewStep disabled={true} />
+              <AchievementsStep disabled={true} />
+              <ChallengesStep disabled={true} />
+              <LearningGoalsStep disabled={true} />
             </div>
-          )}
-          <div className="flex flex-col gap-6">
-            <OverviewStep disabled={true} />
-            <AchievementsStep disabled={true} />
-            <ChallengesStep disabled={true} />
-            <LearningGoalsStep disabled={true} />
+          </Form>
+
+          {/* Right column — manager evaluation */}
+          <div className="lg:sticky lg:top-6 flex flex-col gap-4">
+            <ManagerEvaluationPanel review={managerReview} />
+            {managerReview && (managerReview.strengths || managerReview.finalRating) && (
+              <EncouragementCard />
+            )}
           </div>
-        </Form>
+        </div>
       ) : (
         <>
           {/* Desktop Stepper */}
