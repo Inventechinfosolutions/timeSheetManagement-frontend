@@ -11,9 +11,11 @@ export const MobileOverviewStep: React.FC<StepProps> = ({ disabled }) => {
     <Card className="mobile-overview-card">
       <div className="mobile-info-width">
         <h1 className="mobile-overview-card__title">1. Quarter Overview</h1>
-        <p className="mobile-overview-card__subtitle">
-          Summarize your performance and key responsibilities this review period.
-        </p>
+        {!disabled && (
+          <p className="mobile-overview-card__subtitle">
+            Summarize your performance and key responsibilities this review period.
+          </p>
+        )}
         <div className="border border-slate-100 rounded-2xl py-3 px-2 bg-slate-50/50 relative">
         <Form.Item
           name="overview"
@@ -31,7 +33,7 @@ export const MobileOverviewStep: React.FC<StepProps> = ({ disabled }) => {
           <Input.TextArea
             rows={6}
             disabled={disabled}
-            placeholder="Summarize your performance, responsibilities, and key contributions...."
+            placeholder={disabled ? undefined : "Summarize your performance, responsibilities, and key contributions...."}
             className="mobile-overview-card__textarea mobile-overview-card__scrollbar-hide"
             styles={{
               textarea: {

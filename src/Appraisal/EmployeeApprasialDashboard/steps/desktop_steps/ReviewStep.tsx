@@ -1025,7 +1025,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
             <Card
                 className="shadow-md border border-slate-100 rounded-2xl bg-white/80 backdrop-blur-sm"
                 title={
-                    <div className="flex items-center gap-2 text-slate-800 font-semibold text-lg">
+                    <div className="flex items-center gap-2 text-slate-800 font-semibold text-base">
                         <span>6. Review & Confirm</span>
                     </div>
                 }

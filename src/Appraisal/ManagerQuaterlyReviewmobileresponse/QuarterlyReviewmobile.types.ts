@@ -25,6 +25,14 @@ export interface ManagerReviewItem {
   achievements: Array<{ title?: string; details: string }> | string;
   challenges: Array<{ title?: string; details: string }> | string;
   learningGoals: Array<{ title?: string; details: string }> | string;
+  projects?: Array<{ projectTitle: string; achievement: string; challenge: string }> | null;
+  teamContribution?: Array<{ category: string; rating: number }> | null;
+  companyEnvironment?: {
+    workCultureFeedback?: string;
+    workLifeBalance?: string;
+    suggestions?: string;
+    rating?: number;
+  } | null;
   submittedDate: string | null;
   reviewedOn: string | null;
   lastModified: string | null; // Backend-computed: reviewedOn -> updatedAt -> submittedDate
@@ -47,8 +55,8 @@ export interface ReviewStats {
   completed: number;
 }
 
-export const MIN_FIELD_LENGTH = 10;
-export const DEFAULT_RATING_VALUE = 4;
+export const MIN_FIELD_LENGTH = 1;
+export const DEFAULT_RATING_VALUE = 0;
 
 // Sentinel value for the "All Years" option in the Year filter dropdown.
 export const YEAR_FILTER_ALL = 'ALL';

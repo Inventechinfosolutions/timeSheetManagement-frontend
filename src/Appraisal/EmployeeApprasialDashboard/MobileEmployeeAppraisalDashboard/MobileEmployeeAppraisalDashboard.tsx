@@ -25,7 +25,7 @@ import {
     isQuarterOver,
     quarterToSlug,
 } from '../utils/fyQuarter.utils';
-import { StatusBadge } from '../EmployeeAppraisalDashboard';
+import { StatusBadge, getDisplayAverageRating } from '../EmployeeAppraisalDashboard';
 import './MobileEmployeeAppraisalDashboard.css';
 
 interface MobileEmployeeAppraisalDashboardProps {
@@ -36,6 +36,8 @@ interface MobileEmployeeAppraisalDashboardProps {
     selectedFY: string;
     fyLoading: boolean;
     onFYChange: (fy: string) => void;
+    onWithdraw?: (record: QuarterlyReview) => void;
+    onDownload?: (record: QuarterlyReview) => void;
 }
 
 /* ---------- Small building blocks ---------- */
@@ -113,10 +115,14 @@ const ReviewCard: React.FC<{
 
         const isCompleted =
             record.reviewStatus === ReviewStatus.COMPLETED ||
-            record.status === ReviewStatus.APPROVED;
+            record.reviewStatus === ReviewStatus.REVIEWED ||
+            record.status === ReviewStatus.APPROVED ||
+            record.status === ReviewStatus.COMPLETED;
 
-        const isInReview =
-            record.reviewStatus === ReviewStatus.IN_REVIEW;
+        const canWithdraw =
+            !isCompleted &&
+            record.status !== ReviewStatus.DRAFT &&
+            record.status !== ReviewStatus.NOT_STARTED;
 
         return (
             <div className="mobile-review-card">
@@ -163,7 +169,7 @@ const ReviewCard: React.FC<{
                             />
                         )}
 
-                        {isInReview && !isEditable && !isCompleted && (
+                        {canWithdraw && (
                             <CircleIconButton
                                 icon={<Trash2 className="w-4 h-4" />}
                                 tooltip="Withdraw"
@@ -182,29 +188,38 @@ const ReviewCard: React.FC<{
                     </StatCol>
 
                     <StatCol label="Final Rating">
-                        {record.finalRating ? (
-                            <span
-                                style={{
-                                    fontWeight: 600,
-                                    color: '#4338ca',
-                                }}
-                            >
-                                {record.finalRating}
-                            </span>
-                        ) : (
-                            '—'
-                        )}
+                        {(() => {
+                            const avg = getDisplayAverageRating(record);
+                            return avg ? (
+                                <span
+                                    style={{
+                                        fontWeight: 600,
+                                        color: '#4338ca',
+                                    }}
+                                >
+                                    {avg}
+                                </span>
+                            ) : (
+                                '—'
+                            );
+                        })()}
                     </StatCol>
 
-                    <StatCol label="Status">
-                        {record.status ? (
-                            <StatusBadge
-                                status={record.status}
-                                showStatusIndicator={false}
-                            />
-                        ) : (
-                            '—'
-                        )}
+                    <StatCol label="Review Status">
+                        {(() => {
+                            const isDraftOrNotStarted =
+                                record.status === ReviewStatus.DRAFT ||
+                                record.status === ReviewStatus.NOT_STARTED;
+
+                            return !isDraftOrNotStarted && record.reviewStatus ? (
+                                <StatusBadge
+                                    status={record.reviewStatus}
+                                    showStatusIndicator={false}
+                                />
+                            ) : (
+                                '—'
+                            );
+                        })()}
                     </StatCol>
                 </div>
             </div>
@@ -223,6 +238,8 @@ const MobileEmployeeAppraisalDashboard: React.FC<
     selectedFY,
     fyLoading,
     onFYChange,
+    onWithdraw,
+    onDownload,
 }) => {
         const navigate = useNavigate();
         const [messageApi, contextHolder] = message.useMessage();
@@ -239,8 +256,11 @@ const MobileEmployeeAppraisalDashboard: React.FC<
             (r) => r.quarter === currentQuarter
         );
 
-        const currentStatus =
-            currentReview?.status ?? 'Not Started';
+        const currentStatus = !currentReview
+            ? ReviewStatus.NOT_STARTED
+            : currentReview.status === ReviewStatus.DRAFT
+                ? ReviewStatus.DRAFT
+                : ReviewStatus.SUBMITTED;
 
         const hasCurrentQuarterReview =
             !!currentReview;
@@ -362,7 +382,7 @@ const MobileEmployeeAppraisalDashboard: React.FC<
 
                     {/* Current Quarter Stats Card */}
                     <div className="mobile-quarter-card">
-                                {actionButton}
+                        {actionButton}
                         <div className="mobile-submission-row">
 
                             <div className="mobile-submission-label-group">
@@ -421,7 +441,9 @@ const MobileEmployeeAppraisalDashboard: React.FC<
                                 label="Review status"
                                 sublabel="Manager evaluation"
                                 value={
-                                    currentReview?.reviewStatus ?? '—'
+                                    (currentStatus === ReviewStatus.SUBMITTED && currentReview?.reviewStatus)
+                                        ? currentReview.reviewStatus
+                                        : '—'
                                 }
                             />
 
@@ -438,14 +460,14 @@ const MobileEmployeeAppraisalDashboard: React.FC<
                                 iconTone="amber"
                                 label="Final rating"
                                 sublabel={
-                                    currentReview?.reviewedOn
+                                    (currentReview?.reviewStatus === ReviewStatus.REVIEWED || currentReview?.reviewStatus === ReviewStatus.COMPLETED || currentReview?.status === ReviewStatus.COMPLETED || currentReview?.status === ReviewStatus.APPROVED) && currentReview?.reviewedOn
                                         ? `Reviewed ${new Date(
                                             currentReview.reviewedOn
                                         ).toLocaleDateString('en-IN')}`
                                         : 'Not available yet'
                                 }
                                 value={
-                                    currentReview?.finalRating ?? '—'
+                                    getDisplayAverageRating(currentReview) ?? '—'
                                 }
                             />
 
@@ -544,9 +566,9 @@ const MobileEmployeeAppraisalDashboard: React.FC<
                                                 )
                                             }
 
-                                            onDownload={() => { }}
+                                            onDownload={() => onDownload && onDownload(record)}
 
-                                            onWithdraw={() => { }}
+                                            onWithdraw={() => onWithdraw && onWithdraw(record)}
                                         />
                                     ))
 

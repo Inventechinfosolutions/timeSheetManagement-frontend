@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { Form, Button, message, Spin, Modal } from 'antd';
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { Save, Send, ArrowLeft, ArrowRight, ChevronLeft, CheckCircle2, User, UserX } from 'lucide-react';
+import { Save, Send, ArrowLeft, ArrowRight, ChevronLeft, CheckCircle2, User, UserX, Star, Award, MessageSquare, TrendingUp, ThumbsUp } from 'lucide-react';
 
 import { QuarterlyReviewStepperMobile } from '../mobile/QuarterlyReviewStepperMobile';
 import { OverviewStep } from '../steps/desktop_steps/OverviewStep';
@@ -27,6 +27,15 @@ import {
 import { getManagerMappingByEmployeeId } from '../../../reducers/managerMapping.reducer';
 
 import './MobileQuarterlyReviewForm.css';
+
+const RATING_CATEGORIES = [
+    { key: 'productivity', label: 'Productivity & Output' },
+    { key: 'quality', label: 'Quality of Work' },
+    { key: 'ownership', label: 'Ownership & Accountability' },
+    { key: 'communication', label: 'Communication Skills' },
+    { key: 'collaboration', label: 'Team Collaboration' },
+    { key: 'innovation', label: 'Innovation & Initiative' },
+];
 
 interface ReviewItem {
     title?: string;
@@ -100,7 +109,56 @@ const parseTeamContribution = (val: any): TeamContributionItem[] => {
 
 const TOTAL_STEPS = 6;
 
-const MobileQuarterlyReviewForm = () => {
+export interface MobileQuarterlyReviewFormProps {
+    currentStep?: number;
+    setCurrentStep?: React.Dispatch<React.SetStateAction<number>>;
+    form?: any;
+    formData?: {
+        overview: string;
+        projects: ProjectItem[];
+        learningGoals: ReviewItem[];
+        teamContribution: TeamContributionItem[];
+        averageRating?: number | null;
+        companyEnvironment?: CompanyEnvironment;
+    };
+    setFormData?: React.Dispatch<React.SetStateAction<any>>;
+    formKey?: number;
+    loading?: boolean;
+    saving?: boolean;
+    autoSaving?: boolean;
+    isNextEnabled?: boolean;
+    quarter?: string;
+    reviewId?: number | undefined;
+    backendStatus?: ReviewStatus | null;
+    managerName?: string | null;
+    managerEvaluation?: {
+        reviewStatus?: string | null;
+        finalRating?: string | number | null;
+        ratings?: Record<string, number> | null;
+        strengths?: string | null;
+        improvements?: string | null;
+        remarks?: string | null;
+        reviewedOn?: string | null;
+        managerName?: string | null;
+    } | null;
+    isReadOnly?: boolean;
+    confirmModalOpen?: boolean;
+    setConfirmModalOpen?: (open: boolean) => void;
+    noManagerModalOpen?: boolean;
+    setNoManagerModalOpen?: (open: boolean) => void;
+    fetchingManager?: boolean;
+    handleBack?: () => Promise<void>;
+    handleNext?: () => Promise<void>;
+    handleStepChange?: (targetStep: number) => Promise<void>;
+    handleSaveDraft?: () => Promise<void>;
+    handleSubmitClick?: () => Promise<void>;
+    handleConfirmedSubmit?: () => Promise<void>;
+    evaluateNextEnabled?: (step: number, allValues: any) => void;
+}
+
+const MobileQuarterlyReviewForm: React.FC<MobileQuarterlyReviewFormProps> = (props) => {
+    const isControlled = props.currentStep !== undefined;
+
     const navigate = useNavigate();
     const { date: quarterParamSlug } = useParams<{ tab?: string; date?: string }>();
     const [searchParams] = useSearchParams();
@@ -108,20 +166,47 @@ const MobileQuarterlyReviewForm = () => {
     const quarterParam = slugToQuarter(rawQuarterParam);
 
     const dispatch = useDispatch<AppDispatch>();
-    const [form] = Form.useForm();
+    const [internalForm] = Form.useForm();
+    const form = props.form || internalForm;
+
     const currentUser = useSelector((state: RootState) => state.user.currentUser);
     const employeeId = currentUser?.loginId ?? '';
 
-    const [formKey, setFormKey] = useState(0);
-    const [currentStep, setCurrentStep] = useState(0);
-    const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
-    const [autoSaving, setAutoSaving] = useState(false);
-    const [isNextEnabled, setIsNextEnabled] = useState(false);
-    const [quarter, setQuarter] = useState<string>('');
-    const [reviewId, setReviewId] = useState<number | undefined>(undefined);
-    const [backendStatus, setBackendStatus] = useState<ReviewStatus | null>(null);
-    const [formData, setFormData] = useState<{
+    const [internalFormKey, setInternalFormKey] = useState(0);
+    const formKey = props.formKey !== undefined ? props.formKey : internalFormKey;
+
+    const [internalCurrentStep, setInternalCurrentStep] = useState(0);
+    const currentStep = props.currentStep !== undefined ? props.currentStep : internalCurrentStep;
+    const setCurrentStep = props.setCurrentStep || setInternalCurrentStep;
+
+    const [internalLoading, setInternalLoading] = useState(true);
+    const loading = props.loading !== undefined ? props.loading : internalLoading;
+
+    const [internalSaving, setInternalSaving] = useState(false);
+    const saving = props.saving !== undefined ? props.saving : internalSaving;
+
+    const [internalAutoSaving, setInternalAutoSaving] = useState(false);
+    const autoSaving = props.autoSaving !== undefined ? props.autoSaving : internalAutoSaving;
+
+    const [internalIsNextEnabled, setInternalIsNextEnabled] = useState(false);
+    const isNextEnabled = props.isNextEnabled !== undefined ? props.isNextEnabled : internalIsNextEnabled;
+
+    const [internalQuarter, setInternalQuarter] = useState<string>('');
+    const quarter = props.quarter !== undefined ? props.quarter : internalQuarter;
+
+    const [internalReviewId, setInternalReviewId] = useState<number | undefined>(undefined);
+    const reviewId = props.reviewId !== undefined ? props.reviewId : internalReviewId;
+
+    const [internalBackendStatus, setInternalBackendStatus] = useState<ReviewStatus | null>(null);
+    const backendStatus = props.backendStatus !== undefined ? props.backendStatus : internalBackendStatus;
+
+    const [internalManagerName, setInternalManagerName] = useState<string | null>(null);
+    const managerName = props.managerName !== undefined ? props.managerName : internalManagerName;
+
+    const [internalManagerEvaluation, setInternalManagerEvaluation] = useState<any>(null);
+    const managerEvaluation = props.managerEvaluation !== undefined ? props.managerEvaluation : internalManagerEvaluation;
+
+    const [internalFormData, setInternalFormData] = useState<{
         overview: string;
         projects: ProjectItem[];
         learningGoals: ReviewItem[];
@@ -136,29 +221,39 @@ const MobileQuarterlyReviewForm = () => {
         averageRating: null,
         companyEnvironment: undefined,
     });
+    const formData = props.formData !== undefined ? props.formData : internalFormData;
+    const setFormData = props.setFormData || setInternalFormData;
 
-    const [confirmModalOpen, setConfirmModalOpen] = useState(false);
-    const [noManagerModalOpen, setNoManagerModalOpen] = useState(false);
-    const [managerName, setManagerName] = useState<string | null>(null);
-    const [fetchingManager, setFetchingManager] = useState(false);
+    const [internalConfirmModalOpen, setInternalConfirmModalOpen] = useState(false);
+    const confirmModalOpen = props.confirmModalOpen !== undefined ? props.confirmModalOpen : internalConfirmModalOpen;
+    const setConfirmModalOpen = props.setConfirmModalOpen || setInternalConfirmModalOpen;
+
+    const [internalNoManagerModalOpen, setInternalNoManagerModalOpen] = useState(false);
+    const noManagerModalOpen = props.noManagerModalOpen !== undefined ? props.noManagerModalOpen : internalNoManagerModalOpen;
+    const setNoManagerModalOpen = props.setNoManagerModalOpen || setInternalNoManagerModalOpen;
+
+    const [internalFetchingManager, setInternalFetchingManager] = useState(false);
+    const fetchingManager = props.fetchingManager !== undefined ? props.fetchingManager : internalFetchingManager;
+
     const rootRef = useRef<HTMLDivElement>(null);
 
     const quarterOver = quarter ? isQuarterOver(quarter) : false;
-    const isReadOnly =
-        (quarterOver && backendStatus === ReviewStatus.SUBMITTED) ||
-        searchParams.get('mode') === ReviewStatus.VIEW;
+    const isReadOnly = props.isReadOnly !== undefined
+        ? props.isReadOnly
+        : ((quarterOver && backendStatus === ReviewStatus.SUBMITTED) || searchParams.get('mode') === ReviewStatus.VIEW);
 
     useEffect(() => {
+        if (isControlled) return;
         const init = async () => {
             try {
-                setLoading(true);
+                setInternalLoading(true);
 
                 let resolvedQuarter = quarterParam ?? '';
                 if (!resolvedQuarter) {
                     const res = await dispatch(getCurrentQuarter()).unwrap();
                     resolvedQuarter = res;
                 }
-                setQuarter(resolvedQuarter);
+                setInternalQuarter(resolvedQuarter);
 
                 let existing: any = null;
                 try {
@@ -181,8 +276,8 @@ const MobileQuarterlyReviewForm = () => {
                 }
 
                 if (existing) {
-                    if (existing.id) setReviewId(existing.id);
-                    setBackendStatus(existing.status);
+                    if (existing.id) setInternalReviewId(existing.id);
+                    setInternalBackendStatus(existing.status);
                     const parseCompanyEnvironment = (val: any): CompanyEnvironment | undefined => {
                         if (!val) return undefined;
                         if (typeof val === 'object') return val;
@@ -196,22 +291,56 @@ const MobileQuarterlyReviewForm = () => {
                         averageRating: existing.averageRating ?? null,
                         companyEnvironment: parseCompanyEnvironment(existing.companyEnvironment),
                     };
-                    setFormData(initialVals);
-                    setFormKey(k => k + 1);
+                    setInternalFormData(initialVals);
+                    setInternalFormKey(k => k + 1);
                     if (existing.managerName) {
-                        setManagerName(existing.managerName);
+                        setInternalManagerName(existing.managerName);
+                    }
+
+                    const isManagerReviewed =
+                        existing.reviewStatus === ReviewStatus.REVIEWED ||
+                        existing.reviewStatus === ReviewStatus.COMPLETED ||
+                        existing.status === ReviewStatus.REVIEWED ||
+                        existing.status === ReviewStatus.APPROVED ||
+                        existing.status === ReviewStatus.COMPLETED;
+
+                    const parseJsonSafely = (val: any): any => {
+                        if (!val) return null;
+                        if (typeof val === 'object') return val;
+                        try { return JSON.parse(val); } catch { return null; }
+                    };
+
+                    const parsedRatings = parseJsonSafely(existing.ratings || existing.managerRatings);
+                    const evalData = {
+                        reviewStatus: existing.reviewStatus ?? (isManagerReviewed ? 'Reviewed' : null),
+                        finalRating: existing.finalRating ?? null,
+                        ratings: parsedRatings && typeof parsedRatings === 'object' ? parsedRatings : null,
+                        strengths: existing.strengths ?? null,
+                        improvements: existing.improvements ?? null,
+                        remarks: existing.remarks ?? existing.managerFeedback ?? null,
+                        reviewedOn: existing.reviewedOn ?? null,
+                        managerName: existing.managerName ?? null,
+                    };
+
+                    if (
+                        isManagerReviewed &&
+                        (evalData.finalRating || evalData.strengths || evalData.improvements || evalData.remarks || evalData.ratings)
+                    ) {
+                        setInternalManagerEvaluation(evalData);
+                    } else {
+                        setInternalManagerEvaluation(null);
                     }
                 }
             } catch {
                 message.error('Failed to load review data.');
             } finally {
-                setLoading(false);
+                setInternalLoading(false);
             }
         };
         init();
-    }, [quarterParam]);
+    }, [quarterParam, isControlled]);
 
-    const getStepRequiredValue = useCallback(
+    const internalGetStepRequiredValue = useCallback(
         (step: number, allValues: any): boolean => {
             if (step === 0) {
                 return (allValues.overview ?? '').trim().length >= 1;
@@ -264,29 +393,33 @@ const MobileQuarterlyReviewForm = () => {
         []
     );
 
-    const evaluateNextEnabled = useCallback(
+    const internalEvaluateNextEnabled = useCallback(
         (step: number, allValues: any) => {
             if (step >= TOTAL_STEPS - 1) {
-                setIsNextEnabled(true);
+                setInternalIsNextEnabled(true);
                 return;
             }
-            setIsNextEnabled(getStepRequiredValue(step, allValues));
+            setInternalIsNextEnabled(internalGetStepRequiredValue(step, allValues));
         },
-        [getStepRequiredValue]
+        [internalGetStepRequiredValue]
     );
 
+    const evaluateNextEnabled = props.evaluateNextEnabled || internalEvaluateNextEnabled;
+
     useEffect(() => {
+        if (isControlled) return;
         if (!loading) {
             form.setFieldsValue(formData);
             evaluateNextEnabled(currentStep, formData);
         }
-    }, [loading, formKey]);
+    }, [loading, formKey, isControlled]);
 
     const watchedValues = Form.useWatch([], form);
 
     useEffect(() => {
+        if (isControlled) return;
         evaluateNextEnabled(currentStep, watchedValues || {});
-    }, [currentStep, watchedValues, evaluateNextEnabled]);
+    }, [currentStep, watchedValues, evaluateNextEnabled, isControlled]);
 
     const cleanReviewItems = (raw: any): ReviewItem[] => {
         if (!Array.isArray(raw)) return [];
@@ -350,33 +483,33 @@ const MobileQuarterlyReviewForm = () => {
         };
     };
 
-    const silentSaveDraft = useCallback(async () => {
+    const internalSilentSaveDraft = useCallback(async () => {
         if (isReadOnly) return;
         try {
-            setAutoSaving(true);
+            setInternalAutoSaving(true);
             const payload = getFormPayload(ReviewStatus.DRAFT);
             const result = await dispatch(saveOrSubmitReview(payload)).unwrap();
-            if (result?.id) setReviewId(result.id);
-            setBackendStatus(result.status);
+            if (result?.id) setInternalReviewId(result.id);
+            setInternalBackendStatus(result.status);
         } catch {
             // Non-blocking draft save
         } finally {
-            setAutoSaving(false);
+            setInternalAutoSaving(false);
         }
     }, [form, quarter, isReadOnly, formData, dispatch]);
 
-    const handleBack = async () => {
+    const internalHandleBack = async () => {
         if (!isReadOnly) {
-            await silentSaveDraft();
+            await internalSilentSaveDraft();
         }
-        setCurrentStep(prev => {
+        setCurrentStep((prev: number) => {
             const next = Math.max(prev - 1, 0);
             requestAnimationFrame(() => scrollToTop());
             return next;
         });
     };
 
-    const handleNext = async () => {
+    const internalHandleNext = async () => {
         if (currentStep === 1) {
             try {
                 await form.validateFields();
@@ -386,17 +519,17 @@ const MobileQuarterlyReviewForm = () => {
         }
 
         if (!isReadOnly) {
-            await silentSaveDraft();
+            await internalSilentSaveDraft();
         }
 
-        setCurrentStep(prev => {
+        setCurrentStep((prev: number) => {
             const next = Math.min(prev + 1, TOTAL_STEPS - 1);
             requestAnimationFrame(() => scrollToTop());
             return next;
         });
     };
 
-    const handleStepChange = async (targetStep: number) => {
+    const internalHandleStepChange = async (targetStep: number) => {
         if (targetStep > currentStep) {
             if (!isNextEnabled) return;
             if (currentStep === 1) {
@@ -406,33 +539,33 @@ const MobileQuarterlyReviewForm = () => {
                     return;
                 }
             }
-            if (!isReadOnly) await silentSaveDraft();
+            if (!isReadOnly) await internalSilentSaveDraft();
             setCurrentStep(targetStep);
             requestAnimationFrame(() => scrollToTop());
         } else {
-            if (!isReadOnly) await silentSaveDraft();
+            if (!isReadOnly) await internalSilentSaveDraft();
             setCurrentStep(targetStep);
             requestAnimationFrame(() => scrollToTop());
         }
     };
 
-    const handleSaveDraft = async () => {
+    const internalHandleSaveDraft = async () => {
         try {
-            setSaving(true);
+            setInternalSaving(true);
             const payload = getFormPayload(ReviewStatus.DRAFT);
             const result = await dispatch(saveOrSubmitReview(payload)).unwrap();
-            if (result?.id) setReviewId(result.id);
-            setBackendStatus(result.status);
+            if (result?.id) setInternalReviewId(result.id);
+            setInternalBackendStatus(result.status);
             message.success('Draft saved successfully!');
             navigate('/employee-dashboard/appraisal');
         } catch (err: any) {
             message.error(err?.message ?? 'Failed to save draft.');
         } finally {
-            setSaving(false);
+            setInternalSaving(false);
         }
     };
 
-    const handleSubmitClick = async () => {
+    const internalHandleSubmitClick = async () => {
         try {
             await form.validateFields();
         } catch {
@@ -446,40 +579,47 @@ const MobileQuarterlyReviewForm = () => {
         }
 
         try {
-            setFetchingManager(true);
+            setInternalFetchingManager(true);
             const result = await dispatch(getManagerMappingByEmployeeId(employeeId)).unwrap();
             const fetchedManagerName: string | undefined = result?.managerName;
 
             if (!fetchedManagerName) {
-                setNoManagerModalOpen(true);
+                setInternalNoManagerModalOpen(true);
                 return;
             }
 
-            setManagerName(fetchedManagerName);
-            setConfirmModalOpen(true);
+            setInternalManagerName(fetchedManagerName);
+            setInternalConfirmModalOpen(true);
         } catch {
-            setNoManagerModalOpen(true);
+            setInternalNoManagerModalOpen(true);
         } finally {
-            setFetchingManager(false);
+            setInternalFetchingManager(false);
         }
     };
 
-    const handleConfirmedSubmit = async () => {
+    const internalHandleConfirmedSubmit = async () => {
         try {
-            setSaving(true);
+            setInternalSaving(true);
             const payload = getFormPayload(ReviewStatus.SUBMITTED);
             const result = await dispatch(saveOrSubmitReview(payload)).unwrap();
-            if (result?.id) setReviewId(result.id);
-            setBackendStatus(result.status);
-            setConfirmModalOpen(false);
+            if (result?.id) setInternalReviewId(result.id);
+            setInternalBackendStatus(result.status);
+            setInternalConfirmModalOpen(false);
             message.success('Quarterly review submitted successfully!');
             navigate('/employee-dashboard/appraisal');
         } catch (err: any) {
             message.error(err?.message ?? 'Failed to submit review.');
         } finally {
-            setSaving(false);
+            setInternalSaving(false);
         }
     };
+
+    const handleBack = props.handleBack || internalHandleBack;
+    const handleNext = props.handleNext || internalHandleNext;
+    const handleStepChange = props.handleStepChange || internalHandleStepChange;
+    const handleSaveDraft = props.handleSaveDraft || internalHandleSaveDraft;
+    const handleSubmitClick = props.handleSubmitClick || internalHandleSubmitClick;
+    const handleConfirmedSubmit = props.handleConfirmedSubmit || internalHandleConfirmedSubmit;
 
     const renderStepContent = () => {
         const disabled = isReadOnly;
@@ -562,7 +702,139 @@ const MobileQuarterlyReviewForm = () => {
 
                 {isReadOnly ? (
                     <Form key={`ro-${formKey}`} form={form} layout="vertical" className="mb-6" initialValues={formData}>
-                        {managerName && (
+                        {managerEvaluation && (
+                            <div className="mb-4 bg-gradient-to-br from-indigo-900/5 via-indigo-50/40 to-purple-50/30 border border-indigo-200/80 rounded-2xl p-4 shadow-sm">
+                                <div className="flex items-center justify-between gap-2 pb-3 border-b border-indigo-100">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold shrink-0">
+                                            <Award className="w-4 h-4" />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-bold text-slate-900 text-sm leading-tight">
+                                                Manager Evaluation
+                                            </h3>
+                                            <p className="text-[10px] text-slate-500 mt-0.5">
+                                                {managerEvaluation.managerName || managerName || 'Manager'}
+                                                {managerEvaluation.reviewedOn && (
+                                                    <> &bull; {new Date(managerEvaluation.reviewedOn).toLocaleDateString('en-IN')}</>
+                                                )}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                        {managerEvaluation.reviewStatus || 'Reviewed'}
+                                    </span>
+                                </div>
+
+                                {(() => {
+                                    const managerRatingValues = managerEvaluation.ratings
+                                        ? Object.values(managerEvaluation.ratings).map(Number).filter(v => !isNaN(v) && v > 0)
+                                        : [];
+                                    const managerAvgScore = managerRatingValues.length > 0
+                                        ? (managerRatingValues.reduce((a, b) => a + b, 0) / managerRatingValues.length).toFixed(1)
+                                        : null;
+
+                                    if (!managerAvgScore && !managerEvaluation.finalRating) return null;
+
+                                    return (
+                                        <div className="mt-3 bg-white/90 border border-indigo-100 rounded-xl p-3 flex items-center justify-between gap-2">
+                                            <div>
+                                                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Overall Rating</p>
+                                                <p className="text-sm font-extrabold text-indigo-900 mt-0.5">
+                                                    {managerAvgScore
+                                                        ? `${managerAvgScore} / 5.0`
+                                                        : typeof managerEvaluation.finalRating === ReviewStatus.NUMBER
+                                                            ? `${managerEvaluation.finalRating} / 5.0`
+                                                            : managerEvaluation.finalRating}
+                                                </p>
+                                                {managerEvaluation.finalRating && managerAvgScore && (
+                                                    <p className="text-[11px] text-indigo-600 font-medium mt-0.5">
+                                                        {managerEvaluation.finalRating}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-1 px-2.5 py-1 bg-amber-50 border border-amber-200 rounded-lg">
+                                                <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                                                <span className="font-bold text-amber-800 text-xs">
+                                                    {managerAvgScore ||
+                                                        (typeof managerEvaluation.finalRating === ReviewStatus.NUMBER
+                                                            ? managerEvaluation.finalRating.toFixed(1)
+                                                            : managerEvaluation.finalRating)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+
+                                {managerEvaluation.ratings && Object.keys(managerEvaluation.ratings).length > 0 && (
+                                    <div className="mt-3">
+                                        <h4 className="text-[10px] font-bold text-slate-700 uppercase tracking-wider mb-2">
+                                            Category Ratings
+                                        </h4>
+                                        <div className="grid grid-cols-1 gap-2">
+                                            {RATING_CATEGORIES.map((cat) => {
+                                                const val = managerEvaluation.ratings?.[cat.key] || 0;
+                                                return (
+                                                    <div key={cat.key} className="bg-white/80 border border-slate-200/80 rounded-lg p-2.5 flex items-center justify-between gap-2">
+                                                        <span className="text-xs font-medium text-slate-700">{cat.label}</span>
+                                                        <div className="flex items-center gap-0.5">
+                                                            {[1, 2, 3, 4, 5].map((star) => (
+                                                                <Star
+                                                                    key={star}
+                                                                    className={`w-3 h-3 ${star <= val
+                                                                            ? 'text-amber-400 fill-amber-400'
+                                                                            : 'text-slate-200'
+                                                                        }`}
+                                                                />
+                                                            ))}
+                                                            <span className="text-xs font-bold text-slate-700 ml-1">{val}/5</span>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="mt-3 flex flex-col gap-2">
+                                    {managerEvaluation.strengths && (
+                                        <div className="bg-white/90 border border-emerald-100 rounded-xl p-3 flex flex-col gap-1">
+                                            <div className="flex items-center gap-1.5 text-black font-semibold text-[12px] uppercase tracking-wide">
+                                                <span>1. Key Strengths</span>
+                                            </div>
+                                            <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">
+                                                {managerEvaluation.strengths}
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {managerEvaluation.improvements && (
+                                        <div className="bg-white/90 border border-amber-100 rounded-xl p-3 flex flex-col gap-1">
+                                            <div className="flex items-center gap-1.5 text-black font-semibold text-[12px] uppercase tracking-wide">
+                                                <span>2. Areas for Improvement</span>
+                                            </div>
+                                            <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">
+                                                {managerEvaluation.improvements}
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {managerEvaluation.remarks && (
+                                        <div className="bg-white/90 border border-indigo-100 rounded-xl p-3 flex flex-col gap-1">
+                                            <div className="flex items-center gap-1.5 text-black font-semibold text-[12px] uppercase tracking-wide">
+                                                <span>3. Manager Feedback & Remarks</span>
+                                            </div>
+                                            <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">
+                                                {managerEvaluation.remarks}
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {!managerEvaluation && managerName && (
                             <div className="mobile-qr-readonly-manager-banner">
                                 <div className="mobile-qr-manager-icon-wrapper">
                                     <User className="w-4 h-4 text-blue-600" />
@@ -601,16 +873,18 @@ const MobileQuarterlyReviewForm = () => {
                         </Form>
 
                         <div
-                            className={`mobile-qr-footer-nav ${currentStep === 0 ? "mobile-qr-footer-nav-center" : ""
+                            className={`mobile-qr-footer-nav ${currentStep === 0 ? 'mobile-qr-footer-nav-center' : ''
                                 }`}
                         >
                             {currentStep > 0 && (
                                 <Button
-                                    icon={<ArrowLeft className="w-3.5 h-3.5" />}
                                     onClick={handleBack}
                                     className="h-9 px-3 rounded-xl text-xs whitespace-nowrap"
                                 >
-
+                                    <span className="flex items-center justify-center gap-1.5">
+                                        <ArrowLeft className="w-3.5 h-3.5 shrink-0" />
+                                        <span className="hidden md:inline">Previous</span>
+                                    </span>
                                 </Button>
                             )}
 
@@ -618,10 +892,12 @@ const MobileQuarterlyReviewForm = () => {
                                 <Button
                                     onClick={handleSaveDraft}
                                     loading={saving}
-                                    icon={<Save className="w-3.5 h-3.5" />}
                                     className="h-9 px-3 rounded-xl border-blue-600 text-blue-600 hover:text-blue-700 text-xs font-semibold"
                                 >
-                                    Save Draft
+                                    <span className="flex items-center justify-center gap-1.5">
+                                        <Save className="w-3.5 h-3.5 shrink-0" />
+                                        <span>Save Draft</span>
+                                    </span>
                                 </Button>
 
                                 {currentStep < TOTAL_STEPS - 1 ? (
@@ -629,26 +905,24 @@ const MobileQuarterlyReviewForm = () => {
                                         type="primary"
                                         onClick={handleNext}
                                         disabled={!isNextEnabled}
-                                        className="h-9 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold text-xs flex items-center gap-1.5 border-0"
+                                        className="h-9 px-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold text-xs border-0"
                                     >
-                                        {currentStep === 0 ? (
-                                            <span className="inline-flex items-center gap-1 whitespace-nowrap">
-                                                Next
-                                                <ArrowRight className="w-3.5 h-3.5 flex-shrink-0" />
-                                            </span>
-                                        ) : (
-                                            <ArrowRight className="w-3.5 h-3.5" />
-                                        )}
+                                        <span className="flex items-center justify-center gap-1.5">
+                                            {currentStep === 0 && <span>Next</span>}
+                                            <ArrowRight className="w-3.5 h-3.5 shrink-0" />
+                                        </span>
                                     </Button>
                                 ) : (
                                     <Button
                                         type="primary"
                                         onClick={handleSubmitClick}
                                         loading={saving || fetchingManager}
-                                        icon={<Send className="w-3.5 h-3.5" />}
-                                        className="h-9 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold text-xs flex items-center gap-1.5 border-0"
+                                        className="h-9 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold text-xs border-0"
                                     >
-                                        Submit
+                                        <span className="flex items-center justify-center gap-1.5">
+                                            <Send className="w-3.5 h-3.5 shrink-0" />
+                                            <span>Submit</span>
+                                        </span>
                                     </Button>
                                 )}
                             </div>

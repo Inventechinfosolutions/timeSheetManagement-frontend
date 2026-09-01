@@ -129,10 +129,12 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({ disabled }) => {
         }
       `}</style>
 
-      <h1 className="text-xl font-semibold mb-2">5. Company Environment</h1>
-      <p className="text-slate-500 text-sm mb-6 leading-relaxed">
-        Provide feedback on your experience with the company culture, work-life balance, and make suggestions for overall improvement.
-      </p>
+      <h1 className="text-base font-semibold mb-2">5. Company Environment</h1>
+      {!disabled && (
+        <p className="text-slate-500 text-sm mb-6 leading-relaxed">
+          Provide feedback on your experience with the company culture, work-life balance, and make suggestions for overall improvement.
+        </p>
+      )}
 
       <div className="flex flex-col gap-5 border border-slate-100 rounded-2xl py-3 px-2 bg-slate-50/50 relative">
      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -156,7 +158,7 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({ disabled }) => {
       <Input.TextArea
         rows={3}
         disabled={disabled}
-        placeholder="Share your workplace experience and suggestions...."
+        placeholder={disabled ? undefined : "Share your workplace experience and suggestions...."}
         className="hide-scrollbar rounded-xl border-slate-200 hover:border-emerald-400 focus:border-emerald-500 focus:shadow-[0_0_0_2px_rgba(16,185,129,0.1)] transition-all duration-200 p-3 text-slate-900  hover:-translate-y-0.5"
         style={{
           borderRadius: '12px',
@@ -197,7 +199,7 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({ disabled }) => {
       <Input.TextArea
         rows={3}
         disabled={disabled}
-        placeholder="Share your work-life balance experience...."
+        placeholder={disabled ? undefined : "Share your work-life balance experience...."}
         className="hide-scrollbar rounded-xl border-slate-200 hover:border-emerald-400 focus:border-emerald-500 focus:shadow-[0_0_0_2px_rgba(16,185,129,0.1)] transition-all duration-200 p-3 text-slate-900  hover:-translate-y-0.5"
         style={{
           borderRadius: '12px',
@@ -238,7 +240,7 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({ disabled }) => {
       <Input.TextArea
         rows={3}
         disabled={disabled}
-        placeholder="Share your suggestions for improvement...."
+        placeholder={disabled ? undefined : "Share your suggestions for improvement...."}
         className="hide-scrollbar rounded-xl border-slate-200 hover:border-emerald-400 focus:border-emerald-500 focus:shadow-[0_0_0_2px_rgba(16,185,129,0.1)] transition-all duration-200 p-3 text-slate-900  hover:-translate-y-0.5"
         style={{
           borderRadius: '12px',

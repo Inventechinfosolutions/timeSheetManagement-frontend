@@ -62,9 +62,11 @@ export const MobileCompanyEnvironmentStep: React.FC<StepProps> = ({
                     5. Company Environment
                 </h1>
 
-                <p className="mobile-ces-card__subtitle">
-                    Share your feedback on culture, work-life balance, and improvements.
-                </p>
+                {!disabled && (
+                    <p className="mobile-ces-card__subtitle">
+                        Share your feedback on culture, work-life balance, and improvements.
+                    </p>
+                )}
 
                 {/* Gray container */}
                 <div className="mobile-ces-fields">
@@ -84,7 +86,7 @@ export const MobileCompanyEnvironmentStep: React.FC<StepProps> = ({
                             <Input.TextArea
                                 rows={3}
                                 disabled={disabled}
-                                placeholder="Share your workplace experience and suggestions...."
+                                placeholder={disabled ? undefined : "Share your workplace experience and suggestions...."}
                                 className="mobile-ces-textarea"
                                 showCount
                                 maxLength={2000}
@@ -113,7 +115,7 @@ export const MobileCompanyEnvironmentStep: React.FC<StepProps> = ({
                             <Input.TextArea
                                 rows={3}
                                 disabled={disabled}
-                                placeholder="Share your work-life balance experience...."
+                                placeholder={disabled ? undefined : "Share your work-life balance experience...."}
                                 className="mobile-ces-textarea"
                                 showCount
                                 maxLength={2000}
@@ -143,7 +145,7 @@ export const MobileCompanyEnvironmentStep: React.FC<StepProps> = ({
                             <Input.TextArea
                                 rows={3}
                                 disabled={disabled}
-                                placeholder="Share your suggestions for improvement...."
+                                placeholder={disabled ? undefined : "Share your suggestions for improvement...."}
                                 className="mobile-ces-textarea"
                                 showCount
                                 maxLength={2000}
@@ -180,10 +182,10 @@ export const MobileCompanyEnvironmentStep: React.FC<StepProps> = ({
 };
 
 
-/* =========================================
+/* 
    Interactive Emoji Rating
    Same style as CompanyEnvironmentStep
-   ========================================= */
+    */
 
 interface EmojiRatingProps {
     value?: number;

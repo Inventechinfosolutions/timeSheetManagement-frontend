@@ -28,7 +28,7 @@ export const AchievementsAndChallengesStep: React.FC<StepProps> = ({
 }) => {
   const form = Form.useFormInstance();
   const uploaderRefs = useRef<{ [key: number]: CommonMultipleUploaderRef | null }>({});
-  const [, setFileCounts] = useState<{ [key: number]: number }>({});
+  const [fileCounts, setFileCounts] = useState<{ [key: number]: number }>({});
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -96,10 +96,12 @@ export const AchievementsAndChallengesStep: React.FC<StepProps> = ({
           },
         }}
       >
-        <h1 className="text-xl font-semibold mb-2">2. Accomplishments & Challenges</h1>
-        <p className="text-slate-500 text-sm mb-6 leading-relaxed">
-          Highlight your key achievements, challenges, and performance impacts this quarter.
-        </p>
+        <h1 className="text-base font-semibold mb-2">2. Accomplishments & Challenges</h1>
+        {!disabled && (
+          <p className="text-slate-500 text-sm mb-6 leading-relaxed">
+            Highlight your key achievements, challenges, and performance impacts this quarter.
+          </p>
+        )}
 
         <Form.List name="projects">
           {(fields, { add, remove }, { errors }) => (
@@ -143,7 +145,7 @@ export const AchievementsAndChallengesStep: React.FC<StepProps> = ({
                       >
                         <Input
                           disabled={disabled}
-                          placeholder="Enter project title"
+                          placeholder={disabled ? undefined : "Enter project title"}
                           className="rounded-xl border-slate-200 focus:border-blue-500 h-10 px-3 text-slate-900 bg-white hover:-translate-y-0.5"
                           style={{
                             backgroundColor: '#ffffff',
@@ -178,7 +180,7 @@ export const AchievementsAndChallengesStep: React.FC<StepProps> = ({
                           <Input.TextArea
                             rows={4}
                             disabled={disabled}
-                            placeholder="List your key accomplishments..."
+                            placeholder={disabled ? undefined : "List your key accomplishments..."}
                             className="rounded-xl border-slate-200 focus:border-blue-500 p-3 text-slate-900 hide-scrollbar bg-white hover:-translate-y-0.5"
                             style={{
                               borderRadius: '12px',
@@ -214,7 +216,7 @@ export const AchievementsAndChallengesStep: React.FC<StepProps> = ({
                           <Input.TextArea
                             rows={4}
                             disabled={disabled}
-                            placeholder="Describe any challenges faced..."
+                            placeholder={disabled ? undefined : "Describe any challenges faced..."}
                             className="rounded-xl border-slate-200 focus:border-blue-500 p-3 text-slate-900 hide-scrollbar bg-white hover:-translate-y-0.5"
                             style={{
                               borderRadius: '12px',
@@ -238,7 +240,9 @@ export const AchievementsAndChallengesStep: React.FC<StepProps> = ({
 
                     {/* Row 3: Attachments */}
                     <div>
-                      <div className="text-sm font-semibold text-slate-800 mb-2">Attachments</div>
+                      {(!disabled || (fileCounts[idx] !== undefined && fileCounts[idx] > 0)) && (
+                        <div className="text-sm font-semibold text-slate-800 mb-2">Attachments</div>
+                      )}
                       <CommonMultipleUploader
                         ref={(el) => {
                           uploaderRefs.current[idx] = el;

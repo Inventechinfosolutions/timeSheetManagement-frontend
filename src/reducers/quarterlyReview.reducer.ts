@@ -53,6 +53,10 @@ export interface QuarterlyReview {
   reviewStatus?: string | null;
   finalRating?: string | null;
   reviewedOn?: string | null;
+  ratings?: Record<string, number> | null;
+  strengths?: string | null;
+  improvements?: string | null;
+  remarks?: string | null;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: string;
@@ -145,6 +149,63 @@ export const saveOrSubmitReview = createAsyncThunk<QuarterlyReview, SaveOrSubmit
       return response.data?.data as QuarterlyReview;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || error.message || 'Request failed');
+    }
+  }
+);
+
+/** DELETE /api/quarterly-review/:id (id or quarter) */
+export const withdrawQuarterlyReview = createAsyncThunk<
+  { id: number | string; message: string },
+  number | string,
+  ThunkConfig
+>(
+  'quarterlyReview/withdraw',
+  async (idOrQuarter, { rejectWithValue }) => {
+    try {
+      const response = await axios.delete(`${apiUrl}/${idOrQuarter}`);
+      return {
+        id: idOrQuarter,
+        message: response.data?.message || 'Quarterly review withdrawn successfully',
+      };
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || error.message || 'Failed to withdraw quarterly review');
+    }
+  }
+);
+
+/** GET /api/quarterly-review/:id/download-pdf — Download PDF report of completed review */
+export const downloadQuarterlyReviewPdf = createAsyncThunk<
+  void,
+  { id?: number | string; quarter?: string },
+  ThunkConfig
+>(
+  'quarterlyReview/download_pdf',
+  async ({ id, quarter }, { rejectWithValue }) => {
+    try {
+      const identifier = id ?? (quarter ? quarterToSlug(quarter) : '');
+      const response = await axios.get(`${apiUrl}/${identifier}/download-pdf`, {
+        responseType: 'blob',
+      });
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = `Quarterly_Review_${quarter ? quarter.replace(/\s+/g, '_') : identifier}.pdf`;
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1].replace(/['"]/g, '');
+        }
+      }
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || error.message || 'Failed to download review PDF'
+      );
     }
   }
 );
@@ -268,6 +329,17 @@ export const QuarterlyReviewSlice = createSlice({
         state.loading = false;
         state.entity = action.payload;
       })
+      .addCase(withdrawQuarterlyReview.fulfilled, (state, action) => {
+        state.loading = false;
+        state.updating = false;
+        state.updateSuccess = true;
+        state.entities = state.entities.filter(
+          (r) => r.id !== action.payload.id && r.quarter !== action.payload.id
+        );
+        if (state.entity && (state.entity.id === action.payload.id || state.entity.quarter === action.payload.id)) {
+          state.entity = null;
+        }
+      })
       .addMatcher(
         isFulfilled(saveOrSubmitReview),
         (state, action) => {
@@ -285,7 +357,7 @@ export const QuarterlyReviewSlice = createSlice({
         }
       )
       .addMatcher(
-        isPending(saveOrSubmitReview),
+        isPending(saveOrSubmitReview, withdrawQuarterlyReview),
         (state) => {
           state.errorMessage = null;
           state.updateSuccess = false;
