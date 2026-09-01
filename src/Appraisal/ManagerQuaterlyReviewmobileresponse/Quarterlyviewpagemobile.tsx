@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Avatar,
   Button,
@@ -16,6 +16,14 @@ import {
   PerformanceRating,
   RATING_CATEGORY_ITEMS,
 } from './QuarterlyReviewmobile.types';
+import CommonMultipleUploader from '../../EmployeeDashboard/CommonMultipleUploader';
+import {
+  uploadQuarterlyReviewFile,
+  downloadQuarterlyReviewFile,
+  previewQuarterlyReviewFile,
+  deleteQuarterlyReviewFile,
+  getQuarterlyReviewFiles,
+} from '../../reducers/quarterlyReview.reducer';
 
 const { TextArea } = Input;
 
@@ -214,6 +222,8 @@ const QuarterlyViewPageMobile: React.FC<QuarterlyViewPageMobileProps> = ({
   setRemarks,
   setFieldErrors,
 }) => {
+  const [fileCounts, setFileCounts] = useState<{ [key: number]: number }>({});
+
   // Auto-sync the Final Performance Rating dropdown whenever the manager
   // changes any star rating (which changes averageRatingScore).
   // Skipped in view-only mode so a saved/submitted review never mutates.
@@ -261,7 +271,7 @@ const QuarterlyViewPageMobile: React.FC<QuarterlyViewPageMobileProps> = ({
         className="mobile-evaluation-modal qvm-wrapper"
       >
         {currentReview && (
-          <div className="py-2 flex flex-col gap-4 sm:gap-6 max-h-[80vh] overflow-y-auto pr-1">
+          <div className="py-2 flex flex-col gap-4 sm:gap-6 max-h-[80vh] overflow-y-auto overflow-x-hidden pr-1">
             {/* Employee Header info bar - Stacked layout for mobile */}
             <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
@@ -280,8 +290,8 @@ const QuarterlyViewPageMobile: React.FC<QuarterlyViewPageMobileProps> = ({
 
               <div className="flex items-center gap-4 text-xs font-semibold text-slate-600 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-t-0 pt-2 sm:pt-0 border-indigo-100">
                 <div>
-                  <p className="text-slate-400 font-normal text-[10px] sm:text-xs">Quarter</p>
-                  <p className="text-indigo-700 font-bold text-xs sm:text-sm">{currentReview.quarter}</p>
+                  <p className="text-slate-500 font-normal text-[10px] sm:text-sm">Quarter</p>
+                  <p className="text-black font-semibold text-xs sm:text-sm">{currentReview.quarter}</p>
                 </div>
                 <Divider type="vertical" className="h-6 sm:h-8" />
                 <div>
@@ -299,34 +309,251 @@ const QuarterlyViewPageMobile: React.FC<QuarterlyViewPageMobileProps> = ({
             <Row gutter={[16, 16]}>
               {/* Employee Submission Details */}
               <Col xs={24} lg={12}>
-                <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 sm:p-4 flex flex-col gap-3.5 sm:gap-4 h-full">
-                  <h4 className="font-bold text-slate-900 text-xs sm:text-sm uppercase tracking-wider text-indigo-700 flex items-center gap-2">
-                    Employee Submission Details
-                  </h4>
+                <div className="flex flex-col gap-3.5 sm:gap-4">
+                  {/* ── Section header ── */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold uppercase tracking-widest text-black">Employee Submission Details</span>
+                    <div className="flex-1 h-px bg-indigo-100" />
+                  </div>
 
-                  <div>
-                    <h5 className="font-bold text-slate-800 text-xs uppercase mb-1">Executive Summary</h5>
-                    <div className={`bg-white border border-slate-200 rounded-xl p-2.5 sm:p-3 ${SUBMISSION_CARD_HOVER_CLASSES}`}>
-                      <p className="text-slate-900 text-xs sm:text-sm leading-relaxed">
-                        {currentReview.overview || 'No summary provided.'}
+                  {/* ── 1. Quarter Overview ── */}
+                  <div className="bg-white border border-slate-200 rounded-2xl p-3.5 sm:p-4 flex flex-col gap-2 shadow-sm">
+                    <h5 className="text-xs font-medium text-black uppercase tracking-widest mb-0.5">
+                      1. Quarter Overview
+                    </h5>
+                    {currentReview.overview ? (
+                      <p className="text-slate-800 text-xs sm:text-sm leading-relaxed whitespace-pre-line">
+                        {currentReview.overview}
                       </p>
-                    </div>
+                    ) : (
+                      <p className="text-slate-400 text-xs sm:text-sm italic">No overview provided.</p>
+                    )}
                   </div>
 
-                  <div>
-                    <h5 className="font-bold text-slate-800 text-xs uppercase mb-1">Key Achievements</h5>
-                    {renderItemList(currentReview.achievements)}
+                  {/* ── 2. Accomplishments & Challenges ── */}
+                  <div className="bg-white border border-slate-200 rounded-2xl p-3.5 sm:p-4 flex flex-col gap-3 shadow-sm">
+                    <h5 className="text-xs font-medium text-black uppercase tracking-widest mb-0.5">
+                      2. Accomplishments &amp; Challenges
+                    </h5>
+                    {(() => {
+                      const projects = Array.isArray(currentReview.projects) && currentReview.projects.length > 0
+                        ? currentReview.projects
+                        : null;
+
+                      if (projects) {
+                        return (
+                          <div className="flex flex-col gap-3">
+                            {projects.map((proj, idx) => (
+                              <div key={idx} className={`border border-slate-200 rounded-xl overflow-hidden ${SUBMISSION_CARD_HOVER_CLASSES}`}>
+                           {/* Project name banner */}
+                                <div className="bg-indigo-50 border-b border-indigo-100 px-3 py-2 flex items-center gap-2">
+                                  <span className="text-xs font-medium text-black">
+                                    {idx + 1}. Project Title:
+                                  </span>
+
+                                  <span className="text-xs font-semibold text-slate-700 truncate">
+                                    {proj.projectTitle || `Project ${idx + 1}`}
+                                  </span>
+                                </div>
+                                <div className="p-3 flex flex-col gap-2.5">
+                                  <div>
+                                    <span className="text-xs font-medium text-slate-600 uppercase tracking-wider">Achievement</span>
+                                    <p className="text-slate-800 text-xs sm:text-sm leading-relaxed mt-0.5 whitespace-pre-line">
+                                      {proj.achievement || <span className="text-slate-400 italic">Not provided</span>}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <span className="text-xs font-medium text-slate-600 uppercase tracking-wider">Challenge</span>
+                                    <p className="text-slate-800 text-xs sm:text-sm leading-relaxed mt-0.5 whitespace-pre-line">
+                                      {proj.challenge || <span className="text-slate-400 italic">Not provided</span>}
+                                    </p>
+                                  </div>
+                                  {/* Attachments */}
+                                  <div>
+                                    {(fileCounts[idx] !== undefined && fileCounts[idx] > 0) && (
+                                      <span className="text-xs font-medium text-slate-600 uppercase tracking-wider block mb-1">
+                                        Attachments
+                                      </span>
+                                    )}
+                                    <CommonMultipleUploader
+                                      variant="chip"
+                                      entityType="QUARTERLY_REVIEW"
+                                      entityId={currentReview.id || 0}
+                                      refId={idx + 1}
+                                      refType="QUARTERLY_REVIEW_DOCUMENT"
+                                      uploadFile={uploadQuarterlyReviewFile}
+                                      downloadFile={downloadQuarterlyReviewFile}
+                                      previewFile={previewQuarterlyReviewFile}
+                                      deleteFile={deleteQuarterlyReviewFile}
+                                      getFiles={getQuarterlyReviewFiles}
+                                      disabled={true}
+                                      maxFiles={3}
+                                      allowedTypes={["images", "pdf", "docs"]}
+                                      hideUploadButton={true}
+                                      hideEmptyState={true}
+                                      fetchOnMount={Boolean(currentReview.id && currentReview.id > 0)}
+                                      onFilesChange={(files) => {
+                                        const count = files ? files.length : 0;
+                                        setFileCounts((prev) => {
+                                          if (prev[idx] === count) return prev;
+                                          return { ...prev, [idx]: count };
+                                        });
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      }
+
+                      const achs = Array.isArray(currentReview.achievements)
+                        ? currentReview.achievements
+                        : typeof currentReview.achievements === 'string' && currentReview.achievements
+                          ? [{ details: currentReview.achievements }]
+                          : [];
+                      const chs = Array.isArray(currentReview.challenges)
+                        ? currentReview.challenges
+                        : typeof currentReview.challenges === 'string' && currentReview.challenges
+                          ? [{ details: currentReview.challenges }]
+                          : [];
+
+                      if (achs.length === 0 && chs.length === 0) {
+                        return <p className="text-slate-400 text-xs sm:text-sm italic">No data provided.</p>;
+                      }
+
+                      return (
+                        <div className="flex flex-col gap-3">
+                          {achs.length > 0 && (
+                            <div>
+                              <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Achievements</span>
+                              {renderItemList(achs)}
+                            </div>
+                          )}
+                          {chs.length > 0 && (
+                            <div>
+                              <span className="text-[10px] font-bold text-rose-500 uppercase tracking-wider">Challenges</span>
+                              {renderItemList(chs)}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
 
-                  <div>
-                    <h5 className="font-bold text-slate-800 text-xs uppercase mb-1">Key Challenges</h5>
-                    {renderItemList(currentReview.challenges)}
-                  </div>
-
-                  <div>
-                    <h5 className="font-bold text-slate-800 text-xs uppercase mb-1">Learning & Growth Goals</h5>
+                  {/* ── 3. Learning & Goals ── */}
+                  <div className="bg-white border border-slate-200 rounded-2xl p-3.5 sm:p-4 flex flex-col gap-2 shadow-sm">
+                    <h5 className="text-xs font-medium text-black uppercase tracking-widest mb-0.5">
+                      3. Learning &amp; Goals
+                    </h5>
                     {renderItemList(currentReview.learningGoals)}
                   </div>
+
+                  {/* ── 4. Team Contribution ── */}
+                  <div className="bg-white border border-slate-200 rounded-2xl p-3.5 sm:p-4 flex flex-col gap-3 shadow-sm">
+                    <h5 className="text-xs font-medium text-black uppercase tracking-widest mb-0.5">
+                      4. Team Contribution
+                    </h5>
+                    {Array.isArray(currentReview.teamContribution) && currentReview.teamContribution.length > 0 ? (
+                      <div className="flex flex-col gap-2">
+                        {currentReview.teamContribution.map((item, idx) => {
+                          const stars = Math.round(Number(item.rating) || 0);
+                          return (
+                            <div key={idx} className={`flex items-center justify-between gap-3 bg-white border border-slate-200 rounded-xl px-3 py-2 ${SUBMISSION_CARD_HOVER_CLASSES}`}>
+                              <span className="text-xs font-medium text-slate-700 capitalize">
+                                {item.category.replace(/_/g, ' ')}
+                              </span>
+                              <div className="flex items-center gap-0.5 shrink-0">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <svg
+                                    key={star}
+                                    className={`w-3.5 h-3.5 ${star <= stars ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-200'}`}
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                                  </svg>
+                                ))}
+                                <span className="ml-1.5 text-[10px] font-bold text-slate-500">{stars}/5</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-slate-400 text-xs sm:text-sm italic">No team contribution data provided.</p>
+                    )}
+                  </div>
+
+                  {/* ── 5. Company Environment ── */}
+                  <div className="bg-white border border-slate-200 rounded-2xl p-3.5 sm:p-4 flex flex-col gap-3 shadow-sm">
+  <div className="flex items-center justify-between">
+    <h5 className="text-xs font-medium text-black uppercase tracking-widest mb-0.5">
+      5. Company Environment
+    </h5>
+  </div>
+
+  {currentReview.companyEnvironment ? (
+    <div className="flex flex-col gap-2.5">
+      {[
+        { label: 'Work Culture Feedback', key: 'workCultureFeedback' as const },
+        { label: 'Work-Life Balance', key: 'workLifeBalance' as const },
+        { label: 'Suggestions', key: 'suggestions' as const },
+      ].map(({ label, key }) => {
+        const val = currentReview.companyEnvironment?.[key];
+        if (!val) return null;
+
+        return (
+          <div
+            key={key}
+            className={`bg-white border border-slate-200 rounded-xl p-3 ${SUBMISSION_CARD_HOVER_CLASSES}`}
+          >
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+              {label}
+            </span>
+
+            <p className="text-slate-800 text-xs sm:text-sm leading-relaxed mt-1 whitespace-pre-line">
+              {val}
+            </p>
+          </div>
+        );
+      })}
+
+      {/* Rating - placed after Suggestions card */}
+      {currentReview.companyEnvironment?.rating != null && (() => {
+        const EMOJIS = [
+          { value: 1, label: 'Very Bad', icon: '😡' },
+          { value: 2, label: 'Bad', icon: '🙁' },
+          { value: 3, label: 'Neutral', icon: '😐' },
+          { value: 4, label: 'Good', icon: '🙂' },
+          { value: 5, label: 'Excellent', icon: '🤩' },
+        ];
+
+        const emoji = EMOJIS.find(
+          e => e.value === currentReview.companyEnvironment?.rating
+        );
+
+        return emoji ? (
+          <div className="flex justify-start">
+            <div className="flex items-center gap-1.5 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-xl">
+              <span className="text-lg leading-none">
+                {emoji.icon}
+              </span>
+
+              <span className="text-[10px] font-bold text-indigo-700">
+                {emoji.label}
+              </span>
+            </div>
+          </div>
+        ) : null;
+      })()}
+    </div>
+  ) : (
+    <p className="text-slate-400 text-xs sm:text-sm italic">
+      No company environment feedback provided.
+    </p>
+  )}
+</div>
                 </div>
               </Col>
 
@@ -351,7 +578,7 @@ const QuarterlyViewPageMobile: React.FC<QuarterlyViewPageMobileProps> = ({
                         </span>
                         <Rate
                           disabled={isViewOnly}
-                          value={ratings[item.key]}
+                          value={ratings[item.key] || 0}
                           onChange={(val) =>
                             setRatings((prev) => ({ ...prev, [item.key]: val }))
                           }
@@ -481,9 +708,9 @@ const QuarterlyViewPageMobile: React.FC<QuarterlyViewPageMobileProps> = ({
             </Row>
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2.5 sm:gap-3 pt-3 border-t border-slate-100">
-              <Button onClick={onClose} className="!rounded-xl w-full sm:w-auto">
+              {/* <Button onClick={onClose} className="!rounded-xl w-full sm:w-auto">
                 Close
-              </Button>
+              </Button> */}
 
               {!isViewOnly && (
                 <div className="flex items-center gap-2 w-full sm:w-auto">

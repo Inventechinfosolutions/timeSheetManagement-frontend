@@ -405,6 +405,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
     setFieldErrors({});
     applyReviewToForm(record);
     setIsModalOpen(true);
+    loadFreshReview(record.employeeId);
     navigate(`/manager-dashboard/quarterly-review/${record.employeeId}`, {
       replace: false,
     });
@@ -630,7 +631,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
     {
       title: "Employee Name",
       key: "employeeName",
-      width: "16%",
+      width: "10%",
       render: (_: any, r: ManagerReviewItem) => {
         const displayName = r.employeeName
           ? r.employeeName
@@ -649,7 +650,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
           : "";
 
         return (
-          <div className="inline-flex items-center gap-2 w-44">
+          <div className="inline-flex items-center gap-2">
             <div className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[11px] font-bold shrink-0">
               {initials || <Users className="w-3.5 h-3.5 text-indigo-500" />}
             </div>

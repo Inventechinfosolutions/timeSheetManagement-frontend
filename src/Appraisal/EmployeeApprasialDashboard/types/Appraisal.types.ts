@@ -41,6 +41,10 @@ export interface QuarterlyReview {
     reviewStatus?: string | null;
     finalRating?: string | null;
     reviewedOn?: string | null;
+    ratings?: Record<string, number> | null;
+    strengths?: string | null;
+    improvements?: string | null;
+    remarks?: string | null;
     // Audit fields
     createdAt?: string;
     updatedAt?: string;

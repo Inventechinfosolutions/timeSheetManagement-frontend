@@ -99,10 +99,12 @@ export const MobileTeamContributionStep: React.FC<StepProps> = ({
             4. Team Contribution
           </h1>
 
-          <p className="mobile-tcs-header__subtitle">
-            Provide a self-assessment of your core competencies and team
-            contribution.
-          </p>
+          {!disabled && (
+            <p className="mobile-tcs-header__subtitle">
+              Provide a self-assessment of your core competencies and team
+              contribution.
+            </p>
+          )}
         </div>
 
         {/* Average Rating */}

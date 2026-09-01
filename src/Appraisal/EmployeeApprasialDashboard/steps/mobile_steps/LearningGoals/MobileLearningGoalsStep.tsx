@@ -22,9 +22,11 @@ export const MobileLearningGoalsStep: React.FC<StepProps> = ({ disabled }) => {
     >
       <div className="mobile-info-width">
         <h1 className="mobile-learning-goals-card__title">3. Learning & Future Goals</h1>
-        <p className="mobile-learning-goals-card__subtitle">
-          Share your learnings and next-quarter goals
-        </p>
+        {!disabled && (
+          <p className="mobile-learning-goals-card__subtitle">
+            Share your learnings and next-quarter goals
+          </p>
+        )}
 
         <Form.List name="learningGoals">
           {(fields, { add, remove }, { errors }) => (
@@ -63,7 +65,7 @@ export const MobileLearningGoalsStep: React.FC<StepProps> = ({ disabled }) => {
                       <Input.TextArea
                         rows={4}
                         disabled={disabled}
-                        placeholder="Describe your learning goals and career objectives...."
+                        placeholder={disabled ? undefined : "Describe your learning goals and career objectives...."}
                         className="mobile-learning-goals-item__textarea"
                         styles={{
                           textarea: {

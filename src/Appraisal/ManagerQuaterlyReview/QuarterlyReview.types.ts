@@ -25,6 +25,18 @@ export interface ManagerReviewItem {
   achievements: Array<{ title?: string; details: string }> | string;
   challenges: Array<{ title?: string; details: string }> | string;
   learningGoals: Array<{ title?: string; details: string }> | string;
+  /** Per-project breakdown (projectTitle, achievement, challenge) — returned by the backend
+   *  when the employee used the structured project form. Falls back to achievements/challenges. */
+  projects?: Array<{ projectTitle: string; achievement: string; challenge: string }> | null;
+  /** Team contribution category ratings */
+  teamContribution?: Array<{ category: string; rating: number }> | null;
+  /** Company environment feedback */
+  companyEnvironment?: {
+    workCultureFeedback?: string;
+    workLifeBalance?: string;
+    suggestions?: string;
+    rating?: number;
+  } | null;
   submittedDate: string | null;
   reviewedOn: string | null;
   lastModified: string | null; // Backend-computed: reviewedOn -> updatedAt -> submittedDate
@@ -47,7 +59,7 @@ export interface ReviewStats {
   completed: number;
 }
 
-export const MIN_FIELD_LENGTH = 10;
+export const MIN_FIELD_LENGTH = 1;
 
 // Upper bound on the manager's free-text evaluation fields (Strengths,
 // Areas for Improvement, Manager Feedback & Remarks). Enforced both as a
@@ -55,7 +67,7 @@ export const MIN_FIELD_LENGTH = 10;
 // in each field's live character counter.
 export const MAX_FIELD_LENGTH = 1000;
 
-export const DEFAULT_RATING_VALUE = 4;
+export const DEFAULT_RATING_VALUE = 0;
 
 // Sentinel value for the "All Years" option in the Year filter dropdown.
 export const YEAR_FILTER_ALL = 'ALL';

@@ -217,14 +217,16 @@ export const TeamContributionStep: React.FC<StepProps> = ({ disabled }) => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-100">
         <div>
-          <h1 className="text-xl font-semibold mb-1 text-slate-800">
+          <h1 className="text-base font-semibold mb-1 text-slate-800">
             4. Team Contribution
           </h1>
 
-          <p className="text-slate-500 text-sm mb-0 leading-relaxed">
-            Provide a self-assessment of your core competencies and team
-            contribution.
-          </p>
+          {!disabled && (
+            <p className="text-slate-500 text-sm mb-0 leading-relaxed">
+              Provide a self-assessment of your core competencies and team
+              contribution.
+            </p>
+          )}
         </div>
 
         {/* Average Rating */}

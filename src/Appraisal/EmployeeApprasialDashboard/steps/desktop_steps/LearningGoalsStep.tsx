@@ -58,10 +58,12 @@ export const LearningGoalsStep: React.FC<StepProps> = ({ disabled }) => {
         },
       }}
     >
-      <h1 className='text-xl font-semibold mb-2'>3. Learning & Goals</h1>
-      <p className="text-slate-500 text-sm mb-6 leading-relaxed">
-        Describe the skills you gained this quarter and your goals for the next.
-      </p>
+      <h1 className='text-base font-semibold mb-2'>3. Learning & Goals</h1>
+      {!disabled && (
+        <p className="text-slate-500 text-sm mb-6 leading-relaxed">
+          Describe the skills you gained this quarter and your goals for the next.
+        </p>
+      )}
 
       <Form.List name="learningGoals">
         {(fields, { add, remove }, { errors }) => (
@@ -98,7 +100,7 @@ export const LearningGoalsStep: React.FC<StepProps> = ({ disabled }) => {
                     <Input.TextArea
                       rows={4}
                       disabled={disabled}
-                      placeholder="List skills to develop, certifications to pursue, and goals for next quarter."
+                      placeholder={disabled ? undefined : "List skills to develop, certifications to pursue, and goals for next quarter."}
                       className="rounded-xl border-slate-200 hover:border-indigo-400 focus:border-indigo-500 focus:shadow-[0_0_0_2px_rgba(99,102,241,0.1)] transition-all duration-200 p-3 hide-scrollbar hover:-translate-y-0.5"
                       style={{
                         borderRadius: '12px',

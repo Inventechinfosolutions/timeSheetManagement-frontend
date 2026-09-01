@@ -28,7 +28,7 @@ export const MobileAchievementsAndChallengesStep: React.FC<StepProps> = ({
   const [removingIndex, setRemovingIndex] = useState<number | null>(null);
   const form = Form.useFormInstance();
   const uploaderRefs = useRef<{ [key: number]: CommonMultipleUploaderRef | null }>({});
-  const [, setFileCounts] = useState<{ [key: number]: number }>({});
+  const [fileCounts, setFileCounts] = useState<{ [key: number]: number }>({});
 
   return (
     <Card
@@ -42,9 +42,11 @@ export const MobileAchievementsAndChallengesStep: React.FC<StepProps> = ({
     >
       <div className="mobile-info-width">
         <h1 className="mobile-achievements-card__title">2. Accomplishments & Challenges</h1>
-        <p className="mobile-achievements-card__subtitle">
-          Highlight your key achievements, challenges, and performance impacts this quarter.
-        </p>
+        {!disabled && (
+          <p className="mobile-achievements-card__subtitle">
+            Highlight your key achievements, challenges, and performance impacts this quarter.
+          </p>
+        )}
 
         <Form.List name="projects">
           {(fields, { add, remove }, { errors }) => (
@@ -94,7 +96,7 @@ export const MobileAchievementsAndChallengesStep: React.FC<StepProps> = ({
                         >
                           <Input
                             disabled={disabled}
-                            placeholder="Enter project title"
+                            placeholder={disabled ? undefined : "Enter project title"}
                             className="mobile-achievements-item__input"
                             style={{
                               backgroundColor: '#ffffff',
@@ -126,7 +128,7 @@ export const MobileAchievementsAndChallengesStep: React.FC<StepProps> = ({
                           <Input.TextArea
                             rows={4}
                             disabled={disabled}
-                            placeholder="List your key accomplishments..."
+                            placeholder={disabled ? undefined : "List your key accomplishments..."}
                             className="mobile-achievements-item__textarea mobile-achievements-item__scrollbar-hide"
                             showCount
                             maxLength={2000}
@@ -155,7 +157,7 @@ export const MobileAchievementsAndChallengesStep: React.FC<StepProps> = ({
                           <Input.TextArea
                             rows={4}
                             disabled={disabled}
-                            placeholder="Describe any challenges faced..."
+                            placeholder={disabled ? undefined : "Describe any challenges faced..."}
                             className="mobile-achievements-item__textarea mobile-achievements-item__textarea--challenge mobile-achievements-item__scrollbar-hide"
                             showCount
                             maxLength={2000}
@@ -172,9 +174,11 @@ export const MobileAchievementsAndChallengesStep: React.FC<StepProps> = ({
 
                       {/* Attachments Section */}
                       <div className="mobile-achievements-item__uploader">
-                        <span className="mobile-achievements-item__label mb-2">
-                          Attachments
-                        </span>
+                        {(!disabled || (fileCounts[idx] !== undefined && fileCounts[idx] > 0)) && (
+                          <span className="mobile-achievements-item__label mb-2">
+                            Attachments
+                          </span>
+                        )}
                         <CommonMultipleUploader
                           ref={(el) => {
                             uploaderRefs.current[idx] = el;
