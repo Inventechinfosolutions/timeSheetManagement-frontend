@@ -41,14 +41,14 @@ const FileNameWithExtension: React.FC<{
         }}
         title={name}
       ><span
-          style={{
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-            minWidth: 0,
-            flex: "0 1 auto",
-          }}
-        >{baseName}</span><span style={{ flexShrink: 0, whiteSpace: "nowrap" }}>{extension}</span></div>
+        style={{
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          minWidth: 0,
+          flex: "0 1 auto",
+        }}
+      >{baseName}</span><span style={{ flexShrink: 0, whiteSpace: "nowrap" }}>{extension}</span></div>
     );
   }
   return (
