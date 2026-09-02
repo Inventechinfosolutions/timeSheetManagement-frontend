@@ -116,8 +116,9 @@ const LeaveManagement = () => {
       currentUser.role.toUpperCase().includes(UserType.MANAGER));
   const isPrivileged = isAdmin || isManager;
 
-  const isCancellationAllowed = (toDate: string) => {
+  const isCancellationAllowed = (toDate: string, status?: string) => {
     if (isPrivileged) return true;
+    if (status === LeaveRequestStatus.PENDING) return true;
     const cutoff = dayjs(toDate).hour(18).minute(30).second(0);
     return dayjs().isBefore(cutoff);
   };
@@ -1248,7 +1249,7 @@ const LeaveManagement = () => {
             };
           }
 
-          if (isTimePassed) {
+          if (isTimePassed && request.status !== LeaveRequestStatus.PENDING) {
             return {
               ...d,
               isCancellable: false,
@@ -2210,7 +2211,7 @@ const LeaveManagement = () => {
                             </button>
                             {(item.status === LeaveRequestStatus.PENDING ||
                               item.status === LeaveRequestStatus.APPROVED) &&
-                              isCancellationAllowed(item.toDate) ? (
+                              isCancellationAllowed(item.toDate, item.status) ? (
                               <button
                                 onClick={() => handleCancel(item.id)}
                                 className="p-1.5 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
@@ -3623,19 +3624,14 @@ const LeaveManagement = () => {
             <div className="space-y-4">
               <p className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-100">
                 Choose the dates you want to revert.
-                {!(
-                  requestToCancel?.status ===
-                  LeaveRequestStatus.REQUESTING_FOR_CANCELLATION ||
-                  requestToCancel?.status ===
-                  LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
-                ) && (
-                    <>
-                      <br />
-                      <span className="text-xs text-red-500 font-semibold">
-                        Requests can only be cancelled before 6:30 PM on the respective day.
-                      </span>
-                    </>
-                  )}
+                {requestToCancel?.status === LeaveRequestStatus.APPROVED && (
+                  <>
+                    <br />
+                    <span className="text-xs text-red-500 font-semibold">
+                      Requests can only be cancelled before 6:30 PM on the respective day.
+                    </span>
+                  </>
+                )}
               </p>
 
               {/* Select All Option */}
