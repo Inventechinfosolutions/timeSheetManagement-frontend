@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { Form, Button, message, Spin, Modal } from 'antd';
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { Save, Send, ArrowLeft, ArrowRight, ChevronLeft, CheckCircle2, User, UserX, Star, Award, MessageSquare, TrendingUp, ThumbsUp } from 'lucide-react';
+import { Save, Send, ArrowLeft, ArrowRight, ChevronLeft, CheckCircle2, User, UserX, Star, Award, HourglassIcon, MessageSquare, TrendingUp, ThumbsUp } from 'lucide-react';
 
 import { QuarterlyReviewStepperMobile } from '../mobile/QuarterlyReviewStepperMobile';
 import { OverviewStep } from '../steps/desktop_steps/OverviewStep';
@@ -702,155 +702,179 @@ const MobileQuarterlyReviewForm: React.FC<MobileQuarterlyReviewFormProps> = (pro
 
                 {isReadOnly ? (
                     <Form key={`ro-${formKey}`} form={form} layout="vertical" className="mb-6" initialValues={formData}>
-                        {managerEvaluation && (
-                            <div className="mb-4 bg-gradient-to-br from-indigo-900/5 via-indigo-50/40 to-purple-50/30 border border-indigo-200/80 rounded-2xl p-4 shadow-sm">
-                                <div className="flex items-center justify-between gap-2 pb-3 border-b border-indigo-100">
-                                    <div className="flex items-center gap-2.5">
-                                        <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold shrink-0">
-                                            <Award className="w-4 h-4" />
+                        {/* Two-column layout on tablet/iPad (md), stacked on mobile */}
+                        <div className="flex flex-col md:flex-row gap-5 items-start">
+
+                            {/* ── LEFT COLUMN: Employee Review Steps ── */}
+                            <div className="flex-1 min-w-0 flex flex-col gap-4 w-full">
+                                {/* "Submitted to Manager" banner when no eval yet */}
+                                {!managerEvaluation && managerName && (
+                                    <div className="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3.5 shadow-sm">
+                                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                                            <User className="w-5 h-5 text-blue-600" />
                                         </div>
                                         <div>
-                                            <h3 className="font-bold text-slate-900 text-sm leading-tight">
-                                                Manager Evaluation
-                                            </h3>
-                                            <p className="text-[10px] text-slate-500 mt-0.5">
-                                                {managerEvaluation.managerName || managerName || 'Manager'}
-                                                {managerEvaluation.reviewedOn && (
-                                                    <> &bull; {new Date(managerEvaluation.reviewedOn).toLocaleDateString('en-IN')}</>
-                                                )}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
-                                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                                        {managerEvaluation.reviewStatus || 'Reviewed'}
-                                    </span>
-                                </div>
-
-                                {(() => {
-                                    const managerRatingValues = managerEvaluation.ratings
-                                        ? Object.values(managerEvaluation.ratings).map(Number).filter(v => !isNaN(v) && v > 0)
-                                        : [];
-                                    const managerAvgScore = managerRatingValues.length > 0
-                                        ? (managerRatingValues.reduce((a, b) => a + b, 0) / managerRatingValues.length).toFixed(1)
-                                        : null;
-
-                                    if (!managerAvgScore && !managerEvaluation.finalRating) return null;
-
-                                    return (
-                                        <div className="mt-3 bg-white/90 border border-indigo-100 rounded-xl p-3 flex items-center justify-between gap-2">
-                                            <div>
-                                                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Overall Rating</p>
-                                                <p className="text-sm font-extrabold text-indigo-900 mt-0.5">
-                                                    {managerAvgScore
-                                                        ? `${managerAvgScore} / 5.0`
-                                                        : typeof managerEvaluation.finalRating === ReviewStatus.NUMBER
-                                                            ? `${managerEvaluation.finalRating} / 5.0`
-                                                            : managerEvaluation.finalRating}
-                                                </p>
-                                                {managerEvaluation.finalRating && managerAvgScore && (
-                                                    <p className="text-[11px] text-indigo-600 font-medium mt-0.5">
-                                                        {managerEvaluation.finalRating}
-                                                    </p>
-                                                )}
-                                            </div>
-                                            <div className="flex items-center gap-1 px-2.5 py-1 bg-amber-50 border border-amber-200 rounded-lg">
-                                                <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-                                                <span className="font-bold text-amber-800 text-xs">
-                                                    {managerAvgScore ||
-                                                        (typeof managerEvaluation.finalRating === ReviewStatus.NUMBER
-                                                            ? managerEvaluation.finalRating.toFixed(1)
-                                                            : managerEvaluation.finalRating)}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    );
-                                })()}
-
-                                {managerEvaluation.ratings && Object.keys(managerEvaluation.ratings).length > 0 && (
-                                    <div className="mt-3">
-                                        <h4 className="text-[10px] font-bold text-slate-700 uppercase tracking-wider mb-2">
-                                            Category Ratings
-                                        </h4>
-                                        <div className="grid grid-cols-1 gap-2">
-                                            {RATING_CATEGORIES.map((cat) => {
-                                                const val = managerEvaluation.ratings?.[cat.key] || 0;
-                                                return (
-                                                    <div key={cat.key} className="bg-white/80 border border-slate-200/80 rounded-lg p-2.5 flex items-center justify-between gap-2">
-                                                        <span className="text-xs font-medium text-slate-700">{cat.label}</span>
-                                                        <div className="flex items-center gap-0.5">
-                                                            {[1, 2, 3, 4, 5].map((star) => (
-                                                                <Star
-                                                                    key={star}
-                                                                    className={`w-3 h-3 ${star <= val
-                                                                            ? 'text-amber-400 fill-amber-400'
-                                                                            : 'text-slate-200'
-                                                                        }`}
-                                                                />
-                                                            ))}
-                                                            <span className="text-xs font-bold text-slate-700 ml-1">{val}/5</span>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
+                                            <p className="text-xs text-slate-500 leading-none mb-1 font-semibold uppercase tracking-wider">Submitted to Manager</p>
+                                            <p className="text-base font-semibold text-slate-800 mb-0">{managerName}</p>
                                         </div>
                                     </div>
                                 )}
-
-                                <div className="mt-3 flex flex-col gap-2">
-                                    {managerEvaluation.strengths && (
-                                        <div className="bg-white/90 border border-emerald-100 rounded-xl p-3 flex flex-col gap-1">
-                                            <div className="flex items-center gap-1.5 text-black font-semibold text-[12px] uppercase tracking-wide">
-                                                <span>1. Key Strengths</span>
-                                            </div>
-                                            <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">
-                                                {managerEvaluation.strengths}
-                                            </p>
-                                        </div>
-                                    )}
-
-                                    {managerEvaluation.improvements && (
-                                        <div className="bg-white/90 border border-amber-100 rounded-xl p-3 flex flex-col gap-1">
-                                            <div className="flex items-center gap-1.5 text-black font-semibold text-[12px] uppercase tracking-wide">
-                                                <span>2. Areas for Improvement</span>
-                                            </div>
-                                            <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">
-                                                {managerEvaluation.improvements}
-                                            </p>
-                                        </div>
-                                    )}
-
-                                    {managerEvaluation.remarks && (
-                                        <div className="bg-white/90 border border-indigo-100 rounded-xl p-3 flex flex-col gap-1">
-                                            <div className="flex items-center gap-1.5 text-black font-semibold text-[12px] uppercase tracking-wide">
-                                                <span>3. Manager Feedback & Remarks</span>
-                                            </div>
-                                            <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">
-                                                {managerEvaluation.remarks}
-                                            </p>
-                                        </div>
-                                    )}
-                                </div>
+                                <OverviewStep disabled={true} />
+                                <AchievementsAndChallengesStep disabled={true} reviewId={reviewId} />
+                                <LearningGoalsStep disabled={true} />
+                                <TeamContributionStep disabled={true} />
+                                <CompanyEnvironmentStep disabled={true} />
                             </div>
-                        )}
 
-                        {!managerEvaluation && managerName && (
-                            <div className="mobile-qr-readonly-manager-banner">
-                                <div className="mobile-qr-manager-icon-wrapper">
-                                    <User className="w-4 h-4 text-blue-600" />
-                                </div>
-                                <div>
-                                    <p className="mobile-qr-manager-label">Submitted to Manager</p>
-                                    <p className="mobile-qr-manager-name">{managerName}</p>
-                                </div>
+                            {/* ── RIGHT COLUMN: Manager Evaluation ── */}
+                            <div className="w-full md:w-[320px] lg:w-[380px] shrink-0 md:sticky md:top-4 flex flex-col gap-4">
+                                {managerEvaluation ? (
+                                    <div className="bg-gradient-to-br from-indigo-900/5 via-indigo-50/40 to-purple-50/30 border border-indigo-200/80 rounded-2xl p-4 md:p-5 shadow-sm">
+                                        {/* Header */}
+                                        <div className="flex items-center justify-between gap-3 pb-3.5 border-b border-indigo-100">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-200 shrink-0">
+                                                    <HourglassIcon className="w-5 h-5" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="font-bold text-slate-900 text-sm leading-tight">
+                                                        Manager Evaluation
+                                                    </h3>
+                                                    <p className="text-xs text-slate-500 mt-0.5">
+                                                        <span className="font-semibold text-slate-700">{managerEvaluation.managerName || managerName || 'Manager'}</span>
+                                                        {managerEvaluation.reviewedOn && (
+                                                            <> &bull; {new Date(managerEvaluation.reviewedOn).toLocaleDateString('en-IN')}</>
+                                                        )}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1.5 shrink-0">
+                                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                                {managerEvaluation.reviewStatus || 'Reviewed'}
+                                            </span>
+                                        </div>
+
+                                        {/* Overall Rating */}
+                                        {(() => {
+                                            const managerRatingValues = managerEvaluation.ratings
+                                                ? Object.values(managerEvaluation.ratings).map(Number).filter(v => !isNaN(v) && v > 0)
+                                                : [];
+                                            const managerAvgScore = managerRatingValues.length > 0
+                                                ? (managerRatingValues.reduce((a, b) => a + b, 0) / managerRatingValues.length).toFixed(1)
+                                                : null;
+
+                                            if (!managerAvgScore && !managerEvaluation.finalRating) return null;
+
+                                            return (
+                                                <div className="mt-3.5 bg-white/90 border border-indigo-100 rounded-xl p-3.5 flex items-center justify-between gap-3">
+                                                    <div>
+                                                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Overall Rating</p>
+                                                        <p className="text-lg font-extrabold text-indigo-900 mt-0.5">
+                                                            {managerAvgScore
+                                                                ? `${managerAvgScore} / 5.0`
+                                                                : typeof managerEvaluation.finalRating === 'number'
+                                                                    ? `${managerEvaluation.finalRating.toFixed(1)} / 5.0`
+                                                                    : managerEvaluation.finalRating}
+                                                        </p>
+                                                        {managerEvaluation.finalRating && managerAvgScore && (
+                                                            <p className="text-xs text-indigo-600 font-medium mt-0.5">
+                                                                {managerEvaluation.finalRating}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center gap-1 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-xl">
+                                                        <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                                                        <span className="font-bold text-amber-800 text-sm">
+                                                            {managerAvgScore ||
+                                                                (typeof managerEvaluation.finalRating === 'number'
+                                                                    ? managerEvaluation.finalRating.toFixed(1)
+                                                                    : managerEvaluation.finalRating)}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })()}
+
+                                        {/* Category Ratings */}
+                                        {managerEvaluation.ratings && Object.keys(managerEvaluation.ratings).length > 0 && (
+                                            <div className="mt-3.5">
+                                                <h4 className="text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-2">
+                                                    Category Ratings
+                                                </h4>
+                                                <div className="flex flex-col gap-2">
+                                                    {RATING_CATEGORIES.map((cat) => {
+                                                        const val = managerEvaluation.ratings?.[cat.key] || 0;
+                                                        return (
+                                                            <div key={cat.key} className="bg-white/80 border border-slate-200/80 rounded-xl px-3 py-2 flex items-center justify-between gap-2">
+                                                                <span className="text-xs font-medium text-slate-700">{cat.label}</span>
+                                                                <div className="flex items-center gap-0.5">
+                                                                    {[1, 2, 3, 4, 5].map((star) => (
+                                                                        <Star
+                                                                            key={star}
+                                                                            className={`w-3.5 h-3.5 ${star <= val
+                                                                                ? 'text-amber-400 fill-amber-400'
+                                                                                : 'text-slate-200'
+                                                                                }`}
+                                                                        />
+                                                                    ))}
+                                                                    <span className="text-xs font-bold text-slate-600 ml-1">{val}/5</span>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Feedback Cards */}
+                                        <div className="mt-3.5 flex flex-col gap-3">
+                                            {managerEvaluation.strengths && (
+                                                <div className="bg-white/90 border border-emerald-100 rounded-xl p-3.5 flex flex-col gap-1">
+                                                    <div className="flex items-center gap-1.5 text-black font-semibold text-[12px] uppercase tracking-wide">
+                                                        <span>1. Key Strengths</span>
+                                                    </div>
+                                                    <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">
+                                                        {managerEvaluation.strengths}
+                                                    </p>
+                                                </div>
+                                            )}
+
+                                            {managerEvaluation.improvements && (
+                                                <div className="bg-white/90 border border-amber-100 rounded-xl p-3.5 flex flex-col gap-1">
+                                                    <div className="flex items-center gap-1.5 text-black font-semibold text-[12px] uppercase tracking-wide">
+                                                        <span>2. Areas for Improvement</span>
+                                                    </div>
+                                                    <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">
+                                                        {managerEvaluation.improvements}
+                                                    </p>
+                                                </div>
+                                            )}
+
+                                            {managerEvaluation.remarks && (
+                                                <div className="bg-white/90 border border-indigo-100 rounded-xl p-3.5 flex flex-col gap-1">
+                                                    <div className="flex items-center gap-1.5 text-black font-semibold text-[12px] uppercase tracking-wide">
+                                                        <span>3. Manager Remarks</span>
+                                                    </div>
+                                                    <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">
+                                                        {managerEvaluation.remarks}
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    /* Pending evaluation placeholder */
+                                    <div className="bg-white border border-slate-200 border-lined rounded-2xl p-6 flex flex-col items-center justify-center gap-3 text-center min-h-[180px]">
+                                        <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">
+                                            <HourglassIcon className="w-6 h-6 text-slate-400" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-semibold text-slate-600">Awaiting Manager Evaluation</p>
+                                            <p className="text-xs text-slate-400 mt-1">Your manager hasn't reviewed this submission yet.</p>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                        )}
-                        <div className="flex flex-col gap-4">
-                            <OverviewStep disabled={true} />
-                            <AchievementsAndChallengesStep disabled={true} reviewId={reviewId} />
-                            <LearningGoalsStep disabled={true} />
-                            <TeamContributionStep disabled={true} />
-                            <CompanyEnvironmentStep disabled={true} />
                         </div>
                     </Form>
                 ) : (
@@ -908,7 +932,9 @@ const MobileQuarterlyReviewForm: React.FC<MobileQuarterlyReviewFormProps> = (pro
                                         className="h-9 px-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold text-xs border-0"
                                     >
                                         <span className="flex items-center justify-center gap-1.5">
-                                            {currentStep === 0 && <span>Next</span>}
+                                            <span className={currentStep === 0 ? 'inline' : 'hidden sm:inline'}>
+                                                Next
+                                            </span>
                                             <ArrowRight className="w-3.5 h-3.5 shrink-0" />
                                         </span>
                                     </Button>

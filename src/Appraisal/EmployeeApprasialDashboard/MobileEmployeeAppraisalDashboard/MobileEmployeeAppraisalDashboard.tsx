@@ -164,7 +164,7 @@ const ReviewCard: React.FC<{
                             <CircleIconButton
                                 icon={<Download className="w-4 h-4" />}
                                 tooltip="Download"
-                                tone="filled"
+                                tone="outline"
                                 onClick={onDownload}
                             />
                         )}
@@ -173,7 +173,7 @@ const ReviewCard: React.FC<{
                             <CircleIconButton
                                 icon={<Trash2 className="w-4 h-4" />}
                                 tooltip="Withdraw"
-                                tone="withdraw"
+                                tone="outline"
                                 onClick={onWithdraw}
                             />
                         )}

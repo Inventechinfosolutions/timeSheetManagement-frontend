@@ -178,7 +178,7 @@
   white-space: pre-wrap;
 }
 
-/* Attachment file cards inside project items - vertical stack, full width */
+/* Attachment file cards inside project items */
 
 .mobile-review-attachment-stack {
   display: flex;
@@ -188,21 +188,48 @@
   margin-top: 0.25rem;
 }
 
+@media (min-width: 768px) {
+  .mobile-review-attachment-stack {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    box-sizing: border-box;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .mobile-review-attachment-stack::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 .mobile-review-file-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 5px 8px;
+  border-radius: 12px;
+  padding: 5px 12px;
   width: 100%;
   gap: 6px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
   transition: all 0.2s ease;
   height: 44px;
   box-sizing: border-box;
   overflow: hidden;
+}
+
+@media (min-width: 768px) {
+  .mobile-review-file-card {
+    flex: 0 0 250px;
+    width: 250px;
+    min-width: 250px;
+    max-width: 250px;
+    flex-shrink: 0;
+  }
 }
 
 .mobile-review-file-card:hover {

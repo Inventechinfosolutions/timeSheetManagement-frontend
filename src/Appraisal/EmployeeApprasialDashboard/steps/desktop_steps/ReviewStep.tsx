@@ -89,8 +89,8 @@ const FileTypeIcon: React.FC<{ name: string }> = ({ name }) => {
         return (
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                 <rect width="24" height="24" rx="4" fill="#FEE2E2" />
-                <path d="M7 7h6l4 4v8a1 1 0 01-1 1H7a1 1 0 01-1-1V8a1 1 0 011-1z" fill="#EF4444" opacity=".8"/>
-                <path d="M13 7l4 4h-4V7z" fill="#DC2626"/>
+                <path d="M7 7h6l4 4v8a1 1 0 01-1 1H7a1 1 0 01-1-1V8a1 1 0 011-1z" fill="#EF4444" opacity=".8" />
+                <path d="M13 7l4 4h-4V7z" fill="#DC2626" />
                 <text x="5" y="19" fontSize="5" fontWeight="bold" fill="#fff" fontFamily="sans-serif">PDF</text>
             </svg>
         );
@@ -101,7 +101,7 @@ const FileTypeIcon: React.FC<{ name: string }> = ({ name }) => {
                 <rect width="24" height="24" rx="4" fill="#DBEAFE" />
                 <rect x="5" y="6" width="14" height="12" rx="1.5" fill="#3B82F6" opacity=".7" />
                 <circle cx="9" cy="10" r="1.5" fill="#fff" />
-                <path d="M5 16l4-4 3 3 2-2 3 3" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                <path d="M5 16l4-4 3 3 2-2 3 3" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
             </svg>
         );
     }
@@ -111,8 +111,8 @@ const FileTypeIcon: React.FC<{ name: string }> = ({ name }) => {
         return (
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                 <rect width="24" height="24" rx="4" fill="#D1FAE5" />
-                <path d="M7 7h6l4 4v8a1 1 0 01-1 1H7a1 1 0 01-1-1V8a1 1 0 011-1z" fill="#10B981" opacity=".8"/>
-                <path d="M13 7l4 4h-4V7z" fill="#059669"/>
+                <path d="M7 7h6l4 4v8a1 1 0 01-1 1H7a1 1 0 01-1-1V8a1 1 0 011-1z" fill="#10B981" opacity=".8" />
+                <path d="M13 7l4 4h-4V7z" fill="#059669" />
                 <text x="5.5" y="18.5" fontSize="4.5" fontWeight="bold" fill="#fff" fontFamily="sans-serif">XLS</text>
             </svg>
         );
@@ -120,8 +120,8 @@ const FileTypeIcon: React.FC<{ name: string }> = ({ name }) => {
     return (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
             <rect width="24" height="24" rx="4" fill="#E0E7FF" />
-            <path d="M7 7h6l4 4v8a1 1 0 01-1 1H7a1 1 0 01-1-1V8a1 1 0 011-1z" fill="#6366F1" opacity=".8"/>
-            <path d="M13 7l4 4h-4V7z" fill="#4F46E5"/>
+            <path d="M7 7h6l4 4v8a1 1 0 01-1 1H7a1 1 0 01-1-1V8a1 1 0 011-1z" fill="#6366F1" opacity=".8" />
+            <path d="M13 7l4 4h-4V7z" fill="#4F46E5" />
             <text x="5.5" y="18.5" fontSize="4.5" fontWeight="bold" fill="#fff" fontFamily="sans-serif">DOC</text>
         </svg>
     );
@@ -200,14 +200,14 @@ const ReviewAttachmentChip: React.FC<{ file: AttachmentFile }> = ({ file }) => {
                     justifyContent: 'space-between',
                     background: '#ffffff',
                     border: '1px solid #e2e8f0',
-                    borderRadius: '8px',
-                    padding: '5px 8px',
+                    borderRadius: '12px',
+                    padding: '5px 12px',
                     flex: '0 0 250px',
                     width: '250px',
                     minWidth: '250px',
                     maxWidth: '250px',
                     gap: '6px',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
                     transition: 'all 0.2s ease',
                     height: '44px',
                     boxSizing: 'border-box',
@@ -284,8 +284,8 @@ const ReviewAttachmentChip: React.FC<{ file: AttachmentFile }> = ({ file }) => {
                             ? <Spin size="small" />
                             : (
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                                    <circle cx="12" cy="12" r="3"/>
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                    <circle cx="12" cy="12" r="3" />
                                 </svg>
                             )
                         }
@@ -891,10 +891,9 @@ const CompanyEnvironmentSummaryCard: React.FC<{
                                                     flex flex-col items-center justify-center
                                                     flex-1 h-16 rounded-md border
                                                     transition-all duration-200
-                                                    ${
-                                                        isSelected
-                                                            ? `${emoji.selectedBg} border-transparent shadow-md scale-105 opacity-100 ring-2 ${emoji.ring} ring-offset-1 z-10 font-bold`
-                                                            : `${emoji.bg} ${emoji.border} opacity-40`
+                                                    ${isSelected
+                                                        ? `${emoji.selectedBg} border-transparent shadow-md scale-105 opacity-100 ring-2 ${emoji.ring} ring-offset-1 z-10 font-bold`
+                                                        : `${emoji.bg} ${emoji.border} opacity-40`
                                                     }
                                                 `}
                                                 style={{
@@ -913,10 +912,9 @@ const CompanyEnvironmentSummaryCard: React.FC<{
                                                 <span
                                                     className={`
                                                         mt-1 text-[11px] font-bold whitespace-nowrap
-                                                        ${
-                                                            isSelected
-                                                                ? 'text-white'
-                                                                : emoji.color
+                                                        ${isSelected
+                                                            ? 'text-white'
+                                                            : emoji.color
                                                         }
                                                     `}
                                                 >
