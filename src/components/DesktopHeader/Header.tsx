@@ -36,7 +36,7 @@ import {
   UserType,
 } from "../../enums";
 import "./Header.css";
-import workspherelogo from "../../assets/worksphere_Logo_white.svg";
+import workspherelogo from "../../assets/WorkSphere_Logo_white.svg";
 import MobileHeader from "../HeaderMobileResposive/MobileHeader";
 
 export interface HeaderProps {
