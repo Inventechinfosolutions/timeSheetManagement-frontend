@@ -226,9 +226,7 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
     [RatingCategory.COLLABORATION]: DEFAULT_RATING_VALUE,
     [RatingCategory.INNOVATION]: DEFAULT_RATING_VALUE,
   });
-  const [finalRating, setFinalRating] = useState<string>(
-    PerformanceRating.EXCEEDS_EXPECTATIONS,
-  );
+  const [finalRating, setFinalRating] = useState<string>("");
   const [strengths, setStrengths] = useState<string>("");
   const [improvements, setImprovements] = useState<string>("");
   const [remarks, setRemarks] = useState<string>("");
@@ -286,7 +284,8 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
     if (avg >= 4.0) return PerformanceRating.EXCEEDS_EXPECTATIONS;
     if (avg >= 3.0) return PerformanceRating.MEETS_EXPECTATIONS;
     if (avg >= 2.0) return PerformanceRating.NEEDS_IMPROVEMENT;
-    return PerformanceRating.UNSATISFACTORY;
+    if (avg >= 1.0) return PerformanceRating.UNSATISFACTORY;
+    return "";
   };
 
   useEffect(() => {
@@ -332,7 +331,9 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
     setFinalRating(
       avg > 0
         ? getFinalRatingFromScore(avg)
-        : PerformanceRating.EXCEEDS_EXPECTATIONS,
+        : record.finalRating
+          ? getFinalRatingFromScore(record.finalRating)
+          : "",
     );
 
     setStrengths(record.strengths || "");

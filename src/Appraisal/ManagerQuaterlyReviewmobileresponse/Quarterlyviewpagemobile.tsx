@@ -192,12 +192,13 @@ const renderItemList = (data: Array<{ title?: string; details: string }> | strin
 };
 
 // Maps a numeric average score (0-5) to the matching PerformanceRating band.
-const getPerformanceRatingFromScore = (score: number): PerformanceRating => {
+const getPerformanceRatingFromScore = (score: number): PerformanceRating | '' => {
   if (score >= 5.0) return PerformanceRating.OUTSTANDING;
   if (score >= 4.0) return PerformanceRating.EXCEEDS_EXPECTATIONS;
   if (score >= 3.0) return PerformanceRating.MEETS_EXPECTATIONS;
   if (score >= 2.0) return PerformanceRating.NEEDS_IMPROVEMENT;
-  return PerformanceRating.UNSATISFACTORY;
+  if (score >= 1.0) return PerformanceRating.UNSATISFACTORY;
+  return '';
 };
 
 const QuarterlyViewPageMobile: React.FC<QuarterlyViewPageMobileProps> = ({
@@ -235,7 +236,7 @@ const QuarterlyViewPageMobile: React.FC<QuarterlyViewPageMobileProps> = ({
         ? parseFloat(averageRatingScore)
         : averageRatingScore;
 
-    if (numericAvg === undefined || numericAvg === null || Number.isNaN(numericAvg) || numericAvg <= 0) {
+    if (numericAvg === undefined || numericAvg === null || Number.isNaN(numericAvg)) {
       return;
     }
 
