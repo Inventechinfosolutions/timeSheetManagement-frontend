@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { Loader2, CheckCircle, Eye, EyeOff } from "lucide-react";
-import Header from "../components/Header";
+import Header from "../components/DesktopHeader/Header";
 import {
   resetPasswordEmployee,
   clearResetPasswordState,

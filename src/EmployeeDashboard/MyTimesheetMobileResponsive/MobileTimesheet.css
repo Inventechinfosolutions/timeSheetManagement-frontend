@@ -1,0 +1,556 @@
+  .mobile-timesheet-scrollbar {
+    scrollbar-width: none;
+  }
+
+  .mobile-timesheet-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mobile-timesheet-shell {
+    max-width: 100vw;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+  }
+
+  .mobile-timesheet-grid {
+    grid-auto-rows: minmax(clamp(56px, 13vw, 112px), auto);
+  }
+
+  .mobile-timesheet-day {
+    -webkit-tap-highlight-color: transparent;
+    min-height: clamp(56px, 13vw, 112px);
+    touch-action: manipulation;
+    border: 1px solid transparent;
+  }
+
+  /* Day cell content scales with device size instead of staying fixed at
+    phone size — grows on large phones / tablets, shrinks on tiny phones. */
+  .mobile-timesheet-day-number {
+    font-size: clamp(12px, 3.2vw, 20px) !important;
+    font-weight: 800;
+  }
+
+  .mobile-timesheet-day-hours {
+    font-size: clamp(9px, 2.2vw, 14px) !important;
+    font-weight: 900;
+  }
+
+  .mobile-timesheet-day-status-label span {
+    font-size: clamp(6px, 1.6vw, 10px) !important;
+    font-weight: 900;
+  }
+
+  .mobile-timesheet-day-status-label-external span {
+    font-size: var(--mt-status-size) !important;
+    font-weight: 900 !important;
+    letter-spacing: 0 !important;
+    line-height: 1 !important;
+  }
+
+  .mobile-timesheet-modal {
+    animation: mobile-timesheet-zoom 160ms ease-out;
+  }
+
+  .mobile-timesheet-summary-row {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+  }
+
+  /* Toolbar text scales with device size */
+  .mobile-timesheet-month-label {
+    font-size: clamp(0.75rem, 2vw, 1.2rem) !important;
+    font-weight: 900;
+  }
+
+  .mobile-timesheet-total-label,
+  .mobile-timesheet-total-unit {
+    font-size: clamp(8px, 1.6vw, 15px) !important;
+    font-weight: 900;
+  }
+
+  .mobile-timesheet-total-value {
+    font-size: clamp(13px, 2.4vw, 1.6rem) !important;
+    font-weight: 900;
+  }
+
+  /* Right-side group wraps tightly around total+autofill content.
+     space-between on the parent row pushes it to the far right naturally,
+     with no empty gap inside the group itself. */
+  .mobile-timesheet-right-group {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    margin-left: auto !important;
+    flex: 0 1 auto !important;
+    gap: 4px !important;
+  }
+
+  .mobile-timesheet-total {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: baseline !important;
+    justify-content: flex-end !important;
+    /* shrink to share space with the autofill button inside right-group */
+    flex-shrink: 1 !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    gap: 2px !important;
+  }
+
+  /* --- 380px Layout Constraint Block --- */
+  @media (max-width: 380px) {
+    .flex-nowrap {
+      flex-wrap: nowrap !important;
+    }
+
+    .mobile-timesheet-month-selector {
+      flex: 0 0 auto !important;
+    }
+
+    .mobile-timesheet-right-group {
+      gap: 3px !important;
+    }
+
+    .mobile-timesheet-total {
+      overflow: hidden !important;
+    }
+
+    .mobile-timesheet-actions {
+      flex: 0 0 auto !important;
+    }
+  }
+
+  .mobile-timesheet-actions {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+  }
+
+  .mobile-timesheet-legend {
+    flex-wrap: wrap;
+    overflow: visible;
+    align-items: center;
+    justify-content: center;
+    margin-top: 8px;
+  }
+
+  .mobile-timesheet-legend-item {
+    flex: 0 0 auto;
+    font-size: clamp(9px, 1.6vw, 14px) !important;
+    font-weight: 700;
+  }
+
+  /* --- UPDATED: 380px Fine-tuning Styling Overrides --- */
+  @media (max-width: 380px) {
+    .mobile-timesheet-summary-row {
+      gap: 2px !important;
+    }
+
+    .mobile-timesheet-month-label {
+      min-width: 52px !important;
+      font-size: 10px !important;
+    }
+
+    /* Safe micro-scaling targeting the specific collision zone */
+    .mobile-timesheet-total-label,
+    .mobile-timesheet-total-unit {
+      font-size: 7px !important;
+    }
+
+    .mobile-timesheet-total-value {
+      font-size: 13px !important;
+    }
+
+    .mobile-timesheet-actions {
+      gap: 4px !important;
+    }
+
+    .mobile-timesheet-legend {
+      padding-left: 0;
+      padding-right: 0;
+      column-gap: 8px;
+      row-gap: 6px;
+    }
+
+    .mobile-timesheet-legend-item {
+      font-size: 7.5px !important;
+      letter-spacing: 0;
+    }
+
+    .mobile-timesheet-shell .mobile-timesheet-grid {
+      gap: 6px;
+    }
+
+    .mobile-timesheet-shell .mobile-timesheet-day {
+      border-radius: 10px;
+    }
+  }
+
+  /* ---- Tablets / large phones (700px – 1024px): bigger cells + bigger text ---- */
+  @media (min-width: 700px) and (max-width: 1024px) {
+    .mobile-timesheet-shell {
+      padding: 14px 18px 22px;
+    }
+
+    .mobile-timesheet-shell .mobile-timesheet-grid {
+      gap: 4px;
+      grid-auto-rows: minmax(64px, auto);
+    }
+
+    .mobile-timesheet-shell .mobile-timesheet-day {
+      min-height: 64px;
+    }
+
+    .mobile-timesheet-legend {
+      column-gap: 14px;
+      row-gap: 8px;
+    }
+
+    .mobile-timesheet-month-label {
+      font-size: 1.05rem !important;
+    }
+
+    .mobile-timesheet-total-value {
+      font-size: 1.35rem !important;
+    }
+  }
+
+  /* ---- Large tablets / iPad landscape and up (>= 1025px): biggest text ---- */
+  @media (min-width: 1025px) {
+    .mobile-timesheet-shell {
+      padding: 18px 24px 28px;
+    }
+
+    .mobile-timesheet-shell .mobile-timesheet-grid {
+      gap: 14px;
+      grid-auto-rows: minmax(80px, auto);
+    }
+
+    .mobile-timesheet-shell .mobile-timesheet-day {
+      min-height: 80px;
+    }
+
+    .mobile-timesheet-legend {
+      column-gap: 18px;
+      row-gap: 10px;
+    }
+
+    .mobile-timesheet-month-label {
+      font-size: 1.2rem !important;
+    }
+
+    .mobile-timesheet-total-value {
+      font-size: 1.55rem !important;
+    }
+
+    .mobile-timesheet-total-label,
+    .mobile-timesheet-total-unit {
+      font-size: 14px !important;
+    }
+  }
+
+  @keyframes mobile-timesheet-zoom {
+    from {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* ==========================================================================
+      FIXED: Mobile Bottom Sheet & Keyboard Collision Adaptive Overrides
+    ========================================================================== */
+  @media (max-width: 639px) {
+    .mobile-timesheet-modal {
+      animation: mobile-timesheet-slide-up 220ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+      border-bottom-left-radius: 0px !important;
+      border-bottom-right-radius: 0px !important;
+      width: 100vw !important;
+      max-width: 100vw !important;
+    }
+
+    /* Dynamically offsets content so iOS/Android native keypads push it upwards */
+    .pb-safe-bottom {
+      padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+    }
+  }
+
+  @keyframes mobile-timesheet-slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Device-safe typography and spacing for the mobile/tablet timesheet view. */
+  @media (max-width: 1279px) {
+    .mobile-timesheet-shell {
+      --mt-page-pad: 2px;
+      --mt-grid-gap: clamp(5px, 1.8vw, 12px);
+      --mt-day-radius: clamp(9px, 2.6vw, 16px);
+      --mt-weekday-size: clamp(8px, 1.7vw, 12px);
+      --mt-day-number-size: clamp(11px, 3vw, 18px);
+      --mt-day-hours-size: clamp(8px, 2vw, 12px);
+      --mt-status-size: clamp(5.5px, 1.45vw, 8px);
+      --mt-legend-size: clamp(7.25px, 1.75vw, 12px);
+      --mt-month-size: clamp(10px, 2.2vw, 16px);
+      --mt-total-label-size: clamp(7.5px, 1.45vw, 12px);
+      --mt-total-value-size: clamp(15px, 3.2vw, 22px);
+      padding-left: var(--mt-page-pad);
+      padding-right: var(--mt-page-pad);
+    }
+
+    .mobile-timesheet-shell .mobile-timesheet-toolbar {
+      border-radius: clamp(14px, 4vw, 20px);
+      padding: 6px 0px 6px 6px !important;
+      /* margin-bottom: clamp(8px, 2.4vw, 14px); */
+    }
+
+    .mobile-timesheet-summary-row {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      gap: 4px !important;
+      width: 100% !important;
+    }
+
+    .mobile-timesheet-summary-row>div:first-child,
+    .mobile-timesheet-summary-row>.mobile-timesheet-month-selector {
+      flex: 0 0 auto !important;
+    }
+
+    .mobile-timesheet-right-group {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: flex-end !important;
+      margin-left: auto !important;
+      flex: 0 1 auto !important;
+      min-width: 0 !important;
+      gap: clamp(4px, 1.2vw, 10px) !important;
+    }
+
+    .mobile-timesheet-actions {
+      flex: 0 0 auto !important;
+    }
+
+    .mobile-timesheet-month-label {
+      min-width: clamp(50px, 15vw, 86px) !important;
+      font-size: var(--mt-month-size) !important;
+      font-weight: 900 !important;
+      letter-spacing: 0 !important;
+    }
+
+    .mobile-timesheet-total {
+      display: flex !important;
+      flex-shrink: 1 !important;
+      justify-content: flex-end !important;
+      align-items: baseline !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      min-width: 0 !important;
+      gap: 2px !important;
+    }
+
+    .mobile-timesheet-total-label,
+    .mobile-timesheet-total-unit {
+      font-size: var(--mt-total-label-size) !important;
+      font-weight: 900 !important;
+      letter-spacing: 0 !important;
+    }
+
+    .mobile-timesheet-total-value {
+      font-size: var(--mt-total-value-size) !important;
+      font-weight: 900 !important;
+      letter-spacing: 0 !important;
+    }
+
+    .mobile-timesheet-actions button {
+      min-height: clamp(28px, 7vw, 38px);
+      padding: clamp(4px, 1.4vw, 8px) clamp(7px, 2.2vw, 12px) !important;
+      font-size: clamp(6.5px, 1.45vw, 9px) !important;
+      line-height: 1.05 !important;
+    }
+
+    .mobile-timesheet-weekday-row,
+    .mobile-timesheet-shell .mobile-timesheet-grid {
+      gap: var(--mt-grid-gap) !important;
+    }
+
+    .mobile-timesheet-weekday-cell {
+      font-size: 10px !important;
+      font-weight: 900 !important;
+      letter-spacing: 0 !important;
+    }
+
+    .mobile-timesheet-shell .mobile-timesheet-day {
+      min-height: clamp(52px, 13.5vw, 88px) !important;
+      border-radius: var(--mt-day-radius) !important;
+      aspect-ratio: 1 / 1;
+      /* was 1 / 1.12 — box is squarer now that label lives outside it */
+    }
+
+    .mobile-timesheet-day-number {
+      font-size: var(--mt-day-number-size) !important;
+      font-weight: 800 !important;
+      line-height: 1 !important;
+    }
+
+    .mobile-timesheet-day-hours {
+      font-size: var(--mt-day-hours-size) !important;
+      font-weight: 900 !important;
+      line-height: 1 !important;
+    }
+
+    .mobile-timesheet-day-status-label span {
+      font-size: var(--mt-status-size) !important;
+      font-weight: 900 !important;
+      letter-spacing: 0 !important;
+      line-height: 1 !important;
+    }
+
+    .mobile-timesheet-legend {
+      gap: clamp(6px, 1.8vw, 14px) clamp(8px, 2.6vw, 18px) !important;
+      padding: clamp(9px, 2.6vw, 16px) !important;
+      border-radius: clamp(10px, 2.8vw, 16px) !important;
+    }
+
+    .mobile-timesheet-legend-item {
+      gap: clamp(4px, 1.4vw, 7px) !important;
+      font-size: 10px !important;
+      font-weight: 800 !important;
+      letter-spacing: 0 !important;
+    }
+
+    .mobile-timesheet-legend-item>div {
+      width: clamp(7px, 1.9vw, 11px) !important;
+      height: clamp(7px, 1.9vw, 11px) !important;
+      flex: 0 0 auto;
+    }
+  }
+
+  /* --- UPDATED: 380px Explicit Target Button Override --- */
+  @media (max-width: 380px) {
+    .mobile-timesheet-actions button {
+      padding: 4px 5px !important;
+      font-size: 7px !important;
+    }
+  }
+
+  /* ==========================================================
+    FIXED MOBILE TOOLBAR
+    Galaxy S8+, Galaxy A series, Z Fold 5 Folded, iPhone SE
+    ========================================================== */
+  @media (max-width: 430px) {
+
+    .mobile-timesheet-summary-row {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      gap: 4px !important;
+      width: 100% !important;
+    }
+
+    /* Month */
+    .mobile-timesheet-month-selector {
+      flex: 0 0 auto !important;
+    }
+
+    .mobile-timesheet-month-label {
+      min-width: 56px !important;
+      font-size: 12px !important;
+      font-weight: 900 !important;
+    }
+
+    .mobile-timesheet-right-group {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: flex-end !important;
+      margin-left: auto !important;
+      flex: 0 1 auto !important;
+      min-width: 0 !important;
+      gap: clamp(4px, 1.2vw, 10px) !important;
+    }
+
+    /* Total shrinks proportionally; autofill button never gets pushed out */
+    .mobile-timesheet-total {
+      flex-shrink: 1 !important;
+      min-width: 0 !important;
+      display: flex !important;
+      justify-content: flex-end !important;
+      align-items: baseline !important;
+      overflow: hidden !important;
+      white-space: nowrap !important;
+      gap: 2px !important;
+    }
+
+    .mobile-timesheet-total-label,
+    .mobile-timesheet-total-unit {
+      font-size: 10px !important;
+      font-weight: 900 !important;
+    }
+
+    .mobile-timesheet-total-value {
+      font-size: 13px !important;
+      font-weight: 900 !important;
+    }
+
+    /* Auto Fill — never shrinks */
+    .mobile-timesheet-actions {
+      flex: 0 0 auto !important;
+    }
+
+    .mobile-timesheet-autofill-btn {
+      padding: 4px 6px !important;
+      gap: 2px !important;
+      min-width: 40px !important;
+    }
+
+    .mobile-timesheet-autofill-btn svg {
+      width: 10px !important;
+      height: 10px !important;
+    }
+  }
+
+  /* ==========================================================
+      IPAD / TABLET SPECIFIC OVERRIDES
+      ========================================================== */
+  @media (min-width: 768px) and (max-width: 1024px) {
+    .mobile-timesheet-shell {
+      --mt-weekday-size: 14px !important;
+      --mt-day-number-size: 22px !important;
+      --mt-day-hours-size: 14px !important;
+      --mt-status-size: 10px !important;
+      --mt-legend-size: 14px !important;
+      --mt-month-size: 18px !important;
+      --mt-total-label-size: 14px !important;
+      --mt-total-value-size: 24px !important;
+    }
+
+    .mobile-timesheet-lock-icon {
+      width: 16px !important;
+      height: 16px !important;
+    }
+  }
+
+  .mobile-timesheet-lock-icon {
+    width: clamp(7px, 2vw, 11px);
+    height: clamp(7px, 2vw, 11px);
+  }

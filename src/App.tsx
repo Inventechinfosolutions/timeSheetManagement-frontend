@@ -34,9 +34,13 @@ import MyProfile from "./EmployeeDashboard/MyProfile";
 import TodayAttendance from "./EmployeeDashboard/TodayAttendance";
 import ChangePassword from "./EmployeeDashboard/ChangePassword";
 import AttendanceViewWrapper from "./EmployeeDashboard/CalenderViewWrapper";
-import MobileResponsiveCalendarPage from "./EmployeeDashboard/MobileResponsiveCalendarPage";
+// import MobileResponsiveCalendarPage from "./EmployeeDashboard/MobileResponsiveCalendarPage";
+import MobileTimesheetHistory from "./EmployeeDashboard/MobileTimesheetHistory/MobileTimesheetHistory";
+import EmployeeAppraisalDashboard from "./Appraisal/EmployeeApprasialDashboard/EmployeeAppraisalDashboard";
+import QuarterlyReviewForm from "./Appraisal/EmployeeApprasialDashboard/QuarterlyReviewForm";
 import LeaveManagement from "./EmployeeDashboard/LeaveManagement";
 import LeaveBalance from "./EmployeeDashboard/LeaveBalance";
+import About from "./pages/About";
 
 // Admin Dashboard Components
 import AdminDashboard from "./AdminDashboard/AdminDashboard";
@@ -55,11 +59,14 @@ import AdminViewEmployeeDashboard from "./AdminDashboard/AdminViewEmployeeDashbo
 import AdminLeaveManagement from "./AdminDashboard/AdminLeaveManagement";
 import ManagerMapping from "./ManagerMapping/ManagerMapping";
 import ManagerEmployeesView from "./AdminDashboard/ManagerEmployeesView";
+import MobileTimesheet from "./EmployeeDashboard/MyTimesheetMobileResponsive/MobileTimesheet";
+import QuarterlyReviewResponsive from "./Appraisal/ManagerQuaterlyReview/QuarterlyReviewResponsive";
+
 
 const EmployeeTabWrapper = () => {
   const { tab } = useParams<{ tab: string }>();
 
-  switch (tab) {
+  switch (tab?.toLowerCase()) {
     case "my-timesheet":
       return <MyTimesheet />;
     case "timesheet-view":
@@ -69,11 +76,17 @@ const EmployeeTabWrapper = () => {
     case "change-password":
       return <ChangePassword />;
     case "calendar-view":
-      return <MobileResponsiveCalendarPage />;
+      return <MobileTimesheetHistory />;
     case "leave-management":
       return <LeaveManagement />;
+    case "appraisal":
+      return <EmployeeAppraisalDashboard />;
+    case "quarterly-review":
+      return <QuarterlyReviewForm />;
     case "leave-balance":
       return <LeaveBalance />;
+    case "about":
+      return <About />;
     default:
       return <Navigate to="/employee-dashboard" replace />;
   }
@@ -82,7 +95,7 @@ const EmployeeTabWrapper = () => {
 const AdminTabWrapper = () => {
   const { tab } = useParams<{ tab: string }>();
 
-  switch (tab) {
+  switch (tab?.toLowerCase()) {
     case "registration":
       return <EmpRegistration />;
     case "employees":
@@ -229,7 +242,10 @@ function AppContent() {
           }
         />
 
-        <Route path="/login" element={<Navigate to="/landing?skipSplash=true" replace />} />
+        <Route
+          path="/login"
+          element={<Navigate to="/landing?skipSplash=true" replace />}
+        />
 
         <Route path="/welcome" element={<Navigate to="/landing" replace />} />
         <Route path="/portal" element={<Navigate to="/landing" replace />} />
@@ -271,7 +287,9 @@ function AppContent() {
                 <Route
                   path="/admin-dashboard"
                   element={
-                    <ProtectedRoute allowedRoles={[UserType.ADMIN, UserType.RECEPTIONIST]}>
+                    <ProtectedRoute
+                      allowedRoles={[UserType.ADMIN, UserType.RECEPTIONIST]}
+                    >
                       <AdminLayout />
                     </ProtectedRoute>
                   }
@@ -357,6 +375,10 @@ function AppContent() {
                     path="manager-employees/:managerId"
                     element={<ManagerEmployeesView />}
                   />
+                  <Route
+                    path="quarterly-review/:employeeId?"
+                    element={<QuarterlyReviewResponsive />}
+                  />
                   <Route path=":tab/:date?" element={<AdminTabWrapper />} />
                 </Route>
 
@@ -368,6 +390,10 @@ function AppContent() {
                     </ProtectedRoute>
                   }
                 >
+                  <Route
+                    path="/employee-dashboard/mobile-timesheet"
+                    element={<MobileTimesheet />}
+                  />
                   <Route index element={<TodayAttendance />} />
                   <Route path=":tab/:date?" element={<EmployeeTabWrapper />} />
                 </Route>
@@ -394,7 +420,7 @@ function AppContent() {
                   ))}
 
                 {mainComponentConfigs
-                  .filter((c) => c && ["/about", "/dashboard"].includes(c.path))
+                  .filter((c) => c && c.path === "/dashboard")
                   .map((config) => (
                     <Route
                       key={config.path}
@@ -402,7 +428,7 @@ function AppContent() {
                       element={
                         <Suspense
                           fallback={
-                            <div className="flex items-center justify-center min-h-screen">
+                            <div className="flex items-center justify-center flex-1 w-full h-full">
                               <Spin size="large" />
                             </div>
                           }

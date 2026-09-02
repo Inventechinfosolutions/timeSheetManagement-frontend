@@ -1,9 +1,11 @@
 import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
-import { Spin } from "antd";
+// import { Spin } from "antd";
 import { useSelector } from "react-redux";
 import type { RootState } from "../store";
-
+import LogoTop from "/src/assets/logo_top.png";
+import LogoBottom from "/src/assets/logo_bottom.png";
+import "./ApiLoadingSpinner.css";
 interface ApiLoadingSpinnerProps {
   /** When true, spinner is positioned to cover only content area (exclude header/footer/sidebar). */
   contained?: boolean;
@@ -49,13 +51,13 @@ export default function ApiLoadingSpinner({ contained = false, contentAreaRef }:
   if (contained && contentAreaRef && typeof document !== "undefined" && document.body) {
     const style: React.CSSProperties = bounds
       ? {
-          position: "fixed",
-          top: bounds.top,
-          left: bounds.left,
-          width: bounds.width,
-          height: bounds.height,
-          zIndex: CONTENT_LOADER_Z_INDEX,
-        }
+        position: "fixed",
+        top: bounds.top,
+        left: bounds.left,
+        width: bounds.width,
+        height: bounds.height,
+        zIndex: CONTENT_LOADER_Z_INDEX,
+      }
       : { display: "none" };
     const contentAreaLoader = (
       <div
@@ -64,7 +66,20 @@ export default function ApiLoadingSpinner({ contained = false, contentAreaRef }:
         aria-busy="true"
         aria-label="Loading"
       >
-        <Spin size="large" tip="Loading..." />
+        {/* <Spin size="large" tip="Loading..." /> */}
+        <div className="logo-loader">
+          <img
+            src={LogoTop}
+            alt="Top"
+            className="logo-top"
+          />
+
+          <img
+            src={LogoBottom}
+            alt="Bottom"
+            className="logo-bottom"
+          />
+        </div>
       </div>
     );
     return createPortal(contentAreaLoader, document.body);
@@ -78,7 +93,20 @@ export default function ApiLoadingSpinner({ contained = false, contentAreaRef }:
         aria-busy="true"
         aria-label="Loading"
       >
-        <Spin size="large" tip="Loading..." />
+        {/* <Spin size="large" tip="Loading..." /> */}
+        <div className="logo-loader">
+          <img
+            src={LogoTop}
+            alt="Top"
+            className="logo-top"
+          />
+
+          <img
+            src={LogoBottom}
+            alt="Bottom"
+            className="logo-bottom"
+          />
+        </div>
       </div>
     );
   }
@@ -91,7 +119,20 @@ export default function ApiLoadingSpinner({ contained = false, contentAreaRef }:
       aria-busy="true"
       aria-label="Loading"
     >
-      <Spin size="large" tip="Loading..." />
+      {/* <Spin size="large" tip="Loading..." /> */}
+      <div className="logo-loader">
+        <img
+          src={LogoTop}
+          alt="Top"
+          className="logo-top"
+        />
+
+        <img
+          src={LogoBottom}
+          alt="Bottom"
+          className="logo-bottom"
+        />
+      </div>
     </div>
   );
   return typeof document !== "undefined" && document.body

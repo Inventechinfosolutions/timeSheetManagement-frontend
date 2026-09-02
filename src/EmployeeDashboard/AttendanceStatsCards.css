@@ -1,0 +1,232 @@
+/* ── Shared Base ── */
+
+.attendance-stats {
+  opacity: 1;
+  transition: opacity 300ms ease;
+}
+
+.attendance-stats--loading {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.attendance-stat-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  transition: background-color 300ms ease;
+}
+
+.attendance-stat-icon--blue {
+  background: #eff6ff;
+  color: #4318ff;
+}
+
+.attendance-stat-icon--amber {
+  background: #fffbeb;
+  color: #f59e0b;
+}
+
+.attendance-stat-icon--green {
+  background: #f0fdf4;
+  color: #05cd99;
+}
+
+.attendance-stat-icon--red {
+  background: #fef2f2;
+  color: #ee5d50;
+}
+
+.attendance-stat-body {
+  width: 100%;
+}
+
+.attendance-stat-label {
+  margin-bottom: 2px;
+  color: #a3aed0;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.attendance-stat-label--with-icon {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.attendance-stat-info {
+  display: inline-flex;
+  cursor: pointer;
+  color: #4318ff;
+}
+
+.attendance-stat-info:hover {
+  color: #3b15e0;
+}
+
+.attendance-stat-value {
+  color: #1b2559;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.attendance-stat-note {
+  margin: 2px 0 0;
+  color: #6b7280;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.attendance-stat-note--muted {
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+.attendance-stat-tooltip {
+  min-width: 170px;
+  padding: 8px;
+  color: #ffffff;
+  font-size: 12px;
+}
+
+.attendance-stat-tooltip-title {
+  margin-bottom: 4px;
+  border-bottom: 1px solid rgb(255 255 255 / 0.2);
+  padding-bottom: 4px;
+  font-weight: 800;
+}
+
+.attendance-stat-tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 6px;
+  font-weight: 500;
+}
+
+.attendance-stat-tooltip-row span:last-child {
+  font-weight: 700;
+}
+
+.attendance-stat-tooltip-positive {
+  color: #86efac;
+}
+
+.attendance-stat-tooltip-total {
+  margin-top: 4px;
+  border-top: 1px dashed rgb(255 255 255 / 0.2);
+  font-weight: 700;
+}
+
+.attendance-balance-orb {
+  position: absolute;
+  border-radius: 9999px;
+  pointer-events: none;
+}
+
+.attendance-balance-orb--top {
+  top: -16px;
+  right: -16px;
+  width: 80px;
+  height: 80px;
+  background: rgb(255 255 255 / 0.2);
+  filter: blur(16px);
+  transition: transform 500ms ease;
+}
+
+.attendance-balance-card:hover .attendance-balance-orb--top {
+  transform: scale(1.5);
+}
+
+.attendance-balance-orb--bottom {
+  bottom: -24px;
+  left: -24px;
+  width: 96px;
+  height: 96px;
+  background: rgb(255 255 255 / 0.1);
+  filter: blur(24px);
+}
+
+.attendance-balance-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  height: 100%;
+}
+
+.attendance-balance-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.attendance-balance-heading p {
+  margin: 0;
+  color: rgb(255 255 255 / 0.8);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.attendance-balance-row {
+  display: flex;
+  align-items: baseline;
+}
+
+.attendance-balance-row span {
+  color: #ffffff;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.attendance-balance-row small {
+  color: rgb(255 255 255 / 0.6);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.attendance-balance-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(255 255 255 / 0.2);
+  background: rgb(255 255 255 / 0.2);
+  color: #ffffff;
+}
+
+.attendance-balance-card {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #4318ff, #3b15e0);
+  box-sizing: border-box;
+  transition:
+    box-shadow 300ms ease,
+    transform 300ms ease;
+}
+
+.attendance-balance-card:hover {
+  transform: translateY(-4px);
+}
+
+.attendance-stat-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  width: 100%;
+  min-width: 0;
+  background: #ffffff;
+  border: 1px solid #eef2f7;
+  box-sizing: border-box;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+.attendance-stat-card:hover {
+  transform: translateY(-4px);
+}

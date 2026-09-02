@@ -256,10 +256,10 @@ const MobileResponsiveCalendarPage = ({
   return (
     <div className="flex flex-col w-full">
       {/* Header with Blue Gradient */}
-      <div className="px-5 py-4 bg-gradient-to-r from-blue-100 via-blue-50 to-white border-b border-gray-100 shadow-sm shrink-0">
-        <div className="flex items-center justify-between mb-3">
+      <div className="px-3 py-2 md:px-5 md:py-4 bg-gradient-to-r from-blue-100 via-blue-50 to-white border-b border-gray-100 shadow-sm shrink-0">
+        <div className="flex items-center justify-between mb-2 md:mb-3">
           <div>
-            <h1 className="text-xl font-bold text-[#1B2559]">
+            <h1 className="text-sm md:text-xl font-bold text-[#1B2559] whitespace-nowrap">
               Monthly Attendance Snapshot
             </h1>
             <p className="text-xs text-gray-500 font-medium">
@@ -268,10 +268,10 @@ const MobileResponsiveCalendarPage = ({
           </div>
           <button
             onClick={handleDownload}
-            className="p-2.5 bg-[#4318FF] text-white rounded-xl shadow-lg shadow-blue-500/30 active:scale-95 transition-all"
+            className="p-2 md:p-2.5 bg-[#4318FF] text-white rounded-xl shadow-lg shadow-blue-500/30 active:scale-95 transition-all"
             title="Download Report"
           >
-            <Download size={18} strokeWidth={2.5} />
+            <Download size={15} strokeWidth={2.5} />
           </button>
         </div>
 

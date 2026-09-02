@@ -214,7 +214,7 @@ const AdminDashboard = () => {
         ],
         chart: {
           type: "donut" as const,
-          fontFamily: "DM Sans, sans-serif",
+          // fontFamily: "DM Sans, sans-serif",
           toolbar: { show: false },
         },
         plotOptions: {

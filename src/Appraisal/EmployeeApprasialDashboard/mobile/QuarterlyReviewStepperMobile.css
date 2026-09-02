@@ -1,0 +1,95 @@
+.mobile-stepper-container {
+  width: 100%;
+}
+
+.mobile-stepper-scroll {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE/Edge */
+}
+
+.mobile-stepper-scroll::-webkit-scrollbar {
+  display: none;
+  /* Chrome/Safari */
+}
+
+.mobile-stepper-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  width: 200%;
+  /* 6 columns at 1/6 track width each = 3 visible per viewport */
+}
+
+.mobile-progress-bg {
+  position: absolute;
+  top: 1rem;
+  left: 10%;
+  right: 10%;
+  height: 2px;
+  background: #e2e8f0;
+  z-index: 0;
+}
+
+.mobile-progress-active {
+  position: absolute;
+  top: 1rem;
+  left: 10%;
+  height: 2px;
+  background: #a7f3d0;
+  transition: width 0.3s ease;
+  z-index: 0;
+}
+
+.mobile-step-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 10;
+  width: 100%;
+  padding: 0 2px;
+}
+
+.mobile-step-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.mobile-step-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.1;
+}
+
+.mobile-step-status {
+  font-size: 9px;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+/* Tablet/iPad: show all 6 steps in one row, no scrolling */
+@media (min-width: 640px) {
+  .mobile-stepper-scroll {
+    overflow: visible;
+  }
+
+  .mobile-stepper-grid {
+    width: 100%;
+  }
+
+  .mobile-step-title {
+    font-size: 11px;
+  }
+
+  .mobile-step-status {
+    font-size: 10px;
+  }
+}

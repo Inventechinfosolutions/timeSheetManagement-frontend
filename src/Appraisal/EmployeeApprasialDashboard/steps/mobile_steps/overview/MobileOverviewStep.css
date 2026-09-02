@@ -1,0 +1,72 @@
+/* MobileOverviewStep.css */
+.mobile-info-width {
+  margin-left: -16px;
+  margin-right: -16px;
+}
+
+.mobile-overview-card {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgb(241 245 249);
+  border-radius: 1rem;
+  background-color: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(4px);
+}
+
+.mobile-overview-card__title {
+  font-size: clamp(10px 1vw 12px);
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.mobile-overview-card__subtitle {
+  color: rgb(100 116 139);
+  font-size: 0.8125rem;
+  margin-bottom: 1.25rem;
+  text-align: justify;
+}
+
+.mobile-overview-card__label {
+  font-weight: 500;
+  color: rgb(51 65 85);
+}
+
+.mobile-overview-card__required {
+  color: rgb(244 63 94);
+}
+
+.mobile-overview-card__textarea {
+  border-radius: 0.75rem;
+  border-color: rgb(226 232 240);
+  padding: 0.75rem;
+  transition: all 0.2s ease;
+}
+
+.mobile-overview-card__textarea:hover {
+  border-color: rgb(129 140 248);
+}
+
+.mobile-overview-card__textarea:focus {
+  border-color: rgb(99 102 241);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+}
+
+/* Hide scrollbar on mobile textarea */
+
+.mobile-overview-card__scrollbar-hide textarea {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.mobile-overview-card__scrollbar-hide textarea::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+.mobile-overview-card__scrollbar-hide textarea::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+
+.mobile-overview-card__scrollbar-hide textarea::-webkit-scrollbar-track {
+  background: transparent;
+}

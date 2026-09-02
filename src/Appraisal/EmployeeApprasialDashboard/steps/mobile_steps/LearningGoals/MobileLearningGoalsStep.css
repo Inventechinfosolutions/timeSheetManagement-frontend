@@ -1,0 +1,272 @@
+/* MobileLearningGoalsStep.css */
+
+.mobile-learning-goals-card {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgb(241 245 249);
+  border-radius: 1rem;
+  padding: 1rem;
+  background-color: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(4px);
+}
+
+/* 
+   CARD HEADER
+    */
+
+.mobile-learning-goals-card__title {
+  font-size: 1.125rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.mobile-learning-goals-card__subtitle {
+  color: rgb(100 116 139);
+  font-size: 0.8125rem;
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+/* 
+   GOALS LIST
+    */
+
+.mobile-learning-goals-card__list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+}
+
+/* 
+   ADD GOAL
+    */
+
+.mobile-learning-goals-card__add-wrap {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+
+  margin-top: 0.75rem;
+  margin-bottom: 0.25rem;
+  padding: 0;
+}
+
+.mobile-learning-goals-card__add-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  gap: 0.375rem;
+
+  width: auto !important;
+  min-width: auto !important;
+
+  height: 2.125rem !important;
+  min-height: 2.125rem !important;
+
+  padding: 0 0.75rem !important;
+  margin: 0 !important;
+
+  border-radius: 0.625rem !important;
+
+  border: 1px dashed rgb(203 213 225) !important;
+
+  background-color: #ffffff;
+
+  color: rgb(51 65 85);
+
+  font-size: 0.75rem;
+  font-weight: 500;
+
+  line-height: 1;
+  white-space: nowrap;
+
+  box-shadow: none !important;
+}
+
+.mobile-learning-goals-card__add-btn:hover {
+  border-color: rgb(148 163 184) !important;
+  background-color: rgb(248 250 252) !important;
+  color: rgb(15 23 42) !important;
+}
+
+/* Keep icon + text perfectly aligned */
+.mobile-learning-goals-card__add-btn > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 
+   GOAL ITEM
+    */
+
+.mobile-learning-goals-item {
+  border: 1px solid rgb(241 245 249);
+  border-radius: 1rem;
+
+  padding: 0.75rem 0.5rem;
+
+  background-color: rgba(248, 250, 252, 0.5);
+
+  position: relative;
+}
+
+/* 
+   GOAL HEADER
+    */
+
+.mobile-learning-goals-item__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  margin-bottom: 0.5rem;
+
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+}
+
+.mobile-learning-goals-item__label {
+  font-weight: 500;
+
+  color: rgb(51 65 85);
+
+  font-size: 0.8125rem;
+
+  display: flex;
+  align-items: center;
+
+  min-width: 0;
+}
+
+.mobile-learning-goals-item__required {
+  color: rgb(244 63 94);
+  margin-right: 0.25rem;
+  flex-shrink: 0;
+}
+
+/* 
+   REMOVE BUTTON
+    */
+
+.mobile-learning-goals-item__remove-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 0.375rem;
+
+  padding: 0.25rem 0.5rem;
+
+  height: auto;
+
+  color: rgb(244 63 94);
+
+  font-weight: 500;
+
+  flex-shrink: 0;
+}
+
+.mobile-learning-goals-item__remove-btn:hover {
+  color: rgb(225 29 72);
+  background-color: rgb(255 241 242);
+}
+
+/* 
+   TEXTAREA
+    */
+
+.mobile-learning-goals-item__textarea {
+  width: 100%;
+
+  border-radius: 0.75rem;
+
+  border-color: rgb(226 232 240);
+
+  padding: 0.75rem;
+
+  color: rgb(15 23 42);
+
+  background-color: #ffffff;
+
+  transition: all 0.2s ease;
+}
+
+.mobile-learning-goals-item__textarea:hover {
+  border-color: rgb(129 140 248);
+}
+
+.mobile-learning-goals-item__textarea:focus {
+  border-color: rgb(99 102 241);
+
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+}
+
+/* 
+   TABLET / IPAD
+   768px - 1023px
+    */
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .mobile-learning-goals-card {
+    padding: 1rem;
+  }
+
+  .mobile-learning-goals-card__list {
+    gap: 1rem;
+  }
+
+  .mobile-learning-goals-card__add-wrap {
+    width: 100%;
+
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+
+    margin-top: 0.75rem;
+    margin-bottom: 0.25rem;
+
+    padding: 0;
+  }
+
+  .mobile-learning-goals-card__add-btn {
+    width: auto !important;
+
+    min-width: auto !important;
+
+    height: 2.125rem !important;
+    min-height: 2.125rem !important;
+
+    padding: 0 0.875rem !important;
+  }
+}
+
+/* 
+   SMALL MOBILE
+    */
+
+@media (max-width: 767px) {
+  .mobile-learning-goals-card__add-wrap {
+    width: 100%;
+
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+
+    margin-top: 0.75rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .mobile-learning-goals-card__add-btn {
+    width: auto !important;
+
+    height: 2rem !important;
+    min-height: 2rem !important;
+
+    padding: 0 0.7rem !important;
+
+    font-size: 0.7rem;
+  }
+}
