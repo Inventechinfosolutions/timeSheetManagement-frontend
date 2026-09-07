@@ -1,6 +1,16 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { useAppSelector } from "../../hooks";
 import { useParams, useNavigate } from "react-router-dom";
-import { Table, Button, Input, Select, Spin, message } from "antd";
+import {
+  Table,
+  Button,
+  Checkbox,
+  Input,
+  Modal,
+  Select,
+  Spin,
+  message,
+} from "antd";
 import {
   Search,
   Users,
@@ -12,8 +22,10 @@ import {
   Star,
   ArrowLeft,
   Hourglass,
+  Bell,
 } from "lucide-react";
 import axios from "axios";
+import dayjs from "dayjs";
 import {
   ManagerReviewItem,
   ReviewStats,
@@ -32,14 +44,40 @@ import {
   toFiscalYearLabel,
   YEARS_BEFORE_CURRENT,
   YEARS_AFTER_CURRENT,
+  getDefaultQuarterDates,
+  getFormattedQuarterPayload,
 } from "./QuarterlyReview.types";
 import QuarterlyViewPage from "./Quarterlyviewpage";
+import { QuarterDateItem } from "./QuarterDateConfigModal";
 
 const { Option } = Select;
 
 type RatingValues = Record<string, number>;
 
 const DEFAULT_PAGE_SIZE = 10;
+const REVIEW_GRACE_PERIOD_DAYS = 10;
+
+// Table layout constants. Columns now use fixed pixel widths instead of
+// percentages so the Employee Name column can be sized generously enough
+// to show full names without truncation, independent of every other
+// column's width. TABLE_SCROLL_X is the sum of all column widths below —
+// keep it in sync whenever a column width changes, since AntD's `scroll.x`
+// determines the table's total horizontal width and must match (or exceed)
+// the sum of the fixed column widths for the layout to render correctly.
+const COLUMN_WIDTHS = {
+  employeeName: 200,
+  employeeId: 100,
+  designation: 150,
+  quarter: 90,
+  finalRating: 130,
+  lastModified: 130,
+  startDate: 130,
+  endDate: 130,
+  status: 150,
+  notify: 130,
+  action: 160,
+};
+const TABLE_SCROLL_X = Object.values(COLUMN_WIDTHS).reduce((a, b) => a + b, 0);
 
 interface ManagerReviewBoardDesktopProps {
   onBack?: () => void;
@@ -88,6 +126,14 @@ interface ManagerReviewBoardDesktopProps {
  * Selects elsewhere on the app outside this component, their dropdowns will
  * also pick up Inter — flag if that's undesired and we can scope it via a
  * `popupClassName` on each Select instead.)
+ *
+ * The "Send Review Notification" Modal is ALSO a document.body portal, for
+ * the same reason as the Select dropdown above. Rather than going fully
+ * unscoped for it too, it carries its own `mqr-notification-modal`
+ * className (set on <Modal className="mqr-notification-modal">), which
+ * AntD applies directly to the real .ant-modal node even though it's
+ * portaled — so Inter + a bit of polish is scoped to `.mqr-notification-modal`
+ * instead of leaking Inter onto every modal in the app.
  *
  * STAT CARDS — the 4 cards (Total Submissions, Pending Reviews, In
  * Review, Completed Reviews) fill the entire row (`flex-1` on the
@@ -153,6 +199,93 @@ const MQR_FONT_STYLES = `
     font-family: ${MQR_FONT_STACK} !important;
   }
 
+  /* The "Send Review Notification" Modal is also a document.body portal,
+     outside .mqr-wrapper — same situation as the Select dropdown above.
+     It already carries a "mqr-notification-modal" className (set via
+     Modal className="mqr-notification-modal"), which DOES land on the
+     real .ant-modal node, so we scope Inter + a bit of polish to just
+     this modal instead of going fully unscoped. */
+  .mqr-notification-modal,
+  .mqr-notification-modal * {
+    font-family: ${MQR_FONT_STACK} !important;
+  }
+
+  .mqr-notification-modal .ant-modal-content {
+    border-radius: 16px !important;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    /* Caps the whole modal so it always fits the viewport — this is what
+       stops the outer .ant-modal-wrap from ALSO becoming scrollable
+       (previously two nested scrollbars: one for this wrap, one for the
+       inner employee list further down). */
+    max-height: 82vh;
+  }
+
+  .mqr-notification-modal .ant-modal-header {
+    border-bottom: 1px solid #E2E8F0 !important;
+    padding: 14px 20px 10px !important;
+    flex: 0 0 auto;
+  }
+
+  .mqr-notification-modal .ant-modal-title {
+    font-weight: 800 !important;
+    font-size: 16px !important;
+    color: #2B3674 !important;
+    letter-spacing: -0.01em;
+  }
+
+  .mqr-notification-modal .ant-modal-body {
+    padding: 14px 20px !important;
+    /* Body itself never scrolls — flex-shrinks to fit, and only the
+       .mqr-employee-list child (flex-1 + min-height:0 in the JSX) grows
+       and scrolls internally. */
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mqr-notification-modal .ant-modal-footer {
+    border-top: 1px solid #E2E8F0 !important;
+    padding: 10px 20px !important;
+    flex: 0 0 auto;
+  }
+
+  .mqr-notification-modal .ant-modal-footer .ant-btn {
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    height: auto !important;
+    padding: 6px 16px !important;
+  }
+
+  /* Custom, thinner scrollbar for the employee list so scrolling feels
+     smoother than the default chunky OS scrollbar — Firefox via
+     scrollbar-width/-color, WebKit/Chromium via the ::-webkit- rules. */
+  .mqr-notification-modal .mqr-employee-list {
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: #C7D2FE #F1F5F9;
+  }
+
+  .mqr-notification-modal .mqr-employee-list::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .mqr-notification-modal .mqr-employee-list::-webkit-scrollbar-track {
+    background: #F8FAFC;
+  }
+
+  .mqr-notification-modal .mqr-employee-list::-webkit-scrollbar-thumb {
+    background-color: #C7D2FE;
+    border-radius: 8px;
+  }
+
+  .mqr-notification-modal .mqr-employee-list::-webkit-scrollbar-thumb:hover {
+    background-color: #A5B4FC;
+  }
+
   .mqr-wrapper {
     --mqr-scale: 1; /* <-- change this ONE value to resize all text on the page */
   }
@@ -202,14 +335,9 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
     inReview: 0,
     completed: 0,
   });
-  const [setQuarterOptions] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [selectedQuarter] = useState<string>(
-    QuarterFilter.ALL,
-  );
-  const [selectedQuarterCard, setSelectedQuarterCard] = useState<string>(
-    QuarterFilter.ALL,
-  );
+  const [selectedQuarter] = useState<string>(QuarterFilter.ALL);
+  const [selectedQuarterCard, setSelectedQuarterCard] = useState<string>("");
   const [selectedStatusTab, setSelectedStatusTab] = useState<string>(
     StatusTabFilter.ALL,
   );
@@ -241,50 +369,297 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
     [RatingCategory.INNOVATION]: DEFAULT_RATING_VALUE,
   });
   const [finalRating, setFinalRating] = useState<string>("");
+  // Which quarter the manager is giving THIS review for. Picked inside the
+  // evaluation modal (QuarterlyViewPage), independent of any quarter tag
+  // already on the employee's submission — a manager can give a Q1, Q2,
+  // Q3, or Q4 review for an employee regardless of the configured quarter
+  // date ranges (all four are always selectable).
+  const [reviewQuarter, setReviewQuarter] = useState<string>("");
+  const reviewQuarterChangedRef = useRef(false);
   const [strengths, setStrengths] = useState<string>("");
   const [improvements, setImprovements] = useState<string>("");
   const [remarks, setRemarks] = useState<string>("");
   const [fieldErrors, setFieldErrors] = useState<{
+    quarter?: string;
     strengths?: string;
     improvements?: string;
     remarks?: string;
   }>({});
 
+  // Quarter Date Range Configuration state
+  const [quarterDateConfigs, setQuarterDateConfigs] = useState<
+    QuarterDateItem[]
+  >([]);
+  // Logged-in manager's employee ID — used to fetch all mapped employees
+  const currentUser = useAppSelector((state: any) => state.user.currentUser);
+  const managerEmployeeId = currentUser?.employeeId || currentUser?.loginId;
+
+  const [notificationModalOpen, setNotificationModalOpen] = useState(false);
+  const [selectedNotificationEmployeeIds, setSelectedNotificationEmployeeIds] =
+    useState<string[]>([]);
+  const [sendingNotifications, setSendingNotifications] = useState(false);
+  // Holds ALL employees mapped to this manager (from manager-mapping, not quarterly review).
+  // This ensures all 80 members appear even if they haven't submitted a review yet.
+  const [allNotificationEmployees, setAllNotificationEmployees] = useState<
+    any[]
+  >([]);
+  const [loadingNotificationEmployees, setLoadingNotificationEmployees] =
+    useState(false);
+  const [notificationQuarterFilter, setNotificationQuarterFilter] =
+    useState<string>(QuarterFilter.ALL);
+  const [notificationDate, setNotificationDate] = useState<string>("");
+
+  // Which row's per-row Send/Resend button (in the main table's Notify
+  // column) is currently mid-request — scopes the button's loading/disabled
+  // state to just that row instead of the whole table. Keyed by employeeId,
+  // same key used everywhere else in this file to identify a row.
+  const [sendingRowNotification, setSendingRowNotification] = useState<
+    string | null
+  >(null);
+
+  const fetchQuarterConfigs = async (year: string) => {
+    if (!year || year === YEAR_FILTER_ALL) return;
+    const defaultConfigs: QuarterDateItem[] = (
+      [
+        QuarterFilter.Q1,
+        QuarterFilter.Q2,
+        QuarterFilter.Q3,
+        QuarterFilter.Q4,
+      ] as const
+    ).map((quarter) => ({
+      quarter,
+      ...getDefaultQuarterDates(quarter, year),
+    }));
+
+    setQuarterDateConfigs(defaultConfigs);
+  };
+
+  useEffect(() => {
+    fetchQuarterConfigs(selectedYear);
+  }, [selectedYear]);
+
   /**
    * Fetch the current filters + requested page/pageSize from the API.
    * This is the single place responsible for pulling table data — every
    * pagination click, filter change, and post-submit refresh routes through
-   * here with explicit page/size args so the server always returns exactly
-   * the rows for that page.
+   */
+
+  async function fetchAllMappedEmployees(): Promise<any[]> {
+    const managerKeys = Array.from(
+      new Set(
+        [
+          currentUser?.aliasLoginName,
+          currentUser?.name,
+          currentUser?.fullName,
+          currentUser?.employeeId,
+          currentUser?.loginId,
+          managerEmployeeId,
+        ].filter(Boolean),
+      ),
+    );
+
+    for (const key of managerKeys) {
+      try {
+        const res = await axios.get("/api/manager-mapping/all", {
+          params: {
+            managerName: key,
+            status: "ACTIVE",
+            limit: 9999,
+          },
+        });
+        const items =
+          res.data?.items ||
+          res.data?.data ||
+          (Array.isArray(res.data) ? res.data : []);
+        if (Array.isArray(items) && items.length > 0) {
+          return items.map((m: any) => ({
+            employeeId: m.employeeId,
+            employeeName: m.employeeName || m.employeeId,
+            designation: m.designation || "Employee",
+            department: m.department || "—",
+            quarter: m.quarter || null,
+            notificationDate:
+              m.notificationDate || m.notificationSentAt || m.sentAt || null,
+            reviewStatus: m.reviewStatus || null,
+            isCompleted: false,
+          }));
+        }
+      } catch {
+        // try next identifier
+      }
+    }
+
+    try {
+      const response = await axios.get(
+        "/api/manager-quarterly-review/notification-candidates",
+      );
+      const data =
+        response.data?.data ||
+        (Array.isArray(response.data) ? response.data : []);
+      if (Array.isArray(data) && data.length > 0) {
+        return data;
+      }
+    } catch {
+      // Ignore secondary fallback error
+    }
+
+    return [];
+  }
+
+  /**
+   * Fetch the current filters + requested page/pageSize from the API.
+   * Merges all mapped team members so every employee under the manager displays.
    */
   const fetchData = async (
     page: number = currentPage,
     size: number = pageSize,
+    overrideStatus?: string,
+    overrideYear?: string,
+    overrideQuarterCard?: string,
+    overrideSearch?: string,
   ) => {
     try {
       setLoading(true);
+      const statusToUse =
+        overrideStatus !== undefined ? overrideStatus : selectedStatusTab;
+      const yearToUse =
+        overrideYear !== undefined ? overrideYear : selectedYear;
+      const quarterCardToUse =
+        overrideQuarterCard !== undefined
+          ? overrideQuarterCard
+          : selectedQuarterCard;
+      const searchToUse =
+        overrideSearch !== undefined ? overrideSearch : searchQuery;
 
-      const params: Record<string, any> = { page, pageSize: size };
+      const params: Record<string, any> = { page: 1, pageSize: 9999 };
       if (selectedQuarter !== QuarterFilter.ALL)
         params.quarter = selectedQuarter;
-      if (selectedQuarterCard !== QuarterFilter.ALL)
-        params.quarterCard = selectedQuarterCard;
-      if (selectedYear !== YEAR_FILTER_ALL) params.year = selectedYear;
-      if (selectedStatusTab !== StatusTabFilter.ALL)
-        params.status = selectedStatusTab;
-      if (searchQuery.trim()) params.search = searchQuery.trim();
+      if (quarterCardToUse && quarterCardToUse !== QuarterFilter.ALL)
+        params.quarterCard = quarterCardToUse;
+      if (yearToUse !== YEAR_FILTER_ALL) params.year = yearToUse;
+      if (statusToUse !== StatusTabFilter.ALL) params.status = statusToUse;
+      if (searchToUse.trim()) params.search = searchToUse.trim();
 
-      const [subsRes, statsRes] = await Promise.all([
-        axios.get("/api/manager-quarterly-review", { params }),
-        axios.get("/api/manager-quarterly-review/stats"),
+      const [subsRes, statsRes, mappedEmployees] = await Promise.all([
+        axios
+          .get("/api/manager-quarterly-review", { params })
+          .catch(() => ({ data: { success: false, data: [] } })),
+        axios
+          .get("/api/manager-quarterly-review/stats")
+          .catch(() => ({ data: { success: false, data: null } })),
+        fetchAllMappedEmployees(),
       ]);
 
-      if (subsRes.data?.success) {
-        setSubmissions(subsRes.data.data || []);
-        setTotalCount(subsRes.data.total ?? 0);
+      let existingSubmissions: ManagerReviewItem[] = [];
+      if (subsRes.data?.success && Array.isArray(subsRes.data.data)) {
+        existingSubmissions = subsRes.data.data;
       }
-      if (statsRes.data?.success) {
-        setStats(statsRes.data.data);
+
+      // Merge all mapped employees so all team members appear in the table
+      const combinedSubmissions: ManagerReviewItem[] = [...existingSubmissions];
+
+      for (const emp of mappedEmployees) {
+        const exists = combinedSubmissions.some(
+          (s) => s.employeeId === emp.employeeId,
+        );
+        if (!exists) {
+          const rawQuarter = emp.quarter;
+          const defaultQuarter = rawQuarter
+            ? rawQuarter.trim().split(/\s+/)[0]
+            : quarterCardToUse && quarterCardToUse !== QuarterFilter.ALL
+              ? quarterCardToUse
+              : quarterDateConfigs[0]?.quarter || "Q1";
+
+          combinedSubmissions.push({
+            id: emp.id || emp.employeeId,
+            employeeId: emp.employeeId,
+            employeeName: emp.employeeName || emp.employeeId,
+            department: emp.department || "—",
+            designation: emp.designation || "Employee",
+            quarter: defaultQuarter,
+            status: "Under Review",
+            reviewStatus: null,
+            overview: "",
+            achievements: "",
+            challenges: "",
+            learningGoals: "",
+            submittedDate: null,
+            reviewedOn: null,
+            lastModified: dayjs().format("YYYY-MM-DDTHH:mm:ssZ"),
+            finalRating: null,
+            actionType: "evaluate",
+            actionLabel: "Evaluate Now",
+            notificationDate: emp.notificationDate || null,
+          } as any);
+        }
+      }
+
+      let filtered = combinedSubmissions;
+
+      if (quarterCardToUse && quarterCardToUse !== QuarterFilter.ALL) {
+        filtered = filtered.filter((s) => {
+          const qCode = (s.quarter || "").trim().split(/\s+/)[0];
+          return qCode === quarterCardToUse;
+        });
+      }
+
+      if (statusToUse && statusToUse !== StatusTabFilter.ALL) {
+        filtered = filtered.filter((s) => {
+          if (statusToUse === StatusTabFilter.PENDING) {
+            return (
+              !s.reviewStatus ||
+              s.reviewStatus === ManagerReviewStatus.PENDING ||
+              s.status === "Under Review"
+            );
+          }
+          if (statusToUse === StatusTabFilter.IN_REVIEW) {
+            return s.reviewStatus === ManagerReviewStatus.IN_REVIEW;
+          }
+          if (statusToUse === StatusTabFilter.COMPLETED) {
+            return (
+              s.reviewStatus === ManagerReviewStatus.REVIEWED ||
+              s.status === "Reviewed"
+            );
+          }
+          return true;
+        });
+      }
+
+      if (searchToUse.trim()) {
+        const q = searchToUse.trim().toLowerCase();
+        filtered = filtered.filter(
+          (s) =>
+            (s.employeeName || "").toLowerCase().includes(q) ||
+            (s.employeeId || "").toLowerCase().includes(q) ||
+            (s.designation || "").toLowerCase().includes(q) ||
+            (s.department || "").toLowerCase().includes(q),
+        );
+      }
+
+      const startIndex = (page - 1) * size;
+      const paginatedRows = filtered.slice(startIndex, startIndex + size);
+
+      setSubmissions(paginatedRows);
+      setTotalCount(filtered.length);
+
+      if (statsRes.data?.success && statsRes.data.data) {
+        setStats({
+          ...statsRes.data.data,
+          totalTeamMembers: Math.max(
+            combinedSubmissions.length,
+            statsRes.data.data.totalTeamMembers || 0,
+          ),
+          totalSubmissions: Math.max(
+            combinedSubmissions.length,
+            statsRes.data.data.totalSubmissions || 0,
+          ),
+        });
+      } else {
+        setStats((prev) => ({
+          ...prev,
+          totalTeamMembers: combinedSubmissions.length,
+          totalSubmissions: combinedSubmissions.length,
+        }));
       }
     } catch (err: any) {
       message.error(
@@ -296,26 +671,286 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
     }
   };
 
+  const handleStatusTabChange = (statusKey: string) => {
+    setSelectedStatusTab(statusKey);
+    setCurrentPage(1);
+    fetchData(
+      1,
+      pageSize,
+      statusKey,
+      selectedYear,
+      selectedQuarterCard,
+      searchQuery,
+    );
+  };
+
+  const handleYearChange = (year: string) => {
+    setSelectedYear(year);
+    setCurrentPage(1);
+    fetchData(
+      1,
+      pageSize,
+      selectedStatusTab,
+      year,
+      selectedQuarterCard,
+      searchQuery,
+    );
+  };
+
+  const handleQuarterChange = (quarter: string) => {
+    setSelectedQuarterCard(quarter);
+    setCurrentPage(1);
+    fetchData(
+      1,
+      pageSize,
+      selectedStatusTab,
+      selectedYear,
+      quarter,
+      searchQuery,
+    );
+  };
+
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
+    setCurrentPage(1);
+    fetchData(
+      1,
+      pageSize,
+      selectedStatusTab,
+      selectedYear,
+      selectedQuarterCard,
+      query,
+    );
+  };
+
+  // Holds search query inside notification modal (useful when manager has 80+ employees)
+  const [modalSearchText, setModalSearchText] = useState<string>("");
+
+  // All employees who have NOT yet completed a review are selectable for notification
+  const selectableNotificationEmployees = useMemo(() => {
+    return allNotificationEmployees.filter((emp: any) => {
+      const submission = submissions.find(
+        (s) => s.employeeId === emp.employeeId,
+      );
+      const isReviewed =
+        emp.isCompleted ||
+        emp.reviewStatus === ManagerReviewStatus.REVIEWED ||
+        submission?.reviewStatus === ManagerReviewStatus.REVIEWED;
+      return !isReviewed;
+    });
+  }, [allNotificationEmployees, submissions]);
+
+  const openNotificationModal = async () => {
+    setNotificationModalOpen(true);
+    setLoadingNotificationEmployees(true);
+    setModalSearchText("");
+    setNotificationQuarterFilter(QuarterFilter.ALL);
+    setNotificationDate(new Date().toISOString());
+
+    try {
+      let candidates: any[] = [];
+
+      // 1. Primary: query /api/manager-mapping/all trying all possible manager identifiers
+      const managerKeys = Array.from(
+        new Set(
+          [
+            currentUser?.aliasLoginName,
+            currentUser?.name,
+            currentUser?.fullName,
+            currentUser?.employeeId,
+            currentUser?.loginId,
+            managerEmployeeId,
+          ].filter(Boolean),
+        ),
+      );
+
+      for (const key of managerKeys) {
+        try {
+          const res = await axios.get("/api/manager-mapping/all", {
+            params: {
+              managerName: key,
+              status: "ACTIVE",
+              limit: 9999,
+            },
+          });
+          const items =
+            res.data?.items ||
+            res.data?.data ||
+            (Array.isArray(res.data) ? res.data : []);
+          if (Array.isArray(items) && items.length > 0) {
+            candidates = items.map((m: any) => ({
+              employeeId: m.employeeId,
+              employeeName: m.employeeName || m.employeeId,
+              designation: m.designation || "Employee",
+              department: m.department || "—",
+              quarter: null,
+              notificationDate:
+                m.notificationDate || m.notificationSentAt || m.sentAt || null,
+              reviewStatus: null,
+              isCompleted: false,
+            }));
+            break;
+          }
+        } catch {
+          // try next identifier
+        }
+      }
+
+      // 2. Secondary fallback if manager-mapping returns empty: try dedicated notification-candidates endpoint
+      if (candidates.length === 0) {
+        try {
+          const response = await axios.get(
+            "/api/manager-quarterly-review/notification-candidates",
+          );
+          const data =
+            response.data?.data ||
+            (Array.isArray(response.data) ? response.data : []);
+          if (Array.isArray(data) && data.length > 0) {
+            candidates = data;
+          }
+        } catch {
+          // Ignore secondary fallback error
+        }
+      }
+
+      // 3. Additional safety: merge any employees from submissions who might be missing from mapping
+      for (const sub of submissions) {
+        if (!candidates.some((c: any) => c.employeeId === sub.employeeId)) {
+          const submissionData: any = sub;
+          candidates.push({
+            employeeId: sub.employeeId,
+            employeeName: sub.employeeName || sub.employeeId,
+            designation: sub.designation || "Employee",
+            department: sub.department || "—",
+            quarter: sub.quarter || null,
+            notificationDate:
+              submissionData.notificationDate ||
+              submissionData.notificationSentAt ||
+              null,
+            reviewStatus: sub.reviewStatus || null,
+            isCompleted: sub.reviewStatus === ManagerReviewStatus.REVIEWED,
+          });
+        }
+      }
+
+      setAllNotificationEmployees(candidates);
+
+      // Pre-select all employees requiring a review
+      const selectable = candidates.filter((emp: any) => {
+        const sub = submissions.find((s) => s.employeeId === emp.employeeId);
+        return !(
+          emp.isCompleted ||
+          emp.reviewStatus === ManagerReviewStatus.REVIEWED ||
+          sub?.reviewStatus === ManagerReviewStatus.REVIEWED
+        );
+      });
+
+      setSelectedNotificationEmployeeIds(
+        (selectable.length > 0 ? selectable : candidates).map(
+          (emp: any) => emp.employeeId,
+        ),
+      );
+    } catch {
+      message.error("Failed to load the full employee list for notifications.");
+    } finally {
+      setLoadingNotificationEmployees(false);
+    }
+  };
+
+  const sendReviewNotifications = async () => {
+    if (selectedNotificationEmployeeIds.length === 0) {
+      message.warning("Select at least one employee.");
+      return;
+    }
+
+    try {
+      setSendingNotifications(true);
+      const sentAt = new Date().toISOString();
+      await axios.post("/api/manager-quarterly-review/notifications", {
+        employeeIds: selectedNotificationEmployeeIds,
+        startDate: sentAt,
+        notificationDate: sentAt,
+      });
+      message.success("Review notifications sent successfully.");
+      setNotificationModalOpen(false);
+      setSelectedNotificationEmployeeIds([]);
+    } catch (err: any) {
+      message.error(
+        err.response?.data?.message || "Failed to send review notifications.",
+      );
+    } finally {
+      setSendingNotifications(false);
+    }
+  };
+
+  // Sends (or resends) a review notification to a single employee directly
+  // from the main table row's Notify column — reuses the same bulk
+  // notifications endpoint with a one-item employeeIds array, then
+  // refetches the current page so the row's notificationDate (and the
+  // Send/Resend label) reflects the new state.
+  const sendSingleNotification = async (record: ManagerReviewItem) => {
+    try {
+      setSendingRowNotification(record.employeeId);
+      const sentAt = new Date().toISOString();
+      await axios.post("/api/manager-quarterly-review/notifications", {
+        employeeIds: [record.employeeId],
+        startDate: sentAt,
+        notificationDate: sentAt,
+      });
+      const alreadyNotified = Boolean(
+        (record as any).notificationDate ||
+        (record as any).notificationSentAt ||
+        (record as any).sentAt ||
+        (record as any).isNotified ||
+        (record as any).notificationSent ||
+        record.reviewStatus === ManagerReviewStatus.IN_REVIEW,
+      );
+      message.success(
+        alreadyNotified
+          ? "Reminder notification resent to employee."
+          : "Review notification sent to employee.",
+      );
+      fetchData(currentPage, pageSize);
+    } catch (err: any) {
+      message.error(
+        err.response?.data?.message || "Failed to send review notification.",
+      );
+    } finally {
+      setSendingRowNotification(null);
+    }
+  };
+
+  const filteredNotificationEmployees = useMemo(() => {
+    return allNotificationEmployees.filter((emp: any) => {
+      const rawQuarter =
+        emp.quarter ||
+        submissions.find((s) => s.employeeId === emp.employeeId)?.quarter;
+      const quarterCode = rawQuarter ? rawQuarter.trim().split(/\s+/)[0] : "";
+      const matchesQuarter =
+        notificationQuarterFilter === QuarterFilter.ALL ||
+        quarterCode === notificationQuarterFilter;
+      const query = modalSearchText.trim().toLowerCase();
+      const matchesSearch =
+        !query ||
+        [
+          emp.employeeName,
+          emp.employeeId,
+          emp.designation,
+          emp.department,
+        ].some((value) => (value || "").toLowerCase().includes(query));
+      return matchesQuarter && matchesSearch;
+    });
+  }, [
+    allNotificationEmployees,
+    modalSearchText,
+    notificationQuarterFilter,
+    submissions,
+  ]);
+
   // Initial load
   useEffect(() => {
     fetchData(1, DEFAULT_PAGE_SIZE);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Populate the quarter dropdown once, independent of pagination, so
-  // options don't disappear/shrink just because the current page doesn't
-  // happen to contain every quarter.
-  useEffect(() => {
-    axios
-      .get("/api/manager-quarterly-review/filters")
-      .then((res) => {
-        if (res.data?.success) {
-          setQuarterOptions(res.data.data?.quarters || []);
-        }
-      })
-      .catch(() => {
-        // Non-critical — dropdown just falls back to empty options.
-      });
   }, []);
 
   const handleBack = () => {
@@ -390,6 +1025,17 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
           : "",
     );
 
+    // Seed the quarter picker from whatever quarter is already on the
+    // record (e.g. re-opening a saved draft keeps the manager's earlier
+    // choice). Left blank when the record has never had a quarter set,
+    // so the manager must explicitly pick one for a brand-new review.
+    if (!reviewQuarterChangedRef.current) {
+      const recordQuarter = record.quarter
+        ? record.quarter.trim().split(/\s+/)[0]
+        : "";
+      setReviewQuarter(recordQuarter);
+    }
+
     setStrengths(record.strengths || "");
     setImprovements(record.improvements || "");
     setRemarks(record.remarks || "");
@@ -403,6 +1049,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
   ) => {
     setCurrentReview(record);
     setIsViewOnly(viewOnly);
+    reviewQuarterChangedRef.current = false;
     setFieldErrors({});
     applyReviewToForm(record);
     setIsModalOpen(true);
@@ -439,6 +1086,8 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
     setIsModalOpen(false);
     setCurrentReview(null);
     loadedEmployeeIdRef.current = null;
+    reviewQuarterChangedRef.current = false;
+    setReviewQuarter("");
     setCurrentPage(1);
     navigate("/manager-dashboard/quarterly-review", { replace: false });
     fetchData(1, pageSize);
@@ -453,6 +1102,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
       loadedEmployeeIdRef.current = employeeIdFromUrl;
       setCurrentReview(match);
       setIsViewOnly(match.actionType === ActionType.VIEW);
+      reviewQuarterChangedRef.current = false;
       setFieldErrors({});
       applyReviewToForm(match);
       setIsModalOpen(true);
@@ -463,11 +1113,15 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
 
   const validateTextFields = (): boolean => {
     const errors: {
+      quarter?: string;
       strengths?: string;
       improvements?: string;
       remarks?: string;
     } = {};
 
+    if (!reviewQuarter) {
+      errors.quarter = "Please select a quarter.";
+    }
     if (strengths.trim().length < MIN_FIELD_LENGTH) {
       errors.strengths = `Please enter at least ${MIN_FIELD_LENGTH} characters.`;
     }
@@ -498,7 +1152,14 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
         ? `/api/manager-quarterly-review/${currentReview.id}/draft`
         : `/api/manager-quarterly-review/${currentReview.id}/review`;
 
+      const formattedQuarter = getFormattedQuarterPayload(
+        reviewQuarter,
+        currentReview.quarter,
+        selectedYear,
+      );
+
       const payload = {
+        quarter: formattedQuarter,
         ratings,
         finalRating,
         strengths,
@@ -520,14 +1181,19 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
         setIsModalOpen(false);
         setCurrentReview(null);
         loadedEmployeeIdRef.current = null;
+        reviewQuarterChangedRef.current = false;
+        setReviewQuarter("");
         setCurrentPage(1);
         navigate("/manager-dashboard/quarterly-review", { replace: false });
         fetchData(1, pageSize);
       }
     } catch (err: any) {
-      message.error(
-        err.response?.data?.message || "Failed to submit review evaluation.",
-      );
+      console.error("Submit evaluation failed:", err.response?.data || err);
+      const serverMessage = err.response?.data?.message;
+      const errorMsg = Array.isArray(serverMessage)
+        ? serverMessage.join(" | ")
+        : serverMessage || "Failed to submit review evaluation.";
+      message.error(errorMsg);
     } finally {
       setSubmitting(false);
     }
@@ -590,7 +1256,57 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
     fetchData(page, size);
   };
 
-  const renderStatusBadge = (status: string | null) => {
+  const isReviewExpired = (record: ManagerReviewItem): boolean => {
+    if (record.reviewStatus === ManagerReviewStatus.REVIEWED) return false;
+
+    const quarterCode = getManagerQuarter(record);
+    if (!quarterCode) return isPendingReviewExpired(record);
+    const quarterConfig = quarterDateConfigs.find(
+      (config) => config.quarter === quarterCode,
+    );
+    if (!quarterConfig?.endDate) return false;
+
+    return dayjs().isAfter(
+      dayjs(quarterConfig.endDate)
+        .add(REVIEW_GRACE_PERIOD_DAYS, "day")
+        .endOf("day"),
+    );
+  };
+
+  const renderStatusBadge = (record: ManagerReviewItem) => {
+    if (isReviewExpired(record)) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200">
+          <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+          Review Expired
+        </span>
+      );
+    }
+
+    const reviewStatus = record.reviewStatus;
+
+    // Manager completed the review
+    if (reviewStatus === ManagerReviewStatus.REVIEWED) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          Reviewed
+        </span>
+      );
+    }
+
+    // Manager opened and saved a draft — actively in progress
+    if (reviewStatus === ManagerReviewStatus.IN_REVIEW) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+          <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+          In Review
+        </span>
+      );
+    }
+
+    // Also handle appraisal-level completed statuses
+    const status = record.status;
     const s = status || AppraisalStatus.NOT_STARTED;
     if (
       [
@@ -606,33 +1322,84 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
         </span>
       );
     }
-    if (s === AppraisalStatus.UNDER_REVIEW) {
-      // CHANGED: was purple (bg-purple-50 / text-purple-700 /
-      // border-purple-200), now amber/yellow to match the same "pending"
-      // visual language used for the Pending Reviews stat card and the
-      // NOT_STARTED fallback badge below.
-      return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-          Under Review
-        </span>
-      );
-    }
+
+    // Manager hasn't touched this record yet — show "Under Review"
     return (
       <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
         <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-        {s}
+        Under Review
       </span>
     );
   };
 
   const tableTextClass = "text-slate-700 text-sm font-medium";
 
+  const getManagerQuarter = (record: ManagerReviewItem): string =>
+    (record.quarter || "").trim().split(/\s+/)[0];
+
+  const isPendingReviewExpired = (record: ManagerReviewItem): boolean => {
+    if (record.reviewStatus === ManagerReviewStatus.REVIEWED) return false;
+
+    const currentQuarter = quarterDateConfigs
+      .filter(
+        (config) => !dayjs().isBefore(dayjs(config.startDate).startOf("day")),
+      )
+      .sort(
+        (a, b) => dayjs(b.startDate).valueOf() - dayjs(a.startDate).valueOf(),
+      )[0];
+    return Boolean(
+      currentQuarter &&
+      dayjs().isAfter(
+        dayjs(currentQuarter.endDate)
+          .add(REVIEW_GRACE_PERIOD_DAYS, "day")
+          .endOf("day"),
+      ),
+    );
+  };
+
+  // Looks up the configured Start/End date for a review record's quarter
+  // from `quarterDateConfigs`, direct record fields, or standard defaults.
+  const getQuarterDatesForRecord = (
+    record: ManagerReviewItem,
+  ): { startDate: string | null; endDate: string | null } => {
+    if (record.startDate && record.endDate) {
+      return { startDate: record.startDate, endDate: record.endDate };
+    }
+
+    const quarterCode = getManagerQuarter(record);
+    if (!quarterCode) return { startDate: null, endDate: null };
+
+    const cfg = quarterDateConfigs.find((c) => c.quarter === quarterCode);
+    if (cfg && cfg.startDate && cfg.endDate) {
+      return {
+        startDate: cfg.startDate,
+        endDate: cfg.endDate,
+      };
+    }
+
+    let yearStr = selectedYear;
+    if (!yearStr || yearStr === YEAR_FILTER_ALL) {
+      if (record.lastModified) {
+        yearStr = String(new Date(record.lastModified).getFullYear());
+      } else {
+        yearStr = String(new Date().getFullYear());
+      }
+    }
+
+    return getDefaultQuarterDates(quarterCode, yearStr);
+  };
+
+  const formatConfigDate = (d: string | null) =>
+    d ? dayjs(d).format("DD MMM YYYY") : "—";
+
   const columns = [
     {
       title: "Employee Name",
       key: "employeeName",
-      width: "10%",
+      // Fixed width (not a %) and generous enough to show most full names
+      // on one line without truncation. See COLUMN_WIDTHS at the top of
+      // this file — keep TABLE_SCROLL_X in sync if this changes.
+      width: COLUMN_WIDTHS.employeeName,
       render: (_: any, r: ManagerReviewItem) => {
         const displayName = r.employeeName
           ? r.employeeName
@@ -655,7 +1422,14 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
             <div className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[11px] font-bold shrink-0">
               {initials || <Users className="w-3.5 h-3.5 text-indigo-500" />}
             </div>
-            <p className={`${tableTextClass} truncate`}>{displayName || "—"}</p>
+            {/* Was `truncate` (forces single-line + ellipsis), which is what
+                clipped longer names. Now wraps onto a second line instead
+                of cutting text off, now that the column has real width. */}
+            <p
+              className={`${tableTextClass} whitespace-normal break-words text-left`}
+            >
+              {displayName || "—"}
+            </p>
           </div>
         );
       },
@@ -665,7 +1439,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
       title: "Employee ID",
       dataIndex: "employeeId",
       key: "employeeId",
-      width: "10%",
+      width: COLUMN_WIDTHS.employeeId,
       render: (id: string) => (
         <span className={tableTextClass}>{id || "—"}</span>
       ),
@@ -675,7 +1449,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
       title: "Designation",
       dataIndex: "designation",
       key: "designation",
-      width: "14%",
+      width: COLUMN_WIDTHS.designation,
       render: (d: string) => (
         <span className={tableTextClass}>
           {d ? d.charAt(0).toUpperCase() + d.slice(1) : "—"}
@@ -687,11 +1461,9 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
       title: "Quarter",
       dataIndex: "quarter",
       key: "quarter",
-      width: "10%",
-      render: (q: string) => (
-        <span className={tableTextClass}>
-          {q ? q.trim().split(/\s+/)[0] : "—"}
-        </span>
+      width: COLUMN_WIDTHS.quarter,
+      render: (_q: string, r: ManagerReviewItem) => (
+        <span className={tableTextClass}>{getManagerQuarter(r) || "—"}</span>
       ),
     },
 
@@ -699,7 +1471,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
       title: "Final Rating",
       dataIndex: "finalRating",
       key: "finalRating",
-      width: "14%",
+      width: COLUMN_WIDTHS.finalRating,
       render: (rating: number | null) =>
         rating != null ? (
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-bold text-xs border border-indigo-100">
@@ -715,34 +1487,98 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
       title: "Last Modified",
       dataIndex: "lastModified",
       key: "lastModified",
-      width: "14%",
-      render: (d: string | null) =>
-        d ? (
-          <div className={`${tableTextClass} leading-tight`}>
-            <div>
-              {new Date(d).toLocaleDateString("en-GB", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-              })}
-            </div>
-          </div>
-        ) : (
-          <span className="text-slate-400 text-sm font-medium">—</span>
-        ),
+      width: COLUMN_WIDTHS.lastModified,
+      render: (lastModified: string | null) => (
+        <span className={tableTextClass}>
+          {lastModified ? dayjs(lastModified).format("DD MMM YYYY") : "—"}
+        </span>
+      ),
+    },
+
+    {
+      title: "Start Date",
+      key: "startDate",
+      width: COLUMN_WIDTHS.startDate,
+      render: (_: any, r: ManagerReviewItem) => {
+        const { startDate } = getQuarterDatesForRecord(r);
+        return (
+          <span className={tableTextClass}>{formatConfigDate(startDate)}</span>
+        );
+      },
+    },
+
+    {
+      title: "End Date",
+      key: "endDate",
+      width: COLUMN_WIDTHS.endDate,
+      render: (_: any, r: ManagerReviewItem) => {
+        const { endDate } = getQuarterDatesForRecord(r);
+        return (
+          <span className={tableTextClass}>{formatConfigDate(endDate)}</span>
+        );
+      },
     },
 
     {
       title: "Status",
       key: "status",
-      width: "14%",
-      render: (_: any, r: ManagerReviewItem) => renderStatusBadge(r.status),
+      width: COLUMN_WIDTHS.status,
+      render: (_: any, r: ManagerReviewItem) =>
+        renderStatusBadge(
+          isPendingReviewExpired(r) ? { ...r, status: "Review Expired" } : r,
+        ),
+    },
+
+    {
+      // Send/Resend notification for this row. A completed review has
+      // nothing left to notify about, so it just shows a dash instead of
+      // a button. Otherwise the button reads "Resend" once a notification
+      // has already gone out for this employee or when the review is in-progress,
+      // and "Send" the first time. Uses the same bulk notifications
+      // endpoint as the "Send Appraisal Notification" modal, scoped to
+      // this one employeeId.
+      title: "Notify",
+      key: "notify",
+      width: COLUMN_WIDTHS.notify,
+      render: (_: any, record: ManagerReviewItem) => {
+        if (record.reviewStatus === ManagerReviewStatus.REVIEWED) {
+          return <span className="text-slate-300 text-sm">—</span>;
+        }
+
+        const alreadyNotified = Boolean(
+          (record as any).notificationDate ||
+          (record as any).notificationSentAt ||
+          (record as any).sentAt ||
+          (record as any).isNotified ||
+          (record as any).notificationSent ||
+          record.reviewStatus === ManagerReviewStatus.IN_REVIEW,
+        );
+        const isSending = sendingRowNotification === record.employeeId;
+
+        return (
+          <Button
+            type={alreadyNotified ? "default" : "primary"}
+            size="small"
+            icon={<Bell className="w-3.5 h-3.5" />}
+            loading={isSending}
+            onClick={() => sendSingleNotification(record)}
+            className={
+              alreadyNotified
+                ? "!border-indigo-200 !text-indigo-600 hover:!bg-indigo-50 !font-semibold !rounded-lg !flex !items-center !gap-1"
+                : "!bg-indigo-600 hover:!bg-indigo-700 !text-white !font-semibold !rounded-lg !flex !items-center !gap-1"
+            }
+          >
+            {alreadyNotified ? "Resend" : "Send"}
+          </Button>
+        );
+      },
     },
 
     {
       title: "Action",
       key: "action",
-      width: "14%",
+      width: COLUMN_WIDTHS.action,
+      fixed: "right" as const,
       render: (_: any, record: ManagerReviewItem) => {
         const isReviewed = record.actionType === ActionType.VIEW;
 
@@ -775,7 +1611,6 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
     },
   ];
 
-
   return (
     <div className="mqr-wrapper w-full min-h-full bg-slate-50 px-6 pt-3 pb-10 flex flex-col gap-3">
       <style>{MQR_FONT_STYLES}</style>
@@ -794,14 +1629,24 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
         </span>
       </button>
 
-      <div>
-        <h1 className="text-2xl font-extrabold text-[#2B3674] tracking-tight">
-          Manager Quarterly Review
-        </h1>
-        <p className="text-slate-500 text-sm mt-0.5">
-          Review, evaluate, and provide ratings for quarterly appraisal
-          submissions from your team members.
-        </p>
+      <div className="flex items-start justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-extrabold text-[#2B3674] tracking-tight">
+            Manager Quarterly Review
+          </h1>
+          <p className="text-slate-500 text-sm mt-0.5">
+            Review, evaluate, and provide ratings for quarterly appraisal
+            submissions from your team members.
+          </p>
+        </div>
+        <Button
+          type="primary"
+          icon={<Bell className="w-4 h-4" />}
+          onClick={openNotificationModal}
+          className="!bg-indigo-600 hover:!bg-indigo-700 !text-white !font-bold !rounded-xl !px-4 !py-2 !h-auto flex items-center gap-2 shadow-sm"
+        >
+          Send Appraisal Notification
+        </Button>
       </div>
 
       {/* Stat cards fill the whole row now. The Q1-Q4 quick-filter buttons
@@ -890,23 +1735,22 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
           search box + Financial Year + Quarter selects grouped on the
           right, all inside the same white card. */}
       <div className="bg-white border border-slate-100 rounded-2xl px-3 pt-2 pb-3 shadow-sm flex flex-col gap-2">
-        <h2 className="text-base font-extrabold text-[#2B3674] leading-tight">
-          Quarterly Reviews
-        </h2>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h2 className="text-base font-extrabold text-[#2B3674] leading-tight">
+            Quarterly Reviews
+          </h2>
+        </div>
 
         <div className="h-px bg-slate-100" />
 
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          {/* Status segmented control — the active tab renders as a white
-              pill with a subtle shadow inside a light gray track, the
-              "toolbar" pattern used in modern dashboard UIs, rather than
-              separate solid-colored buttons competing for attention. */}
-          <div className="inline-flex items-center gap-1 bg-slate-100 rounded-xl p-1">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 w-full">
+          {/* Status segmented control — expanding up to the center line */}
+          <div className="flex-1 w-full md:w-auto flex items-center gap-1 bg-slate-100 rounded-xl p-1">
             {STATUS_TAB_ITEMS.map((tab) => (
               <button
                 key={tab.key}
-                onClick={() => setSelectedStatusTab(tab.key)}
-                className={`px-5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                onClick={() => handleStatusTabChange(tab.key)}
+                className={`flex-1 py-2 px-3 text-center rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
                   selectedStatusTab === tab.key
                     ? "bg-white text-indigo-600 shadow-sm"
                     : "text-slate-500 hover:text-slate-700"
@@ -917,26 +1761,27 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
             ))}
           </div>
 
-          {/* Vertical divider between the status control and the filters;
-              hidden once the row wraps on narrower widths. */}
-          <div className="hidden md:block w-px h-8 bg-slate-200" />
+          {/* Vertical divider between status tabs and search controls */}
+          <div className="hidden lg:block w-px h-8 bg-slate-200 shrink-0" />
 
-          <div className="flex items-center gap-3 flex-1 min-w-[420px] justify-end">
+          {/* Right controls — Search input expands up to the center line */}
+          <div className="flex-1 w-full md:w-auto flex items-center gap-3 justify-end">
             <Input
               placeholder="Search employee name or ID..."
               prefix={<Search className="w-4 h-4 text-slate-400" />}
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="!rounded-xl !max-w-md !flex-1"
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="!rounded-xl flex-1"
               allowClear
             />
 
             <Select
               value={selectedYear}
-              onChange={setSelectedYear}
-              className="!w-36 !rounded-xl !shrink-0"
+              onChange={handleYearChange}
+              className="!rounded-xl !shrink-0"
+              style={{ width: 170 }}
               suffixIcon={<Calendar className="w-3.5 h-3.5 text-indigo-500" />}
-              dropdownStyle={{ minWidth: 200 }}
+              dropdownStyle={{ minWidth: 170 }}
             >
               <Option value={YEAR_FILTER_ALL}>All Years</Option>
               {yearOptions.map((y) => (
@@ -945,20 +1790,88 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
                 </Option>
               ))}
             </Select>
-
-            <Select
-              value={selectedQuarterCard}
-              onChange={setSelectedQuarterCard}
-              className="!w-32 !rounded-xl !shrink-0"
-            >
-              <Option value={QuarterFilter.ALL}>All Quarters</Option>
-              <Option value={QuarterFilter.Q1}>Q1</Option>
-              <Option value={QuarterFilter.Q2}>Q2</Option>
-              <Option value={QuarterFilter.Q3}>Q3</Option>
-              <Option value={QuarterFilter.Q4}>Q4</Option>
-            </Select>
           </div>
         </div>
+      </div>
+
+      {/* Quarter selector — card-style buttons for all quarters and Q1-Q4. */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <button
+          type="button"
+          onClick={() =>
+            handleQuarterChange(
+              selectedQuarterCard === QuarterFilter.ALL
+                ? ""
+                : QuarterFilter.ALL,
+            )
+          }
+          className={`flex-1 min-w-[150px] flex flex-col items-center gap-1 px-5 py-3 rounded-2xl border-2 transition-all duration-200 cursor-pointer select-none ${
+            selectedQuarterCard === QuarterFilter.ALL
+              ? "bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200 scale-[1.03]"
+              : "bg-white border-slate-200 text-slate-700 hover:border-indigo-400 hover:shadow-md"
+          }`}
+        >
+          <span
+            className={`text-lg font-extrabold tracking-tight ${
+              selectedQuarterCard === QuarterFilter.ALL
+                ? "text-white"
+                : "text-indigo-600"
+            }`}
+          >
+            All Quarters
+          </span>
+          <span
+            className={`text-[10px] font-medium leading-tight text-center ${
+              selectedQuarterCard === QuarterFilter.ALL
+                ? "text-indigo-100"
+                : "text-slate-400"
+            }`}
+          >
+            View all employees
+          </span>
+        </button>
+
+        {(
+          [
+            QuarterFilter.Q1,
+            QuarterFilter.Q2,
+            QuarterFilter.Q3,
+            QuarterFilter.Q4,
+          ] as const
+        ).map((q) => {
+          const cfg = quarterDateConfigs.find((c) => c.quarter === q);
+          const dateRange = cfg
+            ? `${dayjs(cfg.startDate).format("DD MMM")} – ${dayjs(cfg.endDate).format("DD MMM YYYY")}`
+            : "";
+          const isActive = selectedQuarterCard === q;
+          return (
+            <button
+              key={q}
+              type="button"
+              onClick={() => handleQuarterChange(isActive ? "" : q)}
+              className={`flex-1 min-w-[150px] flex flex-col items-center gap-1 px-5 py-3 rounded-2xl border-2 transition-all duration-200 cursor-pointer select-none ${
+                isActive
+                  ? "bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200 scale-[1.03]"
+                  : "bg-white border-slate-200 text-slate-700 hover:border-indigo-400 hover:shadow-md"
+              }`}
+            >
+              <span
+                className={`text-lg font-extrabold tracking-tight ${isActive ? "text-white" : "text-indigo-600"}`}
+              >
+                {q}
+              </span>
+              {dateRange && (
+                <span
+                  className={`text-[10px] font-medium leading-tight text-center ${
+                    isActive ? "text-indigo-100" : "text-slate-400"
+                  }`}
+                >
+                  {dateRange}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       <style>{`
@@ -995,6 +1908,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
           background-color: #F8FAFC !important;
         }
       `}</style>
+
       <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden mb-4">
         {loading && submissions.length === 0 ? (
           <div className="flex h-64 items-center justify-center">
@@ -1005,6 +1919,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
             columns={columns}
             dataSource={submissions}
             rowKey="id"
+            scroll={{ x: TABLE_SCROLL_X }}
             loading={loading}
             pagination={{
               current: currentPage,
@@ -1035,6 +1950,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
         isViewOnly={isViewOnly}
         ratings={ratings}
         finalRating={finalRating}
+        reviewQuarter={reviewQuarter}
         strengths={strengths}
         improvements={improvements}
         remarks={remarks}
@@ -1045,11 +1961,190 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
         onSubmitEvaluation={handleSubmitEvaluation}
         setRatings={setRatings}
         setFinalRating={setFinalRating}
+        setReviewQuarter={(quarter) => {
+          reviewQuarterChangedRef.current = true;
+          setReviewQuarter(quarter);
+        }}
         setStrengths={setStrengths}
         setImprovements={setImprovements}
         setRemarks={setRemarks}
         setFieldErrors={setFieldErrors}
       />
+
+      <Modal
+        title="Send Review Notification"
+        className="mqr-notification-modal"
+        open={notificationModalOpen}
+        onCancel={() => {
+          setNotificationModalOpen(false);
+          setAllNotificationEmployees([]);
+          setSelectedNotificationEmployeeIds([]);
+          setModalSearchText("");
+          setNotificationQuarterFilter(QuarterFilter.ALL);
+          setNotificationDate("");
+        }}
+        onOk={sendReviewNotifications}
+        okText="Send Notification"
+        confirmLoading={sendingNotifications}
+        okButtonProps={{
+          className:
+            "!bg-indigo-600 hover:!bg-indigo-700 !border-indigo-600 !font-semibold !rounded-lg",
+        }}
+        cancelButtonProps={{
+          className: "!rounded-lg !font-medium",
+        }}
+        width={1100}
+        style={{ top: 24 }}
+      >
+        <div className="flex flex-col gap-2 flex-1 min-h-0">
+          {/* Fixed 28px first column (was `auto`) so this header row lines
+              up exactly with the data rows below, which have a real
+              Checkbox component in that slot — `auto` sized the empty
+              header <span/> differently than the rendered checkbox,
+              throwing the columns out of alignment. */}
+          <div className="grid grid-cols-[28px_1.4fr_1fr_1.2fr_0.8fr_1fr] gap-3 px-3 py-1.5 rounded-lg bg-indigo-50/70 text-[11px] font-bold uppercase tracking-wide text-indigo-700">
+            <span />
+            <span>Employee Name</span>
+            <span>Employee ID</span>
+            <span>Designation</span>
+            <span>Quarter</span>
+            <span>Start Date</span>
+          </div>
+
+          <div className="flex items-center justify-between gap-3 py-0.5">
+            <Checkbox
+              disabled={loadingNotificationEmployees}
+              checked={
+                !loadingNotificationEmployees &&
+                selectableNotificationEmployees.length > 0 &&
+                selectableNotificationEmployees.every((emp: any) =>
+                  selectedNotificationEmployeeIds.includes(emp.employeeId),
+                )
+              }
+              indeterminate={
+                !loadingNotificationEmployees &&
+                selectedNotificationEmployeeIds.length > 0 &&
+                selectedNotificationEmployeeIds.length <
+                  selectableNotificationEmployees.length
+              }
+              onChange={(event) =>
+                setSelectedNotificationEmployeeIds(
+                  event.target.checked
+                    ? selectableNotificationEmployees.map(
+                        (emp: any) => emp.employeeId,
+                      )
+                    : [],
+                )
+              }
+            >
+              Select all employees requiring a review
+              {!loadingNotificationEmployees &&
+                allNotificationEmployees.length > 0 && (
+                  <span className="ml-2 text-xs text-slate-400 font-normal">
+                    ({selectableNotificationEmployees.length} requiring review /{" "}
+                    {allNotificationEmployees.length} total members)
+                  </span>
+                )}
+            </Checkbox>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <Select
+                value={notificationQuarterFilter}
+                onChange={setNotificationQuarterFilter}
+                size="small"
+                className="w-24"
+                aria-label="Filter notifications by quarter"
+              >
+                <Option value={QuarterFilter.ALL}>All</Option>
+                <Option value={QuarterFilter.Q1}>Q1</Option>
+                <Option value={QuarterFilter.Q2}>Q2</Option>
+                <Option value={QuarterFilter.Q3}>Q3</Option>
+                <Option value={QuarterFilter.Q4}>Q4</Option>
+              </Select>
+              {allNotificationEmployees.length > 5 && (
+                <Input
+                  prefix={<Search size={14} className="text-slate-400 mr-1" />}
+                  placeholder="Search name or ID..."
+                  size="small"
+                  value={modalSearchText}
+                  onChange={(e) => setModalSearchText(e.target.value)}
+                  allowClear
+                  className="rounded-lg w-64"
+                />
+              )}
+            </div>
+          </div>
+
+          <div className="mqr-employee-list flex-1 min-h-[140px] overflow-y-auto border border-slate-200 rounded-lg">
+            {loadingNotificationEmployees ? (
+              <div className="flex justify-center items-center p-8">
+                <Spin tip="Loading all employees..." />
+              </div>
+            ) : allNotificationEmployees.length === 0 ? (
+              <p className="p-4 text-slate-500">No employees found.</p>
+            ) : (
+              filteredNotificationEmployees.map((emp: any) => {
+                const submission = submissions.find(
+                  (s) => s.employeeId === emp.employeeId,
+                );
+                const rawQuarter = emp.quarter || submission?.quarter;
+                const quarterCode = rawQuarter
+                  ? rawQuarter.trim().split(/\s+/)[0]
+                  : selectedQuarterCard &&
+                      selectedQuarterCard !== QuarterFilter.ALL
+                    ? selectedQuarterCard
+                    : quarterDateConfigs[0]?.quarter || "—";
+                const startDateStr =
+                  emp.notificationDate || notificationDate
+                    ? dayjs(emp.notificationDate || notificationDate).format(
+                        "DD MMM YYYY",
+                      )
+                    : "—";
+                const isReviewed = Boolean(
+                  emp.isCompleted ||
+                  emp.reviewStatus === ManagerReviewStatus.REVIEWED ||
+                  submission?.reviewStatus === ManagerReviewStatus.REVIEWED,
+                );
+
+                return (
+                  <div
+                    key={emp.employeeId}
+                    className="grid grid-cols-[28px_1.4fr_1fr_1.2fr_0.8fr_1fr] items-center gap-3 py-2 px-3 border-b border-slate-100 last:border-b-0 hover:bg-slate-50/60 transition-colors"
+                  >
+                    <Checkbox
+                      disabled={isReviewed}
+                      checked={selectedNotificationEmployeeIds.includes(
+                        emp.employeeId,
+                      )}
+                      onChange={(event) =>
+                        setSelectedNotificationEmployeeIds((current) =>
+                          event.target.checked
+                            ? [...current, emp.employeeId]
+                            : current.filter((id) => id !== emp.employeeId),
+                        )
+                      }
+                    />
+                    <span className="font-semibold text-slate-800 flex items-center gap-1.5 flex-wrap">
+                      {emp.employeeName}
+                      {isReviewed && (
+                        <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-full px-1.5 py-0.5">
+                          Reviewed
+                        </span>
+                      )}
+                    </span>
+                    <span className="text-slate-500">ID: {emp.employeeId}</span>
+                    <span className="text-slate-600">
+                      {emp.designation || submission?.designation || "Employee"}
+                    </span>
+                    <span className="text-slate-600">{quarterCode || "—"}</span>
+                    <span className="text-slate-500">{startDateStr}</span>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

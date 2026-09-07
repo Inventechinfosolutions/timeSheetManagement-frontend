@@ -8,6 +8,7 @@ import {
   Modal,
   Rate,
   Row,
+  Select,
 } from 'antd';
 import { Save, Send, } from 'lucide-react';
 import {
@@ -15,6 +16,7 @@ import {
   MAX_FIELD_LENGTH,
   MIN_FIELD_LENGTH,
   PerformanceRating,
+  QuarterFilter,
   RATING_CATEGORY_ITEMS,
 } from './QuarterlyReview.types';
 import CommonMultipleUploader from '../../EmployeeDashboard/CommonMultipleUploader';
@@ -27,6 +29,7 @@ import {
 } from '../../reducers/quarterlyReview.reducer';
 
 const { TextArea } = Input;
+const { Option } = Select;
 
 // Display labels for the read-only "Final Performance Rating" field.
 // This used to be rendered via a disabled antd <Select>, but antd's
@@ -42,9 +45,21 @@ const PERFORMANCE_RATING_LABELS: Record<string, string> = {
   [PerformanceRating.UNSATISFACTORY]: 'Unsatisfactory (1.0 - 1.9)',
 };
 
+// Display labels for the manager-selected review quarter. Shown in the
+// "Review Quarter" picker below (edit mode) and as a plain read-only line
+// (view mode) — same disabled->plain-text convention used for Final
+// Performance Rating above.
+const REVIEW_QUARTER_LABELS: Record<string, string> = {
+  [QuarterFilter.Q1]: 'Q1 — April to June',
+  [QuarterFilter.Q2]: 'Q2 — July to September',
+  [QuarterFilter.Q3]: 'Q3 — October to December',
+  [QuarterFilter.Q4]: 'Q4 — January to March',
+};
+
 type RatingValues = Record<string, number>;
 
 interface FieldErrors {
+  quarter?: string;
   strengths?: string;
   improvements?: string;
   remarks?: string;
@@ -56,6 +71,7 @@ interface QuarterlyViewPageProps {
   isViewOnly: boolean;
   ratings: RatingValues;
   finalRating: string;
+  reviewQuarter: string;
   strengths: string;
   improvements: string;
   remarks: string;
@@ -66,6 +82,7 @@ interface QuarterlyViewPageProps {
   onSubmitEvaluation: (isDraft: boolean) => void;
   setRatings: React.Dispatch<React.SetStateAction<RatingValues>>;
   setFinalRating: (value: string) => void;
+  setReviewQuarter: (value: string) => void;
   setStrengths: (value: string) => void;
   setImprovements: (value: string) => void;
   setRemarks: (value: string) => void;
@@ -208,6 +225,7 @@ const QuarterlyViewPage: React.FC<QuarterlyViewPageProps> = ({
   isViewOnly,
   ratings,
   finalRating,
+  reviewQuarter,
   strengths,
   improvements,
   remarks,
@@ -218,6 +236,7 @@ const QuarterlyViewPage: React.FC<QuarterlyViewPageProps> = ({
   onSubmitEvaluation,
   setRatings,
   setFinalRating,
+  setReviewQuarter,
   setStrengths,
   setImprovements,
   setRemarks,
@@ -271,441 +290,492 @@ const QuarterlyViewPage: React.FC<QuarterlyViewPageProps> = ({
         className="!top-4 qr-wrapper"
       >
         {currentReview && (
-          <div className="py-2 flex flex-col gap-6 max-h-[80vh] overflow-y-auto overflow-x-hidden pr-1">
-            <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <Avatar size={48} className="bg-indigo-600 font-bold">
-                  {currentReview.employeeName.charAt(0).toUpperCase()}
-                </Avatar>
-                <div>
-                  <h4 className="font-bold text-slate-900 text-base">{currentReview.employeeName}</h4>
-                  <p className="text-xs text-slate-500">
-                    ID: <span className="font-semibold text-slate-700">{currentReview.employeeId}</span> &bull; {currentReview.department} &bull; {currentReview.designation}
-                  </p>
+          // Outer wrapper owns the height budget for the modal body. It is a
+          // column flex container: the scrollable content area above takes
+          // all available space (flex-1), and the action-button footer below
+          // is a fixed-height sibling (shrink-0) that sits outside the
+          // scrolling region entirely — so it never drifts up/down as the
+          // user scrolls the content, unlike a `sticky` element still nested
+          // inside the scroll container.
+          <div className="flex flex-col max-h-[80vh]">
+            <div className="py-2 flex flex-col gap-6 overflow-y-auto overflow-x-hidden pr-1 flex-1">
+              <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <Avatar size={48} className="bg-indigo-600 font-bold">
+                    {currentReview.employeeName.charAt(0).toUpperCase()}
+                  </Avatar>
+                  <div>
+                    <h4 className="font-bold text-slate-900 text-base">{currentReview.employeeName}</h4>
+                    <p className="text-xs text-slate-500">
+                      ID: <span className="font-semibold text-slate-700">{currentReview.employeeId}</span> &bull; {currentReview.department} &bull; {currentReview.designation}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4 text-xs font-semibold text-slate-600">
+                  <div>
+                    <p className="text-slate-400 font-normal text-xs">Quarter</p>
+                    <p className="text-black font-semibold text-sm">{currentReview.quarter}</p>
+                  </div>
+                  <Divider type="vertical" className="h-8" />
+                  <div>
+                    <p className="text-slate-400 font-normal">Submitted On</p>
+                    <p className="text-slate-800">
+                      {currentReview.submittedDate
+                        ? new Date(currentReview.submittedDate).toLocaleDateString('en-IN')
+                        : '—'}
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 text-xs font-semibold text-slate-600">
-                <div>
-                  <p className="text-slate-400 font-normal text-xs">Quarter</p>
-                  <p className="text-black font-semibold text-sm">{currentReview.quarter}</p>
-                </div>
-                <Divider type="vertical" className="h-8" />
-                <div>
-                  <p className="text-slate-400 font-normal">Submitted On</p>
-                  <p className="text-slate-800">
-                    {currentReview.submittedDate
-                      ? new Date(currentReview.submittedDate).toLocaleDateString('en-IN')
-                      : '—'}
-                  </p>
-                </div>
-              </div>
-            </div>
+              <Row gutter={[20, 20]} align="top" className="qr-two-col-row">
+                <Col xs={24} lg={12} className="qr-submission-col">
+                  <div className="flex flex-col gap-5">
 
-            <Row gutter={[20, 20]} align="top" className="qr-two-col-row">
-              <Col xs={24} lg={12} className="qr-submission-col">
-                <div className="flex flex-col gap-5">
+                    {/* ── Section header ── */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold uppercase tracking-widest text-black">Employee Submission Details</span>
+                      <div className="flex-1 h-px bg-indigo-100" />
+                    </div>
 
-                  {/* ── Section header ── */}
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold uppercase tracking-widest text-black">Employee Submission Details</span>
-                    <div className="flex-1 h-px bg-indigo-100" />
-                  </div>
+                    {/* ── 1. Quarter Overview ── */}
+                    <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col gap-2 shadow-sm">
+                      <h5 className="text-xs font-medium text-black uppercase tracking-widest mb-0.5">
+                        1. Quarter Overview
+                      </h5>
+                      {currentReview.overview ? (
+                        <p className="text-slate-800 text-sm leading-relaxed whitespace-pre-line">
+                          {currentReview.overview}
+                        </p>
+                      ) : (
+                        <p className="text-slate-400 text-sm italic">No overview provided.</p>
+                      )}
+                    </div>
 
-                  {/* ── 1. Quarter Overview ── */}
-                  <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col gap-2 shadow-sm">
-                    <h5 className="text-xs font-medium text-black uppercase tracking-widest mb-0.5">
-                      1. Quarter Overview
-                    </h5>
-                    {currentReview.overview ? (
-                      <p className="text-slate-800 text-sm leading-relaxed whitespace-pre-line">
-                        {currentReview.overview}
-                      </p>
-                    ) : (
-                      <p className="text-slate-400 text-sm italic">No overview provided.</p>
-                    )}
-                  </div>
+                    {/* ── 2. Accomplishments & Challenges ── */}
+                    <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col gap-3 shadow-sm">
+                      <h5 className="text-xs font-medium text-black uppercase tracking-widest mb-0.5">
+                        2. Accomplishments &amp; Challenges
+                      </h5>
+                      {(() => {
+                        // Use structured projects if available, otherwise fall back to old achievements/challenges
+                        const projects = Array.isArray(currentReview.projects) && currentReview.projects.length > 0
+                          ? currentReview.projects
+                          : null;
 
-                  {/* ── 2. Accomplishments & Challenges ── */}
-                  <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col gap-3 shadow-sm">
-                    <h5 className="text-xs font-medium text-black uppercase tracking-widest mb-0.5">
-                      2. Accomplishments &amp; Challenges
-                    </h5>
-                    {(() => {
-                      // Use structured projects if available, otherwise fall back to old achievements/challenges
-                      const projects = Array.isArray(currentReview.projects) && currentReview.projects.length > 0
-                        ? currentReview.projects
-                        : null;
-
-                      if (projects) {
-                        return (
-                          <div className="flex flex-col gap-3">
-                            {projects.map((proj, idx) => (
-                              <div key={idx} className={`border border-slate-200 rounded-xl overflow-hidden ${SUBMISSION_CARD_HOVER_CLASSES}`}>
-                                {/* Project name banner */}
-                                <div className="bg-indigo-50 border-b border-indigo-100 px-3 py-2 flex items-center gap-2">
-                                  <span className="text-xs font-medium text-black">
-                                    {idx + 1}. Project Title:
-                                  </span>
-
-                                  <span className="text-xs font-semibold text-slate-700 truncate">
-                                    {proj.projectTitle || `Project ${idx + 1}`}
-                                  </span>
-                                </div>
-                                <div className="p-3 flex flex-col gap-2.5">
-                                  {/* Achievement */}
-                                  <div>
-                                    <span className="text-xs font-medium text-slate-600 uppercase tracking-wider">Achievement</span>
-                                    <p className="text-slate-800 text-sm leading-relaxed mt-0.5 whitespace-pre-line">
-                                      {proj.achievement || <span className="text-slate-400 italic">Not provided</span>}
-                                    </p>
-                                  </div>
-                                  {/* Challenge */}
-                                  <div>
-                                    <span className="text-xs font-medium text-slate-600 uppercase tracking-wider">Challenge</span>
-                                    <p className="text-slate-800 text-sm leading-relaxed mt-0.5 whitespace-pre-line">
-                                      {proj.challenge || <span className="text-slate-400 italic">Not provided</span>}
-                                    </p>
-                                  </div>
-                                  {/* Attachments */}
-                                  <div>
-                                    {(fileCounts[idx] !== undefined && fileCounts[idx] > 0) && (
-                                      <span className="text-xs font-medium text-slate-600 uppercase tracking-wider block mb-1">
-                                        Attachments
-                                      </span>
-                                    )}
-                                    <CommonMultipleUploader
-                                      variant="chip"
-                                      entityType="QUARTERLY_REVIEW"
-                                      entityId={currentReview.id || 0}
-                                      refId={idx + 1}
-                                      refType="QUARTERLY_REVIEW_DOCUMENT"
-                                      uploadFile={uploadQuarterlyReviewFile}
-                                      downloadFile={downloadQuarterlyReviewFile}
-                                      previewFile={previewQuarterlyReviewFile}
-                                      deleteFile={deleteQuarterlyReviewFile}
-                                      getFiles={getQuarterlyReviewFiles}
-                                      disabled={true}
-                                      maxFiles={3}
-                                      allowedTypes={["images", "pdf", "docs"]}
-                                      hideUploadButton={true}
-                                      hideEmptyState={true}
-                                      fetchOnMount={Boolean(currentReview.id && currentReview.id > 0)}
-                                      onFilesChange={(files) => {
-                                        const count = files ? files.length : 0;
-                                        setFileCounts((prev) => {
-                                          if (prev[idx] === count) return prev;
-                                          return { ...prev, [idx]: count };
-                                        });
-                                      }}
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      }
-
-                      // Fallback: legacy achievements/challenges arrays
-                      const achs = Array.isArray(currentReview.achievements)
-                        ? currentReview.achievements
-                        : typeof currentReview.achievements === 'string' && currentReview.achievements
-                          ? [{ details: currentReview.achievements }]
-                          : [];
-                      const chs = Array.isArray(currentReview.challenges)
-                        ? currentReview.challenges
-                        : typeof currentReview.challenges === 'string' && currentReview.challenges
-                          ? [{ details: currentReview.challenges }]
-                          : [];
-
-                      if (achs.length === 0 && chs.length === 0) {
-                        return <p className="text-slate-400 text-sm italic">No data provided.</p>;
-                      }
-
-                      return (
-                        <div className="flex flex-col gap-3">
-                          {achs.length > 0 && (
-                            <div>
-                              <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Achievements</span>
-                              {renderItemList(achs)}
-                            </div>
-                          )}
-                          {chs.length > 0 && (
-                            <div>
-                              <span className="text-[10px] font-bold text-rose-500 uppercase tracking-wider">Challenges</span>
-                              {renderItemList(chs)}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })()}
-                  </div>
-
-                  {/* ── 3. Learning & Goals ── */}
-                  <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col gap-2 shadow-sm">
-                    <h5 className="text-xs font-medium text-black uppercase tracking-widest mb-0.5">
-                      3. Learning &amp; Goals
-                    </h5>
-                    {renderItemList(currentReview.learningGoals)}
-                  </div>
-
-                  {/* ── 4. Team Contribution ── */}
-                  <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col gap-3 shadow-sm">
-                    <h5 className="text-xs font-medium text-black uppercase tracking-widest mb-0.5">
-                      4. Team Contribution
-                    </h5>
-                    {Array.isArray(currentReview.teamContribution) && currentReview.teamContribution.length > 0 ? (
-                      <div className="flex flex-col gap-2">
-                        {currentReview.teamContribution.map((item, idx) => {
-                          const stars = Math.round(Number(item.rating) || 0);
+                        if (projects) {
                           return (
-                            <div key={idx} className={`flex items-center justify-between gap-3 bg-white border border-slate-200 rounded-xl px-3 py-2 ${SUBMISSION_CARD_HOVER_CLASSES}`}>
-                              <span className="text-xs font-medium text-slate-700 capitalize">
-                                {item.category.replace(/_/g, ' ')}
-                              </span>
-                              <div className="flex items-center gap-0.5 shrink-0">
-                                {[1, 2, 3, 4, 5].map((star) => (
-                                  <svg
-                                    key={star}
-                                    className={`w-3.5 h-3.5 ${star <= stars ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-200'}`}
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                                  </svg>
-                                ))}
-                                <span className="ml-1.5 text-[10px] font-bold text-slate-500">{stars}/5</span>
-                              </div>
+                            <div className="flex flex-col gap-3">
+                              {projects.map((proj, idx) => (
+                                <div key={idx} className={`border border-slate-200 rounded-xl overflow-hidden ${SUBMISSION_CARD_HOVER_CLASSES}`}>
+                                  {/* Project name banner */}
+                                  <div className="bg-indigo-50 border-b border-indigo-100 px-3 py-2 flex items-center gap-2">
+                                    <span className="text-xs font-medium text-black">
+                                      {idx + 1}. Project Title:
+                                    </span>
+
+                                    <span className="text-xs font-semibold text-slate-700 truncate">
+                                      {proj.projectTitle || `Project ${idx + 1}`}
+                                    </span>
+                                  </div>
+                                  <div className="p-3 flex flex-col gap-2.5">
+                                    {/* Achievement */}
+                                    <div>
+                                      <span className="text-xs font-medium text-slate-600 uppercase tracking-wider">Achievement</span>
+                                      <p className="text-slate-800 text-sm leading-relaxed mt-0.5 whitespace-pre-line">
+                                        {proj.achievement || <span className="text-slate-400 italic">Not provided</span>}
+                                      </p>
+                                    </div>
+                                    {/* Challenge */}
+                                    <div>
+                                      <span className="text-xs font-medium text-slate-600 uppercase tracking-wider">Challenge</span>
+                                      <p className="text-slate-800 text-sm leading-relaxed mt-0.5 whitespace-pre-line">
+                                        {proj.challenge || <span className="text-slate-400 italic">Not provided</span>}
+                                      </p>
+                                    </div>
+                                    {/* Attachments */}
+                                    <div>
+                                      {(fileCounts[idx] !== undefined && fileCounts[idx] > 0) && (
+                                        <span className="text-xs font-medium text-slate-600 uppercase tracking-wider block mb-1">
+                                          Attachments
+                                        </span>
+                                      )}
+                                      <CommonMultipleUploader
+                                        variant="chip"
+                                        entityType="QUARTERLY_REVIEW"
+                                        entityId={currentReview.id || 0}
+                                        refId={idx + 1}
+                                        refType="QUARTERLY_REVIEW_DOCUMENT"
+                                        uploadFile={uploadQuarterlyReviewFile}
+                                        downloadFile={downloadQuarterlyReviewFile}
+                                        previewFile={previewQuarterlyReviewFile}
+                                        deleteFile={deleteQuarterlyReviewFile}
+                                        getFiles={getQuarterlyReviewFiles}
+                                        disabled={true}
+                                        maxFiles={3}
+                                        allowedTypes={["images", "pdf", "docs"]}
+                                        hideUploadButton={true}
+                                        hideEmptyState={true}
+                                        fetchOnMount={Boolean(currentReview.id && currentReview.id > 0)}
+                                        onFilesChange={(files) => {
+                                          const count = files ? files.length : 0;
+                                          setFileCounts((prev) => {
+                                            if (prev[idx] === count) return prev;
+                                            return { ...prev, [idx]: count };
+                                          });
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
                             </div>
                           );
-                        })}
-                      </div>
-                    ) : (
-                      <p className="text-slate-400 text-sm italic">No team contribution data provided.</p>
-                    )}
-                  </div>
+                        }
 
-                  {/* ── 5. Company Environment ── */}
-                  <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col gap-3 shadow-sm">
-                    <div className="flex items-center justify-between">
-                      <h5 className="text-xs font-medium text-black uppercase tracking-widest mb-0.5">
-                        5. Company Environment
-                      </h5>
-                      {currentReview.companyEnvironment?.rating != null && (() => {
-                        const EMOJIS = [
-                          { value: 1, label: 'Very Bad', icon: '😡' },
-                          { value: 2, label: 'Bad', icon: '🙁' },
-                          { value: 3, label: 'Neutral', icon: '😐' },
-                          { value: 4, label: 'Good', icon: '🙂' },
-                          { value: 5, label: 'Excellent', icon: '🤩' },
-                        ];
-                        const emoji = EMOJIS.find(e => e.value === currentReview.companyEnvironment?.rating);
-                        return emoji ? (
-                          <div className="flex items-center gap-1.5 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-xl">
-                            <span className="text-lg leading-none">{emoji.icon}</span>
-                            <span className="text-[10px] font-bold text-indigo-700">{emoji.label}</span>
+                        // Fallback: legacy achievements/challenges arrays
+                        const achs = Array.isArray(currentReview.achievements)
+                          ? currentReview.achievements
+                          : typeof currentReview.achievements === 'string' && currentReview.achievements
+                            ? [{ details: currentReview.achievements }]
+                            : [];
+                        const chs = Array.isArray(currentReview.challenges)
+                          ? currentReview.challenges
+                          : typeof currentReview.challenges === 'string' && currentReview.challenges
+                            ? [{ details: currentReview.challenges }]
+                            : [];
+
+                        if (achs.length === 0 && chs.length === 0) {
+                          return <p className="text-slate-400 text-sm italic">No data provided.</p>;
+                        }
+
+                        return (
+                          <div className="flex flex-col gap-3">
+                            {achs.length > 0 && (
+                              <div>
+                                <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Achievements</span>
+                                {renderItemList(achs)}
+                              </div>
+                            )}
+                            {chs.length > 0 && (
+                              <div>
+                                <span className="text-[10px] font-bold text-rose-500 uppercase tracking-wider">Challenges</span>
+                                {renderItemList(chs)}
+                              </div>
+                            )}
                           </div>
-                        ) : null;
+                        );
                       })()}
                     </div>
 
-                    {currentReview.companyEnvironment ? (
-                      <div className="flex flex-col gap-2.5">
-                        {[
-                          { label: 'Work Culture Feedback', key: 'workCultureFeedback' as const },
-                          { label: 'Work-Life Balance', key: 'workLifeBalance' as const },
-                          { label: 'Suggestions', key: 'suggestions' as const },
-                        ].map(({ label, key }) => {
-                          const val = currentReview.companyEnvironment?.[key];
-                          if (!val) return null;
-                          return (
-                            <div key={key} className={`bg-white border border-slate-200 rounded-xl p-3 ${SUBMISSION_CARD_HOVER_CLASSES}`}>
-                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{label}</span>
-                              <p className="text-slate-800 text-sm leading-relaxed mt-1 whitespace-pre-line">{val}</p>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <p className="text-slate-400 text-sm italic">No company environment feedback provided.</p>
-                    )}
-                  </div>
-
-                </div>
-              </Col>
-
-              <Col xs={24} lg={12}>
-                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col gap-4 shadow-sm">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                    <h4 className="font-bold text-slate-900 text-sm uppercase tracking-wider text-indigo-700 flex items-center gap-2">
-                      Manager Evaluation & Rating
-                    </h4>
-                    <div className="bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-xl text-center">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Avg Score</span>
-                      <span className="text-lg font-black text-indigo-700">{averageRatingScore} / 5.0</span>
+                    {/* ── 3. Learning & Goals ── */}
+                    <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col gap-2 shadow-sm">
+                      <h5 className="text-xs font-medium text-black uppercase tracking-widest mb-0.5">
+                        3. Learning &amp; Goals
+                      </h5>
+                      {renderItemList(currentReview.learningGoals)}
                     </div>
-                  </div>
 
-                  <div className="space-y-3 bg-white border border-slate-200 rounded-xl p-3">
-                    {RATING_CATEGORY_ITEMS.map((item) => (
-                      <div key={item.key} className="flex items-center justify-between gap-2">
-                        <span className="text-xs font-semibold text-slate-700 min-w-0 truncate">
-                          {item.label}
-                        </span>
-                        <Rate
+                    {/* ── 4. Team Contribution ── */}
+                    <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col gap-3 shadow-sm">
+                      <h5 className="text-xs font-medium text-black uppercase tracking-widest mb-0.5">
+                        4. Team Contribution
+                      </h5>
+                      {Array.isArray(currentReview.teamContribution) && currentReview.teamContribution.length > 0 ? (
+                        <div className="flex flex-col gap-2">
+                          {currentReview.teamContribution.map((item, idx) => {
+                            const stars = Math.round(Number(item.rating) || 0);
+                            return (
+                              <div key={idx} className={`flex items-center justify-between gap-3 bg-white border border-slate-200 rounded-xl px-3 py-2 ${SUBMISSION_CARD_HOVER_CLASSES}`}>
+                                <span className="text-xs font-medium text-slate-700 capitalize">
+                                  {item.category.replace(/_/g, ' ')}
+                                </span>
+                                <div className="flex items-center gap-0.5 shrink-0">
+                                  {[1, 2, 3, 4, 5].map((star) => (
+                                    <svg
+                                      key={star}
+                                      className={`w-3.5 h-3.5 ${star <= stars ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-200'}`}
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                                    </svg>
+                                  ))}
+                                  <span className="ml-1.5 text-[10px] font-bold text-slate-500">{stars}/5</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-slate-400 text-sm italic">No team contribution data provided.</p>
+                      )}
+                    </div>
+
+                    {/* ── 5. Company Environment ── */}
+                    <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col gap-3 shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <h5 className="text-xs font-medium text-black uppercase tracking-widest mb-0.5">
+                          5. Company Environment
+                        </h5>
+                        {currentReview.companyEnvironment?.rating != null && (() => {
+                          const EMOJIS = [
+                            { value: 1, label: 'Very Bad', icon: '😡' },
+                            { value: 2, label: 'Bad', icon: '🙁' },
+                            { value: 3, label: 'Neutral', icon: '😐' },
+                            { value: 4, label: 'Good', icon: '🙂' },
+                            { value: 5, label: 'Excellent', icon: '🤩' },
+                          ];
+                          const emoji = EMOJIS.find(e => e.value === currentReview.companyEnvironment?.rating);
+                          return emoji ? (
+                            <div className="flex items-center gap-1.5 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-xl">
+                              <span className="text-lg leading-none">{emoji.icon}</span>
+                              <span className="text-[10px] font-bold text-indigo-700">{emoji.label}</span>
+                            </div>
+                          ) : null;
+                        })()}
+                      </div>
+
+                      {currentReview.companyEnvironment ? (
+                        <div className="flex flex-col gap-2.5">
+                          {[
+                            { label: 'Work Culture Feedback', key: 'workCultureFeedback' as const },
+                            { label: 'Work-Life Balance', key: 'workLifeBalance' as const },
+                            { label: 'Suggestions', key: 'suggestions' as const },
+                          ].map(({ label, key }) => {
+                            const val = currentReview.companyEnvironment?.[key];
+                            if (!val) return null;
+                            return (
+                              <div key={key} className={`bg-white border border-slate-200 rounded-xl p-3 ${SUBMISSION_CARD_HOVER_CLASSES}`}>
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{label}</span>
+                                <p className="text-slate-800 text-sm leading-relaxed mt-1 whitespace-pre-line">{val}</p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-slate-400 text-sm italic">No company environment feedback provided.</p>
+                      )}
+                    </div>
+
+                  </div>
+                </Col>
+
+                <Col xs={24} lg={12}>
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col gap-4 shadow-sm">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                      <h4 className="font-bold text-slate-900 text-sm uppercase tracking-wider text-indigo-700 flex items-center gap-2">
+                        Manager Evaluation & Rating
+                      </h4>
+                      <div className="bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-xl text-center">
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block">Avg Score</span>
+                        <span className="text-lg font-black text-indigo-700">{averageRatingScore} / 5.0</span>
+                      </div>
+                    </div>
+
+                    {/* Review Quarter — the manager picks which quarter this
+                        evaluation is for, independent of whatever quarter the
+                        employee's submission (left column) is tagged with.
+                        All four quarters are always selectable, regardless of
+                        the configured Quarter Date Ranges. Shown as a plain
+                        read-only line in view mode, same pattern used for
+                        Final Performance Rating below. */}
+                    <div>
+                      <label className="font-bold text-slate-800 text-xs uppercase mb-1.5 block">
+                        Review Quarter {!isViewOnly && <span className="text-red-500">*</span>}
+                      </label>
+                      {isViewOnly ? (
+                        <div
+                          className={`bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold text-slate-900 ${SUBMISSION_CARD_HOVER_CLASSES}`}
+                        >
+                          {REVIEW_QUARTER_LABELS[reviewQuarter] || reviewQuarter || '—'}
+                        </div>
+                      ) : (
+                        <>
+                          <Select
+                            value={reviewQuarter || undefined}
+                            placeholder="Select the quarter this review is for"
+                            onChange={(val) => {
+                              setReviewQuarter(val);
+                              if (fieldErrors.quarter) {
+                                setFieldErrors((prev) => ({ ...prev, quarter: undefined }));
+                              }
+                            }}
+                            status={fieldErrors.quarter ? 'error' : undefined}
+                            className="!w-full !rounded-xl"
+                          >
+                            <Option value={QuarterFilter.Q1}>{REVIEW_QUARTER_LABELS[QuarterFilter.Q1]}</Option>
+                            <Option value={QuarterFilter.Q2}>{REVIEW_QUARTER_LABELS[QuarterFilter.Q2]}</Option>
+                            <Option value={QuarterFilter.Q3}>{REVIEW_QUARTER_LABELS[QuarterFilter.Q3]}</Option>
+                            <Option value={QuarterFilter.Q4}>{REVIEW_QUARTER_LABELS[QuarterFilter.Q4]}</Option>
+                          </Select>
+                          {fieldErrors.quarter && (
+                            <p className="text-red-500 text-xs mt-1">{fieldErrors.quarter}</p>
+                          )}
+                        </>
+                      )}
+                    </div>
+
+                    <div className="space-y-3 bg-white border border-slate-200 rounded-xl p-3">
+                      {RATING_CATEGORY_ITEMS.map((item) => (
+                        <div key={item.key} className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-semibold text-slate-700 min-w-0 truncate">
+                            {item.label}
+                          </span>
+                          <Rate
+                            disabled={isViewOnly}
+                            value={ratings[item.key] || 0}
+                            onChange={(val) =>
+                              setRatings((prev) => ({ ...prev, [item.key]: val }))
+                            }
+                            className="!text-amber-400 text-sm shrink-0"
+                          />
+                        </div>
+                      ))}
+                    </div>
+
+                    <Divider className="!my-2" />
+
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="font-bold text-slate-800 text-xs uppercase">
+                          Final Performance Rating
+                        </label>
+                      </div>
+                      {/* Rendered as plain text instead of a disabled antd
+                          <Select> — this field is always read-only (the
+                          Select below was hard-coded `disabled`), and antd's
+                          built-in disabled-state color kept overriding our
+                          black-text fix, making it look faded/illegible.
+                          A plain div sidesteps that fight entirely. */}
+                      <div
+                        className={`bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold text-slate-900 ${SUBMISSION_CARD_HOVER_CLASSES}`}
+                      >
+                        {PERFORMANCE_RATING_LABELS[finalRating] || finalRating || '—'}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="font-bold text-slate-800 text-xs uppercase mb-1.5 block">
+                        Performance Strengths
+                      </label>
+                      <div className={`bg-white border border-slate-200 rounded-xl p-3 ${SUBMISSION_CARD_HOVER_CLASSES}`}>
+                        <TextArea
                           disabled={isViewOnly}
-                          value={ratings[item.key] || 0}
-                          onChange={(val) =>
-                            setRatings((prev) => ({ ...prev, [item.key]: val }))
-                          }
-                          className="!text-amber-400 text-sm shrink-0"
+                          autoSize={{ minRows: 2 }}
+                          maxLength={MAX_FIELD_LENGTH}
+                          placeholder="Highlight key strengths and standout contributions..."
+                          value={strengths}
+                          onChange={(e) => {
+                            setStrengths(e.target.value);
+                            if (fieldErrors.strengths && e.target.value.trim().length >= MIN_FIELD_LENGTH) {
+                              setFieldErrors((prev) => ({ ...prev, strengths: undefined }));
+                            }
+                          }}
+                          status={fieldErrors.strengths ? 'error' : undefined}
+                          className="!border-none !shadow-none !p-0 !bg-transparent !resize-none !text-slate-900 !text-sm !leading-relaxed"
                         />
                       </div>
-                    ))}
-                  </div>
+                      <div className="flex items-center justify-between mt-1">
+                        {fieldErrors.strengths ? (
+                          <p className="text-red-500 text-xs">{fieldErrors.strengths}</p>
+                        ) : (
+                          <span />
+                        )}
+                        {!isViewOnly && renderMaxLengthCounter(strengths.length)}
+                      </div>
+                    </div>
 
-                  <Divider className="!my-2" />
-
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="font-bold text-slate-800 text-xs uppercase">
-                        Final Performance Rating
+                    <div>
+                      <label className="font-bold text-slate-800 text-xs uppercase mb-1.5 block">
+                        Areas for Improvement
                       </label>
+                      <div className={`bg-white border border-slate-200 rounded-xl p-3 ${SUBMISSION_CARD_HOVER_CLASSES}`}>
+                        <TextArea
+                          disabled={isViewOnly}
+                          autoSize={{ minRows: 2 }}
+                          maxLength={MAX_FIELD_LENGTH}
+                          placeholder="Specify areas for growth and skill development..."
+                          value={improvements}
+                          onChange={(e) => {
+                            setImprovements(e.target.value);
+                            if (fieldErrors.improvements && e.target.value.trim().length >= MIN_FIELD_LENGTH) {
+                              setFieldErrors((prev) => ({ ...prev, improvements: undefined }));
+                            }
+                          }}
+                          status={fieldErrors.improvements ? 'error' : undefined}
+                          className="!border-none !shadow-none !p-0 !bg-transparent !resize-none !text-slate-900 !text-sm !leading-relaxed"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between mt-1">
+                        {fieldErrors.improvements ? (
+                          <p className="text-red-500 text-xs">{fieldErrors.improvements}</p>
+                        ) : (
+                          <span />
+                        )}
+                        {!isViewOnly && renderMaxLengthCounter(improvements.length)}
+                      </div>
                     </div>
-                    {/* Rendered as plain text instead of a disabled antd
-                        <Select> — this field is always read-only (the
-                        Select below was hard-coded `disabled`), and antd's
-                        built-in disabled-state color kept overriding our
-                        black-text fix, making it look faded/illegible.
-                        A plain div sidesteps that fight entirely. */}
-                    <div
-                      className={`bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold text-slate-900 ${SUBMISSION_CARD_HOVER_CLASSES}`}
-                    >
-                      {PERFORMANCE_RATING_LABELS[finalRating] || finalRating || '—'}
+
+                    <div>
+                      <label className="font-bold text-slate-800 text-xs uppercase mb-1.5 block">
+                        Manager Feedback & Remarks
+                      </label>
+                      <div className={`bg-white border border-slate-200 rounded-xl p-3 ${SUBMISSION_CARD_HOVER_CLASSES}`}>
+                        <TextArea
+                          disabled={isViewOnly}
+                          autoSize={{ minRows: 2 }}
+                          maxLength={MAX_FIELD_LENGTH}
+                          placeholder="Overall feedback and recommendations..."
+                          value={remarks}
+                          onChange={(e) => {
+                            setRemarks(e.target.value);
+                            if (fieldErrors.remarks && e.target.value.trim().length >= MIN_FIELD_LENGTH) {
+                              setFieldErrors((prev) => ({ ...prev, remarks: undefined }));
+                            }
+                          }}
+                          status={fieldErrors.remarks ? 'error' : undefined}
+                          className="!border-none !shadow-none !p-0 !bg-transparent !resize-none !text-slate-900 !text-sm !leading-relaxed"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between mt-1">
+                        {fieldErrors.remarks ? (
+                          <p className="text-red-500 text-xs">{fieldErrors.remarks}</p>
+                        ) : (
+                          <span />
+                        )}
+                        {!isViewOnly && renderMaxLengthCounter(remarks.length)}
+                      </div>
                     </div>
                   </div>
-
-                  <div>
-                    <label className="font-bold text-slate-800 text-xs uppercase mb-1.5 block">
-                      Performance Strengths
-                    </label>
-                    <div className={`bg-white border border-slate-200 rounded-xl p-3 ${SUBMISSION_CARD_HOVER_CLASSES}`}>
-                      <TextArea
-                        disabled={isViewOnly}
-                        autoSize={{ minRows: 2 }}
-                        maxLength={MAX_FIELD_LENGTH}
-                        placeholder="Highlight key strengths and standout contributions..."
-                        value={strengths}
-                        onChange={(e) => {
-                          setStrengths(e.target.value);
-                          if (fieldErrors.strengths && e.target.value.trim().length >= MIN_FIELD_LENGTH) {
-                            setFieldErrors((prev) => ({ ...prev, strengths: undefined }));
-                          }
-                        }}
-                        status={fieldErrors.strengths ? 'error' : undefined}
-                        className="!border-none !shadow-none !p-0 !bg-transparent !resize-none !text-slate-900 !text-sm !leading-relaxed"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between mt-1">
-                      {fieldErrors.strengths ? (
-                        <p className="text-red-500 text-xs">{fieldErrors.strengths}</p>
-                      ) : (
-                        <span />
-                      )}
-                      {!isViewOnly && renderMaxLengthCounter(strengths.length)}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="font-bold text-slate-800 text-xs uppercase mb-1.5 block">
-                      Areas for Improvement
-                    </label>
-                    <div className={`bg-white border border-slate-200 rounded-xl p-3 ${SUBMISSION_CARD_HOVER_CLASSES}`}>
-                      <TextArea
-                        disabled={isViewOnly}
-                        autoSize={{ minRows: 2 }}
-                        maxLength={MAX_FIELD_LENGTH}
-                        placeholder="Specify areas for growth and skill development..."
-                        value={improvements}
-                        onChange={(e) => {
-                          setImprovements(e.target.value);
-                          if (fieldErrors.improvements && e.target.value.trim().length >= MIN_FIELD_LENGTH) {
-                            setFieldErrors((prev) => ({ ...prev, improvements: undefined }));
-                          }
-                        }}
-                        status={fieldErrors.improvements ? 'error' : undefined}
-                        className="!border-none !shadow-none !p-0 !bg-transparent !resize-none !text-slate-900 !text-sm !leading-relaxed"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between mt-1">
-                      {fieldErrors.improvements ? (
-                        <p className="text-red-500 text-xs">{fieldErrors.improvements}</p>
-                      ) : (
-                        <span />
-                      )}
-                      {!isViewOnly && renderMaxLengthCounter(improvements.length)}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="font-bold text-slate-800 text-xs uppercase mb-1.5 block">
-                      Manager Feedback & Remarks
-                    </label>
-                    <div className={`bg-white border border-slate-200 rounded-xl p-3 ${SUBMISSION_CARD_HOVER_CLASSES}`}>
-                      <TextArea
-                        disabled={isViewOnly}
-                        autoSize={{ minRows: 2 }}
-                        maxLength={MAX_FIELD_LENGTH}
-                        placeholder="Overall feedback and recommendations..."
-                        value={remarks}
-                        onChange={(e) => {
-                          setRemarks(e.target.value);
-                          if (fieldErrors.remarks && e.target.value.trim().length >= MIN_FIELD_LENGTH) {
-                            setFieldErrors((prev) => ({ ...prev, remarks: undefined }));
-                          }
-                        }}
-                        status={fieldErrors.remarks ? 'error' : undefined}
-                        className="!border-none !shadow-none !p-0 !bg-transparent !resize-none !text-slate-900 !text-sm !leading-relaxed"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between mt-1">
-                      {fieldErrors.remarks ? (
-                        <p className="text-red-500 text-xs">{fieldErrors.remarks}</p>
-                      ) : (
-                        <span />
-                      )}
-                      {!isViewOnly && renderMaxLengthCounter(remarks.length)}
-                    </div>
-                  </div>
-                </div>
-              </Col>
-            </Row>
-
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
-
-              {!isViewOnly && (
-                <>
-                  <Button
-                    type="default"
-                    icon={<Save className="w-4 h-4" />}
-                    loading={submitting}
-                    onClick={() => onSubmitEvaluation(true)}
-                    className="!rounded-xl !border-indigo-200 !text-indigo-600 hover:!bg-indigo-50 !font-semibold"
-                  >
-                    Save Draft
-                  </Button>
-                  <Button
-                    type="primary"
-                    icon={<Send className="w-4 h-4" />}
-                    loading={submitting}
-                    onClick={() => onSubmitEvaluation(false)}
-                    className="!rounded-xl !bg-indigo-600 hover:!bg-indigo-700 !font-semibold"
-                  >
-                    Submit Final Review
-                  </Button>
-                </>
-              )}
+                </Col>
+              </Row>
             </div>
+
+            {/* Footer lives outside the scrollable div above, so it stays
+                put at the bottom of the modal regardless of scroll position. */}
+            {!isViewOnly && (
+              <div className="flex items-center justify-center gap-3 pt-3 pb-1 border-t border-slate-100 bg-white shrink-0">
+                <Button
+                  type="default"
+                  icon={<Save className="w-4 h-4" />}
+                  loading={submitting}
+                  onClick={() => onSubmitEvaluation(true)}
+                  className="!rounded-xl !border-indigo-200 !text-indigo-600 hover:!bg-indigo-50 !font-semibold"
+                >
+                  Save Draft
+                </Button>
+                <Button
+                  type="primary"
+                  icon={<Send className="w-4 h-4" />}
+                  loading={submitting}
+                  onClick={() => onSubmitEvaluation(false)}
+                  className="!rounded-xl !bg-indigo-600 hover:!bg-indigo-700 !font-semibold"
+                >
+                  Submit Final Review
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </Modal>

@@ -487,6 +487,12 @@
   border-color: #fde68a;
 }
 
+.quarterly-review-mobile-view .mobile-status-badge-expired {
+  background-color: #fef2f2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
 .quarterly-review-mobile-view .mobile-status-dot {
   width: 0.5rem;
   height: 0.5rem;

@@ -45,7 +45,55 @@ export interface ManagerReviewItem {
   strengths?: string | null;
   improvements?: string | null;
   remarks?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
 }
+
+export const getDefaultQuarterDates = (
+  quarterCode: string,
+  yearStr?: string
+): { startDate: string; endDate: string } => {
+  const code = (quarterCode || "").toUpperCase().trim().split(/\s+/)[0];
+  let year = parseInt((yearStr || "").split("-")[0], 10);
+  if (isNaN(year)) year = new Date().getFullYear();
+
+  switch (code) {
+    case "Q1":
+      return { startDate: `${year}-01-01`, endDate: `${year}-03-31` };
+    case "Q2":
+      return { startDate: `${year}-04-01`, endDate: `${year}-06-30` };
+    case "Q3":
+      return { startDate: `${year}-07-01`, endDate: `${year}-09-30` };
+    case "Q4":
+      return { startDate: `${year}-10-01`, endDate: `${year}-12-31` };
+    default:
+      return { startDate: `${year}-01-01`, endDate: `${year}-03-31` };
+  }
+};
+
+export const getFormattedQuarterPayload = (
+  selectedQuarterCode: string,
+  currentQuarterStr?: string | null,
+  yearFilter?: string
+): string => {
+  if (!selectedQuarterCode) return "";
+  const code = selectedQuarterCode.trim().split(/\s+/)[0];
+
+  if (/^Q\d\s+FY\d{4}-\d{2}$/i.test(selectedQuarterCode.trim())) {
+    return selectedQuarterCode.trim();
+  }
+
+  const fyMatch = (currentQuarterStr || "").match(/FY\d{4}-\d{2}/i);
+  if (fyMatch) {
+    return `${code} ${fyMatch[0]}`;
+  }
+
+  if (yearFilter && yearFilter !== YEAR_FILTER_ALL && /^\d{4}-\d{2}$/.test(yearFilter)) {
+    return `${code} FY${yearFilter}`;
+  }
+
+  return `${code} FY${DEFAULT_YEAR}`;
+};
 
 export interface ReviewStats {
   totalTeamMembers: number;

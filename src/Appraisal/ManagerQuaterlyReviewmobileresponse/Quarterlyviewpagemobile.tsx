@@ -8,12 +8,14 @@ import {
   Modal,
   Rate,
   Row,
+  Select,
 } from 'antd';
 import { Save, Send } from 'lucide-react';
 import {
   ManagerReviewItem,
   MIN_FIELD_LENGTH,
   PerformanceRating,
+  QuarterFilter,
   RATING_CATEGORY_ITEMS,
 } from './QuarterlyReviewmobile.types';
 import CommonMultipleUploader from '../../EmployeeDashboard/CommonMultipleUploader';
@@ -30,6 +32,7 @@ const { TextArea } = Input;
 type RatingValues = Record<string, number>;
 
 interface FieldErrors {
+  quarter?: string;
   strengths?: string;
   improvements?: string;
   remarks?: string;
@@ -41,6 +44,7 @@ interface QuarterlyViewPageMobileProps {
   isViewOnly: boolean;
   ratings: RatingValues;
   finalRating: string;
+  reviewQuarter: string;
   strengths: string;
   improvements: string;
   remarks: string;
@@ -52,6 +56,7 @@ interface QuarterlyViewPageMobileProps {
   onSubmitEvaluation: (isDraft: boolean) => void;
   setRatings: React.Dispatch<React.SetStateAction<RatingValues>>;
   setFinalRating: (value: string) => void;
+  setReviewQuarter: (value: string) => void;
   setStrengths: (value: string) => void;
   setImprovements: (value: string) => void;
   setRemarks: (value: string) => void;
@@ -147,6 +152,13 @@ const PERFORMANCE_RATING_LABELS: Record<string, string> = {
   [PerformanceRating.UNSATISFACTORY]: 'Unsatisfactory (1.0 - 1.9)',
 };
 
+const REVIEW_QUARTER_LABELS: Record<string, string> = {
+  [QuarterFilter.Q1]: 'Q1 — April to June',
+  [QuarterFilter.Q2]: 'Q2 — July to September',
+  [QuarterFilter.Q3]: 'Q3 — October to December',
+  [QuarterFilter.Q4]: 'Q4 — January to March',
+};
+
 const renderItemList = (data: Array<{ title?: string; details: string }> | string | undefined) => {
   if (!data) {
     return (
@@ -207,6 +219,7 @@ const QuarterlyViewPageMobile: React.FC<QuarterlyViewPageMobileProps> = ({
   isViewOnly,
   ratings,
   finalRating,
+  reviewQuarter,
   strengths,
   improvements,
   remarks,
@@ -218,6 +231,7 @@ const QuarterlyViewPageMobile: React.FC<QuarterlyViewPageMobileProps> = ({
   onSubmitEvaluation,
   setRatings,
   setFinalRating,
+  setReviewQuarter,
   setStrengths,
   setImprovements,
   setRemarks,
@@ -569,6 +583,42 @@ const QuarterlyViewPageMobile: React.FC<QuarterlyViewPageMobileProps> = ({
                       <span className="text-[9px] uppercase font-bold text-slate-400 block">Avg Score</span>
                       <span className="text-base sm:text-lg font-black text-indigo-700">{averageRatingScore} / 5.0</span>
                     </div>
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-slate-800 text-xs uppercase mb-1.5 block">
+                      Review Quarter {!isViewOnly && <span className="text-red-500">*</span>}
+                    </label>
+                    {isViewOnly ? (
+                      <div
+                        className={`bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs sm:text-sm font-semibold text-slate-900 ${SUBMISSION_CARD_HOVER_CLASSES}`}
+                      >
+                        {REVIEW_QUARTER_LABELS[reviewQuarter] || reviewQuarter || '—'}
+                      </div>
+                    ) : (
+                      <>
+                        <Select
+                          value={reviewQuarter || undefined}
+                          placeholder="Select the quarter this review is for"
+                          onChange={(value) => {
+                            setReviewQuarter(value);
+                            if (fieldErrors.quarter) {
+                              setFieldErrors((previous) => ({ ...previous, quarter: undefined }));
+                            }
+                          }}
+                          status={fieldErrors.quarter ? 'error' : undefined}
+                          className="!w-full !rounded-xl"
+                        >
+                          <Select.Option value={QuarterFilter.Q1}>{REVIEW_QUARTER_LABELS[QuarterFilter.Q1]}</Select.Option>
+                          <Select.Option value={QuarterFilter.Q2}>{REVIEW_QUARTER_LABELS[QuarterFilter.Q2]}</Select.Option>
+                          <Select.Option value={QuarterFilter.Q3}>{REVIEW_QUARTER_LABELS[QuarterFilter.Q3]}</Select.Option>
+                          <Select.Option value={QuarterFilter.Q4}>{REVIEW_QUARTER_LABELS[QuarterFilter.Q4]}</Select.Option>
+                        </Select>
+                        {fieldErrors.quarter && (
+                          <p className="text-red-500 text-xs mt-1">{fieldErrors.quarter}</p>
+                        )}
+                      </>
+                    )}
                   </div>
 
                   <div className={`space-y-3 bg-white border border-slate-200 rounded-xl p-2.5 sm:p-3 ${SUBMISSION_CARD_HOVER_CLASSES}`}>

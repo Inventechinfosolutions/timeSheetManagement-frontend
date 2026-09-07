@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { useAppSelector } from "../../hooks";
 import { useParams, useNavigate } from "react-router-dom";
-import { Table, Button, Input, Select, Spin, message, Avatar, Pagination } from "antd";
+import { Table, Button, Checkbox, Input, Modal, Select, Spin, message, Avatar, Pagination } from "antd";
 import {
   Search,
   Users,
@@ -11,8 +12,10 @@ import {
   Edit3,
   Calendar,
   Star,
+  Bell,
 } from "lucide-react";
 import axios from "axios";
+import dayjs from "dayjs";
 import {
   ManagerReviewItem,
   ReviewStats,
@@ -31,8 +34,11 @@ import {
   toFiscalYearLabel,
   YEARS_BEFORE_CURRENT,
   YEARS_AFTER_CURRENT,
+  getDefaultQuarterDates,
+  getFormattedQuarterPayload,
 } from "./QuarterlyReviewmobile.types";
 import QuarterlyViewPageMobile from "./Quarterlyviewpagemobile";
+import { QuarterDateItem } from "../ManagerQuaterlyReview/QuarterDateConfigModal";
 import "./QuarterlyReviewmobile.css";
 
 const { Option } = Select;
@@ -45,8 +51,80 @@ type RatingValues = Record<string, number>;
 // same job for the card list, which previously rendered every filtered
 // submission in one long unpaginated scroll.
 const CARD_PAGE_SIZE = 5;
+const REVIEW_GRACE_PERIOD_DAYS = 10;
 
-const renderStatusBadge = (status: string | null) => {
+const getManagerQuarter = (record: ManagerReviewItem): string =>
+  (record.quarter || "").trim().split(/\s+/)[0];
+
+const isPendingReviewExpired = (
+  record: ManagerReviewItem,
+  configs: QuarterDateItem[],
+): boolean => {
+  if (record.reviewStatus === ManagerReviewStatus.REVIEWED) return false;
+  const currentQuarter = configs
+    .filter((config) => !dayjs().isBefore(dayjs(config.startDate).startOf("day")))
+    .sort((a, b) => dayjs(b.startDate).valueOf() - dayjs(a.startDate).valueOf())[0];
+  return Boolean(
+    currentQuarter &&
+      dayjs().isAfter(dayjs(currentQuarter.endDate).add(REVIEW_GRACE_PERIOD_DAYS, "day").endOf("day")),
+  );
+};
+
+const isReviewExpired = (
+  record: ManagerReviewItem,
+  quarterDateConfigs: QuarterDateItem[],
+): boolean => {
+  if (record.reviewStatus === ManagerReviewStatus.REVIEWED) return false;
+
+  const quarterCode = getManagerQuarter(record);
+  if (!quarterCode) return isPendingReviewExpired(record, quarterDateConfigs);
+  const quarterConfig = quarterDateConfigs.find(
+    (config) => config.quarter === quarterCode,
+  );
+  if (!quarterConfig?.endDate) return false;
+
+  return dayjs().isAfter(
+    dayjs(quarterConfig.endDate).add(REVIEW_GRACE_PERIOD_DAYS, "day").endOf("day"),
+  );
+};
+
+const renderStatusBadge = (
+  record: ManagerReviewItem,
+  quarterDateConfigs: QuarterDateItem[],
+) => {
+  if (isReviewExpired(record, quarterDateConfigs)) {
+    return (
+      <span className="mobile-status-badge mobile-status-badge-expired">
+        <span className="mobile-status-dot" />
+        Review Expired
+      </span>
+    );
+  }
+
+  const reviewStatus = record.reviewStatus;
+
+  // Manager completed the review
+  if (reviewStatus === ManagerReviewStatus.REVIEWED) {
+    return (
+      <span className="mobile-status-badge mobile-status-badge-success">
+        <span className="mobile-status-dot text-emerald-500" />
+        Reviewed
+      </span>
+    );
+  }
+
+  // Manager opened and saved a draft — actively in progress
+  if (reviewStatus === ManagerReviewStatus.IN_REVIEW) {
+    return (
+      <span className="mobile-status-badge mobile-status-badge-purple">
+        <span className="mobile-status-dot" />
+        In Review
+      </span>
+    );
+  }
+
+  // Also handle appraisal-level completed statuses
+  const status = record.status;
   const s = status || AppraisalStatus.NOT_STARTED;
   if (
     [
@@ -57,23 +135,17 @@ const renderStatusBadge = (status: string | null) => {
   ) {
     return (
       <span className="mobile-status-badge mobile-status-badge-success">
-        <span className="mobile-status-dot" />
+        <span className="mobile-status-dot text-emerald-500" />
         {s}
       </span>
     );
   }
-  if (s === AppraisalStatus.UNDER_REVIEW) {
-    return (
-      <span className="mobile-status-badge mobile-status-badge-purple">
-        <span className="mobile-status-dot" />
-        Under Review
-      </span>
-    );
-  }
+
+  // Manager hasn't touched this record yet — show "Under Review"
   return (
     <span className="mobile-status-badge mobile-status-badge-amber">
       <span className="mobile-status-dot" />
-      {s}
+      Under Review
     </span>
   );
 };
@@ -98,12 +170,53 @@ const CardField: React.FC<{ label: string; children: React.ReactNode }> = ({
   </div>
 );
 
+const getQuarterDatesForCode = (
+  record: ManagerReviewItem,
+  configs: QuarterDateItem[],
+  selectedYear?: string,
+): { startDate: string | null; endDate: string | null } => {
+  if (record.startDate && record.endDate) {
+    return { startDate: record.startDate, endDate: record.endDate };
+  }
+  const quarterCode = getManagerQuarter(record);
+  if (!quarterCode) return { startDate: null, endDate: null };
+
+  const cfg = (configs || []).find((c) => c.quarter === quarterCode);
+  if (cfg && cfg.startDate && cfg.endDate) {
+    return {
+      startDate: cfg.startDate,
+      endDate: cfg.endDate,
+    };
+  }
+
+  let yearStr = selectedYear;
+  if (!yearStr || yearStr === YEAR_FILTER_ALL) {
+    if (record.lastModified) {
+      yearStr = String(new Date(record.lastModified).getFullYear());
+    } else {
+      yearStr = String(new Date().getFullYear());
+    }
+  }
+
+  return getDefaultQuarterDates(quarterCode, yearStr);
+};
+
+const formatConfigDate = (d: string | null) =>
+  d ? dayjs(d).format("DD MMM YYYY") : "—";
+
 const SubmissionCard: React.FC<{
   record: ManagerReviewItem;
+  quarterDateConfigs: QuarterDateItem[];
+  selectedYear?: string;
   onEvaluate: () => void;
   onView: () => void;
-}> = ({ record, onEvaluate, onView }) => {
+}> = ({ record, quarterDateConfigs, selectedYear, onEvaluate, onView }) => {
   const isReviewed = record.actionType === ActionType.VIEW;
+  const { startDate, endDate } = getQuarterDatesForCode(
+    record,
+    quarterDateConfigs,
+    selectedYear,
+  );
 
   return (
     <div className="mobile-submission-card">
@@ -121,7 +234,7 @@ const SubmissionCard: React.FC<{
             </p>
           </div>
         </div>
-        {renderStatusBadge(record.status)}
+        {renderStatusBadge(record, quarterDateConfigs)}
       </div>
 
       <div className="mobile-card-body">
@@ -132,25 +245,14 @@ const SubmissionCard: React.FC<{
         </CardField>
         <CardField label="Quarter">
           <span className="mobile-card-field-strong">
-            {record.quarter ? record.quarter.trim().split(/\s+/)[0] : "—"}
+            {getManagerQuarter(record) || "—"}
           </span>
         </CardField>
         <CardField label="Final Rating">
           <FinalRatingBadge rating={record.finalRating} />
         </CardField>
-        <CardField label="Last Modified">
-          {record.lastModified ? (
-            <span>
-              {new Date(record.lastModified).toLocaleDateString("en-GB", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-              })}
-            </span>
-          ) : (
-            "—"
-          )}
-        </CardField>
+        <CardField label="Start Date">{formatConfigDate(startDate)}</CardField>
+        <CardField label="End Date">{formatConfigDate(endDate)}</CardField>
       </div>
 
       <div className="mobile-submission-actions">
@@ -180,9 +282,7 @@ const SubmissionCard: React.FC<{
   );
 };
 
-const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
-  onBack,
-}) => {
+const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = () => {
   const { employeeId: employeeIdFromUrl } = useParams<{
     employeeId?: string;
   }>();
@@ -227,28 +327,247 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
     [RatingCategory.INNOVATION]: DEFAULT_RATING_VALUE,
   });
   const [finalRating, setFinalRating] = useState<string>("");
+  const [reviewQuarter, setReviewQuarter] = useState<string>("");
+  const reviewQuarterChangedRef = useRef(false);
   const [strengths, setStrengths] = useState<string>("");
   const [improvements, setImprovements] = useState<string>("");
   const [remarks, setRemarks] = useState<string>("");
   const [fieldErrors, setFieldErrors] = useState<{
+    quarter?: string;
     strengths?: string;
     improvements?: string;
     remarks?: string;
   }>({});
 
-  const fetchData = async () => {
+  // Quarter Date Range Configuration state
+  const [quarterDateConfigs, setQuarterDateConfigs] = useState<QuarterDateItem[]>([]);
+  // Logged-in manager's employee ID — used to fetch all mapped employees
+  const currentUser = useAppSelector((state: any) => state.user.currentUser);
+  const managerEmployeeId = currentUser?.employeeId || currentUser?.loginId;
+
+  const [notificationModalOpen, setNotificationModalOpen] = useState(false);
+  const [selectedNotificationEmployeeIds, setSelectedNotificationEmployeeIds] = useState<string[]>([]);
+  const [sendingNotifications, setSendingNotifications] = useState(false);
+  const [allNotificationEmployees, setAllNotificationEmployees] = useState<any[]>([]);
+  const [loadingNotificationEmployees, setLoadingNotificationEmployees] = useState(false);
+  const [modalSearchText, setModalSearchText] = useState<string>("");
+
+  const fetchQuarterConfigs = async (year: string) => {
+    if (!year || year === YEAR_FILTER_ALL) return;
+    const fallbackConfigs: QuarterDateItem[] = (
+      [QuarterFilter.Q1, QuarterFilter.Q2, QuarterFilter.Q3, QuarterFilter.Q4] as const
+    ).map((quarter) => ({
+      quarter,
+      ...getDefaultQuarterDates(quarter, year),
+    }));
+
+    try {
+      const res = await axios
+        .get("/api/manager-quarterly-review/quarter-configs", {
+          params: { year },
+        })
+        .catch(() => null);
+      if (res?.data?.success && Array.isArray(res.data.data)) {
+        setQuarterDateConfigs(res.data.data);
+      } else {
+        setQuarterDateConfigs(fallbackConfigs);
+      }
+    } catch {
+      // The endpoint may be unavailable in older deployments; keep the
+      // quarter cards useful with the standard fiscal-year ranges.
+      setQuarterDateConfigs(fallbackConfigs);
+    }
+  };
+
+  useEffect(() => {
+    fetchQuarterConfigs(selectedYear);
+  }, [selectedYear]);
+
+  const fetchAllMappedEmployees = async (): Promise<any[]> => {
+    const managerKeys = Array.from(
+      new Set(
+        [
+          currentUser?.aliasLoginName,
+          currentUser?.name,
+          currentUser?.fullName,
+          currentUser?.employeeId,
+          currentUser?.loginId,
+          managerEmployeeId,
+        ].filter(Boolean),
+      ),
+    );
+
+    for (const key of managerKeys) {
+      try {
+        const res = await axios.get("/api/manager-mapping/all", {
+          params: {
+            managerName: key,
+            status: "ACTIVE",
+            limit: 9999,
+          },
+        });
+        const items = res.data?.items || res.data?.data || (Array.isArray(res.data) ? res.data : []);
+        if (Array.isArray(items) && items.length > 0) {
+          return items.map((m: any) => ({
+            employeeId: m.employeeId,
+            employeeName: m.employeeName || m.employeeId,
+            designation: m.designation || "Employee",
+            department: m.department || "—",
+            quarter: m.quarter || null,
+            notificationDate: m.notificationDate || m.notificationSentAt || m.sentAt || null,
+            reviewStatus: m.reviewStatus || null,
+            isCompleted: false,
+          }));
+        }
+      } catch {
+        // try next identifier
+      }
+    }
+
+    try {
+      const response = await axios.get(
+        "/api/manager-quarterly-review/notification-candidates",
+      );
+      const data = response.data?.data || (Array.isArray(response.data) ? response.data : []);
+      if (Array.isArray(data) && data.length > 0) {
+        return data;
+      }
+    } catch {
+      // Ignore secondary fallback error
+    }
+
+    return [];
+  };
+
+  const fetchData = async (
+    overrideStatus?: string,
+    overrideYear?: string,
+    overrideQuarterCard?: string,
+    overrideSearch?: string,
+  ) => {
     try {
       setLoading(true);
-      const [subsRes, statsRes] = await Promise.all([
-        axios.get("/api/manager-quarterly-review"),
-        axios.get("/api/manager-quarterly-review/stats"),
+      const statusToUse =
+        overrideStatus !== undefined ? overrideStatus : selectedStatusTab;
+      const yearToUse =
+        overrideYear !== undefined ? overrideYear : selectedYear;
+      const quarterCardToUse =
+        overrideQuarterCard !== undefined ? overrideQuarterCard : selectedQuarterCard;
+      const searchToUse =
+        overrideSearch !== undefined ? overrideSearch : searchQuery;
+
+      const params: Record<string, any> = { page: 1, pageSize: 9999 };
+      if (quarterCardToUse && quarterCardToUse !== QuarterFilter.ALL) {
+        params.quarterCard = quarterCardToUse;
+      }
+      if (yearToUse !== YEAR_FILTER_ALL) {
+        params.year = yearToUse;
+      }
+      if (statusToUse !== StatusTabFilter.ALL) {
+        params.status = statusToUse;
+      }
+      if (searchToUse.trim()) {
+        params.search = searchToUse.trim();
+      }
+
+      const [subsRes, statsRes, mappedEmployees] = await Promise.all([
+        axios.get("/api/manager-quarterly-review", { params }).catch(() => ({ data: { success: false, data: [] } })),
+        axios.get("/api/manager-quarterly-review/stats").catch(() => ({ data: { success: false, data: null } })),
+        fetchAllMappedEmployees(),
       ]);
 
-      if (subsRes.data?.success) {
-        setSubmissions(subsRes.data.data || []);
+      let existingSubmissions: ManagerReviewItem[] = [];
+      if (subsRes.data?.success && Array.isArray(subsRes.data.data)) {
+        existingSubmissions = subsRes.data.data;
       }
-      if (statsRes.data?.success) {
-        setStats(statsRes.data.data);
+
+      const combinedSubmissions: ManagerReviewItem[] = [...existingSubmissions];
+
+      for (const emp of mappedEmployees) {
+        const exists = combinedSubmissions.some(
+          (s) => s.employeeId === emp.employeeId,
+        );
+        if (!exists) {
+          const rawQuarter = emp.quarter;
+          const defaultQuarter = rawQuarter
+            ? rawQuarter.trim().split(/\s+/)[0]
+            : (quarterCardToUse && quarterCardToUse !== QuarterFilter.ALL
+                ? quarterCardToUse
+                : (quarterDateConfigs[0]?.quarter || "Q1"));
+
+          combinedSubmissions.push({
+            id: emp.id || emp.employeeId,
+            employeeId: emp.employeeId,
+            employeeName: emp.employeeName || emp.employeeId,
+            department: emp.department || "—",
+            designation: emp.designation || "Employee",
+            quarter: defaultQuarter,
+            status: "Under Review",
+            reviewStatus: null,
+            overview: "",
+            achievements: "",
+            challenges: "",
+            learningGoals: "",
+            submittedDate: null,
+            reviewedOn: null,
+            lastModified: dayjs().format("YYYY-MM-DDTHH:mm:ssZ"),
+            finalRating: null,
+            actionType: "evaluate",
+            actionLabel: "Evaluate Now",
+            notificationDate: emp.notificationDate || null,
+          } as any);
+        }
+      }
+
+      let filtered = combinedSubmissions;
+
+      if (quarterCardToUse && quarterCardToUse !== QuarterFilter.ALL) {
+        filtered = filtered.filter((s) => {
+          const qCode = (s.quarter || "").trim().split(/\s+/)[0];
+          return qCode === quarterCardToUse;
+        });
+      }
+
+      if (statusToUse && statusToUse !== StatusTabFilter.ALL) {
+        filtered = filtered.filter((s) => {
+          if (statusToUse === StatusTabFilter.PENDING) {
+            return !s.reviewStatus || s.reviewStatus === ManagerReviewStatus.PENDING || s.status === "Under Review";
+          }
+          if (statusToUse === StatusTabFilter.IN_REVIEW) {
+            return s.reviewStatus === ManagerReviewStatus.IN_REVIEW;
+          }
+          if (statusToUse === StatusTabFilter.COMPLETED) {
+            return s.reviewStatus === ManagerReviewStatus.REVIEWED || s.status === "Reviewed";
+          }
+          return true;
+        });
+      }
+
+      if (searchToUse.trim()) {
+        const q = searchToUse.trim().toLowerCase();
+        filtered = filtered.filter(
+          (s) =>
+            (s.employeeName || "").toLowerCase().includes(q) ||
+            (s.employeeId || "").toLowerCase().includes(q) ||
+            (s.designation || "").toLowerCase().includes(q) ||
+            (s.department || "").toLowerCase().includes(q),
+        );
+      }
+
+      setSubmissions(filtered);
+
+      if (statsRes.data?.success && statsRes.data.data) {
+        setStats({
+          ...statsRes.data.data,
+          totalTeamMembers: Math.max(combinedSubmissions.length, statsRes.data.data.totalTeamMembers || 0),
+          totalSubmissions: Math.max(combinedSubmissions.length, statsRes.data.data.totalSubmissions || 0),
+        });
+      } else {
+        setStats((prev) => ({
+          ...prev,
+          totalTeamMembers: combinedSubmissions.length,
+          totalSubmissions: combinedSubmissions.length,
+        }));
       }
     } catch (err: any) {
       message.error(
@@ -260,17 +579,172 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const handleStatusTabChange = (statusKey: string) => {
+    setSelectedStatusTab(statusKey);
+    setCurrentPage(1);
+    fetchData(statusKey, selectedYear, selectedQuarterCard, searchQuery);
+  };
 
-  const handleBack = () => {
-    if (onBack) {
-      onBack();
-    } else {
-      window.history.back();
+  const handleYearChange = (year: string) => {
+    setSelectedYear(year);
+    setCurrentPage(1);
+    fetchData(selectedStatusTab, year, selectedQuarterCard, searchQuery);
+  };
+
+  const handleQuarterChange = (quarter: string) => {
+    setSelectedQuarterCard(quarter);
+    setCurrentPage(1);
+    fetchData(selectedStatusTab, selectedYear, quarter, searchQuery);
+  };
+
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
+    setCurrentPage(1);
+    fetchData(selectedStatusTab, selectedYear, selectedQuarterCard, query);
+  };
+
+  // All employees who have NOT yet completed a review are selectable for notification
+  const selectableNotificationEmployees = useMemo(() => {
+    return allNotificationEmployees.filter((emp: any) => {
+      const submission = submissions.find((s) => s.employeeId === emp.employeeId);
+      const isReviewed =
+        emp.isCompleted ||
+        emp.reviewStatus === ManagerReviewStatus.REVIEWED ||
+        submission?.reviewStatus === ManagerReviewStatus.REVIEWED;
+      return !isReviewed;
+    });
+  }, [allNotificationEmployees, submissions]);
+
+  const openNotificationModal = async () => {
+    setNotificationModalOpen(true);
+    setLoadingNotificationEmployees(true);
+    setModalSearchText("");
+
+    try {
+      let candidates: any[] = [];
+
+      // 1. Primary: query /api/manager-mapping/all trying all possible manager identifiers
+      const managerKeys = Array.from(
+        new Set(
+          [
+            currentUser?.aliasLoginName,
+            currentUser?.name,
+            currentUser?.fullName,
+            currentUser?.employeeId,
+            currentUser?.loginId,
+            managerEmployeeId,
+          ].filter(Boolean),
+        ),
+      );
+
+      for (const key of managerKeys) {
+        try {
+          const res = await axios.get("/api/manager-mapping/all", {
+            params: {
+              managerName: key,
+              status: "ACTIVE",
+              limit: 9999,
+            },
+          });
+          const items = res.data?.items || res.data?.data || (Array.isArray(res.data) ? res.data : []);
+          if (Array.isArray(items) && items.length > 0) {
+            candidates = items.map((m: any) => ({
+              employeeId: m.employeeId,
+              employeeName: m.employeeName || m.employeeId,
+              designation: m.designation || "Employee",
+              department: m.department || "—",
+              quarter: null,
+              reviewStatus: null,
+              isCompleted: false,
+            }));
+            break;
+          }
+        } catch {
+          // try next identifier
+        }
+      }
+
+      // 2. Secondary fallback if manager-mapping returns empty: try dedicated notification-candidates endpoint
+      if (candidates.length === 0) {
+        try {
+          const response = await axios.get(
+            "/api/manager-quarterly-review/notification-candidates",
+          );
+          const data = response.data?.data || (Array.isArray(response.data) ? response.data : []);
+          if (Array.isArray(data) && data.length > 0) {
+            candidates = data;
+          }
+        } catch {
+          // Ignore secondary fallback error
+        }
+      }
+
+      // 3. Additional safety: merge any employees from submissions who might be missing from mapping
+      for (const sub of submissions) {
+        if (!candidates.some((c: any) => c.employeeId === sub.employeeId)) {
+          candidates.push({
+            employeeId: sub.employeeId,
+            employeeName: sub.employeeName || sub.employeeId,
+            designation: sub.designation || "Employee",
+            department: sub.department || "—",
+            quarter: sub.quarter || null,
+            reviewStatus: sub.reviewStatus || null,
+            isCompleted: sub.reviewStatus === ManagerReviewStatus.REVIEWED,
+          });
+        }
+      }
+
+      setAllNotificationEmployees(candidates);
+
+      // Pre-select all employees requiring a review
+      const selectable = candidates.filter((emp: any) => {
+        const sub = submissions.find((s) => s.employeeId === emp.employeeId);
+        return !(
+          emp.isCompleted ||
+          emp.reviewStatus === ManagerReviewStatus.REVIEWED ||
+          sub?.reviewStatus === ManagerReviewStatus.REVIEWED
+        );
+      });
+
+      setSelectedNotificationEmployeeIds(
+        (selectable.length > 0 ? selectable : candidates).map(
+          (emp: any) => emp.employeeId,
+        ),
+      );
+    } catch {
+      message.error("Failed to load the full employee list for notifications.");
+    } finally {
+      setLoadingNotificationEmployees(false);
     }
   };
+
+  const sendReviewNotifications = async () => {
+    if (selectedNotificationEmployeeIds.length === 0) {
+      message.warning("Select at least one employee.");
+      return;
+    }
+
+    try {
+      setSendingNotifications(true);
+      await axios.post("/api/manager-quarterly-review/notifications", {
+        employeeIds: selectedNotificationEmployeeIds,
+      });
+      message.success("Review notifications sent successfully.");
+      setNotificationModalOpen(false);
+      setSelectedNotificationEmployeeIds([]);
+    } catch (err: any) {
+      message.error(
+        err.response?.data?.message || "Failed to send review notifications.",
+      );
+    } finally {
+      setSendingNotifications(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const averageRatingScore = useMemo(() => {
     const values = Object.values(ratings) as number[];
@@ -336,6 +810,17 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
           : "",
     );
 
+    // Seed the quarter picker from whatever quarter is already on the
+    // record (e.g. re-opening a saved draft keeps the manager's earlier
+    // choice). Left blank when the record has never had a quarter set,
+    // so the manager must explicitly pick one for a brand-new review.
+    if (!reviewQuarterChangedRef.current) {
+      const recordQuarter = record.quarter
+        ? record.quarter.trim().split(/\s+/)[0]
+        : "";
+      setReviewQuarter(recordQuarter);
+    }
+
     setStrengths(record.strengths || "");
     setImprovements(record.improvements || "");
     setRemarks(record.remarks || "");
@@ -370,6 +855,7 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
   ) => {
     setCurrentReview(record);
     setIsViewOnly(viewOnly);
+    reviewQuarterChangedRef.current = false;
     setFieldErrors({});
     applyReviewToForm(record);
     setIsModalOpen(true);
@@ -384,6 +870,8 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
     setIsModalOpen(false);
     setCurrentReview(null);
     loadedEmployeeIdRef.current = null;
+    reviewQuarterChangedRef.current = false;
+    setReviewQuarter("");
     navigate("/manager-dashboard/quarterly-review", { replace: false });
     fetchData();
   };
@@ -397,6 +885,7 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
       loadedEmployeeIdRef.current = employeeIdFromUrl;
       setCurrentReview(match);
       setIsViewOnly(match.actionType === ActionType.VIEW);
+      reviewQuarterChangedRef.current = false;
       setFieldErrors({});
       applyReviewToForm(match);
       setIsModalOpen(true);
@@ -407,11 +896,15 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
 
   const validateTextFields = (): boolean => {
     const errors: {
+      quarter?: string;
       strengths?: string;
       improvements?: string;
       remarks?: string;
     } = {};
 
+    if (!reviewQuarter) {
+      errors.quarter = "Please select a quarter.";
+    }
     if (strengths.trim().length < MIN_FIELD_LENGTH) {
       errors.strengths = `Please enter at least ${MIN_FIELD_LENGTH} characters.`;
     }
@@ -429,6 +922,13 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
   const handleSubmitEvaluation = async (isDraft: boolean) => {
     if (!currentReview) return;
 
+    if (!reviewQuarter) {
+      const quarterError = "Please select a quarter.";
+      setFieldErrors((previous) => ({ ...previous, quarter: quarterError }));
+      message.error(quarterError);
+      return;
+    }
+
     if (!isDraft && !validateTextFields()) {
       message.error(
         `Please complete all feedback fields with at least ${MIN_FIELD_LENGTH} characters before submitting.`,
@@ -442,7 +942,14 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
         ? `/api/manager-quarterly-review/${currentReview.id}/draft`
         : `/api/manager-quarterly-review/${currentReview.id}/review`;
 
+      const formattedQuarter = getFormattedQuarterPayload(
+        reviewQuarter,
+        currentReview.quarter,
+        selectedYear
+      );
+
       const payload = {
+        quarter: formattedQuarter,
         ratings,
         finalRating,
         strengths,
@@ -464,13 +971,18 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
         setIsModalOpen(false);
         setCurrentReview(null);
         loadedEmployeeIdRef.current = null;
+        reviewQuarterChangedRef.current = false;
+        setReviewQuarter("");
         navigate("/manager-dashboard/quarterly-review", { replace: false });
         fetchData();
       }
     } catch (err: any) {
-      message.error(
-        err.response?.data?.message || "Failed to submit review evaluation.",
-      );
+      console.error("Submit evaluation failed:", err.response?.data || err);
+      const serverMessage = err.response?.data?.message;
+      const errorMsg = Array.isArray(serverMessage)
+        ? serverMessage.join(" | ")
+        : serverMessage || "Failed to submit review evaluation.";
+      message.error(errorMsg);
     } finally {
       setSubmitting(false);
     }
@@ -570,10 +1082,7 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
     searchQuery,
   ]);
 
-  // Whenever the filtered result set changes (search, status tab,
-  // quarter, or year), snap the card list's pagination back to page 1
-  // — otherwise a user filtering down to fewer results could land on
-  // a now out-of-range page and see an empty list.
+  // Whenever the filtered result set changes, snap pagination back to page 1
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedYear, selectedQuarterCard, selectedStatusTab, searchQuery]);
@@ -591,7 +1100,7 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
     {
       title: "Employee Name",
       key: "employeeName",
-      width: "16%",
+      width: "14%",
       render: (_: any, r: ManagerReviewItem) => (
         <div className="mobile-table-name-cell">
           <Avatar size="large" className="mobile-avatar mobile-table-avatar">
@@ -605,14 +1114,14 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
       title: "Employee ID",
       dataIndex: "employeeId",
       key: "employeeId",
-      width: "10%",
+      width: "8%",
       render: (id: string) => <span className="mobile-table-text">{id}</span>,
     },
     {
       title: "Designation",
       dataIndex: "designation",
       key: "designation",
-      width: "14%",
+      width: "12%",
       render: (d: string) => (
         <span className="mobile-table-text">{d || "—"}</span>
       ),
@@ -621,50 +1130,75 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
       title: "Quarter",
       dataIndex: "quarter",
       key: "quarter",
-      width: "10%",
-      render: (q: string) => (
+      width: "8%",
+      render: (_q: string, r: ManagerReviewItem) => (
         <span className="mobile-table-text">
-          {q ? q.trim().split(/\s+/)[0] : "—"}
+          {getManagerQuarter(r) || "—"}
         </span>
       ),
     },
     {
       title: "Status",
       key: "status",
-      width: "14%",
-      render: (_: any, r: ManagerReviewItem) => renderStatusBadge(r.status),
+      width: "12%",
+      render: (_: any, r: ManagerReviewItem) =>
+        renderStatusBadge(r, quarterDateConfigs),
     },
     {
       title: "Final Rating",
       dataIndex: "finalRating",
       key: "finalRating",
-      width: "14%",
+      width: "12%",
       render: (rating: number | null) => <FinalRatingBadge rating={rating} />,
     },
     {
       title: "Last Modified",
       dataIndex: "lastModified",
       key: "lastModified",
-      width: "14%",
-      render: (d: string | null) =>
-        d ? (
-          <div className="mobile-table-last-modified">
-            <div>
-              {new Date(d).toLocaleDateString("en-GB", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-              })}
-            </div>
-          </div>
-        ) : (
-          <span className="mobile-table-empty">—</span>
-        ),
+      width: "10%",
+      render: (lastModified: string | null) => (
+        <span className="mobile-table-text">
+          {lastModified ? dayjs(lastModified).format("DD MMM YYYY") : "—"}
+        </span>
+      ),
+    },
+    {
+      title: "Start Date",
+      key: "startDate",
+      width: "9%",
+      render: (_: any, r: ManagerReviewItem) => {
+        const { startDate } = getQuarterDatesForCode(
+          r,
+          quarterDateConfigs,
+        );
+        return (
+          <span className="mobile-table-text">
+            {formatConfigDate(startDate)}
+          </span>
+        );
+      },
+    },
+    {
+      title: "End Date",
+      key: "endDate",
+      width: "9%",
+      render: (_: any, r: ManagerReviewItem) => {
+        const { endDate } = getQuarterDatesForCode(
+          r,
+          quarterDateConfigs,
+        );
+        return (
+          <span className="mobile-table-text">
+            {formatConfigDate(endDate)}
+          </span>
+        );
+      },
     },
     {
       title: "Action",
       key: "action",
-      width: "14%",
+      width: "12%",
+      fixed: "right" as const,
       render: (_: any, record: ManagerReviewItem) => {
         const isReviewed = record.actionType === ActionType.VIEW;
         return (
@@ -706,7 +1240,7 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
             filter, ahead of "All Quarters"), and quarter filtering is
             handled entirely by the "All Quarters" select in that same
             filter bar. */}
-        <div className="mobile-page-header-row">
+        <div className="mobile-page-header-row flex items-center justify-between">
           <div className="mobile-page-header-copy">
             <div className="mobile-title-col">
               <h1 className="mobile-page-title">
@@ -717,6 +1251,15 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
               </p>
             </div>
           </div>
+          <Button
+            type="primary"
+            size="small"
+            icon={<Bell className="w-3.5 h-3.5" />}
+            onClick={openNotificationModal}
+            className="!bg-indigo-600 hover:!bg-indigo-700 !text-white !font-bold !rounded-lg shrink-0"
+          >
+            Send Notification
+          </Button>
         </div>
       </div>
 
@@ -779,13 +1322,15 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
           each item's quarter label. */}
       <div className="mobile-filter-bar">
         {/* NEW: subheading above the status tabs, inside the filter card. */}
-        <h2 className="mobile-filter-heading">Quarterly Reviews</h2>
+        <div className="flex items-center justify-between flex-wrap gap-1">
+          <h2 className="mobile-filter-heading">Quarterly Reviews</h2>
+        </div>
 
         <div className="mobile-filter-tabs">
           {STATUS_TAB_ITEMS.map((tab) => (
             <button
               key={tab.key}
-              onClick={() => setSelectedStatusTab(tab.key)}
+              onClick={() => handleStatusTabChange(tab.key)}
               className={`mobile-filter-tab ${selectedStatusTab === tab.key ? "active" : ""}`}
             >
               {tab.label}
@@ -800,14 +1345,14 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
             placeholder="Search employee name or ID..."
             prefix={<Search className="mobile-search-icon" />}
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="mobile-input"
             allowClear
           />
 
           <Select
             value={selectedYear}
-            onChange={setSelectedYear}
+            onChange={handleYearChange}
             className="mobile-year-select-full"
             suffixIcon={<Calendar className="mobile-select-calendar-icon" />}
             dropdownStyle={{ minWidth: 160 }}
@@ -820,18 +1365,58 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
             ))}
           </Select>
 
-          <Select
-            value={selectedQuarterCard}
-            onChange={setSelectedQuarterCard}
-            className="mobile-select"
-          >
-            <Option value={QuarterFilter.ALL}>All Quarters</Option>
-            <Option value={QuarterFilter.Q1}>Q1</Option>
-            <Option value={QuarterFilter.Q2}>Q2</Option>
-            <Option value={QuarterFilter.Q3}>Q3</Option>
-            <Option value={QuarterFilter.Q4}>Q4</Option>
-          </Select>
         </div>
+      </div>
+
+      {/* Quarter selector — card-style buttons for All Quarters and Q1-Q4. */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <button
+          type="button"
+          onClick={() => handleQuarterChange(QuarterFilter.ALL)}
+          className={`flex-1 min-w-[58px] flex flex-col items-center gap-0.5 px-2 py-2.5 rounded-2xl border-2 transition-all duration-200 cursor-pointer select-none ${
+            selectedQuarterCard === QuarterFilter.ALL
+              ? "bg-indigo-600 border-indigo-600 text-white shadow-md"
+              : "bg-white border-slate-200 text-slate-700 hover:border-indigo-400"
+          }`}
+        >
+          <span className={`text-base font-extrabold ${
+            selectedQuarterCard === QuarterFilter.ALL ? "text-white" : "text-indigo-600"
+          }`}>
+            All
+          </span>
+          <span className={`text-[9px] font-medium leading-tight text-center ${
+            selectedQuarterCard === QuarterFilter.ALL ? "text-indigo-100" : "text-slate-400"
+          }`}>
+            Quarters
+          </span>
+        </button>
+
+        {([QuarterFilter.Q1, QuarterFilter.Q2, QuarterFilter.Q3, QuarterFilter.Q4] as const).map((q) => {
+          const cfg = quarterDateConfigs.find((c) => c.quarter === q);
+          const dateRange = cfg
+            ? `${dayjs(cfg.startDate).format("DD MMM")} – ${dayjs(cfg.endDate).format("DD MMM")}`
+            : "";
+          const isActive = selectedQuarterCard === q;
+          return (
+            <button
+              key={q}
+              type="button"
+              onClick={() => handleQuarterChange(isActive ? QuarterFilter.ALL : q)}
+              className={`flex-1 min-w-[58px] flex flex-col items-center gap-0.5 px-2 py-2.5 rounded-2xl border-2 transition-all duration-200 cursor-pointer select-none ${
+                isActive
+                  ? "bg-indigo-600 border-indigo-600 text-white shadow-md"
+                  : "bg-white border-slate-200 text-slate-700 hover:border-indigo-400"
+              }`}
+            >
+              <span className={`text-base font-extrabold ${isActive ? "text-white" : "text-indigo-600"}`}>{q}</span>
+              {dateRange && (
+                <span className={`text-[9px] font-medium leading-tight text-center ${
+                  isActive ? "text-indigo-100" : "text-slate-400"
+                }`}>{dateRange}</span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {loading ? (
@@ -842,24 +1427,19 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
         </div>
       ) : filteredSubmissions.length > 0 ? (
         <>
-          {/* Mobile card list — now shows only the current page's slice
-              (paginatedSubmissions) instead of every filtered result, so
-              the page no longer turns into one long continuous scroll. */}
+          {/* Mobile card list — shows only the current page's slice */}
           <div className="mobile-card-list">
             {paginatedSubmissions.map((record) => (
               <SubmissionCard
                 key={record.id}
                 record={record}
+                quarterDateConfigs={quarterDateConfigs}
                 onEvaluate={() => handleOpenEvaluation(record, false)}
                 onView={() => handleOpenEvaluation(record, true)}
               />
             ))}
           </div>
 
-          {/* Compact pagination for the mobile/tablet card list. Only
-              rendered when there's more than one page, and hidden at
-              desktop widths via .mobile-pagination's own media query
-              (the <Table> below has its own built-in pagination there). */}
           {filteredSubmissions.length > CARD_PAGE_SIZE && (
             <div className="mobile-pagination">
               <Pagination
@@ -880,7 +1460,7 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
               rowKey="id"
               pagination={{ pageSize: 10, showSizeChanger: true }}
               className="custom-table"
-              scroll={{ x: 900 }}
+              scroll={{ x: 1000 }}
             />
           </div>
         </>
@@ -904,6 +1484,7 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
         isViewOnly={isViewOnly}
         ratings={ratings}
         finalRating={finalRating}
+        reviewQuarter={reviewQuarter}
         strengths={strengths}
         improvements={improvements}
         remarks={remarks}
@@ -915,11 +1496,171 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
         onSubmitEvaluation={handleSubmitEvaluation}
         setRatings={setRatings}
         setFinalRating={setFinalRating}
+        setReviewQuarter={(quarter) => {
+          reviewQuarterChangedRef.current = true;
+          setReviewQuarter(quarter);
+        }}
         setStrengths={setStrengths}
         setImprovements={setImprovements}
         setRemarks={setRemarks}
         setFieldErrors={setFieldErrors}
       />
+
+      <Modal
+        title="Send Review Notification"
+        open={notificationModalOpen}
+        onCancel={() => {
+          setNotificationModalOpen(false);
+          setAllNotificationEmployees([]);
+          setSelectedNotificationEmployeeIds([]);
+          setModalSearchText("");
+        }}
+        onOk={sendReviewNotifications}
+        okText="Send Notification"
+        confirmLoading={sendingNotifications}
+        width="95%"
+        style={{ top: 24 }}
+      >
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-1">
+            <Checkbox
+              disabled={loadingNotificationEmployees}
+              checked={
+                !loadingNotificationEmployees &&
+                selectableNotificationEmployees.length > 0 &&
+                selectableNotificationEmployees.every((emp: any) =>
+                  selectedNotificationEmployeeIds.includes(emp.employeeId),
+                )
+              }
+              indeterminate={
+                !loadingNotificationEmployees &&
+                selectedNotificationEmployeeIds.length > 0 &&
+                selectedNotificationEmployeeIds.length < selectableNotificationEmployees.length
+              }
+              onChange={(event) =>
+                setSelectedNotificationEmployeeIds(
+                  event.target.checked
+                    ? selectableNotificationEmployees.map((emp: any) => emp.employeeId)
+                    : [],
+                )
+              }
+            >
+              Select all employees requiring a review
+              {!loadingNotificationEmployees && allNotificationEmployees.length > 0 && (
+                <span className="ml-2 text-xs text-slate-400 font-normal">
+                  ({selectableNotificationEmployees.length} requiring review / {allNotificationEmployees.length} total members)
+                </span>
+              )}
+            </Checkbox>
+
+            {allNotificationEmployees.length > 3 && (
+              <div className="w-full sm:w-64">
+                <Input
+                  prefix={<Search size={14} className="text-slate-400 mr-1" />}
+                  placeholder="Search name or ID..."
+                  size="small"
+                  value={modalSearchText}
+                  onChange={(e) => setModalSearchText(e.target.value)}
+                  allowClear
+                  className="rounded-lg"
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="overflow-x-auto border border-slate-200 rounded-lg">
+            <div className="min-w-[700px]">
+              <div className="grid grid-cols-[auto_1.4fr_1fr_1.2fr_0.8fr_1fr_1fr] gap-3 px-3 py-2 text-xs font-bold uppercase text-slate-500 bg-slate-50 border-b border-slate-200">
+                <span />
+                <span>Employee Name</span>
+                <span>Employee ID</span>
+                <span>Designation</span>
+                <span>Quarter</span>
+                <span>Start Date</span>
+                <span>End Date</span>
+              </div>
+
+              <div className="max-h-[380px] overflow-y-auto">
+                {loadingNotificationEmployees ? (
+                  <div className="flex justify-center items-center p-8">
+                    <Spin tip="Loading all employees..." />
+                  </div>
+                ) : allNotificationEmployees.length === 0 ? (
+                  <p className="p-4 text-slate-500">No employees found.</p>
+                ) : (
+                  allNotificationEmployees
+                    .filter((emp: any) => {
+                      if (!modalSearchText.trim()) return true;
+                      const q = modalSearchText.toLowerCase();
+                      return (
+                        (emp.employeeName || "").toLowerCase().includes(q) ||
+                        (emp.employeeId || "").toLowerCase().includes(q) ||
+                        (emp.designation || "").toLowerCase().includes(q) ||
+                        (emp.department || "").toLowerCase().includes(q)
+                      );
+                    })
+                    .map((emp: any) => {
+                      const submission = submissions.find((s) => s.employeeId === emp.employeeId);
+                      const rawQuarter = emp.quarter || submission?.quarter;
+                      const quarterCode = rawQuarter
+                        ? rawQuarter.trim().split(/\s+/)[0]
+                        : (selectedQuarterCard !== QuarterFilter.ALL
+                            ? selectedQuarterCard
+                            : (quarterDateConfigs[0]?.quarter || "—"));
+                      const quarterConfig = (quarterCode && quarterCode !== "—")
+                        ? quarterDateConfigs.find((c) => c.quarter === quarterCode)
+                        : undefined;
+                      const startDateStr = quarterConfig?.startDate
+                        ? dayjs(quarterConfig.startDate).format("DD MMM YYYY")
+                        : "—";
+                      const endDateStr = quarterConfig?.endDate
+                        ? dayjs(quarterConfig.endDate).format("DD MMM YYYY")
+                        : "—";
+                      const isReviewed = Boolean(
+                        emp.isCompleted ||
+                        emp.reviewStatus === ManagerReviewStatus.REVIEWED ||
+                        submission?.reviewStatus === ManagerReviewStatus.REVIEWED,
+                      );
+
+                      return (
+                        <div
+                          key={emp.employeeId}
+                          className="grid grid-cols-[auto_1.4fr_1fr_1.2fr_0.8fr_1fr_1fr] items-center gap-3 p-3 border-b border-slate-100 last:border-b-0 hover:bg-slate-50/60 transition-colors text-xs"
+                        >
+                          <Checkbox
+                            disabled={isReviewed}
+                            checked={selectedNotificationEmployeeIds.includes(emp.employeeId)}
+                            onChange={(event) =>
+                              setSelectedNotificationEmployeeIds((current) =>
+                                event.target.checked
+                                  ? [...current, emp.employeeId]
+                                  : current.filter((id) => id !== emp.employeeId),
+                              )
+                            }
+                          />
+                          <span className="font-semibold text-slate-800 flex items-center gap-1.5 flex-wrap">
+                            {emp.employeeName}
+                            {isReviewed && (
+                              <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-full px-1.5 py-0.5">
+                                Reviewed
+                              </span>
+                            )}
+                          </span>
+                          <span className="text-slate-500">ID: {emp.employeeId}</span>
+                          <span className="text-slate-600">{emp.designation || submission?.designation || "Employee"}</span>
+                          <span className="text-slate-600">{quarterCode || "—"}</span>
+                          <span className="text-slate-500">{startDateStr}</span>
+                          <span className="text-slate-500">{endDateStr}</span>
+                        </div>
+                      );
+                    })
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
     </div>
   );
 };
