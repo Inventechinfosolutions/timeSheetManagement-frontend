@@ -49,6 +49,10 @@ export interface ManagerReviewItem {
   strengths?: string | null;
   improvements?: string | null;
   remarks?: string | null;
+  employeeRole?: string;
+  evaluatorName?: string | null;
+  evaluatorRole?: string | null;
+  evaluatorId?: string | null;
 }
 
 export interface ReviewStats {

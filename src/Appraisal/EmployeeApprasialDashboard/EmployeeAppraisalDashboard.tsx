@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Table, Spin, message, Tooltip, Select, Modal } from 'antd';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import {
   Plus, Edit3, Eye, Calendar, Star, ClipboardList,
@@ -110,9 +110,9 @@ export const getDisplayAverageRating = (record?: QuarterlyReview | null): string
       try { parsed = JSON.parse(parsed); } catch { }
     }
     if (typeof parsed === 'object' && parsed !== null) {
-      const values = Object.values(parsed).map(Number).filter(v => !isNaN(v) && v > 0);
-      if (values.length > 0) {
-        return (values.reduce((a, b) => a + b, 0) / values.length).toFixed(1);
+      const ratingValues = Object.values(parsed).map(Number).filter((rating) => !isNaN(rating) && rating > 0);
+      if (ratingValues.length > 0) {
+        return (ratingValues.reduce((sum, rating) => sum + rating, 0) / ratingValues.length).toFixed(1);
       }
     }
   }
@@ -237,7 +237,13 @@ const useIsMobileOrTablet = (breakpoint: number = 1024) => {
 const EmployeeAppraisalDashboard: React.FC = () => {
   const isMobileOrTablet = useIsMobileOrTablet();
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch<AppDispatch>();
+
+  const isManager = location.pathname.startsWith('/manager-dashboard');
+  const isAdmin = location.pathname.startsWith('/admin-dashboard');
+  const basePath = isManager ? '/manager-dashboard' : isAdmin ? '/admin-dashboard' : '/employee-dashboard';
+  const reviewPath = isManager || isAdmin ? `${basePath}/review` : `${basePath}/quarterly-review`;
 
   const [reviews, setReviews] = useState<QuarterlyReview[]>([]);
   const [currentQuarter, setCurrentQuarter] = useState<string>('');
@@ -251,20 +257,20 @@ const EmployeeAppraisalDashboard: React.FC = () => {
     const fetch = async () => {
       try {
         setLoading(true);
-        const [q, allUnfiltered] = await Promise.all([
+        const [quarterResponse, allUnfilteredReviews] = await Promise.all([
           dispatch(getCurrentQuarter()).unwrap(),
           dispatch(getAllReviews(undefined)).unwrap(),
         ]);
-        const resolvedQuarter = q ?? '';
+        const resolvedQuarter = quarterResponse ?? '';
         setCurrentQuarter(resolvedQuarter);
 
         const uniqueFYs = Array.from(
-          new Set(allUnfiltered.map((r) => getFinancialYear(r.quarter)).filter((fy) => fy !== '—'))
-        ).sort((a, b) => b.localeCompare(a));
+          new Set(allUnfilteredReviews.map((reviewRecord) => getFinancialYear(reviewRecord.quarter)).filter((financialYear) => financialYear !== '—'))
+        ).sort((financialYearA, financialYearB) => financialYearB.localeCompare(financialYearA));
         setFyOptions(uniqueFYs);
 
         setSelectedFY('');
-        setReviews(allUnfiltered);
+        setReviews(allUnfilteredReviews);
       } catch (err: any) {
         message.error(err?.message ?? 'Failed to load quarterly reviews.');
       } finally {
@@ -274,12 +280,12 @@ const EmployeeAppraisalDashboard: React.FC = () => {
     fetch();
   }, [dispatch]);
 
-  const handleFYChange = async (fy: string) => {
-    setSelectedFY(fy);
+  const handleFYChange = async (financialYear: string) => {
+    setSelectedFY(financialYear);
     setFyLoading(true);
     try {
-      const fyParam = fy ? fy.replace('FY ', 'FY') : undefined;
-      const filtered = await dispatch(getAllReviews(fyParam)).unwrap();
+      const financialYearParam = financialYear ? financialYear.replace('FY ', 'FY') : undefined;
+      const filtered = await dispatch(getAllReviews(financialYearParam)).unwrap();
       setReviews(filtered);
     } catch (err: any) {
       message.error(err?.message ?? 'Failed to filter reviews.');
@@ -309,13 +315,13 @@ const EmployeeAppraisalDashboard: React.FC = () => {
       setSelectedReviewForWithdraw(null);
 
       // Refresh reviews list
-      const fyParam = selectedFY ? selectedFY.replace('FY ', 'FY') : undefined;
-      const updated = await dispatch(getAllReviews(fyParam)).unwrap();
+      const financialYearParam = selectedFY ? selectedFY.replace('FY ', 'FY') : undefined;
+      const updated = await dispatch(getAllReviews(financialYearParam)).unwrap();
       setReviews(updated);
 
       const uniqueFYs = Array.from(
-        new Set(updated.map((r) => getFinancialYear(r.quarter)).filter((fy) => fy !== '—'))
-      ).sort((a, b) => b.localeCompare(a));
+        new Set(updated.map((reviewRecord) => getFinancialYear(reviewRecord.quarter)).filter((financialYear) => financialYear !== '—'))
+      ).sort((financialYearA, financialYearB) => financialYearB.localeCompare(financialYearA));
       setFyOptions(uniqueFYs);
     } catch (err: any) {
       messageApi.error(err || 'Failed to withdraw quarterly review.');
@@ -417,7 +423,7 @@ const EmployeeAppraisalDashboard: React.FC = () => {
     );
   }
 
-  const currentReview = reviews.find((r) => r.quarter === currentQuarter);
+  const currentReview = reviews.find((reviewItem) => reviewItem.quarter === currentQuarter);
   const currentStatus = !currentReview
     ? ReviewStatus.NOT_STARTED
     : currentReview.status === ReviewStatus.DRAFT
@@ -451,8 +457,8 @@ const EmployeeAppraisalDashboard: React.FC = () => {
 
         navigate(
           currentQuarter
-            ? `/employee-dashboard/quarterly-review/${quarterToSlug(currentQuarter)}`
-            : "/employee-dashboard/quarterly-review"
+            ? `${reviewPath}/${quarterToSlug(currentQuarter)}`
+            : reviewPath
         );
       }}
       aria-disabled={hasCurrentQuarterReview}
@@ -478,16 +484,16 @@ const EmployeeAppraisalDashboard: React.FC = () => {
       dataIndex: 'quarter',
       key: 'quarter',
       width: '9%',
-      render: (q: string) => (
-        <span className="font-semibold text-black text-sm">{q?.split(' ')[0] ?? q}</span>
+      render: (quarterName: string) => (
+        <span className="font-semibold text-black text-sm">{quarterName?.split(' ')[0] ?? quarterName}</span>
       ),
     },
     {
       title: 'Financial Year',
       key: 'fy',
       width: '13%',
-      render: (_: any, r: QuarterlyReview) => (
-        <span className="font-semibold text-black text-sm">{getFinancialYear(r.quarter)}</span>
+      render: (_value: any, reviewRecord: QuarterlyReview) => (
+        <span className="font-semibold text-black text-sm">{getFinancialYear(reviewRecord.quarter)}</span>
       ),
     },
     {
@@ -495,23 +501,26 @@ const EmployeeAppraisalDashboard: React.FC = () => {
       dataIndex: 'managerName',
       key: 'managerName',
       width: '14%',
-      render: (m: string | null) =>
-        m ? (
-          <Tooltip title={m}>
-            <span>{m}</span>
+      render: (managerName: string | null, record: QuarterlyReview) => {
+        if (record.status === ReviewStatus.DRAFT || record.status === ReviewStatus.NOT_STARTED) {
+          return <span className="text-slate-400 text-sm">—</span>;
+        }
+        const displayEvaluator = managerName || (isManager ? 'CEO & Admin' : '—');
+        return (
+          <Tooltip title={displayEvaluator}>
+            <span>{displayEvaluator}</span>
           </Tooltip>
-        ) : (
-          <span className="text-slate-400 text-sm">—</span>
-        ),
+        );
+      },
     },
     {
       title: 'Reviewed On',
       dataIndex: 'reviewedOn',
       key: 'reviewedOn',
       width: '13%',
-      render: (d: string | null) => (
+      render: (reviewedDate: string | null) => (
         <span className="text-slate-500 text-sm">
-          {d ? new Date(d).toLocaleDateString('en-IN') : '—'}
+          {reviewedDate ? new Date(reviewedDate).toLocaleDateString('en-IN') : '—'}
         </span>
       ),
     },
@@ -520,10 +529,10 @@ const EmployeeAppraisalDashboard: React.FC = () => {
       dataIndex: 'finalRating',
       key: 'finalRating',
       width: '12%',
-      render: (_: any, record: QuarterlyReview) => {
-        const avg = getDisplayAverageRating(record);
-        return avg ? (
-          <span className="font-semibold text-indigo-700">{avg}</span>
+      render: (_value: any, record: QuarterlyReview) => {
+        const avgRating = getDisplayAverageRating(record);
+        return avgRating ? (
+          <span className="font-semibold text-indigo-700">{avgRating}</span>
         ) : (
           <span className="text-slate-400 text-sm">—</span>
         );
@@ -534,22 +543,22 @@ const EmployeeAppraisalDashboard: React.FC = () => {
       dataIndex: 'reviewStatus',
       key: 'reviewStatus',
       width: '14%',
-      render: (s: string | null, record: QuarterlyReview) => {
+      render: (statusValue: string | null, record: QuarterlyReview) => {
         const isDraftOrNotStarted =
           record.status === ReviewStatus.DRAFT ||
           record.status === ReviewStatus.NOT_STARTED;
 
-        if (isDraftOrNotStarted || !s) {
+        if (isDraftOrNotStarted || !statusValue) {
           return <span className="text-slate-400 text-sm">—</span>;
         }
-        return <StatusBadge status={s} showStatusIndicator={false} />;
+        return <StatusBadge status={statusValue} showStatusIndicator={false} />;
       },
     },
     {
       title: 'Action',
       key: 'action',
       width: '10%',
-      render: (_: any, record: QuarterlyReview) => {
+      render: (_value: any, record: QuarterlyReview) => {
         const isEditable =
           record.quarter === currentQuarter &&
           record.status === ReviewStatus.DRAFT;
@@ -570,7 +579,7 @@ const EmployeeAppraisalDashboard: React.FC = () => {
               tooltip="View"
               tone="indigo"
               onClick={() =>
-                navigate(`/employee-dashboard/quarterly-review/${quarterToSlug(record.quarter)}?mode=view`)
+                navigate(`${reviewPath}/${quarterToSlug(record.quarter)}?mode=view`)
               }
             />
             {isEditable && (
@@ -579,7 +588,7 @@ const EmployeeAppraisalDashboard: React.FC = () => {
                 tooltip="Edit"
                 tone="indigo"
                 onClick={() =>
-                  navigate(`/employee-dashboard/quarterly-review/${quarterToSlug(record.quarter)}`)
+                  navigate(`${reviewPath}/${quarterToSlug(record.quarter)}`)
                 }
               />
             )}
@@ -745,7 +754,7 @@ const EmployeeAppraisalDashboard: React.FC = () => {
                         : '—'}
                     </span>
                   }
-                  subtext="Manager evaluation"
+                  subtext={isManager ? "CEO & Admin evaluation" : "Manager evaluation"}
                   delay={160}
                 />
                 <StatCard
@@ -787,9 +796,9 @@ const EmployeeAppraisalDashboard: React.FC = () => {
                       prefix={<Calendar className="w-4 h-4 text-indigo-500" />}
                       popupMatchSelectWidth
                       style={{ width: 180 }}
-                      options={fyOptions.map((fy) => ({
-                        label: fy,
-                        value: fy,
+                      options={fyOptions.map((financialYear) => ({
+                        label: financialYear,
+                        value: financialYear,
                       }))}
                     />
                   )}
@@ -860,7 +869,7 @@ const EmployeeAppraisalDashboard: React.FC = () => {
                       columns={columns}
                       dataSource={reviews}
                       loading={fyLoading}
-                      rowKey={(r) => r.quarter}
+                      rowKey={(reviewItem) => reviewItem.quarter}
                       pagination={false}
                       size="middle"
                       tableLayout="fixed"

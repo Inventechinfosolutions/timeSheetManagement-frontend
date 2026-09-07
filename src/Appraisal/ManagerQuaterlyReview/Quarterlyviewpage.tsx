@@ -278,7 +278,20 @@ const QuarterlyViewPage: React.FC<QuarterlyViewPageProps> = ({
                   {currentReview.employeeName.charAt(0).toUpperCase()}
                 </Avatar>
                 <div>
-                  <h4 className="font-bold text-slate-900 text-base">{currentReview.employeeName}</h4>
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-bold text-slate-900 text-base">{currentReview.employeeName}</h4>
+                    {currentReview.employeeRole && (
+                      <span
+                        className={`px-2 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider ${
+                          currentReview.employeeRole.toUpperCase() === "MANAGER"
+                            ? "bg-purple-100 text-purple-800 border border-purple-200"
+                            : "bg-blue-100 text-blue-800 border border-blue-200"
+                        }`}
+                      >
+                        {currentReview.employeeRole}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-slate-500">
                     ID: <span className="font-semibold text-slate-700">{currentReview.employeeId}</span> &bull; {currentReview.department} &bull; {currentReview.designation}
                   </p>
@@ -299,6 +312,17 @@ const QuarterlyViewPage: React.FC<QuarterlyViewPageProps> = ({
                       : '—'}
                   </p>
                 </div>
+                {currentReview.evaluatorName && (
+                  <>
+                    <Divider type="vertical" className="h-8" />
+                    <div>
+                      <p className="text-slate-400 font-normal">Evaluated By</p>
+                      <p className="text-slate-800 font-semibold">
+                        {currentReview.evaluatorName} {currentReview.evaluatorRole ? `(${currentReview.evaluatorRole})` : ''}
+                      </p>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 

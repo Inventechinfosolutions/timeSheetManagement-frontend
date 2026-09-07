@@ -58,7 +58,8 @@ const Header = ({
   const { currentUser } = useAppSelector((state) => state.user);
 
   // Permissions
-  const isAdmin = currentUser?.userType === UserType.ADMIN;
+  const isAdmin = currentUser?.userType === UserType.ADMIN || currentUser?.userType === UserType.CEO;
+  const isCEO = currentUser?.userType === UserType.CEO;
   const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
   const isManager = currentUser?.userType === UserType.MANAGER;
   const isApprover = isAdmin || isManager || isReceptionist;
@@ -911,20 +912,24 @@ const Header = ({
                   </div>
                   <div className="profile-user-info flex flex-col items-start min-w-[70px]">
                     <span className="text-sm font-bold text-white truncate max-w-[120px] xl:max-w-[160px]">
-                      {isAdmin
-                        ? "Admin"
-                        : isReceptionist
-                          ? "Receptionist"
-                          : currentUser?.aliasLoginName?.split(" ")[0] || "User"}
+                      {isCEO
+                        ? "CEO"
+                        : isAdmin
+                          ? "Admin"
+                          : isReceptionist
+                            ? "Receptionist"
+                            : currentUser?.aliasLoginName?.split(" ")[0] || "User"}
                     </span>
                     <span className="text-[11px] text-blue-100/80 truncate max-w-[120px] xl:max-w-[160px]">
-                      {isAdmin
-                        ? "Administrator"
-                        : isReceptionist
-                          ? "View only"
-                          : isManager
-                            ? "Manager"
-                            : "Employee"}
+                      {isCEO
+                        ? "Chief Executive Officer"
+                        : isAdmin
+                          ? "Administrator"
+                          : isReceptionist
+                            ? "View only"
+                            : isManager
+                              ? "Manager"
+                              : "Employee"}
                     </span>
                   </div>
                   <ChevronDown
@@ -937,7 +942,16 @@ const Header = ({
                 {/* Desktop Profile Menu Dropdown */}
                 {isDropdownOpen && (
                   <div className="profile-menu absolute right-0 top-14 w-[300px] xl:w-[330px] bg-white rounded-xl shadow-[0px_20px_50px_0px_#111c440d] border border-gray-100 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                    {isAdmin ? (
+                    {isCEO ? (
+                      <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
+                        <p className="text-sm font-bold text-[#1B2559]">
+                          CEO
+                        </p>
+                        <p className="text-xs text-[#667eea] font-medium">
+                          Chief Executive Officer
+                        </p>
+                      </div>
+                    ) : isAdmin ? (
                       <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
                         <p className="text-sm font-bold text-[#1B2559]">
                           Admin

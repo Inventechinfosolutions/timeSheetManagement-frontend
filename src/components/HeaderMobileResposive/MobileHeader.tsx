@@ -56,7 +56,7 @@ const MobileHeader = ({
   const { currentUser } = useAppSelector((state) => state.user);
 
   // Permissions
-  const isAdmin = currentUser?.userType === UserType.ADMIN;
+  const isAdmin = currentUser?.userType === UserType.ADMIN || currentUser?.userType === UserType.CEO;
   const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
   const isManager = currentUser?.userType === UserType.MANAGER;
   const isApprover = isAdmin || isManager || isReceptionist;

@@ -212,7 +212,7 @@ const EmployeeListView = () => {
     lastLoggedIn: emp.lastLoggedIn,
     lastLinkSentAt: emp.lastLinkSentAt,
     isActive: emp.userStatus !== UserStatus.INACTIVE,
-    isAdmin: emp.userType === UserType.ADMIN,
+    isAdmin: emp.userType === UserType.ADMIN || emp.userType === UserType.CEO,
   }));
 
   const currentItems = employees.filter((emp) => {

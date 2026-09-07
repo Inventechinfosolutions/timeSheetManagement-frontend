@@ -161,7 +161,7 @@ const SidebarLayout = ({
                 <User className="w-6 h-6 text-white" />
               </div>
               <span className="text-xl font-bold text-white tracking-tight whitespace-nowrap">
-                {currentUser?.userType === UserType.ADMIN
+                {(currentUser?.userType === UserType.ADMIN || currentUser?.userType === UserType.CEO)
                   ? "Admin"
                   : currentUser?.userType === UserType.MANAGER
                     ? "Manager"
@@ -202,7 +202,7 @@ const SidebarLayout = ({
                   {entity?.employeeId || "EMP001"}
                 </span>
                 <span className="text-[10px] font-medium text-blue-100 uppercase tracking-widest whitespace-nowrap">
-                  {currentUser?.userType === UserType.ADMIN
+                  {(currentUser?.userType === UserType.ADMIN || currentUser?.userType === UserType.CEO)
                     ? "Admin"
                     : currentUser?.userType === UserType.MANAGER
                       ? "Manager"

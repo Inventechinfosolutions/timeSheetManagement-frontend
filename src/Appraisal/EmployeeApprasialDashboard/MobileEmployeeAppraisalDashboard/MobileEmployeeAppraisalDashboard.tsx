@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, Spin, Tooltip, Select, message } from 'antd';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
     Plus,
     Edit3,
@@ -35,7 +35,7 @@ interface MobileEmployeeAppraisalDashboardProps {
     fyOptions: string[];
     selectedFY: string;
     fyLoading: boolean;
-    onFYChange: (fy: string) => void;
+    onFYChange: (financialYear: string) => void;
     onWithdraw?: (record: QuarterlyReview) => void;
     onDownload?: (record: QuarterlyReview) => void;
 }
@@ -139,7 +139,7 @@ const ReviewCard: React.FC<{
 
                         <p className="mobile-review-manager-line">
                             <User className="mobile-review-manager-icon" />
-                            Submitted to {record.managerName ?? '—'}
+                            Submitted to {record.managerName || (typeof window !== 'undefined' && window.location.pathname.startsWith('/manager-dashboard') ? 'CEO & Admin' : '—')}
                         </p>
                     </div>
 
@@ -242,7 +242,13 @@ const MobileEmployeeAppraisalDashboard: React.FC<
     onDownload,
 }) => {
         const navigate = useNavigate();
+        const location = useLocation();
         const [messageApi, contextHolder] = message.useMessage();
+
+        const isManager = location.pathname.startsWith('/manager-dashboard');
+        const isAdmin = location.pathname.startsWith('/admin-dashboard');
+        const basePath = isManager ? '/manager-dashboard' : isAdmin ? '/admin-dashboard' : '/employee-dashboard';
+        const reviewPath = isManager || isAdmin ? `${basePath}/review` : `${basePath}/quarterly-review`;
 
         if (loading) {
             return (
@@ -253,7 +259,7 @@ const MobileEmployeeAppraisalDashboard: React.FC<
         }
 
         const currentReview = reviews.find(
-            (r) => r.quarter === currentQuarter
+            (reviewItem) => reviewItem.quarter === currentQuarter
         );
 
         const currentStatus = !currentReview
@@ -305,10 +311,10 @@ const MobileEmployeeAppraisalDashboard: React.FC<
 
                     navigate(
                         currentQuarter
-                            ? `/employee-dashboard/quarterly-review/${quarterToSlug(
+                            ? `${reviewPath}/${quarterToSlug(
                                 currentQuarter
                             )}`
-                            : '/employee-dashboard/quarterly-review'
+                            : reviewPath
                     );
                 }}
                 aria-disabled={hasCurrentQuarterReview}
@@ -439,7 +445,7 @@ const MobileEmployeeAppraisalDashboard: React.FC<
                                 }
                                 iconTone="indigo"
                                 label="Review status"
-                                sublabel="Manager evaluation"
+                                sublabel={isManager ? "CEO & Admin evaluation" : "Manager evaluation"}
                                 value={
                                     (currentStatus === ReviewStatus.SUBMITTED && currentReview?.reviewStatus)
                                         ? currentReview.reviewStatus
@@ -516,9 +522,9 @@ const MobileEmployeeAppraisalDashboard: React.FC<
                                         <ChevronDown className="w-4 h-4 text-slate-400" />
                                     }
                                     popupMatchSelectWidth
-                                    options={fyOptions.map((fy) => ({
-                                        label: fy,
-                                        value: fy,
+                                    options={fyOptions.map((financialYear) => ({
+                                        label: financialYear,
+                                        value: financialYear,
                                     }))}
                                 />
 
@@ -552,7 +558,7 @@ const MobileEmployeeAppraisalDashboard: React.FC<
 
                                             onView={() =>
                                                 navigate(
-                                                    `/employee-dashboard/quarterly-review/${quarterToSlug(
+                                                    `${reviewPath}/${quarterToSlug(
                                                         record.quarter
                                                     )}?mode=view`
                                                 )
@@ -560,7 +566,7 @@ const MobileEmployeeAppraisalDashboard: React.FC<
 
                                             onEdit={() =>
                                                 navigate(
-                                                    `/employee-dashboard/quarterly-review/${quarterToSlug(
+                                                    `${reviewPath}/${quarterToSlug(
                                                         record.quarter
                                                     )}`
                                                 )

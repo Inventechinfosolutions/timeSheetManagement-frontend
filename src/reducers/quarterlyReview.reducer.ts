@@ -57,6 +57,10 @@ export interface QuarterlyReview {
   strengths?: string | null;
   improvements?: string | null;
   remarks?: string | null;
+  evaluatorName?: string | null;
+  evaluatorRole?: string | null;
+  evaluatorId?: string | null;
+  employeeRole?: string | null;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: string;
@@ -72,6 +76,7 @@ export interface SaveOrSubmitPayload {
   teamContribution?: TeamContributionItem[];
   averageRating?: number | null;
   companyEnvironment?: CompanyEnvironment;
+  managerName?: string;
 }
 
 interface QuarterlyReviewState {

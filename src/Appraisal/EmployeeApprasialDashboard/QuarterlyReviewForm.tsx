@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Form, Button, message, Spin, Modal } from 'antd';
-import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useParams, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { Save, Send, ArrowLeft, ArrowRight, ChevronLeft, CheckCircle2, User, UserX, Star, HourglassIcon, MessageSquare, TrendingUp, ThumbsUp } from 'lucide-react';
+import { Save, Send, ArrowLeft, ArrowRight, ChevronLeft, CheckCircle2, User, UserX, Star, HourglassIcon } from 'lucide-react';
 
 import { QuarterlyReviewStepper } from './desktop/QuarterlyReviewStepper';
 import { OverviewStep } from './steps/desktop_steps/OverviewStep';
@@ -12,9 +12,9 @@ import { TeamContributionStep, DEFAULT_TEAM_CONTRIBUTION } from './steps/desktop
 import { CompanyEnvironmentStep } from './steps/desktop_steps/CompanyEnvironmentStep';
 import { ReviewStep } from './steps/desktop_steps/ReviewStep';
 import { ReviewStatus } from './enums/Appraisal.enums';
+import { UserType } from '../../enums';
 import {
   isQuarterOver,
-  formatQuarterRange,
   slugToQuarter,
 } from './utils/fyQuarter.utils';
 import type { RootState, AppDispatch } from '../../store';
@@ -141,10 +141,17 @@ const useIsMobile = (breakpoint: number = 1024): boolean => {
 
 const QuarterlyReviewForm = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { date: quarterParamSlug } = useParams<{ tab?: string; date?: string }>();
   const [searchParams] = useSearchParams();
   const rawQuarterParam = quarterParamSlug || searchParams.get('quarter') || '';
   const quarterParam = slugToQuarter(rawQuarterParam);
+
+  const getBasePath = () => {
+    if (location.pathname.startsWith('/manager-dashboard')) return '/manager-dashboard';
+    if (location.pathname.startsWith('/admin-dashboard')) return '/admin-dashboard';
+    return '/employee-dashboard';
+  };
 
   const dispatch = useDispatch<AppDispatch>();
   const [form] = Form.useForm();
@@ -224,9 +231,9 @@ const QuarterlyReviewForm = () => {
           try {
             const allReviews = await dispatch(getAllReviews()).unwrap();
             existing = allReviews.find(
-              (r: any) =>
-                r.quarter === resolvedQuarter ||
-                r.quarter?.trim() === resolvedQuarter?.trim()
+              (reviewRecord: any) =>
+                reviewRecord.quarter === resolvedQuarter ||
+                reviewRecord.quarter?.trim() === resolvedQuarter?.trim()
             ) ?? null;
           } catch (allErr) {
             console.warn('[QRForm] getAllReviews fallback failed', allErr);
@@ -510,13 +517,17 @@ const QuarterlyReviewForm = () => {
       const result = await dispatch(saveOrSubmitReview(payload)).unwrap();
       setBackendStatus(result.status);
       message.success('Draft saved successfully!');
-      navigate('/employee-dashboard/appraisal');
+      navigate(`${getBasePath()}/appraisal`);
     } catch (err: any) {
       message.error(err?.message ?? 'Failed to save draft.');
     } finally {
       setSaving(false);
     }
   };
+
+  const isManagerUser =
+    currentUser?.userType === UserType.MANAGER ||
+    location.pathname.startsWith('/manager-dashboard');
 
   const handleSubmitClick = async () => {
     try {
@@ -537,6 +548,11 @@ const QuarterlyReviewForm = () => {
       const fetchedManagerName: string | undefined = result?.managerName;
 
       if (!fetchedManagerName) {
+        if (isManagerUser) {
+          setManagerName('CEO & Admin');
+          setConfirmModalOpen(true);
+          return;
+        }
         setNoManagerModalOpen(true);
         return;
       }
@@ -544,6 +560,11 @@ const QuarterlyReviewForm = () => {
       setManagerName(fetchedManagerName);
       setConfirmModalOpen(true);
     } catch {
+      if (isManagerUser) {
+        setManagerName('CEO & Admin');
+        setConfirmModalOpen(true);
+        return;
+      }
       setNoManagerModalOpen(true);
     } finally {
       setFetchingManager(false);
@@ -553,14 +574,17 @@ const QuarterlyReviewForm = () => {
   const handleConfirmedSubmit = async () => {
     try {
       setSaving(true);
-      const payload = getFormPayload(ReviewStatus.SUBMITTED);
+      const payload = {
+        ...getFormPayload(ReviewStatus.SUBMITTED),
+        managerName: managerName || (isManagerUser ? 'CEO & Admin' : undefined),
+      };
       const result = await dispatch(saveOrSubmitReview(payload)).unwrap();
       setBackendStatus(result.status);
       setConfirmModalOpen(false);
       message.success('Quarterly review submitted successfully!');
-      navigate('/employee-dashboard/appraisal');
-    } catch (err: any) {
-      message.error(err?.message ?? 'Failed to submit review.');
+      navigate(`${getBasePath()}/appraisal`);
+    } catch (error: any) {
+      message.error(error?.message ?? 'Failed to submit review.');
     } finally {
       setSaving(false);
     }
@@ -654,7 +678,7 @@ const QuarterlyReviewForm = () => {
       `}</style>
       <div ref={rootRef} className="w-full px-2.5 py-2 quarterly-review-form-wrapper">
         <button
-          onClick={() => navigate('/employee-dashboard/appraisal')}
+          onClick={() => navigate(`${getBasePath()}/appraisal`)}
           className="hidden lg:inline-flex items-center gap-1.5 text-[#A3AED0] hover:text-[#3311CC] font-semibold text-sm transition-colors cursor-pointer"
         >
           <ChevronLeft className="w-4 h-4" />
@@ -710,15 +734,19 @@ const QuarterlyReviewForm = () => {
 
               {/* ── LEFT COLUMN: Employee Review Steps ── */}
               <div className="flex-1 min-w-0 flex flex-col gap-5">
-                {/* "Submitted to Manager" banner when no eval yet */}
+                {/* "Submitted to Evaluators" banner when no eval yet */}
                 {!managerEvaluation && managerName && (
                   <div className="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-2xl px-5 py-4 shadow-sm">
                     <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
                       <User className="w-5 h-5 text-blue-600" />
                     </div>
                     <div>
-                      <p className="text-xs text-slate-500 leading-none mb-1 font-semibold uppercase tracking-wider">Submitted to Manager</p>
-                      <p className="text-base font-semibold text-slate-800 mb-0">{managerName}</p>
+                      <p className="text-xs text-slate-500 leading-none mb-1 font-semibold uppercase tracking-wider">Submitted to Evaluators</p>
+                      <p className="text-base font-semibold text-slate-800 mb-0">
+                        {isManagerUser || managerName === 'CEO & Admin'
+                          ? 'CEO & Admin'
+                          : `Manager (${managerName}), Admin & CEO`}
+                      </p>
                     </div>
                   </div>
                 )}
@@ -758,10 +786,10 @@ const QuarterlyReviewForm = () => {
                     {/* Overall Rating */}
                     {(() => {
                       const managerRatingValues = managerEvaluation.ratings
-                        ? Object.values(managerEvaluation.ratings).map(Number).filter(v => !isNaN(v) && v > 0)
+                        ? Object.values(managerEvaluation.ratings).map(Number).filter((ratingScore) => !isNaN(ratingScore) && ratingScore > 0)
                         : [];
                       const managerAvgScore = managerRatingValues.length > 0
-                        ? (managerRatingValues.reduce((a, b) => a + b, 0) / managerRatingValues.length).toFixed(1)
+                        ? (managerRatingValues.reduce((accumulatedTotal, currentRating) => accumulatedTotal + currentRating, 0) / managerRatingValues.length).toFixed(1)
                         : null;
 
                       if (!managerAvgScore && !managerEvaluation.finalRating) return null;
@@ -801,16 +829,16 @@ const QuarterlyReviewForm = () => {
                       <div className="mt-4">
                         <h4 className="text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-2">Category Ratings</h4>
                         <div className="flex flex-col gap-2">
-                          {RATING_CATEGORIES.map((cat) => {
-                            const val = managerEvaluation.ratings?.[cat.key] || 0;
+                          {RATING_CATEGORIES.map((categoryItem) => {
+                            const scoreValue = managerEvaluation.ratings?.[categoryItem.key] || 0;
                             return (
-                              <div key={cat.key} className="bg-white/80 border border-slate-200/80 rounded-xl px-3 py-2 flex items-center justify-between gap-2">
-                                <span className="text-xs font-medium text-slate-700">{cat.label}</span>
+                              <div key={categoryItem.key} className="bg-white/80 border border-slate-200/80 rounded-xl px-3 py-2 flex items-center justify-between gap-2">
+                                <span className="text-xs font-medium text-slate-700">{categoryItem.label}</span>
                                 <div className="flex items-center gap-0.5">
-                                  {[1, 2, 3, 4, 5].map((star) => (
-                                    <Star key={star} className={`w-3.5 h-3.5 ${star <= val ? 'text-amber-400 fill-amber-400' : 'text-slate-200'}`} />
+                                  {[1, 2, 3, 4, 5].map((starRating) => (
+                                    <Star key={starRating} className={`w-3.5 h-3.5 ${starRating <= scoreValue ? 'text-amber-400 fill-amber-400' : 'text-slate-200'}`} />
                                   ))}
-                                  <span className="text-xs font-bold text-slate-600 ml-1">{val}/5</span>
+                                  <span className="text-xs font-bold text-slate-600 ml-1">{scoreValue}/5</span>
                                 </div>
                               </div>
                             );
@@ -960,12 +988,18 @@ const QuarterlyReviewForm = () => {
           {managerName && (
             <div className="mt-3 p-3 bg-blue-50 border border-blue-100 rounded-xl flex items-center gap-2.5 text-xs text-blue-800">
               <User className="w-4 h-4 text-blue-600 shrink-0" />
-              <span>Assigned Manager: <strong>{managerName}</strong></span>
+              <span>
+                {isManagerUser || managerName === 'CEO & Admin' ? (
+                  <>Assigned Evaluators: <strong>CEO & Admin</strong></>
+                ) : (
+                  <>Assigned Evaluators: <strong>Manager ({managerName}), Admin & CEO</strong></>
+                )}
+              </span>
             </div>
           )}
 
           <div className="mt-3 p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-500 leading-relaxed">
-            <strong>Note:</strong> Once submitted, your review cannot be edited and will be sent to your manager for evaluation.
+            <strong>Note:</strong> Once submitted, your review cannot be edited and will be sent to {isManagerUser || managerName === 'CEO & Admin' ? 'the CEO and Admin' : 'your Manager, Admin, and CEO'} for evaluation.
           </div>
         </Modal>
 

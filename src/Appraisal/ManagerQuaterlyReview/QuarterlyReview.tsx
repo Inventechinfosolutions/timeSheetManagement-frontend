@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Table, Button, Input, Select, Spin, message } from "antd";
 import {
   Search,
@@ -193,6 +193,11 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
     employeeId?: string;
   }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isManagerRoute = location.pathname.startsWith("/manager-dashboard");
+  const baseRoute = isManagerRoute
+    ? "/manager-dashboard/quarterly-review"
+    : "/admin-dashboard/quarterly-review";
 
   const [submissions, setSubmissions] = useState<ManagerReviewItem[]>([]);
   const [stats, setStats] = useState<ReviewStats>({
@@ -202,7 +207,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
     inReview: 0,
     completed: 0,
   });
-  const [setQuarterOptions] = useState<string[]>([]);
+  const [, setQuarterOptions] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedQuarter] = useState<string>(
     QuarterFilter.ALL,
@@ -213,6 +218,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
   const [selectedStatusTab, setSelectedStatusTab] = useState<string>(
     StatusTabFilter.ALL,
   );
+  const [selectedRole, setSelectedRole] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedYear, setSelectedYear] = useState<string>(DEFAULT_YEAR);
 
@@ -272,6 +278,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
       if (selectedYear !== YEAR_FILTER_ALL) params.year = selectedYear;
       if (selectedStatusTab !== StatusTabFilter.ALL)
         params.status = selectedStatusTab;
+      if (selectedRole !== "ALL") params.role = selectedRole;
       if (searchQuery.trim()) params.search = searchQuery.trim();
 
       const [subsRes, statsRes] = await Promise.all([
@@ -286,10 +293,10 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
       if (statsRes.data?.success) {
         setStats(statsRes.data.data);
       }
-    } catch (err: any) {
+    } catch (error: any) {
       message.error(
-        err.response?.data?.message ||
-          "Failed to fetch quarterly review submissions.",
+        error.response?.data?.message ||
+        "Failed to fetch quarterly review submissions.",
       );
     } finally {
       setLoading(false);
@@ -329,24 +336,24 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
   const averageRatingScore = useMemo(() => {
     const values = Object.values(ratings);
     if (values.length === 0) return 0;
-    const sum = values.reduce((a, b) => a + b, 0);
+    const sum = values.reduce((runningTotal, currentValue) => runningTotal + currentValue, 0);
     return (sum / values.length).toFixed(1);
   }, [ratings]);
 
-  const getFinalRatingFromScore = (avg: number): string => {
-    if (avg >= 5.0) return PerformanceRating.OUTSTANDING;
-    if (avg >= 4.0) return PerformanceRating.EXCEEDS_EXPECTATIONS;
-    if (avg >= 3.0) return PerformanceRating.MEETS_EXPECTATIONS;
-    if (avg >= 2.0) return PerformanceRating.NEEDS_IMPROVEMENT;
-    if (avg >= 1.0) return PerformanceRating.UNSATISFACTORY;
+  const getFinalRatingFromScore = (averageScore: number): string => {
+    if (averageScore >= 5.0) return PerformanceRating.OUTSTANDING;
+    if (averageScore >= 4.0) return PerformanceRating.EXCEEDS_EXPECTATIONS;
+    if (averageScore >= 3.0) return PerformanceRating.MEETS_EXPECTATIONS;
+    if (averageScore >= 2.0) return PerformanceRating.NEEDS_IMPROVEMENT;
+    if (averageScore >= 1.0) return PerformanceRating.UNSATISFACTORY;
     return "";
   };
 
   useEffect(() => {
     if (isViewOnly) return;
-    const avg = parseFloat(averageRatingScore as unknown as string);
-    if (!isNaN(avg)) {
-      setFinalRating(getFinalRatingFromScore(avg));
+    const computedAverage = parseFloat(averageRatingScore as unknown as string);
+    if (!isNaN(computedAverage)) {
+      setFinalRating(getFinalRatingFromScore(computedAverage));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [averageRatingScore, isViewOnly]);
@@ -354,37 +361,37 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
   const applyReviewToForm = (record: ManagerReviewItem) => {
     const resolvedRatings = record.ratings
       ? {
-          [RatingCategory.PRODUCTIVITY]:
-            record.ratings.productivity || DEFAULT_RATING_VALUE,
-          [RatingCategory.QUALITY]:
-            record.ratings.quality || DEFAULT_RATING_VALUE,
-          [RatingCategory.OWNERSHIP]:
-            record.ratings.ownership || DEFAULT_RATING_VALUE,
-          [RatingCategory.COMMUNICATION]:
-            record.ratings.communication || DEFAULT_RATING_VALUE,
-          [RatingCategory.COLLABORATION]:
-            record.ratings.collaboration || DEFAULT_RATING_VALUE,
-          [RatingCategory.INNOVATION]:
-            record.ratings.innovation || DEFAULT_RATING_VALUE,
-        }
+        [RatingCategory.PRODUCTIVITY]:
+          record.ratings.productivity || DEFAULT_RATING_VALUE,
+        [RatingCategory.QUALITY]:
+          record.ratings.quality || DEFAULT_RATING_VALUE,
+        [RatingCategory.OWNERSHIP]:
+          record.ratings.ownership || DEFAULT_RATING_VALUE,
+        [RatingCategory.COMMUNICATION]:
+          record.ratings.communication || DEFAULT_RATING_VALUE,
+        [RatingCategory.COLLABORATION]:
+          record.ratings.collaboration || DEFAULT_RATING_VALUE,
+        [RatingCategory.INNOVATION]:
+          record.ratings.innovation || DEFAULT_RATING_VALUE,
+      }
       : {
-          [RatingCategory.PRODUCTIVITY]: DEFAULT_RATING_VALUE,
-          [RatingCategory.QUALITY]: DEFAULT_RATING_VALUE,
-          [RatingCategory.OWNERSHIP]: DEFAULT_RATING_VALUE,
-          [RatingCategory.COMMUNICATION]: DEFAULT_RATING_VALUE,
-          [RatingCategory.COLLABORATION]: DEFAULT_RATING_VALUE,
-          [RatingCategory.INNOVATION]: DEFAULT_RATING_VALUE,
-        };
+        [RatingCategory.PRODUCTIVITY]: DEFAULT_RATING_VALUE,
+        [RatingCategory.QUALITY]: DEFAULT_RATING_VALUE,
+        [RatingCategory.OWNERSHIP]: DEFAULT_RATING_VALUE,
+        [RatingCategory.COMMUNICATION]: DEFAULT_RATING_VALUE,
+        [RatingCategory.COLLABORATION]: DEFAULT_RATING_VALUE,
+        [RatingCategory.INNOVATION]: DEFAULT_RATING_VALUE,
+      };
 
     setRatings(resolvedRatings);
 
     const ratingValues = Object.values(resolvedRatings);
-    const avg = ratingValues.length
-      ? ratingValues.reduce((a, b) => a + b, 0) / ratingValues.length
+    const calculatedAverage = ratingValues.length
+      ? ratingValues.reduce((runningSum, ratingItem) => runningSum + ratingItem, 0) / ratingValues.length
       : 0;
     setFinalRating(
-      avg > 0
-        ? getFinalRatingFromScore(avg)
+      calculatedAverage > 0
+        ? getFinalRatingFromScore(calculatedAverage)
         : record.finalRating
           ? getFinalRatingFromScore(record.finalRating)
           : "",
@@ -407,25 +414,25 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
     applyReviewToForm(record);
     setIsModalOpen(true);
     loadFreshReview(record.employeeId);
-    navigate(`/manager-dashboard/quarterly-review/${record.employeeId}`, {
+    navigate(`${baseRoute}/${record.employeeId}`, {
       replace: false,
     });
   };
 
   const loadFreshReview = async (employeeId: string) => {
     try {
-      const res = await axios.get(
+      const response = await axios.get(
         `/api/manager-quarterly-review/${employeeId}`,
       );
-      if (res.data?.success && res.data?.data) {
-        const freshRecord: ManagerReviewItem = res.data.data;
+      if (response.data?.success && response.data?.data) {
+        const freshRecord: ManagerReviewItem = response.data.data;
         setCurrentReview(freshRecord);
         applyReviewToForm(freshRecord);
       }
-    } catch (err: any) {
+    } catch (error: any) {
       message.error(
-        err.response?.data?.message ||
-          `Failed to load the latest details for this review.`,
+        error.response?.data?.message ||
+        `Failed to load the latest details for this review.`,
       );
     }
   };
@@ -440,7 +447,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
     setCurrentReview(null);
     loadedEmployeeIdRef.current = null;
     setCurrentPage(1);
-    navigate("/manager-dashboard/quarterly-review", { replace: false });
+    navigate(baseRoute, { replace: false });
     fetchData(1, pageSize);
   };
 
@@ -448,13 +455,15 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
     if (!employeeIdFromUrl || submissions.length === 0) return;
     if (loadedEmployeeIdRef.current === employeeIdFromUrl) return;
 
-    const match = submissions.find((s) => s.employeeId === employeeIdFromUrl);
-    if (match) {
+    const matchedSubmission = submissions.find(
+      (submission) => submission.employeeId === employeeIdFromUrl,
+    );
+    if (matchedSubmission) {
       loadedEmployeeIdRef.current = employeeIdFromUrl;
-      setCurrentReview(match);
-      setIsViewOnly(match.actionType === ActionType.VIEW);
+      setCurrentReview(matchedSubmission);
+      setIsViewOnly(matchedSubmission.actionType === ActionType.VIEW);
       setFieldErrors({});
-      applyReviewToForm(match);
+      applyReviewToForm(matchedSubmission);
       setIsModalOpen(true);
       loadFreshReview(employeeIdFromUrl);
     }
@@ -509,30 +518,29 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
           : ManagerReviewStatus.REVIEWED,
       };
 
-      const res = await axios.post(endpoint, payload);
+      const response = await axios.post(endpoint, payload);
 
-      if (res.data?.success) {
+      if (response.data?.success) {
         message.success(
           isDraft
             ? "Evaluation draft saved."
-            : "Manager review submitted successfully!",
+            : "Review evaluation submitted successfully!",
         );
         setIsModalOpen(false);
         setCurrentReview(null);
         loadedEmployeeIdRef.current = null;
         setCurrentPage(1);
-        navigate("/manager-dashboard/quarterly-review", { replace: false });
+        navigate(baseRoute, { replace: false });
         fetchData(1, pageSize);
       }
-    } catch (err: any) {
+    } catch (error: any) {
       message.error(
-        err.response?.data?.message || "Failed to submit review evaluation.",
+        error.response?.data?.message || "Failed to submit review evaluation.",
       );
     } finally {
       setSubmitting(false);
     }
   };
-
   const getSubmissionYear = (item: ManagerReviewItem): string => {
     const fyMatch = (item.quarter || "").match(/FY(\d{4}-\d{2})/i);
     if (fyMatch) return fyMatch[1];
@@ -546,25 +554,20 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
     const currentCalendarYear = new Date().getFullYear();
     const rangeYears: string[] = [];
     for (
-      let y = currentCalendarYear - YEARS_BEFORE_CURRENT;
-      y <= currentCalendarYear + YEARS_AFTER_CURRENT;
-      y++
+      let yearIndex = currentCalendarYear - YEARS_BEFORE_CURRENT;
+      yearIndex <= currentCalendarYear + YEARS_AFTER_CURRENT;
+      yearIndex++
     ) {
-      rangeYears.push(toFiscalYearLabel(y));
+      rangeYears.push(toFiscalYearLabel(yearIndex));
     }
 
-    // Note: `submissions` now only holds the current page's rows (server-side
-    // pagination), so this only merges in years from the static range plus
-    // whatever happens to be on the current page. If you need every year
-    // actually present across the full team, add a `/filters` response field
-    // for years the same way quarters are fetched below.
     const dataYears = submissions
-      .map((s) => getSubmissionYear(s))
+      .map((submission) => getSubmissionYear(submission))
       .filter(Boolean);
 
     const years = Array.from(
       new Set([...rangeYears, DEFAULT_YEAR, ...dataYears]),
-    ).sort((a, b) => parseInt(b, 10) - parseInt(a, 10));
+    ).sort((previousYear, nextYear) => parseInt(nextYear, 10) - parseInt(previousYear, 10));
     return years;
   }, [submissions]);
 
@@ -579,38 +582,35 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
     selectedQuarter,
     selectedQuarterCard,
     selectedStatusTab,
+    selectedRole,
     searchQuery,
   ]);
 
-  const handleTableChange = (page: number, size: number) => {
-    setCurrentPage(page);
-    if (size !== pageSize) {
-      setPageSize(size);
+  const handleTableChange = (pageNumber: number, newPageSize: number) => {
+    setCurrentPage(pageNumber);
+    if (newPageSize !== pageSize) {
+      setPageSize(newPageSize);
     }
-    fetchData(page, size);
+    fetchData(pageNumber, newPageSize);
   };
 
   const renderStatusBadge = (status: string | null) => {
-    const s = status || AppraisalStatus.NOT_STARTED;
+    const currentStatus = status || AppraisalStatus.NOT_STARTED;
     if (
       [
         AppraisalStatus.REVIEWED,
         AppraisalStatus.APPROVED,
         AppraisalStatus.COMPLETED,
-      ].includes(s as AppraisalStatus)
+      ].includes(currentStatus as AppraisalStatus)
     ) {
       return (
         <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-          {s}
+          {currentStatus}
         </span>
       );
     }
-    if (s === AppraisalStatus.UNDER_REVIEW) {
-      // CHANGED: was purple (bg-purple-50 / text-purple-700 /
-      // border-purple-200), now amber/yellow to match the same "pending"
-      // visual language used for the Pending Reviews stat card and the
-      // NOT_STARTED fallback badge below.
+    if (currentStatus === AppraisalStatus.UNDER_REVIEW) {
       return (
         <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
           <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
@@ -621,7 +621,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
     return (
       <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
         <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-        {s}
+        {currentStatus}
       </span>
     );
   };
@@ -632,22 +632,22 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
     {
       title: "Employee Name",
       key: "employeeName",
-      width: "10%",
-      render: (_: any, r: ManagerReviewItem) => {
-        const displayName = r.employeeName
-          ? r.employeeName
-              .split(" ")
-              .map((w) => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w))
-              .join(" ")
+      width: "16%",
+      render: (_: any, record: ManagerReviewItem) => {
+        const displayName = record.employeeName
+          ? record.employeeName
+            .split(" ")
+            .map((word) => (word ? word.charAt(0).toUpperCase() + word.slice(1) : word))
+            .join(" ")
           : "";
 
         const initials = displayName
           ? displayName
-              .split(" ")
-              .filter(Boolean)
-              .slice(0, 2)
-              .map((w) => w.charAt(0).toUpperCase())
-              .join("")
+            .split(" ")
+            .filter(Boolean)
+            .slice(0, 2)
+            .map((word) => word.charAt(0).toUpperCase())
+            .join("")
           : "";
 
         return (
@@ -655,7 +655,21 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
             <div className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[11px] font-bold shrink-0">
               {initials || <Users className="w-3.5 h-3.5 text-indigo-500" />}
             </div>
-            <p className={`${tableTextClass} truncate`}>{displayName || "—"}</p>
+            <div className="flex flex-col text-left">
+              <div className="flex items-center gap-1.5">
+                <p className={`${tableTextClass} truncate`}>{displayName || "—"}</p>
+                {record.employeeRole && (
+                  <span
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${record.employeeRole.toUpperCase() === "MANAGER"
+                        ? "bg-purple-100 text-purple-700 border border-purple-200"
+                        : "bg-blue-50 text-blue-700 border border-blue-200"
+                      }`}
+                  >
+                    {record.employeeRole}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
         );
       },
@@ -666,8 +680,8 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
       dataIndex: "employeeId",
       key: "employeeId",
       width: "10%",
-      render: (id: string) => (
-        <span className={tableTextClass}>{id || "—"}</span>
+      render: (employeeIdText: string) => (
+        <span className={tableTextClass}>{employeeIdText || "—"}</span>
       ),
     },
 
@@ -675,10 +689,10 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
       title: "Designation",
       dataIndex: "designation",
       key: "designation",
-      width: "14%",
-      render: (d: string) => (
+      width: "13%",
+      render: (designationText: string) => (
         <span className={tableTextClass}>
-          {d ? d.charAt(0).toUpperCase() + d.slice(1) : "—"}
+          {designationText ? designationText.charAt(0).toUpperCase() + designationText.slice(1) : "—"}
         </span>
       ),
     },
@@ -688,9 +702,9 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
       dataIndex: "quarter",
       key: "quarter",
       width: "10%",
-      render: (q: string) => (
+      render: (quarterText: string) => (
         <span className={tableTextClass}>
-          {q ? q.trim().split(/\s+/)[0] : "—"}
+          {quarterText ? quarterText.trim().split(/\s+/)[0] : "—"}
         </span>
       ),
     },
@@ -699,12 +713,12 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
       title: "Final Rating",
       dataIndex: "finalRating",
       key: "finalRating",
-      width: "14%",
-      render: (rating: number | null) =>
-        rating != null ? (
+      width: "11%",
+      render: (ratingScore: number | null) =>
+        ratingScore != null ? (
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-bold text-xs border border-indigo-100">
             <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-            {rating}
+            {ratingScore}
           </span>
         ) : (
           <span className="text-slate-400 text-sm font-medium">—</span>
@@ -715,12 +729,12 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
       title: "Last Modified",
       dataIndex: "lastModified",
       key: "lastModified",
-      width: "14%",
-      render: (d: string | null) =>
-        d ? (
+      width: "12%",
+      render: (modifiedDate: string | null) =>
+        modifiedDate ? (
           <div className={`${tableTextClass} leading-tight`}>
             <div>
-              {new Date(d).toLocaleDateString("en-GB", {
+              {new Date(modifiedDate).toLocaleDateString("en-GB", {
                 day: "2-digit",
                 month: "short",
                 year: "numeric",
@@ -736,7 +750,16 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
       title: "Status",
       key: "status",
       width: "14%",
-      render: (_: any, r: ManagerReviewItem) => renderStatusBadge(r.status),
+      render: (_: any, record: ManagerReviewItem) => (
+        <div className="flex flex-col items-center gap-0.5">
+          {renderStatusBadge(record.status)}
+          {record.evaluatorName && (
+            <span className="text-[10px] text-slate-500 font-medium">
+              By: {record.evaluatorName}
+            </span>
+          )}
+        </div>
+      ),
     },
 
     {
@@ -747,7 +770,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
         const isReviewed = record.actionType === ActionType.VIEW;
 
         return (
-          <div className="inline-flex items-center gap-2">
+          <div className="inline-flex items-center gap-2 justify-center">
             {!isReviewed ? (
               <Button
                 type="primary"
@@ -760,13 +783,12 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
               </Button>
             ) : (
               <Button
-                type="default"
                 size="small"
-                icon={<Eye className="w-3.5 h-3.5 text-indigo-600" />}
+                icon={<Eye className="w-3.5 h-3.5" />}
                 onClick={() => handleOpenEvaluation(record, true)}
-                className="!border-indigo-200 !text-indigo-600 hover:!bg-indigo-50 !font-semibold !rounded-lg !flex !items-center !gap-1"
+                className="!border-slate-300 hover:!border-indigo-400 !text-slate-700 hover:!text-indigo-600 !font-semibold !rounded-lg !flex !items-center !gap-1"
               >
-                {record.actionLabel || "View"}
+                View
               </Button>
             )}
           </div>
@@ -774,7 +796,6 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
       },
     },
   ];
-
 
   return (
     <div className="mqr-wrapper w-full min-h-full bg-slate-50 px-6 pt-3 pb-10 flex flex-col gap-3">
@@ -796,11 +817,12 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
 
       <div>
         <h1 className="text-2xl font-extrabold text-[#2B3674] tracking-tight">
-          Manager Quarterly Review
+          {isManagerRoute ? "Manager Quarterly Review" : "Quarterly Review"}
         </h1>
         <p className="text-slate-500 text-sm mt-0.5">
-          Review, evaluate, and provide ratings for quarterly appraisal
-          submissions from your team members.
+          {isManagerRoute
+            ? "Review, evaluate, and provide ratings for quarterly appraisal submissions from your team members."
+            : "Review, evaluate, and provide ratings for quarterly appraisal submissions across the organization."}
         </p>
       </div>
 
@@ -906,11 +928,10 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
               <button
                 key={tab.key}
                 onClick={() => setSelectedStatusTab(tab.key)}
-                className={`px-5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
-                  selectedStatusTab === tab.key
+                className={`px-5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${selectedStatusTab === tab.key
                     ? "bg-white text-indigo-600 shadow-sm"
                     : "text-slate-500 hover:text-slate-700"
-                }`}
+                  }`}
               >
                 {tab.label}
               </button>
@@ -926,10 +947,20 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
               placeholder="Search employee name or ID..."
               prefix={<Search className="w-4 h-4 text-slate-400" />}
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(changeEvent) => setSearchQuery(changeEvent.target.value)}
               className="!rounded-xl !max-w-md !flex-1"
               allowClear
             />
+
+            <Select
+              value={selectedRole}
+              onChange={setSelectedRole}
+              className="!w-36 !rounded-xl !shrink-0"
+            >
+              <Option value="ALL">All Roles</Option>
+              <Option value="MANAGER">Managers</Option>
+              <Option value="EMPLOYEE">Employees</Option>
+            </Select>
 
             <Select
               value={selectedYear}
@@ -939,9 +970,9 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
               dropdownStyle={{ minWidth: 200 }}
             >
               <Option value={YEAR_FILTER_ALL}>All Years</Option>
-              {yearOptions.map((y) => (
-                <Option key={y} value={y}>
-                  {`FY ${y}`}
+              {yearOptions.map((yearOption) => (
+                <Option key={yearOption} value={yearOption}>
+                  {`FY ${yearOption}`}
                 </Option>
               ))}
             </Select>

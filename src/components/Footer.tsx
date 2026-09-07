@@ -1,6 +1,5 @@
 import "./Footer.css";
-import inventechLogo from "../assets/inventech-logo.jpg";
-import worksphereLogo from "../assets/workspherelogo.png";
+import inventechLogo from "../assets/logo.png";
 
 interface FooterProps {
   className?: string;
@@ -13,23 +12,22 @@ const Footer = ({ className = "" }: FooterProps) => {
     <footer className={`footer ${className}`}>
       <div className="footer-container">
         <div className="footer-content">
-          <img
-            src={inventechLogo}
-            alt="InvenTech Logo"
-            className="footer-logo"
-          />
-
           <p className="footer-small">
-            &copy; {currentYear} Worksphere Powered by{" "}
-            <a
-              href="https://inventechinfo.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="footer-brand"
-            >
-              InvenTech Info Solutions
-            </a>
+            &copy; {currentYear} Worksphere Powered by
           </p>
+
+          <a
+            href="https://inventechinfo.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="footer-brand"
+          >
+            <img
+              src={inventechLogo}
+              alt="InvenTech Info Solutions"
+              className="footer-logo"
+            />
+          </a>
         </div>
       </div>
     </footer>

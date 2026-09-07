@@ -162,7 +162,7 @@ const LeaveManagementDesktop = () => {
       currentUser?.employeeId ||
       currentUser?.loginId;
 
-  const isAdmin = currentUser?.userType === UserType.ADMIN;
+  const isAdmin = currentUser?.userType === UserType.ADMIN || currentUser?.userType === UserType.CEO;
   const isManager =
     currentUser?.userType === UserType.MANAGER ||
     (currentUser?.role &&

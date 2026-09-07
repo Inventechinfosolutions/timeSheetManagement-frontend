@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Table, Button, Input, Select, Spin, message, Avatar, Pagination } from "antd";
 import {
   Search,
@@ -115,7 +115,20 @@ const SubmissionCard: React.FC<{
               : "E"}
           </Avatar>
           <div className="mobile-submission-copy">
-            <p className="mobile-submission-title">{record.employeeName}</p>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <p className="mobile-submission-title">{record.employeeName}</p>
+              {record.employeeRole && (
+                <span
+                  className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                    record.employeeRole.toUpperCase() === "MANAGER"
+                      ? "bg-purple-100 text-purple-700 border border-purple-200"
+                      : "bg-blue-50 text-blue-700 border border-blue-200"
+                  }`}
+                >
+                  {record.employeeRole}
+                </span>
+              )}
+            </div>
             <p className="mobile-submission-subtitle">
               {record.designation || "—"}
             </p>
@@ -151,6 +164,13 @@ const SubmissionCard: React.FC<{
             "—"
           )}
         </CardField>
+        {record.evaluatorName && (
+          <CardField label="Evaluated By">
+            <span className="text-slate-800 text-xs font-semibold">
+              {record.evaluatorName} {record.evaluatorRole ? `(${record.evaluatorRole})` : ''}
+            </span>
+          </CardField>
+        )}
       </div>
 
       <div className="mobile-submission-actions">
@@ -187,6 +207,11 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
     employeeId?: string;
   }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isManagerRoute = location.pathname.startsWith("/manager-dashboard");
+  const baseRoute = isManagerRoute
+    ? "/manager-dashboard/quarterly-review"
+    : "/admin-dashboard/quarterly-review";
 
   const [submissions, setSubmissions] = useState<ManagerReviewItem[]>([]);
   const [stats, setStats] = useState<ReviewStats>({
@@ -203,6 +228,7 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
   const [selectedStatusTab, setSelectedStatusTab] = useState<string>(
     StatusTabFilter.ALL,
   );
+  const [selectedRole, setSelectedRole] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedYear, setSelectedYear] = useState<string>(DEFAULT_YEAR);
 
@@ -239,8 +265,12 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
   const fetchData = async () => {
     try {
       setLoading(true);
+      const params: Record<string, any> = {};
+      if (selectedRole !== "ALL") {
+        params.role = selectedRole;
+      }
       const [subsRes, statsRes] = await Promise.all([
-        axios.get("/api/manager-quarterly-review"),
+        axios.get("/api/manager-quarterly-review", { params }),
         axios.get("/api/manager-quarterly-review/stats"),
       ]);
 
@@ -250,9 +280,9 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
       if (statsRes.data?.success) {
         setStats(statsRes.data.data);
       }
-    } catch (err: any) {
+    } catch (error: any) {
       message.error(
-        err.response?.data?.message ||
+        error.response?.data?.message ||
           "Failed to fetch quarterly review submissions.",
       );
     } finally {
@@ -346,17 +376,17 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
   const loadFreshReview = async (employeeId: string) => {
     try {
       setLoadingReview(true);
-      const res = await axios.get(
+      const response = await axios.get(
         `/api/manager-quarterly-review/${employeeId}`,
       );
-      if (res.data?.success && res.data?.data) {
-        const freshRecord: ManagerReviewItem = res.data.data;
+      if (response.data?.success && response.data?.data) {
+        const freshRecord: ManagerReviewItem = response.data.data;
         setCurrentReview(freshRecord);
         applyReviewToForm(freshRecord);
       }
-    } catch (err: any) {
+    } catch (error: any) {
       message.error(
-        err.response?.data?.message ||
+        error.response?.data?.message ||
           `Failed to load the latest details for this review.`,
       );
     } finally {
@@ -374,7 +404,7 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
     applyReviewToForm(record);
     setIsModalOpen(true);
     loadedEmployeeIdRef.current = record.employeeId;
-    navigate(`/manager-dashboard/quarterly-review/${record.employeeId}`, {
+    navigate(`${baseRoute}/${record.employeeId}`, {
       replace: false,
     });
     loadFreshReview(record.employeeId);
@@ -384,7 +414,7 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
     setIsModalOpen(false);
     setCurrentReview(null);
     loadedEmployeeIdRef.current = null;
-    navigate("/manager-dashboard/quarterly-review", { replace: false });
+    navigate(baseRoute, { replace: false });
     fetchData();
   };
 
@@ -392,13 +422,15 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
     if (!employeeIdFromUrl || submissions.length === 0) return;
     if (loadedEmployeeIdRef.current === employeeIdFromUrl) return;
 
-    const match = submissions.find((s) => s.employeeId === employeeIdFromUrl);
-    if (match) {
+    const matchedSubmission = submissions.find(
+      (submission) => submission.employeeId === employeeIdFromUrl,
+    );
+    if (matchedSubmission) {
       loadedEmployeeIdRef.current = employeeIdFromUrl;
-      setCurrentReview(match);
-      setIsViewOnly(match.actionType === ActionType.VIEW);
+      setCurrentReview(matchedSubmission);
+      setIsViewOnly(matchedSubmission.actionType === ActionType.VIEW);
       setFieldErrors({});
-      applyReviewToForm(match);
+      applyReviewToForm(matchedSubmission);
       setIsModalOpen(true);
       loadFreshReview(employeeIdFromUrl);
     }
@@ -453,23 +485,23 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
           : ManagerReviewStatus.REVIEWED,
       };
 
-      const res = await axios.post(endpoint, payload);
+      const response = await axios.post(endpoint, payload);
 
-      if (res.data?.success) {
+      if (response.data?.success) {
         message.success(
           isDraft
             ? "Evaluation draft saved."
-            : "Manager review submitted successfully!",
+            : "Review evaluation submitted successfully!",
         );
         setIsModalOpen(false);
         setCurrentReview(null);
         loadedEmployeeIdRef.current = null;
-        navigate("/manager-dashboard/quarterly-review", { replace: false });
+        navigate(baseRoute, { replace: false });
         fetchData();
       }
-    } catch (err: any) {
+    } catch (error: any) {
       message.error(
-        err.response?.data?.message || "Failed to submit review evaluation.",
+        error.response?.data?.message || "Failed to submit review evaluation.",
       );
     } finally {
       setSubmitting(false);
@@ -489,18 +521,18 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
     const currentCalendarYear = new Date().getFullYear();
     const rangeYears: string[] = [];
     for (
-      let y = currentCalendarYear - YEARS_BEFORE_CURRENT;
-      y <= currentCalendarYear + YEARS_AFTER_CURRENT;
-      y++
+      let yearIndex = currentCalendarYear - YEARS_BEFORE_CURRENT;
+      yearIndex <= currentCalendarYear + YEARS_AFTER_CURRENT;
+      yearIndex++
     ) {
-      rangeYears.push(toFiscalYearLabel(y));
+      rangeYears.push(toFiscalYearLabel(yearIndex));
     }
     const dataYears = submissions
-      .map((s) => getSubmissionYear(s))
+      .map((submission) => getSubmissionYear(submission))
       .filter(Boolean);
     const years = Array.from(
       new Set([...rangeYears, DEFAULT_YEAR, ...dataYears]),
-    ).sort((a, b) => parseInt(b, 10) - parseInt(a, 10));
+    ).sort((previousYear, nextYear) => parseInt(nextYear, 10) - parseInt(previousYear, 10));
     return years;
   }, [submissions]);
 
@@ -510,6 +542,10 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
   // logic the old Q1–Q4 quick-filter cards used before they were removed.
   const filteredSubmissions = useMemo(() => {
     return submissions.filter((item) => {
+      if (selectedRole !== "ALL") {
+        const itemRole = (item.employeeRole || "EMPLOYEE").toUpperCase();
+        if (itemRole !== selectedRole) return false;
+      }
       if (selectedYear !== YEAR_FILTER_ALL) {
         const itemYear = getSubmissionYear(item);
         if (itemYear && itemYear !== selectedYear) return false;
@@ -521,16 +557,6 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
         }
       }
       if (selectedStatusTab !== StatusTabFilter.ALL) {
-        // FIX: the status tabs (Pending / In Review / Completed) describe
-        // the MANAGER's evaluation progress, which is tracked on
-        // `reviewStatus` (Pending | In Review | Reviewed) — a separate
-        // field from `status`, which is the employee-facing submission
-        // status (Not Started | Under Review | Reviewed | Completed).
-        // The previous logic filtered on `status`, so a submission that
-        // was "Under Review" on the employee side but never actually
-        // touched by the manager (reviewStatus: "Pending") never matched
-        // any tab correctly. A missing/null reviewStatus is treated as
-        // Pending, since that means the manager hasn't acted on it yet.
         const currentReviewStatus =
           item.reviewStatus || ManagerReviewStatus.PENDING;
 
@@ -554,10 +580,10 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
         }
       }
       if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matchesName = item.employeeName?.toLowerCase().includes(q);
-        const matchesId = item.employeeId?.toLowerCase().includes(q);
-        const matchesDept = item.department?.toLowerCase().includes(q);
+        const searchQueryLower = searchQuery.toLowerCase();
+        const matchesName = item.employeeName?.toLowerCase().includes(searchQueryLower);
+        const matchesId = item.employeeId?.toLowerCase().includes(searchQueryLower);
+        const matchesDept = item.department?.toLowerCase().includes(searchQueryLower);
         if (!matchesName && !matchesId && !matchesDept) return false;
       }
       return true;
@@ -567,6 +593,7 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
     selectedYear,
     selectedQuarterCard,
     selectedStatusTab,
+    selectedRole,
     searchQuery,
   ]);
 
@@ -576,7 +603,7 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
   // a now out-of-range page and see an empty list.
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedYear, selectedQuarterCard, selectedStatusTab, searchQuery]);
+  }, [selectedYear, selectedQuarterCard, selectedStatusTab, selectedRole, searchQuery]);
 
   // Slice of filteredSubmissions shown on the current card-list page.
   // The desktop <Table> further below still receives the FULL
@@ -592,12 +619,27 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
       title: "Employee Name",
       key: "employeeName",
       width: "16%",
-      render: (_: any, r: ManagerReviewItem) => (
+      render: (_: any, record: ManagerReviewItem) => (
         <div className="mobile-table-name-cell">
           <Avatar size="large" className="mobile-avatar mobile-table-avatar">
-            {r.employeeName ? r.employeeName.charAt(0).toUpperCase() : "E"}
+            {record.employeeName ? record.employeeName.charAt(0).toUpperCase() : "E"}
           </Avatar>
-          <p className="mobile-table-name">{r.employeeName}</p>
+          <div className="flex flex-col text-left">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <p className="mobile-table-name">{record.employeeName}</p>
+              {record.employeeRole && (
+                <span
+                  className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                    record.employeeRole.toUpperCase() === "MANAGER"
+                      ? "bg-purple-100 text-purple-700 border border-purple-200"
+                      : "bg-blue-50 text-blue-700 border border-blue-200"
+                  }`}
+                >
+                  {record.employeeRole}
+                </span>
+              )}
+            </div>
+          </div>
         </div>
       ),
     },
@@ -606,15 +648,15 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
       dataIndex: "employeeId",
       key: "employeeId",
       width: "10%",
-      render: (id: string) => <span className="mobile-table-text">{id}</span>,
+      render: (employeeIdString: string) => <span className="mobile-table-text">{employeeIdString}</span>,
     },
     {
       title: "Designation",
       dataIndex: "designation",
       key: "designation",
       width: "14%",
-      render: (d: string) => (
-        <span className="mobile-table-text">{d || "—"}</span>
+      render: (designationString: string) => (
+        <span className="mobile-table-text">{designationString || "—"}</span>
       ),
     },
     {
@@ -622,9 +664,9 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
       dataIndex: "quarter",
       key: "quarter",
       width: "10%",
-      render: (q: string) => (
+      render: (quarterString: string) => (
         <span className="mobile-table-text">
-          {q ? q.trim().split(/\s+/)[0] : "—"}
+          {quarterString ? quarterString.trim().split(/\s+/)[0] : "—"}
         </span>
       ),
     },
@@ -632,25 +674,34 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
       title: "Status",
       key: "status",
       width: "14%",
-      render: (_: any, r: ManagerReviewItem) => renderStatusBadge(r.status),
+      render: (_: any, record: ManagerReviewItem) => (
+        <div className="flex flex-col items-center gap-0.5">
+          {renderStatusBadge(record.status)}
+          {record.evaluatorName && (
+            <span className="text-[10px] text-slate-500 font-medium">
+              By: {record.evaluatorName}
+            </span>
+          )}
+        </div>
+      ),
     },
     {
       title: "Final Rating",
       dataIndex: "finalRating",
       key: "finalRating",
       width: "14%",
-      render: (rating: number | null) => <FinalRatingBadge rating={rating} />,
+      render: (ratingValue: number | null) => <FinalRatingBadge rating={ratingValue} />,
     },
     {
       title: "Last Modified",
       dataIndex: "lastModified",
       key: "lastModified",
       width: "14%",
-      render: (d: string | null) =>
-        d ? (
+      render: (modifiedDateString: string | null) =>
+        modifiedDateString ? (
           <div className="mobile-table-last-modified">
             <div>
-              {new Date(d).toLocaleDateString("en-GB", {
+              {new Date(modifiedDateString).toLocaleDateString("en-GB", {
                 day: "2-digit",
                 month: "short",
                 year: "numeric",
@@ -710,10 +761,12 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
           <div className="mobile-page-header-copy">
             <div className="mobile-title-col">
               <h1 className="mobile-page-title">
-                Manager Quarterly Review
+                {isManagerRoute ? "Manager Quarterly Review" : "Quarterly Review"}
               </h1>
               <p className="mobile-page-subtitle">
-                Review and rate your team's quarterly submissions.
+                {isManagerRoute
+                  ? "Review and rate your team's quarterly submissions."
+                  : "Review and rate quarterly appraisal submissions across the organization."}
               </p>
             </div>
           </div>
@@ -800,10 +853,20 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
             placeholder="Search employee name or ID..."
             prefix={<Search className="mobile-search-icon" />}
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(changeEvent) => setSearchQuery(changeEvent.target.value)}
             className="mobile-input"
             allowClear
           />
+
+          <Select
+            value={selectedRole}
+            onChange={setSelectedRole}
+            className="mobile-select"
+          >
+            <Option value="ALL">All Roles</Option>
+            <Option value="MANAGER">Managers</Option>
+            <Option value="EMPLOYEE">Employees</Option>
+          </Select>
 
           <Select
             value={selectedYear}
@@ -813,9 +876,9 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
             dropdownStyle={{ minWidth: 160 }}
           >
             <Option value={YEAR_FILTER_ALL}>All FY Year</Option>
-            {yearOptions.map((y) => (
-              <Option key={y} value={y}>
-                {`FY ${y}`}
+            {yearOptions.map((yearOption) => (
+              <Option key={yearOption} value={yearOption}>
+                {`FY ${yearOption}`}
               </Option>
             ))}
           </Select>

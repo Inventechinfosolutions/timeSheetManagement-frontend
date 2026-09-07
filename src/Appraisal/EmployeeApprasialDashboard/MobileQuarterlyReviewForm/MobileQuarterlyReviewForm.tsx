@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Form, Button, message, Spin, Modal } from 'antd';
-import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useParams, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { Save, Send, ArrowLeft, ArrowRight, ChevronLeft, CheckCircle2, User, UserX, Star, Award, HourglassIcon, MessageSquare, TrendingUp, ThumbsUp } from 'lucide-react';
+import { Save, Send, ArrowLeft, ArrowRight, CheckCircle2, User, UserX, Star, HourglassIcon } from 'lucide-react';
 
 import { QuarterlyReviewStepperMobile } from '../mobile/QuarterlyReviewStepperMobile';
 import { OverviewStep } from '../steps/desktop_steps/OverviewStep';
@@ -12,9 +12,9 @@ import { TeamContributionStep, DEFAULT_TEAM_CONTRIBUTION } from '../steps/deskto
 import { CompanyEnvironmentStep } from '../steps/desktop_steps/CompanyEnvironmentStep';
 import { ReviewStep } from '../steps/desktop_steps/ReviewStep';
 import { ReviewStatus } from '../enums/Appraisal.enums';
+import { UserType } from '../../../enums';
 import {
     isQuarterOver,
-    formatQuarterRange,
     slugToQuarter,
 } from '../utils/fyQuarter.utils';
 import type { RootState, AppDispatch } from '../../../store';
@@ -160,10 +160,17 @@ const MobileQuarterlyReviewForm: React.FC<MobileQuarterlyReviewFormProps> = (pro
     const isControlled = props.currentStep !== undefined;
 
     const navigate = useNavigate();
+    const location = useLocation();
     const { date: quarterParamSlug } = useParams<{ tab?: string; date?: string }>();
     const [searchParams] = useSearchParams();
     const rawQuarterParam = quarterParamSlug || searchParams.get('quarter') || '';
     const quarterParam = slugToQuarter(rawQuarterParam);
+
+    const getBasePath = () => {
+        if (location.pathname.startsWith('/manager-dashboard')) return '/manager-dashboard';
+        if (location.pathname.startsWith('/admin-dashboard')) return '/admin-dashboard';
+        return '/employee-dashboard';
+    };
 
     const dispatch = useDispatch<AppDispatch>();
     const [internalForm] = Form.useForm();
@@ -557,13 +564,17 @@ const MobileQuarterlyReviewForm: React.FC<MobileQuarterlyReviewFormProps> = (pro
             if (result?.id) setInternalReviewId(result.id);
             setInternalBackendStatus(result.status);
             message.success('Draft saved successfully!');
-            navigate('/employee-dashboard/appraisal');
+            navigate(`${getBasePath()}/appraisal`);
         } catch (err: any) {
             message.error(err?.message ?? 'Failed to save draft.');
         } finally {
             setInternalSaving(false);
         }
     };
+
+    const isManagerUser =
+        currentUser?.userType === UserType.MANAGER ||
+        location.pathname.startsWith('/manager-dashboard');
 
     const internalHandleSubmitClick = async () => {
         try {
@@ -584,6 +595,11 @@ const MobileQuarterlyReviewForm: React.FC<MobileQuarterlyReviewFormProps> = (pro
             const fetchedManagerName: string | undefined = result?.managerName;
 
             if (!fetchedManagerName) {
+                if (isManagerUser) {
+                    setInternalManagerName('CEO & Admin');
+                    setInternalConfirmModalOpen(true);
+                    return;
+                }
                 setInternalNoManagerModalOpen(true);
                 return;
             }
@@ -591,6 +607,11 @@ const MobileQuarterlyReviewForm: React.FC<MobileQuarterlyReviewFormProps> = (pro
             setInternalManagerName(fetchedManagerName);
             setInternalConfirmModalOpen(true);
         } catch {
+            if (isManagerUser) {
+                setInternalManagerName('CEO & Admin');
+                setInternalConfirmModalOpen(true);
+                return;
+            }
             setInternalNoManagerModalOpen(true);
         } finally {
             setInternalFetchingManager(false);
@@ -600,15 +621,18 @@ const MobileQuarterlyReviewForm: React.FC<MobileQuarterlyReviewFormProps> = (pro
     const internalHandleConfirmedSubmit = async () => {
         try {
             setInternalSaving(true);
-            const payload = getFormPayload(ReviewStatus.SUBMITTED);
+            const payload = {
+                ...getFormPayload(ReviewStatus.SUBMITTED),
+                managerName: internalManagerName || (isManagerUser ? 'CEO & Admin' : undefined),
+            };
             const result = await dispatch(saveOrSubmitReview(payload)).unwrap();
             if (result?.id) setInternalReviewId(result.id);
             setInternalBackendStatus(result.status);
             setInternalConfirmModalOpen(false);
             message.success('Quarterly review submitted successfully!');
-            navigate('/employee-dashboard/appraisal');
-        } catch (err: any) {
-            message.error(err?.message ?? 'Failed to submit review.');
+            navigate(`${getBasePath()}/appraisal`);
+        } catch (error: any) {
+            message.error(error?.message ?? 'Failed to submit review.');
         } finally {
             setInternalSaving(false);
         }
@@ -656,7 +680,7 @@ const MobileQuarterlyReviewForm: React.FC<MobileQuarterlyReviewFormProps> = (pro
         <div className="block lg:hidden">
             <div ref={rootRef} className="mobile-qr-container">
                 {/* <button
-                    onClick={() => navigate('/employee-dashboard/appraisal')}
+                    onClick={() => navigate(`${getBasePath()}/appraisal`)}
                     className="mobile-qr-back-btn"
                 >
                     <ChevronLeft className="w-4 h-4" />
@@ -707,15 +731,19 @@ const MobileQuarterlyReviewForm: React.FC<MobileQuarterlyReviewFormProps> = (pro
 
                             {/* ── LEFT COLUMN: Employee Review Steps ── */}
                             <div className="flex-1 min-w-0 flex flex-col gap-4 w-full">
-                                {/* "Submitted to Manager" banner when no eval yet */}
+                                {/* "Submitted to Evaluators" banner when no eval yet */}
                                 {!managerEvaluation && managerName && (
                                     <div className="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3.5 shadow-sm">
                                         <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
                                             <User className="w-5 h-5 text-blue-600" />
                                         </div>
                                         <div>
-                                            <p className="text-xs text-slate-500 leading-none mb-1 font-semibold uppercase tracking-wider">Submitted to Manager</p>
-                                            <p className="text-base font-semibold text-slate-800 mb-0">{managerName}</p>
+                                            <p className="text-xs text-slate-500 leading-none mb-1 font-semibold uppercase tracking-wider">Submitted to Evaluators</p>
+                                            <p className="text-base font-semibold text-slate-800 mb-0">
+                                                {isManagerUser || managerName === 'CEO & Admin'
+                                                    ? 'CEO & Admin'
+                                                    : `Manager (${managerName}), Admin & CEO`}
+                                            </p>
                                         </div>
                                     </div>
                                 )}
@@ -757,10 +785,10 @@ const MobileQuarterlyReviewForm: React.FC<MobileQuarterlyReviewFormProps> = (pro
                                         {/* Overall Rating */}
                                         {(() => {
                                             const managerRatingValues = managerEvaluation.ratings
-                                                ? Object.values(managerEvaluation.ratings).map(Number).filter(v => !isNaN(v) && v > 0)
+                                                ? Object.values(managerEvaluation.ratings).map(Number).filter((ratingScore) => !isNaN(ratingScore) && ratingScore > 0)
                                                 : [];
                                             const managerAvgScore = managerRatingValues.length > 0
-                                                ? (managerRatingValues.reduce((a, b) => a + b, 0) / managerRatingValues.length).toFixed(1)
+                                                ? (managerRatingValues.reduce((accumulatedTotal, currentRating) => accumulatedTotal + currentRating, 0) / managerRatingValues.length).toFixed(1)
                                                 : null;
 
                                             if (!managerAvgScore && !managerEvaluation.finalRating) return null;
@@ -802,22 +830,22 @@ const MobileQuarterlyReviewForm: React.FC<MobileQuarterlyReviewFormProps> = (pro
                                                     Category Ratings
                                                 </h4>
                                                 <div className="flex flex-col gap-2">
-                                                    {RATING_CATEGORIES.map((cat) => {
-                                                        const val = managerEvaluation.ratings?.[cat.key] || 0;
+                                                    {RATING_CATEGORIES.map((categoryItem) => {
+                                                        const scoreValue = managerEvaluation.ratings?.[categoryItem.key] || 0;
                                                         return (
-                                                            <div key={cat.key} className="bg-white/80 border border-slate-200/80 rounded-xl px-3 py-2 flex items-center justify-between gap-2">
-                                                                <span className="text-xs font-medium text-slate-700">{cat.label}</span>
+                                                            <div key={categoryItem.key} className="bg-white/80 border border-slate-200/80 rounded-xl px-3 py-2 flex items-center justify-between gap-2">
+                                                                <span className="text-xs font-medium text-slate-700">{categoryItem.label}</span>
                                                                 <div className="flex items-center gap-0.5">
-                                                                    {[1, 2, 3, 4, 5].map((star) => (
+                                                                    {[1, 2, 3, 4, 5].map((starRating) => (
                                                                         <Star
-                                                                            key={star}
-                                                                            className={`w-3.5 h-3.5 ${star <= val
+                                                                            key={starRating}
+                                                                            className={`w-3.5 h-3.5 ${starRating <= scoreValue
                                                                                 ? 'text-amber-400 fill-amber-400'
                                                                                 : 'text-slate-200'
                                                                                 }`}
                                                                         />
                                                                     ))}
-                                                                    <span className="text-xs font-bold text-slate-600 ml-1">{val}/5</span>
+                                                                    <span className="text-xs font-bold text-slate-600 ml-1">{scoreValue}/5</span>
                                                                 </div>
                                                             </div>
                                                         );
@@ -984,12 +1012,18 @@ const MobileQuarterlyReviewForm: React.FC<MobileQuarterlyReviewFormProps> = (pro
                     {managerName && (
                         <div className="mt-2.5 p-2.5 bg-blue-50 border border-blue-100 rounded-xl flex items-center gap-2 text-xs text-blue-800">
                             <User className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                            <span>Assigned Manager: <strong>{managerName}</strong></span>
+                            <span>
+                                {isManagerUser || managerName === 'CEO & Admin' ? (
+                                    <>Assigned Evaluators: <strong>CEO & Admin</strong></>
+                                ) : (
+                                    <>Assigned Evaluators: <strong>Manager ({managerName}), Admin & CEO</strong></>
+                                )}
+                            </span>
                         </div>
                     )}
 
                     <div className="mt-2.5 p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-500 leading-relaxed">
-                        <strong>Note:</strong> Once submitted, your review cannot be edited and will be sent to your manager for evaluation.
+                        <strong>Note:</strong> Once submitted, your review cannot be edited and will be sent to {isManagerUser || managerName === 'CEO & Admin' ? 'the CEO and Admin' : 'your Manager, Admin, and CEO'} for evaluation.
                     </div>
                 </Modal>
 

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Card, Divider, Rate, Modal, Spin } from 'antd';
-import { User, Star, Paperclip, X } from 'lucide-react';
+import { User, Star, X } from 'lucide-react';
 import { useDispatch } from 'react-redux';
 import { AppDispatch } from '../../../../store';
 import {
@@ -277,8 +277,8 @@ const ReviewAttachmentChip: React.FC<{ file: AttachmentFile }> = ({ file }) => {
                             transition: 'background 0.2s ease',
                             marginLeft: 'auto',
                         }}
-                        onMouseEnter={(e) => (e.currentTarget.style.background = '#f1f5f9')}
-                        onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
+                        onMouseEnter={(event) => (event.currentTarget.style.background = '#f1f5f9')}
+                        onMouseLeave={(event) => (event.currentTarget.style.background = 'none')}
                     >
                         {loading
                             ? <Spin size="small" />
@@ -528,17 +528,17 @@ const ProjectSummaryCard: React.FC<{
                 return items;
             }
 
-            let achs: any[] = Array.isArray(achievements)
+            let achievementsList: any[] = Array.isArray(achievements)
                 ? achievements
                 : [];
 
-            let chs: any[] = Array.isArray(challenges)
+            let challengesList: any[] = Array.isArray(challenges)
                 ? challenges
                 : [];
 
             if (typeof achievements === 'string') {
                 try {
-                    achs = JSON.parse(achievements);
+                    achievementsList = JSON.parse(achievements);
                 } catch {
                     // Invalid JSON
                 }
@@ -546,28 +546,28 @@ const ProjectSummaryCard: React.FC<{
 
             if (typeof challenges === 'string') {
                 try {
-                    chs = JSON.parse(challenges);
+                    challengesList = JSON.parse(challenges);
                 } catch {
                     // Invalid JSON
                 }
             }
 
-            return achs.map((ach) => ({
+            return achievementsList.map((achievementItem) => ({
                 projectTitle:
-                    ach.title ||
-                    ach.projectTitle ||
+                    achievementItem.title ||
+                    achievementItem.projectTitle ||
                     '',
 
                 achievement:
-                    ach.details ||
-                    ach.achievement ||
+                    achievementItem.details ||
+                    achievementItem.achievement ||
                     '',
 
                 challenge:
-                    chs.find(
-                        (c) =>
-                            (c.title || c.projectTitle) ===
-                            (ach.title || ach.projectTitle)
+                    challengesList.find(
+                        (challengeItem) =>
+                            (challengeItem.title || challengeItem.projectTitle) ===
+                            (achievementItem.title || achievementItem.projectTitle)
                     )?.details || '',
             }));
         };
@@ -709,8 +709,8 @@ const TeamContributionSummaryCard: React.FC<{
             }
 
             const valid = list
-                .map((i) => Number(i.rating) || 0)
-                .filter((r) => r > 0);
+                .map((item) => Number(item.rating) || 0)
+                .filter((ratingScore) => ratingScore > 0);
 
             if (valid.length === 0) {
                 return 0;
@@ -718,7 +718,7 @@ const TeamContributionSummaryCard: React.FC<{
 
             return (
                 Math.round(
-                    (valid.reduce((a, b) => a + b, 0) /
+                    (valid.reduce((accumulatedTotal, currentRating) => accumulatedTotal + currentRating, 0) /
                         valid.length) *
                     10
                 ) / 10
@@ -1042,10 +1042,21 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
                             <User className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
 
                             <span>
-                                Assigned Manager:{' '}
-                                <strong className="text-indigo-900">
-                                    {managerName}
-                                </strong>
+                                {managerName === 'CEO & Admin' ? (
+                                    <>
+                                        Assigned Evaluators:{' '}
+                                        <strong className="text-indigo-900">
+                                            CEO & Admin
+                                        </strong>
+                                    </>
+                                ) : (
+                                    <>
+                                        Assigned Evaluators:{' '}
+                                        <strong className="text-indigo-900">
+                                            Manager ({managerName}), Admin & CEO
+                                        </strong>
+                                    </>
+                                )}
                             </span>
                         </div>
                     )}
