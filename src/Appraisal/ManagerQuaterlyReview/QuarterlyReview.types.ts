@@ -49,6 +49,12 @@ export interface ManagerReviewItem {
   strengths?: string | null;
   improvements?: string | null;
   remarks?: string | null;
+  employeeRole?: string;
+  evaluatorName?: string | null;
+  evaluatorRole?: string | null;
+  evaluatorId?: string | null;
+  isFinalRatingHidden?: boolean;
+  hasFinalRating?: boolean;
 }
 
 export interface ReviewStats {
@@ -57,6 +63,9 @@ export interface ReviewStats {
   pendingReviews: number;
   inReview: number;
   completed: number;
+  assignmentSummary: number;
+  notAssignedCount: number;
+  totalEmployees: number;
 }
 
 export const MIN_FIELD_LENGTH = 1;

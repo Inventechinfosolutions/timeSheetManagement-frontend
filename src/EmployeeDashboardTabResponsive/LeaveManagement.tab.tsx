@@ -1615,7 +1615,7 @@ const LeaveManagementTab: React.FC<LeaveManagementTabProps> = ({
 
               {/* Document Upload Section */}
               <div className="space-y-2">
-                <label className="text-sm font-bold text-[#2B3674] ml-1">
+                <label className="text-sm font-semibold text-slate-800 ml-1">
                   Attachments {isViewMode ? "" : "(Optional)"}
                 </label>
                 {!isViewMode && (
@@ -1624,9 +1624,12 @@ const LeaveManagementTab: React.FC<LeaveManagementTabProps> = ({
                     file)
                   </p>
                 )}
-                <div className="bg-[#F4F7FE] rounded-2xl p-2 border border-blue-50">
+                <div>
                   <CommonMultipleUploader
                     key={isViewMode ? selectedRequestId : uploaderKey}
+                    variant="chip"
+                    hideEmptyState={true}
+                    hideUploadButton={isViewMode}
                     entityType="LEAVE_REQUEST"
                     entityId={Number(entity?.id || 0)}
                     refId={isViewMode ? selectedRequestId || 0 : 0}
@@ -2181,12 +2184,22 @@ const LeaveManagementTab: React.FC<LeaveManagementTabProps> = ({
                     : ""
                 }`}
               >
-                <label className="block text-sm font-bold text-[#2B3674] mb-2">
+                <label className="block text-sm font-semibold text-slate-800 mb-2">
                   Supporting Documents (Optional)
                 </label>
-                <div className="bg-[#F4F7FE] rounded-2xl p-2 border border-blue-50">
+                <div>
                   <CommonMultipleUploader
                     key={`modify-uploader-${modifyModal.request?.id}`}
+                    variant="chip"
+                    hideEmptyState={true}
+                    hideUploadButton={
+                      modifyFormData.firstHalf ===
+                        (modifyModal.request?.firstHalf ||
+                          modifyModal.request?.requestType) &&
+                      modifyFormData.secondHalf ===
+                        (modifyModal.request?.secondHalf ||
+                          modifyModal.request?.requestType)
+                    }
                     entityType="LEAVE_REQUEST"
                     entityId={Number(entity?.id || 0)}
                     refId={0}
@@ -2227,6 +2240,18 @@ const LeaveManagementTab: React.FC<LeaveManagementTabProps> = ({
             <div className="flex gap-3 pt-4 px-6 pb-5 border-t border-gray-100 shrink-0">
               <button
                 onClick={() => {
+                  if (uploadedDocumentKeys && uploadedDocumentKeys.length > 0) {
+                    uploadedDocumentKeys.forEach((key: string) => {
+                      dispatch(
+                        deleteLeaveRequestFile({
+                          entityId: Number(entity?.id || 0),
+                          refId: 0,
+                          refType: "DOCUMENT",
+                          key,
+                        }),
+                      );
+                    });
+                  }
                   setModifyModal({
                     isOpen: false,
                     request: null,

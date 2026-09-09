@@ -132,7 +132,7 @@ const TodayAttendance = ({
   const handleDateNavigator = useCallback((timestamp: number) => {
     if (setScrollToDate) setScrollToDate(timestamp);
     const targetDate = new Date(timestamp);
-    const isPrivilegedUser = currentUser?.userType === UserType.ADMIN ||
+    const isPrivilegedUser = currentUser?.userType === UserType.ADMIN || currentUser?.userType === UserType.CEO ||
       currentUser?.userType === UserType.MANAGER || currentUser?.userType === UserType.TEAMLEAD;
     const isSelfView = !currentEmployeeId || currentEmployeeId === currentUser?.employeeId;
     const isViewAttendance = location.pathname.includes("/view-attendance/");

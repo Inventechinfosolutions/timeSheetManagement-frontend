@@ -1,8 +1,8 @@
+import { HiddenRatingBadge } from '../../components/HiddenRatingBadge';
 import React from 'react';
-import { Button, Spin, Tooltip, Select, message } from 'antd';
-import { useNavigate } from 'react-router-dom';
+import { Spin, Tooltip, Select } from 'antd';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
-    Plus,
     Edit3,
     Eye,
     Clock,
@@ -14,6 +14,7 @@ import {
     User,
     ChevronDown,
     FileCheck2,
+    Award,
 } from 'lucide-react';
 import { ReviewStatus } from '../enums/Appraisal.enums';
 import { QuarterlyReview } from '../types/Appraisal.types';
@@ -34,8 +35,11 @@ interface MobileEmployeeAppraisalDashboardProps {
     loading: boolean;
     fyOptions: string[];
     selectedFY: string;
+    selectedQuarter?: string;
+    summaryData?: any;
     fyLoading: boolean;
-    onFYChange: (fy: string) => void;
+    onFYChange: (financialYear: string) => void;
+    onQuarterChange?: (quarter: string) => void;
     onWithdraw?: (record: QuarterlyReview) => void;
     onDownload?: (record: QuarterlyReview) => void;
 }
@@ -139,7 +143,7 @@ const ReviewCard: React.FC<{
 
                         <p className="mobile-review-manager-line">
                             <User className="mobile-review-manager-icon" />
-                            Submitted to {record.managerName ?? '—'}
+                            Submitted to {record.managerName || (typeof window !== 'undefined' && window.location.pathname.startsWith('/manager-dashboard') ? 'CEO & Admin' : '—')}
                         </p>
                     </div>
 
@@ -189,18 +193,25 @@ const ReviewCard: React.FC<{
 
                     <StatCol label="Final Rating">
                         {(() => {
-                            const avg = getDisplayAverageRating(record);
-                            return avg ? (
-                                <span
-                                    style={{
-                                        fontWeight: 600,
-                                        color: '#4338ca',
-                                    }}
-                                >
-                                    {avg}
-                                </span>
-                            ) : (
-                                '—'
+                            const isEvaluated = Boolean(
+                                (record as any).hasFinalRating ||
+                                record.reviewStatus === ReviewStatus.REVIEWED ||
+                                record.reviewStatus === ReviewStatus.COMPLETED ||
+                                record.status === ReviewStatus.COMPLETED ||
+                                record.status === ReviewStatus.APPROVED ||
+                                record.finalRating
+                            );
+                            if (!isEvaluated) {
+                                return '—';
+                            }
+                            return (
+                                <HiddenRatingBadge
+                                    reviewId={record.id}
+                                    quarter={record.quarter}
+                                    finalRating={getDisplayAverageRating(record) || record.finalRating}
+                                    isFinalRatingHidden={(record as any).isFinalRatingHidden}
+                                    hasFinalRating={true}
+                                />
                             );
                         })()}
                     </StatCol>
@@ -236,13 +247,21 @@ const MobileEmployeeAppraisalDashboard: React.FC<
     loading,
     fyOptions,
     selectedFY,
+    selectedQuarter,
+    summaryData,
     fyLoading,
     onFYChange,
+    onQuarterChange,
     onWithdraw,
     onDownload,
 }) => {
         const navigate = useNavigate();
-        const [messageApi, contextHolder] = message.useMessage();
+        const location = useLocation();
+
+        const isManager = location.pathname.startsWith('/manager-dashboard');
+        const isAdmin = location.pathname.startsWith('/admin-dashboard');
+        const basePath = isManager ? '/manager-dashboard' : isAdmin ? '/admin-dashboard' : '/employee-dashboard';
+        const reviewPath = isManager || isAdmin ? `${basePath}/review` : `${basePath}/quarterly-review`;
 
         if (loading) {
             return (
@@ -253,7 +272,7 @@ const MobileEmployeeAppraisalDashboard: React.FC<
         }
 
         const currentReview = reviews.find(
-            (r) => r.quarter === currentQuarter
+            (reviewItem) => reviewItem.quarter === currentQuarter
         );
 
         const currentStatus = !currentReview
@@ -261,9 +280,6 @@ const MobileEmployeeAppraisalDashboard: React.FC<
             : currentReview.status === ReviewStatus.DRAFT
                 ? ReviewStatus.DRAFT
                 : ReviewStatus.SUBMITTED;
-
-        const hasCurrentQuarterReview =
-            !!currentReview;
 
         const quarterRange =
             formatQuarterRange(currentQuarter);
@@ -274,65 +290,8 @@ const MobileEmployeeAppraisalDashboard: React.FC<
         const quarterOver =
             isQuarterOver(currentQuarter);
 
-        /*
-         * Create button
-         *
-         * Same behavior as desktop:
-         *
-         * 1. If a review already exists for the current quarter:
-         *    - Keep the button visible
-         *    - Make it disabled-looking
-         *    - Show an info message when clicked
-         *
-         * 2. If no review exists:
-         *    - Navigate to the current-quarter review page
-         */
-        const actionButton = (
-            <Button
-                type="primary"
-                icon={
-                    <span className="!flex !items-center !justify-center">
-                        <Plus className="!w-4 !h-4" />
-                    </span>
-                }
-                onClick={() => {
-                    if (hasCurrentQuarterReview) {
-                        messageApi.info(
-                            'You have already created a review for the current quarter.'
-                        );
-                        return;
-                    }
-
-                    navigate(
-                        currentQuarter
-                            ? `/employee-dashboard/quarterly-review/${quarterToSlug(
-                                currentQuarter
-                            )}`
-                            : '/employee-dashboard/quarterly-review'
-                    );
-                }}
-                aria-disabled={hasCurrentQuarterReview}
-                className={`
-                !flex !items-center !justify-center !gap-2
-                !h-9 !px-4 !rounded-xl
-                !font-semibold !text-sm
-                !border-none
-                !transition-all !duration-300
-
-                ${hasCurrentQuarterReview
-                        ? '!bg-gray-300 !text-gray-500 !cursor-not-allowed !shadow-none'
-                        : '!bg-blue-600 hover:!bg-blue-700 !text-white !shadow-sm hover:!-translate-y-0.5 hover:!shadow-md'
-                    }
-            `}
-            >
-                Create
-            </Button>
-        );
-
         return (
             <>
-                {contextHolder}
-
                 <div className="mobile-dashboard-container">
 
                     {/* Top Header */}
@@ -344,8 +303,7 @@ const MobileEmployeeAppraisalDashboard: React.FC<
                                 </h1>
 
                                 <p className="mobile-subtitle">
-                                    Submit your quarterly achievements and view
-                                    your performance review status.
+                                    Complete assigned quarterly reviews and view your performance appraisal status.
                                 </p>
                             </div>
                         </div>
@@ -380,52 +338,9 @@ const MobileEmployeeAppraisalDashboard: React.FC<
                         </div>
                     </div>
 
-                    {/* Current Quarter Stats Card */}
+                    {/* Current Quarter Summary Stats Card */}
                     <div className="mobile-quarter-card">
-                        {actionButton}
-                        <div className="mobile-submission-row">
-
-                            <div className="mobile-submission-label-group">
-                                <span className="mobile-submission-icon-bg">
-                                    <FileCheck2 className="mobile-submission-icon" />
-                                </span>
-
-                                <span className="mobile-submission-label">
-                                    Submission Status
-                                </span>
-                            </div>
-
-                            <StatusBadge
-                                status={currentStatus}
-                            />
-                        </div>
-
                         <div className="mobile-info-rows">
-
-                            <InfoRow
-                                icon={
-                                    <Clock
-                                        style={{
-                                            width: 18,
-                                            height: 18,
-                                            color: '#10b981',
-                                        }}
-                                    />
-                                }
-                                iconTone="emerald"
-                                label="Due date"
-                                sublabel={
-                                    quarterOver
-                                        ? 'Quarter ended'
-                                        : 'Draft editable until then'
-                                }
-                                value={
-                                    currentStatus === ReviewStatus.NOT_STARTED ||
-                                        !currentQuarter
-                                        ? '—'
-                                        : quarterEndDate
-                                }
-                            />
 
                             <InfoRow
                                 icon={
@@ -439,11 +354,11 @@ const MobileEmployeeAppraisalDashboard: React.FC<
                                 }
                                 iconTone="indigo"
                                 label="Review status"
-                                sublabel="Manager evaluation"
+                                sublabel={isManager ? "CEO & Admin evaluation" : "Manager evaluation"}
                                 value={
-                                    (currentStatus === ReviewStatus.SUBMITTED && currentReview?.reviewStatus)
-                                        ? currentReview.reviewStatus
-                                        : '—'
+                                    summaryData?.reviewStatus && summaryData.reviewStatus !== '—'
+                                        ? summaryData.reviewStatus
+                                        : currentReview?.reviewStatus || '—'
                                 }
                             />
 
@@ -458,16 +373,58 @@ const MobileEmployeeAppraisalDashboard: React.FC<
                                     />
                                 }
                                 iconTone="amber"
-                                label="Final rating"
+                                label="Quarter rating"
                                 sublabel={
-                                    (currentReview?.reviewStatus === ReviewStatus.REVIEWED || currentReview?.reviewStatus === ReviewStatus.COMPLETED || currentReview?.status === ReviewStatus.COMPLETED || currentReview?.status === ReviewStatus.APPROVED) && currentReview?.reviewedOn
-                                        ? `Reviewed ${new Date(
-                                            currentReview.reviewedOn
-                                        ).toLocaleDateString('en-IN')}`
+                                    summaryData?.hasQuarterRating
+                                        ? `Rating for ${selectedQuarter || (summaryData?.targetQuarter ? summaryData.targetQuarter.split(' ')[0] : currentQuarter?.split(' ')[0] || 'Quarter')}`
                                         : 'Not available yet'
                                 }
                                 value={
-                                    getDisplayAverageRating(currentReview) ?? '—'
+                                    summaryData?.hasQuarterRating ? (
+                                        <HiddenRatingBadge
+                                            reviewId={summaryData?.activeReview?.id || currentReview?.id}
+                                            quarter={summaryData?.targetQuarter || selectedQuarter || currentReview?.quarter}
+                                            finalRating={summaryData?.quarterRating || summaryData?.quarterRatingScore || currentReview?.quarterRating || currentReview?.finalRating || getDisplayAverageRating(currentReview)}
+                                            isFinalRatingHidden={summaryData?.isQuarterRatingHidden ?? (currentReview as any)?.isFinalRatingHidden}
+                                            hasFinalRating={true}
+                                            size="lg"
+                                        />
+                                    ) : (
+                                        '—'
+                                    )
+                                }
+                            />
+
+                            <InfoRow
+                                icon={
+                                    <Award
+                                        style={{
+                                            width: 18,
+                                            height: 18,
+                                            color: '#10b981',
+                                        }}
+                                    />
+                                }
+                                iconTone="emerald"
+                                label="Year rating"
+                                sublabel={
+                                    summaryData?.hasYearRating
+                                        ? `Overall rating for ${summaryData?.targetFY || selectedFY || getFinancialYear(currentQuarter)}`
+                                        : 'Not available yet'
+                                }
+                                value={
+                                    summaryData?.hasYearRating ? (
+                                        <HiddenRatingBadge
+                                            reviewId={currentReview?.id ? `year-${summaryData?.targetFY || selectedFY || 'current'}` : undefined}
+                                            quarter={summaryData?.targetQuarter || currentQuarter}
+                                            finalRating={summaryData?.yearRating || summaryData?.yearRatingScore || currentReview?.yearRating}
+                                            isFinalRatingHidden={summaryData?.isYearRatingHidden}
+                                            hasFinalRating={true}
+                                            size="lg"
+                                        />
+                                    ) : (
+                                        '—'
+                                    )
                                 }
                             />
 
@@ -498,10 +455,10 @@ const MobileEmployeeAppraisalDashboard: React.FC<
 
                         </div>
 
-                        {/* Financial Year Filter */}
-                        {fyOptions.length > 0 && (
-                            <div className="mobile-filter-wrapper">
+                        {/* Financial Year and Quarter Filters */}
+                        <div className="mobile-filter-wrapper" style={{ display: 'flex', gap: '8px' }}>
 
+                            {fyOptions.length > 0 && (
                                 <Select
                                     className="mobile-filter-select"
                                     allowClear
@@ -516,14 +473,35 @@ const MobileEmployeeAppraisalDashboard: React.FC<
                                         <ChevronDown className="w-4 h-4 text-slate-400" />
                                     }
                                     popupMatchSelectWidth
-                                    options={fyOptions.map((fy) => ({
-                                        label: fy,
-                                        value: fy,
+                                    options={fyOptions.map((financialYear) => ({
+                                        label: financialYear,
+                                        value: financialYear,
                                     }))}
                                 />
+                            )}
 
-                            </div>
-                        )}
+                            <Select
+                                className="mobile-filter-select"
+                                allowClear
+                                value={
+                                    selectedQuarter || undefined
+                                }
+                                onChange={onQuarterChange}
+                                placeholder="Quarter"
+                                variant="outlined"
+                                suffixIcon={
+                                    <ChevronDown className="w-4 h-4 text-slate-400" />
+                                }
+                                popupMatchSelectWidth
+                                options={[
+                                    { label: 'Q1', value: 'Q1' },
+                                    { label: 'Q2', value: 'Q2' },
+                                    { label: 'Q3', value: 'Q3' },
+                                    { label: 'Q4', value: 'Q4' },
+                                ]}
+                            />
+
+                        </div>
 
                         {/* Review History */}
                         {reviews.length > 0 ? (
@@ -552,7 +530,7 @@ const MobileEmployeeAppraisalDashboard: React.FC<
 
                                             onView={() =>
                                                 navigate(
-                                                    `/employee-dashboard/quarterly-review/${quarterToSlug(
+                                                    `${reviewPath}/${quarterToSlug(
                                                         record.quarter
                                                     )}?mode=view`
                                                 )
@@ -560,7 +538,7 @@ const MobileEmployeeAppraisalDashboard: React.FC<
 
                                             onEdit={() =>
                                                 navigate(
-                                                    `/employee-dashboard/quarterly-review/${quarterToSlug(
+                                                    `${reviewPath}/${quarterToSlug(
                                                         record.quarter
                                                     )}`
                                                 )

@@ -1,3 +1,4 @@
+import { useDispatch } from 'react-redux';
 import React, { useRef, useState, useEffect } from 'react';
 import { Form, Input, Card, Button } from 'antd';
 import { Plus, Trash2 } from 'lucide-react';
@@ -27,6 +28,7 @@ export const AchievementsAndChallengesStep: React.FC<StepProps> = ({
   onDataChange,
 }) => {
   const form = Form.useFormInstance();
+  const dispatch = useDispatch();
   const uploaderRefs = useRef<{ [key: number]: CommonMultipleUploaderRef | null }>({});
   const [fileCounts, setFileCounts] = useState<{ [key: number]: number }>({});
   const [isMobile, setIsMobile] = useState(false);
@@ -40,6 +42,62 @@ export const AchievementsAndChallengesStep: React.FC<StepProps> = ({
 
     return () => mql.removeEventListener('change', updateMatch);
   }, []);
+
+  const handleRemoveProject = async (name: number, idx: number, removeFn: (i: number) => void) => {
+    try {
+      const projectData = form?.getFieldValue(['projects', name]);
+      const attachments = projectData?.attachment;
+
+      if (reviewId && reviewId > 0) {
+        if (Array.isArray(attachments)) {
+          for (const att of attachments) {
+            const fileKey = att?.key || att?.id || att?.s3Key;
+            if (fileKey) {
+              dispatch(deleteQuarterlyReviewFile({
+                entityId: reviewId,
+                refId: idx + 1,
+                refType: 'QUARTERLY_REVIEW_DOCUMENT',
+                entityType: 'QUARTERLY_REVIEW',
+                key: fileKey,
+              }) as any);
+            }
+          }
+        } else if (attachments && typeof attachments === 'object') {
+          const fileKey = (attachments as any).key || (attachments as any).id || (attachments as any).s3Key;
+          if (fileKey) {
+            dispatch(deleteQuarterlyReviewFile({
+              entityId: reviewId,
+              refId: idx + 1,
+              refType: 'QUARTERLY_REVIEW_DOCUMENT',
+              entityType: 'QUARTERLY_REVIEW',
+              key: fileKey,
+            }) as any);
+          }
+        }
+
+        dispatch(deleteQuarterlyReviewFile({
+          entityId: reviewId,
+          refId: idx + 1,
+          refType: 'QUARTERLY_REVIEW_DOCUMENT',
+          entityType: 'QUARTERLY_REVIEW',
+          key: 'all',
+        }) as any);
+      }
+    } catch (err) {
+      console.error('Failed to cleanup files for removed project:', err);
+    }
+
+    removeFn(name);
+    setFileCounts((prev) => {
+      const next = { ...prev };
+      delete next[idx];
+      return next;
+    });
+
+    if (onDataChange) {
+      onDataChange();
+    }
+  };
 
   if (isMobile) {
     return (
@@ -122,7 +180,7 @@ export const AchievementsAndChallengesStep: React.FC<StepProps> = ({
                         <Button
                           type="text"
                           danger
-                          onClick={() => remove(name)}
+                          onClick={() => handleRemoveProject(name, idx, remove)}
                           icon={<Trash2 className="w-4 h-4 text-red-500" />}
                           className="flex items-center gap-1.5 px-2 py-1 h-auto text-xs font-semibold text-red-500 hover:text-red-600 hover:bg-red-50 cursor-pointer hover:-translate-y-0.5"
                         >

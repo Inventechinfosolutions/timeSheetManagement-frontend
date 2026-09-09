@@ -55,7 +55,7 @@ const MobileResponsiveCalendarPage = ({
   );
   const { currentUser } = useAppSelector((state: RootState) => state.user);
 
-  const isAdmin = currentUser?.userType === UserType.ADMIN;
+  const isAdmin = currentUser?.userType === UserType.ADMIN || currentUser?.userType === UserType.CEO;
   const isManager =
     currentUser?.userType === UserType.MANAGER ||
     (currentUser?.role &&

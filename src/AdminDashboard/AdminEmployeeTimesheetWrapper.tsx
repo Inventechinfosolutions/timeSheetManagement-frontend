@@ -150,7 +150,7 @@ const AdminEmployeeTimesheetWrapper = () => {
           blockedFrom: fromDate,
           blockedTo: toDate,
           reason: reason || "Timesheet Locked",
-          blockedBy: currentUser?.userType === UserType.ADMIN ? "Admin" : "Manager",
+          blockedBy: (currentUser?.userType === UserType.ADMIN || currentUser?.userType === UserType.CEO) ? "Admin" : "Manager",
         }),
       ).unwrap();
 

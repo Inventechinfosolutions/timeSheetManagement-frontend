@@ -26,18 +26,23 @@ const setupAxiosInterceptors = (
       Storage.local.get("TimeSheet-authenticationToken") ||
       Storage.session.get("TimeSheet-authenticationToken");
    
-    const user = Storage.session.get("user");  
     const existingContentType =
       config.headers?.["Content-Type"] || config.headers?.["content-type"];
    
     config.headers.Accept = "application/json";
-    if (!existingContentType) {
-        config.headers["Content-Type"] = "application/json";
+
+    // Handle Content-Type properly for FormData vs JSON payloads
+    if (config.data instanceof FormData) {
+      if (config.headers) {
+        delete config.headers["Content-Type"];
+        delete config.headers["content-type"];
+      }
+    } else if (config.data && !existingContentType) {
+      config.headers["Content-Type"] = "application/json";
     }
  
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      config.headers.user = user || "";
     }
  
     config.withCredentials = true;
@@ -80,7 +85,7 @@ const setupAxiosInterceptors = (
     }
  
     // 2. Handle 401: Attempt Refresh
-    if (status === 401 && !originalRequest._retry && !originalRequest.url?.includes('/auth/refresh')) {
+    if (status === 401 && !originalRequest._retry && !originalRequest.url?.includes('/auth/refresh') && !originalRequest.url?.includes('/reveal-rating')) {
       const token = Storage.local.get("TimeSheet-authenticationToken") || Storage.session.get("TimeSheet-authenticationToken");
       
       // Only attempt refresh if we actually HAVE a token to begin with

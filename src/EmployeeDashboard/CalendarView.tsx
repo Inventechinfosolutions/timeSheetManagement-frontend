@@ -15,7 +15,6 @@ import {
 import { generateMonthlyEntries, isEditableMonth } from "../utils/attendanceUtils";
 import CalendarViewDesktop from "./CalendarView.desktop";
 import CalendarViewMobile from "../EmployeeDashboardMobileResponsive/CalendarView.mobile";
-import CalendarViewTab from "../EmployeeDashboardTabResponsive/CalendarView.tab";
 import {
   CALENDAR_DAYS_OF_WEEK,
   CalendarVariant,
@@ -93,7 +92,9 @@ const Calendar = ({
     (state: RootState) => state.timesheetBlocker,
   );
 
-  const isAdmin = currentUser?.userType === UserType.ADMIN;
+  const isAdmin =
+    currentUser?.userType === UserType.ADMIN ||
+    currentUser?.userType === UserType.CEO;
   const isManager =
     currentUser?.userType === UserType.MANAGER ||
     (currentUser?.role &&
@@ -335,6 +336,7 @@ const Calendar = ({
     const dateStr = dayjs(targetDate).format("YYYY-MM-DD");
     const isPrivilegedUser =
       currentUser?.userType === UserType.ADMIN ||
+        currentUser?.userType === UserType.CEO ||
       currentUser?.userType === UserType.MANAGER ||
       currentUser?.userType === UserType.TEAMLEAD;
     const isSelfView = currentEmployeeId === currentUser?.employeeId;
@@ -413,9 +415,8 @@ const Calendar = ({
       {isSmall || isSidebar ? (
         <CalendarViewMobile {...viewProps} />
       ) : (
-        <CalendarViewTab {...viewProps} />
-      )}
         <CalendarViewDesktop {...viewProps} />
+      )}
       
 
       {isDownloadModalOpen && (

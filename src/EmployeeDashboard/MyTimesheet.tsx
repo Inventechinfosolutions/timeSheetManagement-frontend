@@ -104,7 +104,7 @@ const MyTimesheet = ({
 
   const { blockers } = useAppSelector((state) => state.timesheetBlocker);
 
-  const isAdmin = currentUser?.userType === UserType.ADMIN;
+  const isAdmin = currentUser?.userType === UserType.ADMIN || currentUser?.userType === UserType.CEO;
   const isManager = !!(
     currentUser?.userType === UserType.MANAGER ||
     (currentUser?.role &&

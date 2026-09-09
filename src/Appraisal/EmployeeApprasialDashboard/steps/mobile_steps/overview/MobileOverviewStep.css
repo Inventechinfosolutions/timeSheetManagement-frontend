@@ -23,6 +23,7 @@
   font-size: 0.8125rem;
   margin-bottom: 1.25rem;
   text-align: justify;
+  letter-spacing: -0.025em;
 }
 
 .mobile-overview-card__label {

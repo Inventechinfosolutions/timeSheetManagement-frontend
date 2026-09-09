@@ -1,4 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
+import { getNotificationTargetRoute } from "../../utils/notificationNavigation";
 import dayjs from "dayjs";
 import {
   LogOut,
@@ -6,6 +7,8 @@ import {
   User,
   ChevronDown,
   ArrowLeft,
+  ArrowRight,
+  ExternalLink,
   Check,
   RotateCcw,
 } from "lucide-react";
@@ -58,7 +61,8 @@ const Header = ({
   const { currentUser } = useAppSelector((state) => state.user);
 
   // Permissions
-  const isAdmin = currentUser?.userType === UserType.ADMIN;
+  const isAdmin = currentUser?.userType === UserType.ADMIN || currentUser?.userType === UserType.CEO;
+  const isCEO = currentUser?.userType === UserType.CEO;
   const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
   const isManager = currentUser?.userType === UserType.MANAGER;
   const isApprover = isAdmin || isManager || isReceptionist;
@@ -136,6 +140,21 @@ const Header = ({
   const handleNotificationClick = (id: number) => {
     dispatch(fetchNotificationDetails(id));
     setViewMode("detail");
+  };
+
+  const handleNotificationItemClick = (notif: any) => {
+    if (!notif.isRead) {
+      handleMarkAsRead(notif.id, "attendance");
+    }
+    setIsNotificationOpen(false);
+    setViewMode("list");
+    dispatch(clearSelectedNotification());
+    const targetRoute = getNotificationTargetRoute(
+      notif,
+      currentUser?.userType,
+      location.pathname
+    );
+    navigate(targetRoute);
   };
 
   const handleBackToList = () => {
@@ -742,9 +761,7 @@ const Header = ({
                                 ? notifications.map((notif) => (
                                   <div
                                     key={notif.id}
-                                    onClick={() =>
-                                      handleNotificationClick(notif.id)
-                                    }
+                                    onClick={() => handleNotificationItemClick(notif)}
                                     className={`flex gap-4 p-5 hover:bg-gray-50/80 transition-colors border-b border-gray-50 last:border-0 group cursor-pointer relative ${!notif.isRead ? "bg-blue-50/30" : ""
                                       }`}
                                   >
@@ -855,29 +872,42 @@ const Header = ({
                             </div>
                           )}
                         </div>
-                        {selectedNotification &&
-                          !selectedNotification.isRead &&
-                          !isReceptionist && (
-                            <div className="p-6 border-t border-gray-50 bg-gray-50/50">
+                        {selectedNotification && (
+                          <div className="p-4 border-t border-gray-100 bg-gray-50/70 flex items-center gap-2.5">
+                            <button
+                              onClick={() => {
+                                const targetRoute = getNotificationTargetRoute(
+                                  selectedNotification,
+                                  currentUser?.userType,
+                                  location.pathname
+                                );
+                                setIsNotificationOpen(false);
+                                setViewMode("list");
+                                navigate(targetRoute);
+                              }}
+                              className="flex-1 py-2.5 px-4 rounded-xl bg-[#4318FF] text-white font-bold text-xs shadow-md shadow-blue-500/20 hover:bg-[#3713d3] hover:-translate-y-0.5 active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                            >
+                              <ExternalLink size={15} />
+                              Go to Page
+                            </button>
+                            {!selectedNotification.isRead && !isReceptionist && (
                               <button
                                 onClick={() =>
                                   handleMarkAsRead(selectedNotification.id)
                                 }
-                                className="w-full py-3 rounded-xl bg-[#4318FF] text-white font-bold text-sm shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:-translate-y-0.5 active:scale-95 transition-all flex items-center justify-center gap-2"
+                                className="py-2.5 px-3.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 font-bold text-xs transition-all flex items-center justify-center gap-1.5"
                               >
-                                <Check size={18} />
+                                <Check size={14} />
                                 Mark as Read
                               </button>
-                            </div>
-                          )}
-                        {selectedNotification &&
-                          selectedNotification.isRead && (
-                            <div className="p-6 border-t border-gray-50 bg-gray-50/50 text-center">
-                              <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-100 text-green-700 text-xs font-bold uppercase tracking-wide">
-                                <Check size={14} /> Read
+                            )}
+                            {selectedNotification.isRead && (
+                              <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-green-50 text-green-700 text-[11px] font-bold border border-green-200">
+                                <Check size={13} /> Read
                               </span>
-                            </div>
-                          )}
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -911,20 +941,24 @@ const Header = ({
                   </div>
                   <div className="profile-user-info flex flex-col items-start min-w-[70px]">
                     <span className="text-sm font-bold text-white truncate max-w-[120px] xl:max-w-[160px]">
-                      {isAdmin
-                        ? "Admin"
-                        : isReceptionist
-                          ? "Receptionist"
-                          : currentUser?.aliasLoginName?.split(" ")[0] || "User"}
+                      {isCEO
+                        ? "CEO"
+                        : isAdmin
+                          ? "Admin"
+                          : isReceptionist
+                            ? "Receptionist"
+                            : currentUser?.aliasLoginName?.split(" ")[0] || "User"}
                     </span>
                     <span className="text-[11px] text-blue-100/80 truncate max-w-[120px] xl:max-w-[160px]">
-                      {isAdmin
-                        ? "Administrator"
-                        : isReceptionist
-                          ? "View only"
-                          : isManager
-                            ? "Manager"
-                            : "Employee"}
+                      {isCEO
+                        ? "Chief Executive Officer"
+                        : isAdmin
+                          ? "Administrator"
+                          : isReceptionist
+                            ? "View only"
+                            : isManager
+                              ? "Manager"
+                              : "Employee"}
                     </span>
                   </div>
                   <ChevronDown
@@ -937,7 +971,16 @@ const Header = ({
                 {/* Desktop Profile Menu Dropdown */}
                 {isDropdownOpen && (
                   <div className="profile-menu absolute right-0 top-14 w-[300px] xl:w-[330px] bg-white rounded-xl shadow-[0px_20px_50px_0px_#111c440d] border border-gray-100 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                    {isAdmin ? (
+                    {isCEO ? (
+                      <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
+                        <p className="text-sm font-bold text-[#1B2559]">
+                          CEO
+                        </p>
+                        <p className="text-xs text-[#667eea] font-medium">
+                          Chief Executive Officer
+                        </p>
+                      </div>
+                    ) : isAdmin ? (
                       <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
                         <p className="text-sm font-bold text-[#1B2559]">
                           Admin

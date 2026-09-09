@@ -1,3 +1,5 @@
+import { RevealedRatingsProvider } from './Appraisal/hooks/useRevealedRatings';
+import { AuthenticateRatingModal } from './Appraisal/components/AuthenticateRatingModal';
 import {
   BrowserRouter as Router,
   Routes,
@@ -61,6 +63,7 @@ import ManagerMapping from "./ManagerMapping/ManagerMapping";
 import ManagerEmployeesView from "./AdminDashboard/ManagerEmployeesView";
 import MobileTimesheet from "./EmployeeDashboard/MyTimesheetMobileResponsive/MobileTimesheet";
 import QuarterlyReviewResponsive from "./Appraisal/ManagerQuaterlyReview/QuarterlyReviewResponsive";
+
 
 
 const EmployeeTabWrapper = () => {
@@ -128,6 +131,12 @@ const AdminTabWrapper = () => {
       return <MyProfile />;
     case "leave-management":
       return <LeaveManagement />;
+    case "appraisal":
+      return <EmployeeAppraisalDashboard />;
+    case "quarterly-review":
+      return <QuarterlyReviewResponsive />;
+    case "review":
+      return <QuarterlyReviewForm />;
     default:
       return <Navigate to="/admin-dashboard" replace />;
   }
@@ -288,7 +297,7 @@ function AppContent() {
                   path="/admin-dashboard"
                   element={
                     <ProtectedRoute
-                      allowedRoles={[UserType.ADMIN, UserType.RECEPTIONIST]}
+                      allowedRoles={[UserType.ADMIN, UserType.RECEPTIONIST, UserType.CEO]}
                     >
                       <AdminLayout />
                     </ProtectedRoute>
@@ -328,6 +337,14 @@ function AppContent() {
                   <Route
                     path="manager-employees/:managerId"
                     element={<ManagerEmployeesView />}
+                  />
+                  <Route
+                    path="review/:date?"
+                    element={<QuarterlyReviewForm />}
+                  />
+                  <Route
+                    path="quarterly-review/:employeeId?"
+                    element={<QuarterlyReviewResponsive />}
                   />
                   <Route path=":tab/:date?" element={<AdminTabWrapper />} />
                 </Route>
@@ -374,6 +391,10 @@ function AppContent() {
                   <Route
                     path="manager-employees/:managerId"
                     element={<ManagerEmployeesView />}
+                  />
+                  <Route
+                    path="review/:date?"
+                    element={<QuarterlyReviewForm />}
                   />
                   <Route
                     path="quarterly-review/:employeeId?"
@@ -450,7 +471,10 @@ function AppContent() {
 function App() {
   return (
     <Router>
-      <AppContent />
+      <RevealedRatingsProvider>
+        <AppContent />
+        <AuthenticateRatingModal />
+      </RevealedRatingsProvider>
     </Router>
   );
 }

@@ -44,6 +44,9 @@ const AdminLayout = () => {
     ) {
       return "Manager Mapping";
     }
+    if (path.includes("/admin-dashboard/quarterly-review")) {
+      return "Quarterly Review";
+    }
 
     switch (tab) {
       case "registration":
@@ -63,6 +66,8 @@ const AdminLayout = () => {
         return "Leave Balance";
       case "manager-mapping":
         return "Manager Mapping";
+      case "quarterly-review":
+        return "Quarterly Review";
       default:
         return "Admin Dashboard";
     }
@@ -91,6 +96,8 @@ const AdminLayout = () => {
       navigate("/admin-dashboard/leave-balance");
     } else if (tabName === "Manager Mapping") {
       navigate("/admin-dashboard/manager-mapping");
+    } else if (tabName === "Quarterly Review") {
+      navigate("/admin-dashboard/quarterly-review");
     }
   };
 
