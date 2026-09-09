@@ -54,16 +54,16 @@ const renderStatusBadge = (status: string | null) => {
       AppraisalStatus.REVIEWED,
       AppraisalStatus.APPROVED,
       AppraisalStatus.COMPLETED,
-    ].includes(s as AppraisalStatus)
+    ].includes(currentStatus as AppraisalStatus)
   ) {
     return (
       <span className="mobile-status-badge mobile-status-badge-success">
         <span className="mobile-status-dot" />
-        {s}
+        {currentStatus}
       </span>
     );
   }
-  if (s === AppraisalStatus.UNDER_REVIEW) {
+  if (currentStatus === AppraisalStatus.UNDER_REVIEW) {
     return (
       <span className="mobile-status-badge mobile-status-badge-purple">
         <span className="mobile-status-dot" />
@@ -74,7 +74,7 @@ const renderStatusBadge = (status: string | null) => {
   return (
     <span className="mobile-status-badge mobile-status-badge-amber">
       <span className="mobile-status-dot" />
-      {s}
+      {currentStatus}
     </span>
   );
 };

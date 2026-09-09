@@ -63,9 +63,22 @@ export interface ReviewStats {
   pendingReviews: number;
   inReview: number;
   completed: number;
-  assignmentSummary: number;
-  notAssignedCount: number;
-  totalEmployees: number;
+  assignmentSummary?: {
+    quarter?: string;
+    financialYear?: string;
+    canonicalQuarter?: string;
+    totalEmployees?: number;
+    totalSubmissions?: number;
+    pendingReviews?: number;
+    inReview?: number;
+    completed?: number;
+    assignedCount?: number;
+    notAssignedCount?: number;
+    singleQuarterCount?: number;
+    assignedEmployees?: any[];
+    notAssignedEmployees?: any[];
+    singleQuarterEmployees?: any[];
+  };
 }
 
 export const MIN_FIELD_LENGTH = 1;
@@ -108,8 +121,12 @@ export const RATING_CATEGORY_ITEMS = [
 ];
 
 export const STATUS_TAB_ITEMS = [
-  { key: StatusTabFilter.ALL, label: 'All Reviews' },
+  { key: StatusTabFilter.ALL, label: 'All Status' },
+  { key: StatusTabFilter.ASSIGNED, label: 'Assigned' },
   { key: StatusTabFilter.PENDING, label: 'Pending' },
   { key: StatusTabFilter.IN_REVIEW, label: 'In Review' },
   { key: StatusTabFilter.COMPLETED, label: 'Completed' },
 ];
+
+/** Same list used by the Status dropdown in the filter bar */
+export const STATUS_FILTER_ITEMS = STATUS_TAB_ITEMS;

@@ -20,6 +20,7 @@ import {
   ShieldCheck,
   Check,
   X,
+  RotateCcw,
 } from "lucide-react";
 import axios from "axios";
 import { Modal, Badge } from "antd";
@@ -37,6 +38,7 @@ import {
   MIN_FIELD_LENGTH,
   DEFAULT_RATING_VALUE,
   STATUS_TAB_ITEMS,
+  STATUS_FILTER_ITEMS,
   YEAR_FILTER_ALL,
   DEFAULT_YEAR,
   toFiscalYearLabel,
@@ -216,6 +218,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
     pendingReviews: 0,
     inReview: 0,
     completed: 0,
+    assignmentSummary: {},
   });
   const [, setQuarterOptions] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -229,6 +232,11 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
     StatusTabFilter.ALL,
   );
   const [selectedRole, setSelectedRole] = useState<string>("ALL");
+  const [selectedEmployee, setSelectedEmployee] = useState<string>("ALL");
+  const [teamEmployees, setTeamEmployees] = useState<
+    Array<{ employeeId: string; employeeName: string; designation?: string }>
+  >([]);
+  const [loadingTeamEmployees, setLoadingTeamEmployees] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedYear, setSelectedYear] = useState<string>(DEFAULT_YEAR);
 
@@ -361,6 +369,8 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
       if (selectedStatusTab !== StatusTabFilter.ALL)
         params.status = selectedStatusTab;
       if (selectedRole !== "ALL") params.role = selectedRole;
+      if (selectedEmployee && selectedEmployee !== "ALL")
+        params.employeeId = selectedEmployee;
       if (searchQuery.trim()) params.search = searchQuery.trim();
 
       const statsParams: Record<string, any> = {};
@@ -414,6 +424,29 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
       })
       .catch(() => {
         // Non-critical — dropdown just falls back to empty options.
+      });
+
+    // Fetch team employees for the employee filter dropdown
+    setLoadingTeamEmployees(true);
+    axios
+      .get("/api/manager-quarterly-review/employees")
+      .then((res) => {
+        if (res.data?.success && Array.isArray(res.data.data)) {
+          setTeamEmployees(res.data.data);
+        }
+      })
+      .catch(() => {
+        axios
+          .get("/api/quarterly-review/assignable-employees")
+          .then((res) => {
+            if (res.data?.success && Array.isArray(res.data.data)) {
+              setTeamEmployees(res.data.data);
+            }
+          })
+          .catch(() => {});
+      })
+      .finally(() => {
+        setLoadingTeamEmployees(false);
       });
   }, []);
  
@@ -902,6 +935,16 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
     return years;
   }, [submissions]);
 
+  const handleClearFilters = () => {
+    setSearchQuery("");
+    setSelectedRole("ALL");
+    setSelectedYear(YEAR_FILTER_ALL);
+    setSelectedQuarterCard(QuarterFilter.ALL);
+    setSelectedEmployee("ALL");
+    setSelectedStatusTab(StatusTabFilter.ALL);
+    setCurrentPage(1);
+  };
+
   // Any filter change invalidates the current result set — jump back to
   // page 1 and re-fetch from the server with the new filters applied.
   useEffect(() => {
@@ -914,6 +957,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
     selectedQuarterCard,
     selectedStatusTab,
     selectedRole,
+    selectedEmployee,
     searchQuery,
   ]);
 
@@ -1186,228 +1230,73 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
           `flex-1` on the group below has nothing to share the row with
           anymore, so it stretches across the full width automatically. */}
 
-      {/* ── Employee Assignment Summary Card (Quarter & FY specific) ── */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-4 transition-all">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100 flex-wrap gap-2">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100/80 flex items-center justify-center text-indigo-600">
-              <Users className="w-4.5 h-4.5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-slate-900 leading-none">
-                  Employee Assignment
-                </h3>
-                <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/60">
-                  {selectedQuarterCard !== QuarterFilter.ALL ? selectedQuarterCard : (stats.assignmentSummary?.quarter || "Q1")} {selectedYear !== YEAR_FILTER_ALL ? `FY ${selectedYear}` : "FY 2026-27"}
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500 mt-1">
-                Overview of employees eligible, assigned, and pending assignment for the selected quarter
-              </p>
-            </div>
-          </div>
-
-          {/* Access Requests button */}
-          <div className="flex items-center gap-2">
-            <Badge count={accessRequests.length} offset={[-4, 4]}>
-              <Button
-                size="small"
-                icon={<Key className="w-3.5 h-3.5" />}
-                onClick={openAccessRequestsPanel}
-                className="!border-amber-400 !text-amber-700 hover:!bg-amber-50 !font-semibold !rounded-lg !flex !items-center !gap-1 cursor-pointer"
-              >
-                Access Requests
-              </Button>
-            </Badge>
-          </div>
-
-          {/* Quick Quarter pills */}
-          {/* <div className="flex items-center gap-1.5 bg-slate-50 p-1 rounded-xl border border-slate-200/70">
-            <span className="text-[11px] font-semibold text-slate-500 px-2">Quarter:</span>
-            {[
-              { label: "Q1", val: QuarterFilter.Q1 },
-              { label: "Q2", val: QuarterFilter.Q2 },
-              { label: "Q3", val: QuarterFilter.Q3 },
-              { label: "Q4", val: QuarterFilter.Q4 },
-            ].map((qItem) => {
-              const isActive = selectedQuarterCard === qItem.val || (selectedQuarterCard === QuarterFilter.ALL && qItem.val === QuarterFilter.Q1);
-              return (
-                <button
-                  key={qItem.val}
-                  type="button"
-                  onClick={() => setSelectedQuarterCard(qItem.val)}
-                  className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${
-                    isActive
-                      ? "bg-white text-indigo-700 shadow-sm border border-slate-200"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                  }`}
-                >
-                  {qItem.label}
-                </button>
-              );
-            })}
-          </div> */}
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3">
-          {/* Total Employees */}
-          <div className="rounded-xl bg-slate-50/80 border border-slate-200/70 p-3.5 flex items-center justify-between">
-            <div>
-              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                Total Employees
-              </p>
-              <p className="text-2xl font-black text-slate-900 mt-0.5">
-                {stats.assignmentSummary?.totalEmployees ?? stats.totalTeamMembers}
-              </p>
-              <p className="text-[11px] text-slate-400 mt-0.5">
-                Eligible members
-              </p>
-            </div>
-            <div className="w-10 h-10 rounded-xl bg-slate-200/60 flex items-center justify-center text-slate-600">
-              <Users className="w-5 h-5" />
-            </div>
-          </div>
-
-          {/* Not Assigned (Clickable!) */}
-          <button
-            type="button"
-            onClick={() => {
-              setAssignmentListType("not_assigned");
-              setAssignmentListSearch("");
-              setAssignmentListModalOpen(true);
-            }}
-            className="group rounded-xl bg-amber-50/70 hover:bg-amber-100/60 border border-amber-200/80 hover:border-amber-300 p-3.5 flex items-center justify-between text-left transition-all cursor-pointer shadow-none hover:shadow-sm"
-          >
-            <div>
-              <div className="flex items-center gap-1.5">
-                <p className="text-[11px] font-bold text-amber-800 uppercase tracking-wider">
-                  Not Assigned
-                </p>
-                <span className="text-[10px] font-semibold text-amber-700 bg-amber-100/90 px-1.5 py-0.5 rounded">
-                  View list ↗
-                </span>
-              </div>
-              <p className="text-2xl font-black text-amber-800 mt-0.5">
-                {stats.assignmentSummary?.notAssignedCount ?? 0}
-              </p>
-              <p className="text-[11px] text-amber-700/90 mt-0.5 font-medium">
-                Not assigned yet (click to view)
-              </p>
-            </div>
-            <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <Hourglass className="w-5 h-5" />
-            </div>
-          </button>
-
-          {/* Assigned Members (Clickable!) */}
-          <button
-            type="button"
-            onClick={() => {
-              setAssignmentListType("assigned");
-              setAssignedSubTab("all");
-              setAssignmentListSearch("");
-              setAssignmentListModalOpen(true);
-            }}
-            className="group rounded-xl bg-violet-50/70 hover:bg-violet-100/60 border border-violet-200/80 hover:border-violet-300 p-3.5 flex items-center justify-between text-left transition-all cursor-pointer shadow-none hover:shadow-sm"
-          >
-            <div>
-              <div className="flex items-center gap-1.5">
-                <p className="text-[11px] font-bold text-violet-800 uppercase tracking-wider">
-                  Assigned
-                </p>
-                <span className="text-[10px] font-semibold text-violet-700 bg-violet-100/90 px-1.5 py-0.5 rounded">
-                  View list ↗
-                </span>
-              </div>
-              <div className="flex items-baseline gap-1.5 mt-0.5">
-                <p className="text-2xl font-black text-violet-800">
-                  {stats.assignmentSummary?.assignedCount ?? 0}
-                </p>
-                {(stats.assignmentSummary?.singleQuarterCount ?? 0) > 0 && (
-                  <span className="text-[11px] font-semibold text-violet-600 bg-violet-100/90 px-1.5 py-0.5 rounded">
-                    {stats.assignmentSummary?.singleQuarterCount} pending 1Q
-                  </span>
-                )}
-              </div>
-              <p className="text-[11px] text-violet-700/90 mt-0.5 font-medium">
-                {(stats.assignmentSummary?.singleQuarterCount ?? 0) > 0
-                  ? `${stats.assignmentSummary?.singleQuarterCount} with 1 quarter assigned, 1 pending`
-                  : "1 quarter assigned, 1 pending"}
-              </p>
-            </div>
-            <div className="w-10 h-10 rounded-xl bg-violet-100 text-violet-700 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <Calendar className="w-5 h-5" />
-            </div>
-          </button>
-        </div>
+      {/* ── Employee Assignment — single Create button ── */}
+      <div className="flex items-center justify-end">
+        <button
+          type="button"
+          onClick={() => {
+            setAssignmentListType("not_assigned");
+            setAssignmentListSearch("");
+            setAssignmentListModalOpen(true);
+          }}
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-sm font-semibold shadow-sm hover:shadow-md transition-all"
+        >
+          <span className="text-base leading-none">+</span>
+          Create
+        </button>
       </div>
 
-      {/* ── Review Submissions Summary Cards (Submission & Review status only) ── */}
+      {/* ── Review Submissions Summary Cards - COMMENTED OUT ── */}
+      {/*
       <div className="flex items-start gap-3 flex-wrap">
         <div className="flex items-stretch gap-3 flex-1 min-w-[560px]">
-          {/* Total Submissions */}
           <div className="mqr-stat-card rounded-xl border border-slate-200 bg-white p-4 flex-1 min-w-[135px] flex items-center gap-3">
             <div className="w-11 h-11 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
               <Users className="w-5 h-5 text-blue-600" />
             </div>
-
             <div className="min-w-0">
               <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wide leading-snug truncate">
                 Total Submissions
               </p>
-
               <p className="text-2xl font-bold text-slate-900 mt-0.5">
                 {stats.totalSubmissions}
               </p>
             </div>
           </div>
-
-          {/* Pending Reviews */}
           <div className="mqr-stat-card rounded-xl border border-slate-200 bg-white p-4 flex-1 min-w-[135px] flex items-center gap-3">
             <div className="w-11 h-11 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
               <Hourglass className="w-5 h-5 text-amber-600" />
             </div>
-
             <div className="min-w-0">
               <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wide leading-snug truncate">
                 Pending Reviews
               </p>
-
               <p className="text-2xl font-bold text-slate-900 mt-0.5">
                 {stats.pendingReviews}
               </p>
             </div>
           </div>
-
-          {/* In Review */}
           <div className="mqr-stat-card rounded-xl border border-slate-200 bg-white p-4 flex-1 min-w-[135px] flex items-center gap-3">
             <div className="w-11 h-11 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
               <Edit3 className="w-5 h-5 text-indigo-600" />
             </div>
-
             <div className="min-w-0">
               <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wide leading-snug truncate">
                 In Review
               </p>
-
               <p className="text-2xl font-bold text-slate-900 mt-0.5">
                 {stats.inReview}
               </p>
             </div>
           </div>
-
-          {/* Completed Reviews */}
           <div className="mqr-stat-card rounded-xl border border-slate-200 bg-white p-4 flex-1 min-w-[135px] flex items-center gap-3">
             <div className="w-11 h-11 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
               <CheckCircle2 className="w-5 h-5 text-emerald-600" />
             </div>
-
             <div className="min-w-0">
               <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wide leading-snug truncate">
                 Completed Reviews
               </p>
-
               <p className="text-2xl font-bold text-slate-900 mt-0.5">
                 {stats.completed}
               </p>
@@ -1415,6 +1304,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
           </div>
         </div>
       </div>
+      */}
 
       {/* Filter card for the reviews list. The "Quarterly Reviews" section
           label now lives as this card's own top row (previously a
@@ -1422,41 +1312,28 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
           divider, then the status segmented-control on the left and the
           search box + Financial Year + Quarter selects grouped on the
           right, all inside the same white card. */}
-      <div className="bg-white border border-slate-100 rounded-2xl px-3 pt-2 pb-3 shadow-sm flex flex-col gap-2">
+      <div className="bg-white border border-slate-100 rounded-2xl px-3 pt-2 pb-3 shadow-sm flex flex-col gap-2 relative z-20">
         <div className="flex items-center justify-between gap-2">
-            <h2 className="text-base font-extrabold text-[#2B3674] leading-tight">
-              Quarterly Reviews
-            </h2>
-          </div>
+          <h2 className="text-base font-extrabold text-[#2B3674] leading-tight">
+            Quarterly Reviews
+          </h2>
+          <button
+            type="button"
+            onClick={handleClearFilters}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-indigo-600 bg-slate-100/90 hover:bg-indigo-50 border border-slate-200/80 hover:border-indigo-200 transition-all cursor-pointer shadow-xs"
+            title="Reset all filters"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            Clear
+          </button>
+        </div>
 
         <div className="h-px bg-slate-100" />
 
 
         <div className="flex flex-wrap items-center justify-between gap-3">
-          {/* Status segmented control — the active tab renders as a white
-              pill with a subtle shadow inside a light gray track, the
-              "toolbar" pattern used in modern dashboard UIs, rather than
-              separate solid-colored buttons competing for attention. */}
-          <div className="inline-flex items-center gap-1 bg-slate-100 rounded-xl p-1">
-            {STATUS_TAB_ITEMS.map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setSelectedStatusTab(tab.key)}
-                className={`px-5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${selectedStatusTab === tab.key
-                    ? "bg-white text-indigo-600 shadow-sm"
-                    : "text-slate-500 hover:text-slate-700"
-                  }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Vertical divider between the status control and the filters;
-              hidden once the row wraps on narrower widths. */}
-          <div className="hidden md:block w-px h-8 bg-slate-200" />
-
-          <div className="flex items-center gap-3 flex-1 min-w-[420px] justify-end">
+          {/* Search + Filter dropdowns — now on the LEFT */}
+          <div className="flex items-center gap-3 flex-1 min-w-[420px]">
             <Input
               placeholder="Search employee name or ID..."
               prefix={<Search className="w-4 h-4 text-slate-400" />}
@@ -1466,41 +1343,100 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
               allowClear
             />
 
-            <Select
-              value={selectedRole}
-              onChange={setSelectedRole}
-              className="!w-36 !rounded-xl !shrink-0"
-            >
-              <Option value="ALL">All Roles</Option>
-              <Option value="MANAGER">Managers</Option>
-              <Option value="EMPLOYEE">Employees</Option>
-            </Select>
+            {/* Role dropdown wrapped in dedicated relative container */}
+            <div className="relative shrink-0">
+              <Select
+                value={selectedRole}
+                onChange={setSelectedRole}
+                className="!w-36 !rounded-xl"
+                getPopupContainer={(trigger) => trigger.parentElement!}
+              >
+                <Option value="ALL">All Roles</Option>
+                <Option value="MANAGER">Managers</Option>
+                <Option value="EMPLOYEE">Employees</Option>
+              </Select>
+            </div>
 
+            {/* Year dropdown wrapped in dedicated relative container */}
+            <div className="relative shrink-0">
+              <Select
+                value={selectedYear}
+                onChange={setSelectedYear}
+                className="!w-36 !rounded-xl"
+                suffixIcon={<Calendar className="w-3.5 h-3.5 text-indigo-500" />}
+                dropdownStyle={{ minWidth: 200 }}
+                getPopupContainer={(trigger) => trigger.parentElement!}
+              >
+                <Option value={YEAR_FILTER_ALL}>All Years</Option>
+                {yearOptions.map((yearOption) => (
+                  <Option key={yearOption} value={yearOption}>
+                    {`FY ${yearOption}`}
+                  </Option>
+                ))}
+              </Select>
+            </div>
+
+            {/* Quarter dropdown wrapped in dedicated relative container */}
+            <div className="relative shrink-0">
+              <Select
+                value={selectedQuarterCard}
+                onChange={setSelectedQuarterCard}
+                className="!w-32 !rounded-xl"
+                getPopupContainer={(trigger) => trigger.parentElement!}
+              >
+                <Option value={QuarterFilter.ALL}>Quarters</Option>
+                <Option value={QuarterFilter.Q1}>Q1</Option>
+                <Option value={QuarterFilter.Q2}>Q2</Option>
+                <Option value={QuarterFilter.Q3}>Q3</Option>
+                <Option value={QuarterFilter.Q4}>Q4</Option>
+              </Select>
+            </div>
+
+            {/* Employee dropdown beside Quarters wrapped in dedicated relative container */}
+            <div className="relative shrink-0">
+              <Select
+                value={selectedEmployee}
+                onChange={setSelectedEmployee}
+                loading={loadingTeamEmployees}
+                className="!w-52 !rounded-xl"
+                showSearch
+                optionFilterProp="children"
+                filterOption={(input, option) =>
+                  String(option?.children || '')
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+                }
+                dropdownStyle={{ minWidth: 260 }}
+                getPopupContainer={(trigger) => trigger.parentElement!}
+              >
+                <Option value="ALL">All Employees</Option>
+                {teamEmployees.map((emp) => (
+                  <Option key={emp.employeeId} value={emp.employeeId}>
+                    {emp.employeeName && emp.employeeName !== emp.employeeId
+                      ? `${emp.employeeName} (${emp.employeeId})`
+                      : emp.employeeId}
+                  </Option>
+                ))}
+              </Select>
+            </div>
+          </div>
+
+          {/* Vertical divider */}
+          <div className="hidden md:block w-px h-8 bg-slate-200" />
+
+          {/* Status dropdown — RIGHT side wrapped in dedicated relative container */}
+          <div className="relative shrink-0">
             <Select
-              value={selectedYear}
-              onChange={setSelectedYear}
-              className="!w-36 !rounded-xl !shrink-0"
-              suffixIcon={<Calendar className="w-3.5 h-3.5 text-indigo-500" />}
-              dropdownStyle={{ minWidth: 200 }}
+              value={selectedStatusTab}
+              onChange={(val) => setSelectedStatusTab(val)}
+              className="!w-40 !rounded-xl"
+              getPopupContainer={(trigger) => trigger.parentElement!}
             >
-              <Option value={YEAR_FILTER_ALL}>All Years</Option>
-              {yearOptions.map((yearOption) => (
-                <Option key={yearOption} value={yearOption}>
-                  {`FY ${yearOption}`}
+              {STATUS_FILTER_ITEMS.map((item) => (
+                <Option key={item.key} value={item.key}>
+                  {item.label}
                 </Option>
               ))}
-            </Select>
-
-            <Select
-              value={selectedQuarterCard}
-              onChange={setSelectedQuarterCard}
-              className="!w-32 !rounded-xl !shrink-0"
-            >
-              <Option value={QuarterFilter.ALL}>All Quarters</Option>
-              <Option value={QuarterFilter.Q1}>Q1</Option>
-              <Option value={QuarterFilter.Q2}>Q2</Option>
-              <Option value={QuarterFilter.Q3}>Q3</Option>
-              <Option value={QuarterFilter.Q4}>Q4</Option>
             </Select>
           </div>
         </div>
