@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Check } from 'lucide-react';
 import './QuarterlyReviewStepperMobile.css';
+import '../desktop/quarterlyReviewDesktop.css';
 
 interface StepperProps {
   currentStep: number;
@@ -36,7 +37,7 @@ export const QuarterlyReviewStepperMobile: React.FC<StepperProps> = ({
   }, [currentStep]);
 
   return (
-    <div className="bg-white border border-slate-100 py-3 sm:p-4 rounded-2xl mb-3.5 shadow-sm w-full mobile-stepper-container">
+    <div className="qr-stepper-card py-3 sm:p-4 rounded-[28px] mb-3.5 w-full mobile-stepper-container">
       {/* Step counter - top right */}
       <div className="flex justify-end mb-2 px-1">
         <span className="text-xs sm:text-sm font-semibold text-slate-500">
@@ -72,10 +73,10 @@ export const QuarterlyReviewStepperMobile: React.FC<StepperProps> = ({
                   onClick={() => onChangeStep(idx)}
                   className={`flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full font-bold text-xs sm:text-sm transition-all duration-200 ${
                     isCompleted
-                      ? 'bg-emerald-50 border border-emerald-500 text-emerald-500 hover:bg-emerald-100'
+                      ? 'qr-step-circle-done'
                       : isActive
-                        ? 'bg-indigo-600 text-white shadow-sm'
-                        : 'bg-white border border-slate-200 text-slate-400 hover:border-slate-300'
+                        ? 'qr-step-circle-active'
+                        : 'qr-step-circle-upcoming'
                   }`}
                 >
                   {isCompleted ? (
