@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Form, Input, Card, Button } from 'antd';
-import { Plus, Trash2 } from 'lucide-react';
+import { Form, Input, Button } from 'antd';
+import { Plus, Trash2, Trophy } from 'lucide-react';
+import { ReviewStepCard } from '../../desktop/ReviewStepCard';
 import CommonMultipleUploader, {
   CommonMultipleUploaderRef,
 } from '../../../../EmployeeDashboard/CommonMultipleUploader';
@@ -87,21 +88,16 @@ export const AchievementsAndChallengesStep: React.FC<StepProps> = ({
           border-radius: 12px !important;
         }
       `}</style>
-      <Card
-        className="shadow-md border border-slate-100 rounded-2xl p-4 bg-white/80 backdrop-blur-sm"
-        styles={{
-          body: {
-            padding: '10px',
-            textAlign: 'justify',
-          },
-        }}
+      <ReviewStepCard
+        icon={Trophy}
+        stepNumber={2}
+        title="Accomplishments & Challenges"
+        description={
+          disabled
+            ? undefined
+            : 'Highlight your key achievements, challenges, and performance impacts this quarter.'
+        }
       >
-        <h1 className="text-base font-semibold mb-2">2. Accomplishments & Challenges</h1>
-        {!disabled && (
-          <p className="text-slate-500 text-sm mb-6 leading-relaxed">
-            Highlight your key achievements, challenges, and performance impacts this quarter.
-          </p>
-        )}
 
         <Form.List name="projects">
           {(fields, { add, remove }, { errors }) => (
@@ -110,7 +106,7 @@ export const AchievementsAndChallengesStep: React.FC<StepProps> = ({
                 {fields.map(({ key, name, ...restField }, idx) => (
                   <div
                     key={key}
-                    className="bg-slate-50/50  p-6 rounded-2xl relative border border-slate-200/80 transition-all"
+                    className="qr-field-shell p-6 rounded-2xl relative transition-all"
                   >
                     {/* Item Header */}
                     <div className="flex justify-between items-center mb-1">
@@ -146,11 +142,11 @@ export const AchievementsAndChallengesStep: React.FC<StepProps> = ({
                         <Input
                           disabled={disabled}
                           placeholder={disabled ? undefined : "Enter project title"}
-                          className="rounded-xl border-slate-200 focus:border-blue-500 h-10 px-3 text-slate-900 bg-white hover:-translate-y-0.5"
+                          className="rounded-xl h-10 px-3 text-slate-900 bg-white hover:-translate-y-0.5"
                           style={{
                             backgroundColor: '#ffffff',
                             borderRadius: '12px',
-                            borderColor: '#e2e8f0',
+                            borderColor: '#94a3b8',
                           }}
                           styles={{
                             input: {
@@ -181,11 +177,11 @@ export const AchievementsAndChallengesStep: React.FC<StepProps> = ({
                             rows={4}
                             disabled={disabled}
                             placeholder={disabled ? undefined : "List your key accomplishments..."}
-                            className="rounded-xl border-slate-200 focus:border-blue-500 p-3 text-slate-900 hide-scrollbar bg-white hover:-translate-y-0.5"
+                            className="rounded-xl p-3 text-slate-900 hide-scrollbar bg-white hover:-translate-y-0.5"
                             style={{
                               borderRadius: '12px',
                               backgroundColor: '#fff',
-                              borderColor: '#e2e8f0',
+                              borderColor: '#94a3b8',
                             }}
                             showCount
                             maxLength={2000}
@@ -217,11 +213,11 @@ export const AchievementsAndChallengesStep: React.FC<StepProps> = ({
                             rows={4}
                             disabled={disabled}
                             placeholder={disabled ? undefined : "Describe any challenges faced..."}
-                            className="rounded-xl border-slate-200 focus:border-blue-500 p-3 text-slate-900 hide-scrollbar bg-white hover:-translate-y-0.5"
+                            className="rounded-xl p-3 text-slate-900 hide-scrollbar bg-white hover:-translate-y-0.5"
                             style={{
                               borderRadius: '12px',
                               backgroundColor: '#fff',
-                              borderColor: '#e2e8f0',
+                              borderColor: '#94a3b8',
                             }}
                             showCount
                             maxLength={2000}
@@ -301,7 +297,7 @@ export const AchievementsAndChallengesStep: React.FC<StepProps> = ({
             </>
           )}
         </Form.List>
-      </Card>
+      </ReviewStepCard>
     </>
   );
 };

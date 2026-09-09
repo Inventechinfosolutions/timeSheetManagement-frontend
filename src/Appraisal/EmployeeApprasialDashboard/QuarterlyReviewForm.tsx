@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { Form, Button, message, Spin, Modal } from 'antd';
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { Save, Send, ArrowLeft, ArrowRight, ChevronLeft, CheckCircle2, User, UserX, Star, HourglassIcon, MessageSquare, TrendingUp, ThumbsUp } from 'lucide-react';
+import { Save, Send, ArrowLeft, ArrowRight, ChevronLeft, CheckCircle2, User, UserX, Star, HourglassIcon, ClipboardList } from 'lucide-react';
 
 import { QuarterlyReviewStepper } from './desktop/QuarterlyReviewStepper';
 import { OverviewStep } from './steps/desktop_steps/OverviewStep';
@@ -28,6 +28,7 @@ import { getManagerMappingByEmployeeId } from '../../reducers/managerMapping.red
 
 // Fixed import path: MobileQuarterlyReviewForm lives in the sibling `mobile` folder.
 import MobileQuarterlyReviewForm from './MobileQuarterlyReviewForm/MobileQuarterlyReviewForm';
+import './desktop/quarterlyReviewDesktop.css';
 
 const RATING_CATEGORIES = [
   { key: 'productivity', label: 'Productivity & Output' },
@@ -636,51 +637,50 @@ const QuarterlyReviewForm = () => {
   // const quarterRange = formatQuarterRange(quarter);
 
   return (
-    <div className="pb-8 mt-2 px-1">
+    <div className="qr-form-page pb-8 mt-2 px-1">
       <style>{`
         .quarterly-review-form-wrapper .ant-input-disabled,
         .quarterly-review-form-wrapper .ant-input[disabled],
         .quarterly-review-form-wrapper textarea.ant-input-disabled,
         .quarterly-review-form-wrapper textarea.ant-input[disabled] {
-          background-color: #ffffff !important;
+          background-color: rgba(255, 255, 255, 0.62) !important;
           color: #0f172a !important;
-          border-color: #e2e8f0 !important;
+          border-color: #93c5fd !important;
         }
 
         .quarterly-review-form-wrapper .ant-input,
         .quarterly-review-form-wrapper textarea.ant-input {
-          border-radius: 12px !important;
+          border-radius: 16px !important;
         }
       `}</style>
-      <div ref={rootRef} className="w-full px-2.5 py-2 quarterly-review-form-wrapper">
+      <div ref={rootRef} className="qr-form-inner w-full px-2.5 py-2 quarterly-review-form-wrapper">
         <button
           onClick={() => navigate('/employee-dashboard/appraisal')}
-          className="hidden lg:inline-flex items-center gap-1.5 text-[#A3AED0] hover:text-[#3311CC] font-semibold text-sm transition-colors cursor-pointer"
+          className="hidden lg:inline-flex items-center gap-1.5 text-blue-400 hover:text-blue-700 font-semibold text-sm transition-colors cursor-pointer mb-3"
         >
           <ChevronLeft className="w-4 h-4" />
           Back
         </button>
 
-        <div className="mb-3.5">
-          <div className="flex items-center justify-between mb-4">
-            {/* Left */}
-            <div className="flex items-center gap-2 text-nowrap">
-              <h1 className="text-xl font-semibold text-slate-900">
-                Quarterly Review
-              </h1>
-
-              <span className="text-slate-400">—</span>
-
-              <p className="text-sm text-darygray-500">
-                {quarter}
-                {/* · {quarterRange} */}
-              </p>
+        <div className="qr-hero mb-4">
+          <div className="relative z-10 flex items-center justify-between gap-4 px-5 py-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur-sm border border-white/25 flex items-center justify-center shrink-0">
+                <ClipboardList className="w-5 h-5 text-white" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-xl font-bold text-white mb-0.5 leading-tight">
+                  Quarterly Review
+                </h1>
+                <p className="text-sm text-blue-100 mb-0 truncate">
+                  {quarter}
+                </p>
+              </div>
             </div>
 
-            {/* Right */}
             <div className="flex items-center gap-3 shrink-0">
               {autoSaving && (
-                <span className="text-slate-400 text-xs animate-pulse">
+                <span className="text-blue-100 text-xs animate-pulse">
                   Auto-saving...
                 </span>
               )}
@@ -690,12 +690,12 @@ const QuarterlyReviewForm = () => {
                   onClick={handleSaveDraft}
                   loading={saving}
                   icon={<Save className="w-4 h-4" />}
-                  className="h-9 px-4 rounded-md border border-slate-300 bg-white font-medium"
+                  className="qr-hero-save h-9 px-4 rounded-xl font-semibold"
                 >
                   Save Draft
                 </Button>
               ) : (
-                <span className="bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-full px-3 py-1.5 text-xs font-semibold">
+                <span className="bg-white/15 text-white border border-white/30 rounded-full px-3 py-1.5 text-xs font-semibold">
                   ✓ {backendStatus === ReviewStatus.SUBMITTED ? "Submitted" : "Draft"} — Read Only
                 </span>
               )}
@@ -884,14 +884,15 @@ const QuarterlyReviewForm = () => {
             </Form>
 
             <div
-              className={`bg-white border border-slate-100 rounded-2xl p-4 mb-4 mt-2 shadow-sm flex items-center ${currentStep === 0 ? "justify-center" : "justify-between"
+              className={`qr-footer-bar relative rounded-2xl p-4 mb-4 mt-2 flex items-center ${currentStep === 0 ? "justify-center" : "justify-between"
                 }`}
             >
+              <div className="qr-glass-shine" />
               {currentStep > 0 && (
                 <Button
                   icon={<ArrowLeft className="w-4 h-4" />}
                   onClick={handleBack}
-                  className="h-10 px-3 rounded-xl whitespace-nowrap flex-shrink-0 hover:-translate-x-0.5"
+                  className="h-10 px-4 rounded-xl whitespace-nowrap flex-shrink-0 border-blue-200 text-blue-700 hover:!text-blue-800 hover:!border-blue-400 bg-white font-semibold hover:-translate-x-0.5"
                 >
                   Previous
                 </Button>
@@ -902,7 +903,7 @@ const QuarterlyReviewForm = () => {
                   onClick={handleSaveDraft}
                   loading={saving}
                   icon={<Save className="w-4 h-4" />}
-                  className="h-10 px-5 rounded-xl border-blue-600 text-blue-600 hover:text-blue-700 hover:border-blue-700 bg-white font-semibold  hover:-translate-y-0.5"
+                  className="h-10 px-5 rounded-xl border-blue-500 text-blue-600 hover:!text-blue-700 hover:!border-blue-700 bg-white font-semibold hover:-translate-y-0.5"
                 >
                   Save Draft
                 </Button>
@@ -912,7 +913,7 @@ const QuarterlyReviewForm = () => {
                     type="primary"
                     onClick={handleNext}
                     disabled={!isNextEnabled}
-                    className="h-10 px-6 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold flex items-center gap-2 border-0 shadow-md shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer hover:translate-x-0.5"
+                    className="qr-next-btn h-10 px-6 rounded-xl text-white font-semibold flex items-center gap-2 border-0 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer hover:translate-x-0.5"
                   >
                     Next <ArrowRight className="w-4 h-4" />
                   </Button>
