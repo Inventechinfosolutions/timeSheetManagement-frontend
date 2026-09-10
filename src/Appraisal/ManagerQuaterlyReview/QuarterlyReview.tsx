@@ -264,6 +264,8 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
     email?: string;
     isAssigned?: boolean;
     assignedQuarters?: string[];
+    requestedQuarters?: string[];
+    hasPendingRequest?: boolean;
   }
 
   // Assign Review modal state
@@ -310,17 +312,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
     return Array.from(assignedSet);
   }, [assignMode, selectedEmployeeIds, assignableEmployees, employeeAssignedQuarters]);
 
-  // Clear assignQuarter if the newly selected employee already has it assigned
-  useEffect(() => {
-    if (
-      assignQuarter &&
-      currentAssignedQuarters.some((q) =>
-        q.toUpperCase().startsWith(assignQuarter.toUpperCase().split(" ")[0])
-      )
-    ) {
-      setAssignQuarter("");
-    }
-  }, [currentAssignedQuarters, assignQuarter]);
+
 
   // Access Requests panel state
   const [accessRequestsOpen, setAccessRequestsOpen] = useState(false);
@@ -332,6 +324,127 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
   const [accessRequests, setAccessRequests] = useState<ReviewAccessRequest[]>([]);
   const [accessRequestsLoading, setAccessRequestsLoading] = useState(false);
   const [actioningRequestId, setActioningRequestId] = useState<string | number | null>(null);
+
+  // Helper to determine if a quarter is disabled/enabled for current selection in Assign modal
+  const getQuarterOptionStatus = (qCode: string): {
+    disabled: boolean;
+    tag: string | null;
+    tagClass: string;
+  } => {
+    // If individual mode and no employee is selected yet, keep enabled
+    if (assignMode === "individual" && selectedEmployeeIds.length === 0) {
+      return { disabled: false, tag: null, tagClass: "" };
+    }
+
+    const normQ = qCode.trim().toUpperCase(); // e.g. "Q1"
+
+    // Target employees to check
+    const targetEmployees =
+      assignMode === "all"
+        ? assignableEmployees
+        : assignableEmployees.filter((e) =>
+            selectedEmployeeIds.map(String).includes(String(e.employeeId))
+          );
+
+    // Fallback if assignableEmployees is not yet populated
+    if (targetEmployees.length === 0) {
+      const isAssigned = currentAssignedQuarters.some((assigned) => {
+        const aNorm = (assigned || "").trim().toUpperCase();
+        return aNorm.startsWith(normQ + " ") || aNorm === normQ || aNorm.startsWith(normQ + "-");
+      });
+      if (isAssigned) {
+        // Check if there is a pending access request
+        const hasReq = accessRequests.some((r) => {
+          const rNorm = (r.quarter || "").trim().toUpperCase();
+          return (
+            (rNorm.startsWith(normQ + " ") || rNorm === normQ || rNorm.startsWith(normQ + "-")) &&
+            r.status === "PENDING"
+          );
+        });
+        if (!hasReq) {
+          return { disabled: true, tag: "Already assigned", tagClass: "text-slate-400 font-normal" };
+        }
+        return {
+          disabled: false,
+          tag: "Access Requested",
+          tagClass: "text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded text-[10px] font-semibold",
+        };
+      }
+      return { disabled: false, tag: null, tagClass: "" };
+    }
+
+    let anyAssignedWithoutRequest = false;
+    let anyRequested = false;
+
+    for (const emp of targetEmployees) {
+      const assignedQs = emp.assignedQuarters || [];
+      const requestedQs = emp.requestedQuarters || [];
+
+      // Check if assigned for this quarter
+      const isEmpAssigned = assignedQs.some((assigned) => {
+        const aNorm = (assigned || "").trim().toUpperCase();
+        if (assignFinancialYear) {
+          const fyClean = assignFinancialYear.replace(/[^0-9-]/g, "");
+          const aFyClean = aNorm.replace(/[^0-9-]/g, "");
+          const qMatch = aNorm.startsWith(normQ + " ") || aNorm === normQ || aNorm.startsWith(normQ + "-");
+          if (qMatch) {
+            return aFyClean ? aFyClean.includes(fyClean) || fyClean.includes(aFyClean) : true;
+          }
+          return false;
+        }
+        return aNorm.startsWith(normQ + " ") || aNorm === normQ || aNorm.startsWith(normQ + "-");
+      });
+
+      if (isEmpAssigned) {
+        // Check if employee has sent an access request for this quarter
+        const hasEmpReq =
+          requestedQs.some((reqQ) => {
+            const rNorm = (reqQ || "").trim().toUpperCase();
+            return rNorm.startsWith(normQ + " ") || rNorm === normQ || rNorm.startsWith(normQ + "-");
+          }) ||
+          accessRequests.some((r) => {
+            if (String(r.employeeId) !== String(emp.employeeId)) return false;
+            if (r.status !== "PENDING") return false;
+            const rNorm = (r.quarter || "").trim().toUpperCase();
+            return rNorm.startsWith(normQ + " ") || rNorm === normQ || rNorm.startsWith(normQ + "-");
+          });
+
+        if (hasEmpReq) {
+          anyRequested = true;
+        } else {
+          anyAssignedWithoutRequest = true;
+        }
+      }
+    }
+
+    if (anyAssignedWithoutRequest) {
+      return {
+        disabled: true,
+        tag: "Already assigned",
+        tagClass: "text-slate-400 font-normal",
+      };
+    }
+
+    if (anyRequested) {
+      return {
+        disabled: false,
+        tag: "Access Requested",
+        tagClass: "text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded text-[10px] font-semibold",
+      };
+    }
+
+    return { disabled: false, tag: null, tagClass: "" };
+  };
+
+  // Clear assignQuarterLabel if the newly selected employee already has it assigned without request
+  useEffect(() => {
+    if (assignQuarterLabel) {
+      const status = getQuarterOptionStatus(assignQuarterLabel);
+      if (status.disabled) {
+        setAssignQuarterLabel("");
+      }
+    }
+  }, [selectedEmployeeIds, assignMode, assignFinancialYear, assignableEmployees, accessRequests, currentAssignedQuarters]);
 
   const [ratings, setRatings] = useState<RatingValues>({
     [RatingCategory.PRODUCTIVITY]: DEFAULT_RATING_VALUE,
@@ -746,10 +859,10 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
 
   const openAssignModal = async (item?: ManagerReviewItem) => {
     setAssignModalOpen(true);
-    const initialQ = (selectedQuarter && selectedQuarter !== QuarterFilter.ALL) ? selectedQuarter : "";
-    setAssignQuarter(initialQ);
+    setAssignQuarterLabel("");
     setAssignNotes("");
     setLoadingAssignableEmployees(true);
+    loadAccessRequests();
 
     if (item) {
       const singleId = String(item.employeeId || item.id || "");
@@ -757,26 +870,11 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
       setAssignEmployeeName(item.employeeName || "");
       setSelectedEmployeeIds([singleId]);
       setAssignMode("individual");
-      // Fetch per-quarter assignment status for this employee (parallel)
-      try {
-        const singleId = String(item.employeeId || item.id || '');
-        const availQs = getAvailableQuarters().filter(q => !q.disabled);
-        const qResults = await Promise.allSettled(
-          availQs.map(q =>
-            axios.get('/api/quarterly-review/assignable-employees', { params: { quarter: q.value } })
-          )
-        );
-        const assignedQs: string[] = [];
-        qResults.forEach((result, idx) => {
-          if (result.status === 'fulfilled' && result.value.data?.success) {
-            const empList = result.value.data.data as any[];
-            const match = empList.find((e: any) => String(e.employeeId) === singleId);
-            if (match?.isAssigned) assignedQs.push(availQs[idx].value);
-          }
-        });
-        setEmployeeAssignedQuarters(assignedQs);
-      } catch (_qErr) {
-        setEmployeeAssignedQuarters([]);
+      if (item.quarter) {
+        const qCodeMatch = item.quarter.match(/Q[1-4]/i);
+        if (qCodeMatch) {
+          setEmployeeAssignedQuarters([qCodeMatch[0].toUpperCase(), item.quarter]);
+        }
       }
     } else {
       setAssignEmployeeId("");
@@ -803,7 +901,6 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
   const handleAssignReview = async () => {
     // Validate all mandatory fields
     if (!assignQuarterLabel) { message.error("Quarter is required."); return; }
-    if (!assignFinancialYear) { message.error("Financial Year is required."); return; }
     if (!assignStartDate) { message.error("Start date is required."); return; }
     if (!assignEndDate) { message.error("End date (deadline) is required."); return; }
     if (!assignNotes || !assignNotes.trim()) { message.error("Description is required."); return; }
@@ -2177,46 +2274,38 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
             </div>
           )}
 
-          {/* Quarter + Financial Year selectors */}
-          <div className="flex gap-3">
-            <div className="flex-1 flex flex-col gap-1.5">
-              <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
-                Quarter <span className="text-red-500">*</span>
-              </label>
-              <Select
-                value={assignQuarterLabel || undefined}
-                onChange={(val) => setAssignQuarterLabel(val)}
-                placeholder="Select quarter"
-                className="w-full"
-                size="large"
-              >
-                {["Q1", "Q2", "Q3", "Q4"].map((q) => (
-                  <Option key={q} value={q}>{q}</Option>
-                ))}
-              </Select>
-            </div>
-            <div className="flex-1 flex flex-col gap-1.5">
-              <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
-                Financial Year <span className="text-red-500">*</span>
-              </label>
-              <Select
-                value={assignFinancialYear || undefined}
-                onChange={(val) => setAssignFinancialYear(val)}
-                placeholder="Select FY"
-                className="w-full"
-                size="large"
-              >
-                {(() => {
-                  const now = new Date();
-                  const year = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
-                  return [year - 1, year, year + 1].map((y) => {
-                    const label = `FY${y}-${String(y + 1).slice(2)}`;
-                    return <Option key={label} value={label}>{label}</Option>;
-                  });
-                })()}
-              </Select>
-            </div>
+          {/* Quarter selector */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+              Quarter <span className="text-red-500">*</span>
+            </label>
+            <Select
+              value={assignQuarterLabel || undefined}
+              onChange={(val) => setAssignQuarterLabel(val)}
+              placeholder="Select quarter"
+              className="w-full"
+              size="large"
+            >
+              {["Q1", "Q2", "Q3", "Q4"].map((q) => {
+                const status = getQuarterOptionStatus(q);
+                return (
+                  <Option key={q} value={q} disabled={status.disabled}>
+                    <div className="flex items-center justify-between py-0.5">
+                      <span className={status.disabled ? "text-slate-400 font-medium" : "text-slate-800 font-medium"}>
+                        {q}
+                      </span>
+                      {status.tag && (
+                        <span className={`text-[11px] ml-2 ${status.tagClass}`}>
+                          {status.tag}
+                        </span>
+                      )}
+                    </div>
+                  </Option>
+                );
+              })}
+            </Select>
           </div>
+
           {/* Date range pickers */}
           <div className="flex gap-3">
             <div className="flex-1 flex flex-col gap-1.5">
