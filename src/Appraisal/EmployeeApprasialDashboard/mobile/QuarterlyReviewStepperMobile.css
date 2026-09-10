@@ -32,7 +32,7 @@
   left: 10%;
   right: 10%;
   height: 2px;
-  background: #e2e8f0;
+  background: #d6e4ff;
   z-index: 0;
 }
 
@@ -41,7 +41,7 @@
   top: 1rem;
   left: 10%;
   height: 2px;
-  background: #a7f3d0;
+  background: #4d7cff;
   transition: width 0.3s ease;
   z-index: 0;
 }

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Form, Input, Card, Button } from 'antd';
-import { Plus, Trash2 } from 'lucide-react';
+import { Form, Input, Button } from 'antd';
+import { Plus, Trash2, GraduationCap } from 'lucide-react';
 import { MobileLearningGoalsStep } from '../mobile_steps/LearningGoals/MobileLearningGoalsStep';
+import { ReviewStepCard } from '../../desktop/ReviewStepCard';
 
 interface StepProps {
   disabled?: boolean;
@@ -49,21 +50,16 @@ export const LearningGoalsStep: React.FC<StepProps> = ({ disabled }) => {
     background: transparent;
   }
 `}</style>
-    <Card
-      className="shadow-md border border-slate-100 rounded-2xl p-4 bg-white/80 backdrop-blur-sm"
-      styles={{
-        body: {
-          padding: "10px",
-          textAlign: 'justify',
-        },
-      }}
+    <ReviewStepCard
+      icon={GraduationCap}
+      stepNumber={3}
+      title="Learning & Goals"
+      description={
+        disabled
+          ? undefined
+          : 'Describe the skills you gained this quarter and your goals for the next.'
+      }
     >
-      <h1 className='text-base font-semibold mb-2'>3. Learning & Goals</h1>
-      {!disabled && (
-        <p className="text-slate-500 text-sm mb-6 leading-relaxed">
-          Describe the skills you gained this quarter and your goals for the next.
-        </p>
-      )}
 
       <Form.List name="learningGoals">
         {(fields, { add, remove }, { errors }) => (
@@ -72,7 +68,7 @@ export const LearningGoalsStep: React.FC<StepProps> = ({ disabled }) => {
               {fields.map(({ key, name, ...restField }) => (
                 <div
                   key={key}
-                  className="border border-slate-100 rounded-2xl py-3 px-2 bg-slate-50/50 relative"
+                  className="qr-field-shell rounded-2xl p-4 relative"
                 >
                   <div className="flex justify-between items-center mb-2">
                     <span className="font-semibold text-slate-700 text-sm flex items-center">
@@ -101,11 +97,11 @@ export const LearningGoalsStep: React.FC<StepProps> = ({ disabled }) => {
                       rows={4}
                       disabled={disabled}
                       placeholder={disabled ? undefined : "List skills to develop, certifications to pursue, and goals for next quarter."}
-                      className="rounded-xl border-slate-200 hover:border-indigo-400 focus:border-indigo-500 focus:shadow-[0_0_0_2px_rgba(99,102,241,0.1)] transition-all duration-200 p-3 hide-scrollbar hover:-translate-y-0.5"
+                      className="rounded-xl transition-all duration-200 p-3 hide-scrollbar hover:-translate-y-0.5"
                       style={{
                         borderRadius: '12px',
                         backgroundColor: '#fff',
-                        borderColor: '#e2e8f0',
+                        borderColor: '#94a3b8',
                       }}
                       styles={{
                         textarea: {
@@ -140,7 +136,7 @@ export const LearningGoalsStep: React.FC<StepProps> = ({ disabled }) => {
           </>
         )}
       </Form.List>
-    </Card>
+    </ReviewStepCard>
     </>
   );
 };

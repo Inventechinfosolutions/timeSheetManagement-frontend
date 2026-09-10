@@ -1,12 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+<<<<<<< HEAD
 import { Card, Divider, Rate, Modal, Spin } from 'antd';
 import { User, Star, X } from 'lucide-react';
+=======
+import { Divider, Rate, Modal, Spin } from 'antd';
+import { User, Star, Paperclip, X, CheckCircle2 } from 'lucide-react';
+>>>>>>> c05f023628bfc298054c827d7cb590f06332dba9
 import { useDispatch } from 'react-redux';
 import { AppDispatch } from '../../../../store';
 import {
     previewQuarterlyReviewFile,
 } from '../../../../reducers/quarterlyReview.reducer';
 import { MobileReviewStep } from '../mobile_steps/Review/MobileReviewStep';
+import { ReviewStepCard } from '../../desktop/ReviewStepCard';
 
 interface ReviewItem {
     title?: string;
@@ -414,7 +420,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({
                     {value.map((item, idx) => (
                         <div
                             key={idx}
-                            className="rounded-lg border border-slate-200 p-4 bg-white"
+                            className="rounded-lg qr-review-inner p-4"
                         >
                             <div className="font-semibold text-indigo-700 mb-2">
                                 Goal {(idx + 1).toString().padStart(2, '0')}
@@ -439,7 +445,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({
                             {parsed.map((item: any, idx: number) => (
                                 <div
                                     key={idx}
-                                    className="rounded-lg border border-slate-200 p-4 bg-white"
+                                    className="rounded-lg qr-review-inner p-4"
                                 >
                                     <div className="font-semibold text-indigo-700 mb-2">
                                         Goal {(idx + 1)
@@ -460,7 +466,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({
             }
 
             return value.trim() ? (
-                <div className="hide-scrollbar bg-white text-slate-600 p-2.5 rounded-xl border border-slate-100 max-h-32 overflow-y-auto whitespace-pre-wrap pr-2">
+                <div className="hide-scrollbar qr-review-inner text-slate-600 p-2.5 rounded-xl max-h-32 overflow-y-auto whitespace-pre-wrap pr-2">
                     {value}
                 </div>
             ) : (
@@ -479,7 +485,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({
 
     return (
         <div
-            className={`rounded-2xl border p-4 mb-4 bg-slate-50/60 ${color}`}
+            className="qr-review-section rounded-2xl p-4 mb-4"
         >
             <div className="flex items-center gap-2 mb-3">
                 <span className="font-semibold text-slate-800 text-sm">
@@ -576,7 +582,7 @@ const ProjectSummaryCard: React.FC<{
 
         return (
             <div
-                className={`rounded-2xl border p-4 bg-slate-50/60 mb-4 ${color}`}
+                className="qr-review-section rounded-2xl p-4 mb-4"
             >
                 <div className="flex items-center gap-2 mb-3">
                     <span className="font-semibold text-slate-800 text-sm">
@@ -593,7 +599,7 @@ const ProjectSummaryCard: React.FC<{
                         {projectList.map((item: any, idx: number) => (
                             <div
                                 key={idx}
-                                className="rounded-xl border border-slate-200/80 p-4 bg-white"
+                                className="rounded-xl qr-review-inner p-4"
                             >
                                 <div className="font-bold text-indigo-700 text-sm mb-3">
                                     Project{' '}
@@ -727,7 +733,7 @@ const TeamContributionSummaryCard: React.FC<{
 
         return (
             <div
-                className={`rounded-2xl border p-4 bg-slate-50/60 mb-4 ${color}`}
+                className="qr-review-section rounded-2xl p-4 mb-4"
             >
                 <div className="flex items-center justify-between mb-3">
                     <span className="font-semibold text-slate-800 text-sm">
@@ -756,7 +762,7 @@ const TeamContributionSummaryCard: React.FC<{
                         {list.map((item, idx) => (
                             <div
                                 key={idx}
-                                className="flex items-center justify-between p-3 rounded-xl border border-slate-200/80 bg-white"
+                                className="flex items-center justify-between p-3 rounded-xl qr-review-inner"
                             >
                                 <span className="font-semibold text-slate-700 text-xs">
                                     {item.category}
@@ -818,7 +824,7 @@ const CompanyEnvironmentSummaryCard: React.FC<{
 
         return (
             <div
-                className={`rounded-2xl border p-4 bg-slate-50/60 mb-4 ${color}`}
+                className="qr-review-section rounded-2xl p-4 mb-4"
             >
                 {/* Header */}
                 <div className="flex items-center mb-3 border-b border-slate-100 pb-2">
@@ -835,7 +841,7 @@ const CompanyEnvironmentSummaryCard: React.FC<{
                             Feedback on Work Culture:
                         </span>
 
-                        <div className="hide-scrollbar bg-white p-2.5 rounded-xl border border-slate-100 max-h-32 overflow-y-auto whitespace-pre-wrap pr-2">
+                        <div className="hide-scrollbar qr-review-inner p-2.5 rounded-xl max-h-32 overflow-y-auto whitespace-pre-wrap pr-2">
                             {env.workCultureFeedback || (
                                 <span className="italic text-slate-400">
                                     No response provided.
@@ -850,7 +856,7 @@ const CompanyEnvironmentSummaryCard: React.FC<{
                             Work-Life Balance:
                         </span>
 
-                        <div className="hide-scrollbar bg-white p-2.5 rounded-xl border border-slate-100 max-h-32 overflow-y-auto whitespace-pre-wrap pr-2">
+                        <div className="hide-scrollbar qr-review-inner p-2.5 rounded-xl max-h-32 overflow-y-auto whitespace-pre-wrap pr-2">
                             {env.workLifeBalance || (
                                 <span className="italic text-slate-400">
                                     No response provided.
@@ -865,7 +871,7 @@ const CompanyEnvironmentSummaryCard: React.FC<{
                             Suggestions for Improvement:
                         </span>
 
-                        <div className="hide-scrollbar bg-white p-2.5 rounded-xl border border-slate-100 max-h-32 overflow-y-auto whitespace-pre-wrap pr-2">
+                        <div className="hide-scrollbar qr-review-inner p-2.5 rounded-xl max-h-32 overflow-y-auto whitespace-pre-wrap pr-2">
                             {env.suggestions || (
                                 <span className="italic text-slate-400">
                                     No response provided.
@@ -1020,17 +1026,14 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
                 }
             `}</style>
 
-            <Card
-                className="shadow-md border border-slate-100 rounded-2xl bg-white/80 backdrop-blur-sm"
-                title={
-                    <div className="flex items-center gap-2 text-slate-800 font-semibold text-base">
-                        <span>6. Review & Confirm</span>
-                    </div>
-                }
+            <ReviewStepCard
+                icon={CheckCircle2}
+                stepNumber={6}
+                title="Review & Confirm"
             >
                 {/* Review Information */}
-                <div className="mb-4 p-3 bg-indigo-50 rounded-xl border border-indigo-100 flex flex-col gap-2">
-                    <p className="text-indigo-700 text-sm font-medium mb-0">
+                <div className="mb-4 p-3 bg-gradient-to-r from-sky-50 via-blue-50 to-indigo-50 rounded-xl border border-blue-100 flex flex-col gap-2">
+                    <p className="text-blue-800 text-sm font-medium mb-0">
                         You're reviewing your quarterly submission for{' '}
                         <strong>{quarter}</strong>.
                         Please check all entries carefully before
@@ -1038,8 +1041,8 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
                     </p>
 
                     {managerName && (
-                        <div className="flex items-center gap-1.5 text-xs text-indigo-700 bg-indigo-100/50 rounded-lg px-2.5 py-1.5 mt-1 border border-indigo-100/80 w-fit">
-                            <User className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                        <div className="flex items-center gap-1.5 text-xs text-blue-700 bg-white/70 rounded-lg px-2.5 py-1.5 mt-1 border border-blue-100 w-fit">
+                            <User className="w-3.5 h-3.5 text-blue-500 shrink-0" />
 
                             <span>
                                 {managerName === 'CEO & Admin' ? (
@@ -1109,14 +1112,14 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
                 <Divider className="my-4" />
 
                 {/* Note */}
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500 leading-relaxed">
+                <div className="p-3 bg-gradient-to-r from-slate-50 to-blue-50 rounded-xl border border-blue-100 text-xs text-slate-500 leading-relaxed">
                     <strong className="text-slate-600">
                         Note:
                     </strong>{' '}
                     Drafts stay editable until quarter end.
                     Submitted reviews become read-only.
                 </div>
-            </Card>
+            </ReviewStepCard>
         </>
     );
 };
