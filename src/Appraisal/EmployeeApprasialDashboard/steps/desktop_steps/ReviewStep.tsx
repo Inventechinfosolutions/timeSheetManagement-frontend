@@ -1,11 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-<<<<<<< HEAD
-import { Card, Divider, Rate, Modal, Spin } from 'antd';
-import { User, Star, X } from 'lucide-react';
-=======
 import { Divider, Rate, Modal, Spin } from 'antd';
 import { User, Star, Paperclip, X, CheckCircle2 } from 'lucide-react';
->>>>>>> c05f023628bfc298054c827d7cb590f06332dba9
 import { useDispatch } from 'react-redux';
 import { AppDispatch } from '../../../../store';
 import {

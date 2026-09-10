@@ -4,11 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { Form, Button, message, Spin, Modal } from 'antd';
 import { useNavigate, useSearchParams, useParams, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-<<<<<<< HEAD
-import { Save, Send, ArrowLeft, ArrowRight, ChevronLeft, CheckCircle2, User, UserX, Star, HourglassIcon } from 'lucide-react';
-=======
 import { Save, Send, ArrowLeft, ArrowRight, ChevronLeft, CheckCircle2, User, UserX, Star, HourglassIcon, ClipboardList } from 'lucide-react';
->>>>>>> c05f023628bfc298054c827d7cb590f06332dba9
 
 import { QuarterlyReviewStepper } from './desktop/QuarterlyReviewStepper';
 import { OverviewStep } from './steps/desktop_steps/OverviewStep';

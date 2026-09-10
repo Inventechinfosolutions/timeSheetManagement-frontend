@@ -1,4 +1,4 @@
-import { HiddenRatingBadge } from "../components/HiddenRatingBadge";
+﻿import { HiddenRatingBadge } from "../components/HiddenRatingBadge";
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Table, Button, Input, Select, Spin, message } from "antd";
@@ -268,6 +268,11 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
 
   // Assign Review modal state
   const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [modeSelectModalOpen, setModeSelectModalOpen] = useState(false);
+  const [assignStartDate, setAssignStartDate] = useState("");
+  const [assignEndDate, setAssignEndDate] = useState("");
+  const [assignFinancialYear, setAssignFinancialYear] = useState("");
+  const [assignQuarterLabel, setAssignQuarterLabel] = useState("");
   const [assignEmployeeId, setAssignEmployeeId] = useState("");
   const [assignQuarter, setAssignQuarter] = useState("");
   const [assignNotes, setAssignNotes] = useState("");
@@ -796,59 +801,41 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
   };
 
   const handleAssignReview = async () => {
-    if (!assignQuarter) {
-      message.error("Please select a quarter to assign.");
-      return;
-    }
-
-    const available = getAvailableQuarters(currentAssignedQuarters);
-    const chosen = available.find((q) => q.value === assignQuarter);
-    if (chosen?.disabled) {
-      if (chosen.reason === "already_assigned") {
-        message.error(
-          `${assignQuarter} has already been assigned to the selected employee(s). Access can only be renewed via an approved Access Request.`
-        );
-      } else {
-        message.error(`${assignQuarter} is an upcoming quarter and cannot be assigned yet.`);
-      }
-      return;
-    }
+    // Validate all mandatory fields
+    if (!assignQuarterLabel) { message.error("Quarter is required."); return; }
+    if (!assignFinancialYear) { message.error("Financial Year is required."); return; }
+    if (!assignStartDate) { message.error("Start date is required."); return; }
+    if (!assignEndDate) { message.error("End date (deadline) is required."); return; }
+    if (!assignNotes || !assignNotes.trim()) { message.error("Description is required."); return; }
     if (assignMode === "individual" && selectedEmployeeIds.length === 0) {
-      message.error("Please select at least one employee or choose 'All Members'.");
+      message.error("Please select at least one employee.");
       return;
     }
-
     try {
       setAssignSubmitting(true);
       const payload: any = {
-        quarter: assignQuarter,
-        notes: assignNotes,
+        mode: assignMode === "all" ? "ALL" : "INDIVIDUAL",
+        quarter: assignQuarterLabel,
+        financialYear: assignFinancialYear,
+        startDate: assignStartDate,
+        endDate: assignEndDate,
+        description: assignNotes.trim(),
       };
-
-      if (assignMode === "all") {
-        payload.assignToAll = true;
-      } else {
-        payload.employeeIds = selectedEmployeeIds;
-        if (selectedEmployeeIds.length === 1) {
-          payload.employeeId = selectedEmployeeIds[0];
-        }
-      }
-
-      const res = await axios.post("/api/quarterly-review/assign", payload);
+      if (assignMode === "individual") { payload.employeeIds = selectedEmployeeIds; }
+      const res = await axios.post("/api/manager-quarterly-review/assignments/create", payload);
       if (res.data?.success) {
-        const count = res.data?.data?.assignedCount ?? (assignMode === "all" ? assignableEmployees.length : selectedEmployeeIds.length);
-        message.success(
-          res.data?.message || `Review for ${assignQuarter} assigned to ${count} member(s) successfully.`
-        );
+        const created = res.data?.data?.created ?? 0;
+        const skipped = res.data?.data?.skipped ?? 0;
+        message.success(res.data?.message || `${created} assignment(s) created${skipped > 0 ? `, ${skipped} skipped` : ""}.`);
         setAssignModalOpen(false);
+        setModeSelectModalOpen(false);
+        setAssignQuarterLabel(""); setAssignFinancialYear(""); setAssignStartDate(""); setAssignEndDate(""); setAssignNotes(""); setSelectedEmployeeIds([]);
         fetchData(1, pageSize);
       } else {
         message.error(res.data?.message || "Failed to assign review.");
       }
     } catch (error: any) {
-      message.error(
-        error.response?.data?.message || "Failed to assign review.",
-      );
+      message.error(error.response?.data?.message || "Failed to assign review.");
     } finally {
       setAssignSubmitting(false);
     }
@@ -1247,9 +1234,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
         <button
           type="button"
           onClick={() => {
-            setAssignmentListType("not_assigned");
-            setAssignmentListSearch("");
-            setAssignmentListModalOpen(true);
+            setModeSelectModalOpen(true);
           }}
           className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-sm font-semibold shadow-sm hover:shadow-md transition-all cursor-pointer"
         >
@@ -1931,6 +1916,104 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
         </div>
       </Modal>
 
+      {/* â”€â”€ Mode Selection Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      <Modal
+        open={modeSelectModalOpen}
+        onCancel={() => setModeSelectModalOpen(false)}
+        footer={null}
+        centered
+        width={420}
+        title={
+          <div className="flex items-center gap-2.5 pb-1">
+            <div className="w-8 h-8 rounded-xl bg-indigo-50 flex items-center justify-center border border-indigo-100">
+              <Plus className="w-4 h-4 text-indigo-600" />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-[#2B3674] text-base leading-snug">
+                Create Review Assignment
+              </h3>
+              <p className="text-xs text-slate-400 font-normal">
+                Choose how you want to assign the quarterly review
+              </p>
+            </div>
+          </div>
+        }
+      >
+        <div className="flex flex-col gap-3 pt-2 pb-1">
+          <button
+            type="button"
+            onClick={() => {
+              setAssignMode("individual");
+              setSelectedEmployeeIds([]);
+              setAssignQuarterLabel("");
+              setAssignFinancialYear("");
+              setAssignStartDate("");
+              setAssignEndDate("");
+              setAssignNotes("");
+              setModeSelectModalOpen(false);
+              setAssignModalOpen(true);
+              // Pre-load employees
+              if (assignableEmployees.length === 0) {
+                setLoadingAssignableEmployees(true);
+                axios.get("/api/quarterly-review/assignable-employees")
+                  .then((res) => {
+                    if (res.data?.success && Array.isArray(res.data.data)) {
+                      setAssignableEmployees(res.data.data);
+                    }
+                  })
+                  .catch(() => {})
+                  .finally(() => setLoadingAssignableEmployees(false));
+              }
+            }}
+            className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all text-left group"
+          >
+            <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center shrink-0 group-hover:bg-indigo-200 transition-colors">
+              <Users className="w-5 h-5 text-indigo-600" />
+            </div>
+            <div>
+              <p className="font-bold text-slate-800 text-sm">Individual Member(s)</p>
+              <p className="text-xs text-slate-500 mt-0.5">Select specific employees from your team</p>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setAssignMode("all");
+              setSelectedEmployeeIds([]);
+              setAssignQuarterLabel("");
+              setAssignFinancialYear("");
+              setAssignStartDate("");
+              setAssignEndDate("");
+              setAssignNotes("");
+              setModeSelectModalOpen(false);
+              setAssignModalOpen(true);
+              // Pre-load employees for "all" count display
+              if (assignableEmployees.length === 0) {
+                setLoadingAssignableEmployees(true);
+                axios.get("/api/quarterly-review/assignable-employees")
+                  .then((res) => {
+                    if (res.data?.success && Array.isArray(res.data.data)) {
+                      setAssignableEmployees(res.data.data);
+                    }
+                  })
+                  .catch(() => {})
+                  .finally(() => setLoadingAssignableEmployees(false));
+              }
+            }}
+            className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-slate-200 hover:border-emerald-400 hover:bg-emerald-50 transition-all text-left group"
+          >
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0 group-hover:bg-emerald-200 transition-colors">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+            </div>
+            <div>
+              <p className="font-bold text-slate-800 text-sm">All Members</p>
+              <p className="text-xs text-slate-500 mt-0.5">Assign to your entire team at once</p>
+            </div>
+          </button>
+        </div>
+      </Modal>
+
       <Modal
         open={assignModalOpen}
         onCancel={() => setAssignModalOpen(false)}
@@ -1957,41 +2040,6 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
         width={540}
       >
         <div className="flex flex-col gap-4 pt-3">
-          {/* Target Audience Segmented Tabs */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
-              Assignment Target
-            </label>
-            <div className="grid grid-cols-2 p-1 bg-slate-100/90 rounded-xl gap-1 border border-slate-200/70">
-              <button
-                type="button"
-                onClick={() => setAssignMode("individual")}
-                className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
-                  assignMode === "individual"
-                    ? "bg-white text-indigo-600 shadow-sm"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                <Users className="w-3.5 h-3.5" />
-                <span>Select Members ({selectedEmployeeIds.length})</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setAssignMode("all")}
-                className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
-                  assignMode === "all"
-                    ? "bg-white text-indigo-600 shadow-sm"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>
-                  {isManagerRoute ? "All Team Members" : "All Members"}
-                </span>
-              </button>
-            </div>
-          </div>
-
           {/* Mode 1: Individual / Multi-Select */}
           {assignMode === "individual" ? (
             <div className="flex flex-col gap-1.5">
@@ -2028,6 +2076,8 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
 
               <Select
                 mode="multiple"
+                showSearch
+                optionLabelProp="label"
                 loading={loadingAssignableEmployees}
                 value={selectedEmployeeIds}
                 onChange={(vals) => setSelectedEmployeeIds(vals)}
@@ -2041,9 +2091,23 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
                 className="w-full"
                 size="large"
                 maxTagCount="responsive"
-                filterOption={(input, option) => {
-                  const label = String(option?.children ?? "");
-                  return label.toLowerCase().includes(input.toLowerCase());
+                filterOption={(input, option: any) => {
+                  if (!input) return true;
+                  const query = input.toLowerCase().trim();
+                  if (option?.label && String(option.label).toLowerCase().includes(query)) {
+                    return true;
+                  }
+                  if (option?.value && String(option.value).toLowerCase().includes(query)) {
+                    return true;
+                  }
+                  const emp = assignableEmployees.find(
+                    (e: any) => String(e.employeeId).toLowerCase() === String(option?.value).toLowerCase()
+                  );
+                  if (emp) {
+                    const text = `${emp.employeeName || ""} ${emp.employeeId || ""} ${emp.designation || ""}`.toLowerCase();
+                    return text.includes(query);
+                  }
+                  return false;
                 }}
               >
                 {assignableEmployees.map((emp: any) => {
@@ -2054,13 +2118,16 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
                         .filter((v: string, i: number, a: string[]) => a.indexOf(v) === i)
                         .join(", ")
                     : "";
+                  const displayName = emp.employeeName && emp.employeeName !== emp.employeeId
+                    ? `${emp.employeeName} (${emp.employeeId})`
+                    : emp.employeeId;
                   return (
-                    <Option key={emp.employeeId} value={emp.employeeId}>
+                    <Option key={emp.employeeId} value={emp.employeeId} label={displayName}>
                       <span className="font-medium text-slate-800">
                         {emp.employeeName} ({emp.employeeId})
                       </span>
                       {emp.designation ? (
-                        <span className="text-slate-500 font-normal"> — {emp.designation}</span>
+                        <span className="text-slate-500 font-normal"> - {emp.designation}</span>
                       ) : null}
                       {hasAssigned ? (
                         <span
@@ -2104,77 +2171,97 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
                     : `Assign to all ${assignableEmployees.length} employees in the organization`}
                 </h4>
                 <p className="text-[11px] text-indigo-700/90 mt-0.5 leading-relaxed">
-                  Every eligible member will immediately receive access to complete their self-review for the chosen quarter with an active 72-hour window.
+                  Review access will be opened for all eligible members for the chosen quarter and selected dates.
                 </p>
               </div>
             </div>
           )}
 
-          {/* Quarter selector */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
-              Quarter to Assign
-            </label>
-            <Select
-              value={assignQuarter || undefined}
-              onChange={handleAssignQuarterChange}
-              placeholder="Select a quarter (current or previous only)"
-              className="w-full"
-              size="large"
-            >
-              {getAvailableQuarters(currentAssignedQuarters).map((qOpt) => (
-                <Option
-                  key={qOpt.value}
-                  value={qOpt.value}
-                  disabled={qOpt.disabled}
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <span className={qOpt.disabled ? "text-slate-400 font-normal" : "text-slate-800 font-medium"}>
-                      {qOpt.label}
-                    </span>
-                    {qOpt.disabled && (
-                      <span
-                        style={{
-                          marginLeft: 8,
-                          fontSize: 11,
-                          fontWeight: 600,
-                          color: qOpt.reason === "already_assigned" ? "#dc2626" : "#94a3b8",
-                          fontStyle: "italic",
-                        }}
-                      >
-                        {qOpt.reason === "already_assigned" ? "(Already Assigned)" : "(Upcoming)"}
-                      </span>
-                    )}
-                  </div>
-                </Option>
-              ))}
-            </Select>
-            <p className="text-[11px] text-slate-400">
-              Only the <strong>current</strong> and <strong>previous</strong> quarters can be assigned. Quarters already assigned to the selected employee(s) are disabled (re-granting access requires an <strong>Access Request</strong>). Future quarters remain disabled until they begin.
-            </p>
+          {/* Quarter + Financial Year selectors */}
+          <div className="flex gap-3">
+            <div className="flex-1 flex flex-col gap-1.5">
+              <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                Quarter <span className="text-red-500">*</span>
+              </label>
+              <Select
+                value={assignQuarterLabel || undefined}
+                onChange={(val) => setAssignQuarterLabel(val)}
+                placeholder="Select quarter"
+                className="w-full"
+                size="large"
+              >
+                {["Q1", "Q2", "Q3", "Q4"].map((q) => (
+                  <Option key={q} value={q}>{q}</Option>
+                ))}
+              </Select>
+            </div>
+            <div className="flex-1 flex flex-col gap-1.5">
+              <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                Financial Year <span className="text-red-500">*</span>
+              </label>
+              <Select
+                value={assignFinancialYear || undefined}
+                onChange={(val) => setAssignFinancialYear(val)}
+                placeholder="Select FY"
+                className="w-full"
+                size="large"
+              >
+                {(() => {
+                  const now = new Date();
+                  const year = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+                  return [year - 1, year, year + 1].map((y) => {
+                    const label = `FY${y}-${String(y + 1).slice(2)}`;
+                    return <Option key={label} value={label}>{label}</Option>;
+                  });
+                })()}
+              </Select>
+            </div>
+          </div>
+          {/* Date range pickers */}
+          <div className="flex gap-3">
+            <div className="flex-1 flex flex-col gap-1.5">
+              <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                From <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                value={assignStartDate}
+                onChange={(e) => setAssignStartDate(e.target.value)}
+                className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
+              />
+            </div>
+            <div className="flex-1 flex flex-col gap-1.5">
+              <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                To (Deadline) <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                value={assignEndDate}
+                min={assignStartDate || undefined}
+                onChange={(e) => setAssignEndDate(e.target.value)}
+                className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
+              />
+            </div>
+            {assignStartDate && assignEndDate && (
+              <div className="flex flex-col gap-1.5 items-end justify-end pb-0.5">
+                <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider invisible">D</label>
+                <div className="px-3 py-2 rounded-lg bg-indigo-50 border border-indigo-100 text-xs font-bold text-indigo-700 whitespace-nowrap">
+                  {Math.max(0, Math.round((new Date(assignEndDate).getTime() - new Date(assignStartDate).getTime()) / 86400000))} Days
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Window info */}
-          <div className="flex items-center gap-2 p-2.5 rounded-lg bg-slate-50 border border-slate-200/80 text-slate-600 text-xs">
-            <Clock className="w-4 h-4 text-indigo-500 shrink-0" />
-            <span>
-              <strong>Access Window:</strong> Assigned members will have <strong>3 days (72 hours)</strong> from assignment to complete and submit.
-            </span>
-          </div>
-
-          {/* Optional notes */}
+          {/* Description (mandatory) */}
           <div className="flex flex-col gap-1.5">
             <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
-              Instructions / Notes{" "}
-              <span className="text-slate-400 normal-case font-normal">
-                (optional)
-              </span>
+              Description <span className="text-red-500">*</span>
             </label>
             <textarea
               value={assignNotes}
               onChange={(e) => setAssignNotes(e.target.value)}
-              placeholder="Add any instructions, focus areas, or deadline remarks for the employee(s)…"
-              rows={2}
+              placeholder="Add instructions, focus areas, or deadline remarks for the employee(s)..."
+              rows={3}
               className="border border-slate-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-400"
             />
           </div>
