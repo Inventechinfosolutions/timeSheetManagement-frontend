@@ -58,7 +58,7 @@ export interface QuarterlyReview {
       assignedAt?: string;
       notes?: string;
     } | null;
-    /** Whether the submission was done manually by the employee or auto-submitted by the system after the 3-day deadline */
+    /** Whether the submission was done manually by the employee or auto-submitted after the assignment deadline */
     submissionType?: 'MANUAL' | 'AUTO' | null;
     /** The exact datetime by which the employee must submit before auto-submission kicks in */
     deadlineAt?: string | null;

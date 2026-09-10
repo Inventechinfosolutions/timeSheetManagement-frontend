@@ -31,7 +31,17 @@ import {
 } from '../../reducers/quarterlyReview.reducer';
 import MobileEmployeeAppraisalDashboard from './MobileEmployeeAppraisalDashboard/MobileEmployeeAppraisalDashboard';
 
-// Helper to calculate 3-day deadline remaining
+const formatDeadlineDate = (deadlineAt?: string | null) => {
+  if (!deadlineAt) return '';
+  const deadline = new Date(deadlineAt);
+  if (Number.isNaN(deadline.getTime())) return '';
+  return deadline.toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+};
+
 export const getDeadlineCountdown = (deadlineAt?: string | null) => {
   if (!deadlineAt) return null;
   const deadline = new Date(deadlineAt).getTime();
@@ -39,7 +49,7 @@ export const getDeadlineCountdown = (deadlineAt?: string | null) => {
   const diffMs = deadline - now;
 
   if (diffMs <= 0) {
-    return { isExpired: true, text: 'Deadline Expired (3-day limit reached)' };
+    return { isExpired: true, text: 'Deadline completed — request access again' };
   }
 
   const hours = Math.floor(diffMs / (1000 * 60 * 60));
@@ -940,7 +950,7 @@ const EmployeeAppraisalDashboard: React.FC = () => {
                       </span>
                     </div>
                     <p className="text-xs text-slate-600 mt-0.5">
-                      3-day completion deadline: {getDeadlineCountdown(activeAssignment.deadlineAt)?.text}
+                      Complete by {formatDeadlineDate(activeAssignment.deadlineAt) || 'the assigned deadline'}: {getDeadlineCountdown(activeAssignment.deadlineAt)?.text}
                     </p>
                   </div>
                 </div>
@@ -1234,7 +1244,7 @@ const EmployeeAppraisalDashboard: React.FC = () => {
           <div className="mb-4 p-3 rounded-xl bg-amber-50/70 border border-amber-200/80 flex items-start gap-2 text-xs text-amber-800">
             <ShieldAlert className="w-4 h-4 shrink-0 text-amber-600 mt-0.5" />
             <span>
-              You have 24 hours after submission to request access. Your request will be sent to your Manager, Admin, and CEO for approval.
+              After the deadline is completed (or after you submit), you have 24 hours to request access again. Your manager, admin, or CEO must approve it before the form reopens.
             </span>
           </div>
 

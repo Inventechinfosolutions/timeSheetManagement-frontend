@@ -903,6 +903,10 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
     if (!assignQuarterLabel) { message.error("Quarter is required."); return; }
     if (!assignStartDate) { message.error("Start date is required."); return; }
     if (!assignEndDate) { message.error("End date (deadline) is required."); return; }
+    if (assignEndDate < assignStartDate) {
+      message.error("Deadline must be on or after the start date.");
+      return;
+    }
     if (!assignNotes || !assignNotes.trim()) { message.error("Description is required."); return; }
     if (assignMode === "individual" && selectedEmployeeIds.length === 0) {
       message.error("Please select at least one employee.");

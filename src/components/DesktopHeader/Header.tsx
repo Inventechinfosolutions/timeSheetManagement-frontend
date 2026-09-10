@@ -11,6 +11,7 @@ import {
   ExternalLink,
   Check,
   RotateCcw,
+  X,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../../hooks";
 import { logoutUser } from "../../reducers/user.reducer";
