@@ -408,6 +408,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
   // Initial load
   useEffect(() => {
     fetchData(1, DEFAULT_PAGE_SIZE);
+    loadAccessRequests();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -1230,8 +1231,19 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
           `flex-1` on the group below has nothing to share the row with
           anymore, so it stretches across the full width automatically. */}
 
-      {/* ── Employee Assignment — single Create button ── */}
-      <div className="flex items-center justify-end">
+      {/* ── Action buttons: Access Requests + Create ── */}
+      <div className="flex items-center justify-end gap-2.5">
+        <Badge count={accessRequests.length} offset={[-2, 2]}>
+          <Button
+            type="default"
+            icon={<Key className="w-3.5 h-3.5 text-amber-600" />}
+            onClick={openAccessRequestsPanel}
+            className="!inline-flex !items-center !gap-1.5 !px-3.5 !py-2 !h-auto !rounded-xl !border-amber-300 !text-amber-700 hover:!bg-amber-50 hover:!border-amber-400 !text-sm !font-semibold !shadow-xs transition-all cursor-pointer"
+          >
+            Access Requests
+          </Button>
+        </Badge>
+
         <button
           type="button"
           onClick={() => {
@@ -1239,7 +1251,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
             setAssignmentListSearch("");
             setAssignmentListModalOpen(true);
           }}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-sm font-semibold shadow-sm hover:shadow-md transition-all"
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-sm font-semibold shadow-sm hover:shadow-md transition-all cursor-pointer"
         >
           <span className="text-base leading-none">+</span>
           Create
