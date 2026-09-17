@@ -1798,7 +1798,7 @@ const EmployeeNotes = () => {
             <form
               id="note-fullpage-form"
               onSubmit={handleSaveModal}
-              className="max-w-5xl mx-auto space-y-3 pb-8"
+              className="w-full space-y-3 pb-8"
             >
               {/* 1. TOP HEADER ROW: Project Name & Title + Back button on top */}
               <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 pb-2.5 border-b border-gray-200">
