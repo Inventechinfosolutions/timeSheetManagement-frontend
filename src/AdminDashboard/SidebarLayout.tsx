@@ -107,7 +107,7 @@ const SidebarLayout = ({
       "My Dashboard": "my-dashboard",
       "My Timesheet": "my-timesheet",
       "My Timesheet History": "my-timesheet-view",
-      "Request Management ": "work-management", // Manager > My Workspace (trailing space intentional)
+      "Request Management ": "leave-management", // Manager > My Workspace (trailing space intentional)
       "Account Settings": "my-profile",
       "Employee Dashboard": "admin-dashboard",
       "Employee Directory": "employees",
@@ -149,6 +149,8 @@ const SidebarLayout = ({
         return "Manager Mapping";
       case "leave-balance":
         return "Leave Balance";
+      case "leave-management":
+        return "Request Management ";
       case "work-management":
         return "Request Management";
       case "quarterly-review":
