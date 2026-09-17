@@ -18,6 +18,7 @@ const EmployeeLayout = () => {
     if (path.includes("/my-profile") || path.includes("/change-password")) return "Account Settings";
     if (path.includes("/leave-management") || path.includes("/leave-balance")) return "Request Management";
     if (path.includes("/about")) return "About";
+    if (path.includes("/employee-notes")) return "Employee Notes";
 
     switch (tab) {
       case "my-timesheet":
@@ -37,6 +38,8 @@ const EmployeeLayout = () => {
         return "Appraisal";
       case "about":
         return "About";
+      case "employee-notes":
+        return "Employee Notes";
       default:
         return "Dashboard";
     }
@@ -70,6 +73,9 @@ const EmployeeLayout = () => {
         break;
       case "About":
         navigate("/employee-dashboard/about");
+        break;
+      case "Employee Notes":
+        navigate("/employee-dashboard/employee-notes");
         break;
 
       default:

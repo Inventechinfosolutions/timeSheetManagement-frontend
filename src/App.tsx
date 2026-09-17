@@ -43,6 +43,7 @@ import QuarterlyReviewForm from "./Appraisal/EmployeeApprasialDashboard/Quarterl
 import LeaveManagement from "./EmployeeDashboard/LeaveManagement";
 import LeaveBalance from "./EmployeeDashboard/LeaveBalance";
 import About from "./pages/About";
+import EmployeeNotes from "./EmployeeDashboard/Employeenotes";
 
 // Admin Dashboard Components
 import AdminDashboard from "./AdminDashboard/AdminDashboard";
@@ -90,6 +91,8 @@ const EmployeeTabWrapper = () => {
       return <LeaveBalance />;
     case "about":
       return <About />;
+    case "employee-notes":
+      return <EmployeeNotes />;
     default:
       return <Navigate to="/employee-dashboard" replace />;
   }
@@ -137,6 +140,8 @@ const AdminTabWrapper = () => {
       return <QuarterlyReviewResponsive />;
     case "review":
       return <QuarterlyReviewForm />;
+    case "about":
+      return <About />;
     default:
       return <Navigate to="/admin-dashboard" replace />;
   }
@@ -416,6 +421,9 @@ function AppContent() {
                     element={<MobileTimesheet />}
                   />
                   <Route index element={<TodayAttendance />} />
+                  <Route path="employee-notes" element={<EmployeeNotes />} />
+                  <Route path="employee-notes/*" element={<EmployeeNotes />} />
+                  <Route path=":projectName/employee-notes" element={<EmployeeNotes />} />
                   <Route path=":tab/:date?" element={<EmployeeTabWrapper />} />
                 </Route>
 

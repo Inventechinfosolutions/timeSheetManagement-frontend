@@ -28,7 +28,7 @@ import { TimesheetEntry, BlockerEntry, HolidayEntry } from "../../types";
 import { AttendanceStatus, UserType, WorkLocationKeyword } from "../../enums";
 import { generateMonthlyEntries } from "../../utils/attendanceUtils";
 import { saveAs } from "file-saver";
-import "./MobileTimesheetHistory.css";
+import "./MobileTimeSheetHistory.css";
 
 interface MobileTimesheetHistoryProps {
     employeeId?: string;
