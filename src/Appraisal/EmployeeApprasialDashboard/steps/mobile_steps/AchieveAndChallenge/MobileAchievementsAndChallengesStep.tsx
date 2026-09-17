@@ -1,3 +1,4 @@
+import { useDispatch } from 'react-redux';
 import React, { useRef, useState } from 'react';
 import { Form, Input, Card, Button } from 'antd';
 import { Plus } from 'lucide-react';
@@ -27,8 +28,65 @@ export const MobileAchievementsAndChallengesStep: React.FC<StepProps> = ({
 }) => {
   const [removingIndex, setRemovingIndex] = useState<number | null>(null);
   const form = Form.useFormInstance();
+  const dispatch = useDispatch();
   const uploaderRefs = useRef<{ [key: number]: CommonMultipleUploaderRef | null }>({});
   const [fileCounts, setFileCounts] = useState<{ [key: number]: number }>({});
+
+    const handleRemoveProject = async (name: number, idx: number, removeFn: (i: number) => void) => {
+    try {
+      const projectData = form?.getFieldValue(['projects', name]);
+      const attachments = projectData?.attachment;
+
+      if (reviewId && reviewId > 0) {
+        if (Array.isArray(attachments)) {
+          for (const att of attachments) {
+            const fileKey = att?.key || att?.id || att?.s3Key;
+            if (fileKey) {
+              deleteQuarterlyReviewFile({
+                entityId: reviewId,
+                refId: idx + 1,
+                refType: 'QUARTERLY_REVIEW_DOCUMENT',
+                entityType: 'QUARTERLY_REVIEW',
+                key: fileKey,
+              });
+            }
+          }
+        } else if (attachments && typeof attachments === 'object') {
+          const fileKey = (attachments as any).key || (attachments as any).id || (attachments as any).s3Key;
+          if (fileKey) {
+            deleteQuarterlyReviewFile({
+              entityId: reviewId,
+              refId: idx + 1,
+              refType: 'QUARTERLY_REVIEW_DOCUMENT',
+              entityType: 'QUARTERLY_REVIEW',
+              key: fileKey,
+            });
+          }
+        }
+
+        deleteQuarterlyReviewFile({
+          entityId: reviewId,
+          refId: idx + 1,
+          refType: 'QUARTERLY_REVIEW_DOCUMENT',
+          entityType: 'QUARTERLY_REVIEW',
+          key: 'all',
+        });
+      }
+    } catch (err) {
+      console.error('Failed to cleanup files for removed project:', err);
+    }
+
+    removeFn(name);
+    setFileCounts((prev) => {
+      const next = { ...prev };
+      delete next[idx];
+      return next;
+    });
+
+    if (onDataChange) {
+      onDataChange();
+    }
+  };
 
   return (
     <Card
@@ -69,7 +127,7 @@ export const MobileAchievementsAndChallengesStep: React.FC<StepProps> = ({
                               setRemovingIndex(idx);
 
                               setTimeout(() => {
-                                remove(name);
+                                handleRemoveProject(name, idx, remove);
                                 setRemovingIndex(null);
                               }, 450);
                             }}

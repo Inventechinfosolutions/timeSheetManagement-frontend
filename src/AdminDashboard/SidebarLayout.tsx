@@ -15,6 +15,7 @@ import {
   ChevronRight,
   LogOut,
   X,
+  Award,
 } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
@@ -23,6 +24,9 @@ import { logoutUser } from "../reducers/user.reducer";
 import ApiLoadingSpinner from "../components/ApiLoadingSpinner";
 import Header from "../components/DesktopHeader/Header";
 import Footer from "../components/Footer";
+import { useSelector } from "react-redux";
+import { RootState } from "../store";
+import { UserType } from "../enums";
 
 interface SidebarLayoutProps {
   children: React.ReactNode;
@@ -46,6 +50,8 @@ const SidebarLayout = ({
   const { tab } = useParams<{ tab?: string }>();
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
+  const { currentUser } = useSelector((state: RootState) => state.user);
+  const isCEO = currentUser?.userType === UserType.CEO;
 
   // Ref for the main scrollable content area
   const mainContentRef = useRef<HTMLDivElement>(null);
@@ -60,15 +66,16 @@ const SidebarLayout = ({
           { name: "My Timesheet", icon: Calendar },
           { name: "My Timesheet History", icon: Eye },
           { name: "Request Management ", icon: Calendar },
+          { name : "Appraisal", icon: Award},
           { name: "Account Settings", icon: User },
         ],
       },
       {
         title: "Team Management",
         items: [
-          { name: "Employee Dashboard", icon: Settings },
+          { name: "Employee Dashboard", icon: LayoutGrid },
           { name: "Employee Directory", icon: Users },
-          { name: "Employee Timesheet", icon: AlarmClock },
+          { name: "Employee Timesheet", icon: Calendar },
           { name: "Request Management", icon: Calendar },
           { name: "Quarterly Review", icon: ClipboardList },
           { name: "Notification", icon: Bell },
@@ -80,21 +87,22 @@ const SidebarLayout = ({
 
   const adminSidebarItems = useMemo(
     () => [
-      { name: "Admin Dashboard", icon: Settings },
+      { name: "Admin Dashboard", icon: LayoutGrid },
       { name: "Employee Directory", icon: Users },
-      { name: "Employee Timesheet", icon: AlarmClock },
+      { name: "Employee Timesheet", icon: Calendar },
       { name: "Request Management", icon: Calendar },
+      { name: "Quarterly Review", icon: ClipboardList },
       { name: "Manager Mapping", icon: Users },
       { name: "Notification", icon: Bell },
     ],
     [],
   );
 
-  // Receptionist: hide Request Management from sidebar
+  // Receptionist: hide Request Management and Quarterly Review from sidebar
   const visibleAdminSidebarItems = useMemo(
     () =>
       title === "Receptionist"
-        ? adminSidebarItems.filter((i) => i.name !== "Request Management")
+        ? adminSidebarItems.filter((item) => item.name !== "Request Management" && item.name !== "Quarterly Review")
         : adminSidebarItems,
     [title, adminSidebarItems],
   );
@@ -114,6 +122,7 @@ const SidebarLayout = ({
       "Employee Timesheet": "timesheet-list",
       "Request Management": "work-management",
       "Quarterly Review": "quarterly-review",
+      "Appraisal": "appraisal",
       Notification: "requests",
       "Admin Dashboard": "admin-dashboard",
       "Manager Mapping": "manager-mapping",
@@ -153,6 +162,9 @@ const SidebarLayout = ({
         return "Request Management";
       case "quarterly-review":
         return "Quarterly Review";
+      case "appraisal":
+      case "review":
+        return "Appraisal";
       case "my-dashboard":
         return "My Dashboard";
       case "my-timesheet":
@@ -193,6 +205,20 @@ const SidebarLayout = ({
       return initial;
     },
   );
+
+  // Automatically expand group containing active tab when active tab changes
+  useEffect(() => {
+    if (title === "Manager" && derivedActiveTab) {
+      managerSidebarGroups.forEach((group) => {
+        if (group.items.some((item) => item.name === derivedActiveTab)) {
+          setExpandedGroups((prev) => ({
+            ...prev,
+            [group.title]: true,
+          }));
+        }
+      });
+    }
+  }, [derivedActiveTab, title, managerSidebarGroups]);
 
   const toggleGroup = (groupTitle: string) => {
     setExpandedGroups((prev) => ({
@@ -289,14 +315,14 @@ const SidebarLayout = ({
               className={
                 hideSidebar
                   ? // FIX: hideSidebar pages should ALWAYS behave as a
-                    // slide-in drawer, at any viewport width — never
-                    // switch into the persistent "md:absolute / md:w-64"
-                    // desktop rail. Previously this branch still carried
-                    // `md:translate-x-0` (forcing it visible-by-default at
-                    // md+) plus a blanket `md:hidden` that then fought it
-                    // and always won, hiding the drawer even when
-                    // isMobileOpen was true on tablet-width screens.
-                    `sidebar-aside fixed top-0 left-0 h-full flex flex-col shrink-0 transition-all duration-300 ease-in-out z-2001 text-white w-72
+                  // slide-in drawer, at any viewport width — never
+                  // switch into the persistent "md:absolute / md:w-64"
+                  // desktop rail. Previously this branch still carried
+                  // `md:translate-x-0` (forcing it visible-by-default at
+                  // md+) plus a blanket `md:hidden` that then fought it
+                  // and always won, hiding the drawer even when
+                  // isMobileOpen was true on tablet-width screens.
+                  `sidebar-aside fixed top-0 left-0 h-full flex flex-col shrink-0 transition-all duration-300 ease-in-out z-2001 text-white w-72
                      ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}`
                   : `sidebar-aside fixed top-0 md:absolute md:top-0 md:left-0 h-full md:h-full flex flex-col shrink-0 transition-all duration-300 ease-in-out z-2001 md:z-30 text-white
                      ${isMobileOpen ? "translate-x-0 w-72" : "-translate-x-full md:translate-x-0"}
@@ -321,7 +347,7 @@ const SidebarLayout = ({
               >
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl border border-white/10">
-                    <AlarmClock className="w-6 h-6 text-white" />
+                    <User className="w-6 h-6 text-white" />
                   </div>
                   <span className="text-xl font-bold text-white tracking-tight">
                     {title}
@@ -353,7 +379,7 @@ const SidebarLayout = ({
                     `}
                 >
                   <div className="shrink-0 transition-transform duration-300 hover:scale-110 p-2 bg-white/10 rounded-xl backdrop-blur-sm">
-                    <AlarmClock className="w-6 h-6 text-white" />
+                    <User className="w-6 h-6 text-white" />
                   </div>
                   <div
                     className={`flex flex-col transition-all duration-300 origin-left
@@ -364,11 +390,13 @@ const SidebarLayout = ({
                         `}
                   >
                     <span className="text-lg font-bold text-white tracking-tight whitespace-nowrap">
-                      {title}
+                      {isCEO ? "CEO" : title}
                     </span>
-                    <span className="text-[10px] font-medium text-blue-100 uppercase tracking-widest whitespace-nowrap">
-                      Management
-                    </span>
+                    {!isCEO && (
+                      <span className="text-[10px] font-medium text-blue-100 uppercase tracking-widest whitespace-nowrap">
+                        Management
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -523,39 +551,52 @@ const SidebarLayout = ({
 
               {/* Logout Button */}
               <div className="px-4 pb-6 mt-2 border-t border-white/10 pt-4">
-                <div className="relative group">
-                  <button
-                    onClick={handleLogout}
-                    className={`w-full flex items-center p-3 rounded-2xl cursor-pointer transition-all duration-300 relative overflow-hidden group bg-white text-red-600 hover:bg-red-50
-                        ${isOpen
-                        ? "gap-4 px-4"
-                        : "md:justify-center md:px-0 gap-0"
-                      }
-                    `}
-                  >
-                    <div className="shrink-0 relative z-10 transition-transform duration-300 text-red-600">
-                      <LogOut className="w-5 h-5 transition-colors duration-300 group-hover:scale-110" />
-                    </div>
-                    <span
-                      className={`text-sm font-semibold whitespace-nowrap transition-all duration-300 relative z-10
-                        ${isOpen
-                          ? "opacity-100 translate-x-0 w-auto"
-                          : "opacity-0 -translate-x-4 w-0 overflow-hidden absolute"
-                        }
-                    `}
-                    >
-                      Logout
-                    </span>
-                  </button>
+  <div className="relative group">
+    <button
+      onClick={handleLogout}
+      className={`w-full flex items-center p-3 rounded-2xl cursor-pointer transition-all duration-300 relative overflow-hidden
+        text-white hover:bg-white hover:text-red-600
+        ${isOpen || isMobileOpen
+          ? "gap-4 px-4"
+          : "xl:justify-center xl:px-0 gap-0"
+        }
+      `}
+    >
+      <div
+        className="
+          shrink-0 relative z-10
+          text-white
+          transition-all duration-300
+          group-hover:text-red-600
+          group-hover:scale-110
+        "
+      >
+        <LogOut className="w-5 h-5 transition-colors duration-300" />
+      </div>
 
-                  {!isOpen && (
-                    <div className="hidden md:block absolute left-[calc(100%+10px)] top-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#111c44] text-white text-xs font-bold rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 whitespace-nowrap z-50">
-                      Logout
-                      <div className="absolute top-1/2 -left-1 -translate-y-1/2 border-4 border-r-[#111c44] border-l-transparent border-t-transparent border-b-transparent"></div>
-                    </div>
-                  )}
-                </div>
-              </div>
+      <span
+        className={`text-md font-semibold whitespace-nowrap
+          transition-all duration-300 relative z-10
+          text-white group-hover:text-red-600
+          ${
+            isOpen || isMobileOpen
+              ? "opacity-100 translate-x-0 w-auto"
+              : "opacity-0 -translate-x-4 w-0 overflow-hidden absolute"
+          }
+        `}
+      >
+        Logout
+      </span>
+    </button>
+
+    {!isOpen && !isMobileOpen && (
+      <div className="sidebar-tooltip hidden xl:block absolute left-[calc(100%+10px)] top-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#111c44] text-white text-md font-bold rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 whitespace-nowrap z-50">
+        Logout
+        <div className="absolute top-1/2 -left-1 -translate-y-1/2 border-4 border-r-[#111c44] border-l-transparent border-t-transparent border-b-transparent"></div>
+      </div>
+    )}
+  </div>
+</div>
             </aside>
           </>
         )}

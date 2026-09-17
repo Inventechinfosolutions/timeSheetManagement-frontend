@@ -50,6 +50,20 @@ export interface QuarterlyReview {
     updatedAt?: string;
     createdBy?: string;
     updatedBy?: string;
+    // Assignment-workflow fields
+    assignment?: {
+      id: string | number;
+      assignedById?: string;
+      assignedByName?: string;
+      assignedAt?: string;
+      notes?: string;
+    } | null;
+    /** Whether the submission was done manually by the employee or auto-submitted by the system after the 3-day deadline */
+    submissionType?: 'MANUAL' | 'AUTO' | null;
+    /** The exact datetime by which the employee must submit before auto-submission kicks in */
+    deadlineAt?: string | null;
+    /** The datetime until which the employee can request access to re-edit a submitted review (24-hour window) */
+    accessRequestEligibleUntil?: string | null;
 }
 export type StatusStyle = {
     bg: string;

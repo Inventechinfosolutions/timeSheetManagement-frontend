@@ -10,5 +10,5 @@ export enum ReviewStatus {
   ACTIVE = 'Active',
   IN_PROGRESS = 'In Progress',
   UPCOMING = 'Upcoming',
-  NUMBER ='number',
+  NUMBER = 'number',
 }

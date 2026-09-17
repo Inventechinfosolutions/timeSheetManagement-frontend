@@ -1,3 +1,5 @@
+import { HiddenRatingBadge } from "../components/HiddenRatingBadge";
+import { useRevealedRatings } from "../hooks/useRevealedRatings";
 import React, { useEffect, useState } from 'react';
 import {
   Avatar,
@@ -223,6 +225,7 @@ const QuarterlyViewPage: React.FC<QuarterlyViewPageProps> = ({
   setRemarks,
   setFieldErrors,
 }) => {
+  const { isRevealed, getRevealedData } = useRevealedRatings();
   const [fileCounts, setFileCounts] = useState<{ [key: number]: number }>({});
 
   // Auto-sync the Final Performance Rating dropdown whenever the manager
@@ -278,7 +281,20 @@ const QuarterlyViewPage: React.FC<QuarterlyViewPageProps> = ({
                   {currentReview.employeeName.charAt(0).toUpperCase()}
                 </Avatar>
                 <div>
-                  <h4 className="font-bold text-slate-900 text-base">{currentReview.employeeName}</h4>
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-bold text-slate-900 text-base">{currentReview.employeeName}</h4>
+                    {currentReview.employeeRole && (
+                      <span
+                        className={`px-2 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider ${
+                          currentReview.employeeRole.toUpperCase() === "MANAGER"
+                            ? "bg-purple-100 text-purple-800 border border-purple-200"
+                            : "bg-blue-100 text-blue-800 border border-blue-200"
+                        }`}
+                      >
+                        {currentReview.employeeRole}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-slate-500">
                     ID: <span className="font-semibold text-slate-700">{currentReview.employeeId}</span> &bull; {currentReview.department} &bull; {currentReview.designation}
                   </p>
@@ -299,6 +315,17 @@ const QuarterlyViewPage: React.FC<QuarterlyViewPageProps> = ({
                       : '—'}
                   </p>
                 </div>
+                {currentReview.evaluatorName && (
+                  <>
+                    <Divider type="vertical" className="h-8" />
+                    <div>
+                      <p className="text-slate-400 font-normal">Evaluated By</p>
+                      <p className="text-slate-800 font-semibold">
+                        {currentReview.evaluatorName} {currentReview.evaluatorRole ? `(${currentReview.evaluatorRole})` : ''}
+                      </p>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -542,7 +569,23 @@ const QuarterlyViewPage: React.FC<QuarterlyViewPageProps> = ({
                     </h4>
                     <div className="bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-xl text-center">
                       <span className="text-[10px] uppercase font-bold text-slate-400 block">Avg Score</span>
-                      <span className="text-lg font-black text-indigo-700">{averageRatingScore} / 5.0</span>
+                      {(() => {
+                        const isRev = isRevealed(currentReview?.id, currentReview?.quarter);
+                        const revData = isRev ? getRevealedData(currentReview?.id, currentReview?.quarter) : null;
+                        const isHidden = !isRev && Boolean(currentReview?.isFinalRatingHidden);
+                        if (isHidden) {
+                          return (
+                            <HiddenRatingBadge
+                              reviewId={currentReview?.id}
+                              quarter={currentReview?.quarter}
+                              isFinalRatingHidden={true}
+                              hasFinalRating={true}
+                            />
+                          );
+                        }
+                        const effectiveAvg = revData?.finalRating ?? averageRatingScore;
+                        return <span className="text-lg font-black text-indigo-700">{effectiveAvg} / 5.0</span>;
+                      })()}
                     </div>
                   </div>
 
@@ -581,7 +624,23 @@ const QuarterlyViewPage: React.FC<QuarterlyViewPageProps> = ({
                     <div
                       className={`bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold text-slate-900 ${SUBMISSION_CARD_HOVER_CLASSES}`}
                     >
-                      {PERFORMANCE_RATING_LABELS[finalRating] || finalRating || '—'}
+                      {(() => {
+                        const isRev = isRevealed(currentReview?.id, currentReview?.quarter);
+                        const revData = isRev ? getRevealedData(currentReview?.id, currentReview?.quarter) : null;
+                        const effectiveFR = revData?.finalRating ?? finalRating;
+                        const isHidden = !isRev && Boolean(currentReview?.isFinalRatingHidden);
+                        if (isHidden) {
+                          return (
+                            <HiddenRatingBadge
+                              reviewId={currentReview?.id}
+                              quarter={currentReview?.quarter}
+                              isFinalRatingHidden={true}
+                              hasFinalRating={true}
+                            />
+                          );
+                        }
+                        return PERFORMANCE_RATING_LABELS[effectiveFR] || effectiveFR || '—';
+                      })()}
                     </div>
                   </div>
 

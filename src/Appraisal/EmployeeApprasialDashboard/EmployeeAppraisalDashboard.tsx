@@ -1,10 +1,12 @@
+import { HiddenRatingBadge } from '../components/HiddenRatingBadge';
 import React, { useState, useEffect } from 'react';
 import { Button, Table, Spin, message, Tooltip, Select, Modal } from 'antd';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import {
-  Plus, Edit3, Eye, Calendar, Star, ClipboardList,
+  Edit3, Eye, Calendar, Star, ClipboardList,
   BarChart3, Download, Trash2, FileCheck2, AlertTriangle,
+  Clock, Key, Send, ShieldAlert, Award,
 } from 'lucide-react';
 import { ReviewStatus } from './enums/Appraisal.enums';
 import { QuarterlyReview, StatusStyle } from './types/Appraisal.types';
@@ -17,15 +19,108 @@ import {
   quarterToSlug, //quarter name into a URL-friendly string (slug).
 } from './utils/fyQuarter.utils';
 import type { AppDispatch } from '../../store';
-import { getCurrentQuarter, getAllReviews, withdrawQuarterlyReview, downloadQuarterlyReviewPdf } from '../../reducers/quarterlyReview.reducer';
+import {
+  getCurrentQuarter,
+  getAllReviews,
+  withdrawQuarterlyReview,
+  downloadQuarterlyReviewPdf,
+  fetchMyReviewAssignments,
+  requestReviewAccess,
+  ReviewAssignment,
+  QuarterlyReviewSummary,
+} from '../../reducers/quarterlyReview.reducer';
 import MobileEmployeeAppraisalDashboard from './MobileEmployeeAppraisalDashboard/MobileEmployeeAppraisalDashboard';
 
+// Helper to calculate 3-day deadline remaining
+export const getDeadlineCountdown = (deadlineAt?: string | null) => {
+  if (!deadlineAt) return null;
+  const deadline = new Date(deadlineAt).getTime();
+  const now = Date.now();
+  const diffMs = deadline - now;
+
+  if (diffMs <= 0) {
+    return { isExpired: true, text: 'Deadline Expired (3-day limit reached)' };
+  }
+
+  const hours = Math.floor(diffMs / (1000 * 60 * 60));
+  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+  const days = Math.floor(hours / 24);
+
+  if (days > 0) {
+    return { isExpired: false, text: `${days}d ${hours % 24}h remaining` };
+  }
+  return { isExpired: false, text: `${hours}h ${minutes}m remaining` };
+};
+
+// Helper to calculate 24-hour Request Access window
+export const getAccessRequestCountdown = (submittedDate?: string | null, eligibleUntil?: string | null) => {
+  const targetDate = eligibleUntil
+    ? new Date(eligibleUntil).getTime()
+    : submittedDate
+      ? new Date(submittedDate).getTime() + 24 * 60 * 60 * 1000
+      : null;
+
+  if (!targetDate) return null;
+  const now = Date.now();
+  const diffMs = targetDate - now;
+
+  if (diffMs <= 0) {
+    return { isEligible: false, text: '24-hour request window closed' };
+  }
+
+  const hours = Math.floor(diffMs / (1000 * 60 * 60));
+  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+  return { isEligible: true, text: `${hours}h ${minutes}m left to request access` };
+};
+
 const STATUS_STYLES: Record<string, StatusStyle> = {
+  'Not Started': {
+    bg: 'bg-slate-100',
+    text: 'text-slate-600',
+    border: 'border-slate-200',
+    indicatorColor: 'bg-slate-400',
+  },
+  Draft: {
+    bg: 'bg-amber-50',
+    text: 'text-amber-700',
+    border: 'border-amber-200',
+    indicatorColor: 'bg-amber-400',
+  },
+  Submitted: {
+    bg: 'bg-emerald-50',
+    text: 'text-emerald-700',
+    border: 'border-emerald-200',
+    indicatorColor: 'bg-emerald-500',
+  },
   [ReviewStatus.NOT_STARTED]: {
     bg: 'bg-slate-100',
     text: 'text-slate-500',
     border: 'border-slate-200',
     indicatorColor: 'bg-slate-400',
+  },
+  ASSIGNED: {
+    bg: 'bg-blue-50',
+    text: 'text-blue-700',
+    border: 'border-blue-200',
+    indicatorColor: 'bg-blue-500',
+  },
+  'Auto Submitted': {
+    bg: 'bg-purple-50',
+    text: 'text-purple-700',
+    border: 'border-purple-200',
+    indicatorColor: 'bg-purple-500',
+  },
+  AUTO_SUBMITTED: {
+    bg: 'bg-purple-50',
+    text: 'text-purple-700',
+    border: 'border-purple-200',
+    indicatorColor: 'bg-purple-500',
+  },
+  'Access Requested': {
+    bg: 'bg-amber-50',
+    text: 'text-amber-700',
+    border: 'border-amber-200',
+    indicatorColor: 'bg-amber-500',
   },
   [ReviewStatus.DRAFT]: {
     bg: 'bg-amber-50',
@@ -110,9 +205,9 @@ export const getDisplayAverageRating = (record?: QuarterlyReview | null): string
       try { parsed = JSON.parse(parsed); } catch { }
     }
     if (typeof parsed === 'object' && parsed !== null) {
-      const values = Object.values(parsed).map(Number).filter(v => !isNaN(v) && v > 0);
-      if (values.length > 0) {
-        return (values.reduce((a, b) => a + b, 0) / values.length).toFixed(1);
+      const ratingValues = Object.values(parsed).map(Number).filter((rating) => !isNaN(rating) && rating > 0);
+      if (ratingValues.length > 0) {
+        return (ratingValues.reduce((sum, rating) => sum + rating, 0) / ratingValues.length).toFixed(1);
       }
     }
   }
@@ -237,54 +332,113 @@ const useIsMobileOrTablet = (breakpoint: number = 1024) => {
 const EmployeeAppraisalDashboard: React.FC = () => {
   const isMobileOrTablet = useIsMobileOrTablet();
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch<AppDispatch>();
 
+  const isManager = location.pathname.startsWith('/manager-dashboard');
+  const isAdmin = location.pathname.startsWith('/admin-dashboard');
+  const basePath = isManager ? '/manager-dashboard' : isAdmin ? '/admin-dashboard' : '/employee-dashboard';
+  const reviewPath = isManager || isAdmin ? `${basePath}/review` : `${basePath}/quarterly-review`;
+
   const [reviews, setReviews] = useState<QuarterlyReview[]>([]);
+  const [assignments, setAssignments] = useState<ReviewAssignment[]>([]);
   const [currentQuarter, setCurrentQuarter] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [fyOptions, setFyOptions] = useState<string[]>([]);
   const [selectedFY, setSelectedFY] = useState<string>('');
+  const [selectedQuarter, setSelectedQuarter] = useState<string>('');
+  const [summaryData, setSummaryData] = useState<QuarterlyReviewSummary | null>(null);
   const [fyLoading, setFyLoading] = useState(false);
+  const [quarterFilterLoading, setQuarterFilterLoading] = useState(false);
   const [messageApi, contextHolder] = message.useMessage();
 
-  useEffect(() => {
-    const fetch = async () => {
-      try {
-        setLoading(true);
-        const [q, allUnfiltered] = await Promise.all([
-          dispatch(getCurrentQuarter()).unwrap(),
-          dispatch(getAllReviews(undefined)).unwrap(),
-        ]);
-        const resolvedQuarter = q ?? '';
-        setCurrentQuarter(resolvedQuarter);
+  // Request Access state
+  const [requestAccessModalOpen, setRequestAccessModalOpen] = useState(false);
+  const [selectedRecordForRequest, setSelectedRecordForRequest] = useState<QuarterlyReview | null>(null);
+  const [requestReason, setRequestReason] = useState('');
+  const [requestSubmitting, setRequestSubmitting] = useState(false);
 
-        const uniqueFYs = Array.from(
-          new Set(allUnfiltered.map((r) => getFinancialYear(r.quarter)).filter((fy) => fy !== '—'))
-        ).sort((a, b) => b.localeCompare(a));
-        setFyOptions(uniqueFYs);
+  const fetchDashboardData = async (fyFilter?: string, qFilter?: string) => {
+    try {
+      setLoading(true);
+      const fyVal = fyFilter !== undefined ? fyFilter : selectedFY;
+      const qVal = qFilter !== undefined ? qFilter : selectedQuarter;
+      const filterPayload = {
+        financialYear: fyVal ? fyVal.replace('FY ', 'FY') : undefined,
+        quarter: qVal || undefined,
+      };
 
-        setSelectedFY('');
-        setReviews(allUnfiltered);
-      } catch (err: any) {
-        message.error(err?.message ?? 'Failed to load quarterly reviews.');
-      } finally {
-        setLoading(false);
+      const [quarterResponse, reviewsResult, myAssignments] = await Promise.all([
+        dispatch(getCurrentQuarter()).unwrap().catch(() => ''),
+        dispatch(getAllReviews(filterPayload)).unwrap().catch(() => [] as any),
+        dispatch(fetchMyReviewAssignments()).unwrap().catch(() => [] as ReviewAssignment[]),
+      ]);
+      const resolvedQuarter = quarterResponse ?? '';
+      setCurrentQuarter(resolvedQuarter);
+
+      const safeReviews: QuarterlyReview[] = Array.isArray(reviewsResult)
+        ? reviewsResult
+        : (reviewsResult?.reviews || []);
+      const summary = (reviewsResult as any)?.summary || null;
+      setSummaryData(summary);
+
+      const safeAssignments = Array.isArray(myAssignments) ? myAssignments : [];
+      setAssignments(safeAssignments);
+
+      const uniqueFYs = Array.from(
+        new Set(safeReviews.map((reviewRecord) => reviewRecord.financialYear || getFinancialYear(reviewRecord.quarter)).filter((financialYear) => financialYear && financialYear !== '—'))
+      ).sort((financialYearA, financialYearB) => financialYearB.localeCompare(financialYearA));
+      if (uniqueFYs.length > 0) {
+        setFyOptions((prev) => Array.from(new Set([...prev, ...uniqueFYs])));
       }
-    };
-    fetch();
+
+      setReviews(safeReviews);
+    } catch (err: any) {
+      message.error(err?.message ?? 'Failed to load quarterly reviews.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
   }, [dispatch]);
 
-  const handleFYChange = async (fy: string) => {
-    setSelectedFY(fy);
+  const handleFYChange = async (financialYear: string) => {
+    setSelectedFY(financialYear);
     setFyLoading(true);
     try {
-      const fyParam = fy ? fy.replace('FY ', 'FY') : undefined;
-      const filtered = await dispatch(getAllReviews(fyParam)).unwrap();
-      setReviews(filtered);
+      const filterPayload = {
+        financialYear: financialYear ? financialYear.replace('FY ', 'FY') : undefined,
+        quarter: selectedQuarter || undefined,
+      };
+      const res: any = await dispatch(getAllReviews(filterPayload)).unwrap();
+      const safeReviews = Array.isArray(res) ? res : (res?.reviews || []);
+      setReviews(safeReviews);
+      setSummaryData(res?.summary || null);
     } catch (err: any) {
       message.error(err?.message ?? 'Failed to filter reviews.');
     } finally {
       setFyLoading(false);
+    }
+  };
+
+  const handleQuarterChange = async (quarterVal: string) => {
+    setSelectedQuarter(quarterVal);
+    setQuarterFilterLoading(true);
+    try {
+      const filterPayload = {
+        financialYear: selectedFY ? selectedFY.replace('FY ', 'FY') : undefined,
+        quarter: quarterVal || undefined,
+      };
+      const res: any = await dispatch(getAllReviews(filterPayload)).unwrap();
+      const safeReviews = Array.isArray(res) ? res : (res?.reviews || []);
+      setReviews(safeReviews);
+      setSummaryData(res?.summary || null);
+    } catch (err: any) {
+      message.error(err?.message ?? 'Failed to filter reviews.');
+    } finally {
+      setQuarterFilterLoading(false);
     }
   };
 
@@ -309,13 +463,13 @@ const EmployeeAppraisalDashboard: React.FC = () => {
       setSelectedReviewForWithdraw(null);
 
       // Refresh reviews list
-      const fyParam = selectedFY ? selectedFY.replace('FY ', 'FY') : undefined;
-      const updated = await dispatch(getAllReviews(fyParam)).unwrap();
+      const financialYearParam = selectedFY ? selectedFY.replace('FY ', 'FY') : undefined;
+      const updated = await dispatch(getAllReviews(financialYearParam)).unwrap();
       setReviews(updated);
 
       const uniqueFYs = Array.from(
-        new Set(updated.map((r) => getFinancialYear(r.quarter)).filter((fy) => fy !== '—'))
-      ).sort((a, b) => b.localeCompare(a));
+        new Set(updated.map((reviewRecord) => getFinancialYear(reviewRecord.quarter)).filter((financialYear) => financialYear !== '—'))
+      ).sort((financialYearA, financialYearB) => financialYearB.localeCompare(financialYearA));
       setFyOptions(uniqueFYs);
     } catch (err: any) {
       messageApi.error(err || 'Failed to withdraw quarterly review.');
@@ -337,6 +491,40 @@ const EmployeeAppraisalDashboard: React.FC = () => {
     }
   };
 
+  const handleOpenRequestAccess = (record: QuarterlyReview) => {
+    setSelectedRecordForRequest(record);
+    setRequestReason('I was unable to complete my quarterly review. Please provide me access again.');
+    setRequestAccessModalOpen(true);
+  };
+
+  const handleSubmitRequestAccess = async () => {
+    if (!selectedRecordForRequest) return;
+    if (!requestReason.trim()) {
+      messageApi.error('Please enter a reason for requesting access.');
+      return;
+    }
+
+    try {
+      setRequestSubmitting(true);
+      await dispatch(
+        requestReviewAccess({
+          assignmentId: selectedRecordForRequest.assignment?.id,
+          quarter: selectedRecordForRequest.quarter,
+          reason: requestReason.trim(),
+        })
+      ).unwrap();
+
+      messageApi.success('Access request submitted successfully to Manager, Admin, and CEO.');
+      setRequestAccessModalOpen(false);
+      setSelectedRecordForRequest(null);
+      fetchDashboardData();
+    } catch (err: any) {
+      messageApi.error(err || 'Failed to submit access request.');
+    } finally {
+      setRequestSubmitting(false);
+    }
+  };
+
   // Switch to Mobile/Tablet component if viewport width is < 1024px
   if (isMobileOrTablet) {
     return (
@@ -348,8 +536,11 @@ const EmployeeAppraisalDashboard: React.FC = () => {
           loading={loading}
           fyOptions={fyOptions}
           selectedFY={selectedFY}
+          selectedQuarter={selectedQuarter}
+          summaryData={summaryData}
           fyLoading={fyLoading}
           onFYChange={handleFYChange}
+          onQuarterChange={handleQuarterChange}
           onWithdraw={handleOpenWithdrawModal}
           onDownload={handleDownloadPdf}
         />
@@ -417,7 +608,12 @@ const EmployeeAppraisalDashboard: React.FC = () => {
     );
   }
 
-  const currentReview = reviews.find((r) => r.quarter === currentQuarter);
+  // Find active assignment
+  const activeAssignment = assignments.find(
+    (assignmentItem) => assignmentItem.isAccessOpen && (assignmentItem.status === 'ASSIGNED' || assignmentItem.status === 'IN_PROGRESS' || assignmentItem.status === 'DRAFT')
+  );
+
+  const currentReview = reviews.find((reviewItem) => reviewItem.quarter === currentQuarter);
   const currentStatus = !currentReview
     ? ReviewStatus.NOT_STARTED
     : currentReview.status === ReviewStatus.DRAFT
@@ -430,159 +626,197 @@ const EmployeeAppraisalDashboard: React.FC = () => {
 
   const submissionSubtext = hasCurrentQuarterReview
     ? 'Your quarterly submission'
-    : 'Not yet submitted';
+    : 'Waiting for authorized assignment';
 
-  // const [messageApi, contextHolder] = message.useMessage();
-  const actionButton = (
-    <Button
-      type="primary"
-      icon={
-        <span className="!flex !items-center !justify-center">
-          <Plus className="!w-4 !h-4" />
-        </span>
-      }
-      onClick={() => {
-        if (hasCurrentQuarterReview) {
-          messageApi.info(
-            "You have already created a review for the current quarter."
-          );
-          return;
-        }
-
-        navigate(
-          currentQuarter
-            ? `/employee-dashboard/quarterly-review/${quarterToSlug(currentQuarter)}`
-            : "/employee-dashboard/quarterly-review"
-        );
-      }}
-      aria-disabled={hasCurrentQuarterReview}
-      className={`
-      !flex !items-center !justify-center !gap-2
-      !h-9 !px-4 !rounded-xl
-      !font-semibold !text-sm
-      !border-none
-      !transition-all !duration-300
-
-      ${hasCurrentQuarterReview
-          ? "!bg-gray-300 !text-gray-500 !cursor-not-allowed !shadow-none"
-          : "!bg-blue-600 hover:!bg-blue-700 !text-white !shadow-sm hover:!-translate-y-0.5 hover:!shadow-md"
-        }
-    `}
-    >
-      Create
-    </Button>
-  );
   const columns = [
     {
       title: 'Quarter',
       dataIndex: 'quarter',
       key: 'quarter',
       width: '9%',
-      render: (q: string) => (
-        <span className="font-semibold text-black text-sm">{q?.split(' ')[0] ?? q}</span>
+      render: (quarterName: string, record: QuarterlyReview) => (
+        <span className="font-semibold text-slate-900 text-sm">{record.quarterCode || (quarterName?.split(' ')[0] ?? quarterName)}</span>
       ),
     },
     {
       title: 'Financial Year',
       key: 'fy',
       width: '13%',
-      render: (_: any, r: QuarterlyReview) => (
-        <span className="font-semibold text-black text-sm">{getFinancialYear(r.quarter)}</span>
+      render: (_value: any, reviewRecord: QuarterlyReview) => (
+        <span className="font-semibold text-slate-800 text-sm">{reviewRecord.financialYear || getFinancialYear(reviewRecord.quarter)}</span>
       ),
     },
     {
-      title: 'Submitted To',
-      dataIndex: 'managerName',
-      key: 'managerName',
-      width: '14%',
-      render: (m: string | null) =>
-        m ? (
-          <Tooltip title={m}>
-            <span>{m}</span>
+      title: 'Assigned By',
+      key: 'assignedBy',
+      width: '18%',
+      render: (_value: any, record: QuarterlyReview) => {
+        const displayEvaluator =
+          record.assignedBy ||
+          (record.assignment?.assignedByName
+            ? `${record.assignment.assignedByName}${record.assignment.assignedByRole ? ` (${record.assignment.assignedByRole})` : ''}`
+            : record.managerName || (isManager ? 'CEO & Admin' : 'Manager / Admin'));
+        return (
+          <Tooltip title={displayEvaluator}>
+            <span className="text-slate-700 text-sm font-medium">{displayEvaluator}</span>
           </Tooltip>
-        ) : (
-          <span className="text-slate-400 text-sm">—</span>
-        ),
-    },
-    {
-      title: 'Reviewed On',
-      dataIndex: 'reviewedOn',
-      key: 'reviewedOn',
-      width: '13%',
-      render: (d: string | null) => (
-        <span className="text-slate-500 text-sm">
-          {d ? new Date(d).toLocaleDateString('en-IN') : '—'}
-        </span>
-      ),
-    },
-    {
-      title: 'Final Rating',
-      dataIndex: 'finalRating',
-      key: 'finalRating',
-      width: '12%',
-      render: (_: any, record: QuarterlyReview) => {
-        const avg = getDisplayAverageRating(record);
-        return avg ? (
-          <span className="font-semibold text-indigo-700">{avg}</span>
-        ) : (
-          <span className="text-slate-400 text-sm">—</span>
         );
+      },
+    },
+    {
+      title: 'Submission Status',
+      key: 'submissionStatus',
+      width: '14%',
+      render: (_value: any, record: QuarterlyReview) => {
+        const status =
+          record.submissionStatus ||
+          (record.status === ReviewStatus.SUBMITTED || record.status === ReviewStatus.COMPLETED || record.status === ReviewStatus.APPROVED
+            ? 'Submitted'
+            : record.status === ReviewStatus.DRAFT
+              ? 'Draft'
+              : 'Not Started');
+        return <StatusBadge status={status} showStatusIndicator={true} />;
+      },
+    },
+    {
+      title: 'Deadline',
+      key: 'deadline',
+      width: '13%',
+      render: (_value: any, record: QuarterlyReview) => {
+        const isSubmitted =
+          record.submissionStatus === 'Submitted' ||
+          record.status === ReviewStatus.SUBMITTED ||
+          record.status === ReviewStatus.COMPLETED ||
+          record.status === ReviewStatus.APPROVED;
+
+        if (isSubmitted || record.deadline === '-') {
+          return <span className="text-slate-400 text-sm font-medium">-</span>;
+        }
+
+        const displayDeadline = record.deadline || record.displayDeadline;
+        if (displayDeadline && displayDeadline !== '-') {
+          return (
+            <span className="text-slate-700 text-sm font-medium">
+              {displayDeadline}
+            </span>
+          );
+        }
+
+        return <span className="text-slate-400 text-sm">-</span>;
       },
     },
     {
       title: 'Review Status',
       dataIndex: 'reviewStatus',
       key: 'reviewStatus',
-      width: '14%',
-      render: (s: string | null, record: QuarterlyReview) => {
+      width: '13%',
+      render: (statusValue: string | null, record: QuarterlyReview) => {
         const isDraftOrNotStarted =
+          record.submissionStatus === 'Draft' ||
+          record.submissionStatus === 'Not Started' ||
           record.status === ReviewStatus.DRAFT ||
           record.status === ReviewStatus.NOT_STARTED;
 
-        if (isDraftOrNotStarted || !s) {
+        if (isDraftOrNotStarted || !statusValue) {
           return <span className="text-slate-400 text-sm">—</span>;
         }
-        return <StatusBadge status={s} showStatusIndicator={false} />;
+        return <StatusBadge status={statusValue} showStatusIndicator={false} />;
+      },
+    },
+    {
+      title: 'Final Rating',
+      dataIndex: 'finalRating',
+      key: 'finalRating',
+      width: '12%',
+      render: (_value: any, record: QuarterlyReview) => {
+        const isEvaluated = Boolean(
+          (record as any).hasFinalRating ||
+          record.reviewStatus === ReviewStatus.REVIEWED ||
+          record.reviewStatus === ReviewStatus.COMPLETED ||
+          record.status === ReviewStatus.COMPLETED ||
+          record.status === ReviewStatus.APPROVED ||
+          record.finalRating
+        );
+
+        if (!isEvaluated) {
+          return <span className="text-slate-400 text-sm font-medium">—</span>;
+        }
+
+        const avgRating = record.finalRating || record.quarterRating || getDisplayAverageRating(record);
+        return (
+          <HiddenRatingBadge
+            reviewId={record.id}
+            quarter={record.quarter}
+            finalRating={avgRating}
+            isFinalRatingHidden={(record as any).isFinalRatingHidden}
+            hasFinalRating={true}
+          />
+        );
       },
     },
     {
       title: 'Action',
       key: 'action',
-      width: '10%',
-      render: (_: any, record: QuarterlyReview) => {
-        const isEditable =
-          record.quarter === currentQuarter &&
-          record.status === ReviewStatus.DRAFT;
+      width: '16%',
+      render: (_value: any, record: QuarterlyReview) => {
+        const isSubmitted =
+          record.status === ReviewStatus.SUBMITTED ||
+          record.status === ReviewStatus.COMPLETED ||
+          record.submissionType === 'AUTO';
         const isCompleted =
           record.reviewStatus === ReviewStatus.COMPLETED ||
           record.reviewStatus === ReviewStatus.REVIEWED ||
           record.status === ReviewStatus.APPROVED ||
           record.status === ReviewStatus.COMPLETED;
-        const canWithdraw =
-          !isCompleted &&
-          record.status !== ReviewStatus.DRAFT &&
-          record.status !== ReviewStatus.NOT_STARTED;
+        const isNotSubmitted =
+          record.status === ReviewStatus.NOT_STARTED ||
+          record.status === ReviewStatus.DRAFT ||
+          record.submissionStatus === 'Not Started' ||
+          record.submissionStatus === 'Draft';
+        const hasAccessOpen = Boolean((record as any).assignment?.isAccessOpen || (record as any).accessGranted);
+        const isEditable = (!isSubmitted && !isCompleted && isNotSubmitted) || hasAccessOpen;
+
+        const accessRequestCountdown = getAccessRequestCountdown(
+          record.submittedDate,
+          record.accessRequestEligibleUntil
+        );
 
         return (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {/* View Button */}
             <RowIconButton
               icon={<Eye className="w-4 h-4" />}
-              tooltip="View"
+              tooltip="View Review"
               tone="indigo"
               onClick={() =>
-                navigate(`/employee-dashboard/quarterly-review/${quarterToSlug(record.quarter)}?mode=view`)
+                navigate(`${reviewPath}/${quarterToSlug(record.quarter)}?mode=view`)
               }
             />
+
+            {/* Edit / Continue button */}
             {isEditable && (
               <RowIconButton
                 icon={<Edit3 className="w-4 h-4" />}
-                tooltip="Edit"
-                tone="indigo"
-                onClick={() =>
-                  navigate(`/employee-dashboard/quarterly-review/${quarterToSlug(record.quarter)}`)
+                tooltip={
+                  record.status === ReviewStatus.NOT_STARTED || record.submissionStatus === 'Not Started'
+                    ? 'Start Review'
+                    : 'Edit Review'
                 }
+                tone="indigo"
+                onClick={async () => {
+                  if (record.status === ReviewStatus.NOT_STARTED || record.submissionStatus === 'Not Started') {
+                    try {
+                      await dispatch(startEditQuarterlyReview(record.quarter)).unwrap();
+                    } catch (startEditError) {
+                      console.warn('Could not mark review as draft', startEditError);
+                    }
+                  }
+                  navigate(`${reviewPath}/${quarterToSlug(record.quarter)}`);
+                }}
               />
             )}
+
+            {/* Download PDF button */}
             {isCompleted && (
               <RowIconButton
                 icon={downloadingQuarter === record.quarter ? <Spin size="small" /> : <Download className="w-4 h-4" />}
@@ -592,13 +826,19 @@ const EmployeeAppraisalDashboard: React.FC = () => {
                 onClick={() => handleDownloadPdf(record)}
               />
             )}
-            {canWithdraw && (
-              <RowIconButton
-                icon={<Trash2 className="w-4 h-4" />}
-                tooltip="Withdraw"
-                tone="withdraw"
-                onClick={() => handleOpenWithdrawModal(record)}
-              />
+
+            {/* 24-Hour Request Access Button */}
+            {isSubmitted && accessRequestCountdown?.isEligible && (
+              <Tooltip title={accessRequestCountdown.text}>
+                <button
+                  type="button"
+                  onClick={() => handleOpenRequestAccess(record)}
+                  className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition-colors flex items-center gap-1 shrink-0"
+                >
+                  <Key className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Request Access</span>
+                </button>
+              </Tooltip>
             )}
           </div>
         );
@@ -668,7 +908,7 @@ const EmployeeAppraisalDashboard: React.FC = () => {
           <div
             className="w-full min-h-screen bg-slate-50 px-4 py-4 flex flex-col"
           >
-            {/* Top Header */}
+            {/* Top Header without Create Button (Assignment-driven) */}
             <div className="mb-4">
               <div className="flex items-center gap-2">
                 <h1 className="text-xl font-semibold text-slate-900 tracking-tight">
@@ -678,18 +918,53 @@ const EmployeeAppraisalDashboard: React.FC = () => {
 
               <div className="mt-1 flex items-center justify-between">
                 <p className="text-slate-500 text-sm">
-                  Submit your quarterly achievements and view your performance review status.
+                  Complete authorized quarterly review assignments and track your performance appraisals.
                 </p>
-
-                <div className="shrink-0 ml-4">
-                  {actionButton}
-                </div>
               </div>
             </div>
 
+            {/* Active Assignment Alert / Card (if any pending assignment exists) */}
+            {activeAssignment && (
+              <div className="mb-4 p-4 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 shadow-sm flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                    <Clock className="w-5 h-5 animate-pulse" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-900 text-sm">
+                        Assigned Review: {activeAssignment.quarter}
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 text-blue-700">
+                        Assigned by {activeAssignment.assignedByName || activeAssignment.assignedByRole}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-600 mt-0.5">
+                      3-day completion deadline: {getDeadlineCountdown(activeAssignment.deadlineAt)?.text}
+                    </p>
+                  </div>
+                </div>
+
+                <Button
+                  type="primary"
+                  className="!bg-blue-600 hover:!bg-blue-700 !text-white !font-semibold !rounded-xl !h-9 !px-4"
+                  onClick={async () => {
+                    try {
+                      await dispatch(startEditQuarterlyReview(activeAssignment.quarter)).unwrap();
+                    } catch (startEditError) {
+                      console.warn('Could not mark review as draft', startEditError);
+                    }
+                    navigate(`${reviewPath}/${quarterToSlug(activeAssignment.quarter)}`);
+                  }}
+                >
+                  Fill Review
+                </Button>
+              </div>
+            )}
+
             {/* Main Content */}
             <div className="flex flex-col gap-4 flex-1 min-h-0">
-              {/* Current Quarter bar: FY / quarter range on the left, badge pinned to the right */}
+              {/* Current Quarter bar */}
               <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm shrink-0 flex items-center justify-between gap-4">
                 <div className="flex flex-col leading-none">
                   <span className="text-[12px] font-semibold text-slate-900 mb-1">
@@ -712,57 +987,78 @@ const EmployeeAppraisalDashboard: React.FC = () => {
                 </span>
               </div>
 
-              {/* Four uniform stat cards, in their own row */}
-              <div className="grid grid-cols-4 gap-4 shrink-0">
-                <StatCard
-                  accent="blue"
-                  icon={<FileCheck2 className="w-5 h-5 text-blue-500" />}
-                  label="Submission Status"
-                  value={<StatusBadge status={currentStatus} />}
-                  subtext={submissionSubtext}
-                  delay={0}
-                />
-                <StatCard
-                  accent="emerald"
-                  icon={<Calendar className="w-5 h-5 text-emerald-500" />}
-                  label="Due Date"
-                  value={
-                    <span className="text-slate-800 font-medium text-base">
-                      {currentStatus === ReviewStatus.NOT_STARTED || !currentQuarter ? '—' : quarterEndDate}
-                    </span>
-                  }
-                  subtext={quarterOver ? 'Quarter ended' : 'Draft editable until then'}
-                  delay={80}
-                />
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 shrink-0">
+                {/* 1. Review Status Card (Kept) */}
                 <StatCard
                   accent="indigo"
                   icon={<ClipboardList className="w-5 h-5 text-indigo-500" />}
                   label="Review Status"
                   value={
-                    <span className="text-slate-800 font-medium text-base">
-                      {currentStatus === ReviewStatus.SUBMITTED && currentReview?.reviewStatus
-                        ? currentReview.reviewStatus
-                        : '—'}
-                    </span>
+                    summaryData?.reviewStatus && summaryData.reviewStatus !== '—' ? (
+                      <StatusBadge status={summaryData.reviewStatus} showStatusIndicator={false} />
+                    ) : currentReview?.reviewStatus ? (
+                      <StatusBadge status={currentReview.reviewStatus} showStatusIndicator={false} />
+                    ) : (
+                      <span className="text-slate-400 font-medium text-base">—</span>
+                    )
                   }
-                  subtext="Manager evaluation"
-                  delay={160}
+                  subtext={isManager ? "CEO & Admin evaluation" : "Manager evaluation"}
+                  delay={0}
                 />
+
+                {/* 2. Quarter Rating Card */}
                 <StatCard
                   accent="amber"
                   icon={<Star className="w-5 h-5 text-amber-400" />}
-                  label="Final Rating"
+                  label="Quarter Rating"
                   value={
-                    <span className="text-slate-800 font-medium text-lg">
-                      {getDisplayAverageRating(currentReview) ?? '—'}
-                    </span>
+                    summaryData?.hasQuarterRating ? (
+                      <HiddenRatingBadge
+                        reviewId={summaryData?.activeReview?.id || currentReview?.id}
+                        quarter={summaryData?.targetQuarter || selectedQuarter || currentReview?.quarter}
+                        finalRating={summaryData?.quarterRating || summaryData?.quarterRatingScore || currentReview?.quarterRating || currentReview?.finalRating || getDisplayAverageRating(currentReview)}
+                        isFinalRatingHidden={summaryData?.isQuarterRatingHidden ?? (currentReview as any)?.isFinalRatingHidden}
+                        hasFinalRating={true}
+                        size="lg"
+                      />
+                    ) : (
+                      <span className="text-2xl font-bold text-slate-400">—</span>
+                    )
                   }
                   subtext={
-                    (currentReview?.reviewStatus === ReviewStatus.REVIEWED || currentReview?.reviewStatus === ReviewStatus.COMPLETED || currentReview?.status === ReviewStatus.COMPLETED || currentReview?.status === ReviewStatus.APPROVED) && currentReview?.reviewedOn
-                      ? `Reviewed ${new Date(currentReview.reviewedOn).toLocaleDateString('en-IN')}`
+                    summaryData?.hasQuarterRating
+                      ? `Rating for ${selectedQuarter || (summaryData?.targetQuarter ? summaryData.targetQuarter.split(' ')[0] : currentQuarter?.split(' ')[0] || 'Quarter')}`
                       : 'Not Available'
                   }
-                  delay={240}
+                  delay={80}
+                />
+
+                {/* 3. Year Rating Card */}
+                <StatCard
+                  accent="emerald"
+                  icon={<Award className="w-5 h-5 text-emerald-500" />}
+                  label="Year Rating"
+                  value={
+                    summaryData?.hasYearRating ? (
+                      <HiddenRatingBadge
+                        reviewId={currentReview?.id ? `year-${summaryData?.targetFY || selectedFY || 'current'}` : undefined}
+                        quarter={summaryData?.targetQuarter || currentQuarter}
+                        finalRating={summaryData?.yearRating || summaryData?.yearRatingScore || currentReview?.yearRating}
+                        isFinalRatingHidden={summaryData?.isYearRatingHidden}
+                        hasFinalRating={true}
+                        size="lg"
+                      />
+                    ) : (
+                      <span className="text-2xl font-bold text-slate-400">—</span>
+                    )
+                  }
+                  subtext={
+                    summaryData?.hasYearRating
+                      ? `Overall rating for ${summaryData?.targetFY || selectedFY || getFinancialYear(currentQuarter)}`
+                      : 'Not Available'
+                  }
+                  delay={160}
                 />
               </div>
 
@@ -775,24 +1071,44 @@ const EmployeeAppraisalDashboard: React.FC = () => {
                     </span>
                     <h2 className="font-semibold text-slate-800 text-base">Quarterly Review History</h2>
                   </div>
-                  {fyOptions.length > 0 && (
+                  <div className="flex items-center gap-2.5">
+                    {fyOptions.length > 0 && (
+                      <Select
+                        className="compact-filter"
+                        value={selectedFY || undefined}
+                        onChange={handleFYChange}
+                        loading={fyLoading}
+                        placeholder="Financial Year"
+                        allowClear
+                        variant="outlined"
+                        prefix={<Calendar className="w-4 h-4 text-indigo-500" />}
+                        popupMatchSelectWidth
+                        style={{ width: 160 }}
+                        options={fyOptions.map((financialYear) => ({
+                          label: financialYear,
+                          value: financialYear,
+                        }))}
+                      />
+                    )}
                     <Select
                       className="compact-filter"
-                      value={selectedFY || undefined}
-                      onChange={handleFYChange}
-                      loading={fyLoading}
-                      placeholder="Financial Year"
+                      value={selectedQuarter || undefined}
+                      onChange={handleQuarterChange}
+                      loading={quarterFilterLoading}
+                      placeholder="Quarter"
                       allowClear
                       variant="outlined"
-                      prefix={<Calendar className="w-4 h-4 text-indigo-500" />}
+                      prefix={<Clock className="w-4 h-4 text-indigo-500" />}
                       popupMatchSelectWidth
-                      style={{ width: 180 }}
-                      options={fyOptions.map((fy) => ({
-                        label: fy,
-                        value: fy,
-                      }))}
+                      style={{ width: 120 }}
+                      options={[
+                        { label: 'Q1', value: 'Q1' },
+                        { label: 'Q2', value: 'Q2' },
+                        { label: 'Q3', value: 'Q3' },
+                        { label: 'Q4', value: 'Q4' },
+                      ]}
                     />
-                  )}
+                  </div>
                 </div>
 
                 {reviews.length > 0 ? (
@@ -860,7 +1176,7 @@ const EmployeeAppraisalDashboard: React.FC = () => {
                       columns={columns}
                       dataSource={reviews}
                       loading={fyLoading}
-                      rowKey={(r) => r.quarter}
+                      rowKey={(reviewItem) => reviewItem.quarter}
                       pagination={false}
                       size="middle"
                       tableLayout="fixed"
@@ -874,8 +1190,10 @@ const EmployeeAppraisalDashboard: React.FC = () => {
                       alt="No quarterly reviews"
                       className="w-12px h-50 object-contain opacity-70"
                     />
-                    <p className="text-slate-500 font-semibold text-base">No quarterly reviews found.</p>
-                    <p className="text-slate-400 text-sm mt-1">Create your first quarterly review to get started.</p>
+                    <p className="text-slate-500 font-semibold text-base">No quarterly reviews assigned yet.</p>
+                    <p className="text-slate-400 text-sm mt-1">
+                      Quarterly reviews will appear here once assigned by your Manager, Admin, or CEO.
+                    </p>
                   </div>
                 )}
               </div>
@@ -883,6 +1201,89 @@ const EmployeeAppraisalDashboard: React.FC = () => {
           </div>
         </>
       </div>
+
+      {/* 24-Hour Request Access Modal */}
+      <Modal
+        open={requestAccessModalOpen}
+        onCancel={() => {
+          if (!requestSubmitting) {
+            setRequestAccessModalOpen(false);
+            setSelectedRecordForRequest(null);
+          }
+        }}
+        footer={null}
+        centered
+        destroyOnClose
+        width={460}
+      >
+        <div className="p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+              <Key className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-800">
+                Request Review Access
+              </h3>
+              <p className="text-xs text-slate-500">
+                For {selectedRecordForRequest?.quarter}
+              </p>
+            </div>
+          </div>
+
+          <div className="mb-4 p-3 rounded-xl bg-amber-50/70 border border-amber-200/80 flex items-start gap-2 text-xs text-amber-800">
+            <ShieldAlert className="w-4 h-4 shrink-0 text-amber-600 mt-0.5" />
+            <span>
+              You have 24 hours after submission to request access. Your request will be sent to your Manager, Admin, and CEO for approval.
+            </span>
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              Reason for Request:
+            </label>
+            <textarea
+              rows={3}
+              value={requestReason}
+              onChange={(changeEvent) => setRequestReason(changeEvent.target.value)}
+              placeholder="E.g., I was unable to complete my quarterly review. Please provide me access again."
+              className="w-full text-sm p-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 bg-slate-50"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-2.5">
+            <button
+              type="button"
+              disabled={requestSubmitting}
+              onClick={() => {
+                setRequestAccessModalOpen(false);
+                setSelectedRecordForRequest(null);
+              }}
+              className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={requestSubmitting || !requestReason.trim()}
+              onClick={handleSubmitRequestAccess}
+              className="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-amber-600 hover:bg-amber-700 transition-all flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+            >
+              {requestSubmitting ? (
+                <>
+                  <Spin size="small" className="text-white" />
+                  <span>Submitting...</span>
+                </>
+              ) : (
+                <>
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Send Access Request</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Withdraw Confirmation Modal */}
       <Modal

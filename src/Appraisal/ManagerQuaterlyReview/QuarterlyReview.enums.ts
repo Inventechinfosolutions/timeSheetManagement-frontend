@@ -37,6 +37,7 @@ export enum QuarterFilter {
 
 export enum StatusTabFilter {
   ALL = 'ALL',
+  ASSIGNED = 'ASSIGNED',
   PENDING = 'PENDING',
   IN_REVIEW = 'IN_REVIEW',
   COMPLETED = 'COMPLETED',

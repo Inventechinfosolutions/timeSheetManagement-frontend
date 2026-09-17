@@ -9,6 +9,9 @@ const TodayAttendance = lazy(
 const ChangePassword = lazy(
   () => import("../EmployeeDashboard/ChangePassword")
 );
+const EmployeeNotes = lazy(
+  () => import("../EmployeeDashboard/Employeenotes")
+);
 
 export const employeeComponentConfigs = [
   {
@@ -30,5 +33,13 @@ export const employeeComponentConfigs = [
   {
     path: "/employee-dashboard/change-password",
     Component: ChangePassword,
+  },
+  {
+    path: "/employee-dashboard/employee-notes/:projectName?",
+    Component: EmployeeNotes,
+  },
+  {
+    path: "/employee-dashboard/:projectName/employee-notes",
+    Component: EmployeeNotes,
   },
 ];

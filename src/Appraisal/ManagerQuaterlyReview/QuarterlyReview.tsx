@@ -1,5 +1,6 @@
+﻿import { HiddenRatingBadge } from "../components/HiddenRatingBadge";
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Table, Button, Input, Select, Spin, message } from "antd";
 import {
   Search,
@@ -12,8 +13,18 @@ import {
   Star,
   ArrowLeft,
   Hourglass,
+  Plus,
+  Key,
+  Clock,
+  Send,
+  ShieldCheck,
+  Check,
+  X,
+  RotateCcw,
 } from "lucide-react";
 import axios from "axios";
+import { Modal, Badge } from "antd";
+import type { ReviewAccessRequest } from "../../reducers/quarterlyReview.reducer";
 import {
   ManagerReviewItem,
   ReviewStats,
@@ -27,6 +38,7 @@ import {
   MIN_FIELD_LENGTH,
   DEFAULT_RATING_VALUE,
   STATUS_TAB_ITEMS,
+  STATUS_FILTER_ITEMS,
   YEAR_FILTER_ALL,
   DEFAULT_YEAR,
   toFiscalYearLabel,
@@ -193,6 +205,11 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
     employeeId?: string;
   }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isManagerRoute = location.pathname.startsWith("/manager-dashboard");
+  const baseRoute = isManagerRoute
+    ? "/manager-dashboard/quarterly-review"
+    : "/admin-dashboard/quarterly-review";
 
   const [submissions, setSubmissions] = useState<ManagerReviewItem[]>([]);
   const [stats, setStats] = useState<ReviewStats>({
@@ -201,8 +218,9 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
     pendingReviews: 0,
     inReview: 0,
     completed: 0,
+    assignmentSummary: {},
   });
-  const [setQuarterOptions] = useState<string[]>([]);
+  const [, setQuarterOptions] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedQuarter] = useState<string>(
     QuarterFilter.ALL,
@@ -213,6 +231,12 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
   const [selectedStatusTab, setSelectedStatusTab] = useState<string>(
     StatusTabFilter.ALL,
   );
+  const [selectedRole, setSelectedRole] = useState<string>("ALL");
+  const [selectedEmployee, setSelectedEmployee] = useState<string>("ALL");
+  const [teamEmployees, setTeamEmployees] = useState<
+    Array<{ employeeId: string; employeeName: string; designation?: string }>
+  >([]);
+  const [loadingTeamEmployees, setLoadingTeamEmployees] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedYear, setSelectedYear] = useState<string>(DEFAULT_YEAR);
 
@@ -231,6 +255,83 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
   );
   const [isViewOnly, setIsViewOnly] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
+
+  interface AssignableEmployee {
+    employeeId: string;
+    employeeName: string;
+    designation?: string;
+    department?: string;
+    email?: string;
+    isAssigned?: boolean;
+    assignedQuarters?: string[];
+  }
+
+  // Assign Review modal state
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [modeSelectModalOpen, setModeSelectModalOpen] = useState(false);
+  const [assignStartDate, setAssignStartDate] = useState("");
+  const [assignEndDate, setAssignEndDate] = useState("");
+  const [assignFinancialYear, setAssignFinancialYear] = useState("");
+  const [assignQuarterLabel, setAssignQuarterLabel] = useState("");
+  const [assignEmployeeId, setAssignEmployeeId] = useState("");
+  const [assignQuarter, setAssignQuarter] = useState("");
+  const [assignNotes, setAssignNotes] = useState("");
+  const [assignSubmitting, setAssignSubmitting] = useState(false);
+  const [assignEmployeeName, setAssignEmployeeName] = useState("");
+  const [assignableEmployees, setAssignableEmployees] = useState<AssignableEmployee[]>([]);
+  const [loadingAssignableEmployees, setLoadingAssignableEmployees] = useState(false);
+  const [assignMode, setAssignMode] = useState<"individual" | "all">("individual");
+  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
+  const [employeeAssignedQuarters, setEmployeeAssignedQuarters] = useState<string[]>([]);
+
+  // Derived assigned quarters for currently selected employee(s)
+  const currentAssignedQuarters = useMemo(() => {
+    if (assignMode === "all") {
+      if (!assignableEmployees || assignableEmployees.length === 0) return [];
+      const firstEmpQs = assignableEmployees[0]?.assignedQuarters || [];
+      return firstEmpQs.filter((q) =>
+        assignableEmployees.every((emp) => emp.assignedQuarters?.includes(q))
+      );
+    }
+
+    if (selectedEmployeeIds.length === 0) {
+      return employeeAssignedQuarters || [];
+    }
+
+    const assignedSet = new Set<string>(employeeAssignedQuarters || []);
+    selectedEmployeeIds.forEach((empId) => {
+      const emp = assignableEmployees.find(
+        (e) => String(e.employeeId) === String(empId)
+      );
+      if (emp?.assignedQuarters && Array.isArray(emp.assignedQuarters)) {
+        emp.assignedQuarters.forEach((q) => assignedSet.add(q));
+      }
+    });
+    return Array.from(assignedSet);
+  }, [assignMode, selectedEmployeeIds, assignableEmployees, employeeAssignedQuarters]);
+
+  // Clear assignQuarter if the newly selected employee already has it assigned
+  useEffect(() => {
+    if (
+      assignQuarter &&
+      currentAssignedQuarters.some((q) =>
+        q.toUpperCase().startsWith(assignQuarter.toUpperCase().split(" ")[0])
+      )
+    ) {
+      setAssignQuarter("");
+    }
+  }, [currentAssignedQuarters, assignQuarter]);
+
+  // Access Requests panel state
+  const [accessRequestsOpen, setAccessRequestsOpen] = useState(false);
+  // Employee assignment list modal state (for clicking Assigned / Not Assigned)
+  const [assignmentListModalOpen, setAssignmentListModalOpen] = useState(false);
+  const [assignmentListType, setAssignmentListType] = useState<"assigned" | "not_assigned" | "single_quarter">("assigned");
+  const [assignedSubTab, setAssignedSubTab] = useState<"all" | "single_quarter">("all");
+  const [assignmentListSearch, setAssignmentListSearch] = useState("");
+  const [accessRequests, setAccessRequests] = useState<ReviewAccessRequest[]>([]);
+  const [accessRequestsLoading, setAccessRequestsLoading] = useState(false);
+  const [actioningRequestId, setActioningRequestId] = useState<string | number | null>(null);
 
   const [ratings, setRatings] = useState<RatingValues>({
     [RatingCategory.PRODUCTIVITY]: DEFAULT_RATING_VALUE,
@@ -272,11 +373,24 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
       if (selectedYear !== YEAR_FILTER_ALL) params.year = selectedYear;
       if (selectedStatusTab !== StatusTabFilter.ALL)
         params.status = selectedStatusTab;
+      if (selectedRole !== "ALL") params.role = selectedRole;
+      if (selectedEmployee && selectedEmployee !== "ALL")
+        params.employeeId = selectedEmployee;
       if (searchQuery.trim()) params.search = searchQuery.trim();
+
+      const statsParams: Record<string, any> = {};
+      if (selectedQuarterCard !== QuarterFilter.ALL) {
+        statsParams.quarter = selectedQuarterCard;
+      } else if (selectedQuarter !== QuarterFilter.ALL) {
+        statsParams.quarter = selectedQuarter;
+      }
+      if (selectedYear !== YEAR_FILTER_ALL) {
+        statsParams.financialYear = selectedYear;
+      }
 
       const [subsRes, statsRes] = await Promise.all([
         axios.get("/api/manager-quarterly-review", { params }),
-        axios.get("/api/manager-quarterly-review/stats"),
+        axios.get("/api/manager-quarterly-review/stats", { params: statsParams }),
       ]);
 
       if (subsRes.data?.success) {
@@ -286,10 +400,10 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
       if (statsRes.data?.success) {
         setStats(statsRes.data.data);
       }
-    } catch (err: any) {
+    } catch (error: any) {
       message.error(
-        err.response?.data?.message ||
-          "Failed to fetch quarterly review submissions.",
+        error.response?.data?.message ||
+        "Failed to fetch quarterly review submissions.",
       );
     } finally {
       setLoading(false);
@@ -299,6 +413,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
   // Initial load
   useEffect(() => {
     fetchData(1, DEFAULT_PAGE_SIZE);
+    loadAccessRequests();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -316,37 +431,52 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
       .catch(() => {
         // Non-critical — dropdown just falls back to empty options.
       });
+
+    // Fetch team employees for the employee filter dropdown
+    setLoadingTeamEmployees(true);
+    axios
+      .get("/api/manager-quarterly-review/employees")
+      .then((res) => {
+        if (res.data?.success && Array.isArray(res.data.data)) {
+          setTeamEmployees(res.data.data);
+        }
+      })
+      .catch(() => {
+        axios
+          .get("/api/quarterly-review/assignable-employees")
+          .then((res) => {
+            if (res.data?.success && Array.isArray(res.data.data)) {
+              setTeamEmployees(res.data.data);
+            }
+          })
+          .catch(() => {});
+      })
+      .finally(() => {
+        setLoadingTeamEmployees(false);
+      });
   }, []);
-
-  const handleBack = () => {
-    if (onBack) {
-      onBack();
-    } else {
-      window.history.back();
-    }
-  };
-
+ 
   const averageRatingScore = useMemo(() => {
     const values = Object.values(ratings);
     if (values.length === 0) return 0;
-    const sum = values.reduce((a, b) => a + b, 0);
+    const sum = values.reduce((runningTotal, currentValue) => runningTotal + currentValue, 0);
     return (sum / values.length).toFixed(1);
   }, [ratings]);
 
-  const getFinalRatingFromScore = (avg: number): string => {
-    if (avg >= 5.0) return PerformanceRating.OUTSTANDING;
-    if (avg >= 4.0) return PerformanceRating.EXCEEDS_EXPECTATIONS;
-    if (avg >= 3.0) return PerformanceRating.MEETS_EXPECTATIONS;
-    if (avg >= 2.0) return PerformanceRating.NEEDS_IMPROVEMENT;
-    if (avg >= 1.0) return PerformanceRating.UNSATISFACTORY;
+  const getFinalRatingFromScore = (averageScore: number): string => {
+    if (averageScore >= 5.0) return PerformanceRating.OUTSTANDING;
+    if (averageScore >= 4.0) return PerformanceRating.EXCEEDS_EXPECTATIONS;
+    if (averageScore >= 3.0) return PerformanceRating.MEETS_EXPECTATIONS;
+    if (averageScore >= 2.0) return PerformanceRating.NEEDS_IMPROVEMENT;
+    if (averageScore >= 1.0) return PerformanceRating.UNSATISFACTORY;
     return "";
   };
 
   useEffect(() => {
     if (isViewOnly) return;
-    const avg = parseFloat(averageRatingScore as unknown as string);
-    if (!isNaN(avg)) {
-      setFinalRating(getFinalRatingFromScore(avg));
+    const computedAverage = parseFloat(averageRatingScore as unknown as string);
+    if (!isNaN(computedAverage)) {
+      setFinalRating(getFinalRatingFromScore(computedAverage));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [averageRatingScore, isViewOnly]);
@@ -354,37 +484,37 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
   const applyReviewToForm = (record: ManagerReviewItem) => {
     const resolvedRatings = record.ratings
       ? {
-          [RatingCategory.PRODUCTIVITY]:
-            record.ratings.productivity || DEFAULT_RATING_VALUE,
-          [RatingCategory.QUALITY]:
-            record.ratings.quality || DEFAULT_RATING_VALUE,
-          [RatingCategory.OWNERSHIP]:
-            record.ratings.ownership || DEFAULT_RATING_VALUE,
-          [RatingCategory.COMMUNICATION]:
-            record.ratings.communication || DEFAULT_RATING_VALUE,
-          [RatingCategory.COLLABORATION]:
-            record.ratings.collaboration || DEFAULT_RATING_VALUE,
-          [RatingCategory.INNOVATION]:
-            record.ratings.innovation || DEFAULT_RATING_VALUE,
-        }
+        [RatingCategory.PRODUCTIVITY]:
+          record.ratings.productivity || DEFAULT_RATING_VALUE,
+        [RatingCategory.QUALITY]:
+          record.ratings.quality || DEFAULT_RATING_VALUE,
+        [RatingCategory.OWNERSHIP]:
+          record.ratings.ownership || DEFAULT_RATING_VALUE,
+        [RatingCategory.COMMUNICATION]:
+          record.ratings.communication || DEFAULT_RATING_VALUE,
+        [RatingCategory.COLLABORATION]:
+          record.ratings.collaboration || DEFAULT_RATING_VALUE,
+        [RatingCategory.INNOVATION]:
+          record.ratings.innovation || DEFAULT_RATING_VALUE,
+      }
       : {
-          [RatingCategory.PRODUCTIVITY]: DEFAULT_RATING_VALUE,
-          [RatingCategory.QUALITY]: DEFAULT_RATING_VALUE,
-          [RatingCategory.OWNERSHIP]: DEFAULT_RATING_VALUE,
-          [RatingCategory.COMMUNICATION]: DEFAULT_RATING_VALUE,
-          [RatingCategory.COLLABORATION]: DEFAULT_RATING_VALUE,
-          [RatingCategory.INNOVATION]: DEFAULT_RATING_VALUE,
-        };
+        [RatingCategory.PRODUCTIVITY]: DEFAULT_RATING_VALUE,
+        [RatingCategory.QUALITY]: DEFAULT_RATING_VALUE,
+        [RatingCategory.OWNERSHIP]: DEFAULT_RATING_VALUE,
+        [RatingCategory.COMMUNICATION]: DEFAULT_RATING_VALUE,
+        [RatingCategory.COLLABORATION]: DEFAULT_RATING_VALUE,
+        [RatingCategory.INNOVATION]: DEFAULT_RATING_VALUE,
+      };
 
     setRatings(resolvedRatings);
 
     const ratingValues = Object.values(resolvedRatings);
-    const avg = ratingValues.length
-      ? ratingValues.reduce((a, b) => a + b, 0) / ratingValues.length
+    const calculatedAverage = ratingValues.length
+      ? ratingValues.reduce((runningSum, ratingItem) => runningSum + ratingItem, 0) / ratingValues.length
       : 0;
     setFinalRating(
-      avg > 0
-        ? getFinalRatingFromScore(avg)
+      calculatedAverage > 0
+        ? getFinalRatingFromScore(calculatedAverage)
         : record.finalRating
           ? getFinalRatingFromScore(record.finalRating)
           : "",
@@ -407,25 +537,25 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
     applyReviewToForm(record);
     setIsModalOpen(true);
     loadFreshReview(record.employeeId);
-    navigate(`/manager-dashboard/quarterly-review/${record.employeeId}`, {
+    navigate(`${baseRoute}/${record.employeeId}`, {
       replace: false,
     });
   };
 
   const loadFreshReview = async (employeeId: string) => {
     try {
-      const res = await axios.get(
+      const response = await axios.get(
         `/api/manager-quarterly-review/${employeeId}`,
       );
-      if (res.data?.success && res.data?.data) {
-        const freshRecord: ManagerReviewItem = res.data.data;
+      if (response.data?.success && response.data?.data) {
+        const freshRecord: ManagerReviewItem = response.data.data;
         setCurrentReview(freshRecord);
         applyReviewToForm(freshRecord);
       }
-    } catch (err: any) {
+    } catch (error: any) {
       message.error(
-        err.response?.data?.message ||
-          `Failed to load the latest details for this review.`,
+        error.response?.data?.message ||
+        `Failed to load the latest details for this review.`,
       );
     }
   };
@@ -440,7 +570,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
     setCurrentReview(null);
     loadedEmployeeIdRef.current = null;
     setCurrentPage(1);
-    navigate("/manager-dashboard/quarterly-review", { replace: false });
+    navigate(baseRoute, { replace: false });
     fetchData(1, pageSize);
   };
 
@@ -448,13 +578,15 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
     if (!employeeIdFromUrl || submissions.length === 0) return;
     if (loadedEmployeeIdRef.current === employeeIdFromUrl) return;
 
-    const match = submissions.find((s) => s.employeeId === employeeIdFromUrl);
-    if (match) {
+    const matchedSubmission = submissions.find(
+      (submission) => submission.employeeId === employeeIdFromUrl,
+    );
+    if (matchedSubmission) {
       loadedEmployeeIdRef.current = employeeIdFromUrl;
-      setCurrentReview(match);
-      setIsViewOnly(match.actionType === ActionType.VIEW);
+      setCurrentReview(matchedSubmission);
+      setIsViewOnly(matchedSubmission.actionType === ActionType.VIEW);
       setFieldErrors({});
-      applyReviewToForm(match);
+      applyReviewToForm(matchedSubmission);
       setIsModalOpen(true);
       loadFreshReview(employeeIdFromUrl);
     }
@@ -509,27 +641,255 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
           : ManagerReviewStatus.REVIEWED,
       };
 
-      const res = await axios.post(endpoint, payload);
+      const response = await axios.post(endpoint, payload);
 
-      if (res.data?.success) {
+      if (response.data?.success) {
         message.success(
           isDraft
             ? "Evaluation draft saved."
-            : "Manager review submitted successfully!",
+            : "Review evaluation submitted successfully!",
         );
         setIsModalOpen(false);
         setCurrentReview(null);
         loadedEmployeeIdRef.current = null;
         setCurrentPage(1);
-        navigate("/manager-dashboard/quarterly-review", { replace: false });
+        navigate(baseRoute, { replace: false });
         fetchData(1, pageSize);
       }
-    } catch (err: any) {
+    } catch (error: any) {
       message.error(
-        err.response?.data?.message || "Failed to submit review evaluation.",
+        error.response?.data?.message || "Failed to submit review evaluation.",
       );
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  // ── Assign Review ───────────────────────────────────────────────────────
+  // ─── Quarter availability helpers ────────────────────────────────────────────
+  /**
+   * Returns all 4 Indian-FY quarters for the CURRENT financial year.
+   * - disabled: true  → quarter number is greater than the current quarter (future)
+   * Indian FY: Q1=Apr–Jun, Q2=Jul–Sep, Q3=Oct–Dec, Q4=Jan–Mar
+   */
+  const getAvailableQuarters = (assignedQ: string[] = []): Array<{
+    value: string;
+    label: string;
+    disabled: boolean;
+    reason?: "upcoming" | "already_assigned";
+  }> => {
+    const now = new Date();
+    const month = now.getMonth(); // 0-indexed: 0=Jan, 1=Feb, ..., 8=Sep
+
+    let currentQ: number;
+    let fyStartYear: number;
+    if (month >= 3 && month <= 5)       { currentQ = 1; fyStartYear = now.getFullYear(); }
+    else if (month >= 6 && month <= 8)  { currentQ = 2; fyStartYear = now.getFullYear(); }
+    else if (month >= 9 && month <= 11) { currentQ = 3; fyStartYear = now.getFullYear(); }
+    else                                { currentQ = 4; fyStartYear = now.getFullYear() - 1; }
+
+    const fyEnd = String(fyStartYear + 1).slice(2);
+    const fy = `FY${fyStartYear}-${fyEnd}`;
+
+    const quarters = [
+      { qNum: 1, prefix: "Q1", months: "Apr – Jun" },
+      { qNum: 2, prefix: "Q2", months: "Jul – Sep" },
+      { qNum: 3, prefix: "Q3", months: "Oct – Dec" },
+      { qNum: 4, prefix: "Q4", months: "Jan – Mar" },
+    ];
+
+    return quarters.map((q) => {
+      const val = `${q.prefix} ${fy}`;
+      const isUpcoming = q.qNum > currentQ;
+      const isAlreadyAssigned = assignedQ.some((assigned) => {
+        const norm = (assigned || "").trim().toUpperCase();
+        return norm.startsWith(q.prefix.toUpperCase() + " ") || norm === q.prefix.toUpperCase();
+      });
+
+      let disabled = false;
+      let reason: "upcoming" | "already_assigned" | undefined;
+
+      if (isUpcoming) {
+        disabled = true;
+        reason = "upcoming";
+      } else if (isAlreadyAssigned) {
+        disabled = true;
+        reason = "already_assigned";
+      }
+
+      return {
+        value: val,
+        label: `${q.prefix} ${fy} (${q.months})`,
+        disabled,
+        reason,
+      };
+    });
+  };
+
+  const handleAssignQuarterChange = async (val: string) => {
+    setAssignQuarter(val);
+    if (!val) return;
+    try {
+      setLoadingAssignableEmployees(true);
+      const res = await axios.get("/api/quarterly-review/assignable-employees", {
+        params: { quarter: val },
+      });
+      if (res.data?.success && Array.isArray(res.data.data)) {
+        setAssignableEmployees(res.data.data);
+      }
+    } catch (err: any) {
+      console.warn("Failed to update assignable employees for quarter:", err);
+    } finally {
+      setLoadingAssignableEmployees(false);
+    }
+  };
+
+  const openAssignModal = async (item?: ManagerReviewItem) => {
+    setAssignModalOpen(true);
+    const initialQ = (selectedQuarter && selectedQuarter !== QuarterFilter.ALL) ? selectedQuarter : "";
+    setAssignQuarter(initialQ);
+    setAssignNotes("");
+    setLoadingAssignableEmployees(true);
+
+    if (item) {
+      const singleId = String(item.employeeId || item.id || "");
+      setAssignEmployeeId(singleId);
+      setAssignEmployeeName(item.employeeName || "");
+      setSelectedEmployeeIds([singleId]);
+      setAssignMode("individual");
+      // Fetch per-quarter assignment status for this employee (parallel)
+      try {
+        const singleId = String(item.employeeId || item.id || '');
+        const availQs = getAvailableQuarters().filter(q => !q.disabled);
+        const qResults = await Promise.allSettled(
+          availQs.map(q =>
+            axios.get('/api/quarterly-review/assignable-employees', { params: { quarter: q.value } })
+          )
+        );
+        const assignedQs: string[] = [];
+        qResults.forEach((result, idx) => {
+          if (result.status === 'fulfilled' && result.value.data?.success) {
+            const empList = result.value.data.data as any[];
+            const match = empList.find((e: any) => String(e.employeeId) === singleId);
+            if (match?.isAssigned) assignedQs.push(availQs[idx].value);
+          }
+        });
+        setEmployeeAssignedQuarters(assignedQs);
+      } catch (_qErr) {
+        setEmployeeAssignedQuarters([]);
+      }
+    } else {
+      setAssignEmployeeId("");
+      setAssignEmployeeName("");
+      setSelectedEmployeeIds([]);
+      setAssignMode("individual");
+      setEmployeeAssignedQuarters([]);
+    }
+
+    try {
+      const res = await axios.get("/api/quarterly-review/assignable-employees", {
+        params: initialQ ? { quarter: initialQ } : {},
+      });
+      if (res.data?.success && Array.isArray(res.data.data)) {
+        setAssignableEmployees(res.data.data);
+      }
+    } catch (err: any) {
+      console.warn("Failed to fetch assignable employees:", err);
+    } finally {
+      setLoadingAssignableEmployees(false);
+    }
+  };
+
+  const handleAssignReview = async () => {
+    // Validate all mandatory fields
+    if (!assignQuarterLabel) { message.error("Quarter is required."); return; }
+    if (!assignFinancialYear) { message.error("Financial Year is required."); return; }
+    if (!assignStartDate) { message.error("Start date is required."); return; }
+    if (!assignEndDate) { message.error("End date (deadline) is required."); return; }
+    if (!assignNotes || !assignNotes.trim()) { message.error("Description is required."); return; }
+    if (assignMode === "individual" && selectedEmployeeIds.length === 0) {
+      message.error("Please select at least one employee.");
+      return;
+    }
+    try {
+      setAssignSubmitting(true);
+      const payload: any = {
+        mode: assignMode === "all" ? "ALL" : "INDIVIDUAL",
+        quarter: assignQuarterLabel,
+        financialYear: assignFinancialYear,
+        startDate: assignStartDate,
+        endDate: assignEndDate,
+        description: assignNotes.trim(),
+      };
+      if (assignMode === "individual") { payload.employeeIds = selectedEmployeeIds; }
+      const res = await axios.post("/api/manager-quarterly-review/assignments/create", payload);
+      if (res.data?.success) {
+        const created = res.data?.data?.created ?? 0;
+        const skipped = res.data?.data?.skipped ?? 0;
+        message.success(res.data?.message || `${created} assignment(s) created${skipped > 0 ? `, ${skipped} skipped` : ""}.`);
+        setAssignModalOpen(false);
+        setModeSelectModalOpen(false);
+        setAssignQuarterLabel(""); setAssignFinancialYear(""); setAssignStartDate(""); setAssignEndDate(""); setAssignNotes(""); setSelectedEmployeeIds([]);
+        fetchData(1, pageSize);
+      } else {
+        message.error(res.data?.message || "Failed to assign review.");
+      }
+    } catch (error: any) {
+      message.error(error.response?.data?.message || "Failed to assign review.");
+    } finally {
+      setAssignSubmitting(false);
+    }
+  };
+
+  // ── Access Requests ─────────────────────────────────────────────────────
+  const loadAccessRequests = async () => {
+    try {
+      setAccessRequestsLoading(true);
+      const res = await axios.get("/api/quarterly-review/access-requests", {
+        params: { status: "pending" },
+      });
+      if (res.data?.success) {
+        setAccessRequests(res.data.data || []);
+      }
+    } catch (error: any) {
+      message.error(
+        error.response?.data?.message || "Failed to load access requests.",
+      );
+    } finally {
+      setAccessRequestsLoading(false);
+    }
+  };
+
+  const openAccessRequestsPanel = () => {
+    setAccessRequestsOpen(true);
+    loadAccessRequests();
+  };
+
+  const handleAccessRequestAction = async (
+    requestId: string | number,
+    action: "approve" | "reject",
+  ) => {
+    try {
+      setActioningRequestId(requestId);
+      const res = await axios.patch(
+        `/api/quarterly-review/access-requests/${requestId}/${action}`,
+      );
+      if (res.data?.success) {
+        message.success(
+          action === "approve"
+            ? "Access request approved. The employee may now edit their submission."
+            : "Access request rejected.",
+        );
+        // Refresh the list and the main table
+        loadAccessRequests();
+        fetchData(currentPage, pageSize);
+      } else {
+        message.error(res.data?.message || "Action failed.");
+      }
+    } catch (error: any) {
+      message.error(error.response?.data?.message || "Action failed.");
+    } finally {
+      setActioningRequestId(null);
     }
   };
 
@@ -546,27 +906,32 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
     const currentCalendarYear = new Date().getFullYear();
     const rangeYears: string[] = [];
     for (
-      let y = currentCalendarYear - YEARS_BEFORE_CURRENT;
-      y <= currentCalendarYear + YEARS_AFTER_CURRENT;
-      y++
+      let yearIndex = currentCalendarYear - YEARS_BEFORE_CURRENT;
+      yearIndex <= currentCalendarYear + YEARS_AFTER_CURRENT;
+      yearIndex++
     ) {
-      rangeYears.push(toFiscalYearLabel(y));
+      rangeYears.push(toFiscalYearLabel(yearIndex));
     }
 
-    // Note: `submissions` now only holds the current page's rows (server-side
-    // pagination), so this only merges in years from the static range plus
-    // whatever happens to be on the current page. If you need every year
-    // actually present across the full team, add a `/filters` response field
-    // for years the same way quarters are fetched below.
     const dataYears = submissions
-      .map((s) => getSubmissionYear(s))
+      .map((submission) => getSubmissionYear(submission))
       .filter(Boolean);
 
     const years = Array.from(
       new Set([...rangeYears, DEFAULT_YEAR, ...dataYears]),
-    ).sort((a, b) => parseInt(b, 10) - parseInt(a, 10));
+    ).sort((previousYear, nextYear) => parseInt(nextYear, 10) - parseInt(previousYear, 10));
     return years;
   }, [submissions]);
+
+  const handleClearFilters = () => {
+    setSearchQuery("");
+    setSelectedRole("ALL");
+    setSelectedYear(YEAR_FILTER_ALL);
+    setSelectedQuarterCard(QuarterFilter.ALL);
+    setSelectedEmployee("ALL");
+    setSelectedStatusTab(StatusTabFilter.ALL);
+    setCurrentPage(1);
+  };
 
   // Any filter change invalidates the current result set — jump back to
   // page 1 and re-fetch from the server with the new filters applied.
@@ -579,38 +944,36 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
     selectedQuarter,
     selectedQuarterCard,
     selectedStatusTab,
+    selectedRole,
+    selectedEmployee,
     searchQuery,
   ]);
 
-  const handleTableChange = (page: number, size: number) => {
-    setCurrentPage(page);
-    if (size !== pageSize) {
-      setPageSize(size);
+  const handleTableChange = (pageNumber: number, newPageSize: number) => {
+    setCurrentPage(pageNumber);
+    if (newPageSize !== pageSize) {
+      setPageSize(newPageSize);
     }
-    fetchData(page, size);
+    fetchData(pageNumber, newPageSize);
   };
 
   const renderStatusBadge = (status: string | null) => {
-    const s = status || AppraisalStatus.NOT_STARTED;
+    const currentStatus = status || AppraisalStatus.NOT_STARTED;
     if (
       [
         AppraisalStatus.REVIEWED,
         AppraisalStatus.APPROVED,
         AppraisalStatus.COMPLETED,
-      ].includes(s as AppraisalStatus)
+      ].includes(currentStatus as AppraisalStatus)
     ) {
       return (
         <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-          {s}
+          {currentStatus}
         </span>
       );
     }
-    if (s === AppraisalStatus.UNDER_REVIEW) {
-      // CHANGED: was purple (bg-purple-50 / text-purple-700 /
-      // border-purple-200), now amber/yellow to match the same "pending"
-      // visual language used for the Pending Reviews stat card and the
-      // NOT_STARTED fallback badge below.
+    if (currentStatus === AppraisalStatus.UNDER_REVIEW) {
       return (
         <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
           <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
@@ -618,10 +981,18 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
         </span>
       );
     }
+    if (currentStatus === "Assigned") {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+          <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+          Assigned
+        </span>
+      );
+    }
     return (
       <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
         <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-        {s}
+        {currentStatus}
       </span>
     );
   };
@@ -632,22 +1003,22 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
     {
       title: "Employee Name",
       key: "employeeName",
-      width: "10%",
-      render: (_: any, r: ManagerReviewItem) => {
-        const displayName = r.employeeName
-          ? r.employeeName
-              .split(" ")
-              .map((w) => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w))
-              .join(" ")
+      width: "16%",
+      render: (_: any, record: ManagerReviewItem) => {
+        const displayName = record.employeeName
+          ? record.employeeName
+            .split(" ")
+            .map((word) => (word ? word.charAt(0).toUpperCase() + word.slice(1) : word))
+            .join(" ")
           : "";
 
         const initials = displayName
           ? displayName
-              .split(" ")
-              .filter(Boolean)
-              .slice(0, 2)
-              .map((w) => w.charAt(0).toUpperCase())
-              .join("")
+            .split(" ")
+            .filter(Boolean)
+            .slice(0, 2)
+            .map((word) => word.charAt(0).toUpperCase())
+            .join("")
           : "";
 
         return (
@@ -655,7 +1026,21 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
             <div className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[11px] font-bold shrink-0">
               {initials || <Users className="w-3.5 h-3.5 text-indigo-500" />}
             </div>
-            <p className={`${tableTextClass} truncate`}>{displayName || "—"}</p>
+            <div className="flex flex-col text-left">
+              <div className="flex items-center gap-1.5">
+                <p className={`${tableTextClass} truncate`}>{displayName || "—"}</p>
+                {record.employeeRole && (
+                  <span
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${record.employeeRole.toUpperCase() === "MANAGER"
+                        ? "bg-purple-100 text-purple-700 border border-purple-200"
+                        : "bg-blue-50 text-blue-700 border border-blue-200"
+                      }`}
+                  >
+                    {record.employeeRole}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
         );
       },
@@ -666,8 +1051,8 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
       dataIndex: "employeeId",
       key: "employeeId",
       width: "10%",
-      render: (id: string) => (
-        <span className={tableTextClass}>{id || "—"}</span>
+      render: (employeeIdText: string) => (
+        <span className={tableTextClass}>{employeeIdText || "—"}</span>
       ),
     },
 
@@ -675,10 +1060,10 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
       title: "Designation",
       dataIndex: "designation",
       key: "designation",
-      width: "14%",
-      render: (d: string) => (
+      width: "13%",
+      render: (designationText: string) => (
         <span className={tableTextClass}>
-          {d ? d.charAt(0).toUpperCase() + d.slice(1) : "—"}
+          {designationText ? designationText.charAt(0).toUpperCase() + designationText.slice(1) : "—"}
         </span>
       ),
     },
@@ -688,9 +1073,9 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
       dataIndex: "quarter",
       key: "quarter",
       width: "10%",
-      render: (q: string) => (
+      render: (quarterText: string) => (
         <span className={tableTextClass}>
-          {q ? q.trim().split(/\s+/)[0] : "—"}
+          {quarterText ? quarterText.trim().split(/\s+/)[0] : "—"}
         </span>
       ),
     },
@@ -699,12 +1084,20 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
       title: "Final Rating",
       dataIndex: "finalRating",
       key: "finalRating",
-      width: "14%",
-      render: (rating: number | null) =>
-        rating != null ? (
+      width: "11%",
+      render: (ratingScore: number | null, record: ManagerReviewItem) =>
+        record.isFinalRatingHidden ? (
+          <HiddenRatingBadge
+            reviewId={record.id}
+            quarter={record.quarter}
+            finalRating={ratingScore}
+            isFinalRatingHidden={true}
+            hasFinalRating={record.hasFinalRating}
+          />
+        ) : ratingScore != null ? (
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-bold text-xs border border-indigo-100">
             <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-            {rating}
+            {ratingScore}
           </span>
         ) : (
           <span className="text-slate-400 text-sm font-medium">—</span>
@@ -715,12 +1108,12 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
       title: "Last Modified",
       dataIndex: "lastModified",
       key: "lastModified",
-      width: "14%",
-      render: (d: string | null) =>
-        d ? (
+      width: "12%",
+      render: (modifiedDate: string | null) =>
+        modifiedDate ? (
           <div className={`${tableTextClass} leading-tight`}>
             <div>
-              {new Date(d).toLocaleDateString("en-GB", {
+              {new Date(modifiedDate).toLocaleDateString("en-GB", {
                 day: "2-digit",
                 month: "short",
                 year: "numeric",
@@ -736,19 +1129,38 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
       title: "Status",
       key: "status",
       width: "14%",
-      render: (_: any, r: ManagerReviewItem) => renderStatusBadge(r.status),
+      render: (_: any, record: ManagerReviewItem) => (
+        <div className="flex flex-col items-center gap-0.5">
+          {renderStatusBadge(record.status)}
+          {record.evaluatorName && (
+            <span className="text-[10px] text-slate-500 font-medium">
+              By: {record.evaluatorName}
+            </span>
+          )}
+        </div>
+      ),
     },
 
     {
       title: "Action",
       key: "action",
-      width: "14%",
+      width: "18%",
       render: (_: any, record: ManagerReviewItem) => {
         const isReviewed = record.actionType === ActionType.VIEW;
+        const isAssignedOnly = (record.status === "Assigned" || record.status === "Draft") && record.reviewStatus !== "Draft";
 
         return (
-          <div className="inline-flex items-center gap-2">
-            {!isReviewed ? (
+          <div className="inline-flex flex-wrap items-center gap-1.5 justify-center">
+            {isAssignedOnly ? (
+              <Button
+                size="small"
+                icon={<Eye className="w-3.5 h-3.5" />}
+                onClick={() => handleOpenEvaluation(record, true)}
+                className="!border-slate-300 hover:!border-indigo-400 !text-slate-700 hover:!text-indigo-600 !font-semibold !rounded-lg !flex !items-center !gap-1"
+              >
+                View
+              </Button>
+            ) : !isReviewed ? (
               <Button
                 type="primary"
                 size="small"
@@ -756,51 +1168,46 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
                 onClick={() => handleOpenEvaluation(record, false)}
                 className="!bg-indigo-600 hover:!bg-indigo-700 !text-white !font-semibold !rounded-lg !flex !items-center !gap-1"
               >
-                {record.actionLabel || "Evaluate"}
+                {record.reviewStatus === "Draft" ? "Edit Evaluation" : (record.actionLabel || "Evaluate")}
               </Button>
             ) : (
               <Button
-                type="default"
                 size="small"
-                icon={<Eye className="w-3.5 h-3.5 text-indigo-600" />}
+                icon={<Eye className="w-3.5 h-3.5" />}
                 onClick={() => handleOpenEvaluation(record, true)}
-                className="!border-indigo-200 !text-indigo-600 hover:!bg-indigo-50 !font-semibold !rounded-lg !flex !items-center !gap-1"
+                className="!border-slate-300 hover:!border-indigo-400 !text-slate-700 hover:!text-indigo-600 !font-semibold !rounded-lg !flex !items-center !gap-1"
               >
-                {record.actionLabel || "View"}
+                View
               </Button>
             )}
+            {/* Assign a quarter review directly from a row */}
+            <Button
+              size="small"
+              icon={<Send className="w-3 h-3" />}
+              onClick={() => openAssignModal(record)}
+              title="Assign a quarter review to this employee"
+              className="!border-indigo-300 !text-indigo-600 hover:!bg-indigo-50 !font-semibold !rounded-lg !flex !items-center !gap-1"
+            >
+              Assign
+            </Button>
           </div>
         );
       },
     },
   ];
 
-
   return (
     <div className="mqr-wrapper w-full min-h-full bg-slate-50 px-6 pt-3 pb-10 flex flex-col gap-3">
       <style>{MQR_FONT_STYLES}</style>
 
-      {/* Top row: just Back + Title/subtitle. */}
-      <button
-        onClick={handleBack}
-        className="group inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#4318FF]/10 text-[#4318FF] hover:bg-[#4318FF] hover:text-white transition-all duration-300 w-fit"
-      >
-        <ArrowLeft
-          size={13}
-          className="group-hover:-translate-x-1 transition-transform duration-300"
-        />
-        <span className="text-[10px] font-black uppercase tracking-widest">
-          Back
-        </span>
-      </button>
-
       <div>
         <h1 className="text-2xl font-extrabold text-[#2B3674] tracking-tight">
-          Manager Quarterly Review
+          {isManagerRoute ? "Manager Quarterly Review" : "Quarterly Review"}
         </h1>
         <p className="text-slate-500 text-sm mt-0.5">
-          Review, evaluate, and provide ratings for quarterly appraisal
-          submissions from your team members.
+          {isManagerRoute
+            ? "Review, evaluate, and provide ratings for quarterly appraisal submissions from your team members."
+            : "Review, evaluate, and provide ratings for quarterly appraisal submissions across the organization."}
         </p>
       </div>
 
@@ -811,70 +1218,82 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
           `flex-1` on the group below has nothing to share the row with
           anymore, so it stretches across the full width automatically. */}
 
+      {/* ── Action buttons: Access Requests + Create ── */}
+      <div className="flex items-center justify-end gap-2.5">
+        <Badge count={accessRequests.length} offset={[-2, 2]}>
+          <Button
+            type="default"
+            icon={<Key className="w-3.5 h-3.5 text-amber-600" />}
+            onClick={openAccessRequestsPanel}
+            className="!inline-flex !items-center !gap-1.5 !px-3.5 !py-2 !h-auto !rounded-xl !border-amber-300 !text-amber-700 hover:!bg-amber-50 hover:!border-amber-400 !text-sm !font-semibold !shadow-xs transition-all cursor-pointer"
+          >
+            Access Requests
+          </Button>
+        </Badge>
+
+        <button
+          type="button"
+          onClick={() => {
+            setModeSelectModalOpen(true);
+          }}
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-sm font-semibold shadow-sm hover:shadow-md transition-all cursor-pointer"
+        >
+          <span className="text-base leading-none">+</span>
+          Create
+        </button>
+      </div>
+
+      {/* ── Review Submissions Summary Cards - COMMENTED OUT ── */}
+      {/*
       <div className="flex items-start gap-3 flex-wrap">
         <div className="flex items-stretch gap-3 flex-1 min-w-[560px]">
-          {/* Total Submissions */}
           <div className="mqr-stat-card rounded-xl border border-slate-200 bg-white p-4 flex-1 min-w-[135px] flex items-center gap-3">
             <div className="w-11 h-11 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
               <Users className="w-5 h-5 text-blue-600" />
             </div>
-
             <div className="min-w-0">
               <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wide leading-snug truncate">
                 Total Submissions
               </p>
-
               <p className="text-2xl font-bold text-slate-900 mt-0.5">
                 {stats.totalSubmissions}
               </p>
             </div>
           </div>
-
-          {/* Pending Reviews */}
           <div className="mqr-stat-card rounded-xl border border-slate-200 bg-white p-4 flex-1 min-w-[135px] flex items-center gap-3">
             <div className="w-11 h-11 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
               <Hourglass className="w-5 h-5 text-amber-600" />
             </div>
-
             <div className="min-w-0">
               <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wide leading-snug truncate">
                 Pending Reviews
               </p>
-
               <p className="text-2xl font-bold text-slate-900 mt-0.5">
                 {stats.pendingReviews}
               </p>
             </div>
           </div>
-
-          {/* In Review */}
           <div className="mqr-stat-card rounded-xl border border-slate-200 bg-white p-4 flex-1 min-w-[135px] flex items-center gap-3">
             <div className="w-11 h-11 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
               <Edit3 className="w-5 h-5 text-indigo-600" />
             </div>
-
             <div className="min-w-0">
               <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wide leading-snug truncate">
                 In Review
               </p>
-
               <p className="text-2xl font-bold text-slate-900 mt-0.5">
                 {stats.inReview}
               </p>
             </div>
           </div>
-
-          {/* Completed Reviews */}
           <div className="mqr-stat-card rounded-xl border border-slate-200 bg-white p-4 flex-1 min-w-[135px] flex items-center gap-3">
             <div className="w-11 h-11 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
               <CheckCircle2 className="w-5 h-5 text-emerald-600" />
             </div>
-
             <div className="min-w-0">
               <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wide leading-snug truncate">
                 Completed Reviews
               </p>
-
               <p className="text-2xl font-bold text-slate-900 mt-0.5">
                 {stats.completed}
               </p>
@@ -882,6 +1301,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
           </div>
         </div>
       </div>
+      */}
 
       {/* Filter card for the reviews list. The "Quarterly Reviews" section
           label now lives as this card's own top row (previously a
@@ -889,73 +1309,131 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
           divider, then the status segmented-control on the left and the
           search box + Financial Year + Quarter selects grouped on the
           right, all inside the same white card. */}
-      <div className="bg-white border border-slate-100 rounded-2xl px-3 pt-2 pb-3 shadow-sm flex flex-col gap-2">
-        <h2 className="text-base font-extrabold text-[#2B3674] leading-tight">
-          Quarterly Reviews
-        </h2>
+      <div className="bg-white border border-slate-100 rounded-2xl px-3 pt-2 pb-3 shadow-sm flex flex-col gap-2 relative z-20">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-base font-extrabold text-[#2B3674] leading-tight">
+            Quarterly Reviews
+          </h2>
+          <button
+            type="button"
+            onClick={handleClearFilters}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-indigo-600 bg-slate-100/90 hover:bg-indigo-50 border border-slate-200/80 hover:border-indigo-200 transition-all cursor-pointer shadow-xs"
+            title="Reset all filters"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            Clear
+          </button>
+        </div>
 
         <div className="h-px bg-slate-100" />
 
+
         <div className="flex flex-wrap items-center justify-between gap-3">
-          {/* Status segmented control — the active tab renders as a white
-              pill with a subtle shadow inside a light gray track, the
-              "toolbar" pattern used in modern dashboard UIs, rather than
-              separate solid-colored buttons competing for attention. */}
-          <div className="inline-flex items-center gap-1 bg-slate-100 rounded-xl p-1">
-            {STATUS_TAB_ITEMS.map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setSelectedStatusTab(tab.key)}
-                className={`px-5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
-                  selectedStatusTab === tab.key
-                    ? "bg-white text-indigo-600 shadow-sm"
-                    : "text-slate-500 hover:text-slate-700"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Vertical divider between the status control and the filters;
-              hidden once the row wraps on narrower widths. */}
-          <div className="hidden md:block w-px h-8 bg-slate-200" />
-
-          <div className="flex items-center gap-3 flex-1 min-w-[420px] justify-end">
+          {/* Search + Filter dropdowns — now on the LEFT */}
+          <div className="flex items-center gap-3 flex-1 min-w-[420px]">
             <Input
               placeholder="Search employee name or ID..."
               prefix={<Search className="w-4 h-4 text-slate-400" />}
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(changeEvent) => setSearchQuery(changeEvent.target.value)}
               className="!rounded-xl !max-w-md !flex-1"
               allowClear
             />
 
+            {/* Role dropdown wrapped in dedicated relative container */}
+            <div className="relative shrink-0">
+              <Select
+                value={selectedRole}
+                onChange={setSelectedRole}
+                className="!w-36 !rounded-xl"
+                getPopupContainer={(trigger) => trigger.parentElement!}
+              >
+                <Option value="ALL">All Roles</Option>
+                <Option value="MANAGER">Managers</Option>
+                <Option value="EMPLOYEE">Employees</Option>
+              </Select>
+            </div>
+
+            {/* Year dropdown wrapped in dedicated relative container */}
+            <div className="relative shrink-0">
+              <Select
+                value={selectedYear}
+                onChange={setSelectedYear}
+                className="!w-36 !rounded-xl"
+                suffixIcon={<Calendar className="w-3.5 h-3.5 text-indigo-500" />}
+                dropdownStyle={{ minWidth: 200 }}
+                getPopupContainer={(trigger) => trigger.parentElement!}
+              >
+                <Option value={YEAR_FILTER_ALL}>All Years</Option>
+                {yearOptions.map((yearOption) => (
+                  <Option key={yearOption} value={yearOption}>
+                    {`FY ${yearOption}`}
+                  </Option>
+                ))}
+              </Select>
+            </div>
+
+            {/* Quarter dropdown wrapped in dedicated relative container */}
+            <div className="relative shrink-0">
+              <Select
+                value={selectedQuarterCard}
+                onChange={setSelectedQuarterCard}
+                className="!w-32 !rounded-xl"
+                getPopupContainer={(trigger) => trigger.parentElement!}
+              >
+                <Option value={QuarterFilter.ALL}>Quarters</Option>
+                <Option value={QuarterFilter.Q1}>Q1</Option>
+                <Option value={QuarterFilter.Q2}>Q2</Option>
+                <Option value={QuarterFilter.Q3}>Q3</Option>
+                <Option value={QuarterFilter.Q4}>Q4</Option>
+              </Select>
+            </div>
+
+            {/* Employee dropdown beside Quarters wrapped in dedicated relative container */}
+            <div className="relative shrink-0">
+              <Select
+                value={selectedEmployee}
+                onChange={setSelectedEmployee}
+                loading={loadingTeamEmployees}
+                className="!w-52 !rounded-xl"
+                showSearch
+                optionFilterProp="children"
+                filterOption={(input, option) =>
+                  String(option?.children || '')
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+                }
+                dropdownStyle={{ minWidth: 260 }}
+                getPopupContainer={(trigger) => trigger.parentElement!}
+              >
+                <Option value="ALL">All Employees</Option>
+                {teamEmployees.map((emp) => (
+                  <Option key={emp.employeeId} value={emp.employeeId}>
+                    {emp.employeeName && emp.employeeName !== emp.employeeId
+                      ? `${emp.employeeName} (${emp.employeeId})`
+                      : emp.employeeId}
+                  </Option>
+                ))}
+              </Select>
+            </div>
+          </div>
+
+          {/* Vertical divider */}
+          <div className="hidden md:block w-px h-8 bg-slate-200" />
+
+          {/* Status dropdown — RIGHT side wrapped in dedicated relative container */}
+          <div className="relative shrink-0">
             <Select
-              value={selectedYear}
-              onChange={setSelectedYear}
-              className="!w-36 !rounded-xl !shrink-0"
-              suffixIcon={<Calendar className="w-3.5 h-3.5 text-indigo-500" />}
-              dropdownStyle={{ minWidth: 200 }}
+              value={selectedStatusTab}
+              onChange={(val) => setSelectedStatusTab(val)}
+              className="!w-40 !rounded-xl"
+              getPopupContainer={(trigger) => trigger.parentElement!}
             >
-              <Option value={YEAR_FILTER_ALL}>All Years</Option>
-              {yearOptions.map((y) => (
-                <Option key={y} value={y}>
-                  {`FY ${y}`}
+              {STATUS_FILTER_ITEMS.map((item) => (
+                <Option key={item.key} value={item.key}>
+                  {item.label}
                 </Option>
               ))}
-            </Select>
-
-            <Select
-              value={selectedQuarterCard}
-              onChange={setSelectedQuarterCard}
-              className="!w-32 !rounded-xl !shrink-0"
-            >
-              <Option value={QuarterFilter.ALL}>All Quarters</Option>
-              <Option value={QuarterFilter.Q1}>Q1</Option>
-              <Option value={QuarterFilter.Q2}>Q2</Option>
-              <Option value={QuarterFilter.Q3}>Q3</Option>
-              <Option value={QuarterFilter.Q4}>Q4</Option>
             </Select>
           </div>
         </div>
@@ -1050,6 +1528,865 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
         setRemarks={setRemarks}
         setFieldErrors={setFieldErrors}
       />
+
+      {/* ── Assign Review Modal ────────────────────────────────────── */}
+      {/* Modal for Assigned / Not Assigned Employee List */}
+      <Modal
+        open={assignmentListModalOpen}
+        onCancel={() => setAssignmentListModalOpen(false)}
+        footer={[
+          <Button key="close" onClick={() => setAssignmentListModalOpen(false)}>
+            Close
+          </Button>,
+        ]}
+        width={820}
+        title={
+          <div className="flex items-center gap-2.5 pb-2">
+            <div
+              className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+                assignmentListType === "not_assigned"
+                  ? "bg-amber-50 text-amber-600 border border-amber-200/60"
+                  : "bg-violet-50 text-violet-600 border border-violet-200/60"
+              }`}
+            >
+              {assignmentListType === "not_assigned" ? (
+                <Hourglass className="w-5 h-5" />
+              ) : (
+                <Calendar className="w-5 h-5" />
+              )}
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900 leading-snug">
+                {assignmentListType === "not_assigned"
+                  ? `Employees Not Assigned – ${stats.assignmentSummary?.quarter || selectedQuarterCard} ${stats.assignmentSummary?.financialYear || selectedYear}`
+                  : `Assigned Employees – ${stats.assignmentSummary?.quarter || selectedQuarterCard} ${stats.assignmentSummary?.financialYear || selectedYear}`}
+              </h3>
+              <p className="text-xs text-slate-500 font-normal">
+                {assignmentListType === "not_assigned"
+                  ? `Employees who have NOT been assigned a review for this quarter (${stats.assignmentSummary?.notAssignedCount ?? 0} members)`
+                  : `Assigned employees (${stats.assignmentSummary?.assignedCount ?? 0}) and members with pending quarters (${stats.assignmentSummary?.singleQuarterCount ?? 0})`}
+              </p>
+            </div>
+          </div>
+        }
+      >
+        <div className="flex flex-col gap-3.5 pt-2">
+          {assignmentListType !== "not_assigned" && (
+            <div className="flex items-center gap-2 p-1 bg-slate-100/90 rounded-xl border border-slate-200/80 w-fit">
+              <button
+                type="button"
+                onClick={() => setAssignedSubTab("all")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  assignedSubTab === "all"
+                    ? "bg-white text-violet-700 shadow-sm border border-slate-200/80"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <span>All Assigned Members</span>
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-violet-100 text-violet-700 font-semibold">
+                  {stats.assignmentSummary?.assignedCount ?? 0}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setAssignedSubTab("single_quarter")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  assignedSubTab === "single_quarter"
+                    ? "bg-white text-violet-700 shadow-sm border border-slate-200/80"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <span>1 Quarter Assigned (1 Pending)</span>
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-100 text-amber-700 font-semibold">
+                  {stats.assignmentSummary?.singleQuarterCount ?? 0}
+                </span>
+              </button>
+            </div>
+          )}
+
+          <Input
+            prefix={<Search className="w-4 h-4 text-slate-400" />}
+            placeholder="Search employee by name, ID, designation, department..."
+            value={assignmentListSearch}
+            onChange={(e) => setAssignmentListSearch(e.target.value)}
+            allowClear
+            className="!rounded-xl"
+          />
+
+          <Table
+            dataSource={
+              (assignmentListType === "not_assigned"
+                ? (stats.assignmentSummary?.notAssignedEmployees || [])
+                : assignedSubTab === "single_quarter"
+                ? (stats.assignmentSummary?.singleQuarterEmployees || [])
+                : (stats.assignmentSummary?.assignedEmployees || [])
+              ).filter((emp: any) => {
+                if (!assignmentListSearch.trim()) return true;
+                const q = assignmentListSearch.toLowerCase();
+                return (
+                  emp.employeeName?.toLowerCase().includes(q) ||
+                  emp.employeeId?.toLowerCase().includes(q) ||
+                  emp.designation?.toLowerCase().includes(q) ||
+                  emp.department?.toLowerCase().includes(q) ||
+                  emp.assignedQuarter?.toLowerCase().includes(q) ||
+                  emp.quarter?.toLowerCase().includes(q) ||
+                  emp.pendingQuarter?.toLowerCase().includes(q) ||
+                  emp.status?.toLowerCase().includes(q)
+                );
+              })
+            }
+            rowKey="employeeId"
+            pagination={{ pageSize: 8, showSizeChanger: false }}
+            size="middle"
+            columns={
+              assignmentListType === "not_assigned"
+                ? [
+                    {
+                      title: "Employee Name",
+                      dataIndex: "employeeName",
+                      key: "employeeName",
+                      render: (name: string, record: any) => (
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-xs shrink-0">
+                            {name ? name.slice(0, 2).toUpperCase() : "EM"}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-slate-800 text-sm leading-snug">
+                              {name}
+                            </p>
+                            <p className="text-[11px] text-slate-400">
+                              {record.department || "General"}
+                            </p>
+                          </div>
+                        </div>
+                      ),
+                    },
+                    {
+                      title: "Employee ID",
+                      dataIndex: "employeeId",
+                      key: "employeeId",
+                      render: (id: string) => (
+                        <span className="font-mono text-xs text-slate-700 font-semibold bg-slate-100 px-2 py-0.5 rounded">
+                          {id}
+                        </span>
+                      ),
+                    },
+                    {
+                      title: "Designation",
+                      dataIndex: "designation",
+                      key: "designation",
+                      render: (desig: string) => (
+                        <span className="text-slate-600 text-xs font-medium">
+                          {desig || "Team Member"}
+                        </span>
+                      ),
+                    },
+                    {
+                      title: "Action",
+                      key: "action",
+                      render: (_: any, record: any) => (
+                        <Button
+                          size="small"
+                          type="primary"
+                          className="!bg-indigo-600 hover:!bg-indigo-700 !text-xs !font-semibold !rounded-lg"
+                          onClick={() => {
+                            setAssignmentListModalOpen(false);
+                            openAssignModal({
+                              id: record.employeeId,
+                              employeeId: record.employeeId,
+                              employeeName: record.employeeName,
+                            } as any);
+                          }}
+                        >
+                          + Assign Review
+                        </Button>
+                      ),
+                    },
+                  ]
+                : assignedSubTab === "single_quarter"
+                ? [
+                    {
+                      title: "Employee Name",
+                      dataIndex: "employeeName",
+                      key: "employeeName",
+                      render: (name: string, record: any) => (
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center font-bold text-xs shrink-0">
+                            {name ? name.slice(0, 2).toUpperCase() : "EM"}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-slate-800 text-sm leading-snug">
+                              {name}
+                            </p>
+                            <p className="text-[11px] text-slate-400">
+                              {record.department || "General"}
+                            </p>
+                          </div>
+                        </div>
+                      ),
+                    },
+                    {
+                      title: "Employee ID",
+                      dataIndex: "employeeId",
+                      key: "employeeId",
+                      render: (id: string) => (
+                        <span className="font-mono text-xs text-slate-700 font-semibold bg-slate-100 px-2 py-0.5 rounded">
+                          {id}
+                        </span>
+                      ),
+                    },
+                    {
+                      title: "Designation",
+                      dataIndex: "designation",
+                      key: "designation",
+                      render: (desig: string) => (
+                        <span className="text-slate-600 text-xs font-medium">
+                          {desig || "Team Member"}
+                        </span>
+                      ),
+                    },
+                    {
+                      title: "Assigned Quarter",
+                      dataIndex: "assignedQuarter",
+                      key: "assignedQuarter",
+                      render: (q: string) => (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          {q || "Assigned"}
+                        </span>
+                      ),
+                    },
+                    {
+                      title: "Pending Quarter",
+                      dataIndex: "pendingQuarter",
+                      key: "pendingQuarter",
+                      render: (q: string) => (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                          <Hourglass className="w-3.5 h-3.5" />
+                          {q ? q + " Pending" : "Pending"}
+                        </span>
+                      ),
+                    },
+                    {
+                      title: "Action",
+                      key: "action",
+                      render: (_: any, record: any) => (
+                        <Button
+                          size="small"
+                          type="primary"
+                          className="!bg-indigo-600 hover:!bg-indigo-700 !text-xs !font-semibold !rounded-lg"
+                          onClick={() => {
+                            setAssignmentListModalOpen(false);
+                            openAssignModal({
+                              id: record.employeeId,
+                              employeeId: record.employeeId,
+                              employeeName: record.employeeName,
+                            } as any);
+                          }}
+                        >
+                          + Assign Review
+                        </Button>
+                      ),
+                    },
+                  ]
+                : [
+                    {
+                      title: "Employee Name",
+                      dataIndex: "employeeName",
+                      key: "employeeName",
+                      render: (name: string, record: any) => (
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center font-bold text-xs shrink-0">
+                            {name ? name.slice(0, 2).toUpperCase() : "EM"}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-slate-800 text-sm leading-snug">
+                              {name}
+                            </p>
+                            <p className="text-[11px] text-slate-400">
+                              {record.department || "General"}
+                            </p>
+                          </div>
+                        </div>
+                      ),
+                    },
+                    {
+                      title: "Employee ID",
+                      dataIndex: "employeeId",
+                      key: "employeeId",
+                      render: (id: string) => (
+                        <span className="font-mono text-xs text-slate-700 font-semibold bg-slate-100 px-2 py-0.5 rounded">
+                          {id}
+                        </span>
+                      ),
+                    },
+                    {
+                      title: "Designation",
+                      dataIndex: "designation",
+                      key: "designation",
+                      render: (desig: string) => (
+                        <span className="text-slate-600 text-xs font-medium">
+                          {desig || "Team Member"}
+                        </span>
+                      ),
+                    },
+                    {
+                      title: "Assigned Quarter",
+                      dataIndex: "assignedQuarter",
+                      key: "assignedQuarter",
+                      render: (_: string, record: any) => {
+                        const qText =
+                          record.assignedQuarters && record.assignedQuarters.length > 0
+                            ? record.assignedQuarters.join(", ")
+                            : record.assignedQuarter || record.quarter || "Assigned";
+                        return (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            {qText}
+                          </span>
+                        );
+                      },
+                    },
+                    {
+                      title: "Pending Quarter",
+                      dataIndex: "pendingQuarter",
+                      key: "pendingQuarter",
+                      render: (q: string, record: any) => {
+                        const pendingText =
+                          record.pendingQuarters && record.pendingQuarters.length > 0
+                            ? record.pendingQuarters.join(", ") + " Pending"
+                            : q
+                            ? q + " Pending"
+                            : null;
+                        return pendingText ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                            <Hourglass className="w-3.5 h-3.5" />
+                            {pendingText}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-500">
+                            None
+                          </span>
+                        );
+                      },
+                    },
+                    {
+                      title: "Status",
+                      dataIndex: "status",
+                      key: "status",
+                      render: (st: string) => (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                          <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                          {st || "Assigned"}
+                        </span>
+                      ),
+                    },
+                    {
+                      title: "Action",
+                      key: "action",
+                      render: (_: any, record: any) => {
+                        const hasPending =
+                          (record.pendingQuarters && record.pendingQuarters.length > 0) ||
+                          Boolean(record.pendingQuarter);
+                        if (!hasPending) {
+                          return <span className="text-xs text-slate-400 font-medium">—</span>;
+                        }
+                        return (
+                          <Button
+                            size="small"
+                            type="primary"
+                            className="!bg-indigo-600 hover:!bg-indigo-700 !text-xs !font-semibold !rounded-lg"
+                            onClick={() => {
+                              setAssignmentListModalOpen(false);
+                              openAssignModal({
+                                id: record.employeeId,
+                                employeeId: record.employeeId,
+                                employeeName: record.employeeName,
+                              } as any);
+                            }}
+                          >
+                            + Assign Review
+                          </Button>
+                        );
+                      },
+                    },
+                  ]
+            }
+          />
+        </div>
+      </Modal>
+
+      {/* â”€â”€ Mode Selection Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      <Modal
+        open={modeSelectModalOpen}
+        onCancel={() => setModeSelectModalOpen(false)}
+        footer={null}
+        centered
+        width={420}
+        title={
+          <div className="flex items-center gap-2.5 pb-1">
+            <div className="w-8 h-8 rounded-xl bg-indigo-50 flex items-center justify-center border border-indigo-100">
+              <Plus className="w-4 h-4 text-indigo-600" />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-[#2B3674] text-base leading-snug">
+                Create Review Assignment
+              </h3>
+              <p className="text-xs text-slate-400 font-normal">
+                Choose how you want to assign the quarterly review
+              </p>
+            </div>
+          </div>
+        }
+      >
+        <div className="flex flex-col gap-3 pt-2 pb-1">
+          <button
+            type="button"
+            onClick={() => {
+              setAssignMode("individual");
+              setSelectedEmployeeIds([]);
+              setAssignQuarterLabel("");
+              setAssignFinancialYear("");
+              setAssignStartDate("");
+              setAssignEndDate("");
+              setAssignNotes("");
+              setModeSelectModalOpen(false);
+              setAssignModalOpen(true);
+              // Pre-load employees
+              if (assignableEmployees.length === 0) {
+                setLoadingAssignableEmployees(true);
+                axios.get("/api/quarterly-review/assignable-employees")
+                  .then((res) => {
+                    if (res.data?.success && Array.isArray(res.data.data)) {
+                      setAssignableEmployees(res.data.data);
+                    }
+                  })
+                  .catch(() => {})
+                  .finally(() => setLoadingAssignableEmployees(false));
+              }
+            }}
+            className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all text-left group"
+          >
+            <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center shrink-0 group-hover:bg-indigo-200 transition-colors">
+              <Users className="w-5 h-5 text-indigo-600" />
+            </div>
+            <div>
+              <p className="font-bold text-slate-800 text-sm">Individual Member(s)</p>
+              <p className="text-xs text-slate-500 mt-0.5">Select specific employees from your team</p>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setAssignMode("all");
+              setSelectedEmployeeIds([]);
+              setAssignQuarterLabel("");
+              setAssignFinancialYear("");
+              setAssignStartDate("");
+              setAssignEndDate("");
+              setAssignNotes("");
+              setModeSelectModalOpen(false);
+              setAssignModalOpen(true);
+              // Pre-load employees for "all" count display
+              if (assignableEmployees.length === 0) {
+                setLoadingAssignableEmployees(true);
+                axios.get("/api/quarterly-review/assignable-employees")
+                  .then((res) => {
+                    if (res.data?.success && Array.isArray(res.data.data)) {
+                      setAssignableEmployees(res.data.data);
+                    }
+                  })
+                  .catch(() => {})
+                  .finally(() => setLoadingAssignableEmployees(false));
+              }
+            }}
+            className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-slate-200 hover:border-emerald-400 hover:bg-emerald-50 transition-all text-left group"
+          >
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0 group-hover:bg-emerald-200 transition-colors">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+            </div>
+            <div>
+              <p className="font-bold text-slate-800 text-sm">All Members</p>
+              <p className="text-xs text-slate-500 mt-0.5">Assign to your entire team at once</p>
+            </div>
+          </button>
+        </div>
+      </Modal>
+
+      <Modal
+        open={assignModalOpen}
+        onCancel={() => setAssignModalOpen(false)}
+        footer={null}
+        title={
+          <div className="flex items-center gap-2.5 pb-1">
+            <div className="w-8 h-8 rounded-xl bg-indigo-50 flex items-center justify-center border border-indigo-100">
+              <Send className="w-4 h-4 text-indigo-600" />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-[#2B3674] text-base leading-snug">
+                Assign Quarterly Review
+              </h3>
+              <p className="text-xs text-slate-400 font-normal">
+                {isManagerRoute
+                  ? "Open review access for your reporting team members"
+                  : "Open review access for employees across the organization"}
+              </p>
+            </div>
+          </div>
+        }
+        destroyOnClose
+        centered
+        width={540}
+      >
+        <div className="flex flex-col gap-4 pt-3">
+          {/* Mode 1: Individual / Multi-Select */}
+          {assignMode === "individual" ? (
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                  Select Employees
+                </label>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelectedEmployeeIds(
+                        assignableEmployees.map((e) => e.employeeId)
+                      )
+                    }
+                    className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800"
+                  >
+                    Select All ({assignableEmployees.length})
+                  </button>
+                  {selectedEmployeeIds.length > 0 && (
+                    <>
+                      <span className="text-slate-300">|</span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedEmployeeIds([])}
+                        className="text-[11px] font-semibold text-slate-500 hover:text-slate-700"
+                      >
+                        Clear
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <Select
+                mode="multiple"
+                showSearch
+                optionLabelProp="label"
+                loading={loadingAssignableEmployees}
+                value={selectedEmployeeIds}
+                onChange={(vals) => setSelectedEmployeeIds(vals)}
+                placeholder={
+                  loadingAssignableEmployees
+                    ? "Loading eligible employees..."
+                    : isManagerRoute
+                    ? "Select one or more team members..."
+                    : "Select one or more employees..."
+                }
+                className="w-full"
+                size="large"
+                maxTagCount="responsive"
+                filterOption={(input, option: any) => {
+                  if (!input) return true;
+                  const query = input.toLowerCase().trim();
+                  if (option?.label && String(option.label).toLowerCase().includes(query)) {
+                    return true;
+                  }
+                  if (option?.value && String(option.value).toLowerCase().includes(query)) {
+                    return true;
+                  }
+                  const emp = assignableEmployees.find(
+                    (e: any) => String(e.employeeId).toLowerCase() === String(option?.value).toLowerCase()
+                  );
+                  if (emp) {
+                    const text = `${emp.employeeName || ""} ${emp.employeeId || ""} ${emp.designation || ""}`.toLowerCase();
+                    return text.includes(query);
+                  }
+                  return false;
+                }}
+              >
+                {assignableEmployees.map((emp: any) => {
+                  const hasAssigned = emp.assignedQuarters && emp.assignedQuarters.length > 0;
+                  const assignedTag = hasAssigned
+                    ? emp.assignedQuarters
+                        .map((q: string) => q.split(" ")[0])
+                        .filter((v: string, i: number, a: string[]) => a.indexOf(v) === i)
+                        .join(", ")
+                    : "";
+                  const displayName = emp.employeeName && emp.employeeName !== emp.employeeId
+                    ? `${emp.employeeName} (${emp.employeeId})`
+                    : emp.employeeId;
+                  return (
+                    <Option key={emp.employeeId} value={emp.employeeId} label={displayName}>
+                      <span className="font-medium text-slate-800">
+                        {emp.employeeName} ({emp.employeeId})
+                      </span>
+                      {emp.designation ? (
+                        <span className="text-slate-500 font-normal"> - {emp.designation}</span>
+                      ) : null}
+                      {hasAssigned ? (
+                        <span
+                          style={{
+                            marginLeft: 8,
+                            fontSize: 10,
+                            padding: "1px 6px",
+                            borderRadius: 4,
+                            backgroundColor: "#fef2f2",
+                            color: "#dc2626",
+                            border: "1px solid #fecaca",
+                            fontWeight: 500,
+                          }}
+                        >
+                          {assignedTag} Assigned
+                        </span>
+                      ) : null}
+                    </Option>
+                  );
+                })}
+              </Select>
+
+              {assignableEmployees.length === 0 && !loadingAssignableEmployees && (
+                <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+                  {isManagerRoute
+                    ? "No mapped team members found for your manager account. Please contact an Administrator to map employees."
+                    : "No active employees found in the organization."}
+                </p>
+              )}
+            </div>
+          ) : (
+            /* Mode 2: Bulk All Members Callout */
+            <div className="p-3.5 bg-indigo-50/70 border border-indigo-100 rounded-xl flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 mt-0.5">
+                <Users className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-xs font-bold text-indigo-900">
+                  {isManagerRoute
+                    ? `Assign to all ${assignableEmployees.length} team members`
+                    : `Assign to all ${assignableEmployees.length} employees in the organization`}
+                </h4>
+                <p className="text-[11px] text-indigo-700/90 mt-0.5 leading-relaxed">
+                  Review access will be opened for all eligible members for the chosen quarter and selected dates.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Quarter + Financial Year selectors */}
+          <div className="flex gap-3">
+            <div className="flex-1 flex flex-col gap-1.5">
+              <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                Quarter <span className="text-red-500">*</span>
+              </label>
+              <Select
+                value={assignQuarterLabel || undefined}
+                onChange={(val) => setAssignQuarterLabel(val)}
+                placeholder="Select quarter"
+                className="w-full"
+                size="large"
+              >
+                {["Q1", "Q2", "Q3", "Q4"].map((q) => (
+                  <Option key={q} value={q}>{q}</Option>
+                ))}
+              </Select>
+            </div>
+            <div className="flex-1 flex flex-col gap-1.5">
+              <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                Financial Year <span className="text-red-500">*</span>
+              </label>
+              <Select
+                value={assignFinancialYear || undefined}
+                onChange={(val) => setAssignFinancialYear(val)}
+                placeholder="Select FY"
+                className="w-full"
+                size="large"
+              >
+                {(() => {
+                  const now = new Date();
+                  const year = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+                  return [year - 1, year, year + 1].map((y) => {
+                    const label = `FY${y}-${String(y + 1).slice(2)}`;
+                    return <Option key={label} value={label}>{label}</Option>;
+                  });
+                })()}
+              </Select>
+            </div>
+          </div>
+          {/* Date range pickers */}
+          <div className="flex gap-3">
+            <div className="flex-1 flex flex-col gap-1.5">
+              <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                From <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                value={assignStartDate}
+                onChange={(e) => setAssignStartDate(e.target.value)}
+                className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
+              />
+            </div>
+            <div className="flex-1 flex flex-col gap-1.5">
+              <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                To (Deadline) <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                value={assignEndDate}
+                min={assignStartDate || undefined}
+                onChange={(e) => setAssignEndDate(e.target.value)}
+                className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
+              />
+            </div>
+            {assignStartDate && assignEndDate && (
+              <div className="flex flex-col gap-1.5 items-end justify-end pb-0.5">
+                <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider invisible">D</label>
+                <div className="px-3 py-2 rounded-lg bg-indigo-50 border border-indigo-100 text-xs font-bold text-indigo-700 whitespace-nowrap">
+                  {Math.max(0, Math.round((new Date(assignEndDate).getTime() - new Date(assignStartDate).getTime()) / 86400000))} Days
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Description (mandatory) */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+              Description <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              value={assignNotes}
+              onChange={(e) => setAssignNotes(e.target.value)}
+              placeholder="Add instructions, focus areas, or deadline remarks for the employee(s)..."
+              rows={3}
+              className="border border-slate-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            />
+          </div>
+
+          <div className="flex justify-end items-center gap-2 pt-3 border-t border-slate-100">
+            <Button onClick={() => setAssignModalOpen(false)}>Cancel</Button>
+            <Button
+              type="primary"
+              loading={assignSubmitting}
+              icon={<Send className="w-3.5 h-3.5" />}
+              onClick={handleAssignReview}
+              className="!bg-indigo-600 hover:!bg-indigo-700 !font-semibold !rounded-lg"
+            >
+              {assignMode === "all"
+                ? `Assign to All (${assignableEmployees.length})`
+                : selectedEmployeeIds.length > 1
+                ? `Assign to ${selectedEmployeeIds.length} Members`
+                : "Assign Review"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── Access Requests Modal ──────────────────────────────────── */}
+      <Modal
+        open={accessRequestsOpen}
+        onCancel={() => setAccessRequestsOpen(false)}
+        footer={null}
+        title={
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center">
+              <Key className="w-4 h-4 text-amber-600" />
+            </div>
+            <span className="font-extrabold text-[#2B3674]">
+              Pending Access Requests
+            </span>
+          </div>
+        }
+        destroyOnClose
+        centered
+        width={600}
+      >
+        {accessRequestsLoading ? (
+          <div className="flex justify-center py-10">
+            <Spin tip="Loading access requests…" />
+          </div>
+        ) : accessRequests.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <ShieldCheck className="w-10 h-10 text-emerald-400 mb-3" />
+            <p className="font-semibold text-slate-700">
+              No pending access requests
+            </p>
+            <p className="text-slate-400 text-sm mt-1">
+              All access requests have been actioned.
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3 pt-2">
+            {accessRequests.map((req) => (
+              <div
+                key={req.id}
+                className="flex items-start justify-between gap-3 bg-amber-50 border border-amber-100 rounded-xl p-3"
+              >
+                <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                  <p className="text-sm font-bold text-slate-800 truncate">
+                    {req.employeeName || `Employee #${req.employeeId}`}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Quarter:{" "}
+                    <span className="font-semibold text-slate-700">
+                      {req.quarter}
+                    </span>
+                  </p>
+                  {req.requestReason && (
+                    <p className="text-xs text-slate-600 mt-1 italic">
+                      "{req.requestReason}"
+                    </p>
+                  )}
+                  <div className="flex items-center gap-1 mt-1 text-[10px] text-slate-400">
+                    <Clock className="w-3 h-3" />
+                    <span>
+                      {req.requestedAt
+                        ? new Date(req.requestedAt).toLocaleString("en-GB", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "—"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2 shrink-0">
+                  <Button
+                    size="small"
+                    type="primary"
+                    loading={actioningRequestId === req.id}
+                    icon={<Check className="w-3 h-3" />}
+                    onClick={() =>
+                      handleAccessRequestAction(req.id, "approve")
+                    }
+                    className="!bg-emerald-600 hover:!bg-emerald-700 !font-semibold !rounded-lg"
+                  >
+                    Approve
+                  </Button>
+                  <Button
+                    size="small"
+                    danger
+                    loading={actioningRequestId === req.id}
+                    icon={<X className="w-3 h-3" />}
+                    onClick={() =>
+                      handleAccessRequestAction(req.id, "reject")
+                    }
+                    className="!font-semibold !rounded-lg"
+                  >
+                    Reject
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

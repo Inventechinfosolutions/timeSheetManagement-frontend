@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Card, Form, Rate, Tooltip } from 'antd';
+import { Form, Rate, Tooltip } from 'antd';
 import {
   Star,
   MessageCircle,
@@ -11,6 +11,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { MobileTeamContributionStep } from '../mobile_steps/TeamContribution/MobileTeamContributionStep';
+import { ReviewStepCard } from '../../desktop/ReviewStepCard';
 
 interface StepProps {
   disabled?: boolean;
@@ -104,14 +105,36 @@ export const TeamContributionStep: React.FC<StepProps> = ({ disabled }) => {
   }
 
   return (
-    <Card
-      className="shadow-md border border-slate-100 rounded-2xl p-3 bg-white/80 backdrop-blur-sm"
-      styles={{
-        body: {
-          padding: '8px',
-          textAlign: 'left',
-        },
-      }}
+    <ReviewStepCard
+      icon={Users}
+      stepNumber={4}
+      title="Team Contribution"
+      description={
+        disabled
+          ? undefined
+          : 'Provide a self-assessment of your core competencies and team contribution.'
+      }
+      extra={
+        <div
+          key={averageRating}
+          className="rounded-xl tcs-badge-pop flex items-center gap-2 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 px-3 py-1.5 shrink-0 self-start sm:self-center transition-colors duration-300 shadow-sm"
+        >
+          <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+
+          <div className="flex flex-col">
+            <span className="text-[9px] font-bold text-amber-700 uppercase tracking-wider">
+              Average Rating
+            </span>
+
+            <span className="text-base font-bold text-amber-900 leading-none">
+              {averageRating > 0 ? averageRating.toFixed(1) : '0.0'}{' '}
+              <span className="text-[11px] font-normal text-amber-700">
+                / 5.0
+              </span>
+            </span>
+          </div>
+        </div>
+      }
     >
       {/* Local animations */}
       <style>{`
@@ -214,49 +237,12 @@ export const TeamContributionStep: React.FC<StepProps> = ({ disabled }) => {
         }
       `}</style>
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-100">
-        <div>
-          <h1 className="text-base font-semibold mb-1 text-slate-800">
-            4. Team Contribution
-          </h1>
-
-          {!disabled && (
-            <p className="text-slate-500 text-sm mb-0 leading-relaxed">
-              Provide a self-assessment of your core competencies and team
-              contribution.
-            </p>
-          )}
-        </div>
-
-        {/* Average Rating */}
-        <div
-          key={averageRating}
-          className="rounded-md tcs-badge-pop flex items-center gap-2 bg-amber-50 border border-amber-200/80 px-3 py-1.5 shrink-0 self-start sm:self-center transition-colors duration-300"
-        >
-          <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-
-          <div className="flex flex-col">
-            <span className="text-[9px] font-bold text-amber-700 uppercase tracking-wider">
-              Average Rating
-            </span>
-
-            <span className="text-base font-bold text-amber-900 leading-none">
-              {averageRating > 0 ? averageRating.toFixed(1) : '0.0'}{' '}
-              <span className="text-[11px] font-normal text-amber-700">
-                / 5.0
-              </span>
-            </span>
-          </div>
-        </div>
-      </div>
-
       <div>
         <h2 className="text-sm font-bold text-slate-800 mb-3">
           Team Contribution Self-Rating
         </h2>
 
-        <div className="border border-slate-100 rounded-2xl py-3 px-2 bg-slate-50/50 relative">
+        <div className="qr-field-shell rounded-2xl p-4 relative">
           <Form.List name="teamContribution">
             {(fields) => (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -278,7 +264,7 @@ export const TeamContributionStep: React.FC<StepProps> = ({ disabled }) => {
                   return (
                     <div
                       key={key}
-                      className="tcs-card tcs-card-enter flex items-center justify-between rounded-xl bg-white border border-slate-200 px-3 py-2.5 transition-all duration-300 hover:shadow-md hover:border-slate-300"
+                      className="tcs-card tcs-card-enter qr-glass-tile flex items-center justify-between rounded-xl px-3 py-2.5 transition-all duration-300 hover:shadow-md"
                       style={{
                         animationDelay: `${index * 80}ms`,
                       }}
@@ -340,6 +326,6 @@ export const TeamContributionStep: React.FC<StepProps> = ({ disabled }) => {
           </Form.List>
         </div>
       </div>
-    </Card>
+    </ReviewStepCard>
   );
 };
