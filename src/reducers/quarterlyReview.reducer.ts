@@ -153,6 +153,8 @@ export interface QuarterlyReviewSummary {
 }
 
 export interface SaveOrSubmitPayload {
+  id?: number;
+  step?: number;
   quarter: string;
   status: ReviewStatus;
   overview: string;
@@ -257,12 +259,72 @@ export const getReviewByQuarter = createAsyncThunk<QuarterlyReview | null, strin
   }
 );
 
-/** POST /api/quarterly-review — save draft or submit */
+export interface GetReviewParams {
+  id?: number | string;
+  quarter?: string;
+  step?: number | string;
+}
+
+/** GET /api/quarterly-review/:quarterSlug?step=:step or GET /api/quarterly-review/:id?step=:step — Stepper GET API */
+export const getReviewByIdAndStep = createAsyncThunk<
+  QuarterlyReview | null,
+  GetReviewParams,
+  ThunkConfig
+>(
+  'quarterlyReview/fetch_by_id_and_step',
+  async ({ id, quarter, step }, { rejectWithValue }) => {
+    try {
+      const stepParam = step !== undefined ? `?step=${step}` : '';
+      const identifier = quarter ? quarterToSlug(quarter) : id;
+      const url = identifier ? `${apiUrl}/${identifier}${stepParam}` : `${apiUrl}${stepParam}`;
+      const response = await axios.get(url);
+      return (response.data?.data || null) as QuarterlyReview | null;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || error.message || 'Request failed');
+    }
+  }
+);
+
+/** POST /api/quarterly-review?step=:step — create review on initial edit (C of CRUD) */
+export const createQuarterlyReview = createAsyncThunk<QuarterlyReview, SaveOrSubmitPayload, ThunkConfig>(
+  'quarterlyReview/create',
+  async (payload, { rejectWithValue }) => {
+    try {
+      const stepParam = payload.step !== undefined ? `?step=${payload.step}` : '';
+      const response = await axios.post(`${apiUrl}${stepParam}`, payload);
+      return response.data?.data as QuarterlyReview;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || error.message || 'Failed to create review');
+    }
+  }
+);
+
+/** PUT /api/quarterly-review/:quarterSlug?step=:step or PUT /api/quarterly-review/:id?step=:step — update review draft/submit (U of CRUD) */
+export const updateQuarterlyReview = createAsyncThunk<QuarterlyReview, SaveOrSubmitPayload, ThunkConfig>(
+  'quarterlyReview/update',
+  async (payload, { rejectWithValue }) => {
+    try {
+      const stepParam = payload.step !== undefined ? `?step=${payload.step}` : '';
+      const identifier = payload.quarter ? quarterToSlug(payload.quarter) : payload.id;
+      const url = identifier ? `${apiUrl}/${identifier}${stepParam}` : `${apiUrl}${stepParam}`;
+      const response = await axios.put(url, payload);
+      return response.data?.data as QuarterlyReview;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || error.message || 'Failed to update review');
+    }
+  }
+);
+
+/** POST /api/quarterly-review?step=:step or PUT /api/quarterly-review/:quarterSlug?step=:step — save draft or submit */
 export const saveOrSubmitReview = createAsyncThunk<QuarterlyReview, SaveOrSubmitPayload, ThunkConfig>(
   'quarterlyReview/save_or_submit',
   async (payload, { rejectWithValue }) => {
     try {
-      const response = await axios.post(apiUrl, payload);
+      const stepParam = payload.step !== undefined ? `?step=${payload.step}` : '';
+      const identifier = payload.quarter ? quarterToSlug(payload.quarter) : payload.id;
+      const response = identifier
+        ? await axios.put(`${apiUrl}/${identifier}${stepParam}`, payload)
+        : await axios.post(`${apiUrl}${stepParam}`, payload);
       return response.data?.data as QuarterlyReview;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || error.message || 'Request failed');
@@ -544,6 +606,12 @@ export const QuarterlyReviewSlice = createSlice({
         state.loading = false;
         state.entity = action.payload;
       })
+      .addCase(getReviewByIdAndStep.fulfilled, (state, action) => {
+        state.loading = false;
+        if (action.payload) {
+          state.entity = action.payload;
+        }
+      })
       .addCase(fetchMyReviewAssignments.fulfilled, (state, action) => {
         state.loading = false;
         state.assignments = action.payload || [];
@@ -609,7 +677,7 @@ export const QuarterlyReviewSlice = createSlice({
         }
       })
       .addMatcher(
-        isFulfilled(saveOrSubmitReview),
+        isFulfilled(saveOrSubmitReview, createQuarterlyReview, updateQuarterlyReview),
         (state, action) => {
           state.updating = false;
           state.loading = false;
@@ -625,7 +693,7 @@ export const QuarterlyReviewSlice = createSlice({
         }
       )
       .addMatcher(
-        isPending(saveOrSubmitReview, startEditQuarterlyReview, withdrawQuarterlyReview, assignQuarterlyReview, requestReviewAccess, actionReviewAccessRequest),
+        isPending(saveOrSubmitReview, createQuarterlyReview, updateQuarterlyReview, startEditQuarterlyReview, withdrawQuarterlyReview, assignQuarterlyReview, requestReviewAccess, actionReviewAccessRequest),
         (state) => {
           state.errorMessage = null;
           state.updateSuccess = false;

@@ -1,5 +1,6 @@
 export enum ReviewStatus {
-  DRAFT = 'Draft',
+  INITIAL = 'INITIAL',
+  DRAFT = 'DRAFT',
   SUBMITTED = 'Submitted',
   APPROVED = 'Approved',
   IN_REVIEW = 'In Review',
@@ -12,3 +13,15 @@ export enum ReviewStatus {
   UPCOMING = 'Upcoming',
   NUMBER = 'number',
 }
+
+export enum AppraisalReviewStatus {
+  ASSIGNED = 'Assigned',
+  AWAITING_REVIEW = 'Awaiting Review',
+  UNDER_REVIEW = 'Under Review',
+  REVIEWED = 'Reviewed',
+}
+
+export const REVIEW_STATUS_FILTER_OPTIONS = Object.values(AppraisalReviewStatus).map((status) => ({
+  label: status,
+  value: status,
+}));

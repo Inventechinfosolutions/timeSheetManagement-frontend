@@ -1,100 +1,201 @@
 import { HiddenRatingBadge } from "../components/HiddenRatingBadge";
-import React, { useState, useEffect, useMemo, useRef } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { Table, Button, Input, Select, Spin, message, Avatar, Pagination } from "antd";
+import React, { useMemo, useState, useEffect } from "react";
+import { Table, Button, Input, Select, Spin, Modal, message, Tooltip, Avatar } from "antd";
+import axios from "axios";
 import {
   Search,
   Users,
   Clock,
-  CheckCircle2,
-  FileCheck,
   Eye,
   Edit3,
   Calendar,
   Star,
+  RotateCcw,
+  Plus,
+  Send,
+  Key,
+  Check,
+  X,
+  ShieldCheck,
+  CheckCircle2,
+  FileCheck,
+  Briefcase,
+  ClipboardList,
 } from "lucide-react";
-import axios from "axios";
 import {
   ManagerReviewItem,
-  ReviewStats,
   AppraisalStatus,
-  ManagerReviewStatus,
-  PerformanceRating,
   ActionType,
   QuarterFilter,
   StatusTabFilter,
-  RatingCategory,
-  MIN_FIELD_LENGTH,
-  DEFAULT_RATING_VALUE,
   STATUS_TAB_ITEMS,
+  STATUS_FILTER_ITEMS,
   YEAR_FILTER_ALL,
   DEFAULT_YEAR,
   toFiscalYearLabel,
   YEARS_BEFORE_CURRENT,
   YEARS_AFTER_CURRENT,
 } from "./QuarterlyReviewmobile.types";
+import {
+  getMasterFinancialYearCodes,
+  getCurrentFinancialYearData,
+  formatQuarterWithDateRange,
+  computeQuarterDropdownOptions,
+  QuarterDropdownOption,
+} from '../../master/financialYear.master';
 import QuarterlyViewPageMobile from "./Quarterlyviewpagemobile";
+import { useManagerReviewBoard } from "../ManagerQuaterlyReview/hooks/useManagerReviewBoard";
 import "./QuarterlyReviewmobile.css";
 
 const { Option } = Select;
 
-type RatingValues = Record<string, number>;
+const TOTAL_CATEGORIES_FOR_AVERAGE = 6;
+const ROLE_MANAGER_LABEL = "MANAGER";
+const ROLE_ALL_LABEL = "ALL";
+const tableTextClass = "text-slate-700 text-sm font-medium whitespace-nowrap";
 
-// Number of submission cards shown per page on the mobile/tablet card
-// list. The desktop <Table> below already paginates itself (pageSize:
-// 10 via antd's built-in pagination prop) — this constant does the
-// same job for the card list, which previously rendered every filtered
-// submission in one long unpaginated scroll.
-const CARD_PAGE_SIZE = 5;
+const resolveQuarterDateRangeText = (q: string, fyString?: string): string => {
+  let startYear: number;
+  let endYear: number;
+  const match = (fyString || "").match(/(\d{4})/);
+  if (match) {
+    startYear = parseInt(match[1], 10);
+    endYear = startYear + 1;
+  } else {
+    const currentFY = getCurrentFinancialYearData();
+    startYear = currentFY.startYear;
+    endYear = currentFY.endYear;
+  }
+  const norm = (q || '').toUpperCase().trim();
+  if (norm.startsWith('Q1')) return `01 Apr ${startYear} - 30 Jun ${startYear}`;
+  if (norm.startsWith('Q2')) return `01 Jul ${startYear} - 30 Sep ${startYear}`;
+  if (norm.startsWith('Q3')) return `01 Oct ${startYear} - 31 Dec ${startYear}`;
+  if (norm.startsWith('Q4')) return `01 Jan ${endYear} - 31 Mar ${endYear}`;
+  return '';
+};
 
-const renderStatusBadge = (status: string | null) => {
-  const currentStatus = status || AppraisalStatus.NOT_STARTED;
+const formatDateDisplay = (dateValue?: string | Date | null): string => {
+  if (!dateValue) return "—";
+  try {
+    const parsedDate = new Date(dateValue);
+    if (isNaN(parsedDate.getTime())) return String(dateValue);
+    return parsedDate.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return String(dateValue);
+  }
+};
+
+const getMinDeadlineDate = (startDateStr?: string | null): string => {
+  if (!startDateStr) return '';
+  const parts = startDateStr.split('-').map(Number);
+  if (parts.length < 3 || isNaN(parts[0]) || isNaN(parts[1]) || isNaN(parts[2])) return '';
+  const [year, month, day] = parts;
+  const d = new Date(year, month - 1, day + 1);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dt = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dt}`;
+};
+
+const renderStatusBadge = (statusValue: string | null) => {
+  const normalizedStatus = (statusValue || AppraisalStatus.ASSIGNED).trim().toLowerCase();
   if (
-    [
-      AppraisalStatus.REVIEWED,
-      AppraisalStatus.APPROVED,
-      AppraisalStatus.COMPLETED,
-    ].includes(currentStatus as AppraisalStatus)
+    normalizedStatus === AppraisalStatus.REVIEWED.toLowerCase() ||
+    normalizedStatus === "reviewed" ||
+    normalizedStatus === "completed" ||
+    normalizedStatus === "approved"
   ) {
     return (
-      <span className="mobile-status-badge mobile-status-badge-success">
-        <span className="mobile-status-dot" />
-        {currentStatus}
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+        Reviewed
       </span>
     );
   }
-  if (currentStatus === AppraisalStatus.UNDER_REVIEW) {
+  if (
+    normalizedStatus === AppraisalStatus.UNDER_REVIEW.toLowerCase() ||
+    normalizedStatus === "under review" ||
+    normalizedStatus === "under_review" ||
+    normalizedStatus === "in review" ||
+    normalizedStatus === "in_review"
+  ) {
     return (
-      <span className="mobile-status-badge mobile-status-badge-purple">
-        <span className="mobile-status-dot" />
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
         Under Review
       </span>
     );
   }
+  if (
+    normalizedStatus === AppraisalStatus.AWAITING_REVIEW.toLowerCase() ||
+    normalizedStatus === "pending" ||
+    normalizedStatus === "awaiting review" ||
+    normalizedStatus === "awaiting_review" ||
+    normalizedStatus === "submitted" ||
+    normalizedStatus === "auto submitted" ||
+    normalizedStatus === "auto_submitted"
+  ) {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-orange-50 text-orange-700 border border-orange-200">
+        <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+        Awaiting Review
+      </span>
+    );
+  }
   return (
-    <span className="mobile-status-badge mobile-status-badge-amber">
-      <span className="mobile-status-dot" />
-      {currentStatus}
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+      <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+      Assigned
     </span>
   );
 };
 
+const getRecordAverageScore = (reviewRecord: any): number | null => {
+  if (reviewRecord?.finalRating != null && !isNaN(Number(reviewRecord.finalRating))) {
+    return Number(reviewRecord.finalRating);
+  }
+  if (reviewRecord?.averageRatingScore != null && !isNaN(Number(reviewRecord.averageRatingScore))) {
+    return Number(reviewRecord.averageRatingScore);
+  }
+  if (reviewRecord?.ratings && typeof reviewRecord.ratings === "object") {
+    const numericRatingValues = Object.values(reviewRecord.ratings).filter(
+      (valueItem): valueItem is number => typeof valueItem === "number" && !isNaN(valueItem)
+    );
+    if (numericRatingValues.length > 0) {
+      const sumOfRatings = numericRatingValues.reduce(
+        (accumulatedTotal, currentRating) => accumulatedTotal + currentRating,
+        0
+      );
+      if (sumOfRatings > 0) {
+        const totalCategories = Math.max(numericRatingValues.length, TOTAL_CATEGORIES_FOR_AVERAGE);
+        return parseFloat((sumOfRatings / totalCategories).toFixed(1));
+      }
+    }
+  }
+  return null;
+};
+
 const FinalRatingBadge: React.FC<{ rating: number | null; record?: any }> = ({ rating, record }) => {
+  const effectiveScore = getRecordAverageScore(record) ?? rating;
   if (record?.isFinalRatingHidden) {
     return (
       <HiddenRatingBadge
         reviewId={record.id}
         quarter={record.quarter}
-        finalRating={rating}
+        finalRating={effectiveScore}
         isFinalRatingHidden={true}
-        hasFinalRating={record.hasFinalRating}
+        hasFinalRating={record.hasFinalRating || effectiveScore != null}
       />
     );
   }
-  return rating != null ? (
+  return effectiveScore != null ? (
     <span className="mobile-rating-badge">
       <Star className="mobile-rating-icon" />
-      {rating}
+      {effectiveScore}
     </span>
   ) : (
     <span className="mobile-rating-empty">—</span>
@@ -115,28 +216,55 @@ const SubmissionCard: React.FC<{
   record: ManagerReviewItem;
   onEvaluate: () => void;
   onView: () => void;
-}> = ({ record, onEvaluate, onView }) => {
-  const isReviewed = record.actionType === ActionType.VIEW;
+  accessRequests?: any[];
+  onReviewAccessRequest?: (req: any) => void;
+}> = ({ record, onEvaluate, onView, accessRequests, onReviewAccessRequest }) => {
+  const isReviewed =
+    record.status === AppraisalStatus.REVIEWED ||
+    record.status === "Reviewed" ||
+    record.status === "Completed" ||
+    record.status === "Approved" ||
+    record.reviewStatus === "Reviewed";
+
+  const canEvaluate =
+    isReviewed ||
+    record.status === AppraisalStatus.AWAITING_REVIEW ||
+    record.status === AppraisalStatus.UNDER_REVIEW ||
+    record.status === "Awaiting Review" ||
+    record.status === "Under Review";
+
+  const pendingRequest = accessRequests?.find((r: any) => {
+    if (String(r.employeeId).trim().toLowerCase() !== String(record.employeeId).trim().toLowerCase()) return false;
+    if (r.status !== "PENDING") return false;
+    const rQuarter = (r.quarter || "").toUpperCase().replace(/[\s\-_]/g, "");
+    const recQuarter = (record.quarter || "").toUpperCase().replace(/[\s\-_]/g, "");
+    const recFull = (record.fullQuarter || "").toUpperCase().replace(/[\s\-_]/g, "");
+    const recCode = (record.quarterCode || "").toUpperCase().replace(/[\s\-_]/g, "");
+    if (!rQuarter) return true;
+    if (rQuarter === recQuarter || rQuarter === recFull) return true;
+    if (recCode && (rQuarter.startsWith(recCode) || rQuarter.includes(recCode))) return true;
+    if (recQuarter && (rQuarter.includes(recQuarter) || recQuarter.includes(rQuarter))) return true;
+    return true;
+  }) || (record as any).pendingAccessRequest || null;
+
+  const showAccessRequestBtn = Boolean(pendingRequest || (record as any).hasPendingAccessRequest);
 
   return (
     <div className="mobile-submission-card">
       <div className="mobile-submission-head">
         <div className="mobile-submission-meta">
           <Avatar size="large" className="mobile-avatar">
-            {record.employeeName
-              ? record.employeeName.charAt(0).toUpperCase()
-              : "E"}
+            {record.employeeName ? record.employeeName.charAt(0).toUpperCase() : "E"}
           </Avatar>
           <div className="mobile-submission-copy">
             <div className="flex items-center gap-1.5 flex-wrap">
               <p className="mobile-submission-title">{record.employeeName}</p>
               {record.employeeRole && (
                 <span
-                  className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                    record.employeeRole.toUpperCase() === "MANAGER"
-                      ? "bg-purple-100 text-purple-700 border border-purple-200"
-                      : "bg-blue-50 text-blue-700 border border-blue-200"
-                  }`}
+                  className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${record.employeeRole.toUpperCase() === ROLE_MANAGER_LABEL
+                    ? "bg-purple-100 text-purple-700 border border-purple-200"
+                    : "bg-blue-50 text-blue-700 border border-blue-200"
+                    }`}
                 >
                   {record.employeeRole}
                 </span>
@@ -147,7 +275,9 @@ const SubmissionCard: React.FC<{
             </p>
           </div>
         </div>
-        {renderStatusBadge(record.status)}
+        <div className="flex flex-col items-end gap-0.5">
+          {renderStatusBadge(record.displayReviewStatus || record.reviewStatus || record.status)}
+        </div>
       </div>
 
       <div className="mobile-card-body">
@@ -161,10 +291,20 @@ const SubmissionCard: React.FC<{
             {record.quarter ? record.quarter.trim().split(/\s+/)[0] : "—"}
           </span>
         </CardField>
+        <CardField label="Financial Year">
+          <span className="text-slate-700 text-xs font-medium">
+            {record.financialYear || "—"}
+          </span>
+        </CardField>
+        <CardField label="Deadline">
+          <span className="text-slate-700 text-xs font-medium">
+            {formatDateDisplay(record.toDate || record.endDate || record.deadlineAt)}
+          </span>
+        </CardField>
         <CardField label="Final Rating">
           <FinalRatingBadge rating={record.finalRating} record={record} />
         </CardField>
-        <CardField label="Last Modified">
+        <CardField label="Updated On">
           {record.lastModified ? (
             <span>
               {new Date(record.lastModified).toLocaleDateString("en-GB", {
@@ -177,537 +317,488 @@ const SubmissionCard: React.FC<{
             "—"
           )}
         </CardField>
+        {((record as any).assignedByName || record.managerName) && (
+          <CardField label="Assigned By">
+            <span className="text-slate-800 text-xs font-semibold">
+              {(record as any).assignedByName || record.managerName}
+            </span>
+          </CardField>
+        )}
         {record.evaluatorName && (
           <CardField label="Evaluated By">
             <span className="text-slate-800 text-xs font-semibold">
-              {record.evaluatorName} {record.evaluatorRole ? `(${record.evaluatorRole})` : ''}
+              {record.evaluatorName} {record.evaluatorRole ? `(${record.evaluatorRole})` : ""}
             </span>
           </CardField>
         )}
       </div>
 
       <div className="mobile-submission-actions">
-        {!isReviewed ? (
+        {canEvaluate && (
           <Button
-            type="primary"
+            type="text"
             size="small"
-            icon={<Edit3 className="mobile-icon" />}
+            icon={<Edit3 className="w-3.5 h-3.5" />}
             onClick={onEvaluate}
-            className="mobile-button-primary"
-          >
-            {record.actionLabel || "Evaluate"}
-          </Button>
-        ) : (
+            title={isReviewed || record.status === "Under Review" || record.status === "In Review" ? "Edit Evaluation" : "Evaluate"}
+            className="!border !border-slate-300 hover:!border-indigo-400 !text-slate-700 hover:!text-indigo-600 !font-semibold !rounded-lg !flex !items-center !justify-center !w-8 !h-8 !p-0 !bg-white hover:!bg-indigo-50"
+          />
+        )}
+        <Button
+          size="small"
+          icon={<Eye className="w-3.5 h-3.5" />}
+          onClick={onView}
+          title="View Review"
+          className="!border !border-slate-300 hover:!border-indigo-400 !text-slate-700 hover:!text-indigo-600 !font-semibold !rounded-lg !flex !items-center !justify-center !w-8 !h-8 !p-0 !bg-white hover:!bg-indigo-50"
+        />
+        {showAccessRequestBtn && onReviewAccessRequest && (
           <Button
-            type="default"
             size="small"
-            icon={<Eye className="mobile-icon" />}
-            onClick={onView}
-            className="mobile-button-secondary"
-          >
-            {record.actionLabel || "View"}
-          </Button>
+            icon={<Key className="w-3.5 h-3.5 text-amber-600" />}
+            onClick={() => onReviewAccessRequest(pendingRequest || null)}
+            title={
+              pendingRequest
+                ? `Access Request Pending: "${pendingRequest.requestReason || pendingRequest.reason || 'Reopen requested'}" - Click to review`
+                : "Access Request Pending - Click to review"
+            }
+            className="!border-amber-300 hover:!border-amber-400 !bg-amber-50 hover:!bg-amber-100 !text-amber-700 !font-semibold !rounded-lg !flex !items-center !justify-center !w-8 !h-8 !p-0"
+          />
         )}
       </div>
     </div>
   );
 };
 
-const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
-  onBack,
-}) => {
-  const { employeeId: employeeIdFromUrl } = useParams<{
-    employeeId?: string;
-  }>();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const isManagerRoute = location.pathname.startsWith("/manager-dashboard");
-  const baseRoute = isManagerRoute
-    ? "/manager-dashboard/quarterly-review"
-    : "/admin-dashboard/quarterly-review";
+const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = () => {
+  // ── Shared Hook for single source of truth logic ──────────────────────────
+  const board = useManagerReviewBoard({ syncUrlParams: true });
 
-  const [submissions, setSubmissions] = useState<ManagerReviewItem[]>([]);
-  const [stats, setStats] = useState<ReviewStats>({
-    totalTeamMembers: 0,
-    totalSubmissions: 0,
-    pendingReviews: 0,
-    inReview: 0,
-    completed: 0,
-  });
-  const [loading, setLoading] = useState<boolean>(true);
-  const [selectedQuarterCard, setSelectedQuarterCard] = useState<string>(
-    QuarterFilter.ALL,
-  );
-  const [selectedStatusTab, setSelectedStatusTab] = useState<string>(
-    StatusTabFilter.ALL,
-  );
-  const [selectedRole, setSelectedRole] = useState<string>("ALL");
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [selectedYear, setSelectedYear] = useState<string>(DEFAULT_YEAR);
+  // ── Access Requests State ────────────────────────────────────────────────
+  const [selectedAccessRequest, setSelectedAccessRequest] = useState<any | null>(null);
+  const [accessRequestsOpen, setAccessRequestsOpen] = useState<boolean>(false);
+  const [actionComments, setActionComments] = useState<Record<string | number, string>>({});
+  const [actioningRequestId, setActioningRequestId] = useState<string | number | null>(null);
 
-  // Current page for the mobile/tablet card list's own pagination
-  // (separate from the desktop <Table>'s built-in pagination state).
-  const [currentPage, setCurrentPage] = useState<number>(1);
-
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-  const [currentReview, setCurrentReview] = useState<ManagerReviewItem | null>(
-    null,
-  );
-  const [isViewOnly, setIsViewOnly] = useState<boolean>(false);
-  const [submitting, setSubmitting] = useState<boolean>(false);
-  const [loadingReview, setLoadingReview] = useState<boolean>(false);
-
-  const [ratings, setRatings] = useState<RatingValues>({
-    [RatingCategory.PRODUCTIVITY]: DEFAULT_RATING_VALUE,
-    [RatingCategory.QUALITY]: DEFAULT_RATING_VALUE,
-    [RatingCategory.OWNERSHIP]: DEFAULT_RATING_VALUE,
-    [RatingCategory.COMMUNICATION]: DEFAULT_RATING_VALUE,
-    [RatingCategory.COLLABORATION]: DEFAULT_RATING_VALUE,
-    [RatingCategory.INNOVATION]: DEFAULT_RATING_VALUE,
-  });
-  const [finalRating, setFinalRating] = useState<string>("");
-  const [strengths, setStrengths] = useState<string>("");
-  const [improvements, setImprovements] = useState<string>("");
-  const [remarks, setRemarks] = useState<string>("");
-  const [fieldErrors, setFieldErrors] = useState<{
-    strengths?: string;
-    improvements?: string;
-    remarks?: string;
-  }>({});
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const params: Record<string, any> = {};
-      if (selectedRole !== "ALL") {
-        params.role = selectedRole;
-      }
-      const [subsRes, statsRes] = await Promise.all([
-        axios.get("/api/manager-quarterly-review", { params }),
-        axios.get("/api/manager-quarterly-review/stats"),
-      ]);
-
-      if (subsRes.data?.success) {
-        setSubmissions(subsRes.data.data || []);
-      }
-      if (statsRes.data?.success) {
-        setStats(statsRes.data.data);
-      }
-    } catch (error: any) {
-      message.error(
-        error.response?.data?.message ||
-          "Failed to fetch quarterly review submissions.",
-      );
-    } finally {
-      setLoading(false);
-    }
+  const openAccessRequestsModal = (targetRequest?: any | null) => {
+    setSelectedAccessRequest(targetRequest || null);
+    setAccessRequestsOpen(true);
+    board.loadAccessRequests();
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-
-  const averageRatingScore = useMemo(() => {
-    const values = Object.values(ratings) as number[];
-    if (values.length === 0) return 0;
-    const sum = values.reduce((a: number, b: number) => a + b, 0);
-    return (sum / values.length).toFixed(1);
-  }, [ratings]);
-
-  const getFinalRatingFromScore = (avg: number): string => {
-    if (avg >= 5.0) return PerformanceRating.OUTSTANDING;
-    if (avg >= 4.0) return PerformanceRating.EXCEEDS_EXPECTATIONS;
-    if (avg >= 3.0) return PerformanceRating.MEETS_EXPECTATIONS;
-    if (avg >= 2.0) return PerformanceRating.NEEDS_IMPROVEMENT;
-    if (avg >= 1.0) return PerformanceRating.UNSATISFACTORY;
-    return "";
-  };
-
-  useEffect(() => {
-    if (isViewOnly) return;
-    const avg = parseFloat(averageRatingScore as unknown as string);
-    if (!isNaN(avg)) {
-      setFinalRating(getFinalRatingFromScore(avg));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [averageRatingScore, isViewOnly]);
-
-  const applyReviewToForm = (record: ManagerReviewItem) => {
-    const resolvedRatings = record.ratings
-      ? {
-          [RatingCategory.PRODUCTIVITY]:
-            record.ratings.productivity || DEFAULT_RATING_VALUE,
-          [RatingCategory.QUALITY]:
-            record.ratings.quality || DEFAULT_RATING_VALUE,
-          [RatingCategory.OWNERSHIP]:
-            record.ratings.ownership || DEFAULT_RATING_VALUE,
-          [RatingCategory.COMMUNICATION]:
-            record.ratings.communication || DEFAULT_RATING_VALUE,
-          [RatingCategory.COLLABORATION]:
-            record.ratings.collaboration || DEFAULT_RATING_VALUE,
-          [RatingCategory.INNOVATION]:
-            record.ratings.innovation || DEFAULT_RATING_VALUE,
-        }
-      : {
-          [RatingCategory.PRODUCTIVITY]: DEFAULT_RATING_VALUE,
-          [RatingCategory.QUALITY]: DEFAULT_RATING_VALUE,
-          [RatingCategory.OWNERSHIP]: DEFAULT_RATING_VALUE,
-          [RatingCategory.COMMUNICATION]: DEFAULT_RATING_VALUE,
-          [RatingCategory.COLLABORATION]: DEFAULT_RATING_VALUE,
-          [RatingCategory.INNOVATION]: DEFAULT_RATING_VALUE,
-        };
-
-    setRatings(resolvedRatings);
-
-    const ratingValues = Object.values(resolvedRatings);
-    const avg = ratingValues.length
-      ? ratingValues.reduce((a, b) => a + b, 0) / ratingValues.length
-      : 0;
-    setFinalRating(
-      avg > 0
-        ? getFinalRatingFromScore(avg)
-        : record.finalRating
-          ? getFinalRatingFromScore(record.finalRating)
-          : "",
-    );
-
-    setStrengths(record.strengths || "");
-    setImprovements(record.improvements || "");
-    setRemarks(record.remarks || "");
-  };
-
-  const loadedEmployeeIdRef = useRef<string | null>(null);
-
-  const loadFreshReview = async (employeeId: string) => {
-    try {
-      setLoadingReview(true);
-      const response = await axios.get(
-        `/api/manager-quarterly-review/${employeeId}`,
-      );
-      if (response.data?.success && response.data?.data) {
-        const freshRecord: ManagerReviewItem = response.data.data;
-        setCurrentReview(freshRecord);
-        applyReviewToForm(freshRecord);
-      }
-    } catch (error: any) {
-      message.error(
-        error.response?.data?.message ||
-          `Failed to load the latest details for this review.`,
-      );
-    } finally {
-      setLoadingReview(false);
-    }
-  };
-
-  const handleOpenEvaluation = (
-    record: ManagerReviewItem,
-    viewOnly: boolean = false,
+  const handleAccessRequestAction = async (
+    requestId: string | number,
+    action: "approve" | "reject",
   ) => {
-    setCurrentReview(record);
-    setIsViewOnly(viewOnly);
-    setFieldErrors({});
-    applyReviewToForm(record);
-    setIsModalOpen(true);
-    loadedEmployeeIdRef.current = record.employeeId;
-    navigate(`${baseRoute}/${record.employeeId}`, {
-      replace: false,
-    });
-    loadFreshReview(record.employeeId);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setCurrentReview(null);
-    loadedEmployeeIdRef.current = null;
-    navigate(baseRoute, { replace: false });
-    fetchData();
-  };
-
-  useEffect(() => {
-    if (!employeeIdFromUrl || submissions.length === 0) return;
-    if (loadedEmployeeIdRef.current === employeeIdFromUrl) return;
-
-    const matchedSubmission = submissions.find(
-      (submission) => submission.employeeId === employeeIdFromUrl,
-    );
-    if (matchedSubmission) {
-      loadedEmployeeIdRef.current = employeeIdFromUrl;
-      setCurrentReview(matchedSubmission);
-      setIsViewOnly(matchedSubmission.actionType === ActionType.VIEW);
-      setFieldErrors({});
-      applyReviewToForm(matchedSubmission);
-      setIsModalOpen(true);
-      loadFreshReview(employeeIdFromUrl);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [employeeIdFromUrl, submissions]);
-
-  const validateTextFields = (): boolean => {
-    const errors: {
-      strengths?: string;
-      improvements?: string;
-      remarks?: string;
-    } = {};
-
-    if (strengths.trim().length < MIN_FIELD_LENGTH) {
-      errors.strengths = `Please enter at least ${MIN_FIELD_LENGTH} characters.`;
-    }
-    if (improvements.trim().length < MIN_FIELD_LENGTH) {
-      errors.improvements = `Please enter at least ${MIN_FIELD_LENGTH} characters.`;
-    }
-    if (remarks.trim().length < MIN_FIELD_LENGTH) {
-      errors.remarks = `Please enter at least ${MIN_FIELD_LENGTH} characters.`;
-    }
-
-    setFieldErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const handleSubmitEvaluation = async (isDraft: boolean) => {
-    if (!currentReview) return;
-
-    if (!isDraft && !validateTextFields()) {
-      message.error(
-        `Please complete all feedback fields with at least ${MIN_FIELD_LENGTH} characters before submitting.`,
-      );
+    const comment = (actionComments[requestId] || "").trim();
+    if (action === "reject" && !comment) {
+      message.warning("Please enter a comment/reason before rejecting the access request.");
       return;
     }
 
     try {
-      setSubmitting(true);
-      const endpoint = isDraft
-        ? `/api/manager-quarterly-review/${currentReview.id}/draft`
-        : `/api/manager-quarterly-review/${currentReview.id}/review`;
-
-      const payload = {
-        ratings,
-        finalRating,
-        strengths,
-        improvements,
-        remarks,
-        reviewStatus: isDraft
-          ? ManagerReviewStatus.IN_REVIEW
-          : ManagerReviewStatus.REVIEWED,
-      };
-
-      const response = await axios.post(endpoint, payload);
-
-      if (response.data?.success) {
-        message.success(
-          isDraft
-            ? "Evaluation draft saved."
-            : "Review evaluation submitted successfully!",
-        );
-        setIsModalOpen(false);
-        setCurrentReview(null);
-        loadedEmployeeIdRef.current = null;
-        navigate(baseRoute, { replace: false });
-        fetchData();
+      setActioningRequestId(requestId);
+      const success = await board.handleActionAccessRequest(requestId, action, comment, 48);
+      if (success) {
+        setActionComments((prev) => {
+          const updated = { ...prev };
+          delete updated[requestId];
+          return updated;
+        });
+        setSelectedAccessRequest(null);
+        setAccessRequestsOpen(false);
       }
-    } catch (error: any) {
-      message.error(
-        error.response?.data?.message || "Failed to submit review evaluation.",
-      );
     } finally {
-      setSubmitting(false);
+      setActioningRequestId(null);
     }
   };
 
-  const getSubmissionYear = (item: ManagerReviewItem): string => {
-    const fyMatch = (item.quarter || "").match(/FY(\d{4}-\d{2})/i);
-    if (fyMatch) return fyMatch[1];
-    if (item.lastModified) {
-      return toFiscalYearLabel(new Date(item.lastModified).getFullYear());
+  // ── Create & Assign Modals State ──────────────────────────────────────────
+  const [modeSelectModalOpen, setModeSelectModalOpen] = useState<boolean>(false);
+  const [selectedAssignMode, setSelectedAssignMode] = useState<"individual" | "all" | null>(null);
+  const [assignModalOpen, setAssignModalOpen] = useState<boolean>(false);
+  const [assignMode, setAssignMode] = useState<"individual" | "all">("individual");
+  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
+  const [assignQuarterLabel, setAssignQuarterLabel] = useState<string>("");
+  const [assignFinancialYear, setAssignFinancialYear] = useState<string>("");
+  const [assignStartDate, setAssignStartDate] = useState<string>("");
+  const [assignEndDate, setAssignEndDate] = useState<string>("");
+  const [assignNotes, setAssignNotes] = useState<string>("");
+  const [assignSubmitting, setAssignSubmitting] = useState<boolean>(false);
+  const [assignableEmployees, setAssignableEmployees] = useState<any[]>([]);
+  const [loadingAssignableEmployees, setLoadingAssignableEmployees] = useState<boolean>(false);
+
+  const filterQuarterOptions = useMemo(() => {
+    return computeQuarterDropdownOptions(
+      board.selectedYear !== YEAR_FILTER_ALL ? board.selectedYear : undefined
+    );
+  }, [board.selectedYear]);
+
+  const employeeFilterOptions = useMemo(() => [
+    { label: board.employeeDropdownLabel, value: "ALL" },
+    ...board.teamEmployees.map((teamMember) => ({
+      label: teamMember.employeeName && teamMember.employeeName !== teamMember.employeeId
+        ? `${teamMember.employeeName} (${teamMember.employeeId})`
+        : teamMember.employeeId,
+      value: teamMember.employeeId,
+    })),
+  ], [board.teamEmployees, board.employeeDropdownLabel]);
+
+  const getQuarterOptionStatus = (quarterCode: string): {
+    disabled: boolean;
+    tag: string | null;
+    tagClass: string;
+  } => {
+    if (assignMode === "individual" && selectedEmployeeIds.length === 0) {
+      return { disabled: false, tag: null, tagClass: "" };
+    }
+
+    const normalizedQuarter = quarterCode.trim().toUpperCase();
+
+    const targetEmployeeIds =
+      assignMode === "all"
+        ? assignableEmployees.map((employeeItem) => String(employeeItem.employeeId))
+        : selectedEmployeeIds.map(String);
+
+    if (targetEmployeeIds.length === 0) {
+      return { disabled: false, tag: null, tagClass: "" };
+    }
+
+    let anyAssignedWithoutRequest = false;
+    let anyRequested = false;
+
+    for (const empId of targetEmployeeIds) {
+      const employeeItem = assignableEmployees.find(
+        (e) => String(e.employeeId).toLowerCase() === empId.toLowerCase()
+      );
+
+      const assignedQuarterList: string[] = [
+        ...(employeeItem?.assignedQuarters || []),
+        ...(board.submissions || [])
+          .filter((s) => String(s.employeeId).toLowerCase() === empId.toLowerCase())
+          .map((s) => s.quarterCode || s.quarter || ""),
+      ].filter(Boolean);
+
+      const requestedQuarterList: string[] = [
+        ...(employeeItem?.requestedQuarters || []),
+        ...(board.accessRequests || [])
+          .filter(
+            (r) =>
+              String(r.employeeId).toLowerCase() === empId.toLowerCase() &&
+              r.status === "PENDING"
+          )
+          .map((r) => r.quarter || ""),
+      ].filter(Boolean);
+
+      const isEmployeeAssigned = assignedQuarterList.some((assignedQuarter: string) => {
+        const normalizedAssigned = (assignedQuarter || "").trim().toUpperCase();
+        return (
+          normalizedAssigned === normalizedQuarter ||
+          normalizedAssigned.startsWith(normalizedQuarter + " ") ||
+          normalizedAssigned.startsWith(normalizedQuarter + "-") ||
+          normalizedAssigned.includes(` ${normalizedQuarter} `) ||
+          normalizedAssigned.endsWith(` ${normalizedQuarter}`)
+        );
+      });
+
+      if (isEmployeeAssigned) {
+        const hasEmployeeRequest = requestedQuarterList.some((requestedQuarter: string) => {
+          const normalizedRequested = (requestedQuarter || "").trim().toUpperCase();
+          return (
+            normalizedRequested === normalizedQuarter ||
+            normalizedRequested.startsWith(normalizedQuarter + " ") ||
+            normalizedRequested.startsWith(normalizedQuarter + "-") ||
+            normalizedRequested.includes(` ${normalizedQuarter} `) ||
+            normalizedRequested.endsWith(` ${normalizedQuarter}`)
+          );
+        });
+
+        if (hasEmployeeRequest) {
+          anyRequested = true;
+        } else {
+          anyAssignedWithoutRequest = true;
+        }
+      }
+    }
+
+    if (anyAssignedWithoutRequest) {
+      return {
+        disabled: true,
+        tag: "Already assigned",
+        tagClass: "text-slate-400 font-normal",
+      };
+    }
+
+    if (anyRequested) {
+      return {
+        disabled: false,
+        tag: "Access Requested",
+        tagClass: "text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded text-[10px] font-semibold",
+      };
+    }
+
+    return { disabled: false, tag: null, tagClass: "" };
+  };
+
+  const handleAssignReview = async () => {
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
+    const effectiveStart = assignStartDate || todayStr;
+
+    if (!assignQuarterLabel) {
+      message.error("Quarter is required.");
+      return;
+    }
+    if (!assignEndDate) {
+      message.error("Deadline is required.");
+      return;
+    }
+    if (assignEndDate < tomorrowStr) {
+      message.error("Deadline must be at least tomorrow. Current date cannot be selected.");
+      return;
+    }
+    if (!assignNotes || !assignNotes.trim()) {
+      message.error("Description is required.");
+      return;
+    }
+    if (assignMode === "individual" && selectedEmployeeIds.length === 0) {
+      message.error("Please select at least one employee.");
+      return;
+    }
+    try {
+      setAssignSubmitting(true);
+      const assignmentPayload: {
+        mode: string;
+        quarter: string;
+        financialYear?: string;
+        startDate: string;
+        endDate: string;
+        description: string;
+        employeeIds?: string[];
+      } = {
+        mode: assignMode === "all" ? "ALL" : "INDIVIDUAL",
+        quarter: assignQuarterLabel,
+        financialYear: assignFinancialYear,
+        startDate: effectiveStart,
+        endDate: assignEndDate,
+        description: assignNotes.trim(),
+      };
+      if (assignMode === "individual") {
+        assignmentPayload.employeeIds = selectedEmployeeIds;
+      }
+      const createResponse = await axios.post("/api/manager-quarterly-review/assignments/create", assignmentPayload);
+      if (createResponse.data?.success) {
+        const createdCount = createResponse.data?.data?.created ?? 0;
+        const skippedCount = createResponse.data?.data?.skipped ?? 0;
+        message.success(
+          createResponse.data?.message ||
+          `${createdCount} assignment(s) created${skippedCount > 0 ? `, ${skippedCount} skipped` : ""}.`
+        );
+        setAssignModalOpen(false);
+        setModeSelectModalOpen(false);
+        setAssignQuarterLabel("");
+        setAssignFinancialYear("");
+        setAssignStartDate("");
+        setAssignEndDate("");
+        setAssignNotes("");
+        setSelectedEmployeeIds([]);
+        board.fetchData(1, board.pageSize);
+      } else {
+        message.error(createResponse.data?.message || "Failed to assign review.");
+      }
+    } catch (assignmentError: any) {
+      message.error(assignmentError.response?.data?.message || "Failed to assign review.");
+    } finally {
+      setAssignSubmitting(false);
+    }
+  };
+
+  const getSubmissionYear = (reviewItem: ManagerReviewItem): string => {
+    const fiscalYearMatch = (reviewItem.quarter || "").match(/FY(\d{4}-\d{2})/i);
+    if (fiscalYearMatch) return fiscalYearMatch[1];
+    if (reviewItem.lastModified) {
+      return toFiscalYearLabel(new Date(reviewItem.lastModified).getFullYear());
     }
     return "";
   };
 
   const yearOptions = useMemo(() => {
-    const currentCalendarYear = new Date().getFullYear();
-    const rangeYears: string[] = [];
-    for (
-      let yearIndex = currentCalendarYear - YEARS_BEFORE_CURRENT;
-      yearIndex <= currentCalendarYear + YEARS_AFTER_CURRENT;
-      yearIndex++
-    ) {
-      rangeYears.push(toFiscalYearLabel(yearIndex));
-    }
-    const dataYears = submissions
-      .map((submission) => getSubmissionYear(submission))
+    const masterYears = getMasterFinancialYearCodes();
+    const dataYears = board.submissions
+      .map((submissionItem) => getSubmissionYear(submissionItem))
       .filter(Boolean);
-    const years = Array.from(
-      new Set([...rangeYears, DEFAULT_YEAR, ...dataYears]),
+    return Array.from(
+      new Set([...masterYears, DEFAULT_YEAR, ...dataYears])
     ).sort((previousYear, nextYear) => parseInt(nextYear, 10) - parseInt(previousYear, 10));
-    return years;
-  }, [submissions]);
-
-  // Quarter filtering now runs entirely through this one "All Quarters"
-  // select — choosing Q1/Q2/Q3/Q4 does a substring match against each
-  // item's quarter label (e.g. "Q2 FY2026-27" contains "Q2"), the same
-  // logic the old Q1–Q4 quick-filter cards used before they were removed.
-  const filteredSubmissions = useMemo(() => {
-    return submissions.filter((item) => {
-      if (selectedRole !== "ALL") {
-        const itemRole = (item.employeeRole || "EMPLOYEE").toUpperCase();
-        if (itemRole !== selectedRole) return false;
-      }
-      if (selectedYear !== YEAR_FILTER_ALL) {
-        const itemYear = getSubmissionYear(item);
-        if (itemYear && itemYear !== selectedYear) return false;
-      }
-      if (selectedQuarterCard !== QuarterFilter.ALL) {
-        const quarterLabel = (item.quarter || "").toUpperCase();
-        if (!quarterLabel.includes(selectedQuarterCard)) {
-          return false;
-        }
-      }
-      if (selectedStatusTab !== StatusTabFilter.ALL) {
-        const currentReviewStatus =
-          item.reviewStatus || ManagerReviewStatus.PENDING;
-
-        if (
-          selectedStatusTab === StatusTabFilter.PENDING &&
-          currentReviewStatus !== ManagerReviewStatus.PENDING
-        ) {
-          return false;
-        }
-        if (
-          selectedStatusTab === StatusTabFilter.IN_REVIEW &&
-          currentReviewStatus !== ManagerReviewStatus.IN_REVIEW
-        ) {
-          return false;
-        }
-        if (
-          selectedStatusTab === StatusTabFilter.COMPLETED &&
-          currentReviewStatus !== ManagerReviewStatus.REVIEWED
-        ) {
-          return false;
-        }
-      }
-      if (searchQuery.trim()) {
-        const searchQueryLower = searchQuery.toLowerCase();
-        const matchesName = item.employeeName?.toLowerCase().includes(searchQueryLower);
-        const matchesId = item.employeeId?.toLowerCase().includes(searchQueryLower);
-        const matchesDept = item.department?.toLowerCase().includes(searchQueryLower);
-        if (!matchesName && !matchesId && !matchesDept) return false;
-      }
-      return true;
-    });
-  }, [
-    submissions,
-    selectedYear,
-    selectedQuarterCard,
-    selectedStatusTab,
-    selectedRole,
-    searchQuery,
-  ]);
-
-  // Whenever the filtered result set changes (search, status tab,
-  // quarter, or year), snap the card list's pagination back to page 1
-  // — otherwise a user filtering down to fewer results could land on
-  // a now out-of-range page and see an empty list.
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [selectedYear, selectedQuarterCard, selectedStatusTab, selectedRole, searchQuery]);
-
-  // Slice of filteredSubmissions shown on the current card-list page.
-  // The desktop <Table> further below still receives the FULL
-  // filteredSubmissions array — it paginates itself independently via
-  // its own `pagination` prop.
-  const paginatedSubmissions = useMemo(() => {
-    const start = (currentPage - 1) * CARD_PAGE_SIZE;
-    return filteredSubmissions.slice(start, start + CARD_PAGE_SIZE);
-  }, [filteredSubmissions, currentPage]);
+  }, [board.submissions]);
 
   const columns = [
     {
       title: "Employee Name",
       key: "employeeName",
-      width: "16%",
-      render: (_: any, record: ManagerReviewItem) => (
-        <div className="mobile-table-name-cell">
-          <Avatar size="large" className="mobile-avatar mobile-table-avatar">
-            {record.employeeName ? record.employeeName.charAt(0).toUpperCase() : "E"}
-          </Avatar>
-          <div className="flex flex-col text-left">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <p className="mobile-table-name">{record.employeeName}</p>
-              {record.employeeRole && (
-                <span
-                  className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                    record.employeeRole.toUpperCase() === "MANAGER"
-                      ? "bg-purple-100 text-purple-700 border border-purple-200"
-                      : "bg-blue-50 text-blue-700 border border-blue-200"
-                  }`}
-                >
-                  {record.employeeRole}
-                </span>
-              )}
+      width: 150,
+      render: (_: any, reviewRecord: ManagerReviewItem) => {
+        const displayName = reviewRecord.employeeName
+          ? reviewRecord.employeeName
+            .split(" ")
+            .map((word) => (word ? word.charAt(0).toUpperCase() + word.slice(1) : word))
+            .join(" ")
+          : "";
+
+        const initials = displayName
+          ? displayName
+            .split(" ")
+            .filter(Boolean)
+            .slice(0, 2)
+            .map((word) => word.charAt(0).toUpperCase())
+            .join("")
+          : "";
+
+        return (
+          <div className="inline-flex items-center gap-2 whitespace-nowrap">
+            <div className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[11px] font-bold shrink-0">
+              {initials || <Users className="w-3.5 h-3.5 text-indigo-500" />}
+            </div>
+            <div className="flex flex-col text-left">
+              <p className={`${tableTextClass} whitespace-nowrap`}>{displayName || "—"}</p>
             </div>
           </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       title: "Employee ID",
       dataIndex: "employeeId",
       key: "employeeId",
-      width: "10%",
-      render: (employeeIdString: string) => <span className="mobile-table-text">{employeeIdString}</span>,
+      width: 150,
+      render: (employeeIdText: string) => (
+        <span className={tableTextClass}>{employeeIdText || "—"}</span>
+      ),
+    },
+    {
+      title: "Role",
+      dataIndex: "employeeRole",
+      key: "employeeRole",
+      width: 150,
+      render: (_: any, reviewRecord: ManagerReviewItem) => {
+        const roleRaw = (reviewRecord.employeeRole || (reviewRecord as any).role || "").toString().trim().toUpperCase();
+        if (!roleRaw) return <span className={tableTextClass}>—</span>;
+        const isManagerRole = roleRaw === ROLE_MANAGER_LABEL;
+        return (
+          <span
+            className={`inline-block whitespace-nowrap px-2.5 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider ${isManagerRole
+              ? "bg-purple-100 text-purple-700 border border-purple-200"
+              : "bg-blue-50 text-blue-700 border border-blue-200"
+              }`}
+          >
+            {roleRaw}
+          </span>
+        );
+      },
     },
     {
       title: "Designation",
       dataIndex: "designation",
       key: "designation",
-      width: "14%",
-      render: (designationString: string) => (
-        <span className="mobile-table-text">{designationString || "—"}</span>
+      width: 150,
+      render: (designationText: string | null) => (
+        <span className={tableTextClass}>
+          {designationText ? designationText.charAt(0).toUpperCase() + designationText.slice(1) : "—"}
+        </span>
       ),
     },
     {
       title: "Quarter",
       dataIndex: "quarter",
       key: "quarter",
-      width: "10%",
-      render: (quarterString: string) => (
-        <span className="mobile-table-text">
-          {quarterString ? quarterString.trim().split(/\s+/)[0] : "—"}
+      width: 150,
+      render: (quarterText: string | null, reviewRecord: ManagerReviewItem) => {
+        const display = formatQuarterWithDateRange(quarterText, reviewRecord.financialYear);
+        return (
+          <span className="font-semibold text-slate-800 text-sm whitespace-nowrap">
+            {display || "—"}
+          </span>
+        );
+      },
+    },
+    {
+      title: "Financial Year",
+      dataIndex: "financialYear",
+      key: "financialYear",
+      width: 150,
+      render: (yearText: string | null) => (
+        <span className={tableTextClass}>
+          {yearText || "—"}
         </span>
       ),
     },
     {
-      title: "Status",
-      key: "status",
-      width: "14%",
-      render: (_: any, record: ManagerReviewItem) => (
-        <div className="flex flex-col items-center gap-0.5">
-          {renderStatusBadge(record.status)}
-          {record.evaluatorName && (
-            <span className="text-[10px] text-slate-500 font-medium">
-              By: {record.evaluatorName}
-            </span>
-          )}
-        </div>
+      title: "Deadline",
+      dataIndex: "toDate",
+      key: "toDate",
+      width: 150,
+      render: (_: any, reviewRecord: ManagerReviewItem) => (
+        <span className={tableTextClass}>
+          {formatDateDisplay(reviewRecord.toDate || reviewRecord.endDate || reviewRecord.deadlineAt)}
+        </span>
       ),
+    },
+    {
+      title: "Assigned By",
+      key: "assignedBy",
+      width: 170,
+      render: (_: any, reviewRecord: ManagerReviewItem) => {
+        const displayAssignedBy =
+          (reviewRecord as any).assignedByName ||
+          (reviewRecord as any).assignedBy ||
+          reviewRecord.managerName ||
+          "—";
+        return (
+          <Tooltip title={displayAssignedBy}>
+            <span className={`${tableTextClass} truncate max-w-[150px] inline-block`}>
+              {displayAssignedBy}
+            </span>
+          </Tooltip>
+        );
+      },
     },
     {
       title: "Final Rating",
       dataIndex: "finalRating",
       key: "finalRating",
-      width: "14%",
-      render: (ratingValue: number | null, record: ManagerReviewItem) => <FinalRatingBadge rating={ratingValue} record={record} />,
+      width: 150,
+      render: (ratingScore: number | null, reviewRecord: ManagerReviewItem) => {
+        const effectiveScore = getRecordAverageScore(reviewRecord) ?? ratingScore;
+        return reviewRecord.isFinalRatingHidden ? (
+          <HiddenRatingBadge
+            reviewId={reviewRecord.id}
+            quarter={reviewRecord.quarter}
+            finalRating={effectiveScore}
+            isFinalRatingHidden={true}
+            hasFinalRating={reviewRecord.hasFinalRating || effectiveScore != null}
+          />
+        ) : effectiveScore != null ? (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-bold text-xs border border-indigo-100 whitespace-nowrap">
+            <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+            {effectiveScore}
+          </span>
+        ) : (
+          <span className="text-slate-400 text-sm font-medium whitespace-nowrap">—</span>
+        );
+      },
     },
     {
-      title: "Last Modified",
+      title: "Updated On",
       dataIndex: "lastModified",
       key: "lastModified",
-      width: "14%",
-      render: (modifiedDateString: string | null) =>
-        modifiedDateString ? (
-          <div className="mobile-table-last-modified">
+      width: 150,
+      render: (modifiedDate: string | null) =>
+        modifiedDate ? (
+          <div className={`${tableTextClass} leading-tight whitespace-nowrap`}>
             <div>
-              {new Date(modifiedDateString).toLocaleDateString("en-GB", {
+              {new Date(modifiedDate).toLocaleDateString("en-GB", {
                 day: "2-digit",
                 month: "short",
                 year: "numeric",
@@ -715,37 +806,87 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
             </div>
           </div>
         ) : (
-          <span className="mobile-table-empty">—</span>
+          <span className="text-slate-400 text-sm font-medium whitespace-nowrap">—</span>
         ),
     },
     {
-      title: "Action",
+      title: "Status",
+      key: "status",
+      width: 150,
+      render: (_: any, reviewRecord: ManagerReviewItem) => (
+        <div className="flex flex-col items-center gap-0.5 whitespace-nowrap">
+          {renderStatusBadge(reviewRecord.displayReviewStatus || reviewRecord.reviewStatus || reviewRecord.status)}
+        </div>
+      ),
+    },
+    {
+      title: "Actions",
       key: "action",
-      width: "14%",
-      render: (_: any, record: ManagerReviewItem) => {
-        const isReviewed = record.actionType === ActionType.VIEW;
+      width: 150,
+      fixed: "right" as const,
+      render: (_: any, reviewRecord: ManagerReviewItem) => {
+        const isReviewed =
+          reviewRecord.status === AppraisalStatus.REVIEWED ||
+          reviewRecord.status === "Reviewed" ||
+          reviewRecord.status === "Completed" ||
+          reviewRecord.status === "Approved" ||
+          reviewRecord.reviewStatus === "Reviewed";
+
+        const canEvaluate =
+          isReviewed ||
+          reviewRecord.status === AppraisalStatus.AWAITING_REVIEW ||
+          reviewRecord.status === AppraisalStatus.UNDER_REVIEW ||
+          reviewRecord.status === "Awaiting Review" ||
+          reviewRecord.status === "Under Review";
+
+        // Find pending access request for this row's employee and quarter
+        const pendingRequest = board.accessRequests?.find((r: any) => {
+          if (String(r.employeeId).trim().toLowerCase() !== String(reviewRecord.employeeId).trim().toLowerCase()) return false;
+          if (r.status !== "PENDING") return false;
+          const rQuarter = (r.quarter || "").toUpperCase().replace(/[\s\-_]/g, "");
+          const recQuarter = (reviewRecord.quarter || "").toUpperCase().replace(/[\s\-_]/g, "");
+          const recFull = (reviewRecord.fullQuarter || "").toUpperCase().replace(/[\s\-_]/g, "");
+          const recCode = (reviewRecord.quarterCode || "").toUpperCase().replace(/[\s\-_]/g, "");
+          if (!rQuarter) return true;
+          if (rQuarter === recQuarter || rQuarter === recFull) return true;
+          if (recCode && (rQuarter.startsWith(recCode) || rQuarter.includes(recCode))) return true;
+          if (recQuarter && (rQuarter.includes(recQuarter) || recQuarter.includes(rQuarter))) return true;
+          return true;
+        }) || (reviewRecord as any).pendingAccessRequest || null;
+
+        const showAccessRequestBtn = Boolean(pendingRequest || (reviewRecord as any).hasPendingAccessRequest);
+
         return (
-          <div className="mobile-table-action-group">
-            {!isReviewed ? (
+          <div className="inline-flex items-center gap-1.5 justify-center flex-nowrap whitespace-nowrap">
+            {canEvaluate && (
               <Button
-                type="primary"
+                type="text"
                 size="small"
-                icon={<Edit3 className="mobile-icon" />}
-                onClick={() => handleOpenEvaluation(record, false)}
-                className="mobile-button-table mobile-button-primary"
-              >
-                {record.actionLabel || "Evaluate"}
-              </Button>
-            ) : (
+                icon={<Edit3 className="w-3.5 h-3.5" />}
+                onClick={() => board.handleOpenEvaluation(reviewRecord, false)}
+                title={isReviewed || reviewRecord.status === "Under Review" || reviewRecord.status === "In Review" ? "Edit Evaluation" : "Evaluate"}
+                className="!border-slate-300 hover:!border-indigo-400 !text-slate-700 hover:!text-indigo-600 !font-semibold !rounded-lg !flex !items-center !justify-center"
+              />
+            )}
+            <Button
+              size="small"
+              icon={<Eye className="w-3.5 h-3.5" />}
+              onClick={() => board.handleOpenEvaluation(reviewRecord, true)}
+              title="View Review"
+              className="!border-slate-300 hover:!border-indigo-400 !text-slate-700 hover:!text-indigo-600 !font-semibold !rounded-lg !flex !items-center !justify-center"
+            />
+            {showAccessRequestBtn && (
               <Button
-                type="default"
                 size="small"
-                icon={<Eye className="mobile-icon" />}
-                onClick={() => handleOpenEvaluation(record, true)}
-                className="mobile-button-table mobile-button-secondary"
-              >
-                {record.actionLabel || "View"}
-              </Button>
+                icon={<Key className="w-3.5 h-3.5 text-amber-600" />}
+                onClick={() => openAccessRequestsModal(pendingRequest || null)}
+                title={
+                  pendingRequest
+                    ? `Access Request Pending: "${pendingRequest.requestReason || pendingRequest.reason || 'Reopen requested'}" - Click to review`
+                    : "Access Request Pending - Click to review"
+                }
+                className="!border-amber-300 hover:!border-amber-400 !bg-amber-50 hover:!bg-amber-100 !text-amber-700 !font-semibold !rounded-lg !flex !items-center !justify-center"
+              />
             )}
           </div>
         );
@@ -753,24 +894,47 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
     },
   ];
 
+  if (board.isModalOpen) {
+    return (
+      <div className="quarterly-review-mobile-view mobile-page-shell">
+        <QuarterlyViewPageMobile
+          open={true}
+          currentReview={board.currentReview}
+          isViewOnly={board.isViewOnly}
+          ratings={board.ratings}
+          finalRating={board.finalRating}
+          strengths={board.strengths}
+          improvements={board.improvements}
+          remarks={board.remarks}
+          fieldErrors={board.fieldErrors}
+          submitting={board.submitting}
+          loadingReview={board.loading}
+          averageRatingScore={board.averageRatingScore}
+          onClose={board.handleCloseModal}
+          onSubmitEvaluation={board.handleSubmitEvaluation}
+          setRatings={board.setRatings}
+          setFinalRating={board.setFinalRating}
+          setStrengths={board.setStrengths}
+          setImprovements={board.setImprovements}
+          setRemarks={board.setRemarks}
+          setFieldErrors={board.setFieldErrors}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="quarterly-review-mobile-view mobile-page-shell">
       {/* Back Navigation Row + Header */}
       <div className="mobile-page-header-stack">
-        {/* Top Header. The FY pill/select and the Q1-Q4 quick-filter
-            cards that used to sit here have both been removed — Financial
-            Year now lives inside the filter bar below (now the FIRST
-            filter, ahead of "All Quarters"), and quarter filtering is
-            handled entirely by the "All Quarters" select in that same
-            filter bar. */}
         <div className="mobile-page-header-row">
           <div className="mobile-page-header-copy">
             <div className="mobile-title-col">
               <h1 className="mobile-page-title">
-                {isManagerRoute ? "Manager Quarterly Review" : "Quarterly Review"}
+                {board.isManager ? "Manager Quarterly Review" : "Quarterly Review"}
               </h1>
               <p className="mobile-page-subtitle">
-                {isManagerRoute
+                {board.isManager
                   ? "Review and rate your team's quarterly submissions."
                   : "Review and rate quarterly appraisal submissions across the organization."}
               </p>
@@ -779,163 +943,213 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
         </div>
       </div>
 
-      {/* Summary Statistics Cards — 2 cols on mobile, 4 in a row from
-          tablet width up (see .mobile-stat-grid). Label font size dropped
-          further on phones (text-[9px]) and icon wrap padding tightened
-          so "Total Submissions" / "Completed Reviews" fit on one line
-          without truncating to "TOTAL SUBMISSIO..." */}
-      <div className="mobile-stat-grid">
-        <div className="mobile-stat-card">
-          <div className="mobile-stat-icon-wrap indigo">
-            <Users className="mobile-stat-icon" />
-          </div>
-          <div className="mobile-stat-content">
-            <p className="mobile-stat-label">Total Submissions</p>
-            <p className="mobile-stat-value">{stats.totalSubmissions}</p>
-          </div>
-        </div>
-
-        <div className="mobile-stat-card amber">
-          <div className="mobile-stat-icon-wrap amber">
-            <Clock className="mobile-stat-icon" />
-          </div>
-          <div className="mobile-stat-content">
-            <p className="mobile-stat-label">Pending Reviews</p>
-            <p className="mobile-stat-value">{stats.pendingReviews}</p>
-          </div>
-        </div>
-
-        <div className="mobile-stat-card blue">
-          <div className="mobile-stat-icon-wrap blue">
-            <Edit3 className="mobile-stat-icon" />
-          </div>
-          <div className="mobile-stat-content">
-            <p className="mobile-stat-label">In Review</p>
-            <p className="mobile-stat-value">{stats.inReview}</p>
-          </div>
-        </div>
-
-        <div className="mobile-stat-card emerald">
-          <div className="mobile-stat-icon-wrap emerald">
-            <CheckCircle2 className="mobile-stat-icon" />
-          </div>
-          <div className="mobile-stat-content">
-            <p className="mobile-stat-label">Completed Reviews</p>
-            <p className="mobile-stat-value">{stats.completed}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Filter and Search Section — stacks vertically on mobile, search/select go full width.
-          Status tabs shrunk (text-[10px], tighter padding) so all four
-          ("All Reviews" / "Pending" / "In Review" / "Completed") fit in view
-          on a phone-width card without "Completed" getting scrolled off.
-
-          ORDER (top to bottom): status tabs -> Financial Year select
-          (now FIRST, with a calendar icon) -> search + "All Quarters"
-          select (search/quarter toolbar now comes SECOND, right after
-          FY). Quarter filtering (Q1–Q4) is substring-matched against
-          each item's quarter label. */}
+      {/* Filter and Search Section */}
       <div className="mobile-filter-bar">
-        {/* NEW: subheading above the status tabs, inside the filter card. */}
-        <h2 className="mobile-filter-heading">Quarterly Reviews</h2>
-
-        <div className="mobile-filter-tabs">
-          {STATUS_TAB_ITEMS.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setSelectedStatusTab(tab.key)}
-              className={`mobile-filter-tab ${selectedStatusTab === tab.key ? "active" : ""}`}
-            >
-              {tab.label}
-            </button>
-          ))}
+        {/* Header: Title on left, Create button on right */}
+        <div className="flex items-center justify-between gap-2 pb-2 mb-2 border-b border-slate-100">
+          <h2 className="mobile-filter-heading !mb-0">Quarterly Reviews</h2>
+          <button
+            type="button"
+            onClick={() => {
+              setModeSelectModalOpen(true);
+              setSelectedAssignMode(null);
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-semibold shadow-xs hover:shadow-sm transition-all cursor-pointer shrink-0"
+            title="Create review assignment"
+          >
+            <span className="text-sm leading-none">+</span>
+            Create
+          </button>
         </div>
 
-        {/* Filters, in order: 1) Search  2) Financial Year (with calendar
-            icon)  3) All Quarters. Each is its own full-width row. */}
-        <div className="mobile-toolbar mobile-toolbar-stacked">
-          <Input
-            placeholder="Search employee name or ID..."
-            prefix={<Search className="mobile-search-icon" />}
-            value={searchQuery}
-            onChange={(changeEvent) => setSearchQuery(changeEvent.target.value)}
-            className="mobile-input"
-            allowClear
-          />
+        <div className="mobile-filter-toolbar">
+          {/* Row 1: Search, All Roles, Financial Year in one line */}
+          <div className="mobile-filter-row mobile-filter-row-1">
+            <div className="mobile-filter-col mobile-filter-col-search">
+              <Input
+                placeholder="Search employee name or ID..."
+                prefix={<Search className="mobile-search-icon" />}
+                value={board.searchQuery}
+                onChange={(searchChangeEvent) => {
+                  board.setSearchQuery(searchChangeEvent.target.value);
+                  board.setCurrentPage(1);
+                }}
+                className="mobile-input w-full"
+                allowClear
+              />
+            </div>
 
-          <Select
-            value={selectedRole}
-            onChange={setSelectedRole}
-            className="mobile-select"
-          >
-            <Option value="ALL">All Roles</Option>
-            <Option value="MANAGER">Managers</Option>
-            <Option value="EMPLOYEE">Employees</Option>
-          </Select>
+            {!board.isManager && (
+              <div className="mobile-filter-col mobile-filter-col-role">
+                <Select
+                  value={board.selectedRole === ROLE_ALL_LABEL ? undefined : board.selectedRole}
+                  placeholder="All Roles"
+                  prefix={<Briefcase className="w-4 h-4 text-indigo-500 shrink-0" />}
+                  onChange={(selectedRoleValue) => {
+                    board.setSelectedRole(selectedRoleValue || ROLE_ALL_LABEL);
+                    board.setCurrentPage(1);
+                  }}
+                  allowClear
+                  className="mobile-select w-full"
+                  getPopupContainer={(trigger) => trigger.parentElement!}
+                >
+                  <Option value={ROLE_ALL_LABEL}>All Roles</Option>
+                  <Option value={ROLE_MANAGER_LABEL}>Managers</Option>
+                  <Option value="EMPLOYEE">Employees</Option>
+                </Select>
+              </div>
+            )}
 
-          <Select
-            value={selectedYear}
-            onChange={setSelectedYear}
-            className="mobile-year-select-full"
-            suffixIcon={<Calendar className="mobile-select-calendar-icon" />}
-            dropdownStyle={{ minWidth: 160 }}
-          >
-            <Option value={YEAR_FILTER_ALL}>All FY Year</Option>
-            {yearOptions.map((yearOption) => (
-              <Option key={yearOption} value={yearOption}>
-                {`FY ${yearOption}`}
-              </Option>
-            ))}
-          </Select>
+            <div className="mobile-filter-col mobile-filter-col-fy">
+              <Select
+                value={board.selectedYear === YEAR_FILTER_ALL ? undefined : board.selectedYear}
+                placeholder="Financial Year"
+                prefix={<Calendar className="w-4 h-4 text-indigo-500 shrink-0" />}
+                onChange={(selectedYearValue) => {
+                  board.setSelectedYear(selectedYearValue || YEAR_FILTER_ALL);
+                  board.setCurrentPage(1);
+                }}
+                allowClear
+                className="mobile-year-select-full mobile-select w-full"
+                dropdownStyle={{ minWidth: 160 }}
+                getPopupContainer={(trigger) => trigger.parentElement!}
+              >
+                <Option value={YEAR_FILTER_ALL}>All Years</Option>
+                {yearOptions.map((fiscalYearOption) => (
+                  <Option key={fiscalYearOption} value={fiscalYearOption}>
+                    {`FY ${fiscalYearOption}`}
+                  </Option>
+                ))}
+              </Select>
+            </div>
+          </div>
 
-          <Select
-            value={selectedQuarterCard}
-            onChange={setSelectedQuarterCard}
-            className="mobile-select"
-          >
-            <Option value={QuarterFilter.ALL}>All Quarters</Option>
-            <Option value={QuarterFilter.Q1}>Q1</Option>
-            <Option value={QuarterFilter.Q2}>Q2</Option>
-            <Option value={QuarterFilter.Q3}>Q3</Option>
-            <Option value={QuarterFilter.Q4}>Q4</Option>
-          </Select>
+          {/* Row 2: Quarter, Select All, All Status, and Clear in another line */}
+          <div className="mobile-filter-row mobile-filter-row-2">
+            <div className="mobile-filter-col mobile-filter-col-quarter">
+              <Select
+                value={board.selectedQuarterCard === QuarterFilter.ALL ? undefined : board.selectedQuarterCard}
+                placeholder="Quarters"
+                prefix={<Clock className="w-4 h-4 text-indigo-500 shrink-0" />}
+                onChange={(selectedQuarterValue) => {
+                  board.setSelectedQuarterCard(selectedQuarterValue || QuarterFilter.ALL);
+                  board.setCurrentPage(1);
+                }}
+                allowClear
+                className="mobile-select w-full"
+                optionLabelProp="label"
+                getPopupContainer={(trigger) => trigger.parentElement!}
+              >
+                <Option value={QuarterFilter.ALL} label="All Quarters">All Quarters</Option>
+                {filterQuarterOptions.map((opt) => (
+                  <Option key={opt.code} value={opt.code} label={`${opt.code}  ${opt.shortDateRange}`}>
+                    <div className="flex items-center gap-2 py-0.5">
+                      <span className="font-semibold text-slate-800 text-sm">{opt.code}</span>
+                      <span className="text-slate-500 text-xs font-normal">{opt.shortDateRange}</span>
+                    </div>
+                  </Option>
+                ))}
+              </Select>
+            </div>
+
+            <div className="mobile-filter-col mobile-filter-col-employee">
+              <Select
+                value={board.selectedEmployee === "ALL" ? undefined : board.selectedEmployee}
+                placeholder={board.employeeDropdownLabel}
+                prefix={<Users className="w-4 h-4 text-indigo-500 shrink-0" />}
+                onChange={(selectedEmployeeValue) => {
+                  board.setSelectedEmployee(selectedEmployeeValue || "ALL");
+                  board.setCurrentPage(1);
+                }}
+                allowClear
+                loading={board.loadingTeamEmployees}
+                className="mobile-select w-full"
+                showSearch
+                filterOption={(inputFilter, optionItem) =>
+                  String(optionItem?.label || "")
+                    .toLowerCase()
+                    .includes(inputFilter.toLowerCase())
+                }
+                options={employeeFilterOptions}
+                dropdownStyle={{ minWidth: 200 }}
+                getPopupContainer={(trigger) => trigger.parentElement!}
+              />
+            </div>
+
+            <div className="mobile-filter-col mobile-filter-col-status">
+              <Select
+                value={board.selectedStatusTab === StatusTabFilter.ALL ? undefined : board.selectedStatusTab}
+                placeholder="All Status"
+                prefix={<ClipboardList className="w-4 h-4 text-indigo-500 shrink-0" />}
+                onChange={(selectedStatusValue) => {
+                  board.setSelectedStatusTab(selectedStatusValue || StatusTabFilter.ALL);
+                  board.setCurrentPage(1);
+                }}
+                allowClear
+                className="mobile-select w-full"
+                getPopupContainer={(trigger) => trigger.parentElement!}
+              >
+                {STATUS_FILTER_ITEMS.map((statusFilterOption) => (
+                  <Option key={statusFilterOption.key} value={statusFilterOption.key}>
+                    {statusFilterOption.label}
+                  </Option>
+                ))}
+              </Select>
+            </div>
+
+            <div className="mobile-filter-col mobile-filter-col-clear shrink-0">
+              <button
+                type="button"
+                disabled={!board.hasActiveFilters}
+                onClick={board.handleClearFilters}
+                className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shadow-xs h-[36px] ${board.hasActiveFilters
+                  ? "text-slate-600 hover:text-indigo-600 bg-slate-100/90 hover:bg-indigo-50 border border-slate-200/80 hover:border-indigo-200 cursor-pointer"
+                  : "text-slate-400 bg-slate-100/50 border border-slate-200/50 cursor-not-allowed opacity-50 shadow-none"
+                  }`}
+                title={board.hasActiveFilters ? "Reset all filters" : "No active filters"}
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                Clear
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
-      {loading ? (
+      {board.loading ? (
         <div className="mobile-loading-state">
           <div className="mobile-loading-state-inner">
             <Spin size="large" tip="Loading team quarterly reviews..." />
           </div>
         </div>
-      ) : filteredSubmissions.length > 0 ? (
+      ) : board.submissions.length > 0 ? (
         <>
-          {/* Mobile card list — now shows only the current page's slice
-              (paginatedSubmissions) instead of every filtered result, so
-              the page no longer turns into one long continuous scroll. */}
+          {/* Mobile card list with server-side pagination */}
           <div className="mobile-card-list">
-            {paginatedSubmissions.map((record) => (
+            {board.submissions.map((submissionRecord) => (
               <SubmissionCard
-                key={record.id}
-                record={record}
-                onEvaluate={() => handleOpenEvaluation(record, false)}
-                onView={() => handleOpenEvaluation(record, true)}
+                key={submissionRecord.id}
+                record={submissionRecord}
+                onEvaluate={() => board.handleOpenEvaluation(submissionRecord, false)}
+                onView={() => board.handleOpenEvaluation(submissionRecord, true)}
+                accessRequests={board.accessRequests}
+                onReviewAccessRequest={openAccessRequestsModal}
               />
             ))}
           </div>
 
-          {/* Compact pagination for the mobile/tablet card list. Only
-              rendered when there's more than one page, and hidden at
-              desktop widths via .mobile-pagination's own media query
-              (the <Table> below has its own built-in pagination there). */}
-          {filteredSubmissions.length > CARD_PAGE_SIZE && (
+          {/* Server-driven Pagination */}
+          {board.totalCount > board.pageSize && (
             <div className="mobile-pagination">
               <Pagination
-                current={currentPage}
-                pageSize={CARD_PAGE_SIZE}
-                total={filteredSubmissions.length}
-                onChange={setCurrentPage}
+                current={board.currentPage}
+                pageSize={board.pageSize}
+                total={board.totalCount}
+                onChange={(pageNumber, pageSizeNumber) => {
+                  board.setCurrentPage(pageNumber);
+                  board.setPageSize(pageSizeNumber);
+                  board.fetchData(pageNumber, pageSizeNumber);
+                }}
                 simple
               />
             </div>
@@ -945,11 +1159,23 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
           <div className="mobile-table-shell">
             <Table
               columns={columns}
-              dataSource={filteredSubmissions}
+              dataSource={board.submissions}
               rowKey="id"
-              pagination={{ pageSize: 10, showSizeChanger: true }}
+              loading={board.loading || board.accessRequestsLoading}
+              tableLayout="fixed"
+              pagination={{
+                current: board.currentPage,
+                pageSize: board.pageSize,
+                total: board.totalCount,
+                onChange: (pageNumber, pageSizeNumber) => {
+                  board.setCurrentPage(pageNumber);
+                  board.setPageSize(pageSizeNumber);
+                  board.fetchData(pageNumber, pageSizeNumber);
+                },
+                showSizeChanger: true,
+              }}
               className="custom-table"
-              scroll={{ x: 900 }}
+              scroll={{ x: 1650 }}
             />
           </div>
         </>
@@ -966,29 +1192,785 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = ({
         </div>
       )}
 
-      {/* Interactive Evaluation Modal / Drawer Component (mobile-responsive viewpage) */}
-      <QuarterlyViewPageMobile
-        open={isModalOpen}
-        currentReview={currentReview}
-        isViewOnly={isViewOnly}
-        ratings={ratings}
-        finalRating={finalRating}
-        strengths={strengths}
-        improvements={improvements}
-        remarks={remarks}
-        fieldErrors={fieldErrors}
-        submitting={submitting}
-        loadingReview={loadingReview}
-        averageRatingScore={averageRatingScore}
-        onClose={handleCloseModal}
-        onSubmitEvaluation={handleSubmitEvaluation}
-        setRatings={setRatings}
-        setFinalRating={setFinalRating}
-        setStrengths={setStrengths}
-        setImprovements={setImprovements}
-        setRemarks={setRemarks}
-        setFieldErrors={setFieldErrors}
-      />
+      {/* ── Mode Select Modal ── */}
+      <Modal
+        open={modeSelectModalOpen}
+        onCancel={() => {
+          setModeSelectModalOpen(false);
+          setSelectedAssignMode(null);
+        }}
+        footer={null}
+        centered
+        width={420}
+        title={
+          <div className="flex items-center gap-2.5 pb-1">
+            <div className="w-8 h-8 rounded-xl bg-indigo-50 flex items-center justify-center border border-indigo-100">
+              <Plus className="w-4 h-4 text-indigo-600" />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-[#2B3674] text-base leading-snug">
+                Create Review Assignment
+              </h3>
+              <p className="text-xs text-slate-400 font-normal">
+                Choose how you want to assign the quarterly review
+              </p>
+            </div>
+          </div>
+        }
+      >
+        <div className="flex flex-col gap-3 pt-2">
+          {/* Individual Member(s) */}
+          <button
+            type="button"
+            onClick={() => setSelectedAssignMode("individual")}
+            className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${selectedAssignMode === "individual"
+              ? "border-indigo-500 bg-indigo-50/40"
+              : "border-slate-200 hover:border-indigo-300 hover:bg-slate-50"
+              }`}
+          >
+            <span
+              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${selectedAssignMode === "individual"
+                ? "border-indigo-600"
+                : "border-slate-300"
+                }`}
+            >
+              {selectedAssignMode === "individual" && (
+                <span className="w-2.5 h-2.5 rounded-full bg-indigo-600" />
+              )}
+            </span>
+
+            <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center shrink-0">
+              <Users className="w-5 h-5 text-indigo-600" />
+            </div>
+
+            <div className="flex-1">
+              <p className="font-bold text-slate-800 text-sm">
+                Individual Member(s)
+              </p>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Select specific employees from your team
+              </p>
+            </div>
+          </button>
+
+          {/* All Members */}
+          <button
+            type="button"
+            onClick={() => setSelectedAssignMode("all")}
+            className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${selectedAssignMode === "all"
+              ? "border-emerald-500 bg-emerald-50/40"
+              : "border-slate-200 hover:border-emerald-300 hover:bg-slate-50"
+              }`}
+          >
+            <span
+              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${selectedAssignMode === "all"
+                ? "border-emerald-600"
+                : "border-slate-300"
+                }`}
+            >
+              {selectedAssignMode === "all" && (
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-600" />
+              )}
+            </span>
+
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+            </div>
+
+            <div className="flex-1">
+              <p className="font-bold text-slate-800 text-sm">
+                All Members
+              </p>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Assign to your entire team at once
+              </p>
+            </div>
+          </button>
+
+          {/* Continue Button */}
+          <div className="flex justify-end pt-2">
+            <button
+              type="button"
+              disabled={!selectedAssignMode}
+              onClick={() => {
+                if (!selectedAssignMode) return;
+                setAssignMode(selectedAssignMode);
+                setSelectedEmployeeIds([]);
+                setAssignQuarterLabel("");
+                setAssignFinancialYear("");
+                setAssignStartDate("");
+                setAssignEndDate("");
+                setAssignNotes("");
+                setModeSelectModalOpen(false);
+                setAssignModalOpen(true);
+
+                setLoadingAssignableEmployees(true);
+                const queryMode = selectedAssignMode === "all" ? "all-members" : "individual";
+                axios
+                  .get("/api/quarterly-review/assignable-employees", {
+                    params: { mode: queryMode },
+                  })
+                  .then((response) => {
+                    if (response.data?.success && Array.isArray(response.data.data)) {
+                      setAssignableEmployees(
+                        [...response.data.data].sort((firstEmployee: any, secondEmployee: any) =>
+                          (firstEmployee.employeeName || "").localeCompare(
+                            secondEmployee.employeeName || "",
+                            undefined,
+                            { sensitivity: "base" }
+                          )
+                        )
+                      );
+                    }
+                  })
+                  .catch(() => { })
+                  .finally(() => setLoadingAssignableEmployees(false));
+              }}
+              className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${selectedAssignMode
+                ? "bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer"
+                : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                }`}
+            >
+              Continue
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── Assign Modal ── */}
+      <Modal
+        open={assignModalOpen}
+        onCancel={() => {
+          setAssignModalOpen(false);
+          setSelectedAssignMode(null);
+        }}
+        footer={null}
+        title={
+          <div className="flex items-center gap-2.5 pb-1">
+            <div className="w-8 h-8 rounded-xl bg-indigo-50 flex items-center justify-center border border-indigo-100">
+              <Send className="w-4 h-4 text-indigo-600" />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-[#2B3674] text-base leading-snug">
+                Assign Quarterly Review
+              </h3>
+              <p className="text-xs text-slate-400 font-normal">
+                {board.isManager
+                  ? "Open review access for your reporting team members"
+                  : "Open review access for employees across the organization"}
+              </p>
+            </div>
+          </div>
+        }
+        destroyOnClose
+        centered
+        width={540}
+        maskClosable={false}
+      >
+        <div className="flex flex-col gap-4 pt-3">
+          {/* Mode 1: Individual / Multi-Select */}
+          {assignMode === "individual" ? (
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                  Select Employees
+                </label>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelectedEmployeeIds(
+                        assignableEmployees.map((employeeItem) => employeeItem.employeeId)
+                      )
+                    }
+                    className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800"
+                  >
+                    Select All ({assignableEmployees.length})
+                  </button>
+                  {selectedEmployeeIds.length > 0 && (
+                    <>
+                      <span className="text-slate-300">|</span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedEmployeeIds([])}
+                        className="text-[11px] font-semibold text-slate-500 hover:text-slate-700"
+                      >
+                        Clear
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <Select
+                mode="multiple"
+                showSearch
+                optionLabelProp="label"
+                loading={loadingAssignableEmployees}
+                value={selectedEmployeeIds}
+                onChange={(selectedValues) => setSelectedEmployeeIds(selectedValues)}
+                placeholder={
+                  loadingAssignableEmployees
+                    ? "Loading eligible employees..."
+                    : board.isManager
+                      ? "Select one or more team members..."
+                      : "Select one or more employees..."
+                }
+                className="w-full"
+                size="large"
+                maxTagCount="responsive"
+                filterOption={(inputFilter, optionItem: any) => {
+                  if (!inputFilter) return true;
+                  const queryText = inputFilter.toLowerCase().trim();
+                  if (optionItem?.label && String(optionItem.label).toLowerCase().includes(queryText)) {
+                    return true;
+                  }
+                  if (optionItem?.value && String(optionItem.value).toLowerCase().includes(queryText)) {
+                    return true;
+                  }
+                  const matchedEmployee = assignableEmployees.find(
+                    (employeeItem: any) =>
+                      String(employeeItem.employeeId).toLowerCase() === String(optionItem?.value).toLowerCase()
+                  );
+                  if (matchedEmployee) {
+                    const employeeSearchContent = `${matchedEmployee.employeeName || ""} ${matchedEmployee.employeeId || ""} ${matchedEmployee.designation || ""}`.toLowerCase();
+                    return employeeSearchContent.includes(queryText);
+                  }
+                  return false;
+                }}
+              >
+                {[...assignableEmployees]
+                  .sort((firstEmployee: any, secondEmployee: any) =>
+                    (firstEmployee.employeeName || "").localeCompare(secondEmployee.employeeName || "", undefined, {
+                      sensitivity: "base",
+                    })
+                  )
+                  .map((employeeRecord: any) => {
+                    const hasAssignedQuarters =
+                      employeeRecord.assignedQuarters && employeeRecord.assignedQuarters.length > 0;
+                    const assignedTagString = hasAssignedQuarters
+                      ? employeeRecord.assignedQuarters
+                        .map((quarterString: string) => quarterString.split(" ")[0])
+                        .filter(
+                          (valueItem: string, indexItem: number, arrayItems: string[]) =>
+                            arrayItems.indexOf(valueItem) === indexItem
+                        )
+                        .join(", ")
+                      : "";
+                    const employeeDisplayName =
+                      employeeRecord.employeeName && employeeRecord.employeeName !== employeeRecord.employeeId
+                        ? `${employeeRecord.employeeName} (${employeeRecord.employeeId})`
+                        : employeeRecord.employeeId;
+                    return (
+                      <Option key={employeeRecord.employeeId} value={employeeRecord.employeeId} label={employeeDisplayName}>
+                        <span className="font-medium text-slate-800">
+                          {employeeRecord.employeeName} ({employeeRecord.employeeId})
+                        </span>
+                        {employeeRecord.designation ? (
+                          <span className="text-slate-500 font-normal"> - {employeeRecord.designation}</span>
+                        ) : null}
+                        {hasAssignedQuarters ? (
+                          <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-red-50 text-red-600 border border-red-200 font-medium">
+                            {assignedTagString} Assigned
+                          </span>
+                        ) : null}
+                      </Option>
+                    );
+                  })}
+              </Select>
+
+              {assignableEmployees.length === 0 && !loadingAssignableEmployees && (
+                <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+                  {board.isManager
+                    ? "No mapped team members found for your manager account. Please contact an Administrator to map employees."
+                    : "No active employees found in the organization."}
+                </p>
+              )}
+            </div>
+          ) : (
+            /* Mode 2: Bulk All Members Callout */
+            <div className="p-3.5 bg-indigo-50/70 border border-indigo-100 rounded-xl flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 mt-0.5">
+                <Users className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-xs font-bold text-indigo-900">
+                  {board.isManager
+                    ? `Assign to all ${assignableEmployees.length} team members`
+                    : `Assign to all ${assignableEmployees.length} employees in the organization`}
+                </h4>
+                <p className="text-[11px] text-indigo-700/90 mt-0.5 leading-relaxed">
+                  Review access will be opened for all eligible members for the chosen quarter and selected dates.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Quarter selector */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+              Quarter <span className="text-red-500">*</span>
+            </label>
+            <Select
+              value={assignQuarterLabel || undefined}
+              onChange={(selectedQuarterValue) => setAssignQuarterLabel(selectedQuarterValue)}
+              placeholder="Select quarter"
+              className="w-full"
+              size="large"
+              optionLabelProp="label"
+            >
+              {[QuarterFilter.Q1, QuarterFilter.Q2, QuarterFilter.Q3, QuarterFilter.Q4].map((quarterCode) => {
+                const quarterStatus = getQuarterOptionStatus(quarterCode);
+                const dateRange = resolveQuarterDateRangeText(
+                  quarterCode,
+                  assignFinancialYear || (board.selectedYear !== YEAR_FILTER_ALL ? board.selectedYear : undefined)
+                );
+                const fullLabel = `${quarterCode}  ${dateRange}`;
+                return (
+                  <Option key={quarterCode} value={quarterCode} label={fullLabel} disabled={quarterStatus.disabled}>
+                    <div className="flex items-center justify-between py-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className={quarterStatus.disabled ? "text-slate-400 font-semibold text-sm" : "text-slate-800 font-semibold text-sm"}>
+                          {quarterCode}
+                        </span>
+                        <span className={quarterStatus.disabled ? "text-slate-400 text-xs font-normal" : "text-slate-500 text-xs font-normal"}>
+                          {dateRange}
+                        </span>
+                      </div>
+                      {quarterStatus.tag && (
+                        <span className={`text-[11px] ml-2 ${quarterStatus.tagClass}`}>
+                          {quarterStatus.tag}
+                        </span>
+                      )}
+                    </div>
+                  </Option>
+                );
+              })}
+            </Select>
+          </div>
+
+          {/* Deadline date picker */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+              To (Deadline) <span className="text-red-500">*</span>
+            </label>
+            <div className="relative flex items-center">
+              <input
+                type="date"
+                value={assignEndDate}
+                min={(() => {
+                  const tomorrow = new Date();
+                  tomorrow.setDate(tomorrow.getDate() + 1);
+                  return `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
+                })()}
+                onChange={(dateChangeEvent) => setAssignEndDate(dateChangeEvent.target.value)}
+                className="w-full border border-slate-200 rounded-lg pl-3 pr-9 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white cursor-pointer"
+              />
+              <Calendar className="w-4 h-4 text-slate-400 absolute right-3 pointer-events-none" />
+            </div>
+            {assignEndDate && (() => {
+              const today = new Date();
+              const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+              const diffDays = Math.round((new Date(assignEndDate).getTime() - new Date(todayStr).getTime()) / 86400000);
+              const days = Math.max(1, diffDays);
+              const hours = days * 24;
+              return (
+                <div className="pt-1">
+                  <span className="inline-flex px-2.5 py-1 rounded-md bg-indigo-50 border border-indigo-100 text-[11px] font-bold text-indigo-700">
+                    Duration: {days} {days === 1 ? "Day" : "Days"} ({hours} Hours) from today
+                  </span>
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Description (mandatory) */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+              Description <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              value={assignNotes}
+              onChange={(notesChangeEvent) => setAssignNotes(notesChangeEvent.target.value)}
+              placeholder="Add instructions, focus areas, or deadline remarks for the employee(s)..."
+              rows={3}
+              className="border border-slate-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            />
+          </div>
+
+          <div className="flex justify-end items-center gap-2 pt-3 border-t border-slate-100">
+            <Button onClick={() => setAssignModalOpen(false)}>Cancel</Button>
+            <Button
+              type="primary"
+              loading={assignSubmitting}
+              icon={<Send className="w-3.5 h-3.5" />}
+              onClick={handleAssignReview}
+              className="!bg-indigo-600 hover:!bg-indigo-700 !font-semibold !rounded-lg"
+            >
+              {assignMode === "all"
+                ? `Assign to All (${assignableEmployees.length})`
+                : selectedEmployeeIds.length > 1
+                  ? `Assign to ${selectedEmployeeIds.length} Members`
+                  : "Assign Review"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── Access Requests Modal ── */}
+      <Modal
+        open={accessRequestsOpen}
+        onCancel={() => {
+          setAccessRequestsOpen(false);
+          setSelectedAccessRequest(null);
+        }}
+        footer={null}
+        title={
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center">
+              <Key className="w-4 h-4 text-amber-600" />
+            </div>
+            <span className="font-extrabold text-[#2B3674] text-sm sm:text-base">
+              {selectedAccessRequest ? "Review Access Request" : "Pending Access Requests"}
+            </span>
+          </div>
+        }
+        destroyOnClose
+        centered
+        width={560}
+      >
+        {board.accessRequestsLoading ? (
+          <div className="flex justify-center py-10">
+            <Spin tip="Loading access requests…" />
+          </div>
+        ) : (() => {
+          // Build the list to display: prefer filtered array; fallback to selectedAccessRequest directly
+          const filteredList = selectedAccessRequest
+            ? (board.accessRequests || []).filter((r: any) => String(r.id) === String(selectedAccessRequest.id))
+            : (board.accessRequests || []);
+          const displayList = filteredList.length === 0 && selectedAccessRequest
+            ? [selectedAccessRequest]
+            : filteredList;
+          return displayList;
+        })().length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-10 text-center">
+            <ShieldCheck className="w-10 h-10 text-emerald-400 mb-3" />
+            <p className="font-semibold text-slate-700 text-sm">
+              No pending access requests
+            </p>
+            <p className="text-slate-400 text-xs mt-1">
+              All access requests have been actioned.
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3 pt-2 max-h-[75vh] overflow-y-auto">
+            {selectedAccessRequest && (board.accessRequests || []).length > 1 && (
+              <div className="flex items-center justify-between text-xs text-slate-600 pb-2 border-b border-slate-100">
+                <span>
+                  Showing request for <strong>{selectedAccessRequest.employeeName || selectedAccessRequest.employeeId}</strong> ({selectedAccessRequest.quarter})
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedAccessRequest(null)}
+                  className="text-indigo-600 hover:text-indigo-800 font-semibold cursor-pointer underline text-xs"
+                >
+                  View all ({board.accessRequests?.length})
+                </button>
+              </div>
+            )}
+            {(() => {
+              const filteredList = selectedAccessRequest
+                ? (board.accessRequests || []).filter((r: any) => String(r.id) === String(selectedAccessRequest.id))
+                : (board.accessRequests || []);
+              return filteredList.length === 0 && selectedAccessRequest
+                ? [selectedAccessRequest]
+                : filteredList;
+            })().map((req: any) => (
+              <div
+                key={req.id}
+                className="flex flex-col gap-2.5 bg-amber-50/70 border border-amber-200/80 rounded-xl p-3 shadow-sm"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <p className="text-xs sm:text-sm font-bold text-slate-800 truncate">
+                        {req.employeeName || `Employee #${req.employeeId}`}
+                      </p>
+                      {req.userRole && (
+                        <span className="text-[9px] sm:text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
+                          {req.userRole === "MANAGER" ? "Manager" : "Employee"}
+                        </span>
+                      )}
+                      {(req.attemptNumber > 1 || req.attempt_number > 1) && (
+                        <span className="text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200">
+                          Attempt {req.attemptNumber || req.attempt_number} of 2 (Re-request)
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] sm:text-xs text-slate-500">
+                      Quarter:{" "}
+                      <span className="font-semibold text-slate-700">
+                        {req.quarter}
+                      </span>
+                    </p>
+                    {(req.reason || req.requestReason || req.description) && (
+                      <p className="text-[11px] sm:text-xs text-slate-700 mt-1 italic bg-white/70 p-2 rounded-lg border border-amber-100">
+                        "{req.reason || req.requestReason || req.description}"
+                      </p>
+                    )}
+                    <div className="flex items-center gap-1 mt-0.5 text-[10px] text-slate-400">
+                      <Clock className="w-3 h-3" />
+                      <span>
+                        {req.requestedAt
+                          ? new Date(req.requestedAt).toLocaleString("en-GB", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                          : "—"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5 shrink-0">
+                    <Button
+                      size="small"
+                      type="primary"
+                      loading={actioningRequestId === req.id}
+                      icon={<Check className="w-3 h-3" />}
+                      onClick={() =>
+                        handleAccessRequestAction(req.id, "approve")
+                      }
+                      className="!bg-emerald-600 hover:!bg-emerald-700 !font-semibold !rounded-lg shadow-sm !text-xs"
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      size="small"
+                      danger
+                      loading={actioningRequestId === req.id}
+                      icon={<X className="w-3 h-3" />}
+                      onClick={() =>
+                        handleAccessRequestAction(req.id, "reject")
+                      }
+                      className="!font-semibold !rounded-lg !text-xs"
+                    >
+                      Reject
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Approver remarks / comment textarea */}
+                <div className="pt-2 border-t border-amber-200/60">
+                  <label className="block text-[10px] sm:text-[11px] font-semibold text-slate-700 mb-1">
+                    Approver Remarks / Comment: <span className="text-slate-400 font-normal">(Required if rejecting)</span>
+                  </label>
+                  <Input.TextArea
+                    rows={2}
+                    placeholder="Enter reason for rejection or approval remarks..."
+                    value={actionComments[req.id] || ""}
+                    onChange={(e) =>
+                      setActionComments((prev) => ({
+                        ...prev,
+                        [req.id]: e.target.value,
+                      }))
+                    }
+                    className="!text-xs !rounded-lg border-amber-300 focus:!border-amber-500"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Modal>
+
+      {/* ── Assignment Summary Modal (Mobile/Tablet Parity) ── */}
+      <Modal
+        open={board.assignmentListModalOpen}
+        onCancel={() => board.setAssignmentListModalOpen(false)}
+        footer={[
+          <Button key="close" onClick={() => board.setAssignmentListModalOpen(false)}>
+            Close
+          </Button>,
+        ]}
+        width={720}
+        destroyOnClose
+        centered
+        title={
+          <div className="flex items-center gap-2.5 pb-1">
+            <div
+              className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                board.assignmentListType === "not_assigned"
+                  ? "bg-amber-50 text-amber-600 border border-amber-200/60"
+                  : "bg-violet-50 text-violet-600 border border-violet-200/60"
+              }`}
+            >
+              {board.assignmentListType === "not_assigned" ? (
+                <Clock className="w-4 h-4" />
+              ) : (
+                <Users className="w-4 h-4" />
+              )}
+            </div>
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-slate-900 leading-snug">
+                {board.assignmentListType === "not_assigned"
+                  ? `Employees Not Assigned – ${board.stats?.assignmentSummary?.quarter || board.selectedQuarterCard} ${board.stats?.assignmentSummary?.financialYear || board.selectedYear}`
+                  : `Assigned Employees – ${board.stats?.assignmentSummary?.quarter || board.selectedQuarterCard} ${board.stats?.assignmentSummary?.financialYear || board.selectedYear}`}
+              </h3>
+              <p className="text-[11px] sm:text-xs text-slate-500 font-normal">
+                {board.assignmentListType === "not_assigned"
+                  ? `Employees who have NOT been assigned a review for this quarter (${board.stats?.assignmentSummary?.notAssignedCount ?? 0} members)`
+                  : `Assigned employees (${board.stats?.assignmentSummary?.assignedCount ?? 0}) and members with pending quarters (${board.stats?.assignmentSummary?.singleQuarterCount ?? 0})`}
+              </p>
+            </div>
+          </div>
+        }
+      >
+        <div className="flex flex-col gap-3 pt-2">
+          <div className="flex items-center gap-1.5 p-1 bg-slate-100/90 rounded-xl border border-slate-200/80 overflow-x-auto">
+            <button
+              type="button"
+              onClick={() => {
+                board.setAssignmentListType("assigned");
+                board.setAssignedSubTab("all");
+              }}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all shrink-0 cursor-pointer ${
+                board.assignmentListType === "assigned" && board.assignedSubTab === "all"
+                  ? "bg-white text-violet-700 shadow-xs border border-slate-200/80"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <span>All Assigned</span>
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-violet-100 text-violet-700 font-semibold">
+                {board.stats?.assignmentSummary?.assignedCount ?? 0}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                board.setAssignmentListType("assigned");
+                board.setAssignedSubTab("single_quarter");
+              }}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all shrink-0 cursor-pointer ${
+                board.assignmentListType === "assigned" && board.assignedSubTab === "single_quarter"
+                  ? "bg-white text-violet-700 shadow-xs border border-slate-200/80"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <span>1 Qtr (1 Pending)</span>
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-100 text-amber-700 font-semibold">
+                {board.stats?.assignmentSummary?.singleQuarterCount ?? 0}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                board.setAssignmentListType("not_assigned");
+              }}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all shrink-0 cursor-pointer ${
+                board.assignmentListType === "not_assigned"
+                  ? "bg-white text-amber-700 shadow-xs border border-slate-200/80"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <span>Not Assigned</span>
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-100 text-amber-700 font-semibold">
+                {board.stats?.assignmentSummary?.notAssignedCount ?? 0}
+              </span>
+            </button>
+          </div>
+
+          <Input
+            prefix={<Search className="w-4 h-4 text-slate-400" />}
+            placeholder="Search employee by name, ID, designation..."
+            value={board.assignmentListSearch}
+            onChange={(e) => board.setAssignmentListSearch(e.target.value)}
+            allowClear
+            className="!rounded-xl"
+          />
+
+          <div className="max-h-[55vh] overflow-y-auto">
+            <Table
+              dataSource={
+                (board.assignmentListType === "not_assigned"
+                  ? (board.stats?.assignmentSummary?.notAssignedEmployees || [])
+                  : board.assignedSubTab === "single_quarter"
+                    ? (board.stats?.assignmentSummary?.singleQuarterEmployees || [])
+                    : (board.stats?.assignmentSummary?.assignedEmployees || [])
+                ).filter((emp: any) => {
+                  if (!board.assignmentListSearch.trim()) return true;
+                  const q = board.assignmentListSearch.toLowerCase();
+                  return (
+                    emp.employeeName?.toLowerCase().includes(q) ||
+                    emp.employeeId?.toLowerCase().includes(q) ||
+                    emp.designation?.toLowerCase().includes(q) ||
+                    emp.department?.toLowerCase().includes(q)
+                  );
+                })
+              }
+              rowKey="employeeId"
+              pagination={{ pageSize: 6, showSizeChanger: false }}
+              size="small"
+              columns={[
+                {
+                  title: "Employee",
+                  dataIndex: "employeeName",
+                  key: "employeeName",
+                  render: (name: string, record: any) => (
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs shrink-0">
+                        {name ? name.slice(0, 2).toUpperCase() : "EM"}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-slate-800 text-xs truncate leading-snug">
+                          {name}
+                        </p>
+                        <p className="text-[10px] text-slate-400 truncate">
+                          {record.employeeId} · {record.designation || "Member"}
+                        </p>
+                      </div>
+                    </div>
+                  ),
+                },
+                {
+                  title: "Department",
+                  dataIndex: "department",
+                  key: "department",
+                  render: (dept: string) => (
+                    <span className="text-slate-600 text-xs font-medium">
+                      {dept || "General"}
+                    </span>
+                  ),
+                },
+                ...(board.assignmentListType === "not_assigned" ? [
+                  {
+                    title: "Action",
+                    key: "action",
+                    render: (_: any, record: any) => (
+                      <Button
+                        size="small"
+                        type="primary"
+                        className="!bg-indigo-600 hover:!bg-indigo-700 !text-xs !font-semibold !rounded-lg"
+                        onClick={() => {
+                          board.setAssignmentListModalOpen(false);
+                          setSelectedAssignMode("individual");
+                          setAssignMode("individual");
+                          setSelectedEmployeeIds([record.employeeId]);
+                          setAssignModalOpen(true);
+                        }}
+                      >
+                        Assign
+                      </Button>
+                    ),
+                  }
+                ] : []),
+              ]}
+            />
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

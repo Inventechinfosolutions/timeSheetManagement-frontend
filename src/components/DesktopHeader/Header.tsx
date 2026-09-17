@@ -86,8 +86,17 @@ const Header = ({
 
   // Total count for the bell bubble
   const unreadCount = isApprover
-    ? leaveNotifications.length
+    ? leaveNotifications.length + attendanceUnreadCount
     : attendanceUnreadCount + employeeUpdates.length;
+
+  const [approverTab, setApproverTab] = useState<"requests" | "notifications">("requests");
+
+  // Default to notifications tab if there are no leave requests but there are general/appraisal notifications
+  useEffect(() => {
+    if (leaveNotifications.length === 0 && attendanceUnreadCount > 0) {
+      setApproverTab("notifications");
+    }
+  }, [leaveNotifications.length, attendanceUnreadCount]);
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -125,18 +134,28 @@ const Header = ({
       : requestType;
   };
 
-  // Fetch notifications on mount
+  const fetchedEmpIdRef = useRef<string | null>(null);
+  const fetchedApproverRef = useRef<boolean>(false);
+  const fetchedProfileImageIdRef = useRef<string | null>(null);
+
+  // Fetch notifications on mount (only once, no unwanted periodic interval)
   useEffect(() => {
-    if (isApprover) {
+    if (!currentUser) return;
+
+    if (isApprover && !fetchedApproverRef.current) {
+      fetchedApproverRef.current = true;
       dispatch(fetchUnreadNotifications());
     }
-    if (entity?.employeeId && currentUser) {
+
+    const targetEmpId = entity?.employeeId || currentUser?.employeeId || currentUser?.loginId;
+    if (targetEmpId && fetchedEmpIdRef.current !== String(targetEmpId)) {
+      fetchedEmpIdRef.current = String(targetEmpId);
+      dispatch(fetchNotifications(String(targetEmpId)));
       if (!isAdmin) {
-        dispatch(fetchNotifications(entity?.employeeId));
-        dispatch(fetchEmployeeUpdates(entity?.employeeId));
+        dispatch(fetchEmployeeUpdates(String(targetEmpId)));
       }
     }
-  }, [dispatch, isApprover, isAdmin, entity?.employeeId, currentUser]);
+  }, [dispatch, isApprover, isAdmin, entity?.employeeId, currentUser?.employeeId, currentUser?.loginId]);
 
   const handleNotificationClick = (id: number) => {
     dispatch(fetchNotificationDetails(id));
@@ -189,9 +208,12 @@ const Header = ({
     if (isApprover) {
       dispatch(markAllLeaveRequestsRead());
     }
-    if (!isAdmin && entity?.employeeId) {
-      dispatch(markAllNotificationsRead(entity.employeeId));
-      dispatch(markAllEmployeeUpdatesRead(entity.employeeId));
+    const targetEmpId = entity?.employeeId || currentUser?.employeeId || currentUser?.loginId;
+    if (targetEmpId) {
+      dispatch(markAllNotificationsRead(targetEmpId));
+      if (!isAdmin) {
+        dispatch(markAllEmployeeUpdatesRead(targetEmpId));
+      }
     }
   };
 
@@ -235,8 +257,10 @@ const Header = ({
     const shouldFetch =
       !loggedInUserProfileImageUrl &&
       (loggedInUserImageStatus === "idle" ||
-        loggedInUserImageStatus === undefined);
+        loggedInUserImageStatus === undefined) &&
+      fetchedProfileImageIdRef.current !== String(profileId);
     if (profileId && shouldFetch) {
+      fetchedProfileImageIdRef.current = String(profileId);
       dispatch(fetchLoggedInUserProfileImage(String(profileId)));
     }
   }, [
@@ -311,7 +335,22 @@ const Header = ({
                 <button
                   onClick={() => {
                     setIsDropdownOpen(false);
-                    setIsNotificationOpen((prev) => !prev);
+                    setIsNotificationOpen((prev) => {
+                      const next = !prev;
+                      if (next) {
+                        if (isApprover) {
+                          dispatch(fetchUnreadNotifications());
+                        }
+                        const targetEmpId = entity?.employeeId || currentUser?.employeeId || currentUser?.loginId;
+                        if (targetEmpId) {
+                          dispatch(fetchNotifications(targetEmpId));
+                          if (!isAdmin) {
+                            dispatch(fetchEmployeeUpdates(targetEmpId));
+                          }
+                        }
+                      }
+                      return next;
+                    });
                   }}
                   className={`notification-trigger relative p-2.5 xl:p-3 rounded-xl transition-all group ${isNotificationOpen
                     ? "bg-white text-[#4318FF]"
@@ -348,16 +387,53 @@ const Header = ({
                             </button>
                           )}
                         </div>
-                        <div className="flex items-center gap-6 px-6 border-b border-gray-50">
-                          <button className="py-3 text-sm font-bold text-[#1B2559] border-b-2 border-[#1B2559] relative">
-                            {isApprover ? "Pending Approvals" : "Inbox"}
-                            <span className="ml-2 bg-[#1B2559] text-white text-[10px] px-1.5 py-0.5 rounded-md">
-                              {unreadCount}
-                            </span>
-                          </button>
-                        </div>
+                        {isApprover ? (
+                          <div className="flex items-center gap-4 px-6 border-b border-gray-50">
+                            <button
+                              type="button"
+                              onClick={() => setApproverTab("requests")}
+                              className={`py-3 text-sm font-bold transition-all relative ${
+                                approverTab === "requests"
+                                  ? "text-[#1B2559] border-b-2 border-[#1B2559]"
+                                  : "text-gray-400 hover:text-gray-600"
+                              }`}
+                            >
+                              Leave Requests
+                              {leaveNotifications.length > 0 && (
+                                <span className="ml-2 bg-[#1B2559] text-white text-[10px] px-1.5 py-0.5 rounded-md">
+                                  {leaveNotifications.length}
+                                </span>
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setApproverTab("notifications")}
+                              className={`py-3 text-sm font-bold transition-all relative ${
+                                approverTab === "notifications"
+                                  ? "text-[#1B2559] border-b-2 border-[#1B2559]"
+                                  : "text-gray-400 hover:text-gray-600"
+                              }`}
+                            >
+                              Notifications
+                              {attendanceUnreadCount > 0 && (
+                                <span className="ml-2 bg-[#4318FF] text-white text-[10px] px-1.5 py-0.5 rounded-md">
+                                  {attendanceUnreadCount}
+                                </span>
+                              )}
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-6 px-6 border-b border-gray-50">
+                            <button className="py-3 text-sm font-bold text-[#1B2559] border-b-2 border-[#1B2559] relative">
+                              Inbox
+                              <span className="ml-2 bg-[#1B2559] text-white text-[10px] px-1.5 py-0.5 rounded-md">
+                                {unreadCount}
+                              </span>
+                            </button>
+                          </div>
+                        )}
                         <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
-                          {isApprover ? (
+                          {isApprover && approverTab === "requests" ? (
                             leaveNotifications.length > 0 ? (
                               leaveNotifications.map((notif) => {
                                 const getNotificationContent = (
@@ -509,6 +585,66 @@ const Header = ({
                                 </p>
                                 <p className="text-xs text-gray-400 mt-1">
                                   All leave applications have been reviewed.
+                                </p>
+                              </div>
+                            )
+                          ) : isApprover && approverTab === "notifications" ? (
+                            notifications.length > 0 ? (
+                              notifications.map((notif) => (
+                                <div
+                                  key={notif.id}
+                                  onClick={() => handleNotificationItemClick(notif)}
+                                  className={`flex gap-4 p-5 hover:bg-gray-50/80 transition-colors border-b border-gray-50 last:border-0 group cursor-pointer relative ${!notif.isRead ? "bg-blue-50/30" : ""
+                                    }`}
+                                >
+                                  <div className="relative shrink-0">
+                                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-[#4318FF]">
+                                      <Bell size={18} />
+                                    </div>
+                                  </div>
+                                  <div className="flex-1 space-y-1">
+                                    <div className="flex justify-between items-start">
+                                      <p className="text-sm text-[#1B2559] leading-snug">
+                                        <span className="font-bold">
+                                          {notif.title}
+                                        </span>
+                                      </p>
+                                      {!notif.isRead && (
+                                        <span className="w-2 h-2 bg-[#4318FF] rounded-full shrink-0 mt-1.5"></span>
+                                      )}
+                                    </div>
+                                    <div className="flex flex-col gap-1">
+                                      <span className="text-xs text-gray-500 font-medium line-clamp-2">
+                                        {notif.message}
+                                      </span>
+                                      <span className="text-[10px] text-gray-400">
+                                        {new Date(
+                                          notif.createdAt,
+                                        ).toLocaleDateString()}{" "}
+                                        {new Date(
+                                          notif.createdAt,
+                                        ).toLocaleTimeString([], {
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                        })}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-3">
+                                  <Bell
+                                    size={24}
+                                    className="text-gray-300"
+                                  />
+                                </div>
+                                <p className="text-sm font-bold text-[#1B2559]">
+                                  No new notifications
+                                </p>
+                                <p className="text-xs text-gray-400 mt-1">
+                                  You are all caught up.
                                 </p>
                               </div>
                             )

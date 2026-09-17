@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   Avatar,
   Button,
   Col,
   Divider,
   Input,
-  Modal,
   Rate,
   Row,
+  Spin,
 } from 'antd';
-import { Save, Send } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, FileText, Save, Send } from 'lucide-react';
 import {
   ManagerReviewItem,
   MIN_FIELD_LENGTH,
@@ -33,10 +34,11 @@ interface FieldErrors {
   strengths?: string;
   improvements?: string;
   remarks?: string;
+  ratings?: string;
 }
 
 interface QuarterlyViewPageMobileProps {
-  open: boolean;
+  open?: boolean;
   currentReview: ManagerReviewItem | null;
   isViewOnly: boolean;
   ratings: RatingValues;
@@ -58,56 +60,6 @@ interface QuarterlyViewPageMobileProps {
   setFieldErrors: React.Dispatch<React.SetStateAction<FieldErrors>>;
 }
 
-/**
- * FONT CONTROL — single source of truth
- * ----------------------------------------------------------------
- * Everything below is scoped under the ".qvm-wrapper" class, applied
- * once on the Modal itself. Two things are controlled from exactly
- * one place:
- *
- * 1) FONT FAMILY -> the `font-family` rule on ".qvm-wrapper, .qvm-wrapper *"
- * 2) FONT SIZE   -> the `--qvm-scale` CSS variable on ".qvm-wrapper"
- *
- * This file already uses a deliberate responsive Tailwind type scale
- * (text-[9px] / text-[10px] / text-[11px] / text-xs / text-sm /
- * text-base / text-lg, several paired with an sm: breakpoint variant)
- * to distinguish fine print from labels from headings on a phone
- * screen. Rather than flattening that hierarchy, each size is
- * re-expressed as `base-px * var(--qvm-scale)`, so changing ONE
- * number (--qvm-scale) scales every size in the modal up or down
- * together, while preserving the relative hierarchy and the existing
- * mobile/desktop breakpoint behavior (the sm: variant still swaps in
- * at the same breakpoint — only the resulting px values now scale).
- *
- * To resize everything:   change --qvm-scale (e.g. 1.1 = 10% bigger)
- * To change the typeface: edit the font-family stack below
- *
- * TEXT COLOR — description/body text (NEW)
- * ----------------------------------------------------------------
- * Executive Summary, Key Achievements/Challenges/Learning Goals
- * details, and the typed Strengths/Improvements/Remarks text were all
- * using lighter grays (text-slate-700 / text-slate-600), which read
- * as washed-out next to the bold near-black subheadings. Those have
- * been bumped to text-slate-900 below so real content reads as dark
- * as the headings above it.
- *
- * Left OUT on purpose, because they're meant to look secondary:
- *   - "No details provided." empty-state text (text-slate-400, italic)
- *   - Character-count helper text ("12/50 min")
- *   - Small meta labels ("Submitted On", "Avg Score")
- *   - TextArea placeholder text (controlled by antd's own placeholder
- *     styling, not by these classes — say the word if you want that
- *     darkened too)
- *
- * MODAL WIDTH
- * ----------------------------------------------------------------
- * Controlled entirely by the `width` and `style.maxWidth` props on
- * the <Modal> below. `width` is a % of the viewport; `maxWidth` caps
- * how wide it can grow on larger screens (this modal's inner layout
- * switches from 1 column to 2 columns at the `lg` breakpoint via
- * `Col xs={24} lg={12}`, so a wider cap gives those two columns more
- * room to breathe instead of cramming together).
- */
 const QVM_FONT_STYLES = `
   .qvm-wrapper, .qvm-wrapper * {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -126,19 +78,9 @@ const QVM_FONT_STYLES = `
   .qvm-wrapper .text-lg        { font-size: calc(18px * var(--qvm-scale)) !important; }
 `;
 
-// Shared hover treatment for every white description card in the modal:
-// Executive Summary, Key Achievements, Key Challenges, Learning & Growth
-// Goals, and the star-rating list. Kept as one constant so all of them
-// stay visually identical (same border highlight, lift, and shadow).
 const SUBMISSION_CARD_HOVER_CLASSES =
   'transition-all duration-200 ease-out cursor-default hover:border-indigo-300 hover:shadow-md hover:-translate-y-0.5';
 
-// Display labels for the read-only "Final Performance Rating" field.
-// This used to be rendered via a disabled antd <Select>, but antd's
-// built-in disabled-state color kept fading the text out no matter
-// what override was applied. Since this field is always disabled/
-// read-only, a plain text display sidesteps that fight entirely —
-// same fix applied to the desktop QuarterlyViewPage modal.
 const PERFORMANCE_RATING_LABELS: Record<string, string> = {
   [PerformanceRating.OUTSTANDING]: 'Outstanding (5.0)',
   [PerformanceRating.EXCEEDS_EXPECTATIONS]: 'Exceeds Expectations (4.0 - 4.9)',
@@ -201,6 +143,21 @@ const getPerformanceRatingFromScore = (score: number): PerformanceRating | '' =>
   return '';
 };
 
+const formatAssignmentDate = (dateVal?: string | Date | null): string => {
+  if (!dateVal) return '—';
+  try {
+    const parsedDate = new Date(dateVal);
+    if (isNaN(parsedDate.getTime())) return String(dateVal);
+    return parsedDate.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+  } catch {
+    return String(dateVal);
+  }
+};
+
 const QuarterlyViewPageMobile: React.FC<QuarterlyViewPageMobileProps> = ({
   open,
   currentReview,
@@ -224,12 +181,66 @@ const QuarterlyViewPageMobile: React.FC<QuarterlyViewPageMobileProps> = ({
   setFieldErrors,
 }) => {
   const [fileCounts, setFileCounts] = useState<{ [key: number]: number }>({});
+  const location = useLocation();
+
+  const searchParams = new URLSearchParams(location.search);
+  const modeParam = searchParams.get('mode');
+  const effectiveViewOnly =
+    modeParam === 'view'
+      ? true
+      : modeParam === 'edit'
+      ? false
+      : Boolean(isViewOnly || location.state?.viewOnly);
+
+  const isTargetManager =
+    currentReview?.employeeRole?.toUpperCase() === 'MANAGER' ||
+    currentReview?.designation?.toLowerCase().includes('manager');
+
+  const unsubmittedStatuses = ['assigned', 'not started', 'not_started', 'draft', 'in progress', 'in_progress'];
+  const statusLower = (currentReview?.status || '').trim().toLowerCase();
+  const reviewStatusLower = (currentReview?.reviewStatus || '').trim().toLowerCase();
+
+  const isReviewSubmitted = Boolean(
+    currentReview?.submittedDate ||
+    (statusLower && !unsubmittedStatuses.includes(statusLower)) ||
+    (reviewStatusLower && !unsubmittedStatuses.includes(reviewStatusLower))
+  );
+
+  const isAlreadyEvaluated = Boolean(
+    (currentReview?.status?.toLowerCase() === 'reviewed' ||
+      currentReview?.status?.toLowerCase() === 'approved' ||
+      currentReview?.status?.toLowerCase() === 'completed' ||
+      currentReview?.reviewStatus?.toLowerCase() === 'reviewed' ||
+      currentReview?.reviewStatus?.toLowerCase() === 'approved' ||
+      currentReview?.reviewStatus?.toLowerCase() === 'completed') &&
+      !['in review', 'under review', 'draft', 'pending', 'assigned'].includes(
+        (currentReview?.status || '').toLowerCase()
+      ) &&
+      !['in review', 'under review', 'draft', 'pending', 'assigned'].includes(
+        (currentReview?.reviewStatus || '').toLowerCase()
+      )
+  );
+
+  const isReadOnly = effectiveViewOnly || isAlreadyEvaluated || !isReviewSubmitted;
+  const showActionButtons = !effectiveViewOnly && !isAlreadyEvaluated;
+
+  const areAllRatingsFilled = RATING_CATEGORY_ITEMS.every(
+    (item) => typeof ratings[item.key] === 'number' && ratings[item.key] > 0
+  );
+
+  const areAllFieldsFilled =
+    areAllRatingsFilled &&
+    strengths.trim().length >= MIN_FIELD_LENGTH &&
+    improvements.trim().length >= MIN_FIELD_LENGTH &&
+    remarks.trim().length >= MIN_FIELD_LENGTH;
+
+  const isSubmitDisabled = !isReviewSubmitted || submitting || !areAllFieldsFilled;
 
   // Auto-sync the Final Performance Rating dropdown whenever the manager
   // changes any star rating (which changes averageRatingScore).
-  // Skipped in view-only mode so a saved/submitted review never mutates.
+  // Skipped in read-only mode so a saved/submitted review never mutates.
   useEffect(() => {
-    if (isViewOnly) return;
+    if (isReadOnly) return;
 
     const numericAvg =
       typeof averageRatingScore === 'string'
@@ -246,33 +257,109 @@ const QuarterlyViewPageMobile: React.FC<QuarterlyViewPageMobileProps> = ({
       setFinalRating(computedRating);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [averageRatingScore, isViewOnly]);
+  }, [averageRatingScore, isReadOnly]);
 
   return (
     <>
-      {/* Single scoped stylesheet: font-family + font-size for the whole modal */}
+      {/* Single scoped stylesheet: font-family + font-size */}
       <style>{QVM_FONT_STYLES}</style>
 
-      <Modal
-        title={
-          <div className="flex items-center gap-2 pb-2 border-b border-slate-100 pr-4">
-            <span className="font-extrabold text-slate-900 text-sm sm:text-lg truncate">
-              {isViewOnly ? 'View Evaluation - ' : 'Evaluate - '}
-              {currentReview?.employeeName} ({currentReview?.quarter})
-            </span>
+      <div className="qvm-wrapper w-full max-w-full flex flex-col gap-4">
+        {/* Mobile Page Header Bar */}
+        <div className="flex items-center justify-between gap-3 bg-white border border-slate-200 rounded-2xl p-3.5 shadow-sm">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <Button
+              type="default"
+              size="small"
+              icon={<ArrowLeft className="w-3.5 h-3.5 text-slate-700" />}
+              onClick={onClose}
+              className="!inline-flex !items-center !gap-1 !px-2.5 !py-1 !h-auto !rounded-lg !border-slate-300 !text-slate-700 hover:!text-indigo-600 !font-semibold shrink-0"
+            >
+              Back
+            </Button>
+            <div className="min-w-0 truncate">
+              <h1 className="font-extrabold text-slate-900 text-sm sm:text-base truncate">
+                {effectiveViewOnly || isAlreadyEvaluated ? 'View Evaluation' : 'Evaluate'}
+                {currentReview?.employeeName && (
+                  <span className="text-indigo-600 font-bold ml-1.5 truncate">
+                    {currentReview.employeeName}
+                  </span>
+                )}
+              </h1>
+              {currentReview?.quarter && (
+                <p className="text-[11px] text-slate-500 truncate">
+                  {currentReview.quarter}
+                </p>
+              )}
+            </div>
           </div>
-        }
-        open={open}
-        onCancel={onClose}
-        width="98%"
-        style={{ maxWidth: '1400px', top: '16px', paddingBottom: '16px' }}
-        footer={null}
-        destroyOnClose
-        centered
-        className="mobile-evaluation-modal qvm-wrapper"
-      >
-        {currentReview && (
-          <div className="py-2 flex flex-col gap-4 sm:gap-6 max-h-[80vh] overflow-y-auto overflow-x-hidden pr-1">
+
+          {!isViewOnly && (
+            <div className="flex items-center gap-1.5 shrink-0">
+              <Button
+                type="default"
+                size="small"
+                icon={<Save className="w-3.5 h-3.5" />}
+                loading={submitting}
+                onClick={() => onSubmitEvaluation(true)}
+                className="!rounded-lg !border-indigo-200 !text-indigo-600 hover:!bg-indigo-50 !font-semibold text-xs"
+              >
+                Draft
+              </Button>
+              <Button
+                type="primary"
+                size="small"
+                icon={<Send className="w-3.5 h-3.5" />}
+                loading={submitting}
+                onClick={() => onSubmitEvaluation(false)}
+                className="!rounded-lg !bg-indigo-600 hover:!bg-indigo-700 !font-semibold text-xs"
+              >
+                Submit
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {!currentReview ? (
+          <div className="flex flex-col items-center justify-center py-20 bg-white border border-slate-200 rounded-2xl shadow-sm">
+            <Spin size="default" />
+            <p className="text-slate-500 text-xs font-medium mt-3">Loading evaluation details...</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {/* ── Assignment Details Banner ── */}
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 shadow-sm">
+              <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2.5 mb-2.5">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-purple-50 border border-purple-100/80 flex items-center justify-center shrink-0 text-purple-600">
+                    <FileText className="w-3.5 h-3.5" />
+                  </div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Description</p>
+                </div>
+
+                <div className="flex items-center gap-2 bg-amber-50/80 border border-amber-200/60 px-2.5 py-1 rounded-lg">
+                  <div className="w-5 h-5 rounded bg-amber-100/80 flex items-center justify-center shrink-0 text-amber-700">
+                    <Clock className="w-3 h-3" />
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-bold uppercase tracking-wider text-amber-700/80 leading-none mb-0.5">Deadline</p>
+                    <p className="text-xs font-semibold text-slate-800 leading-none">
+                      {formatAssignmentDate(currentReview.toDate || currentReview.deadlineAt)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div
+                className="overflow-y-auto custom-scrollbar pr-1"
+                style={{ maxHeight: 'calc(50 * 1.625em)' }}
+              >
+                <p className="text-xs text-slate-700 leading-relaxed font-normal whitespace-pre-wrap break-words">
+                  {currentReview.notes || currentReview.description || currentReview.assignmentNotes || 'No instructions or remarks provided.'}
+                </p>
+              </div>
+            </div>
+
             {/* Employee Header info bar - Stacked layout for mobile */}
             <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
@@ -337,9 +424,50 @@ const QuarterlyViewPageMobile: React.FC<QuarterlyViewPageMobileProps> = ({
                 <div className="flex flex-col gap-3.5 sm:gap-4">
                   {/* ── Section header ── */}
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold uppercase tracking-widest text-black">Employee Submission Details</span>
+                    <span className="text-xs font-semibold uppercase tracking-widest text-black">
+                      {isTargetManager ? 'Manager Submission Details' : 'Employee Submission Details'}
+                    </span>
                     <div className="flex-1 h-px bg-indigo-100" />
                   </div>
+
+                  {!isReviewSubmitted ? (
+                    <div className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col items-center justify-center text-center shadow-sm">
+                      <div className="w-11 h-11 rounded-2xl bg-amber-50 border border-amber-200/80 flex items-center justify-center text-amber-600 mb-2.5 shadow-sm">
+                        <Clock className="w-5 h-5" />
+                      </div>
+                      <h4 className="text-xs sm:text-sm font-bold text-slate-800 mb-1">
+                        Review Not Submitted Yet
+                      </h4>
+                      <p className="text-[11px] sm:text-xs text-slate-500 max-w-sm leading-relaxed mb-3">
+                        {isTargetManager
+                          ? 'This review has not been submitted to the Admin & CEO yet. Submission details will appear here once submitted.'
+                          : 'This review has not been submitted to the Manager, Admin & CEO yet. Submission details will appear here once submitted.'}
+                      </p>
+                      <div className="w-full max-w-xs bg-slate-50 border border-slate-200/80 rounded-xl p-2.5 flex flex-col gap-1.5 text-[11px]">
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-500 font-medium">Review Status:</span>
+                          <span className="font-semibold text-amber-700 bg-amber-100/80 px-2 py-0.5 rounded-full text-[10px]">
+                            {currentReview.status || currentReview.reviewStatus || 'Assigned'}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-500 font-medium">Deadline:</span>
+                          <span className="font-semibold text-slate-700">
+                            {formatAssignmentDate(currentReview.toDate || currentReview.deadlineAt)}
+                          </span>
+                        </div>
+                        {currentReview.managerName && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-500 font-medium">Assigned By:</span>
+                            <span className="font-semibold text-slate-700 truncate max-w-[130px]">
+                              {currentReview.managerName}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <>
 
                   {/* ── 1. Quarter Overview ── */}
                   <div className="bg-white border border-slate-200 rounded-2xl p-3.5 sm:p-4 flex flex-col gap-2 shadow-sm">
@@ -579,6 +707,8 @@ const QuarterlyViewPageMobile: React.FC<QuarterlyViewPageMobileProps> = ({
     </p>
   )}
 </div>
+                    </>
+                  )}
                 </div>
               </Col>
 
@@ -595,23 +725,30 @@ const QuarterlyViewPageMobile: React.FC<QuarterlyViewPageMobileProps> = ({
                     </div>
                   </div>
 
-                  <div className={`space-y-3 bg-white border border-slate-200 rounded-xl p-2.5 sm:p-3 ${SUBMISSION_CARD_HOVER_CLASSES}`}>
+                  <div className={`space-y-3 bg-white border ${fieldErrors.ratings ? 'border-red-300' : 'border-slate-200'} rounded-xl p-2.5 sm:p-3 ${SUBMISSION_CARD_HOVER_CLASSES}`}>
                     {RATING_CATEGORY_ITEMS.map((item) => (
                       <div key={item.key} className="flex items-center justify-between gap-2">
-                        <span className="text-xs font-semibold text-slate-700 min-w-0 truncate">
-                          {item.label}
+                        <span className="text-xs font-semibold text-slate-700 min-w-0 truncate flex items-center gap-1">
+                          <span>{item.label}</span>
+                          <span className="text-red-500 font-bold">*</span>
                         </span>
                         <Rate
-                          disabled={isViewOnly}
+                          disabled={isReadOnly}
                           value={ratings[item.key] || 0}
-                          onChange={(val) =>
-                            setRatings((prev) => ({ ...prev, [item.key]: val }))
-                          }
+                          onChange={(val) => {
+                            setRatings((prev) => ({ ...prev, [item.key]: val }));
+                            if (fieldErrors.ratings) {
+                              setFieldErrors((prev) => ({ ...prev, ratings: undefined }));
+                            }
+                          }}
                           className="!text-amber-400 text-xs sm:text-sm shrink-0"
                         />
                       </div>
                     ))}
                   </div>
+                  {fieldErrors.ratings && (
+                    <p className="text-red-500 text-xs mt-0.5">{fieldErrors.ratings}</p>
+                  )}
 
                   <Divider className="!my-2" />
 
@@ -635,10 +772,11 @@ const QuarterlyViewPageMobile: React.FC<QuarterlyViewPageMobileProps> = ({
 
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="font-bold text-slate-800 text-xs uppercase">
-                        Performance Strengths
+                      <label className="font-bold text-slate-800 text-xs uppercase flex items-center gap-1">
+                        <span>Performance Strengths</span>
+                        <span className="text-red-500 font-bold normal-case">*</span>
                       </label>
-                      {!isViewOnly && (
+                      {!isReadOnly && (
                         <span className="text-[10px] text-slate-400 font-medium">
                           {strengths.trim().length}/{MIN_FIELD_LENGTH} min
                         </span>
@@ -646,14 +784,14 @@ const QuarterlyViewPageMobile: React.FC<QuarterlyViewPageMobileProps> = ({
                     </div>
                     <div className={`bg-white border border-slate-200 rounded-xl p-2.5 sm:p-3 ${SUBMISSION_CARD_HOVER_CLASSES}`}>
                       <TextArea
-                        disabled={isViewOnly}
+                        disabled={isReadOnly}
                         autoSize={{ minRows: 2 }}
                         placeholder="Highlight key strengths and standout contributions..."
                         value={strengths}
-                        onChange={(e) => {
-                          setStrengths(e.target.value);
-                          if (fieldErrors.strengths && e.target.value.trim().length >= MIN_FIELD_LENGTH) {
-                            setFieldErrors((prev) => ({ ...prev, strengths: undefined }));
+                        onChange={(changeEvent) => {
+                          setStrengths(changeEvent.target.value);
+                          if (fieldErrors.strengths && changeEvent.target.value.trim().length >= MIN_FIELD_LENGTH) {
+                            setFieldErrors((previousErrors) => ({ ...previousErrors, strengths: undefined }));
                           }
                         }}
                         status={fieldErrors.strengths ? 'error' : undefined}
@@ -667,10 +805,11 @@ const QuarterlyViewPageMobile: React.FC<QuarterlyViewPageMobileProps> = ({
 
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="font-bold text-slate-800 text-xs uppercase">
-                        Areas for Improvement
+                      <label className="font-bold text-slate-800 text-xs uppercase flex items-center gap-1">
+                        <span>Areas for Improvement</span>
+                        <span className="text-red-500 font-bold normal-case">*</span>
                       </label>
-                      {!isViewOnly && (
+                      {!isReadOnly && (
                         <span className="text-[10px] text-slate-400 font-medium">
                           {improvements.trim().length}/{MIN_FIELD_LENGTH} min
                         </span>
@@ -678,14 +817,14 @@ const QuarterlyViewPageMobile: React.FC<QuarterlyViewPageMobileProps> = ({
                     </div>
                     <div className={`bg-white border border-slate-200 rounded-xl p-2.5 sm:p-3 ${SUBMISSION_CARD_HOVER_CLASSES}`}>
                       <TextArea
-                        disabled={isViewOnly}
+                        disabled={isReadOnly}
                         autoSize={{ minRows: 2 }}
                         placeholder="Specify areas for growth and skill development..."
                         value={improvements}
-                        onChange={(e) => {
-                          setImprovements(e.target.value);
-                          if (fieldErrors.improvements && e.target.value.trim().length >= MIN_FIELD_LENGTH) {
-                            setFieldErrors((prev) => ({ ...prev, improvements: undefined }));
+                        onChange={(changeEvent) => {
+                          setImprovements(changeEvent.target.value);
+                          if (fieldErrors.improvements && changeEvent.target.value.trim().length >= MIN_FIELD_LENGTH) {
+                            setFieldErrors((previousErrors) => ({ ...previousErrors, improvements: undefined }));
                           }
                         }}
                         status={fieldErrors.improvements ? 'error' : undefined}
@@ -699,10 +838,11 @@ const QuarterlyViewPageMobile: React.FC<QuarterlyViewPageMobileProps> = ({
 
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="font-bold text-slate-800 text-xs uppercase">
-                        Manager Feedback & Remarks
+                      <label className="font-bold text-slate-800 text-xs uppercase flex items-center gap-1">
+                        <span>Manager Feedback & Remarks</span>
+                        <span className="text-red-500 font-bold normal-case">*</span>
                       </label>
-                      {!isViewOnly && (
+                      {!isReadOnly && (
                         <span className="text-[10px] text-slate-400 font-medium">
                           {remarks.trim().length}/{MIN_FIELD_LENGTH} min
                         </span>
@@ -710,14 +850,14 @@ const QuarterlyViewPageMobile: React.FC<QuarterlyViewPageMobileProps> = ({
                     </div>
                     <div className={`bg-white border border-slate-200 rounded-xl p-2.5 sm:p-3 ${SUBMISSION_CARD_HOVER_CLASSES}`}>
                       <TextArea
-                        disabled={isViewOnly}
+                        disabled={isReadOnly}
                         autoSize={{ minRows: 2 }}
                         placeholder="Overall feedback and recommendations..."
                         value={remarks}
-                        onChange={(e) => {
-                          setRemarks(e.target.value);
-                          if (fieldErrors.remarks && e.target.value.trim().length >= MIN_FIELD_LENGTH) {
-                            setFieldErrors((prev) => ({ ...prev, remarks: undefined }));
+                        onChange={(changeEvent) => {
+                          setRemarks(changeEvent.target.value);
+                          if (fieldErrors.remarks && changeEvent.target.value.trim().length >= MIN_FIELD_LENGTH) {
+                            setFieldErrors((previousErrors) => ({ ...previousErrors, remarks: undefined }));
                           }
                         }}
                         status={fieldErrors.remarks ? 'error' : undefined}
@@ -732,19 +872,26 @@ const QuarterlyViewPageMobile: React.FC<QuarterlyViewPageMobileProps> = ({
               </Col>
             </Row>
 
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2.5 sm:gap-3 pt-3 border-t border-slate-100">
-              {/* <Button onClick={onClose} className="!rounded-xl w-full sm:w-auto">
-                Close
-              </Button> */}
+            {/* Mobile Bottom Action Bar */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 pt-3 border-t border-slate-200 bg-white p-3.5 rounded-2xl border shadow-sm">
+              <Button
+                type="default"
+                icon={<ArrowLeft className="w-4 h-4" />}
+                onClick={onClose}
+                className="!rounded-xl !border-slate-300 !text-slate-700 hover:!text-indigo-600 !font-semibold"
+              >
+                Back to Reviews
+              </Button>
 
-              {!isViewOnly && (
+              {showActionButtons && (
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                   <Button
                     type="default"
                     icon={<Save className="w-4 h-4" />}
                     loading={submitting}
+                    disabled={!isReviewSubmitted || submitting}
                     onClick={() => onSubmitEvaluation(true)}
-                    className="!rounded-xl !border-indigo-200 !text-indigo-600 hover:!bg-indigo-50 !font-semibold flex-1 sm:flex-none"
+                    className="!rounded-xl !border-indigo-200 !text-indigo-600 hover:!bg-indigo-50 !font-semibold flex-1 sm:flex-none disabled:!opacity-50 disabled:cursor-not-allowed"
                   >
                     Save Draft
                   </Button>
@@ -752,8 +899,9 @@ const QuarterlyViewPageMobile: React.FC<QuarterlyViewPageMobileProps> = ({
                     type="primary"
                     icon={<Send className="w-4 h-4" />}
                     loading={submitting}
+                    disabled={isSubmitDisabled}
                     onClick={() => onSubmitEvaluation(false)}
-                    className="!rounded-xl !bg-indigo-600 hover:!bg-indigo-700 !font-semibold flex-1 sm:flex-none"
+                    className="!rounded-xl !bg-indigo-600 hover:!bg-indigo-700 !font-semibold flex-1 sm:flex-none disabled:!opacity-50 disabled:cursor-not-allowed"
                   >
                     Submit Final
                   </Button>
@@ -762,7 +910,7 @@ const QuarterlyViewPageMobile: React.FC<QuarterlyViewPageMobileProps> = ({
             </div>
           </div>
         )}
-      </Modal>
+      </div>
     </>
   );
 };

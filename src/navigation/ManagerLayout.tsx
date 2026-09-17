@@ -107,6 +107,8 @@ const ManagerLayout = () => {
     }
     if (
       path.includes("/manager-dashboard/appraisal") ||
+      path.includes("/manager-dashboard/quarterly-ratings") ||
+      path.includes("/manager-dashboard/annual-ratings") ||
       path.includes("/manager-dashboard/review")
     ) {
       return "Appraisal";
@@ -143,6 +145,8 @@ const ManagerLayout = () => {
         return "Request Management ";
       case "appraisal":
       case "review":
+      case "quarterly-ratings":
+      case "annual-ratings":
         return "Appraisal";
       case "quarterly-review":
         return "Quarterly Review";

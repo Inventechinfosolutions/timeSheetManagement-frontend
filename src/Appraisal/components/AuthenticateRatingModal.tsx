@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Modal, Form, Input, Button, Alert } from 'antd';
 import { Lock, Mail, Clock } from 'lucide-react';
 import { useRevealedRatings } from '../hooks/useRevealedRatings';
@@ -8,6 +9,8 @@ export const AuthenticateRatingModal: React.FC = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     if (modalState.isOpen) {
@@ -32,6 +35,25 @@ export const AuthenticateRatingModal: React.FC = () => {
       });
       if (success) {
         form.resetFields();
+        closeAuthModal();
+
+        if (modalState.onSuccess) {
+          modalState.onSuccess();
+        } else if (modalState.navigateOnSuccess) {
+          // Navigate to the new 4 quarters ratings page only when explicitly requested (e.g. Current Year Rating card)
+          const isDashboardAdmin = location.pathname.startsWith('/admin-dashboard');
+          const isDashboardManager = location.pathname.startsWith('/manager-dashboard');
+          const prefix = isDashboardAdmin
+            ? '/admin-dashboard'
+            : isDashboardManager
+              ? '/manager-dashboard'
+              : '/employee-dashboard';
+
+          const targetFY = modalState.quarter || '';
+          const fyParam = targetFY ? `?financialYear=${encodeURIComponent(targetFY)}` : '';
+          const empParam = modalState.employeeId ? `&employeeId=${encodeURIComponent(modalState.employeeId)}` : '';
+          navigate(`${prefix}/quarterly-ratings${fyParam}${empParam}`);
+        }
       }
     } catch (err: any) {
       const serverMsg =
@@ -93,18 +115,17 @@ export const AuthenticateRatingModal: React.FC = () => {
         <Form form={form} layout="vertical" onFinish={handleSubmit} requiredMark={false}>
           <Form.Item
             name="email"
-            label={<span className="text-xs font-bold text-slate-700 uppercase">Registered Email</span>}
+            label={<span className="text-xs font-bold text-slate-700 uppercase">Registered Email or Employee ID</span>}
             rules={[
-              { required: true, message: 'Please enter your registered email' },
-              { type: 'email', message: 'Please enter a valid email address' },
+              { required: true, message: 'Please enter your registered email or Employee ID' },
             ]}
           >
             <Input
               prefix={<Mail className="w-4 h-4 text-slate-400 mr-1.5" />}
-              placeholder="e.g. employee@company.com"
+              placeholder="e.g. employee@company.com or ABC-01"
               className="h-10 rounded-lg text-sm"
               disabled={loading}
-              autoComplete="email"
+              autoComplete="username"
             />
           </Form.Item>
 

@@ -1,60 +1,137 @@
 // Types & Constants for Manager Quarterly Review Board
 
-import { StatusTabFilter, RatingCategory } from './QuarterlyReview.enums';
+import { getCurrentAcademicYearCode } from '../../master/financialYear.master';
 
-export {
+import {
+  ActionType,
   AppraisalStatus,
   ManagerReviewStatus,
   PerformanceRating,
-  ActionType,
   QuarterFilter,
-  StatusTabFilter,
   RatingCategory,
+  StatusTabFilter,
 } from './QuarterlyReview.enums';
+
+export {
+  ActionType,
+  AppraisalStatus,
+  ManagerReviewStatus,
+  PerformanceRating,
+  QuarterFilter,
+  RatingCategory,
+  StatusTabFilter,
+} from './QuarterlyReview.enums';
+
+// -----------------------------------------------------------------------------
+// Types
+// -----------------------------------------------------------------------------
 
 export interface ManagerReviewItem {
   id: number;
+
+  // Employee details
   employeeId: string;
   employeeName: string;
   department: string;
   designation: string;
+  employeeRole?: string;
+  role?: string;
+
+  // Review period
   quarter: string;
-  status: string; // Display-ready status from backend: Not Started | Under Review | Reviewed | Completed
-  reviewStatus: string | null; // Manager review status: Pending, In Review, Reviewed
+  quarterCode?: string;
+  fullQuarter?: string;
+  financialYear?: string | null;
+  fromDate?: string | Date | null;
+  toDate?: string | Date | null;
+  startDate?: string | null;
+  endDate?: string | null;
+
+  // Assignment details
+  assignedAt?: string | Date | null;
+  deadlineAt?: string | Date | null;
+  notes?: string | null;
+  description?: string | null;
+  assignmentNotes?: string | null;
+
+  // Review status
+  status: string;
+  reviewStatus: string | null;
+
+  // Employee review content
   overview: string;
-  achievements: Array<{ title?: string; details: string }> | string;
-  challenges: Array<{ title?: string; details: string }> | string;
-  learningGoals: Array<{ title?: string; details: string }> | string;
-  /** Per-project breakdown (projectTitle, achievement, challenge) — returned by the backend
-   *  when the employee used the structured project form. Falls back to achievements/challenges. */
-  projects?: Array<{ projectTitle: string; achievement: string; challenge: string }> | null;
-  /** Team contribution category ratings */
-  teamContribution?: Array<{ category: string; rating: number }> | null;
-  /** Company environment feedback */
+  achievements: Array<{
+    title?: string;
+    details: string;
+  }> | string;
+
+  challenges: Array<{
+    title?: string;
+    details: string;
+  }> | string;
+
+  learningGoals: Array<{
+    title?: string;
+    details: string;
+  }> | string;
+
+  // Structured project data
+  projects?: Array<{
+    projectTitle: string;
+    achievement: string;
+    challenge: string;
+  }> | null;
+
+  // Team contribution ratings
+  teamContribution?: Array<{
+    category: string;
+    rating: number;
+  }> | null;
+
+  // Company environment feedback
   companyEnvironment?: {
     workCultureFeedback?: string;
     workLifeBalance?: string;
     suggestions?: string;
     rating?: number;
   } | null;
+
+  // Submission and review dates
   submittedDate: string | null;
   reviewedOn: string | null;
-  lastModified: string | null; // Backend-computed: reviewedOn -> updatedAt -> submittedDate
-  finalRating: number | null; // Backend now returns a clean parsed number, not the raw label
-  actionType: 'evaluate' | 'view';
-  actionLabel: string;
+  lastModified: string | null;
+
+  // Rating details
+  finalRating: number | null;
+
   ratings?: {
     [key in RatingCategory]?: number;
   } | null;
+
+  // Manager evaluation
   strengths?: string | null;
   improvements?: string | null;
   remarks?: string | null;
-  employeeRole?: string;
+
+  // Evaluator details
   evaluatorName?: string | null;
   evaluatorRole?: string | null;
   evaluatorId?: string | null;
+
+  // Action
+  actionType: 'evaluate' | 'view';
+  actionLabel: string;
+
+  // Final rating visibility
   isFinalRatingHidden?: boolean;
   hasFinalRating?: boolean;
+}
+
+export interface AssignmentEmployee {
+  employeeId: string;
+  employeeName: string;
+  department?: string;
+  designation?: string;
 }
 
 export interface ReviewStats {
@@ -75,58 +152,109 @@ export interface ReviewStats {
     assignedCount?: number;
     notAssignedCount?: number;
     singleQuarterCount?: number;
-    assignedEmployees?: any[];
-    notAssignedEmployees?: any[];
-    singleQuarterEmployees?: any[];
+
+    assignedEmployees?: AssignmentEmployee[];
+    notAssignedEmployees?: AssignmentEmployee[];
+    singleQuarterEmployees?: AssignmentEmployee[];
   };
 }
-
 export const MIN_FIELD_LENGTH = 1;
 
-// Upper bound on the manager's free-text evaluation fields (Strengths,
-// Areas for Improvement, Manager Feedback & Remarks). Enforced both as a
-// hard cap on the TextArea (via `maxLength`) and as the denominator shown
-// in each field's live character counter.
+/**
+ * Maximum length for manager evaluation text fields:
+ * - Strengths
+ * - Areas for Improvement
+ * - Manager Feedback
+ * - Remarks
+ */
 export const MAX_FIELD_LENGTH = 1000;
 
 export const DEFAULT_RATING_VALUE = 0;
 
-// Sentinel value for the "All Years" option in the Year filter dropdown.
+// -----------------------------------------------------------------------------
+// Year Filter Constants
+// -----------------------------------------------------------------------------
+
+/** Sentinel value representing "All Years". */
 export const YEAR_FILTER_ALL = 'ALL';
 
-// Builds a fiscal-year label like "2026-27" from a starting calendar year
-// (2026), matching the "FY2026-27" format already used in quarter strings
-// like "Q2 FY2026-27".
+/**
+ * Converts a starting calendar year into a financial year label.
+ *
+ * Example:
+ * 2026 -> "2026-27"
+ */
 export const toFiscalYearLabel = (startYear: number): string =>
   `${startYear}-${String((startYear + 1) % 100).padStart(2, '0')}`;
 
-// Fiscal year the Year filter defaults to on first load (e.g. "2026-27"),
-// computed at runtime from the current calendar year — not hardcoded.
-export const DEFAULT_YEAR = toFiscalYearLabel(new Date().getFullYear());
+/**
+ * Financial year selected by default in the Year filter.
+ * The value is obtained dynamically from the financial year master.
+ */
+export const DEFAULT_YEAR = getCurrentAcademicYearCode();
 
-// How many fiscal years before/after the current one always appear in the
-// Year filter dropdown, even if no submissions exist for them yet (e.g. a
-// manager should be able to pick next year — "2027-28" — before any
-// appraisals have been submitted for it).
+/**
+ * Number of years shown before and after the current financial year.
+ */
 export const YEARS_BEFORE_CURRENT = 5;
 export const YEARS_AFTER_CURRENT = 2;
 
+// -----------------------------------------------------------------------------
+// Rating Categories
+// -----------------------------------------------------------------------------
+
 export const RATING_CATEGORY_ITEMS = [
-  { key: RatingCategory.PRODUCTIVITY, label: 'Productivity & Output' },
-  { key: RatingCategory.QUALITY, label: 'Quality of Work' },
-  { key: RatingCategory.OWNERSHIP, label: 'Ownership & Accountability' },
-  { key: RatingCategory.COMMUNICATION, label: 'Communication Skills' },
-  { key: RatingCategory.COLLABORATION, label: 'Team Collaboration' },
-  { key: RatingCategory.INNOVATION, label: 'Innovation & Initiative' },
+  {
+    key: RatingCategory.PRODUCTIVITY,
+    label: 'Productivity & Output',
+  },
+  {
+    key: RatingCategory.QUALITY,
+    label: 'Quality of Work',
+  },
+  {
+    key: RatingCategory.OWNERSHIP,
+    label: 'Ownership & Accountability',
+  },
+  {
+    key: RatingCategory.COMMUNICATION,
+    label: 'Communication Skills',
+  },
+  {
+    key: RatingCategory.COLLABORATION,
+    label: 'Team Collaboration',
+  },
+  {
+    key: RatingCategory.INNOVATION,
+    label: 'Innovation & Initiative',
+  },
 ];
+
 
 export const STATUS_TAB_ITEMS = [
-  { key: StatusTabFilter.ALL, label: 'All Status' },
-  { key: StatusTabFilter.ASSIGNED, label: 'Assigned' },
-  { key: StatusTabFilter.PENDING, label: 'Pending' },
-  { key: StatusTabFilter.IN_REVIEW, label: 'In Review' },
-  { key: StatusTabFilter.COMPLETED, label: 'Completed' },
+  {
+    key: StatusTabFilter.ALL,
+    label: 'All Status',
+  },
+  {
+    key: StatusTabFilter.ASSIGNED,
+    label: 'Assigned',
+  },
+  {
+    key: StatusTabFilter.AWAITING_REVIEW,
+    label: 'Awaiting Review',
+  },
+  {
+    key: StatusTabFilter.UNDER_REVIEW,
+    label: 'Under Review',
+  },
+  {
+    key: StatusTabFilter.REVIEWED,
+    label: 'Reviewed',
+  },
 ];
 
-/** Same list used by the Status dropdown in the filter bar */
+/**
+ * Same status list is used by the Status dropdown filter.
+ */
 export const STATUS_FILTER_ITEMS = STATUS_TAB_ITEMS;

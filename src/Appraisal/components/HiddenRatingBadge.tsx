@@ -14,38 +14,39 @@ const RATING_LABEL_TO_SCORE: Record<string, string> = {
 export const formatToAverageScore = (rating: any, ratings?: any): string => {
   if (!rating && !ratings) return '—';
 
-  // 1. If category ratings object exists, compute the exact average score
-  if (ratings) {
-    let parsed: any = ratings;
-    if (typeof parsed === 'string') {
-      try {
-        parsed = JSON.parse(parsed);
-      } catch {}
-    }
-    if (parsed && typeof parsed === 'object') {
-      const values = Object.values(parsed).map(Number).filter((scoreValue) => !isNaN(scoreValue) && scoreValue > 0);
-      if (values.length > 0) {
-        return (values.reduce((runningSum, scoreValue) => runningSum + scoreValue, 0) / values.length).toFixed(1);
-      }
-    }
-  }
-
-  // 2. If already a number or numeric string (e.g. 5, "5.0", "4.5")
+  // 1. Prioritize explicit numeric rating or label from backend (e.g. 1.2, "1.2")
   if (rating != null && rating !== '') {
     const rawStr = String(rating).trim();
     const num = parseFloat(rawStr);
     if (!isNaN(num) && /^\s*[\d.]+\s*$/.test(rawStr)) {
       return num.toFixed(1);
     }
-    // 3. If label like 'Outstanding', 'Exceeds Expectations'
+    // If label like 'Outstanding', 'Exceeds Expectations'
     const lower = rawStr.toLowerCase();
     if (RATING_LABEL_TO_SCORE[lower]) {
       return RATING_LABEL_TO_SCORE[lower];
     }
-    // 4. Extract first decimal match (e.g. "Outstanding (5.0)")
+    // Extract first decimal match (e.g. "Outstanding (5.0)")
     const match = rawStr.match(/\d+(\.\d+)?/);
     if (match) {
       return parseFloat(match[0]).toFixed(1);
+    }
+  }
+
+  // 2. If category ratings object exists, compute average score across all 6 dimensions
+  if (ratings) {
+    let parsed: any = ratings;
+    if (typeof parsed === 'string') {
+      try {
+        parsed = JSON.parse(parsed);
+      } catch { }
+    }
+    if (parsed && typeof parsed === 'object') {
+      const values = Object.values(parsed).map(Number).filter((scoreValue) => !isNaN(scoreValue));
+      if (values.length > 0) {
+        const sum = values.reduce((runningSum, scoreValue) => runningSum + scoreValue, 0);
+        return (sum / Math.max(values.length, 6)).toFixed(1);
+      }
     }
   }
 
@@ -61,9 +62,11 @@ export interface HiddenRatingBadgeProps {
   ratings?: any;
   isFinalRatingHidden?: boolean;
   hasFinalRating?: boolean;
+  label?: string;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
   emptyPlaceholder?: React.ReactNode;
+  navigateOnSuccess?: boolean;
 }
 
 export const HiddenRatingBadge: React.FC<HiddenRatingBadgeProps> = ({
@@ -75,8 +78,10 @@ export const HiddenRatingBadge: React.FC<HiddenRatingBadgeProps> = ({
   ratings,
   isFinalRatingHidden = false,
   hasFinalRating = false,
+  label,
   className = '',
   emptyPlaceholder = <span className="text-slate-400 font-medium text-sm">—</span>,
+  navigateOnSuccess = false,
 }) => {
   const { isRevealed, getRevealedData, openAuthModal } = useRevealedRatings();
 
@@ -129,8 +134,9 @@ export const HiddenRatingBadge: React.FC<HiddenRatingBadgeProps> = ({
 
   // 3. If rating is hidden / requires identity verification
   if (isFinalRatingHidden || hasFinalRating) {
+    const buttonText = label || 'Final Rating';
     return (
-      <Tooltip title="Final Rating is hidden for confidentiality. Click to verify your registered email & password to view for 2 minutes.">
+      <Tooltip title={`${buttonText} is hidden for confidentiality. Click to verify your registered email & password to view for 2 minutes.`}>
         <button
           type="button"
           onClick={(mouseEvent) => {
@@ -140,13 +146,14 @@ export const HiddenRatingBadge: React.FC<HiddenRatingBadgeProps> = ({
               quarter: quarter ?? undefined,
               employeeId: employeeId ?? undefined,
               initialEmail: initialEmail ?? undefined,
+              navigateOnSuccess,
             });
           }}
           className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50/90 hover:bg-indigo-100 border border-indigo-200/90 hover:border-indigo-300 text-indigo-700 hover:text-indigo-900 transition-all text-xs font-medium cursor-pointer shadow-2xs group ${className}`}
         >
           <EyeClosed className="w-3.5 h-3.5 text-indigo-600 group-hover:scale-110 transition-transform" />
           <span className="leading-tight">
-            Final Rating
+            {buttonText}
           </span>
         </button>
       </Tooltip>

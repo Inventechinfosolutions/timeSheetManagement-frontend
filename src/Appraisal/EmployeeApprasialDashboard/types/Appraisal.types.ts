@@ -55,6 +55,7 @@ export interface QuarterlyReview {
       id: string | number;
       assignedById?: string;
       assignedByName?: string;
+      assignedByRole?: string | null;
       assignedAt?: string;
       notes?: string;
     } | null;
@@ -64,6 +65,24 @@ export interface QuarterlyReview {
     deadlineAt?: string | null;
     /** The datetime until which the employee can request access to re-edit a submitted review (24-hour window) */
     accessRequestEligibleUntil?: string | null;
+    financialYear?: string | null;
+    quarterCode?: string | null;
+    assignedAt?: string | null;
+    fromDate?: string | null;
+    toDate?: string | null;
+    startDate?: string | null;
+    endDate?: string | null;
+    assignedBy?: string | null;
+    submissionStatus?: string | null;
+    quarterRating?: number | string | null;
+    hasFinalRating?: boolean;
+    isFinalRatingHidden?: boolean;
+    notes?: string | null;
+    description?: string | null;
+    assignmentNotes?: string | null;
+    evaluatorName?: string | null;
+    evaluatorRole?: string | null;
+    evaluatorId?: string | null;
 }
 export type StatusStyle = {
     bg: string;

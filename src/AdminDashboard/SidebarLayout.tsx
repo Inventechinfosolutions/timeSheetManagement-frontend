@@ -164,6 +164,8 @@ const SidebarLayout = ({
         return "Quarterly Review";
       case "appraisal":
       case "review":
+      case "quarterly-ratings":
+      case "annual-ratings":
         return "Appraisal";
       case "my-dashboard":
         return "My Dashboard";

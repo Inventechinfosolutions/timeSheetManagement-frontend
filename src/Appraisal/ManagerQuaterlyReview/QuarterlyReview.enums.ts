@@ -1,16 +1,16 @@
 // Enums for Manager Quarterly Review Board
 
 export enum AppraisalStatus {
-  NOT_STARTED = 'Not Started',
+  ASSIGNED = 'Assigned',
+  AWAITING_REVIEW = 'Awaiting Review',
   UNDER_REVIEW = 'Under Review',
   REVIEWED = 'Reviewed',
-  COMPLETED = 'Completed',
-  APPROVED = 'Approved',
 }
 
 export enum ManagerReviewStatus {
-  PENDING = 'Pending',
-  IN_REVIEW = 'In Review',
+  ASSIGNED = 'Assigned',
+  AWAITING_REVIEW = 'Awaiting Review',
+  UNDER_REVIEW = 'Under Review',
   REVIEWED = 'Reviewed',
 }
 
@@ -38,9 +38,9 @@ export enum QuarterFilter {
 export enum StatusTabFilter {
   ALL = 'ALL',
   ASSIGNED = 'ASSIGNED',
-  PENDING = 'PENDING',
-  IN_REVIEW = 'IN_REVIEW',
-  COMPLETED = 'COMPLETED',
+  AWAITING_REVIEW = 'AWAITING_REVIEW',
+  UNDER_REVIEW = 'UNDER_REVIEW',
+  REVIEWED = 'REVIEWED',
 }
 
 export enum RatingCategory {
