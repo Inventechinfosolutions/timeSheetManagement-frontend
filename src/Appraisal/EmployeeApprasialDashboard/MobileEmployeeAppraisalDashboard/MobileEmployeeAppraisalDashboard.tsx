@@ -16,7 +16,15 @@ import {
   Award,
   AlertTriangle,
 } from 'lucide-react';
-import { ReviewStatus, REVIEW_STATUS_FILTER_OPTIONS } from '../enums/Appraisal.enums';
+import {
+  ReviewStatus,
+  AppraisalReviewStatus,
+  FormMode,
+  AccessRequestStatus,
+  SubmissionType,
+  REVIEW_STATUS_FILTER_OPTIONS,
+  QuarterFilter,
+} from '../enums/Appraisal.enums';
 import { QuarterlyReview } from '../types/Appraisal.types';
 import EmptyReviewImage from '../../../assets/EmptyReviewImage.png';
 import { getFinancialYear, quarterToSlug } from '../utils/fyQuarter.utils';
@@ -112,42 +120,37 @@ const ReviewCard: React.FC<{
     const displayStatus = getReviewDisplayStatus(record);
 
     const isCompleted =
-      displayStatus === 'Reviewed' ||
-      record.reviewStatus === ReviewStatus.COMPLETED ||
+      displayStatus === AppraisalReviewStatus.REVIEWED ||
+      record.reviewStatus === AppraisalReviewStatus.REVIEWED ||
       record.reviewStatus === ReviewStatus.REVIEWED ||
-      record.status === ReviewStatus.APPROVED ||
-      record.status === ReviewStatus.COMPLETED ||
-      statusLower === 'reviewed' ||
-      statusLower === 'completed' ||
-      statusLower === 'approved';
+      record.status === ReviewStatus.REVIEWED ||
+      statusLower === ReviewStatus.REVIEWED.toLowerCase();
 
     const isSubmitted =
       !isCompleted &&
-      (statusLower === 'submitted' ||
-        statusLower === 'auto submitted' ||
-        statusLower === 'auto_submitted' ||
-        statusLower === 'awaiting review' ||
-        statusLower === 'awaiting_review' ||
-        subStatusLower === 'submitted' ||
-        subStatusLower === 'auto submitted' ||
-        revStatusLower === 'awaiting review' ||
-        revStatusLower === 'awaiting_review' ||
-        record.submissionType === 'AUTO' ||
-        record.submissionType === 'MANUAL' ||
+      (statusLower === ReviewStatus.SUBMITTED.toLowerCase() ||
+        statusLower === ReviewStatus.AUTO_SUBMITTED.toLowerCase() ||
+        statusLower === AppraisalReviewStatus.AWAITING_REVIEW.toLowerCase() ||
+        subStatusLower === ReviewStatus.SUBMITTED.toLowerCase() ||
+        subStatusLower === ReviewStatus.AUTO_SUBMITTED.toLowerCase() ||
+        revStatusLower === AppraisalReviewStatus.AWAITING_REVIEW.toLowerCase() ||
+        record.submissionType === SubmissionType.AUTO ||
+        record.submissionType === SubmissionType.MANUAL ||
         record.autoSubmitted === 1 ||
         Boolean(record.submittedDate) ||
-        displayStatus === 'Awaiting Review');
+        displayStatus === AppraisalReviewStatus.AWAITING_REVIEW);
 
     const isNotSubmitted =
       !isSubmitted &&
       !isCompleted &&
       (record.status === ReviewStatus.NOT_STARTED ||
         record.status === ReviewStatus.DRAFT ||
-        statusLower === 'initial' ||
-        statusLower === 'draft' ||
-        statusLower === 'assigned' ||
-        record.submissionStatus === 'Not Started' ||
-        record.submissionStatus === 'Draft');
+        record.status === ReviewStatus.INITIAL ||
+        statusLower === ReviewStatus.INITIAL.toLowerCase() ||
+        statusLower === ReviewStatus.DRAFT.toLowerCase() ||
+        statusLower === AppraisalReviewStatus.ASSIGNED.toLowerCase() ||
+        record.submissionStatus === ReviewStatus.NOT_STARTED ||
+        record.submissionStatus === ReviewStatus.DRAFT);
 
     const hasAccessOpen = Boolean(
       (record as any).assignment?.isAccessOpen ||
@@ -164,7 +167,7 @@ const ReviewCard: React.FC<{
       (record as any).updatedAt || (record as any).createdAt
     );
 
-    const isEvaluated = displayStatus === 'Reviewed';
+    const isEvaluated = displayStatus === AppraisalReviewStatus.REVIEWED;
     const evaluatedAverageRating = isEvaluated
       ? record.finalRating || record.quarterRating || getDisplayAverageRating(record)
       : null;
@@ -201,7 +204,7 @@ const ReviewCard: React.FC<{
               <CircleIconButton
                 icon={<Edit3 className="w-4 h-4" />}
                 tooltip={
-                  record.status === ReviewStatus.NOT_STARTED || record.submissionStatus === 'Not Started'
+                  record.status === ReviewStatus.NOT_STARTED || record.submissionStatus === ReviewStatus.NOT_STARTED
                     ? 'Start Review'
                     : 'Edit Review'
                 }
@@ -225,8 +228,8 @@ const ReviewCard: React.FC<{
             {isSubmitted && !hasAccessOpen && onOpenRequestAccess && (
               (() => {
                 const req = (record as any).accessRequest;
-                const isPending = req?.status === 'PENDING';
-                const isRejected = req?.status === 'REJECTED';
+                const isPending = req?.status === AccessRequestStatus.PENDING;
+                const isRejected = req?.status === AccessRequestStatus.REJECTED;
                 const canRetry = req ? req.canReRequest && req.totalAttempts < 2 : true;
 
                 if (isPending) {
@@ -485,15 +488,15 @@ const MobileEmployeeAppraisalDashboard: React.FC<MobileEmployeeAppraisalDashboar
             <Select
               className="mobile-filter-select flex-1 min-w-[130px]"
               allowClear
-              value={selectedFY === 'ALL' ? undefined : (selectedFY || undefined)}
-              onChange={(val) => onFYChange(val || 'ALL')}
+              value={selectedFY === QuarterFilter.ALL ? undefined : (selectedFY || undefined)}
+              onChange={(val) => onFYChange(val || QuarterFilter.ALL)}
               loading={fyLoading}
               placeholder="Financial Year"
               variant="outlined"
               prefix={<Calendar className="w-4 h-4 text-indigo-500 shrink-0" />}
               popupMatchSelectWidth
               options={[
-                { label: 'All Years', value: 'ALL' },
+                { label: 'All Years', value: QuarterFilter.ALL },
                 ...fyOptions.map((financialYearOption) => ({
                   label: financialYearOption,
                   value: financialYearOption,
@@ -546,7 +549,7 @@ const MobileEmployeeAppraisalDashboard: React.FC<MobileEmployeeAppraisalDashboar
                   reviewPath={reviewPath}
                   downloadingQuarter={downloadingQuarter}
                   onView={() =>
-                    navigate(`${reviewPath}/${quarterToSlug(reviewRecord.quarter)}?mode=view`)
+                    navigate(`${reviewPath}/${quarterToSlug(reviewRecord.quarter)}?mode=${FormMode.VIEW}`)
                   }
                   onEdit={async () => {
                     if (onFillReview) {

@@ -16,6 +16,10 @@ import {
   MIN_FIELD_LENGTH,
   PerformanceRating,
   RATING_CATEGORY_ITEMS,
+  AppraisalStatus,
+  ManagerReviewStatus,
+  ReviewStatus,
+  FormMode,
 } from './QuarterlyReviewmobile.types';
 import CommonMultipleUploader from '../../EmployeeDashboard/CommonMultipleUploader';
 import {
@@ -186,9 +190,9 @@ const QuarterlyViewPageMobile: React.FC<QuarterlyViewPageMobileProps> = ({
   const searchParams = new URLSearchParams(location.search);
   const modeParam = searchParams.get('mode');
   const effectiveViewOnly =
-    modeParam === 'view'
+    modeParam === FormMode.VIEW
       ? true
-      : modeParam === 'edit'
+      : modeParam === FormMode.EDIT
       ? false
       : Boolean(isViewOnly || location.state?.viewOnly);
 
@@ -196,7 +200,14 @@ const QuarterlyViewPageMobile: React.FC<QuarterlyViewPageMobileProps> = ({
     currentReview?.employeeRole?.toUpperCase() === 'MANAGER' ||
     currentReview?.designation?.toLowerCase().includes('manager');
 
-  const unsubmittedStatuses = ['assigned', 'not started', 'not_started', 'draft', 'in progress', 'in_progress'];
+  const unsubmittedStatuses = [
+    ReviewStatus.ASSIGNED.toLowerCase(),
+    'not started',
+    'not_started',
+    ReviewStatus.DRAFT.toLowerCase(),
+    'in progress',
+    'in_progress',
+  ];
   const statusLower = (currentReview?.status || '').trim().toLowerCase();
   const reviewStatusLower = (currentReview?.reviewStatus || '').trim().toLowerCase();
 
@@ -207,18 +218,22 @@ const QuarterlyViewPageMobile: React.FC<QuarterlyViewPageMobileProps> = ({
   );
 
   const isAlreadyEvaluated = Boolean(
-    (currentReview?.status?.toLowerCase() === 'reviewed' ||
-      currentReview?.status?.toLowerCase() === 'approved' ||
-      currentReview?.status?.toLowerCase() === 'completed' ||
-      currentReview?.reviewStatus?.toLowerCase() === 'reviewed' ||
-      currentReview?.reviewStatus?.toLowerCase() === 'approved' ||
-      currentReview?.reviewStatus?.toLowerCase() === 'completed') &&
-      !['in review', 'under review', 'draft', 'pending', 'assigned'].includes(
-        (currentReview?.status || '').toLowerCase()
-      ) &&
-      !['in review', 'under review', 'draft', 'pending', 'assigned'].includes(
-        (currentReview?.reviewStatus || '').toLowerCase()
-      )
+    (currentReview?.status?.toLowerCase() === AppraisalStatus.REVIEWED.toLowerCase() ||
+      currentReview?.reviewStatus?.toLowerCase() === AppraisalStatus.REVIEWED.toLowerCase()) &&
+      ![
+        ManagerReviewStatus.UNDER_REVIEW.toLowerCase(),
+        'in review',
+        ReviewStatus.DRAFT.toLowerCase(),
+        'pending',
+        ReviewStatus.ASSIGNED.toLowerCase(),
+      ].includes(statusLower) &&
+      ![
+        ManagerReviewStatus.UNDER_REVIEW.toLowerCase(),
+        'in review',
+        ReviewStatus.DRAFT.toLowerCase(),
+        'pending',
+        ReviewStatus.ASSIGNED.toLowerCase(),
+      ].includes(reviewStatusLower)
   );
 
   const isReadOnly = effectiveViewOnly || isAlreadyEvaluated || !isReviewSubmitted;
@@ -447,7 +462,7 @@ const QuarterlyViewPageMobile: React.FC<QuarterlyViewPageMobileProps> = ({
                         <div className="flex items-center justify-between">
                           <span className="text-slate-500 font-medium">Review Status:</span>
                           <span className="font-semibold text-amber-700 bg-amber-100/80 px-2 py-0.5 rounded-full text-[10px]">
-                            {currentReview.status || currentReview.reviewStatus || 'Assigned'}
+                            {currentReview.status || currentReview.reviewStatus || AppraisalStatus.ASSIGNED}
                           </span>
                         </div>
                         <div className="flex items-center justify-between">

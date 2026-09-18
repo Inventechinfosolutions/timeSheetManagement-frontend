@@ -83,6 +83,22 @@ export interface QuarterlyReview {
     evaluatorName?: string | null;
     evaluatorRole?: string | null;
     evaluatorId?: string | null;
+    autoSubmitted?: number | boolean | null;
+    accessUntil?: string | null;
+    isReopened?: number | null;
+    accessGranted?: boolean | null;
+    assignmentId?: number | null;
+    accessRequest?: {
+      id?: number;
+      status?: string | AccessRequestStatus;
+      rejectionReason?: string | null;
+      remarks?: string | null;
+      reason?: string | null;
+      canReRequest?: boolean;
+      totalAttempts?: number;
+      attemptNumber?: number;
+      accessUntil?: string | null;
+    } | null;
 }
 export type StatusStyle = {
     bg: string;

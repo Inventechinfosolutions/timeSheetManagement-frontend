@@ -1,5 +1,4 @@
-import React from 'react';
-import { ReviewStatus } from '../enums/Appraisal.enums';
+import { ReviewStatus, AppraisalReviewStatus, FormMode } from '../enums/Appraisal.enums';
 import { QuarterlyReview } from '../types/Appraisal.types';
 
 // ── Time & Duration Constants (No Magic Numbers) ────────────────────────────
@@ -15,10 +14,10 @@ const TWENTY_FOUR_HOURS_IN_MS = HOURS_PER_DAY * MILLISECONDS_PER_HOUR;
 
 // ── Status & Category Constants ─────────────────────────────────────────────
 
-export const REVIEW_DISPLAY_STATUS_ASSIGNED = 'Assigned';
-export const REVIEW_DISPLAY_STATUS_UNDER_REVIEW = 'Under Review';
-export const REVIEW_DISPLAY_STATUS_REVIEWED = 'Reviewed';
-export const REVIEW_DISPLAY_STATUS_AWAITING_REVIEW = 'Awaiting Review';
+export const REVIEW_DISPLAY_STATUS_ASSIGNED = AppraisalReviewStatus.ASSIGNED;
+export const REVIEW_DISPLAY_STATUS_UNDER_REVIEW = AppraisalReviewStatus.UNDER_REVIEW;
+export const REVIEW_DISPLAY_STATUS_REVIEWED = AppraisalReviewStatus.REVIEWED;
+export const REVIEW_DISPLAY_STATUS_AWAITING_REVIEW = AppraisalReviewStatus.AWAITING_REVIEW;
 export const REVIEW_DISPLAY_STATUS_PENDING = 'Pending';
 export const REVIEW_DISPLAY_STATUS_ACCESS_REQUESTED = 'Access Requested';
 
@@ -65,13 +64,7 @@ export const STATUS_STYLES: Record<string, StatusStyleDefinition> = {
     border: 'border-blue-200',
     indicatorColor: 'bg-blue-500',
   },
-  'Auto Submitted': {
-    bg: 'bg-purple-50',
-    text: 'text-purple-700',
-    border: 'border-purple-200',
-    indicatorColor: 'bg-purple-500',
-  },
-  AUTO_SUBMITTED: {
+  [ReviewStatus.AUTO_SUBMITTED]: {
     bg: 'bg-purple-50',
     text: 'text-purple-700',
     border: 'border-purple-200',
@@ -83,23 +76,11 @@ export const STATUS_STYLES: Record<string, StatusStyleDefinition> = {
     border: 'border-amber-200',
     indicatorColor: 'bg-amber-500',
   },
-  [ReviewStatus.APPROVED]: {
-    bg: 'bg-emerald-50',
-    text: 'text-emerald-700',
-    border: 'border-emerald-200',
-    indicatorColor: 'bg-emerald-500',
-  },
   [ReviewStatus.IN_REVIEW]: {
     bg: 'bg-indigo-50',
     text: 'text-indigo-700',
     border: 'border-indigo-200',
     indicatorColor: 'bg-indigo-500',
-  },
-  [ReviewStatus.COMPLETED]: {
-    bg: 'bg-emerald-50',
-    text: 'text-emerald-700',
-    border: 'border-emerald-200',
-    indicatorColor: 'bg-emerald-500',
   },
   [REVIEW_DISPLAY_STATUS_REVIEWED]: {
     bg: 'bg-emerald-50',
@@ -139,50 +120,42 @@ export const DEFAULT_STATUS_STYLE: StatusStyleDefinition = {
  * Assigned | Pending | Under Review | Reviewed | Awaiting Review
  */
 export const getReviewDisplayStatus = (reviewRecord?: QuarterlyReview | null): string => {
-  if (!reviewRecord) return REVIEW_DISPLAY_STATUS_ASSIGNED;
+  if (!reviewRecord) return AppraisalReviewStatus.ASSIGNED;
   const reviewStatusString = (reviewRecord.reviewStatus || '').trim().toLowerCase();
   const submissionStatusString = (reviewRecord.status || reviewRecord.submissionStatus || '').trim().toLowerCase();
 
   // 1. In Review by Evaluator -> Under Review
   if (
-    reviewStatusString === 'in review' ||
-    reviewStatusString === 'under review' ||
-    submissionStatusString === 'in review' ||
-    submissionStatusString === 'under review'
+    reviewStatusString === ReviewStatus.IN_REVIEW.toLowerCase() ||
+    reviewStatusString === AppraisalReviewStatus.UNDER_REVIEW.toLowerCase() ||
+    submissionStatusString === ReviewStatus.IN_REVIEW.toLowerCase() ||
+    submissionStatusString === AppraisalReviewStatus.UNDER_REVIEW.toLowerCase()
   ) {
-    return REVIEW_DISPLAY_STATUS_UNDER_REVIEW;
+    return AppraisalReviewStatus.UNDER_REVIEW;
   }
 
   // 2. Completed / Reviewed by Evaluator -> Reviewed
   if (
-    reviewStatusString === 'reviewed' ||
-    reviewStatusString === 'approved' ||
-    reviewStatusString === 'completed' ||
-    submissionStatusString === 'reviewed' ||
-    submissionStatusString === 'approved' ||
-    submissionStatusString === 'completed'
+    reviewStatusString === AppraisalReviewStatus.REVIEWED.toLowerCase() ||
+    submissionStatusString === AppraisalReviewStatus.REVIEWED.toLowerCase()
   ) {
-    return REVIEW_DISPLAY_STATUS_REVIEWED;
+    return AppraisalReviewStatus.REVIEWED;
   }
 
   // 3. Submitted by Employee or Manager -> Awaiting Review
   if (
-    submissionStatusString === 'submitted' ||
-    submissionStatusString === 'auto submitted' ||
-    submissionStatusString === 'pending' ||
-    submissionStatusString === 'awaiting review' ||
-    submissionStatusString === 'awaiting_review' ||
-    reviewStatusString === 'pending' ||
-    reviewStatusString === 'awaiting review' ||
-    reviewStatusString === 'awaiting_review' ||
-    reviewRecord.submissionStatus === 'Submitted' ||
+    submissionStatusString === ReviewStatus.SUBMITTED.toLowerCase() ||
+    submissionStatusString === ReviewStatus.AUTO_SUBMITTED.toLowerCase() ||
+    submissionStatusString === AppraisalReviewStatus.AWAITING_REVIEW.toLowerCase() ||
+    reviewStatusString === AppraisalReviewStatus.AWAITING_REVIEW.toLowerCase() ||
+    reviewRecord.submissionStatus === ReviewStatus.SUBMITTED ||
     Boolean(reviewRecord.submittedDate)
   ) {
-    return REVIEW_DISPLAY_STATUS_AWAITING_REVIEW;
+    return AppraisalReviewStatus.AWAITING_REVIEW;
   }
 
   // 4. Default: Assigned to employee
-  return REVIEW_DISPLAY_STATUS_ASSIGNED;
+  return AppraisalReviewStatus.ASSIGNED;
 };
 
 /**
@@ -193,10 +166,8 @@ export const getDisplayAverageRating = (reviewRecord?: QuarterlyReview | null): 
 
   // The final rating must only be displayed after the manager has submitted/completed the review
   const isManagerReviewed =
+    reviewRecord.reviewStatus === AppraisalReviewStatus.REVIEWED ||
     reviewRecord.reviewStatus === ReviewStatus.REVIEWED ||
-    reviewRecord.reviewStatus === ReviewStatus.COMPLETED ||
-    reviewRecord.status === ReviewStatus.COMPLETED ||
-    reviewRecord.status === ReviewStatus.APPROVED ||
     reviewRecord.status === ReviewStatus.REVIEWED;
 
   if (!isManagerReviewed) {
@@ -412,7 +383,7 @@ export const isReviewEditable = (
   _isManagerUser?: boolean,
   modeParam?: string | null,
 ): boolean => {
-  if (modeParam === ReviewStatus.VIEW || modeParam === 'view') {
+  if (modeParam === FormMode.VIEW) {
     return false;
   }
 
@@ -423,13 +394,12 @@ export const isReviewEditable = (
   const status = reviewRecord.status;
   const isSubmitted =
     status === ReviewStatus.SUBMITTED ||
-    status === ReviewStatus.COMPLETED ||
-    status === ReviewStatus.APPROVED;
+    status === ReviewStatus.AUTO_SUBMITTED;
   const accessOpen = isReviewAccessOpen(reviewRecord);
 
   // If review is submitted, it is only editable if access is currently open or mode is explicitly 'edit'
   if (isSubmitted) {
-    return accessOpen || modeParam === 'edit';
+    return accessOpen || modeParam === FormMode.EDIT;
   }
 
   // If review is Draft / In Progress or Not Started:

@@ -25,6 +25,7 @@ import type { ReviewAccessRequest } from '../../../reducers/quarterlyReview.redu
 import {
   ManagerReviewItem,
   ReviewStats,
+  AppraisalStatus,
   ManagerReviewStatus,
   PerformanceRating,
   QuarterFilter,
@@ -35,6 +36,13 @@ import {
   DEFAULT_RATING_VALUE,
   YEAR_FILTER_ALL,
   DEFAULT_YEAR,
+  FormMode,
+  AccessRequestStatus,
+  AccessRequestAction,
+  AssignmentListType,
+  AssignedSubTab,
+  ReviewStatus,
+  FilterOption,
 } from '../QuarterlyReview.types';
 
 // ── Defined Constants (No Hard-Coded Values) ───────────────────────────────────
@@ -105,43 +113,46 @@ export const useManagerReviewBoard = (options: UseManagerReviewBoardOptions = {}
 
   const handleClearFilters = useCallback(() => {
     setSearchQuery('');
-    setSelectedRole('ALL');
+    setSelectedRole(FilterOption.ALL);
     setSelectedYear(YEAR_FILTER_ALL);
     setSelectedQuarterCard(QuarterFilter.ALL);
-    setSelectedEmployee('ALL');
+    setSelectedEmployee(FilterOption.ALL);
     setSelectedStatusTab(StatusTabFilter.ALL);
     setCurrentPage(INITIAL_PAGE_NUMBER);
   }, []);
 
   // ── URL Search Parameters ──────────────────────────────────────────────────
-  const urlYearParameter = searchParams.get('year') || searchParams.get('financialYear') || searchParams.get('fy');
-  const urlQuarterParameter = searchParams.get('quarter') || searchParams.get('q');
   const urlStatusParameter = searchParams.get('status') || searchParams.get('reviewStatus');
+  const urlQuarterParameter = searchParams.get('quarter') || searchParams.get('q');
+  const urlFinancialYearParameter =
+    searchParams.get('financialYear') || searchParams.get('year') || searchParams.get('fy');
+  const urlRoleParameter = searchParams.get('role');
   const urlEmployeeParameter = searchParams.get('employeeId') || searchParams.get('employee');
   const urlSearchText = searchParams.get('search') || '';
 
-  const resolvedInitialStatusTab = useMemo(() => {
+  const resolvedInitialStatusTab = useMemo((): StatusTabFilter => {
     if (!urlStatusParameter) return StatusTabFilter.ALL;
-    const uppercaseStatus = urlStatusParameter.toUpperCase();
-    if (uppercaseStatus === 'ASSIGNED') return StatusTabFilter.ASSIGNED;
+    const normalizedStatus = urlStatusParameter.trim().toLowerCase().replace(/[\s_-]/g, '');
+
+    const assignedKey = StatusTabFilter.ASSIGNED.toLowerCase().replace(/[\s_-]/g, '');
+    const awaitingReviewKey = StatusTabFilter.AWAITING_REVIEW.toLowerCase().replace(/[\s_-]/g, '');
+    const underReviewKey = StatusTabFilter.UNDER_REVIEW.toLowerCase().replace(/[\s_-]/g, '');
+    const reviewedKey = StatusTabFilter.REVIEWED.toLowerCase().replace(/[\s_-]/g, '');
+    const submittedKey = ReviewStatus.SUBMITTED.toLowerCase().replace(/[\s_-]/g, '');
+
+    if (normalizedStatus === assignedKey) {
+      return StatusTabFilter.ASSIGNED;
+    }
     if (
-      uppercaseStatus === 'AWAITING_REVIEW' ||
-      uppercaseStatus === 'AWAITING REVIEW' ||
-      uppercaseStatus === 'AWAITING-REVIEW' ||
-      uppercaseStatus === 'PENDING' ||
-      uppercaseStatus === 'SUBMITTED'
+      normalizedStatus === awaitingReviewKey ||
+      normalizedStatus === submittedKey
     ) {
       return StatusTabFilter.AWAITING_REVIEW;
     }
-    if (
-      uppercaseStatus === 'UNDER_REVIEW' ||
-      uppercaseStatus === 'UNDER REVIEW' ||
-      uppercaseStatus === 'IN_REVIEW' ||
-      uppercaseStatus === 'IN REVIEW'
-    ) {
+    if (normalizedStatus === underReviewKey) {
       return StatusTabFilter.UNDER_REVIEW;
     }
-    if (uppercaseStatus === 'REVIEWED' || uppercaseStatus === 'COMPLETED' || uppercaseStatus === 'APPROVED') {
+    if (normalizedStatus === reviewedKey) {
       return StatusTabFilter.REVIEWED;
     }
     return StatusTabFilter.ALL;
@@ -149,23 +160,24 @@ export const useManagerReviewBoard = (options: UseManagerReviewBoardOptions = {}
 
   // ── Filter State ──────────────────────────────────────────────────────────
   const [selectedQuarterCard, setSelectedQuarterCard] = useState<string>(
-    urlQuarterParameter && ['Q1', 'Q2', 'Q3', 'Q4'].includes(urlQuarterParameter.toUpperCase())
+    urlQuarterParameter &&
+    [QuarterFilter.Q1, QuarterFilter.Q2, QuarterFilter.Q3, QuarterFilter.Q4].includes(urlQuarterParameter.toUpperCase() as QuarterFilter)
       ? urlQuarterParameter.toUpperCase()
       : QuarterFilter.ALL
   );
   const [selectedStatusTab, setSelectedStatusTab] = useState<string>(resolvedInitialStatusTab);
-  const [selectedRole, setSelectedRole] = useState<string>('ALL');
-  const [selectedEmployee, setSelectedEmployee] = useState<string>(urlEmployeeParameter || 'ALL');
+  const [selectedRole, setSelectedRole] = useState<string>(FilterOption.ALL);
+  const [selectedEmployee, setSelectedEmployee] = useState<string>(urlEmployeeParameter || FilterOption.ALL);
   const [searchQuery, setSearchQuery] = useState<string>(urlSearchText);
-  const [selectedYear, setSelectedYear] = useState<string>(urlYearParameter || YEAR_FILTER_ALL);
+  const [selectedYear, setSelectedYear] = useState<string>(urlFinancialYearParameter || YEAR_FILTER_ALL);
 
   const hasActiveFilters = useMemo(() => {
     return Boolean(
       searchQuery.trim() ||
-      (selectedRole && selectedRole !== 'ALL') ||
+      (selectedRole && selectedRole !== FilterOption.ALL) ||
       (selectedYear && selectedYear !== YEAR_FILTER_ALL) ||
       (selectedQuarterCard && selectedQuarterCard !== QuarterFilter.ALL) ||
-      (selectedEmployee && selectedEmployee !== 'ALL') ||
+      (selectedEmployee && selectedEmployee !== FilterOption.ALL) ||
       (selectedStatusTab && selectedStatusTab !== StatusTabFilter.ALL)
     );
   }, [searchQuery, selectedRole, selectedYear, selectedQuarterCard, selectedEmployee, selectedStatusTab]);
@@ -223,14 +235,14 @@ export const useManagerReviewBoard = (options: UseManagerReviewBoardOptions = {}
 
   // ── Assignment Summary Modal State ─────────────────────────────────────────
   const [assignmentListModalOpen, setAssignmentListModalOpen] = useState<boolean>(false);
-  const [assignmentListType, setAssignmentListType] = useState<'assigned' | 'not_assigned'>('assigned');
+  const [assignmentListType, setAssignmentListType] = useState<AssignmentListType>(AssignmentListType.ASSIGNED);
   const [assignmentListSearch, setAssignmentListSearch] = useState<string>('');
-  const [assignedSubTab, setAssignedSubTab] = useState<'all' | 'single_quarter'>('all');
+  const [assignedSubTab, setAssignedSubTab] = useState<AssignedSubTab>(AssignedSubTab.ALL);
 
-  const openAssignmentListModal = useCallback((type: 'assigned' | 'not_assigned') => {
+  const openAssignmentListModal = useCallback((type: AssignmentListType) => {
     setAssignmentListType(type);
     setAssignmentListSearch('');
-    setAssignedSubTab('all');
+    setAssignedSubTab(AssignedSubTab.ALL);
     setAssignmentListModalOpen(true);
   }, []);
 
@@ -257,7 +269,7 @@ export const useManagerReviewBoard = (options: UseManagerReviewBoardOptions = {}
         nextSearchParams.delete('status');
       }
 
-      if (selectedEmployee && selectedEmployee !== 'ALL') {
+      if (selectedEmployee && selectedEmployee !== FilterOption.ALL) {
         nextSearchParams.set('employeeId', selectedEmployee);
       } else {
         nextSearchParams.delete('employeeId');
@@ -294,10 +306,10 @@ export const useManagerReviewBoard = (options: UseManagerReviewBoardOptions = {}
         if (selectedStatusTab !== StatusTabFilter.ALL) {
           requestParameters.status = selectedStatusTab;
         }
-        if (!isManagerUser && selectedRole !== 'ALL') {
+        if (!isManagerUser && selectedRole !== FilterOption.ALL) {
           requestParameters.role = selectedRole;
         }
-        if (selectedEmployee && selectedEmployee !== 'ALL') {
+        if (selectedEmployee && selectedEmployee !== FilterOption.ALL) {
           requestParameters.employeeId = selectedEmployee;
         }
         if (searchQuery.trim()) {
@@ -315,7 +327,7 @@ export const useManagerReviewBoard = (options: UseManagerReviewBoardOptions = {}
         const [submissionsResponse, statsResponse, accessResponse] = await Promise.all([
           axios.get(API_MANAGER_QUARTERLY_REVIEW_URL, { params: requestParameters }),
           axios.get(API_MANAGER_STATS_URL, { params: statsParameters }),
-          axios.get(API_REVIEW_ACCESS_REQUESTS_URL, { params: { status: 'pending' } }).catch(() => null),
+          axios.get(API_REVIEW_ACCESS_REQUESTS_URL, { params: { status: AccessRequestStatus.PENDING.toLowerCase() } }).catch(() => null),
         ]);
 
         if (submissionsResponse.data?.success) {
@@ -354,7 +366,7 @@ export const useManagerReviewBoard = (options: UseManagerReviewBoardOptions = {}
     try {
       setAccessRequestsLoading(true);
       const response = await axios.get(API_REVIEW_ACCESS_REQUESTS_URL, {
-        params: { status: 'pending' },
+        params: { status: AccessRequestStatus.PENDING.toLowerCase() },
       });
       if (response.data?.success && Array.isArray(response.data.data)) {
         setAccessRequests(response.data.data);
@@ -369,12 +381,15 @@ export const useManagerReviewBoard = (options: UseManagerReviewBoardOptions = {}
   const handleActionAccessRequest = useCallback(
     async (
       requestId: string | number,
-      action: 'approve' | 'reject',
+      action: AccessRequestAction,
       comment: string = '',
       extensionHours: number = 48,
     ): Promise<boolean> => {
+      const isReject = action === AccessRequestAction.REJECT;
+      const isApprove = action === AccessRequestAction.APPROVE;
+
       const trimmedComment = comment.trim();
-      if (action === 'reject' && !trimmedComment) {
+      if (isReject && !trimmedComment) {
         message.warning('Please enter a comment/reason before rejecting the access request.');
         return false;
       }
@@ -383,11 +398,10 @@ export const useManagerReviewBoard = (options: UseManagerReviewBoardOptions = {}
 
       try {
         setActioningRequestId(requestId);
-        const upperAction = action === 'approve' ? 'APPROVE' : 'REJECT';
         const response = await axios.post(
           `/api/quarterly-review/access-requests/${requestId}/action`,
           {
-            action: upperAction,
+            action,
             remarks: trimmedComment,
             extensionHours,
           },
@@ -395,7 +409,7 @@ export const useManagerReviewBoard = (options: UseManagerReviewBoardOptions = {}
 
         if (response.data?.success) {
           message.success(
-            action === 'approve'
+            isApprove
               ? 'Access request approved. The review edit option has been reopened.'
               : 'Access request rejected.',
           );
@@ -589,26 +603,24 @@ export const useManagerReviewBoard = (options: UseManagerReviewBoardOptions = {}
           applyReviewToForm(freshReviewRecord);
 
           const isUnderReviewStatus =
-            freshReviewRecord.status === 'Under Review' ||
-            freshReviewRecord.status === 'In Review' ||
-            freshReviewRecord.reviewStatus === 'Under Review' ||
-            freshReviewRecord.reviewStatus === 'In Review';
+            freshReviewRecord.status === ManagerReviewStatus.UNDER_REVIEW ||
+            freshReviewRecord.reviewStatus === ManagerReviewStatus.UNDER_REVIEW;
           const isEvaluatedStatus =
             !isUnderReviewStatus &&
-            (freshReviewRecord.status === 'Reviewed' ||
-              freshReviewRecord.reviewStatus === 'Reviewed' ||
+            (freshReviewRecord.status === ManagerReviewStatus.REVIEWED ||
+              freshReviewRecord.reviewStatus === ManagerReviewStatus.REVIEWED ||
               Boolean(freshReviewRecord.reviewedOn));
 
           const currentUrlParams = new URLSearchParams(location.search);
           const modeParam = currentUrlParams.get('mode');
           const isExplicitView =
             preferredViewOnly === true ||
-            modeParam === 'view' ||
-            (modeParam !== 'edit' && location.state?.viewOnly === true);
+            modeParam === FormMode.VIEW ||
+            (modeParam !== FormMode.EDIT && location.state?.viewOnly === true);
           const isExplicitEdit =
             preferredViewOnly === false ||
-            modeParam === 'edit' ||
-            (modeParam !== 'view' && location.state?.viewOnly === false);
+            modeParam === FormMode.EDIT ||
+            (modeParam !== FormMode.VIEW && location.state?.viewOnly === false);
 
           if (isExplicitEdit) {
             setIsViewOnly(false);
@@ -635,7 +647,7 @@ export const useManagerReviewBoard = (options: UseManagerReviewBoardOptions = {}
     setIsModalOpen(true);
 
     const formattedQuarterName = getRecordQuarterUrl(reviewRecord);
-    const modeQueryString = `mode=${viewOnlyMode ? 'view' : 'edit'}`;
+    const modeQueryString = `mode=${viewOnlyMode ? FormMode.VIEW : FormMode.EDIT}`;
     const uniqueUrlKey = `${reviewRecord.employeeId}_${formattedQuarterName}`;
 
     loadedEmployeeIdRef.current = uniqueUrlKey;
@@ -671,8 +683,8 @@ export const useManagerReviewBoard = (options: UseManagerReviewBoardOptions = {}
     const rawQuarter = quarterPeriodFromUrl || currentUrlParams.get('quarter') || undefined;
     const resolvedQuarter = formatQuarterHyphen(rawQuarter) || undefined;
     const modeParam = currentUrlParams.get('mode');
-    const isExplicitView = modeParam === 'view' || (modeParam !== 'edit' && location.state?.viewOnly === true);
-    const isExplicitEdit = modeParam === 'edit' || (modeParam !== 'view' && location.state?.viewOnly === false);
+    const isExplicitView = modeParam === FormMode.VIEW || (modeParam !== FormMode.EDIT && location.state?.viewOnly === true);
+    const isExplicitEdit = modeParam === FormMode.EDIT || (modeParam !== FormMode.VIEW && location.state?.viewOnly === false);
     const uniqueUrlKey = `${employeeIdFromUrl}_${resolvedQuarter || ''}`;
 
     if (loadedEmployeeIdRef.current === uniqueUrlKey && currentReview) return;
@@ -685,14 +697,12 @@ export const useManagerReviewBoard = (options: UseManagerReviewBoardOptions = {}
       const activeStateRecord = location.state.record;
       setCurrentReview(activeStateRecord);
       const isUnderReview =
-        activeStateRecord.status === 'Under Review' ||
-        activeStateRecord.status === 'In Review' ||
-        activeStateRecord.reviewStatus === 'Under Review' ||
-        activeStateRecord.reviewStatus === 'In Review';
+        activeStateRecord.status === ManagerReviewStatus.UNDER_REVIEW ||
+        activeStateRecord.reviewStatus === ManagerReviewStatus.UNDER_REVIEW;
       const isEvaluated =
         !isUnderReview &&
-        (activeStateRecord.status === 'Reviewed' ||
-          activeStateRecord.reviewStatus === 'Reviewed' ||
+        (activeStateRecord.status === ManagerReviewStatus.REVIEWED ||
+          activeStateRecord.reviewStatus === ManagerReviewStatus.REVIEWED ||
           Boolean(activeStateRecord.reviewedOn));
 
       setIsViewOnly(isExplicitEdit ? false : (isExplicitView ? true : isEvaluated));
@@ -721,14 +731,12 @@ export const useManagerReviewBoard = (options: UseManagerReviewBoardOptions = {}
     if (matchedSubmissionRecord) {
       setCurrentReview(matchedSubmissionRecord);
       const isUnderReview =
-        matchedSubmissionRecord.status === 'Under Review' ||
-        matchedSubmissionRecord.status === 'In Review' ||
-        matchedSubmissionRecord.reviewStatus === 'Under Review' ||
-        matchedSubmissionRecord.reviewStatus === 'In Review';
+        matchedSubmissionRecord.status === ManagerReviewStatus.UNDER_REVIEW ||
+        matchedSubmissionRecord.reviewStatus === ManagerReviewStatus.UNDER_REVIEW;
       const isEvaluated =
         !isUnderReview &&
-        (matchedSubmissionRecord.status === 'Reviewed' ||
-          matchedSubmissionRecord.reviewStatus === 'Reviewed' ||
+        (matchedSubmissionRecord.status === ManagerReviewStatus.REVIEWED ||
+          matchedSubmissionRecord.reviewStatus === ManagerReviewStatus.REVIEWED ||
           Boolean(matchedSubmissionRecord.reviewedOn));
 
       setIsViewOnly(isExplicitEdit ? false : (isExplicitView ? true : isEvaluated));

@@ -35,6 +35,13 @@ import {
   toFiscalYearLabel,
   YEARS_BEFORE_CURRENT,
   YEARS_AFTER_CURRENT,
+  AccessRequestStatus,
+  AccessRequestAction,
+  AssignmentListType,
+  AssignedSubTab,
+  AssignTargetMode,
+  ReviewStatus,
+  RequestUserRole,
 } from "./QuarterlyReviewmobile.types";
 import {
   getMasterFinancialYearCodes,
@@ -102,54 +109,45 @@ const getMinDeadlineDate = (startDateStr?: string | null): string => {
 };
 
 const renderStatusBadge = (statusValue: string | null) => {
-  const normalizedStatus = (statusValue || AppraisalStatus.ASSIGNED).trim().toLowerCase();
-  if (
-    normalizedStatus === AppraisalStatus.REVIEWED.toLowerCase() ||
-    normalizedStatus === "reviewed" ||
-    normalizedStatus === "completed" ||
-    normalizedStatus === "approved"
-  ) {
+  const normalizedStatus = (statusValue || AppraisalStatus.ASSIGNED).trim().toLowerCase().replace(/[\s_-]/g, '');
+  const reviewedKey = AppraisalStatus.REVIEWED.toLowerCase().replace(/[\s_-]/g, '');
+  const underReviewKey = AppraisalStatus.UNDER_REVIEW.toLowerCase().replace(/[\s_-]/g, '');
+  const awaitingReviewKey = AppraisalStatus.AWAITING_REVIEW.toLowerCase().replace(/[\s_-]/g, '');
+  const submittedKey = ReviewStatus.SUBMITTED.toLowerCase().replace(/[\s_-]/g, '');
+  const autoSubmittedKey = ReviewStatus.AUTO_SUBMITTED.toLowerCase().replace(/[\s_-]/g, '');
+
+  if (normalizedStatus === reviewedKey) {
     return (
       <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-        Reviewed
+        {AppraisalStatus.REVIEWED}
       </span>
     );
   }
-  if (
-    normalizedStatus === AppraisalStatus.UNDER_REVIEW.toLowerCase() ||
-    normalizedStatus === "under review" ||
-    normalizedStatus === "under_review" ||
-    normalizedStatus === "in review" ||
-    normalizedStatus === "in_review"
-  ) {
+  if (normalizedStatus === underReviewKey) {
     return (
       <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
         <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-        Under Review
+        {AppraisalStatus.UNDER_REVIEW}
       </span>
     );
   }
   if (
-    normalizedStatus === AppraisalStatus.AWAITING_REVIEW.toLowerCase() ||
-    normalizedStatus === "pending" ||
-    normalizedStatus === "awaiting review" ||
-    normalizedStatus === "awaiting_review" ||
-    normalizedStatus === "submitted" ||
-    normalizedStatus === "auto submitted" ||
-    normalizedStatus === "auto_submitted"
+    normalizedStatus === awaitingReviewKey ||
+    normalizedStatus === submittedKey ||
+    normalizedStatus === autoSubmittedKey
   ) {
     return (
       <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-orange-50 text-orange-700 border border-orange-200">
         <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-        Awaiting Review
+        {AppraisalStatus.AWAITING_REVIEW}
       </span>
     );
   }
   return (
     <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
       <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-      Assigned
+      {AppraisalStatus.ASSIGNED}
     </span>
   );
 };
@@ -221,21 +219,18 @@ const SubmissionCard: React.FC<{
 }> = ({ record, onEvaluate, onView, accessRequests, onReviewAccessRequest }) => {
   const isReviewed =
     record.status === AppraisalStatus.REVIEWED ||
-    record.status === "Reviewed" ||
-    record.status === "Completed" ||
-    record.status === "Approved" ||
-    record.reviewStatus === "Reviewed";
+    record.reviewStatus === AppraisalStatus.REVIEWED;
 
   const canEvaluate =
     isReviewed ||
     record.status === AppraisalStatus.AWAITING_REVIEW ||
     record.status === AppraisalStatus.UNDER_REVIEW ||
-    record.status === "Awaiting Review" ||
-    record.status === "Under Review";
+    record.reviewStatus === AppraisalStatus.AWAITING_REVIEW ||
+    record.reviewStatus === AppraisalStatus.UNDER_REVIEW;
 
   const pendingRequest = accessRequests?.find((r: any) => {
     if (String(r.employeeId).trim().toLowerCase() !== String(record.employeeId).trim().toLowerCase()) return false;
-    if (r.status !== "PENDING") return false;
+    if (r.status !== AccessRequestStatus.PENDING) return false;
     const rQuarter = (r.quarter || "").toUpperCase().replace(/[\s\-_]/g, "");
     const recQuarter = (record.quarter || "").toUpperCase().replace(/[\s\-_]/g, "");
     const recFull = (record.fullQuarter || "").toUpperCase().replace(/[\s\-_]/g, "");
@@ -340,7 +335,7 @@ const SubmissionCard: React.FC<{
             size="small"
             icon={<Edit3 className="w-3.5 h-3.5" />}
             onClick={onEvaluate}
-            title={isReviewed || record.status === "Under Review" || record.status === "In Review" ? "Edit Evaluation" : "Evaluate"}
+            title={isReviewed || record.status === AppraisalStatus.UNDER_REVIEW ? "Edit Evaluation" : "Evaluate"}
             className="!border !border-slate-300 hover:!border-indigo-400 !text-slate-700 hover:!text-indigo-600 !font-semibold !rounded-lg !flex !items-center !justify-center !w-8 !h-8 !p-0 !bg-white hover:!bg-indigo-50"
           />
         )}
@@ -358,10 +353,10 @@ const SubmissionCard: React.FC<{
             onClick={() => onReviewAccessRequest(pendingRequest || null)}
             title={
               pendingRequest
-                ? `Access Request Pending: "${pendingRequest.requestReason || pendingRequest.reason || 'Reopen requested'}" - Click to review`
-                : "Access Request Pending - Click to review"
+                ? `Pending access request for ${pendingRequest.quarter || record.quarter || 'this quarter'}`
+                : "View pending access request"
             }
-            className="!border-amber-300 hover:!border-amber-400 !bg-amber-50 hover:!bg-amber-100 !text-amber-700 !font-semibold !rounded-lg !flex !items-center !justify-center !w-8 !h-8 !p-0"
+            className="!border-amber-300 !bg-amber-50 hover:!bg-amber-100 !text-amber-700 !font-semibold !rounded-lg !flex !items-center !justify-center !w-8 !h-8 !p-0"
           />
         )}
       </div>
@@ -387,10 +382,10 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = () => {
 
   const handleAccessRequestAction = async (
     requestId: string | number,
-    action: "approve" | "reject",
+    action: AccessRequestAction,
   ) => {
     const comment = (actionComments[requestId] || "").trim();
-    if (action === "reject" && !comment) {
+    if (action === AccessRequestAction.REJECT && !comment) {
       message.warning("Please enter a comment/reason before rejecting the access request.");
       return;
     }
@@ -414,9 +409,9 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = () => {
 
   // ── Create & Assign Modals State ──────────────────────────────────────────
   const [modeSelectModalOpen, setModeSelectModalOpen] = useState<boolean>(false);
-  const [selectedAssignMode, setSelectedAssignMode] = useState<"individual" | "all" | null>(null);
+  const [selectedAssignMode, setSelectedAssignMode] = useState<AssignTargetMode | null>(null);
   const [assignModalOpen, setAssignModalOpen] = useState<boolean>(false);
-  const [assignMode, setAssignMode] = useState<"individual" | "all">("individual");
+  const [assignMode, setAssignMode] = useState<AssignTargetMode>(AssignTargetMode.INDIVIDUAL);
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
   const [assignQuarterLabel, setAssignQuarterLabel] = useState<string>("");
   const [assignFinancialYear, setAssignFinancialYear] = useState<string>("");
@@ -448,14 +443,14 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = () => {
     tag: string | null;
     tagClass: string;
   } => {
-    if (assignMode === "individual" && selectedEmployeeIds.length === 0) {
+    if (assignMode === AssignTargetMode.INDIVIDUAL && selectedEmployeeIds.length === 0) {
       return { disabled: false, tag: null, tagClass: "" };
     }
 
     const normalizedQuarter = quarterCode.trim().toUpperCase();
 
     const targetEmployeeIds =
-      assignMode === "all"
+      assignMode === AssignTargetMode.ALL
         ? assignableEmployees.map((employeeItem) => String(employeeItem.employeeId))
         : selectedEmployeeIds.map(String);
 
@@ -484,7 +479,7 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = () => {
           .filter(
             (r) =>
               String(r.employeeId).toLowerCase() === empId.toLowerCase() &&
-              r.status === "PENDING"
+              r.status === AccessRequestStatus.PENDING
           )
           .map((r) => r.quarter || ""),
       ].filter(Boolean);
@@ -563,7 +558,7 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = () => {
       message.error("Description is required.");
       return;
     }
-    if (assignMode === "individual" && selectedEmployeeIds.length === 0) {
+    if (assignMode === AssignTargetMode.INDIVIDUAL && selectedEmployeeIds.length === 0) {
       message.error("Please select at least one employee.");
       return;
     }
@@ -578,14 +573,14 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = () => {
         description: string;
         employeeIds?: string[];
       } = {
-        mode: assignMode === "all" ? "ALL" : "INDIVIDUAL",
+        mode: assignMode === AssignTargetMode.ALL ? "ALL" : "INDIVIDUAL",
         quarter: assignQuarterLabel,
         financialYear: assignFinancialYear,
         startDate: effectiveStart,
         endDate: assignEndDate,
         description: assignNotes.trim(),
       };
-      if (assignMode === "individual") {
+      if (assignMode === AssignTargetMode.INDIVIDUAL) {
         assignmentPayload.employeeIds = selectedEmployeeIds;
       }
       const createResponse = await axios.post("/api/manager-quarterly-review/assignments/create", assignmentPayload);
@@ -827,22 +822,19 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = () => {
       render: (_: any, reviewRecord: ManagerReviewItem) => {
         const isReviewed =
           reviewRecord.status === AppraisalStatus.REVIEWED ||
-          reviewRecord.status === "Reviewed" ||
-          reviewRecord.status === "Completed" ||
-          reviewRecord.status === "Approved" ||
-          reviewRecord.reviewStatus === "Reviewed";
+          reviewRecord.reviewStatus === AppraisalStatus.REVIEWED;
 
         const canEvaluate =
           isReviewed ||
           reviewRecord.status === AppraisalStatus.AWAITING_REVIEW ||
           reviewRecord.status === AppraisalStatus.UNDER_REVIEW ||
-          reviewRecord.status === "Awaiting Review" ||
-          reviewRecord.status === "Under Review";
+          reviewRecord.reviewStatus === AppraisalStatus.AWAITING_REVIEW ||
+          reviewRecord.reviewStatus === AppraisalStatus.UNDER_REVIEW;
 
         // Find pending access request for this row's employee and quarter
         const pendingRequest = board.accessRequests?.find((r: any) => {
           if (String(r.employeeId).trim().toLowerCase() !== String(reviewRecord.employeeId).trim().toLowerCase()) return false;
-          if (r.status !== "PENDING") return false;
+          if (r.status !== AccessRequestStatus.PENDING) return false;
           const rQuarter = (r.quarter || "").toUpperCase().replace(/[\s\-_]/g, "");
           const recQuarter = (reviewRecord.quarter || "").toUpperCase().replace(/[\s\-_]/g, "");
           const recFull = (reviewRecord.fullQuarter || "").toUpperCase().replace(/[\s\-_]/g, "");
@@ -864,7 +856,7 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = () => {
                 size="small"
                 icon={<Edit3 className="w-3.5 h-3.5" />}
                 onClick={() => board.handleOpenEvaluation(reviewRecord, false)}
-                title={isReviewed || reviewRecord.status === "Under Review" || reviewRecord.status === "In Review" ? "Edit Evaluation" : "Evaluate"}
+                title={isReviewed || reviewRecord.status === AppraisalStatus.UNDER_REVIEW ? "Edit Evaluation" : "Evaluate"}
                 className="!border-slate-300 hover:!border-indigo-400 !text-slate-700 hover:!text-indigo-600 !font-semibold !rounded-lg !flex !items-center !justify-center"
               />
             )}
@@ -1222,19 +1214,19 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = () => {
           {/* Individual Member(s) */}
           <button
             type="button"
-            onClick={() => setSelectedAssignMode("individual")}
-            className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${selectedAssignMode === "individual"
+            onClick={() => setSelectedAssignMode(AssignTargetMode.INDIVIDUAL)}
+            className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${selectedAssignMode === AssignTargetMode.INDIVIDUAL
               ? "border-indigo-500 bg-indigo-50/40"
               : "border-slate-200 hover:border-indigo-300 hover:bg-slate-50"
               }`}
           >
             <span
-              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${selectedAssignMode === "individual"
+              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${selectedAssignMode === AssignTargetMode.INDIVIDUAL
                 ? "border-indigo-600"
                 : "border-slate-300"
                 }`}
             >
-              {selectedAssignMode === "individual" && (
+              {selectedAssignMode === AssignTargetMode.INDIVIDUAL && (
                 <span className="w-2.5 h-2.5 rounded-full bg-indigo-600" />
               )}
             </span>
@@ -1256,19 +1248,19 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = () => {
           {/* All Members */}
           <button
             type="button"
-            onClick={() => setSelectedAssignMode("all")}
-            className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${selectedAssignMode === "all"
+            onClick={() => setSelectedAssignMode(AssignTargetMode.ALL)}
+            className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${selectedAssignMode === AssignTargetMode.ALL
               ? "border-emerald-500 bg-emerald-50/40"
               : "border-slate-200 hover:border-emerald-300 hover:bg-slate-50"
               }`}
           >
             <span
-              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${selectedAssignMode === "all"
+              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${selectedAssignMode === AssignTargetMode.ALL
                 ? "border-emerald-600"
                 : "border-slate-300"
                 }`}
             >
-              {selectedAssignMode === "all" && (
+              {selectedAssignMode === AssignTargetMode.ALL && (
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-600" />
               )}
             </span>
@@ -1305,7 +1297,7 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = () => {
                 setAssignModalOpen(true);
 
                 setLoadingAssignableEmployees(true);
-                const queryMode = selectedAssignMode === "all" ? "all-members" : "individual";
+                const queryMode = selectedAssignMode === AssignTargetMode.ALL ? "all-members" : "individual";
                 axios
                   .get("/api/quarterly-review/assignable-employees", {
                     params: { mode: queryMode },
@@ -1369,7 +1361,7 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = () => {
       >
         <div className="flex flex-col gap-4 pt-3">
           {/* Mode 1: Individual / Multi-Select */}
-          {assignMode === "individual" ? (
+          {assignMode === AssignTargetMode.INDIVIDUAL ? (
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
                 <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
@@ -1601,13 +1593,14 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = () => {
           <div className="flex justify-end items-center gap-2 pt-3 border-t border-slate-100">
             <Button onClick={() => setAssignModalOpen(false)}>Cancel</Button>
             <Button
+              size="large"
               type="primary"
               loading={assignSubmitting}
               icon={<Send className="w-3.5 h-3.5" />}
               onClick={handleAssignReview}
               className="!bg-indigo-600 hover:!bg-indigo-700 !font-semibold !rounded-lg"
             >
-              {assignMode === "all"
+              {assignMode === AssignTargetMode.ALL
                 ? `Assign to All (${assignableEmployees.length})`
                 : selectedEmployeeIds.length > 1
                   ? `Assign to ${selectedEmployeeIds.length} Members`
@@ -1698,7 +1691,7 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = () => {
                       </p>
                       {req.userRole && (
                         <span className="text-[9px] sm:text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
-                          {req.userRole === "MANAGER" ? "Manager" : "Employee"}
+                          {req.userRole === RequestUserRole.MANAGER ? "Manager" : "Employee"}
                         </span>
                       )}
                       {(req.attemptNumber > 1 || req.attempt_number > 1) && (
@@ -1741,7 +1734,7 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = () => {
                       loading={actioningRequestId === req.id}
                       icon={<Check className="w-3 h-3" />}
                       onClick={() =>
-                        handleAccessRequestAction(req.id, "approve")
+                        handleAccessRequestAction(req.id, AccessRequestAction.APPROVE)
                       }
                       className="!bg-emerald-600 hover:!bg-emerald-700 !font-semibold !rounded-lg shadow-sm !text-xs"
                     >
@@ -1753,7 +1746,7 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = () => {
                       loading={actioningRequestId === req.id}
                       icon={<X className="w-3 h-3" />}
                       onClick={() =>
-                        handleAccessRequestAction(req.id, "reject")
+                        handleAccessRequestAction(req.id, AccessRequestAction.REJECT)
                       }
                       className="!font-semibold !rounded-lg !text-xs"
                     >
@@ -1802,12 +1795,12 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = () => {
           <div className="flex items-center gap-2.5 pb-1">
             <div
               className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-                board.assignmentListType === "not_assigned"
+                board.assignmentListType === AssignmentListType.NOT_ASSIGNED
                   ? "bg-amber-50 text-amber-600 border border-amber-200/60"
                   : "bg-violet-50 text-violet-600 border border-violet-200/60"
               }`}
             >
-              {board.assignmentListType === "not_assigned" ? (
+              {board.assignmentListType === AssignmentListType.NOT_ASSIGNED ? (
                 <Clock className="w-4 h-4" />
               ) : (
                 <Users className="w-4 h-4" />
@@ -1815,12 +1808,12 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = () => {
             </div>
             <div>
               <h3 className="text-sm sm:text-base font-bold text-slate-900 leading-snug">
-                {board.assignmentListType === "not_assigned"
+                {board.assignmentListType === AssignmentListType.NOT_ASSIGNED
                   ? `Employees Not Assigned – ${board.stats?.assignmentSummary?.quarter || board.selectedQuarterCard} ${board.stats?.assignmentSummary?.financialYear || board.selectedYear}`
                   : `Assigned Employees – ${board.stats?.assignmentSummary?.quarter || board.selectedQuarterCard} ${board.stats?.assignmentSummary?.financialYear || board.selectedYear}`}
               </h3>
               <p className="text-[11px] sm:text-xs text-slate-500 font-normal">
-                {board.assignmentListType === "not_assigned"
+                {board.assignmentListType === AssignmentListType.NOT_ASSIGNED
                   ? `Employees who have NOT been assigned a review for this quarter (${board.stats?.assignmentSummary?.notAssignedCount ?? 0} members)`
                   : `Assigned employees (${board.stats?.assignmentSummary?.assignedCount ?? 0}) and members with pending quarters (${board.stats?.assignmentSummary?.singleQuarterCount ?? 0})`}
               </p>
@@ -1833,11 +1826,11 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = () => {
             <button
               type="button"
               onClick={() => {
-                board.setAssignmentListType("assigned");
-                board.setAssignedSubTab("all");
+                board.setAssignmentListType(AssignmentListType.ASSIGNED);
+                board.setAssignedSubTab(AssignedSubTab.ALL);
               }}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all shrink-0 cursor-pointer ${
-                board.assignmentListType === "assigned" && board.assignedSubTab === "all"
+                board.assignmentListType === AssignmentListType.ASSIGNED && board.assignedSubTab === AssignedSubTab.ALL
                   ? "bg-white text-violet-700 shadow-xs border border-slate-200/80"
                   : "text-slate-600 hover:text-slate-900"
               }`}
@@ -1850,11 +1843,11 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = () => {
             <button
               type="button"
               onClick={() => {
-                board.setAssignmentListType("assigned");
-                board.setAssignedSubTab("single_quarter");
+                board.setAssignmentListType(AssignmentListType.ASSIGNED);
+                board.setAssignedSubTab(AssignedSubTab.SINGLE_QUARTER);
               }}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all shrink-0 cursor-pointer ${
-                board.assignmentListType === "assigned" && board.assignedSubTab === "single_quarter"
+                board.assignmentListType === AssignmentListType.ASSIGNED && board.assignedSubTab === AssignedSubTab.SINGLE_QUARTER
                   ? "bg-white text-violet-700 shadow-xs border border-slate-200/80"
                   : "text-slate-600 hover:text-slate-900"
               }`}
@@ -1867,10 +1860,10 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = () => {
             <button
               type="button"
               onClick={() => {
-                board.setAssignmentListType("not_assigned");
+                board.setAssignmentListType(AssignmentListType.NOT_ASSIGNED);
               }}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all shrink-0 cursor-pointer ${
-                board.assignmentListType === "not_assigned"
+                board.assignmentListType === AssignmentListType.NOT_ASSIGNED
                   ? "bg-white text-amber-700 shadow-xs border border-slate-200/80"
                   : "text-slate-600 hover:text-slate-900"
               }`}
@@ -1894,9 +1887,9 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = () => {
           <div className="max-h-[55vh] overflow-y-auto">
             <Table
               dataSource={
-                (board.assignmentListType === "not_assigned"
+                (board.assignmentListType === AssignmentListType.NOT_ASSIGNED
                   ? (board.stats?.assignmentSummary?.notAssignedEmployees || [])
-                  : board.assignedSubTab === "single_quarter"
+                  : board.assignedSubTab === AssignedSubTab.SINGLE_QUARTER
                     ? (board.stats?.assignmentSummary?.singleQuarterEmployees || [])
                     : (board.stats?.assignmentSummary?.assignedEmployees || [])
                 ).filter((emp: any) => {
@@ -1944,7 +1937,7 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = () => {
                     </span>
                   ),
                 },
-                ...(board.assignmentListType === "not_assigned" ? [
+                ...(board.assignmentListType === AssignmentListType.NOT_ASSIGNED ? [
                   {
                     title: "Action",
                     key: "action",
@@ -1955,8 +1948,8 @@ const ManagerReviewBoardMobile: React.FC<{ onBack?: () => void }> = () => {
                         className="!bg-indigo-600 hover:!bg-indigo-700 !text-xs !font-semibold !rounded-lg"
                         onClick={() => {
                           board.setAssignmentListModalOpen(false);
-                          setSelectedAssignMode("individual");
-                          setAssignMode("individual");
+                          setSelectedAssignMode(AssignTargetMode.INDIVIDUAL);
+                          setAssignMode(AssignTargetMode.INDIVIDUAL);
                           setSelectedEmployeeIds([record.employeeId]);
                           setAssignModalOpen(true);
                         }}

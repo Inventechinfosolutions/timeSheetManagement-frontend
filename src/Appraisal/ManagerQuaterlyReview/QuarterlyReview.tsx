@@ -47,6 +47,14 @@ import {
   toFiscalYearLabel,
   YEARS_BEFORE_CURRENT,
   YEARS_AFTER_CURRENT,
+  FormMode,
+  AccessRequestStatus,
+  AccessRequestAction,
+  AssignmentListType,
+  AssignedSubTab,
+  AssignTargetMode,
+  ReviewStatus,
+  RequestUserRole,
 } from "./QuarterlyReview.types";
 import {
   getMasterFinancialYearCodes,
@@ -257,21 +265,31 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
   const urlEmployee = searchParams.get('employeeId') || searchParams.get('employee');
   const urlSearch = searchParams.get('search') || "";
 
-  const resolvedInitialStatus = useMemo(() => {
+  const resolvedInitialStatus = useMemo((): StatusTabFilter => {
     if (!urlStatus) return StatusTabFilter.ALL;
-    const s = urlStatus.toUpperCase();
-    if (s === "ASSIGNED") return StatusTabFilter.ASSIGNED;
+    const normalizedStatus = urlStatus.trim().toLowerCase().replace(/[\s_-]/g, '');
+
+    const assignedKey = StatusTabFilter.ASSIGNED.toLowerCase().replace(/[\s_-]/g, '');
+    const awaitingReviewKey = StatusTabFilter.AWAITING_REVIEW.toLowerCase().replace(/[\s_-]/g, '');
+    const underReviewKey = StatusTabFilter.UNDER_REVIEW.toLowerCase().replace(/[\s_-]/g, '');
+    const reviewedKey = StatusTabFilter.REVIEWED.toLowerCase().replace(/[\s_-]/g, '');
+    const submittedKey = ReviewStatus.SUBMITTED.toLowerCase().replace(/[\s_-]/g, '');
+
+    if (normalizedStatus === assignedKey) {
+      return StatusTabFilter.ASSIGNED;
+    }
     if (
-      s === "AWAITING_REVIEW" ||
-      s === "AWAITING REVIEW" ||
-      s === "AWAITING-REVIEW" ||
-      s === "PENDING" ||
-      s === "SUBMITTED"
+      normalizedStatus === awaitingReviewKey ||
+      normalizedStatus === submittedKey
     ) {
       return StatusTabFilter.AWAITING_REVIEW;
     }
-    if (s === "UNDER_REVIEW" || s === "UNDER REVIEW" || s === "IN_REVIEW" || s === "IN REVIEW") return StatusTabFilter.UNDER_REVIEW;
-    if (s === "REVIEWED" || s === "COMPLETED" || s === "APPROVED") return StatusTabFilter.REVIEWED;
+    if (normalizedStatus === underReviewKey) {
+      return StatusTabFilter.UNDER_REVIEW;
+    }
+    if (normalizedStatus === reviewedKey) {
+      return StatusTabFilter.REVIEWED;
+    }
     return StatusTabFilter.ALL;
   }, [urlStatus]);
 
@@ -367,9 +385,9 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
   const [assignEmployeeName, setAssignEmployeeName] = useState("");
   const [assignableEmployees, setAssignableEmployees] = useState<AssignableEmployee[]>([]);
   const [loadingAssignableEmployees, setLoadingAssignableEmployees] = useState(false);
-  const [assignMode, setAssignMode] = useState<"individual" | "all">("individual");
+  const [assignMode, setAssignMode] = useState<AssignTargetMode>(AssignTargetMode.INDIVIDUAL);
   const [selectedAssignMode, setSelectedAssignMode] = useState<
-    "individual" | "all" | null
+    AssignTargetMode | null
   >(null);
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
   const [employeeAssignedQuarters, setEmployeeAssignedQuarters] = useState<string[]>([]);
@@ -394,7 +412,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
   }, [location.pathname]);
   // Derived assigned quarters for currently selected employee(s)
   const currentAssignedQuarters = useMemo(() => {
-    if (assignMode === "all") {
+    if (assignMode === AssignTargetMode.ALL) {
       if (!assignableEmployees || assignableEmployees.length === 0) return [];
       const firstEmpQs = assignableEmployees[0]?.assignedQuarters || [];
       return firstEmpQs.filter((q) =>
@@ -424,8 +442,8 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
   const [accessRequestsOpen, setAccessRequestsOpen] = useState(false);
   // Employee assignment list modal state (for clicking Assigned / Not Assigned)
   const [assignmentListModalOpen, setAssignmentListModalOpen] = useState(false);
-  const [assignmentListType, setAssignmentListType] = useState<"assigned" | "not_assigned" | "single_quarter">("assigned");
-  const [assignedSubTab, setAssignedSubTab] = useState<"all" | "single_quarter">("all");
+  const [assignmentListType, setAssignmentListType] = useState<AssignmentListType>(AssignmentListType.ASSIGNED);
+  const [assignedSubTab, setAssignedSubTab] = useState<AssignedSubTab>(AssignedSubTab.ALL);
   const [assignmentListSearch, setAssignmentListSearch] = useState("");
   const [accessRequests, setAccessRequests] = useState<ReviewAccessRequest[]>([]);
   const [selectedAccessRequest, setSelectedAccessRequest] = useState<ReviewAccessRequest | null>(null);
@@ -441,14 +459,14 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
     tagClass: string;
   } => {
     // If individual mode and no employee is selected yet, keep enabled
-    if (assignMode === "individual" && selectedEmployeeIds.length === 0) {
+    if (assignMode === AssignTargetMode.INDIVIDUAL && selectedEmployeeIds.length === 0) {
       return { disabled: false, tag: null, tagClass: "" };
     }
 
     const normQ = qCode.trim().toUpperCase(); // e.g. "Q1"
 
     const targetEmployeeIds =
-      assignMode === "all"
+      assignMode === AssignTargetMode.ALL
         ? assignableEmployees.map((e) => String(e.employeeId))
         : selectedEmployeeIds.map(String);
 
@@ -480,7 +498,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
           .filter(
             (r) =>
               String(r.employeeId).toLowerCase() === empId.toLowerCase() &&
-              r.status === "PENDING"
+              r.status === AccessRequestStatus.PENDING
           )
           .map((r) => r.quarter || ""),
       ].filter(Boolean);
@@ -607,7 +625,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
       const [subsRes, statsRes, accessRes] = await Promise.all([
         axios.get("/api/manager-quarterly-review", { params }),
         axios.get("/api/manager-quarterly-review/stats", { params: statsParams }),
-        axios.get("/api/quarterly-review/access-requests", { params: { status: "pending" } }).catch(() => null),
+        axios.get("/api/quarterly-review/access-requests", { params: { status: AccessRequestStatus.PENDING.toLowerCase() } }).catch(() => null),
       ]);
 
       if (subsRes.data?.success) {
@@ -799,7 +817,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
     applyReviewToForm(record);
     setIsModalOpen(true);
     const formattedQuarter = getRecordQuarterUrl(record);
-    const modeParam = `mode=${viewOnly ? 'view' : 'edit'}`;
+    const modeParam = `mode=${viewOnly ? FormMode.VIEW : FormMode.EDIT}`;
     const urlKey = `${record.employeeId}_${formattedQuarter}`;
     loadedEmployeeIdRef.current = urlKey;
     loadFreshReview(record.employeeId, formattedQuarter, viewOnly);
@@ -823,34 +841,32 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
         const freshRecord: ManagerReviewItem = response.data.data;
         setCurrentReview(freshRecord);
         applyReviewToForm(freshRecord);
-        const isFreshUnderReview =
-          freshRecord.status === 'Under Review' ||
-          freshRecord.status === 'In Review' ||
-          freshRecord.reviewStatus === 'Under Review' ||
-          freshRecord.reviewStatus === 'In Review';
-        const isFreshEvaluated =
-          !isFreshUnderReview &&
-          (freshRecord.status === 'Reviewed' ||
-            freshRecord.reviewStatus === 'Reviewed' ||
+        const isFreshRecordUnderReview =
+          freshRecord.status === ManagerReviewStatus.UNDER_REVIEW ||
+          freshRecord.reviewStatus === ManagerReviewStatus.UNDER_REVIEW;
+        const isFreshRecordEvaluated =
+          !isFreshRecordUnderReview &&
+          (freshRecord.status === ManagerReviewStatus.REVIEWED ||
+            freshRecord.reviewStatus === ManagerReviewStatus.REVIEWED ||
             Boolean(freshRecord.reviewedOn));
 
         const searchParams = new URLSearchParams(location.search);
         const modeParam = searchParams.get('mode');
         const isExplicitView =
           preferredViewOnly === true ||
-          modeParam === 'view' ||
-          (modeParam !== 'edit' && location.state?.viewOnly === true);
+          modeParam === FormMode.VIEW ||
+          (modeParam !== FormMode.EDIT && location.state?.viewOnly === true);
         const isExplicitEdit =
           preferredViewOnly === false ||
-          modeParam === 'edit' ||
-          (modeParam !== 'view' && location.state?.viewOnly === false);
+          modeParam === FormMode.EDIT ||
+          (modeParam !== FormMode.VIEW && location.state?.viewOnly === false);
 
         if (isExplicitEdit) {
           setIsViewOnly(false);
         } else if (isExplicitView) {
           setIsViewOnly(true);
         } else {
-          setIsViewOnly(isFreshEvaluated);
+          setIsViewOnly(isFreshRecordEvaluated);
         }
       }
     } catch (error: any) {
@@ -887,8 +903,8 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
     const rawQuarterFromUrl = quarterPeriodFromUrl || searchParams.get("quarter") || undefined;
     const quarterFromUrl = formatQuarterHyphen(rawQuarterFromUrl) || undefined;
     const modeFromUrl = searchParams.get("mode");
-    const isExplicitView = modeFromUrl === 'view' || (modeFromUrl !== 'edit' && location.state?.viewOnly === true);
-    const isExplicitEdit = modeFromUrl === 'edit' || (modeFromUrl !== 'view' && location.state?.viewOnly === false);
+    const isExplicitView = modeFromUrl === FormMode.VIEW || (modeFromUrl !== FormMode.EDIT && location.state?.viewOnly === true);
+    const isExplicitEdit = modeFromUrl === FormMode.EDIT || (modeFromUrl !== FormMode.VIEW && location.state?.viewOnly === false);
     const urlKey = `${employeeIdFromUrl}_${quarterFromUrl || ""}`;
 
     if (loadedEmployeeIdRef.current === urlKey && currentReview) return;
@@ -904,30 +920,28 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
         (location.state.record.quarterCode && quarterFromUrl.startsWith(location.state.record.quarterCode)) ||
         (location.state.record.quarter && quarterFromUrl.startsWith(location.state.record.quarter.trim().split(/\s+/)[0])))
     ) {
-      const rec = location.state.record;
-      setCurrentReview(rec);
-      const isRecUnderReview =
-        rec.status === 'Under Review' ||
-        rec.status === 'In Review' ||
-        rec.reviewStatus === 'Under Review' ||
-        rec.reviewStatus === 'In Review';
-      const isRecEvaluated =
-        !isRecUnderReview &&
-        (rec.status === 'Reviewed' ||
-          rec.reviewStatus === 'Reviewed' ||
-          Boolean(rec.reviewedOn));
+      const recordFromLocation = location.state.record;
+      setCurrentReview(recordFromLocation);
+      const isRecordUnderReview =
+        recordFromLocation.status === ManagerReviewStatus.UNDER_REVIEW ||
+        recordFromLocation.reviewStatus === ManagerReviewStatus.UNDER_REVIEW;
+      const isRecordEvaluated =
+        !isRecordUnderReview &&
+        (recordFromLocation.status === ManagerReviewStatus.REVIEWED ||
+          recordFromLocation.reviewStatus === ManagerReviewStatus.REVIEWED ||
+          Boolean(recordFromLocation.reviewedOn));
 
       if (isExplicitEdit) {
         setIsViewOnly(false);
       } else if (isExplicitView) {
         setIsViewOnly(true);
       } else {
-        setIsViewOnly(isRecEvaluated);
+        setIsViewOnly(isRecordEvaluated);
       }
       setFieldErrors({});
-      applyReviewToForm(rec);
+      applyReviewToForm(recordFromLocation);
       setIsModalOpen(true);
-      loadFreshReview(employeeIdFromUrl, quarterFromUrl || getRecordQuarterUrl(rec), isExplicitView ? true : (isExplicitEdit ? false : undefined));
+      loadFreshReview(employeeIdFromUrl, quarterFromUrl || getRecordQuarterUrl(recordFromLocation), isExplicitView ? true : (isExplicitEdit ? false : undefined));
       return;
     }
 
@@ -943,15 +957,13 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
     );
     if (matchedSubmission) {
       setCurrentReview(matchedSubmission);
-      const isMatchedUnderReview =
-        matchedSubmission.status === 'Under Review' ||
-        matchedSubmission.status === 'In Review' ||
-        matchedSubmission.reviewStatus === 'Under Review' ||
-        matchedSubmission.reviewStatus === 'In Review';
-      const isMatchedEvaluated =
-        !isMatchedUnderReview &&
-        (matchedSubmission.status === 'Reviewed' ||
-          matchedSubmission.reviewStatus === 'Reviewed' ||
+      const isMatchedSubmissionUnderReview =
+        matchedSubmission.status === ManagerReviewStatus.UNDER_REVIEW ||
+        matchedSubmission.reviewStatus === ManagerReviewStatus.UNDER_REVIEW;
+      const isMatchedSubmissionEvaluated =
+        !isMatchedSubmissionUnderReview &&
+        (matchedSubmission.status === ManagerReviewStatus.REVIEWED ||
+          matchedSubmission.reviewStatus === ManagerReviewStatus.REVIEWED ||
           Boolean(matchedSubmission.reviewedOn));
 
       if (isExplicitEdit) {
@@ -959,7 +971,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
       } else if (isExplicitView) {
         setIsViewOnly(true);
       } else {
-        setIsViewOnly(isMatchedEvaluated);
+        setIsViewOnly(isMatchedSubmissionEvaluated);
       }
       setFieldErrors({});
       applyReviewToForm(matchedSubmission);
@@ -1154,7 +1166,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
       setAssignEmployeeId(singleId);
       setAssignEmployeeName(item.employeeName || "");
       setSelectedEmployeeIds([singleId]);
-      setAssignMode("individual");
+      setAssignMode(AssignTargetMode.INDIVIDUAL);
       if (item.quarter) {
         const qCodeMatch = item.quarter.match(/Q[1-4]/i);
         if (qCodeMatch) {
@@ -1165,7 +1177,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
       setAssignEmployeeId("");
       setAssignEmployeeName("");
       setSelectedEmployeeIds([]);
-      setAssignMode("individual");
+      setAssignMode(AssignTargetMode.INDIVIDUAL);
       setEmployeeAssignedQuarters([]);
     }
 
@@ -1206,21 +1218,21 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
       return;
     }
     if (!assignNotes || !assignNotes.trim()) { message.error("Description is required."); return; }
-    if (assignMode === "individual" && selectedEmployeeIds.length === 0) {
+    if (assignMode === AssignTargetMode.INDIVIDUAL && selectedEmployeeIds.length === 0) {
       message.error("Please select at least one employee.");
       return;
     }
     try {
       setAssignSubmitting(true);
       const payload: any = {
-        mode: assignMode === "all" ? "ALL" : "INDIVIDUAL",
+        mode: assignMode === AssignTargetMode.ALL ? "ALL" : "INDIVIDUAL",
         quarter: assignQuarterLabel,
         financialYear: assignFinancialYear,
         startDate: effectiveStart,
         endDate: assignEndDate,
         description: assignNotes.trim(),
       };
-      if (assignMode === "individual") { payload.employeeIds = selectedEmployeeIds; }
+      if (assignMode === AssignTargetMode.INDIVIDUAL) { payload.employeeIds = selectedEmployeeIds; }
       const res = await axios.post("/api/manager-quarterly-review/assignments/create", payload);
       if (res.data?.success) {
         const created = res.data?.data?.created ?? 0;
@@ -1253,7 +1265,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
     try {
       setAccessRequestsLoading(true);
       const res = await axios.get("/api/quarterly-review/access-requests", {
-        params: { status: "pending" },
+        params: { status: AccessRequestStatus.PENDING.toLowerCase() },
       });
       if (res.data?.success) {
         setAccessRequests(res.data.data || []);
@@ -1275,25 +1287,24 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
 
   const handleAccessRequestAction = async (
     requestId: string | number,
-    action: "approve" | "reject",
+    action: AccessRequestAction,
   ) => {
     const comment = (actionComments[requestId] || "").trim();
-    if (action === "reject" && !comment) {
+    if (action === AccessRequestAction.REJECT && !comment) {
       message.warning("Please enter a comment/reason before rejecting the access request.");
       return;
     }
 
     try {
       setActioningRequestId(requestId);
-      const upperAction = action === "approve" ? "APPROVE" : "REJECT";
       const res = await axios.post(
         `/api/quarterly-review/access-requests/${requestId}/action`,
-        { action: upperAction, remarks: comment, extensionHours: 48 },
+        { action, remarks: comment, extensionHours: 48 },
       );
 
       if (res.data?.success) {
         message.success(
-          action === "approve"
+          action === AccessRequestAction.APPROVE
             ? "Access request approved. The review edit option has been reopened."
             : "Access request rejected.",
         );
@@ -1385,54 +1396,45 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
   };
 
   const renderStatusBadge = (status: string | null) => {
-    const currentStatus = (status || AppraisalStatus.ASSIGNED).trim().toLowerCase();
-    if (
-      currentStatus === AppraisalStatus.REVIEWED.toLowerCase() ||
-      currentStatus === "reviewed" ||
-      currentStatus === "completed" ||
-      currentStatus === "approved"
-    ) {
+    const currentStatus = (status || AppraisalStatus.ASSIGNED).trim().toLowerCase().replace(/[\s_-]/g, '');
+    const reviewedKey = AppraisalStatus.REVIEWED.toLowerCase().replace(/[\s_-]/g, '');
+    const underReviewKey = AppraisalStatus.UNDER_REVIEW.toLowerCase().replace(/[\s_-]/g, '');
+    const awaitingReviewKey = AppraisalStatus.AWAITING_REVIEW.toLowerCase().replace(/[\s_-]/g, '');
+    const submittedKey = ReviewStatus.SUBMITTED.toLowerCase().replace(/[\s_-]/g, '');
+    const autoSubmittedKey = ReviewStatus.AUTO_SUBMITTED.toLowerCase().replace(/[\s_-]/g, '');
+
+    if (currentStatus === reviewedKey) {
       return (
         <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-          Reviewed
+          {AppraisalStatus.REVIEWED}
         </span>
       );
     }
-    if (
-      currentStatus === AppraisalStatus.UNDER_REVIEW.toLowerCase() ||
-      currentStatus === "under review" ||
-      currentStatus === "under_review" ||
-      currentStatus === "in review" ||
-      currentStatus === "in_review"
-    ) {
+    if (currentStatus === underReviewKey) {
       return (
         <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
           <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-          Under Review
+          {AppraisalStatus.UNDER_REVIEW}
         </span>
       );
     }
     if (
-      currentStatus === AppraisalStatus.AWAITING_REVIEW.toLowerCase() ||
-      currentStatus === "pending" ||
-      currentStatus === "awaiting review" ||
-      currentStatus === "awaiting_review" ||
-      currentStatus === "submitted" ||
-      currentStatus === "auto submitted" ||
-      currentStatus === "auto_submitted"
+      currentStatus === awaitingReviewKey ||
+      currentStatus === submittedKey ||
+      currentStatus === autoSubmittedKey
     ) {
       return (
         <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-orange-50 text-orange-700 border border-orange-200">
           <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-          Awaiting Review
+          {AppraisalStatus.AWAITING_REVIEW}
         </span>
       );
     }
     return (
       <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
         <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-        Assigned
+        {AppraisalStatus.ASSIGNED}
       </span>
     );
   };
@@ -1643,22 +1645,19 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
       render: (_: any, record: ManagerReviewItem) => {
         const isReviewed =
           record.status === AppraisalStatus.REVIEWED ||
-          record.status === "Reviewed" ||
-          record.status === "Completed" ||
-          record.status === "Approved" ||
-          record.reviewStatus === "Reviewed";
+          record.reviewStatus === AppraisalStatus.REVIEWED;
 
         const canEvaluate =
           isReviewed ||
           record.status === AppraisalStatus.AWAITING_REVIEW ||
           record.status === AppraisalStatus.UNDER_REVIEW ||
-          record.status === "Awaiting Review" ||
-          record.status === "Under Review";
+          record.reviewStatus === AppraisalStatus.AWAITING_REVIEW ||
+          record.reviewStatus === AppraisalStatus.UNDER_REVIEW;
 
         // Find pending access request for this row's employee and quarter
         const pendingRequest = accessRequests.find((r) => {
           if (String(r.employeeId).trim().toLowerCase() !== String(record.employeeId).trim().toLowerCase()) return false;
-          if (r.status !== "PENDING") return false;
+          if (r.status !== AccessRequestStatus.PENDING) return false;
           const rQuarter = (r.quarter || "").toUpperCase().replace(/[\s\-_]/g, "");
           const recQuarter = (record.quarter || "").toUpperCase().replace(/[\s\-_]/g, "");
           const recFull = (record.fullQuarter || "").toUpperCase().replace(/[\s\-_]/g, "");
@@ -1680,7 +1679,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
                 size="small"
                 icon={<Edit3 className="w-3.5 h-3.5" />}
                 onClick={() => handleOpenEvaluation(record, false)}
-                title={isReviewed || record.status === "Under Review" || record.status === "In Review" ? "Edit Evaluation" : "Evaluate"}
+                title={isReviewed || record.status === AppraisalStatus.UNDER_REVIEW ? "Edit Evaluation" : "Evaluate"}
                 className="!border-slate-300 hover:!border-indigo-400 !text-slate-700 hover:!text-indigo-600 !font-semibold !rounded-lg !flex !items-center !justify-center"
               />
             )}
@@ -2144,12 +2143,12 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
         title={
           <div className="flex items-center gap-2.5 pb-2">
             <div
-              className={`w-9 h-9 rounded-xl flex items-center justify-center ${assignmentListType === "not_assigned"
+              className={`w-9 h-9 rounded-xl flex items-center justify-center ${assignmentListType === AssignmentListType.NOT_ASSIGNED
                 ? "bg-amber-50 text-amber-600 border border-amber-200/60"
                 : "bg-violet-50 text-violet-600 border border-violet-200/60"
                 }`}
             >
-              {assignmentListType === "not_assigned" ? (
+              {assignmentListType === AssignmentListType.NOT_ASSIGNED ? (
                 <Hourglass className="w-5 h-5" />
               ) : (
                 <Calendar className="w-5 h-5" />
@@ -2157,12 +2156,12 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-900 leading-snug">
-                {assignmentListType === "not_assigned"
+                {assignmentListType === AssignmentListType.NOT_ASSIGNED
                   ? `Employees Not Assigned – ${stats.assignmentSummary?.quarter || selectedQuarterCard} ${stats.assignmentSummary?.financialYear || selectedYear}`
                   : `Assigned Employees – ${stats.assignmentSummary?.quarter || selectedQuarterCard} ${stats.assignmentSummary?.financialYear || selectedYear}`}
               </h3>
               <p className="text-xs text-slate-500 font-normal">
-                {assignmentListType === "not_assigned"
+                {assignmentListType === AssignmentListType.NOT_ASSIGNED
                   ? `Employees who have NOT been assigned a review for this quarter (${stats.assignmentSummary?.notAssignedCount ?? 0} members)`
                   : `Assigned employees (${stats.assignmentSummary?.assignedCount ?? 0}) and members with pending quarters (${stats.assignmentSummary?.singleQuarterCount ?? 0})`}
               </p>
@@ -2171,12 +2170,12 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
         }
       >
         <div className="flex flex-col gap-3.5 pt-2">
-          {assignmentListType !== "not_assigned" && (
+          {assignmentListType !== AssignmentListType.NOT_ASSIGNED && (
             <div className="flex items-center gap-2 p-1 bg-slate-100/90 rounded-xl border border-slate-200/80 w-fit">
               <button
                 type="button"
-                onClick={() => setAssignedSubTab("all")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${assignedSubTab === "all"
+                onClick={() => setAssignedSubTab(AssignedSubTab.ALL)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${assignedSubTab === AssignedSubTab.ALL
                   ? "bg-white text-violet-700 shadow-sm border border-slate-200/80"
                   : "text-slate-600 hover:text-slate-900"
                   }`}
@@ -2188,8 +2187,8 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => setAssignedSubTab("single_quarter")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${assignedSubTab === "single_quarter"
+                onClick={() => setAssignedSubTab(AssignedSubTab.SINGLE_QUARTER)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${assignedSubTab === AssignedSubTab.SINGLE_QUARTER
                   ? "bg-white text-violet-700 shadow-sm border border-slate-200/80"
                   : "text-slate-600 hover:text-slate-900"
                   }`}
@@ -2213,9 +2212,9 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
 
           <Table
             dataSource={
-              (assignmentListType === "not_assigned"
+              (assignmentListType === AssignmentListType.NOT_ASSIGNED
                 ? (stats.assignmentSummary?.notAssignedEmployees || [])
-                : assignedSubTab === "single_quarter"
+                : assignedSubTab === AssignedSubTab.SINGLE_QUARTER
                   ? (stats.assignmentSummary?.singleQuarterEmployees || [])
                   : (stats.assignmentSummary?.assignedEmployees || [])
               ).filter((emp: any) => {
@@ -2237,7 +2236,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
             pagination={{ pageSize: 8, showSizeChanger: false }}
             size="middle"
             columns={
-              assignmentListType === "not_assigned"
+              assignmentListType === AssignmentListType.NOT_ASSIGNED
                 ? [
                   {
                     title: "Employee Name",
@@ -2301,7 +2300,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
                     ),
                   },
                 ]
-                : assignedSubTab === "single_quarter"
+                : assignedSubTab === AssignedSubTab.SINGLE_QUARTER
                   ? [
                     {
                       title: "Employee Name",
@@ -2350,7 +2349,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
                       render: (q: string) => (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                           <CheckCircle2 className="w-3.5 h-3.5" />
-                          {q || "Assigned"}
+                          {q || AppraisalStatus.ASSIGNED}
                         </span>
                       ),
                     },
@@ -2436,7 +2435,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
                         const qText =
                           record.assignedQuarters && record.assignedQuarters.length > 0
                             ? record.assignedQuarters.join(", ")
-                            : record.assignedQuarter || record.quarter || "Assigned";
+                            : record.assignedQuarter || record.quarter || AppraisalStatus.ASSIGNED;
                         return (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                             <CheckCircle2 className="w-3.5 h-3.5" />
@@ -2475,7 +2474,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
                       render: (st: string) => (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
                           <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                          {st || "Assigned"}
+                          {st || AppraisalStatus.ASSIGNED}
                         </span>
                       ),
                     },
@@ -2545,27 +2544,27 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
           {/* Individual Member(s) */}
           <button
             type="button"
-            onClick={() => setSelectedAssignMode("individual")}
-            className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${selectedAssignMode === "individual"
+            onClick={() => setSelectedAssignMode(AssignTargetMode.INDIVIDUAL)}
+            className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${selectedAssignMode === AssignTargetMode.INDIVIDUAL
               ? "border-indigo-500 bg-indigo-50/40"
               : "border-slate-200 hover:border-indigo-300 hover:bg-slate-50"
               }`}
           >
             {/* Radio - LEFT */}
             <span
-              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${selectedAssignMode === "individual"
+              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${selectedAssignMode === AssignTargetMode.INDIVIDUAL
                 ? "border-indigo-600"
                 : "border-slate-300"
                 }`}
             >
-              {selectedAssignMode === "individual" && (
+              {selectedAssignMode === AssignTargetMode.INDIVIDUAL && (
                 <span className="w-2.5 h-2.5 rounded-full bg-indigo-600" />
               )}
             </span>
 
             {/* Icon */}
             <div
-              className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${selectedAssignMode === "individual"
+              className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${selectedAssignMode === AssignTargetMode.INDIVIDUAL
                 ? "bg-indigo-100"
                 : "bg-indigo-100"
                 }`}
@@ -2589,20 +2588,20 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
           {/* All Members */}
           <button
             type="button"
-            onClick={() => setSelectedAssignMode("all")}
-            className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${selectedAssignMode === "all"
+            onClick={() => setSelectedAssignMode(AssignTargetMode.ALL)}
+            className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${selectedAssignMode === AssignTargetMode.ALL
               ? "border-emerald-500 bg-emerald-50/40"
               : "border-slate-200 hover:border-emerald-300 hover:bg-slate-50"
               }`}
           >
             {/* Radio - LEFT */}
             <span
-              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${selectedAssignMode === "all"
+              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${selectedAssignMode === AssignTargetMode.ALL
                 ? "border-emerald-600"
                 : "border-slate-300"
                 }`}
             >
-              {selectedAssignMode === "all" && (
+              {selectedAssignMode === AssignTargetMode.ALL && (
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-600" />
               )}
             </span>
@@ -2649,7 +2648,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
                 setLoadingAssignableEmployees(true);
                 loadAccessRequests();
 
-                const queryMode = selectedAssignMode === "all" ? "all-members" : "individual";
+                const queryMode = selectedAssignMode === AssignTargetMode.ALL ? "all-members" : "individual";
                 axios
                   .get("/api/quarterly-review/assignable-employees", {
                     params: { mode: queryMode },
@@ -2718,7 +2717,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
       >
         <div className="flex flex-col gap-4 pt-3">
           {/* Mode 1: Individual / Multi-Select */}
-          {assignMode === "individual" ? (
+          {assignMode === AssignTargetMode.INDIVIDUAL ? (
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
                 <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
@@ -2962,7 +2961,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
               onClick={handleAssignReview}
               className="!bg-indigo-600 hover:!bg-indigo-700 !font-semibold !rounded-lg"
             >
-              {assignMode === "all"
+              {assignMode === AssignTargetMode.ALL
                 ? `Assign to All (${assignableEmployees.length})`
                 : selectedEmployeeIds.length > 1
                   ? `Assign to ${selectedEmployeeIds.length} Members`
@@ -3053,12 +3052,12 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
                       </p>
                       {req.userRole && (
                         <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
-                          {req.userRole === 'MANAGER' ? 'Manager' : 'Employee'}
+                          {req.userRole === RequestUserRole.MANAGER ? 'Manager' : 'Employee'}
                         </span>
                       )}
-                      {((req as any).attemptNumber > 1 || (req as any).attempt_number > 1) && (
+                      {((req.attemptNumber ?? req.attempt_number ?? 0) > 1) && (
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200">
-                          Attempt {(req as any).attemptNumber || (req as any).attempt_number} of 2 (Re-request)
+                          Attempt {req.attemptNumber || req.attempt_number} of 2 (Re-request)
                         </span>
                       )}
                     </div>
@@ -3096,7 +3095,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
                       loading={actioningRequestId === req.id}
                       icon={<Check className="w-3 h-3" />}
                       onClick={() =>
-                        handleAccessRequestAction(req.id, "approve")
+                        handleAccessRequestAction(req.id, AccessRequestAction.APPROVE)
                       }
                       className="!bg-emerald-600 hover:!bg-emerald-700 !font-semibold !rounded-lg shadow-sm"
                     >
@@ -3108,7 +3107,7 @@ const ManagerReviewBoardDesktop: React.FC<ManagerReviewBoardDesktopProps> = ({
                       loading={actioningRequestId === req.id}
                       icon={<X className="w-3 h-3" />}
                       onClick={() =>
-                        handleAccessRequestAction(req.id, "reject")
+                        handleAccessRequestAction(req.id, AccessRequestAction.REJECT)
                       }
                       className="!font-semibold !rounded-lg"
                     >

@@ -18,13 +18,12 @@
  *  - Any JSX / UI rendering
  *  - Desktop-only or Mobile-only layout decisions
  */
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { FormInstance } from 'antd';
 import { message } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { ReviewStatus } from '../enums/Appraisal.enums';
+import { ReviewStatus, AppraisalReviewStatus, FormMode } from '../enums/Appraisal.enums';
 import { UserType } from '../../../enums';
 import { isQuarterOver, convertUrlSlugToQuarterName, quarterToSlug } from '../utils/fyQuarter.utils';
 import type { RootState, AppDispatch } from '../../../store';
@@ -291,10 +290,9 @@ export const useQuarterlyReviewForm = (
   const modeParam = new URLSearchParams(location.search).get('mode');
 
   const isReadOnly =
-    modeParam === ReviewStatus.VIEW ||
-    modeParam === 'view' ||
-    (!isReopened && quarterOver && (backendStatus === ReviewStatus.SUBMITTED || backendStatus === ReviewStatus.COMPLETED || backendStatus === ReviewStatus.APPROVED)) ||
-    (!isReopened && (backendStatus === ReviewStatus.SUBMITTED || backendStatus === ReviewStatus.COMPLETED || backendStatus === ReviewStatus.APPROVED) && modeParam !== 'edit');
+    modeParam === FormMode.VIEW ||
+    (!isReopened && quarterOver && (backendStatus === ReviewStatus.SUBMITTED || backendStatus === ReviewStatus.AUTO_SUBMITTED)) ||
+    (!isReopened && (backendStatus === ReviewStatus.SUBMITTED || backendStatus === ReviewStatus.AUTO_SUBMITTED) && modeParam !== FormMode.EDIT);
 
   // ── Data Loading ──────────────────────────────────────────────────────────
 
@@ -353,15 +351,13 @@ export const useQuarterlyReviewForm = (
           }
 
           const isManagerReviewed =
+            existingReviewRecord.reviewStatus === AppraisalReviewStatus.REVIEWED ||
             existingReviewRecord.reviewStatus === ReviewStatus.REVIEWED ||
-            existingReviewRecord.reviewStatus === ReviewStatus.COMPLETED ||
-            existingReviewRecord.status === ReviewStatus.REVIEWED ||
-            existingReviewRecord.status === ReviewStatus.APPROVED ||
-            existingReviewRecord.status === ReviewStatus.COMPLETED;
+            existingReviewRecord.status === ReviewStatus.REVIEWED;
 
           const parsedRatingsObject = parseJsonSafely(existingReviewRecord.ratings || existingReviewRecord.managerRatings);
           const evaluationData: ManagerEvaluation = {
-            reviewStatus: existingReviewRecord.reviewStatus ?? (isManagerReviewed ? 'Reviewed' : null),
+            reviewStatus: existingReviewRecord.reviewStatus ?? (isManagerReviewed ? AppraisalReviewStatus.REVIEWED : null),
             finalRating: existingReviewRecord.finalRating ?? null,
             ratings: parsedRatingsObject && typeof parsedRatingsObject === 'object' ? parsedRatingsObject : null,
             strengths: existingReviewRecord.strengths ?? null,

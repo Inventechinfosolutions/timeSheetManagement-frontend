@@ -8,7 +8,15 @@ import {
   BarChart3, Download, Trash2, FileCheck2, AlertTriangle,
   Clock, Key, Send, ShieldAlert, Award, ArrowRight,
 } from 'lucide-react';
-import { ReviewStatus, AppraisalReviewStatus, REVIEW_STATUS_FILTER_OPTIONS } from './enums/Appraisal.enums';
+import {
+  ReviewStatus,
+  AppraisalReviewStatus,
+  FormMode,
+  AccessRequestStatus,
+  SubmissionType,
+  REVIEW_STATUS_FILTER_OPTIONS,
+  QuarterFilter,
+} from './enums/Appraisal.enums';
 import { QuarterlyReview, StatusStyle } from './types/Appraisal.types';
 import EmptyReviewImage from '../../assets/EmptyReviewImage.png';
 import {
@@ -129,7 +137,7 @@ const EmployeeAppraisalDashboard: React.FC = () => {
   const initialFY = urlFY !== null ? urlFY : defaultFY;
   const initialQuarter = searchParams.get('quarter') || searchParams.get('q') || '';
   const rawStatus = searchParams.get('reviewStatus') || searchParams.get('status');
-  const initialReviewStatus = rawStatus && rawStatus !== 'ALL' ? rawStatus : undefined;
+  const initialReviewStatus = rawStatus && rawStatus !== QuarterFilter.ALL ? rawStatus : undefined;
 
   const [reviews, setReviews] = useState<QuarterlyReview[]>([]);
   const [currentQuarter, setCurrentQuarter] = useState<string>('');
@@ -173,7 +181,7 @@ const EmployeeAppraisalDashboard: React.FC = () => {
       }
 
       if (updates.reviewStatus !== undefined) {
-        if (updates.reviewStatus && updates.reviewStatus !== 'ALL') {
+        if (updates.reviewStatus && updates.reviewStatus !== QuarterFilter.ALL) {
           nextParams.set('reviewStatus', updates.reviewStatus);
           nextParams.delete('status');
         } else {
@@ -192,7 +200,7 @@ const EmployeeAppraisalDashboard: React.FC = () => {
   };
 
   const filteredReviews = useMemo(() => {
-    if (!selectedReviewStatus || selectedReviewStatus === 'ALL') {
+    if (!selectedReviewStatus || selectedReviewStatus === QuarterFilter.ALL) {
       return reviews;
     }
     const targetStatus = selectedReviewStatus.trim().toLowerCase();
@@ -200,11 +208,11 @@ const EmployeeAppraisalDashboard: React.FC = () => {
       const displayStatus = getReviewDisplayStatus(reviewRecord);
       const subStatus = (
         reviewRecord.submissionStatus ||
-        (reviewRecord.status === ReviewStatus.SUBMITTED || reviewRecord.status === ReviewStatus.COMPLETED || reviewRecord.status === ReviewStatus.APPROVED
-          ? 'Submitted'
+        (reviewRecord.status === ReviewStatus.SUBMITTED || reviewRecord.status === ReviewStatus.AUTO_SUBMITTED
+          ? ReviewStatus.SUBMITTED
           : reviewRecord.status === ReviewStatus.DRAFT
-            ? 'Draft'
-            : 'Not Started')
+            ? ReviewStatus.DRAFT
+            : ReviewStatus.NOT_STARTED)
       ).trim().toLowerCase();
       return (
         displayStatus.toLowerCase() === targetStatus ||
@@ -245,8 +253,8 @@ const EmployeeAppraisalDashboard: React.FC = () => {
 
     try {
       setLoading(true);
-      const isAllFY = !fyVal || fyVal === 'ALL';
-      const isAllQuarter = !qVal || qVal === 'ALL';
+      const isAllFY = !fyVal || fyVal === QuarterFilter.ALL;
+      const isAllQuarter = !qVal || qVal === QuarterFilter.ALL;
       const filterPayload = {
         financialYear: !isAllFY ? fyVal.replace('FY ', 'FY') : undefined,
         quarter: !isAllQuarter ? qVal : undefined,
@@ -270,7 +278,7 @@ const EmployeeAppraisalDashboard: React.FC = () => {
         new Set([
           ...masterYears,
           ...safeReviews.map((reviewRecord) => reviewRecord.financialYear || getFinancialYear(reviewRecord.quarter)),
-          ...(fyVal && fyVal !== 'ALL' ? [fyVal] : []),
+          ...(fyVal && fyVal !== QuarterFilter.ALL ? [fyVal] : []),
         ].filter((financialYear) => financialYear && financialYear !== '—'))
       ).sort((financialYearA, financialYearB) => financialYearB.localeCompare(financialYearA));
       setFyOptions(uniqueFYs);
@@ -294,8 +302,8 @@ const EmployeeAppraisalDashboard: React.FC = () => {
     updateQueryParams({ financialYear });
     setFyLoading(true);
     try {
-      const isAllFY = !financialYear || financialYear === 'ALL';
-      const isAllQuarter = !selectedQuarter || selectedQuarter === 'ALL';
+      const isAllFY = !financialYear || financialYear === QuarterFilter.ALL;
+      const isAllQuarter = !selectedQuarter || selectedQuarter === QuarterFilter.ALL;
       const filterPayload = {
         financialYear: !isAllFY ? financialYear.replace('FY ', 'FY') : undefined,
         quarter: !isAllQuarter ? selectedQuarter : undefined,
@@ -338,7 +346,7 @@ const EmployeeAppraisalDashboard: React.FC = () => {
     const urlFY = searchParams.get('financialYear') || searchParams.get('fy') || '';
     const urlQ = searchParams.get('quarter') || searchParams.get('q') || '';
     const rawSt = searchParams.get('reviewStatus') || searchParams.get('status');
-    const urlStatus = rawSt && rawSt !== 'ALL' ? rawSt : undefined;
+    const urlStatus = rawSt && rawSt !== QuarterFilter.ALL ? rawSt : undefined;
 
     let shouldFetch = false;
     if (urlFY && urlFY !== selectedFY) {
@@ -618,7 +626,7 @@ const EmployeeAppraisalDashboard: React.FC = () => {
       width: 130,
       render: (_value: any, record: QuarterlyReview) => {
         const displayStatus = getReviewDisplayStatus(record);
-        const isEvaluated = displayStatus === 'Reviewed';
+        const isEvaluated = displayStatus === AppraisalReviewStatus.REVIEWED;
 
         if (!isEvaluated) {
           return <span className="text-slate-400 text-sm font-medium">—</span>;
@@ -649,42 +657,37 @@ const EmployeeAppraisalDashboard: React.FC = () => {
         const displayStatus = getReviewDisplayStatus(record);
 
         const isCompleted =
-          displayStatus === 'Reviewed' ||
-          record.reviewStatus === ReviewStatus.COMPLETED ||
+          displayStatus === AppraisalReviewStatus.REVIEWED ||
+          record.reviewStatus === AppraisalReviewStatus.REVIEWED ||
           record.reviewStatus === ReviewStatus.REVIEWED ||
-          record.status === ReviewStatus.APPROVED ||
-          record.status === ReviewStatus.COMPLETED ||
-          statusLower === 'reviewed' ||
-          statusLower === 'completed' ||
-          statusLower === 'approved';
+          record.status === ReviewStatus.REVIEWED ||
+          statusLower === ReviewStatus.REVIEWED.toLowerCase();
 
         const isSubmitted =
           !isCompleted &&
-          (statusLower === 'submitted' ||
-           statusLower === 'auto submitted' ||
-           statusLower === 'auto_submitted' ||
-           statusLower === 'awaiting review' ||
-           statusLower === 'awaiting_review' ||
-           subStatusLower === 'submitted' ||
-           subStatusLower === 'auto submitted' ||
-           revStatusLower === 'awaiting review' ||
-           revStatusLower === 'awaiting_review' ||
-           record.submissionType === 'AUTO' ||
-           record.submissionType === 'MANUAL' ||
+          (statusLower === ReviewStatus.SUBMITTED.toLowerCase() ||
+           statusLower === ReviewStatus.AUTO_SUBMITTED.toLowerCase() ||
+           statusLower === AppraisalReviewStatus.AWAITING_REVIEW.toLowerCase() ||
+           subStatusLower === ReviewStatus.SUBMITTED.toLowerCase() ||
+           subStatusLower === ReviewStatus.AUTO_SUBMITTED.toLowerCase() ||
+           revStatusLower === AppraisalReviewStatus.AWAITING_REVIEW.toLowerCase() ||
+           record.submissionType === SubmissionType.AUTO ||
+           record.submissionType === SubmissionType.MANUAL ||
            record.autoSubmitted === 1 ||
            Boolean(record.submittedDate) ||
-           displayStatus === 'Awaiting Review');
+           displayStatus === AppraisalReviewStatus.AWAITING_REVIEW);
 
         const isNotSubmitted =
           !isSubmitted &&
           !isCompleted &&
           (record.status === ReviewStatus.NOT_STARTED ||
            record.status === ReviewStatus.DRAFT ||
-           statusLower === 'initial' ||
-           statusLower === 'draft' ||
-           statusLower === 'assigned' ||
-           record.submissionStatus === 'Not Started' ||
-           record.submissionStatus === 'Draft');
+           record.status === ReviewStatus.INITIAL ||
+           statusLower === ReviewStatus.INITIAL.toLowerCase() ||
+           statusLower === ReviewStatus.DRAFT.toLowerCase() ||
+           statusLower === AppraisalReviewStatus.ASSIGNED.toLowerCase() ||
+           record.submissionStatus === ReviewStatus.NOT_STARTED ||
+           record.submissionStatus === ReviewStatus.DRAFT);
 
         const hasAccessOpen = Boolean(
           (record as any).assignment?.isAccessOpen ||
@@ -709,7 +712,7 @@ const EmployeeAppraisalDashboard: React.FC = () => {
               tooltip="View Review"
               tone="indigo"
               onClick={() =>
-                navigate(`${reviewPath}/${quarterToSlug(record.quarter)}?mode=view`)
+                navigate(`${reviewPath}/${quarterToSlug(record.quarter)}?mode=${FormMode.VIEW}`)
               }
             />
 
@@ -718,7 +721,7 @@ const EmployeeAppraisalDashboard: React.FC = () => {
               <RowIconButton
                 icon={<Edit3 className="w-4 h-4" />}
                 tooltip={
-                  record.status === ReviewStatus.NOT_STARTED || record.submissionStatus === 'Not Started'
+                  record.status === ReviewStatus.NOT_STARTED || record.submissionStatus === ReviewStatus.NOT_STARTED
                     ? 'Start Review'
                     : 'Edit Review'
                 }
@@ -744,8 +747,8 @@ const EmployeeAppraisalDashboard: React.FC = () => {
             {isSubmitted && !hasAccessOpen && (
               (() => {
                 const req = (record as any).accessRequest;
-                const isPending = req?.status === 'PENDING';
-                const isRejected = req?.status === 'REJECTED';
+                const isPending = req?.status === AccessRequestStatus.PENDING;
+                const isRejected = req?.status === AccessRequestStatus.REJECTED;
                 const canRetry = req ? req.canReRequest && req.totalAttempts < 2 : true;
 
                 if (isPending) {
@@ -1256,8 +1259,8 @@ const EmployeeAppraisalDashboard: React.FC = () => {
                     {fyOptions.length > 0 && (
                       <Select
                         className="compact-filter"
-                        value={selectedFY === 'ALL' ? undefined : (selectedFY || undefined)}
-                        onChange={(val) => handleFYChange(val || 'ALL')}
+                        value={selectedFY === QuarterFilter.ALL ? undefined : (selectedFY || undefined)}
+                        onChange={(val) => handleFYChange(val || QuarterFilter.ALL)}
                         loading={fyLoading}
                         placeholder="Financial Year"
                         allowClear
@@ -1266,7 +1269,7 @@ const EmployeeAppraisalDashboard: React.FC = () => {
                         popupMatchSelectWidth
                         style={{ width: 160 }}
                         options={[
-                          { label: 'All Years', value: 'ALL' },
+                          { label: 'All Years', value: QuarterFilter.ALL },
                           ...fyOptions.map((financialYear) => ({
                             label: financialYear,
                             value: financialYear,
@@ -1462,7 +1465,7 @@ const EmployeeAppraisalDashboard: React.FC = () => {
             </div>
           </div>
 
-          {selectedRecordForRequest?.accessRequest?.status === 'REJECTED' ? (
+          {selectedRecordForRequest?.accessRequest?.status === AccessRequestStatus.REJECTED ? (
             <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 flex flex-col gap-1 text-xs text-rose-800">
               <div className="flex items-center gap-1.5 font-bold">
                 <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0" />

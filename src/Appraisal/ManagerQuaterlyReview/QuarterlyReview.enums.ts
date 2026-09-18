@@ -27,6 +27,11 @@ export enum ActionType {
   VIEW = 'view',
 }
 
+export enum FormMode {
+  VIEW = 'view',
+  EDIT = 'edit',
+}
+
 export enum QuarterFilter {
   ALL = 'ALL',
   Q1 = 'Q1',
@@ -51,3 +56,37 @@ export enum RatingCategory {
   COLLABORATION = 'collaboration',
   INNOVATION = 'innovation',
 }
+
+export enum AccessRequestStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+}
+
+export enum AccessRequestAction {
+  APPROVE = 'APPROVE',
+  REJECT = 'REJECT',
+}
+
+export enum AssignmentListType {
+  ASSIGNED = 'assigned',
+  NOT_ASSIGNED = 'not_assigned',
+  SINGLE_QUARTER = 'single_quarter',
+}
+
+export enum AssignedSubTab {
+  ALL = 'all',
+  SINGLE_QUARTER = 'single_quarter',
+}
+
+export enum AssignTargetMode {
+  INDIVIDUAL = 'individual',
+  ALL = 'all',
+}
+
+export enum RequestUserRole {
+  MANAGER = 'MANAGER',
+  EMPLOYEE = 'EMPLOYEE',
+}
+
+export { ReviewStatus, FilterOption } from '../EmployeeApprasialDashboard/enums/Appraisal.enums';

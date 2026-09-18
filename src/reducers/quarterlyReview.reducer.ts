@@ -60,7 +60,9 @@ export interface ReviewAccessRequest {
   employeeId: string;
   employeeName?: string;
   quarter: string;
-  requestReason: string;
+  userRole?: string;
+  reason?: string;
+  requestReason?: string;
   requestedAt: string;
   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED';
   actionedById?: string;
@@ -68,6 +70,8 @@ export interface ReviewAccessRequest {
   actionedAt?: string;
   extensionDeadline?: string;
   remarks?: string;
+  attemptNumber?: number;
+  attempt_number?: number;
 }
 
 export interface AssignReviewPayload {
@@ -133,6 +137,22 @@ export interface QuarterlyReview {
   yearRating?: string | number | null;
   isFinalRatingHidden?: boolean;
   hasFinalRating?: boolean;
+  autoSubmitted?: number | boolean | null;
+  accessUntil?: string | null;
+  isReopened?: number | null;
+  accessGranted?: boolean | null;
+  assignmentId?: number | null;
+  accessRequest?: {
+    id?: number;
+    status?: string;
+    rejectionReason?: string | null;
+    remarks?: string | null;
+    reason?: string | null;
+    canReRequest?: boolean;
+    totalAttempts?: number;
+    attemptNumber?: number;
+    accessUntil?: string | null;
+  } | null;
 }
 
 export interface QuarterlyReviewSummary {

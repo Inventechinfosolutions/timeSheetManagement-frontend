@@ -1,6 +1,6 @@
 import React from 'react';
 import { Check } from 'lucide-react';
-import { ReviewStatus } from '../enums/Appraisal.enums';
+import { StepState } from '../enums/Appraisal.enums';
 import { QuarterlyReviewStepperMobile } from '../mobile/QuarterlyReviewStepperMobile';
 import './quarterlyReviewDesktop.css';
 
@@ -47,10 +47,10 @@ export const QuarterlyReviewStepper: React.FC<StepperProps> = ({
 }) => {
   const getStepState = (
     idx: number
-  ): 'Completed' | 'Active' | 'Upcoming' => {
-    if (idx < currentStep) return 'Completed';
-    if (idx === currentStep) return 'Active';
-    return 'Upcoming';
+  ): StepState => {
+    if (idx < currentStep) return StepState.COMPLETED;
+    if (idx === currentStep) return StepState.ACTIVE;
+    return StepState.UPCOMING;
   };
 
   const progressPercent =
@@ -102,14 +102,14 @@ export const QuarterlyReviewStepper: React.FC<StepperProps> = ({
                         type="button"
                         onClick={() => onChangeStep(idx)}
                         className={`z-10 flex items-center justify-center rounded-full font-bold shrink-0 transition-all duration-200 ${
-                          state === ReviewStatus.COMPLETED
+                          state === StepState.COMPLETED
                             ? 'qr-step-circle-done w-7 h-7 text-[11px]'
-                            : state === ReviewStatus.ACTIVE
+                            : state === StepState.ACTIVE
                               ? 'qr-step-circle-active w-9 h-9 text-sm'
                               : 'qr-step-circle-upcoming w-8 h-8 text-xs'
                         }`}
                       >
-                        {state === ReviewStatus.COMPLETED ? (
+                        {state === StepState.COMPLETED ? (
                           <Check className="w-3.5 h-3.5" strokeWidth={3} />
                         ) : (
                           idx + 1
@@ -120,9 +120,9 @@ export const QuarterlyReviewStepper: React.FC<StepperProps> = ({
                     <div className="text-center w-max max-w-[140px] mt-1.5">
                       <div
                         className={`font-semibold text-xs whitespace-nowrap ${
-                          state === ReviewStatus.ACTIVE
+                          state === StepState.ACTIVE
                             ? 'text-[#3d6bff]'
-                            : state === ReviewStatus.COMPLETED
+                            : state === StepState.COMPLETED
                               ? 'text-[#4d7cff]'
                               : 'text-slate-400'
                         }`}
