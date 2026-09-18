@@ -15,6 +15,25 @@
   animation: notesFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+@keyframes notesPopIn {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -24px) scale(0.92);
+  }
+  60% {
+    opacity: 1;
+    transform: translate(-50%, 4px) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+.animate-popIn {
+  animation: notesPopIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 /* Custom Scrollbar for Note Editor & Table Containers */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
@@ -39,7 +58,7 @@
 .notes-rich-editor-content {
   width: 100%;
   flex: 1 1 0%;
-  min-height: 180px;
+  min-height: 320px;
   overflow-y: auto;
   padding: 1rem 1.25rem;
   background-color: #ffffff;
@@ -51,7 +70,7 @@
 
 @media (min-width: 640px) {
   .notes-rich-editor-content {
-    min-height: 210px;
+    min-height: 350px;
   }
 }
 

@@ -37,13 +37,15 @@ export interface RichTextEditorProps {
   initialValue: string;
   onChange: (html: string) => void;
   placeholder?: string;
+  minHeight?: string;
 }
 
 export type NoteModalMode = "create" | "edit" | "view";
+export type NoteActionType = "view" | "edit" | "delete";
 
 export interface NoteToastMessage {
   text: string;
-  type: "success" | "error" | "info";
+  type: "success" | "error" | "info" | "delete" | "loading";
 }
 
 export interface NoteFormErrors {
@@ -72,12 +74,15 @@ export interface EmployeeNotesMobileProps {
   openViewNote: (note: EmployeeNote) => void;
   openEditModal: (note: EmployeeNote) => void;
   setNoteToDelete: (note: EmployeeNote | null) => void;
+  handleDeleteNote?: (note: EmployeeNote) => void;
   openSubTableCreateNote: (
     projectName: string,
     parentNoteId: string,
     category?: NoteCategory
   ) => void;
   uploadingNoteId: string | null;
+  actionLoadingNoteId?: string | null;
+  actionLoadingType?: NoteActionType | null;
   handleTableDirectUpload: (
     note: EmployeeNote,
     e: React.ChangeEvent<HTMLInputElement>
