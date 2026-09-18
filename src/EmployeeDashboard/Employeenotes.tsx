@@ -42,6 +42,9 @@ import {
 import { useAppSelector } from "../hooks";
 import { Storage } from "../utils/storage-util";
 import { EmployeeNotesMobile } from "./Employeenotesmobile";
+import LogoTop from "../assets/logo_top.png";
+import LogoBottom from "../assets/logo_bottom.png";
+import "../components/ApiLoadingSpinner.css";
 import type {
   NoteCategory,
   NoteFile,
@@ -49,6 +52,7 @@ import type {
   EmployeeNote,
   RichTextEditorProps,
   NoteModalMode,
+  NoteActionType,
   NoteToastMessage,
   NoteFormErrors,
   RowModalErrors,
@@ -87,6 +91,7 @@ const RichTextEditor = ({
   initialValue,
   onChange,
   placeholder,
+  minHeight = "380px",
 }: RichTextEditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const [isFocused, setIsFocused] = useState(false);
@@ -159,7 +164,7 @@ const RichTextEditor = ({
 
   return (
     <div
-      style={{ resize: "vertical", minHeight: "220px" }}
+      style={{ resize: "vertical", minHeight }}
       className={`rounded-2xl border transition-all overflow-hidden bg-white resize-y flex flex-col ${isFocused
           ? "border-[#4318FF] ring-2 ring-[#4318FF]/15 shadow-sm"
           : "border-gray-200"
@@ -401,7 +406,8 @@ const RichTextEditor = ({
           placeholder ||
           "Write your notes, key updates, documentation, or action items here..."
         }
-        className="notes-rich-editor-content custom-scrollbar"
+        className="notes-rich-editor-content custom-scrollbar flex-1"
+        style={{ minHeight: "330px" }}
       />
     </div>
   );
@@ -570,6 +576,24 @@ const getAuthHeaders = () => {
   };
 };
 
+const getDecodedToken = () => {
+  try {
+    const rawToken =
+      Storage.local.get("TimeSheet-authenticationToken") ||
+      Storage.session.get("TimeSheet-authenticationToken") ||
+      localStorage.getItem("TimeSheet-authenticationToken") ||
+      sessionStorage.getItem("TimeSheet-authenticationToken");
+    if (!rawToken || typeof rawToken !== "string") return null;
+    const parts = rawToken.split(".");
+    if (parts.length >= 2) {
+      return JSON.parse(atob(parts[1]));
+    }
+  } catch {
+    // Ignore decode error
+  }
+  return null;
+};
+
 // Optional Manager/Admin access: checks common role/authority shapes so
 // managers or admins can manage notes for employees other than themselves.
 // Adjust the field names below if your auth payload uses different keys.
@@ -599,7 +623,18 @@ const EmployeeNotes = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const employeeId = entity?.employeeId || currentUser?.loginId || "";
+  const tokenPayload = useMemo(() => getDecodedToken(), []);
+
+  const employeeId =
+    entity?.employeeId ||
+    currentUser?.employeeId ||
+    currentUser?.loginId ||
+    (currentUser as any)?.id ||
+    tokenPayload?.employeeId ||
+    tokenPayload?.sub ||
+    tokenPayload?.loginId ||
+    localStorage.getItem("employeeId") ||
+    "";
   const authorName =
     currentUser?.aliasLoginName ||
     entity?.fullName ||
@@ -741,12 +776,26 @@ const EmployeeNotes = () => {
   const [rowModalParentNoteId, setRowModalParentNoteId] = useState<string | null>(null);
   const rowModalFileInputRef = useRef<HTMLInputElement>(null);
 
+  // Action Loading State (for View, Edit, Delete buttons)
+  const [actionLoadingNoteId, setActionLoadingNoteId] = useState<string | null>(null);
+  const [actionLoadingType, setActionLoadingType] = useState<NoteActionType | null>(null);
+  const [isCenterLoading, setIsCenterLoading] = useState(false);
+
   // Toast notification
   const [toastMessage, setToastMessage] = useState<NoteToastMessage | null>(null);
+  const toastTimeoutRef = useRef<number | null>(null);
 
-  const showToast = (text: string, type: "success" | "error" | "info" = "success") => {
+  const showToast = (
+    text: string,
+    type: "success" | "error" | "info" | "delete" | "loading" = "success"
+  ) => {
+    if (toastTimeoutRef.current) {
+      window.clearTimeout(toastTimeoutRef.current);
+    }
     setToastMessage({ text, type });
-    window.setTimeout(() => setToastMessage(null), 3000);
+    if (type !== "loading") {
+      toastTimeoutRef.current = window.setTimeout(() => setToastMessage(null), 3500);
+    }
   };
 
   /*
@@ -784,8 +833,28 @@ const EmployeeNotes = () => {
 
             if (cancelled) return;
 
-            setNotes(apiNotes);
-            localStorage.setItem(storageKey, JSON.stringify(apiNotes));
+            const raw = localStorage.getItem(storageKey);
+            const localNotes: EmployeeNote[] = raw ? JSON.parse(raw) : [];
+            const apiIds = new Set(apiNotes.map((an) => an.id));
+            const mergedApiNotes = apiNotes.map((an) => {
+              const localMatch = localNotes.find((ln) => ln.id === an.id);
+              const parentNoteId =
+                an.parentNoteId || localMatch?.parentNoteId || null;
+              const category =
+                an.category ||
+                localMatch?.category ||
+                (an.projectName ? "Project Note" : "Personal Note");
+              return {
+                ...an,
+                category,
+                parentNoteId,
+              };
+            });
+            const localUnsynced = localNotes.filter((ln) => !apiIds.has(ln.id));
+            const allNotesList = [...mergedApiNotes, ...localUnsynced];
+
+            setNotes(allNotesList);
+            localStorage.setItem(storageKey, JSON.stringify(allNotesList));
             return;
           }
 
@@ -852,18 +921,46 @@ const EmployeeNotes = () => {
     return null;
   };
 
+  const skipUrlSyncRef = useRef(false);
+
   // Sync editor view state with URL (for direct links and browser back/forward navigation)
   useEffect(() => {
+    if (skipUrlSyncRef.current) {
+      skipUrlSyncRef.current = false;
+      return;
+    }
+
     const urlProject = getProjectNameFromUrl();
 
     if (urlProject) {
       if (notes.length > 0) {
         const decoded = urlProject.toLowerCase();
-        // Priority 1: Top-level project note matching projectName
-        // Priority 2: Any note matching projectName
-        // Priority 3: Note matching title
-        // Priority 4: Note matching id
+
+        // If the editor is already open in view mode displaying this exact note, keep it
+        if (isEditorOpen && activeNoteId && modalMode === "view") {
+          const currentActive = notes.find((n) => n.id === activeNoteId);
+          if (currentActive) {
+            const currentSlug = getNoteProjectSlug(currentActive).toLowerCase();
+            if (
+              currentSlug === decoded ||
+              currentActive.id === urlProject ||
+              (currentActive.title || "").trim().toLowerCase() === decoded ||
+              (currentActive.projectName || "").trim().toLowerCase() === decoded
+            ) {
+              return;
+            }
+          }
+        }
+
+        // Priority 1: Match by exact note ID
+        // Priority 2: Match note by exact title (sub-notes or personal notes)
+        // Priority 3: Match top-level project note by project name
+        // Priority 4: Match any note by project name
         const matched =
+          notes.find((n) => n.id === urlProject) ||
+          notes.find(
+            (n) => (n.title || "").trim().toLowerCase() === decoded
+          ) ||
           notes.find(
             (n) =>
               (n.projectName || "").trim().toLowerCase() === decoded &&
@@ -871,11 +968,7 @@ const EmployeeNotes = () => {
           ) ||
           notes.find(
             (n) => (n.projectName || "").trim().toLowerCase() === decoded
-          ) ||
-          notes.find(
-            (n) => (n.title || "").trim().toLowerCase() === decoded
-          ) ||
-          notes.find((n) => n.id === urlProject);
+          );
 
         if (matched) {
           if (!isEditorOpen || activeNoteId !== matched.id || modalMode !== "view") {
@@ -890,6 +983,7 @@ const EmployeeNotes = () => {
             setFormRows(matched.rows ? [...matched.rows] : []);
             setFormErrors({});
             setDraftSavedAt(null);
+            setEditorParentNoteId(matched.parentNoteId || null);
             setIsEditorOpen(true);
           }
         }
@@ -907,17 +1001,14 @@ const EmployeeNotes = () => {
     }
   }, [location.pathname, notes, isEditorOpen, activeNoteId, modalMode]);
  
-  // Ensure "Project" notes filter is default whenever user navigates to Employee Notes
-  const prevPathRef = useRef(location.pathname);
+  // Ensure "Project" notes filter is default on initial mount only
+  const hasSetInitialFilterRef = useRef(false);
   useEffect(() => {
-    if (
-      prevPathRef.current !== location.pathname &&
-      location.pathname === "/employee-dashboard/employee-notes"
-    ) {
+    if (!hasSetInitialFilterRef.current) {
+      hasSetInitialFilterRef.current = true;
       setSelectedFilter("Project");
     }
-    prevPathRef.current = location.pathname;
-  }, [location.pathname]);
+  }, []);
 
   // Filter and Search — exclude child notes (they live in sub-tables only)
   const filteredNotes = useMemo(() => {
@@ -925,10 +1016,21 @@ const EmployeeNotes = () => {
       // Child notes (added via a row's sub-table) should not appear in the main table
       if (n.parentNoteId) return false;
 
+      const cat = (n.category || "").trim().toLowerCase();
+      const hasProject = Boolean(n.projectName && n.projectName.trim());
+
+      const isProjectNote =
+        cat.includes("project") ||
+        (hasProject && !cat.includes("personal"));
+
+      const isPersonalNote =
+        cat.includes("personal") ||
+        (!hasProject && !cat.includes("project"));
+
       const matchesFilter =
         selectedFilter === "All" ||
-        (selectedFilter === "Project" && n.category === "Project Note") ||
-        (selectedFilter === "Personal" && n.category === "Personal Note") ||
+        (selectedFilter === "Project" && isProjectNote) ||
+        (selectedFilter === "Personal" && isPersonalNote) ||
         n.category === selectedFilter;
 
       if (!search.trim()) return matchesFilter;
@@ -1173,17 +1275,18 @@ const EmployeeNotes = () => {
   };
 
   /*
-   * DETERMINES THE PROJECT SLUG FOR URL (e.g. /employee-dashboard/employee-notes/:projectName)
+   * DETERMINES THE PROJECT SLUG FOR URL (e.g. /employee-dashboard/:projectName/employee-notes)
    */
   const getNoteProjectSlug = (note: EmployeeNote): string => {
+    // Child notes (sub-table notes) should use their own title or ID so the URL uniquely identifies this specific sub-note
+    if (note.parentNoteId) {
+      if (note.title && note.title.trim()) {
+        return note.title.trim();
+      }
+      return note.id;
+    }
     if (note.projectName && note.projectName.trim()) {
       return note.projectName.trim();
-    }
-    if (note.parentNoteId) {
-      const parent = notes.find((p) => p.id === note.parentNoteId);
-      if (parent?.projectName && parent.projectName.trim()) {
-        return parent.projectName.trim();
-      }
     }
     if (note.title && note.title.trim()) {
       return note.title.trim();
@@ -1209,6 +1312,14 @@ const EmployeeNotes = () => {
     setFormRows([]);
     setFormErrors({});
     setDraftSavedAt(null);
+    setEditorParentNoteId(null);
+    if (category === "Project Note") {
+      setSelectedFilter("Project");
+    } else {
+      setSelectedFilter("Personal");
+    }
+    setSearch("");
+    setCurrentPage(1);
     setIsEditorOpen(true);
 
     // Auto Save recovery: offer to restore an unsaved draft
@@ -1240,71 +1351,222 @@ const EmployeeNotes = () => {
     }
   };
 
-  const openEditModal = (note: EmployeeNote) => {
-    if (location.pathname !== "/employee-dashboard/employee-notes") {
-      navigate("/employee-dashboard/employee-notes");
-    }
-    setModalMode("edit");
-    setActiveNoteId(note.id);
-    setActiveNote(note);
-    setFormProjectName(note.projectName || "");
-    setFormTitle(note.title || "");
-    setFormCategory(note.category || "Personal Note");
-    setFormDescription(note.content || "");
-    setFormFiles(note.files ? [...note.files] : []);
-    setFormRows(note.rows ? [...note.rows] : []);
-    setFormErrors({});
-    setDraftSavedAt(null);
-    setIsEditorOpen(true);
+  const openEditModal = async (note: EmployeeNote) => {
+    if (!note || !note.id) return;
+    if (actionLoadingNoteId || isCenterLoading) return;
+    setActionLoadingNoteId(note.id);
+    setActionLoadingType("edit");
+    setIsCenterLoading(true);
 
-    // Auto Save recovery: offer to restore edits left unsaved for this note
+    const startTime = Date.now();
+
     try {
-      const raw = localStorage.getItem(draftKey);
-      if (raw) {
-        const draft = JSON.parse(raw);
-        if (draft?.mode === "edit" && draft.noteId === note.id) {
-          const wantsRestore = window.confirm(
-            "We found unsaved changes for this note from a previous session. Restore them?"
+      let resolvedNote = { ...note };
+
+      // Call GET API to fetch latest note details on edit
+      if (ENABLE_REMOTE_API && note.id) {
+        const empId =
+          note.employeeId ||
+          employeeId ||
+          currentUser?.employeeId ||
+          currentUser?.loginId ||
+          tokenPayload?.employeeId ||
+          tokenPayload?.sub ||
+          "default";
+        try {
+          const response = await fetch(
+            `${EMPLOYEE_NOTES_API}/${encodeURIComponent(empId)}/${encodeURIComponent(note.id)}`,
+            {
+              method: "GET",
+              headers: getAuthHeaders(),
+            }
           );
-          if (wantsRestore) {
-            setFormProjectName(draft.projectName ?? note.projectName ?? "");
-            setFormTitle(draft.title ?? note.title ?? "");
-            setFormCategory(draft.category || note.category || "Personal Note");
-            setFormDescription(draft.description ?? note.content ?? "");
-            setFormRows(draft.rows || note.rows || []);
-            setDraftSavedAt(draft.savedAt || null);
-          } else {
-            localStorage.removeItem(draftKey);
+          if (response.ok) {
+            const freshData = await response.json();
+            const freshNote: EmployeeNote = freshData?.data ?? freshData;
+            if (freshNote) {
+              resolvedNote = { ...resolvedNote, ...freshNote };
+            }
+          } else if (response.status === 404) {
+            try {
+              const fallbackResp = await fetch(
+                `${EMPLOYEE_NOTES_API}/${encodeURIComponent(note.id)}`,
+                {
+                  method: "GET",
+                  headers: getAuthHeaders(),
+                }
+              );
+              if (fallbackResp.ok) {
+                const freshData = await fallbackResp.json();
+                const freshNote: EmployeeNote = freshData?.data ?? freshData;
+                if (freshNote) {
+                  resolvedNote = { ...resolvedNote, ...freshNote };
+                }
+              }
+            } catch {
+              // Ignore fallback error
+            }
           }
+        } catch (err) {
+          console.warn("Failed to fetch note details on edit:", err);
         }
       }
-    } catch {
-      // ignore malformed draft data
+
+      // Ensure spinner in center of page displays for 1 second (1000ms)
+      const elapsed = Date.now() - startTime;
+      if (elapsed < 1000) {
+        await new Promise((resolve) => setTimeout(resolve, 1000 - elapsed));
+      }
+
+      skipUrlSyncRef.current = true;
+      if (location.pathname !== "/employee-dashboard/employee-notes") {
+        navigate("/employee-dashboard/employee-notes");
+      }
+      setActiveNoteId(resolvedNote.id);
+      setActiveNote(resolvedNote);
+      setFormProjectName(resolvedNote.projectName || "");
+      setFormTitle(resolvedNote.title || "");
+      setFormCategory(resolvedNote.category || (resolvedNote.projectName ? "Project Note" : "Personal Note"));
+      setFormDescription(resolvedNote.content || "");
+      setFormFiles(resolvedNote.files ? [...resolvedNote.files] : []);
+      setFormRows(resolvedNote.rows ? [...resolvedNote.rows] : []);
+      setFormErrors({});
+      setDraftSavedAt(null);
+      setEditorParentNoteId(resolvedNote.parentNoteId || null);
+
+      // Auto Save recovery: offer to restore edits left unsaved for this note
+      try {
+        const raw = localStorage.getItem(draftKey);
+        if (raw) {
+          const draft = JSON.parse(raw);
+          if (draft?.mode === "edit" && draft.noteId === resolvedNote.id) {
+            const wantsRestore = window.confirm(
+              "We found unsaved changes for this note from a previous session. Restore them?"
+            );
+            if (wantsRestore) {
+              setFormProjectName(draft.projectName ?? resolvedNote.projectName ?? "");
+              setFormTitle(draft.title ?? resolvedNote.title ?? "");
+              setFormCategory(draft.category || resolvedNote.category || "Personal Note");
+              setFormDescription(draft.description ?? resolvedNote.content ?? "");
+              setFormRows(draft.rows || resolvedNote.rows || []);
+              setDraftSavedAt(draft.savedAt || null);
+            } else {
+              localStorage.removeItem(draftKey);
+            }
+          }
+        }
+      } catch {
+        // ignore malformed draft data
+      }
+
+      setModalMode("edit");
+      setIsEditorOpen(true);
+    } finally {
+      setIsCenterLoading(false);
+      setActionLoadingNoteId(null);
+      setActionLoadingType(null);
+      setToastMessage(null);
     }
   };
 
-  const openViewNote = (note: EmployeeNote) => {
-    setModalMode("view");
-    setActiveNoteId(note.id);
-    setActiveNote(note);
-    setFormProjectName(note.projectName || "");
-    setFormTitle(note.title || "");
-    setFormCategory(note.category || "Project Note");
-    setFormDescription(note.content || "");
-    setFormFiles(note.files ? [...note.files] : []);
-    setFormRows(note.rows ? [...note.rows] : []);
-    setFormErrors({});
-    setDraftSavedAt(null);
-    setIsEditorOpen(true);
+  const openViewNote = async (note: EmployeeNote) => {
+    if (!note || !note.id) return;
+    if (actionLoadingNoteId || isCenterLoading) return;
+    setActionLoadingNoteId(note.id);
+    setActionLoadingType("view");
+    setIsCenterLoading(true);
 
-    const projectSlug = getNoteProjectSlug(note);
-    const targetUrl = `/employee-dashboard/${encodeURIComponent(projectSlug)}/employee-notes`;
-    if (location.pathname !== targetUrl) {
-      navigate(targetUrl);
+    const startTime = Date.now();
+
+    try {
+      let resolvedNote = { ...note };
+
+      // Call GET API to fetch latest note details on view
+      if (ENABLE_REMOTE_API && note.id) {
+        const empId =
+          note.employeeId ||
+          employeeId ||
+          currentUser?.employeeId ||
+          currentUser?.loginId ||
+          tokenPayload?.employeeId ||
+          tokenPayload?.sub ||
+          "default";
+        try {
+          const response = await fetch(
+            `${EMPLOYEE_NOTES_API}/${encodeURIComponent(empId)}/${encodeURIComponent(note.id)}`,
+            {
+              method: "GET",
+              headers: getAuthHeaders(),
+            }
+          );
+          if (response.ok) {
+            const freshData = await response.json();
+            const freshNote: EmployeeNote = freshData?.data ?? freshData;
+            if (freshNote) {
+              resolvedNote = { ...resolvedNote, ...freshNote };
+            }
+          } else if (response.status === 404) {
+            try {
+              const fallbackResp = await fetch(
+                `${EMPLOYEE_NOTES_API}/${encodeURIComponent(note.id)}`,
+                {
+                  method: "GET",
+                  headers: getAuthHeaders(),
+                }
+              );
+              if (fallbackResp.ok) {
+                const freshData = await fallbackResp.json();
+                const freshNote: EmployeeNote = freshData?.data ?? freshData;
+                if (freshNote) {
+                  resolvedNote = { ...resolvedNote, ...freshNote };
+                }
+              }
+            } catch {
+              // Ignore fallback error
+            }
+          }
+        } catch (err) {
+          console.warn("Failed to fetch note details on view:", err);
+        }
+      }
+
+      // Ensure spinner in center of page displays for 1 second (1000ms)
+      const elapsed = Date.now() - startTime;
+      if (elapsed < 1000) {
+        await new Promise((resolve) => setTimeout(resolve, 1000 - elapsed));
+      }
+
+      skipUrlSyncRef.current = true;
+      setActiveNoteId(resolvedNote.id);
+      setActiveNote(resolvedNote);
+      setFormProjectName(resolvedNote.projectName || "");
+      setFormTitle(resolvedNote.title || "");
+      setFormCategory(resolvedNote.category || (resolvedNote.projectName ? "Project Note" : "Personal Note"));
+      setFormDescription(resolvedNote.content || "");
+      setFormFiles(resolvedNote.files ? [...resolvedNote.files] : []);
+      setFormRows(resolvedNote.rows ? [...resolvedNote.rows] : []);
+      setFormErrors({});
+      setDraftSavedAt(null);
+      setEditorParentNoteId(resolvedNote.parentNoteId || null);
+
+      const projectSlug = getNoteProjectSlug(resolvedNote);
+      const targetUrl = `/employee-dashboard/${encodeURIComponent(projectSlug)}/employee-notes`;
+      if (location.pathname !== targetUrl) {
+        navigate(targetUrl);
+      }
+
+      setModalMode("view");
+      setIsEditorOpen(true);
+    } finally {
+      setIsCenterLoading(false);
+      setActionLoadingNoteId(null);
+      setActionLoadingType(null);
+      setToastMessage(null);
     }
   };
 
   const closeEditor = () => {
+    skipUrlSyncRef.current = true;
     try {
       localStorage.removeItem(draftKey);
     } catch {
@@ -1478,7 +1740,7 @@ const EmployeeNotes = () => {
           setNotes(updated);
           localStorage.setItem(storageKey, JSON.stringify(updated));
           closeRowCreateNoteModal();
-          showToast("Note created and saved to server!");
+          showToast("Successfully saved your note");
           return;
         }
       }
@@ -1488,13 +1750,13 @@ const EmployeeNotes = () => {
       setNotes(updated);
       localStorage.setItem(storageKey, JSON.stringify(updated));
       closeRowCreateNoteModal();
-      showToast("Note created successfully!");
+      showToast("Successfully saved your note");
     } catch {
       const updated = [newNote, ...notes];
       setNotes(updated);
       localStorage.setItem(storageKey, JSON.stringify(updated));
       closeRowCreateNoteModal();
-      showToast("Note created locally!");
+      showToast("Successfully saved your note");
     } finally {
       setIsRowModalSubmitting(false);
     }
@@ -1625,17 +1887,26 @@ const EmployeeNotes = () => {
 
           if (response.ok) {
             const result = await response.json();
-            // Always preserve parentNoteId from newNote (API may not return it)
+            // Always preserve parentNoteId and category from newNote
             const saved: EmployeeNote = {
               ...(result?.data || result || newNote),
               parentNoteId: newNote.parentNoteId || null,
+              category: formCategory,
+              projectName:
+                formCategory === "Project Note" ? trimmedProjectName : undefined,
+              title: trimmedTitle,
             };
             const updated = [saved, ...notes];
             setNotes(updated);
             localStorage.setItem(storageKey, JSON.stringify(updated));
             localStorage.removeItem(draftKey);
+            if (!newNote.parentNoteId) {
+              setSelectedFilter(formCategory === "Project Note" ? "Project" : "Personal");
+              setSearch("");
+              setCurrentPage(1);
+            }
             closeEditor();
-            showToast("Note created and saved to server!");
+            showToast("Successfully saved your note");
             return;
           }
         }
@@ -1645,15 +1916,25 @@ const EmployeeNotes = () => {
         setNotes(updated);
         localStorage.setItem(storageKey, JSON.stringify(updated));
         localStorage.removeItem(draftKey);
+        if (!newNote.parentNoteId) {
+          setSelectedFilter(formCategory === "Project Note" ? "Project" : "Personal");
+          setSearch("");
+          setCurrentPage(1);
+        }
         closeEditor();
-        showToast("Note created successfully!");
+        showToast("Successfully saved your note");
       } catch {
         const updated = [newNote, ...notes];
         setNotes(updated);
         localStorage.setItem(storageKey, JSON.stringify(updated));
         localStorage.removeItem(draftKey);
+        if (!newNote.parentNoteId) {
+          setSelectedFilter(formCategory === "Project Note" ? "Project" : "Personal");
+          setSearch("");
+          setCurrentPage(1);
+        }
         closeEditor();
-        showToast("Note created locally!");
+        showToast("Successfully saved your note");
       } finally {
         setIsSubmitting(false);
       }
@@ -1662,6 +1943,7 @@ const EmployeeNotes = () => {
       if (!activeNoteId) return;
 
       const existing = notes.find((n) => n.id === activeNoteId);
+      const parentId = existing?.parentNoteId ?? editorParentNoteId ?? null;
       const updatedNote: EmployeeNote = {
         id: activeNoteId,
         employeeId,
@@ -1677,6 +1959,7 @@ const EmployeeNotes = () => {
         updatedBy: currentCreator,
         createdAt: existing?.createdAt || nowIso,
         updatedAt: nowIso,
+        parentNoteId: parentId,
       };
 
       try {
@@ -1690,6 +1973,7 @@ const EmployeeNotes = () => {
             rows: updatedNote.rows,
             files: updatedNote.files,
             updatedBy: currentCreator,
+            parentNoteId: parentId,
           };
 
           const response = await fetch(
@@ -1705,15 +1989,27 @@ const EmployeeNotes = () => {
 
           if (response.ok) {
             const result = await response.json();
-            const saved: EmployeeNote = result?.data || result || updatedNote;
+            const saved: EmployeeNote = {
+              ...(result?.data || result || updatedNote),
+              parentNoteId: parentId,
+              category: formCategory,
+              projectName:
+                formCategory === "Project Note" ? trimmedProjectName : undefined,
+              title: trimmedTitle,
+            };
             const updated = notes.map((n) =>
               n.id === activeNoteId ? saved : n
             );
             setNotes(updated);
             localStorage.setItem(storageKey, JSON.stringify(updated));
             localStorage.removeItem(draftKey);
+            if (!parentId) {
+              setSelectedFilter(formCategory === "Project Note" ? "Project" : "Personal");
+              setSearch("");
+              setCurrentPage(1);
+            }
             closeEditor();
-            showToast("Note updated on server!");
+            showToast("Successfully saved your note");
             return;
           }
         }
@@ -1725,8 +2021,13 @@ const EmployeeNotes = () => {
         setNotes(updated);
         localStorage.setItem(storageKey, JSON.stringify(updated));
         localStorage.removeItem(draftKey);
+        if (!parentId) {
+          setSelectedFilter(formCategory === "Project Note" ? "Project" : "Personal");
+          setSearch("");
+          setCurrentPage(1);
+        }
         closeEditor();
-        showToast("Note updated successfully!");
+        showToast("Successfully saved your note");
       } catch {
         const updated = notes.map((n) =>
           n.id === activeNoteId ? updatedNote : n
@@ -1734,8 +2035,13 @@ const EmployeeNotes = () => {
         setNotes(updated);
         localStorage.setItem(storageKey, JSON.stringify(updated));
         localStorage.removeItem(draftKey);
+        if (!parentId) {
+          setSelectedFilter(formCategory === "Project Note" ? "Project" : "Personal");
+          setSearch("");
+          setCurrentPage(1);
+        }
         closeEditor();
-        showToast("Note updated locally!");
+        showToast("Successfully saved your note");
       } finally {
         setIsSubmitting(false);
       }
@@ -1745,48 +2051,139 @@ const EmployeeNotes = () => {
   /*
    * DELETE NOTE (DELETE to Backend API)
    */
-  const confirmDelete = async () => {
-    if (!noteToDelete || !employeeId || isDeleting) return;
+  const executeDeleteNoteApi = async (note: EmployeeNote) => {
+    if (!note || !note.id || isDeleting) return;
 
-    const id = noteToDelete.id;
+    const id = note.id;
+    const empId =
+      note.employeeId ||
+      employeeId ||
+      currentUser?.employeeId ||
+      currentUser?.loginId ||
+      tokenPayload?.employeeId ||
+      tokenPayload?.sub ||
+      "default";
+
     setIsDeleting(true);
+    setActionLoadingNoteId(id);
+    setActionLoadingType("delete");
 
     try {
       if (ENABLE_REMOTE_API) {
-        await fetch(
-          `${EMPLOYEE_NOTES_API}/${encodeURIComponent(
-            employeeId
-          )}/${encodeURIComponent(id)}`,
+        const response = await fetch(
+          `${EMPLOYEE_NOTES_API}/${encodeURIComponent(empId)}/${encodeURIComponent(id)}`,
           {
             method: "DELETE",
             headers: getAuthHeaders(),
           }
         );
+
+        if (!response.ok && response.status === 404) {
+          try {
+            await fetch(`${EMPLOYEE_NOTES_API}/${encodeURIComponent(id)}`, {
+              method: "DELETE",
+              headers: getAuthHeaders(),
+            });
+          } catch {
+            // ignore fallback error
+          }
+        }
       }
-    } catch {
-      // Continue to remove locally
+    } catch (err) {
+      console.warn("Failed to delete note via API:", err);
     } finally {
       const updated = notes.filter((n) => n.id !== id);
       setNotes(updated);
       localStorage.setItem(storageKey, JSON.stringify(updated));
       setIsDeleting(false);
+      setActionLoadingNoteId(null);
+      setActionLoadingType(null);
       setNoteToDelete(null);
-      showToast("Note deleted successfully!");
     }
+  };
+
+  const handleDeleteNote = async (note: EmployeeNote) => {
+    if (!note || !note.id || isDeleting || isCenterLoading) return;
+    setActionLoadingNoteId(note.id);
+    setActionLoadingType("delete");
+    setIsCenterLoading(true);
+
+    try {
+      // 1 second spinner loading in center of page
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Open pop message in center of page to cancel or confirm
+      setNoteToDelete(note);
+    } finally {
+      setIsCenterLoading(false);
+      setActionLoadingNoteId(null);
+      setActionLoadingType(null);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!noteToDelete || isDeleting) return;
+    await executeDeleteNoteApi(noteToDelete);
   };
 
   return (
     <div className="flex-1 flex flex-col px-3 md:px-5 py-3 min-h-0 bg-[#F4F7FE] font-sans">
-      {/* Toast Notification */}
+      {/* Center Page Spinner (Worksphere Logo Loader) */}
+      {isCenterLoading && (
+        <div
+          className="fixed inset-0 z-[99999] flex items-center justify-center bg-white/60 backdrop-blur-[2px] animate-fadeIn"
+          aria-busy="true"
+          aria-label="Loading"
+        >
+          <div className="logo-loader">
+            <img src={LogoTop} alt="Top" className="logo-top" />
+            <img src={LogoBottom} alt="Bottom" className="logo-bottom" />
+          </div>
+        </div>
+      )}
+
+      {/* Pop Message Notification on Header Top Middle */}
       {toastMessage && (
         <div
-          className={`fixed top-5 right-5 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg text-sm font-medium transition-all ${toastMessage.type === "success"
-            ? "bg-emerald-600 text-white"
-            : "bg-red-600 text-white"
-            }`}
+          role="alert"
+          aria-live="assertive"
+          style={{ left: "50%", transform: "translateX(-50%)" }}
+          className={`fixed top-4 sm:top-5 z-[99999] flex items-center gap-2.5 px-5 py-2.5 rounded-full shadow-[0px_16px_36px_rgba(0,0,0,0.18)] bg-white/95 backdrop-blur-md border pointer-events-none animate-popIn ring-1 ring-black/5 ${
+            toastMessage.type === "delete" || toastMessage.type === "error"
+              ? "border-rose-200/90 text-slate-800"
+              : toastMessage.type === "loading"
+              ? "border-blue-200/90 text-slate-800"
+              : "border-emerald-200/90 text-slate-800"
+          }`}
         >
-          <Check size={16} />
-          {toastMessage.text}
+          <div
+            className={`flex items-center justify-center w-6 h-6 rounded-full shrink-0 shadow-xs ${
+              toastMessage.type === "delete" || toastMessage.type === "error"
+                ? "bg-rose-500 text-white shadow-rose-400/40"
+                : toastMessage.type === "loading"
+                ? "bg-[#4318FF] text-white shadow-blue-400/40"
+                : "bg-emerald-500 text-white shadow-emerald-400/40"
+            }`}
+          >
+            {toastMessage.type === "delete" ? (
+              <Trash2 size={13} className="stroke-[2.5]" />
+            ) : toastMessage.type === "loading" ? (
+              <Loader2 size={13} className="animate-spin stroke-[2.5]" />
+            ) : (
+              <Check size={14} className="stroke-[3]" />
+            )}
+          </div>
+          <span className="text-slate-800 font-bold text-xs sm:text-sm tracking-normal whitespace-nowrap">
+            {toastMessage.text}
+          </span>
+          <span
+            className={`w-1.5 h-1.5 rounded-full shrink-0 ml-0.5 ${
+              toastMessage.type === "delete" || toastMessage.type === "error"
+                ? "bg-rose-500 animate-pulse"
+                : toastMessage.type === "loading"
+                ? "bg-[#4318FF] animate-pulse"
+                : "bg-emerald-500 animate-pulse"
+            }`}
+          />
         </div>
       )}
 
@@ -1798,7 +2195,7 @@ const EmployeeNotes = () => {
             <form
               id="note-fullpage-form"
               onSubmit={handleSaveModal}
-              className="max-w-5xl mx-auto space-y-3 pb-8"
+              className="w-full space-y-3 pb-8"
             >
               {/* 1. TOP HEADER ROW: Project Name & Title + Back button on top */}
               <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 pb-2.5 border-b border-gray-200">
@@ -1950,7 +2347,7 @@ const EmployeeNotes = () => {
                 {modalMode === "view" ? (
                   <div
                     style={{ resize: "vertical" }}
-                    className="w-full min-h-[140px] max-h-[750px] overflow-auto resize-y p-4 bg-gray-50/50 rounded-xl border border-gray-200 text-sm font-sans text-slate-800 leading-relaxed shadow-2xs prose prose-slate max-w-none [&_b]:font-bold [&_strong]:font-bold [&_i]:italic [&_em]:italic [&_u]:underline [&_h1]:text-lg [&_h1]:font-bold [&_h2]:text-base [&_h2]:font-bold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5"
+                    className="w-full min-h-[350px] max-h-[850px] overflow-auto resize-y p-4 bg-gray-50/50 rounded-xl border border-gray-200 text-sm font-sans text-slate-800 leading-relaxed shadow-2xs prose prose-slate max-w-none [&_b]:font-bold [&_strong]:font-bold [&_i]:italic [&_em]:italic [&_u]:underline [&_h1]:text-lg [&_h1]:font-bold [&_h2]:text-base [&_h2]:font-bold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5"
                     dangerouslySetInnerHTML={{
                       __html:
                         formDescription ||
@@ -1962,6 +2359,7 @@ const EmployeeNotes = () => {
                     initialValue={formDescription}
                     onChange={(html) => setFormDescription(html)}
                     placeholder="Write your notes, key updates, documentation, or action items here..."
+                    minHeight="380px"
                   />
                 )}
               </div>
@@ -2244,6 +2642,29 @@ const EmployeeNotes = () => {
                       </button>
                     </div>
                   )}
+                  {notes.length > 0 && (
+                    <div className="mt-4 flex items-center gap-2.5 flex-wrap justify-center">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedFilter(selectedFilter === "Personal" ? "Project" : "Personal");
+                          setSearch("");
+                        }}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#4318FF] hover:bg-[#3410d1] text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-2xs"
+                      >
+                        Switch to {selectedFilter === "Personal" ? "Project Notes" : "Personal Notes"}
+                      </button>
+                      {search && (
+                        <button
+                          type="button"
+                          onClick={() => setSearch("")}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gray-100 hover:bg-gray-200 text-slate-700 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                        >
+                          Clear Search
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <>
@@ -2339,8 +2760,9 @@ const EmployeeNotes = () => {
                                 <td className="py-4 px-4 text-left">
                                   <button
                                     type="button"
+                                    disabled={Boolean(actionLoadingNoteId)}
                                     onClick={() => openViewNote(note)}
-                                    className="text-slate-800 hover:text-[#4318FF] text-sm font-semibold hover:underline transition-colors text-left cursor-pointer truncate max-w-[320px] block"
+                                    className="text-slate-800 hover:text-[#4318FF] text-sm font-semibold hover:underline transition-colors text-left cursor-pointer truncate max-w-[320px] block disabled:opacity-60 disabled:cursor-not-allowed"
                                     title={note.title || "Untitled note"}
                                   >
                                     {note.title || "Untitled note"}
@@ -2361,40 +2783,63 @@ const EmployeeNotes = () => {
 
                                 {/* 5. Action */}
                                 <td className="py-4 pl-2 pr-6 text-center whitespace-nowrap">
-                                  <div className="inline-flex items-center justify-center gap-1.5">
-                                    <button
-                                      type="button"
-                                      onClick={() => openViewNote(note)}
-                                      title="View Note Details"
-                                      className="p-2 rounded-lg bg-indigo-50 text-[#4318FF] hover:bg-indigo-100 hover:text-[#3311CC] transition-colors cursor-pointer"
-                                    >
-                                      <Eye size={15} />
-                                    </button>
-                                    {canManageNotes ? (
-                                      <>
+                                  {(() => {
+                                    const isNoteLoading = actionLoadingNoteId === note.id;
+                                    const isViewLoading = isNoteLoading && actionLoadingType === "view";
+                                    const isEditLoading = isNoteLoading && actionLoadingType === "edit";
+                                    const isDeleteLoading = isNoteLoading && actionLoadingType === "delete";
+                                    return (
+                                      <div className="inline-flex items-center justify-center gap-1.5">
                                         <button
                                           type="button"
-                                          onClick={() => openEditModal(note)}
-                                          title="Edit Note"
-                                          className="p-2 rounded-lg bg-blue-50 text-[#4318FF] hover:bg-blue-100 transition-colors cursor-pointer"
+                                          disabled={Boolean(actionLoadingNoteId)}
+                                          onClick={() => openViewNote(note)}
+                                          title={isViewLoading ? "Loading details..." : "View Note Details"}
+                                          className="p-2 rounded-lg bg-indigo-50 text-[#4318FF] hover:bg-indigo-100 hover:text-[#3311CC] disabled:opacity-60 disabled:cursor-not-allowed transition-colors cursor-pointer"
                                         >
-                                          <Pencil size={15} />
+                                          {isViewLoading ? (
+                                            <Loader2 size={15} className="animate-spin text-[#4318FF]" />
+                                          ) : (
+                                            <Eye size={15} />
+                                          )}
                                         </button>
-                                        <button
-                                          type="button"
-                                          onClick={() => setNoteToDelete(note)}
-                                          title="Delete Note"
-                                          className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors cursor-pointer"
-                                        >
-                                          <Trash2 size={15} />
-                                        </button>
-                                      </>
-                                    ) : (
-                                      <span className="text-xs text-slate-500 font-medium ml-1">
-                                        View only
-                                      </span>
-                                    )}
-                                  </div>
+                                        {canManageNotes ? (
+                                          <>
+                                            <button
+                                              type="button"
+                                              disabled={Boolean(actionLoadingNoteId)}
+                                              onClick={() => openEditModal(note)}
+                                              title={isEditLoading ? "Opening editor..." : "Edit Note"}
+                                              className="p-2 rounded-lg bg-blue-50 text-[#4318FF] hover:bg-blue-100 disabled:opacity-60 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                                            >
+                                              {isEditLoading ? (
+                                                <Loader2 size={15} className="animate-spin text-[#4318FF]" />
+                                              ) : (
+                                                <Pencil size={15} />
+                                              )}
+                                            </button>
+                                            <button
+                                              type="button"
+                                              disabled={Boolean(actionLoadingNoteId)}
+                                              onClick={() => handleDeleteNote(note)}
+                                              title={isDeleteLoading ? "Deleting note..." : "Delete Note"}
+                                              className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 disabled:opacity-60 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                                            >
+                                              {isDeleteLoading ? (
+                                                <Loader2 size={15} className="animate-spin text-red-500" />
+                                              ) : (
+                                                <Trash2 size={15} />
+                                              )}
+                                            </button>
+                                          </>
+                                        ) : (
+                                          <span className="text-xs text-slate-500 font-medium ml-1">
+                                            View only
+                                          </span>
+                                        )}
+                                      </div>
+                                    );
+                                  })()}
                                 </td>
                               </tr>
 
@@ -2447,8 +2892,9 @@ const EmployeeNotes = () => {
                                                     <td className="py-2.5 px-3 font-semibold text-slate-900">
                                                       <button
                                                         type="button"
+                                                        disabled={Boolean(actionLoadingNoteId)}
                                                         onClick={() => openViewNote(child)}
-                                                        className="text-slate-900 hover:text-[#4318FF] hover:underline text-left cursor-pointer truncate max-w-[280px] block"
+                                                        className="text-slate-900 hover:text-[#4318FF] hover:underline text-left cursor-pointer truncate max-w-[280px] block disabled:opacity-60 disabled:cursor-not-allowed"
                                                         title={child.title || "Untitled"}
                                                       >
                                                         {child.title || "Untitled"}
@@ -2465,36 +2911,59 @@ const EmployeeNotes = () => {
                                                       </div>
                                                     </td>
                                                     <td className="py-2.5 pr-4 pl-2 text-center">
-                                                      <div className="inline-flex items-center justify-center gap-1.5">
-                                                        <button
-                                                          type="button"
-                                                          onClick={() => openViewNote(child)}
-                                                          title="View Note"
-                                                          className="p-1 rounded-md bg-indigo-50 text-[#4318FF] hover:bg-indigo-100 transition-colors cursor-pointer"
-                                                        >
-                                                          <Eye size={13} />
-                                                        </button>
-                                                        {canManageNotes && (
-                                                          <>
+                                                      {(() => {
+                                                        const isChildLoading = actionLoadingNoteId === child.id;
+                                                        const isChildViewLoading = isChildLoading && actionLoadingType === "view";
+                                                        const isChildEditLoading = isChildLoading && actionLoadingType === "edit";
+                                                        const isChildDeleteLoading = isChildLoading && actionLoadingType === "delete";
+                                                        return (
+                                                          <div className="inline-flex items-center justify-center gap-1.5">
                                                             <button
                                                               type="button"
-                                                              onClick={() => openEditModal(child)}
-                                                              title="Edit Note"
-                                                              className="p-1 rounded-md bg-blue-50 text-[#4318FF] hover:bg-blue-100 transition-colors cursor-pointer"
+                                                              disabled={Boolean(actionLoadingNoteId)}
+                                                              onClick={() => openViewNote(child)}
+                                                              title={isChildViewLoading ? "Loading details..." : "View Note"}
+                                                              className="p-1 rounded-md bg-indigo-50 text-[#4318FF] hover:bg-indigo-100 disabled:opacity-60 disabled:cursor-not-allowed transition-colors cursor-pointer"
                                                             >
-                                                              <Pencil size={13} />
+                                                              {isChildViewLoading ? (
+                                                                <Loader2 size={13} className="animate-spin text-[#4318FF]" />
+                                                              ) : (
+                                                                <Eye size={13} />
+                                                              )}
                                                             </button>
-                                                            <button
-                                                              type="button"
-                                                              onClick={() => setNoteToDelete(child)}
-                                                              title="Delete Note"
-                                                              className="p-1 rounded-md bg-red-50 text-red-500 hover:bg-red-100 transition-colors cursor-pointer"
-                                                            >
-                                                              <Trash2 size={13} />
-                                                            </button>
-                                                          </>
-                                                        )}
-                                                      </div>
+                                                            {canManageNotes && (
+                                                              <>
+                                                                <button
+                                                                  type="button"
+                                                                  disabled={Boolean(actionLoadingNoteId)}
+                                                                  onClick={() => openEditModal(child)}
+                                                                  title={isChildEditLoading ? "Opening editor..." : "Edit Note"}
+                                                                  className="p-1 rounded-md bg-blue-50 text-[#4318FF] hover:bg-blue-100 disabled:opacity-60 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                                                                >
+                                                                  {isChildEditLoading ? (
+                                                                    <Loader2 size={13} className="animate-spin text-[#4318FF]" />
+                                                                  ) : (
+                                                                    <Pencil size={13} />
+                                                                  )}
+                                                                </button>
+                                                                <button
+                                                                  type="button"
+                                                                  disabled={Boolean(actionLoadingNoteId)}
+                                                                  onClick={() => handleDeleteNote(child)}
+                                                                  title={isChildDeleteLoading ? "Deleting note..." : "Delete Note"}
+                                                                  className="p-1 rounded-md bg-red-50 text-red-500 hover:bg-red-100 disabled:opacity-60 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                                                                >
+                                                                  {isChildDeleteLoading ? (
+                                                                    <Loader2 size={13} className="animate-spin text-red-500" />
+                                                                  ) : (
+                                                                    <Trash2 size={13} />
+                                                                  )}
+                                                                </button>
+                                                              </>
+                                                            )}
+                                                          </div>
+                                                        );
+                                                      })()}
                                                     </td>
                                                   </tr>
                                                 );
@@ -2527,8 +2996,11 @@ const EmployeeNotes = () => {
                       openViewNote={openViewNote}
                       openEditModal={openEditModal}
                       setNoteToDelete={setNoteToDelete}
+                      handleDeleteNote={handleDeleteNote}
                       openSubTableCreateNote={openSubTableCreateNote}
                       uploadingNoteId={uploadingNoteId}
+                      actionLoadingNoteId={actionLoadingNoteId}
+                      actionLoadingType={actionLoadingType}
                       handleTableDirectUpload={handleTableDirectUpload}
                       handleTableRemoveFile={handleTableRemoveFile}
                       openFilePreview={openFilePreview}
@@ -2968,6 +3440,7 @@ const EmployeeNotes = () => {
                   initialValue={rowModalDescription}
                   onChange={(html) => setRowModalDescription(html)}
                   placeholder="Write your notes, key updates, documentation, or action items here..."
+                  minHeight="240px"
                 />
               </div>
 
@@ -3098,30 +3571,30 @@ const EmployeeNotes = () => {
         </div>
       )}
 
-      {/* DELETE CONFIRMATION MODAL */}
+      {/* DELETE CONFIRMATION POPUP MODAL */}
       {noteToDelete && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-gray-100">
-            <div className="w-11 h-11 rounded-full bg-red-50 text-red-600 flex items-center justify-center mb-3.5">
-              <Trash2 size={20} />
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-gray-100 text-center flex flex-col items-center">
+            <div className="w-12 h-12 rounded-full bg-red-50 text-red-500 flex items-center justify-center mb-3.5 shadow-xs">
+              <Trash2 size={22} className="stroke-[2.5]" />
             </div>
 
-            <h3 className="text-base font-bold text-[#1B2559]">Delete Note</h3>
+            <h3 className="text-base sm:text-lg font-bold text-[#1B2559]">Delete Note</h3>
 
-            <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">
+            <p className="text-xs sm:text-sm text-gray-500 mt-2 leading-relaxed">
               Are you sure you want to delete &quot;
-              <span className="font-semibold text-gray-700">
+              <span className="font-semibold text-gray-800">
                 {noteToDelete.title || "Untitled note"}
               </span>
               &quot;? This action cannot be undone.
             </p>
 
-            <div className="flex items-center justify-end gap-2 mt-5">
+            <div className="flex items-center justify-center gap-3 mt-6 w-full">
               <button
                 type="button"
                 onClick={() => setNoteToDelete(null)}
                 disabled={isDeleting}
-                className="px-3.5 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                className="flex-1 px-4 py-2 text-xs sm:text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors cursor-pointer disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -3130,10 +3603,10 @@ const EmployeeNotes = () => {
                 type="button"
                 onClick={confirmDelete}
                 disabled={isDeleting}
-                className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors cursor-pointer"
+                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-xs sm:text-sm font-bold bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-xs shadow-red-500/25 transition-all cursor-pointer disabled:opacity-50"
               >
-                {isDeleting && <Loader2 size={13} className="animate-spin" />}
-                Delete
+                {isDeleting && <Loader2 size={14} className="animate-spin" />}
+                Confirm
               </button>
             </div>
           </div>
