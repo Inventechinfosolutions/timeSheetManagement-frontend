@@ -1602,12 +1602,9 @@ const LeaveManagementMobile: React.FC<LeaveManagementMobileProps> = ({
                     file)
                   </p>
                 )}
-                <div>
+                <div className="bg-[#F4F7FE] rounded-2xl p-2 border border-blue-50">
                   <CommonMultipleUploader
                     key={isViewMode ? selectedRequestId : uploaderKey}
-                    variant="chip"
-                    hideEmptyState={true}
-                    hideUploadButton={isViewMode}
                     entityType="LEAVE_REQUEST"
                     entityId={Number(entity?.id || 0)}
                     refId={isViewMode ? selectedRequestId || 0 : 0}
@@ -2165,19 +2162,9 @@ const LeaveManagementMobile: React.FC<LeaveManagementMobileProps> = ({
                 <label className="block text-sm font-semibold text-slate-800 mb-2">
                   Supporting Documents (Optional)
                 </label>
-                <div>
+                <div className="bg-[#F4F7FE] rounded-2xl p-2 border border-blue-50">
                   <CommonMultipleUploader
                     key={`modify-uploader-${modifyModal.request?.id}`}
-                    variant="chip"
-                    hideEmptyState={true}
-                    hideUploadButton={
-                      modifyFormData.firstHalf ===
-                        (modifyModal.request?.firstHalf ||
-                          modifyModal.request?.requestType) &&
-                      modifyFormData.secondHalf ===
-                        (modifyModal.request?.secondHalf ||
-                          modifyModal.request?.requestType)
-                    }
                     entityType="LEAVE_REQUEST"
                     entityId={Number(entity?.id || 0)}
                     refId={0}

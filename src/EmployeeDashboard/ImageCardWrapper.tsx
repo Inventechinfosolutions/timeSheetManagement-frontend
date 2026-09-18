@@ -85,31 +85,32 @@ const ImageCardWrapper: React.FC<ImageCardWrapperProps> = ({
       )}
       <StyledOverlay>
         <StyledActionButtons>
-        {showPreview && (
-  <Button
-    type="default"
-    size="small"
-    shape="circle"
-    icon={<EyeOutlined />}
-    onClick={(e) => {
-      e.stopPropagation();
-      onPreview(file, e as React.MouseEvent);
-    }}
-  />
-)}
-
-{showDownload && (
-  <Button
-    type="default"
-    size="small"
-    shape="circle"
-    icon={<DownloadOutlined />}
-    onClick={(e) => {
-      e.stopPropagation();
-      onDownload(file, e as React.MouseEvent);
-    }}
-  />
-)}
+          {showPreview && (
+            <Button
+              type="default"
+              size="small"
+              icon={<EyeOutlined />}
+              onClick={(e) => {
+                e.stopPropagation();
+                onPreview(file, e as React.MouseEvent);
+              }}
+            >
+              Preview
+            </Button>
+          )}
+          {showDownload && (
+            <Button
+              type="default"
+              size="small"
+              icon={<DownloadOutlined />}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDownload(file, e as React.MouseEvent);
+              }}
+            >
+              Save
+            </Button>
+          )}
         </StyledActionButtons>
       </StyledOverlay>
     </StyledImageWrapper>

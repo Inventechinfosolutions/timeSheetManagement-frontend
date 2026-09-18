@@ -16,6 +16,7 @@ import {
 } from "@ant-design/icons";
 import styled, { createGlobalStyle } from "styled-components";
 import { useDispatch } from "react-redux";
+import ImageCardWrapper from "./ImageCardWrapper";
 
 const StyledWrapper = styled.div`
   width: 100%;
@@ -81,18 +82,17 @@ const StyledUploadButton = styled(Button)`
 
 const StyledGalleryContainer = styled.div`
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
-  // margin-top: 4px;
-
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+  margin-top: 4px;
   @media (max-width: 768px) {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 10px;
   }
 
   @media (max-width: 480px) {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 6px;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 8px;
   }
 `;
 
@@ -321,67 +321,124 @@ export const StyledImageWrapper = styled.div`
   }
 `;
 
-export const StyledOverlay = styled.div`
+const StyledCloseButton = styled.button`
   position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(2px);
-  padding: 6px;
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.25s ease, visibility 0.25s ease;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(255, 59, 48, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  pointer-events: none;
   z-index: 10;
+  font-size: 11px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+
+  &:hover {
+    transform: scale(1.15) rotate(90deg);
+    background: rgba(220, 20, 20, 1);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+  }
+
+  &:active {
+    transform: scale(1.05) rotate(90deg);
+  }
+`;
+
+export const StyledOverlay = styled.div`
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.9) 0%,
+    rgba(0, 0, 0, 0.5) 60%,
+    transparent 100%
+  );
+  padding: 6px;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  height: 45%;
 `;
 
 export const StyledActionButtons = styled.div`
   display: flex;
-  align-items: center;
   justify-content: center;
   gap: 4px;
-  background: #ffffff;
-  border-radius: 24px;
-  padding: 4px 8px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
-  border: 1px solid #e2e8f0;
 
   .ant-btn {
-    background: transparent !important;
-    border: none !important;
-    width: 30px;
-    height: 30px;
-    min-width: 30px;
-    padding: 0 !important;
-    display: flex !important;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50% !important;
-    transition: all 0.2s ease;
+    background: rgba(255, 255, 255, 0.95);
+    border: none;
+    backdrop-filter: blur(10px);
+    padding: 2px 6px;
+    height: 24px;
+    font-size: 11px;
+    line-height: 1;
+    border-radius: 4px;
 
     &:hover {
-      background: #f1f5f9 !important;
-      transform: scale(1.15);
+      background: white;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
     }
 
     .anticon {
-      font-size: 16px;
+      font-size: 11px;
     }
 
-    &.action-btn-view .anticon,
-    &.action-btn-download .anticon {
-      color: #2563eb !important;
-    }
-
-    &.action-btn-delete .anticon {
-      color: #ef4444 !important;
+    span {
+      font-size: 10px;
     }
   }
+`;
+
+const StyledNonImageCard = styled.div`
+  position: relative;
+  width: 100%;
+  padding-bottom: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  cursor: pointer;
+
+  &:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+  }
+`;
+
+const StyledNonImageWrapper = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  color: white;
+  padding: 10px;
+`;
+
+const StyledFileExtension = styled.div`
+  font-size: 18px;
+  font-weight: 700;
+  margin-top: 6px;
+  color: white;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 `;
 
 const StyledFileName = styled.div`
@@ -396,15 +453,12 @@ const StyledFileName = styled.div`
   text-overflow: ellipsis;
   white-space: nowrap;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-  background: rgba(0, 0, 0, 0.65);
+  background: rgba(0, 0, 0, 0.6);
   padding: 3px 5px;
   border-radius: 4px;
   backdrop-filter: blur(4px);
-  z-index: 5;
-  transition: opacity 0.2s ease, visibility 0.2s ease;
 `;
 
-/* StyledImageCard and StyledNonImageCard with hover hide rules */
 const StyledImageCard = styled.div`
   position: relative;
   width: 100%;
@@ -419,46 +473,6 @@ const StyledImageCard = styled.div`
   &:hover {
     transform: translateY(-4px) scale(1.02);
     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
-  }
-
-  &:hover ${StyledOverlay} {
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
-  }
-
-  &:hover ${StyledFileName} {
-    opacity: 0;
-    visibility: hidden;
-  }
-`;
-
-const StyledNonImageCard = styled.div`
-  position: relative;
-  width: 100%;
-  padding-bottom: 100%;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  background: #ffffff;
-  border: 1px solid #e8ecf0;
-  cursor: pointer;
-
-  &:hover {
-    transform: translateY(-4px) scale(1.02);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
-  }
-
-  &:hover ${StyledOverlay} {
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
-  }
-
-  &:hover ${StyledFileName} {
-    opacity: 0;
-    visibility: hidden;
   }
 `;
 
@@ -1404,7 +1418,9 @@ const CommonMultipleUploader = forwardRef<CommonMultipleUploaderRef, CommonMulti
     return imageExtensions.some((ext) => name.endsWith(ext) || name.includes(ext));
   };
 
-  // getFileExtension is handled by _getFileExt helper
+  const getFileExtension = (fileName: string) => {
+    return fileName.split(".").pop()?.toUpperCase() || "FILE";
+  };
 
   const isValidUrl = (url?: string) => {
     if (!url) return false;
@@ -1598,130 +1614,95 @@ const CommonMultipleUploader = forwardRef<CommonMultipleUploaderRef, CommonMulti
         </StyledFileRow>
       ) : existingFiles.length > 0 || uploadingFiles.length > 0 ? (
         <StyledGalleryContainer>
-          {uploadingFiles.map((file, index) =>
-            isImageFile(file.name) ? (
-              <StyledImageCard key={`uploading-${file.uid}-${index}`}>
-                <StyledImageWrapper
-                  style={{ backgroundImage: `url(${file.preview})` }}
+          {uploadingFiles.map((file, index) => (
+            <StyledImageCard key={`uploading-${file.uid}-${index}`}>
+              <StyledImageWrapper
+                style={{ backgroundImage: `url(${file.preview})` }}
+              >
+                <img
+                  src={file.preview}
+                  alt={file.name}
+                  style={{ opacity: 0.6 }}
+                  onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                />
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "50%",
+                    left: "50%",
+                    transform: "translate(-50%, -50%)",
+                    background: "rgba(0,0,0,0.7)",
+                    color: "white",
+                    padding: "8px 12px",
+                    borderRadius: "8px",
+                    fontSize: "12px",
+                    fontWeight: 500,
+                  }}
                 >
-                  <img
-                    src={file.preview}
-                    alt={file.name}
-                    style={{ opacity: 0.6 }}
-                    onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-                      e.currentTarget.style.display = "none";
-                    }}
-                  />
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: "50%",
-                      left: "50%",
-                      transform: "translate(-50%, -50%)",
-                      background: "rgba(0,0,0,0.7)",
-                      color: "white",
-                      padding: "8px 12px",
-                      borderRadius: "8px",
-                      fontSize: "12px",
-                      fontWeight: 500,
-                    }}
-                  >
-                    Uploading...
-                  </div>
-                </StyledImageWrapper>
-              </StyledImageCard>
-            ) : (
-              <StyledNonImageCard key={`uploading-nonimg-${file.uid}-${index}`}>
-                <DocFileMockup fileName={file.name} isUploading />
-                <StyledFileName title={file.name}>
-                  <FileNameWithExtension name={file.name} style={{ fontSize: 9, color: "white" }} />
-                </StyledFileName>
-              </StyledNonImageCard>
-            )
-          )}
+                  Uploading...
+                </div>
+              </StyledImageWrapper>
+            </StyledImageCard>
+          ))}
 
           {existingFiles.map((file, index) =>
             isImageFile(file.name) ? (
               <StyledImageCard key={`existing-img-${file.uid}-${index}`}>
-                <StyledImageWrapper>
-                  <ImageThumbnailCard
-                    getUrl={() => getImageUrl(file)}
-                    fileName={file.name}
-                  />
-                </StyledImageWrapper>
+                {finalShowDelete && (
+                  <StyledCloseButton onClick={(e) => handleDelete(file, e)}>
+                    <CloseOutlined />
+                  </StyledCloseButton>
+                )}
 
-                <StyledFileName title={file.name}>
-                  <FileNameWithExtension name={file.name} style={{ fontSize: 9, color: "white" }} />
-                </StyledFileName>
-
-                <StyledOverlay>
-                  <StyledActionButtons>
-                    {showPreview && (
-                      <Button
-                        type="text"
-                        className="action-btn-view"
-                        icon={<EyeOutlined style={{ fontSize: 20 }} />}
-                        onClick={(e) => handlePreview(file, e)}
-                        title="View"
-                      />
-                    )}
-                    {showDownload && (
-                      <Button
-                        type="text"
-                        className="action-btn-download"
-                        icon={<DownloadOutlined style={{ fontSize: 18 }} />}
-                        onClick={(e) => handleDownload(file, e)}
-                        title="Download"
-                      />
-                    )}
-                    {finalShowDelete && (
-                      <Button
-                        type="text"
-                        className="action-btn-delete"
-                        icon={<CloseOutlined style={{ fontSize: 18, fontWeight: 700 }} />}
-                        onClick={(e) => handleDelete(file, e)}
-                        title="Delete"
-                      />
-                    )}
-                  </StyledActionButtons>
-                </StyledOverlay>
+                <ImageCardWrapper
+                  file={file}
+                  onPreview={handlePreview}
+                  onDownload={handleDownload}
+                  getImageUrl={getImageUrl}
+                  showPreview={showPreview}
+                  showDownload={showDownload}
+                />
               </StyledImageCard>
             ) : (
               <StyledNonImageCard key={`existing-nonimg-${file.uid}-${index}`}>
-                <DocFileMockup fileName={file.name} />
+                {finalShowDelete && (
+                  <StyledCloseButton onClick={(e) => handleDelete(file, e)}>
+                    <CloseOutlined />
+                  </StyledCloseButton>
+                )}
 
-                <StyledFileName title={file.name}>
-                  <FileNameWithExtension name={file.name} style={{ fontSize: 9, color: "white" }} />
-                </StyledFileName>
+                <StyledNonImageWrapper onClick={(e: React.MouseEvent) => handlePreview(file, e)}>
+                  <EyeOutlined style={{ fontSize: 24 }} />
+                  <StyledFileExtension>
+                    {getFileExtension(file.name)}
+                  </StyledFileExtension>
+                </StyledNonImageWrapper>
+
+                <StyledFileName title={file.name}>{file.name}</StyledFileName>
 
                 <StyledOverlay>
                   <StyledActionButtons>
                     {showPreview && (
                       <Button
-                        type="text"
-                        className="action-btn-view"
-                        icon={<EyeOutlined style={{ fontSize: 20 }} />}
+                        type="default"
+                        size="small"
+                        icon={<EyeOutlined />}
                         onClick={(e) => handlePreview(file, e)}
-                        title="View"
-                      />
+                      >
+                        View
+                      </Button>
                     )}
                     {showDownload && (
                       <Button
-                        type="text"
-                        className="action-btn-download"
-                        icon={<DownloadOutlined style={{ fontSize: 18 }} />}
+                        type="default"
+                        size="small"
+                        icon={<DownloadOutlined />}
                         onClick={(e) => handleDownload(file, e)}
-                        title="Download"
-                      />
-                    )}
-                    {finalShowDelete && (
-                      <Button
-                        type="text"
-                        className="action-btn-delete"
-                        icon={<CloseOutlined style={{ fontSize: 18, fontWeight: 700 }} />}
-                        onClick={(e) => handleDelete(file, e)}
-                        title="Delete"
-                      />
+                      >
+                        Save
+                      </Button>
                     )}
                   </StyledActionButtons>
                 </StyledOverlay>
