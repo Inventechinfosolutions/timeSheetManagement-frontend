@@ -75,8 +75,10 @@
 }
 
 .quarterly-review-mobile-view {
-  --mrb-scale: 1; /* <-- change this ONE value to resize all text in the mobile view */
-  --mrb-text-color: #0f172a; /* <-- change this ONE value to recolor all unified body text */
+  --mrb-scale: 1;
+  /* <-- change this ONE value to resize all text in the mobile view */
+  --mrb-text-color: #0f172a;
+  /* <-- change this ONE value to recolor all unified body text */
 }
 
 .quarterly-review-mobile-view {
@@ -319,7 +321,8 @@
   transition: all 0.2s ease;
   white-space: nowrap;
   background-color: transparent;
-  color: var(--mrb-text-color); /* inactive tab — unified; .active below keeps its indigo */
+  color: var(--mrb-text-color);
+  /* inactive tab — unified; .active below keeps its indigo */
   border: none;
   cursor: pointer;
   overflow: hidden;
@@ -349,6 +352,90 @@
 
   .quarterly-review-mobile-view .mobile-page-title {
     font-size: calc(17px * var(--mrb-scale)) !important;
+  }
+}
+
+.quarterly-review-mobile-view .mobile-filter-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.quarterly-review-mobile-view .mobile-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+/* Row 1: Search, All Roles, Financial Year in one line */
+.quarterly-review-mobile-view .mobile-filter-row-1 .mobile-filter-col {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.quarterly-review-mobile-view .mobile-filter-row-1 .mobile-filter-col-search {
+  flex: 1.3 1 0;
+  min-width: 0;
+}
+
+/* Row 2: Quarter, Select All, All Status, and Clear in another line */
+.quarterly-review-mobile-view .mobile-filter-row-2 .mobile-filter-col {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.quarterly-review-mobile-view .mobile-filter-row-2 .mobile-filter-col-clear {
+  flex: 0 0 auto;
+  min-width: auto;
+}
+
+.quarterly-review-mobile-view .mobile-filter-row .ant-input,
+.quarterly-review-mobile-view .mobile-filter-row .ant-select-selector {
+  border-radius: 0.75rem !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: none !important;
+  height: 2.25rem !important;
+  display: flex !important;
+  align-items: center !important;
+  color: var(--mrb-text-color);
+}
+
+.quarterly-review-mobile-view .mobile-filter-row .ant-select-selection-item,
+.quarterly-review-mobile-view .mobile-filter-row .ant-select-selection-placeholder {
+  line-height: 2.25rem !important;
+  font-size: calc(12.5px * var(--mrb-scale)) !important;
+}
+
+.quarterly-review-mobile-view .mobile-filter-row .ant-select-prefix {
+  margin-inline-end: 0.375rem !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+@media (max-width: 520px) {
+  .quarterly-review-mobile-view .mobile-filter-row {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding-bottom: 2px;
+  }
+  .quarterly-review-mobile-view .mobile-filter-row::-webkit-scrollbar {
+    display: none;
+  }
+  .quarterly-review-mobile-view .mobile-filter-row-1 .mobile-filter-col-search {
+    min-width: 140px;
+  }
+  .quarterly-review-mobile-view .mobile-filter-row-1 .mobile-filter-col {
+    min-width: 110px;
+  }
+  .quarterly-review-mobile-view .mobile-filter-row-2 .mobile-filter-col {
+    min-width: 110px;
+  }
+  .quarterly-review-mobile-view .mobile-filter-row-2 .mobile-filter-col-clear {
+    min-width: 68px;
   }
 }
 
@@ -430,12 +517,14 @@
 
 .quarterly-review-mobile-view .mobile-avatar {
   background-color: #e0e7ff !important;
-  color: #4338ca; /* avatar initials — brand accent, left as-is */
+  color: #4338ca;
+  /* avatar initials — brand accent, left as-is */
   font-weight: 700;
 }
 
 .quarterly-review-mobile-view .mobile-submission-title {
-  font-size: calc(14px * var(--mrb-scale)) !important; /* UPDATED per type spec: employee name 14px/600 */
+  font-size: calc(14px * var(--mrb-scale)) !important;
+  /* UPDATED per type spec: employee name 14px/600 */
   font-weight: 600 !important;
   color: var(--mrb-text-color);
   margin: 0;
@@ -446,8 +535,10 @@
 }
 
 .quarterly-review-mobile-view .mobile-submission-subtitle {
-  font-size: calc(12px * var(--mrb-scale)) !important; /* within 11–12px spec range */
-  font-weight: 400 !important; /* UPDATED per type spec: employee role 400 (made explicit) */
+  font-size: calc(12px * var(--mrb-scale)) !important;
+  /* within 11–12px spec range */
+  font-weight: 400 !important;
+  /* UPDATED per type spec: employee role 400 (made explicit) */
   color: var(--mrb-text-color);
   margin: 0.125rem 0 0;
   overflow: hidden;
@@ -462,7 +553,8 @@
   gap: 0.375rem;
   padding: 0.375rem 0.625rem;
   border-radius: 999px;
-  font-size: calc(11px * var(--mrb-scale)) !important; /* UPDATED per type spec: status badge 10–11px */
+  font-size: calc(11px * var(--mrb-scale)) !important;
+  /* UPDATED per type spec: status badge 10–11px */
   font-weight: 600;
   border: 1px solid transparent;
 }
@@ -500,7 +592,8 @@
   display: flex;
   flex-direction: column;
   gap: 0.1rem;
-  padding-left: 3.25rem; /* aligns under the name text, past the avatar (2.5rem) + its gap (0.75rem) */
+  padding-left: 3.25rem;
+  /* aligns under the name text, past the avatar (2.5rem) + its gap (0.75rem) */
 }
 
 .quarterly-review-mobile-view .mobile-card-field {
@@ -512,23 +605,27 @@
 }
 
 .quarterly-review-mobile-view .mobile-card-field-label {
-  font-size: calc(11px * var(--mrb-scale)) !important; /* UPDATED per type spec: detail labels 10–11px/600 */
+  font-size: calc(11px * var(--mrb-scale)) !important;
+  /* UPDATED per type spec: detail labels 10–11px/600 */
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #64748b !important; /* CHANGED: was var(--mrb-text-color) — labels now a lighter slate grey, values stay dark, giving label/value contrast */
+  color: #64748b !important;
+  /* CHANGED: was var(--mrb-text-color) — labels now a lighter slate grey, values stay dark, giving label/value contrast */
   flex-shrink: 0;
 }
 
 .quarterly-review-mobile-view .mobile-card-field-value {
-  font-size: calc(13px * var(--mrb-scale)) !important; /* UPDATED per type spec: detail values 12–13px/500 */
+  font-size: calc(13px * var(--mrb-scale)) !important;
+  /* UPDATED per type spec: detail values 12–13px/500 */
   color: var(--mrb-text-color);
   text-align: right;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  padding-right: 0.625rem; /* matches the status badge's own right padding so values line up under it */
+  padding-right: 0.625rem;
+  /* matches the status badge's own right padding so values line up under it */
 }
 
 .quarterly-review-mobile-view .mobile-card-field-value strong {
@@ -548,9 +645,11 @@
    the date tinted purple instead of the unified dark color. */
 .quarterly-review-mobile-view .mobile-card-list .mobile-card-field-value,
 .quarterly-review-mobile-view .mobile-card-list .mobile-card-field-value * {
-  font-size: calc(13px * var(--mrb-scale)) !important; /* UPDATED per type spec: detail values 12–13px, and still forces EMPLOYEE ID / QUARTER / FINAL RATING / LAST MODIFIED to the same size even if one comes through as a nested element with its own size */
+  font-size: calc(13px * var(--mrb-scale)) !important;
+  /* UPDATED per type spec: detail values 12–13px, and still forces EMPLOYEE ID / QUARTER / FINAL RATING / LAST MODIFIED to the same size even if one comes through as a nested element with its own size */
   color: var(--mrb-text-color) !important;
-  font-weight: 500 !important; /* UPDATED per type spec: detail values weight 500 (was 400) */
+  font-weight: 500 !important;
+  /* UPDATED per type spec: detail values weight 500 (was 400) */
   text-decoration: none !important;
 }
 
@@ -571,17 +670,22 @@
 .quarterly-review-mobile-view .mobile-submission-actions {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
   margin-top: 0.375rem;
   padding-top: 0.375rem;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid #f1f5f9;
 }
 
 .quarterly-review-mobile-view .mobile-submission-actions .ant-btn {
-  min-width: 70%;
-  justify-content: center;
+  width: 2rem !important;
+  min-width: 2rem !important;
   height: 2rem !important;
-  padding: 0 0.75rem !important;
+  padding: 0 !important;
+  border-radius: 0.5rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   line-height: 1 !important;
 }
 
@@ -592,8 +696,10 @@
   border-color: #4f46e5;
   color: #ffffff;
   border-radius: 0.75rem;
-  font-size: calc(13px * var(--mrb-scale)) !important; /* NEW per type spec: button text 12–13px (was inheriting antd's default size) */
-  font-weight: 600; /* UPDATED per type spec: button text 600 (was 700) */
+  font-size: calc(13px * var(--mrb-scale)) !important;
+  /* NEW per type spec: button text 12–13px (was inheriting antd's default size) */
+  font-weight: 600;
+  /* UPDATED per type spec: button text 600 (was 700) */
 }
 
 .quarterly-review-mobile-view .mobile-button-secondary.ant-btn-default,
@@ -602,8 +708,10 @@
   border-color: #c7d2fe;
   color: #4338ca;
   border-radius: 0.75rem;
-  font-size: calc(13px * var(--mrb-scale)) !important; /* NEW per type spec: button text 12–13px */
-  font-weight: 600; /* UPDATED per type spec: button text 600 (was 700) */
+  font-size: calc(13px * var(--mrb-scale)) !important;
+  /* NEW per type spec: button text 12–13px */
+  font-weight: 600;
+  /* UPDATED per type spec: button text 600 (was 700) */
 }
 
 .quarterly-review-mobile-view .mobile-empty-state,
@@ -647,7 +755,8 @@
 }
 
 .quarterly-review-mobile-view .mobile-card-field-strong {
-  font-weight: 700 !important; /* !important required: the .mobile-card-field-value wildcard rule above forces font-weight:400 on every descendant, including this one, unless overridden with equal-or-higher priority */
+  font-weight: 700 !important;
+  /* !important required: the .mobile-card-field-value wildcard rule above forces font-weight:400 on every descendant, including this one, unless overridden with equal-or-higher priority */
   color: var(--mrb-text-color) !important;
 }
 
@@ -707,14 +816,16 @@
   border: 1px solid #c7d2fe;
   font-size: calc(13px * var(--mrb-scale)) !important;
   font-weight: 700 !important;
-  color: #4338ca !important; /* !important needed to beat the .mobile-card-field-value wildcard rule above, since this badge lives inside a card-field-value */
+  color: #4338ca !important;
+  /* !important needed to beat the .mobile-card-field-value wildcard rule above, since this badge lives inside a card-field-value */
 }
 
 .quarterly-review-mobile-view .mobile-rating-icon {
   width: 0.875rem;
   height: 0.875rem;
   fill: #f59e0b;
-  stroke: #f59e0b !important; /* removes the default dark outline so it matches the flat gold desktop star */
+  stroke: #f59e0b !important;
+  /* removes the default dark outline so it matches the flat gold desktop star */
   color: #f59e0b !important;
   flex-shrink: 0;
 }
@@ -724,9 +835,10 @@
   color: #94a3b8;
 }
 
-.quarterly-review-mobile-view .custom-table .ant-table-thead > tr > th {
+.quarterly-review-mobile-view .custom-table .ant-table-thead>tr>th {
   background-color: #eef2ff !important;
-  color: #4338ca !important; /* table header — brand accent, matches active tab / calendar icon */
+  color: #4338ca !important;
+  /* table header — brand accent, matches active tab / calendar icon */
   font-weight: 700 !important;
   font-size: calc(11px * var(--mrb-scale)) !important;
   text-transform: uppercase !important;
@@ -738,17 +850,17 @@
   white-space: nowrap !important;
 }
 
-.quarterly-review-mobile-view .custom-table .ant-table-thead > tr > th::before {
+.quarterly-review-mobile-view .custom-table .ant-table-thead>tr>th::before {
   display: none !important;
 }
 
-.quarterly-review-mobile-view .custom-table .ant-table-tbody > tr > td {
+.quarterly-review-mobile-view .custom-table .ant-table-tbody>tr>td {
   text-align: center !important;
   color: var(--mrb-text-color);
 }
 
-.quarterly-review-mobile-view .custom-table .ant-table-thead > tr > th:first-child,
-.quarterly-review-mobile-view .custom-table .ant-table-tbody > tr > td:first-child {
+.quarterly-review-mobile-view .custom-table .ant-table-thead>tr>th:first-child,
+.quarterly-review-mobile-view .custom-table .ant-table-tbody>tr>td:first-child {
   text-align: left !important;
 }
 
@@ -781,19 +893,7 @@
     width: 12rem;
   }
 
-  /* Search -> FY -> Quarter must stay in this fixed vertical order
-     regardless of viewport width, so the 3-filter toolbar keeps
-     stacking as a column even on tablet/desktop instead of switching
-     to the horizontal row layout above (.mobile-toolbar). */
-  .quarterly-review-mobile-view .mobile-toolbar-stacked {
-    flex-direction: column;
-    align-items: stretch;
-    width: 100%;
-  }
 
-  .quarterly-review-mobile-view .mobile-toolbar-stacked .mobile-year-select-full {
-    width: 100%;
-  }
 
   /* NOTE: the card-list <-> table-shell toggle used to live here and
      flipped to the table as soon as the viewport crossed 640px — which
@@ -848,62 +948,49 @@
     min-width: 100%;
   }
 
-  /* NEW: search / FY / Quarter on one row at tablet width. Search
-     gets more of the row (flex: 2), FY and Quarter split the rest
-     evenly between them (flex: 1 each, so they end up the same
-     width as one another). */
-  .quarterly-review-mobile-view .mobile-toolbar-stacked {
-    flex-direction: row;
-    align-items: center;
-    gap: 0.625rem;
-  }
 
-  .quarterly-review-mobile-view .mobile-toolbar-stacked .mobile-input {
-    flex: 2 1 0;
-    min-width: 0;
-  }
-
-  .quarterly-review-mobile-view .mobile-toolbar-stacked .mobile-year-select-full,
-  .quarterly-review-mobile-view .mobile-toolbar-stacked .mobile-select {
-    flex: 1 1 0;
-    min-width: 0;
-    width: auto;
-  }
 
   /* UPDATED: tablet now sits at the TOP of each type-spec range
      (phone stays at the values it already had — untouched). Every
      rule in this block is scoped to this 640–1023px query only, so
      none of it reaches the phone breakpoint below 640px. */
   .quarterly-review-mobile-view .mobile-page-title {
-    font-size: calc(20px * var(--mrb-scale)) !important; /* spec: page title 18–20px */
+    font-size: calc(20px * var(--mrb-scale)) !important;
+    /* spec: page title 18–20px */
   }
 
   .quarterly-review-mobile-view .mobile-filter-heading {
-    font-size: calc(18px * var(--mrb-scale)) !important; /* spec: section title 16–18px */
+    font-size: calc(18px * var(--mrb-scale)) !important;
+    /* spec: section title 16–18px */
   }
 
   .quarterly-review-mobile-view .mobile-submission-title {
-    font-size: calc(15px * var(--mrb-scale)) !important; /* spec: employee name 14–15px */
+    font-size: calc(15px * var(--mrb-scale)) !important;
+    /* spec: employee name 14–15px */
     font-weight: 600 !important;
   }
 
   .quarterly-review-mobile-view .mobile-submission-subtitle {
-    font-size: calc(12px * var(--mrb-scale)) !important; /* spec: role 11–12px */
+    font-size: calc(12px * var(--mrb-scale)) !important;
+    /* spec: role 11–12px */
   }
 
   .quarterly-review-mobile-view .mobile-status-badge {
-    font-size: calc(11px * var(--mrb-scale)) !important; /* spec: status badge 10–11px */
+    font-size: calc(11px * var(--mrb-scale)) !important;
+    /* spec: status badge 10–11px */
   }
 
   .quarterly-review-mobile-view .mobile-button-primary.ant-btn-primary,
   .quarterly-review-mobile-view .mobile-button-primary.ant-btn,
   .quarterly-review-mobile-view .mobile-button-secondary.ant-btn-default,
   .quarterly-review-mobile-view .mobile-button-secondary.ant-btn {
-    font-size: calc(13px * var(--mrb-scale)) !important; /* spec: button text 12–13px */
+    font-size: calc(13px * var(--mrb-scale)) !important;
+    /* spec: button text 12–13px */
   }
 
   .quarterly-review-mobile-view .mobile-stat-value {
-    font-size: calc(18px * var(--mrb-scale)) !important; /* spec: summary number 16–18px */
+    font-size: calc(18px * var(--mrb-scale)) !important;
+    /* spec: summary number 16–18px */
   }
 
   /* The field block becomes a 2-column grid at tablet, with each
@@ -928,12 +1015,14 @@
   }
 
   .quarterly-review-mobile-view .mobile-card-field-label {
-    font-size: calc(11px * var(--mrb-scale)) !important; /* same as phone */
+    font-size: calc(11px * var(--mrb-scale)) !important;
+    /* same as phone */
   }
 
   .quarterly-review-mobile-view .mobile-card-list .mobile-card-field-value,
   .quarterly-review-mobile-view .mobile-card-list .mobile-card-field-value * {
-    font-size: calc(13px * var(--mrb-scale)) !important; /* UPDATED: was 15px — now matches phone's 13px exactly */
+    font-size: calc(13px * var(--mrb-scale)) !important;
+    /* UPDATED: was 15px — now matches phone's 13px exactly */
   }
 
   .quarterly-review-mobile-view .mobile-card-field-value {
@@ -941,4 +1030,52 @@
     padding-right: 0;
     white-space: normal;
   }
+}
+
+/* ── Desktop Matching Table Styles ────────────────────────────────────────── */
+.quarterly-review-mobile-view .custom-table .ant-table-container {
+  border-top-left-radius: 16px !important;
+  border-top-right-radius: 16px !important;
+  overflow: hidden !important;
+  border: 1px solid #e2e8f0;
+}
+
+.quarterly-review-mobile-view .custom-table .ant-table-thead > tr > th {
+  background-color: #4318FF !important;
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+  font-size: 12px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  border-bottom: none !important;
+  padding-top: 14px !important;
+  padding-bottom: 14px !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+}
+
+.quarterly-review-mobile-view .custom-table .ant-table-thead > tr > th::before {
+  display: none !important;
+}
+
+.quarterly-review-mobile-view .custom-table .ant-table-thead > tr > th.ant-table-cell-fix-right,
+.quarterly-review-mobile-view .custom-table .ant-table-thead > tr > th.ant-table-cell-fix-right-first {
+  background-color: #4318FF !important;
+  color: #FFFFFF !important;
+}
+
+.quarterly-review-mobile-view .custom-table table {
+  border-spacing: 0 !important;
+  border-collapse: collapse !important;
+}
+
+.quarterly-review-mobile-view .custom-table .ant-table-tbody > tr > td {
+  padding: 12px 14px !important;
+  font-size: 13px !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+}
+
+.quarterly-review-mobile-view .custom-table .ant-table-tbody > tr:hover > td {
+  background-color: #f8fafc !important;
 }

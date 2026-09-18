@@ -1,3 +1,5 @@
+import { RevealedRatingsProvider } from './Appraisal/hooks/useRevealedRatings';
+import { AuthenticateRatingModal } from './Appraisal/components/AuthenticateRatingModal';
 import {
   BrowserRouter as Router,
   Routes,
@@ -37,10 +39,12 @@ import AttendanceViewWrapper from "./EmployeeDashboard/CalenderViewWrapper";
 // import MobileResponsiveCalendarPage from "./EmployeeDashboard/MobileResponsiveCalendarPage";
 import MobileTimesheetHistory from "./EmployeeDashboard/MobileTimesheetHistory/MobileTimesheetHistory";
 import EmployeeAppraisalDashboard from "./Appraisal/EmployeeApprasialDashboard/EmployeeAppraisalDashboard";
+import QuarterlyRatingsView from "./Appraisal/EmployeeApprasialDashboard/QuarterlyRatingsView";
 import QuarterlyReviewForm from "./Appraisal/EmployeeApprasialDashboard/QuarterlyReviewForm";
 import LeaveManagement from "./EmployeeDashboard/LeaveManagement";
 import LeaveBalance from "./EmployeeDashboard/LeaveBalance";
 import About from "./pages/About";
+import EmployeeNotes from "./EmployeeDashboard/Employeenotes";
 
 // Admin Dashboard Components
 import AdminDashboard from "./AdminDashboard/AdminDashboard";
@@ -63,6 +67,7 @@ import MobileTimesheet from "./EmployeeDashboard/MyTimesheetMobileResponsive/Mob
 import QuarterlyReviewResponsive from "./Appraisal/ManagerQuaterlyReview/QuarterlyReviewResponsive";
 
 
+
 const EmployeeTabWrapper = () => {
   const { tab } = useParams<{ tab: string }>();
 
@@ -81,12 +86,17 @@ const EmployeeTabWrapper = () => {
       return <LeaveManagement />;
     case "appraisal":
       return <EmployeeAppraisalDashboard />;
+    case "quarterly-ratings":
+    case "annual-ratings":
+      return <QuarterlyRatingsView />;
     case "quarterly-review":
       return <QuarterlyReviewForm />;
     case "leave-balance":
       return <LeaveBalance />;
     case "about":
       return <About />;
+    case "employee-notes":
+      return <EmployeeNotes />;
     default:
       return <Navigate to="/employee-dashboard" replace />;
   }
@@ -128,6 +138,17 @@ const AdminTabWrapper = () => {
       return <MyProfile />;
     case "leave-management":
       return <LeaveManagement />;
+    case "appraisal":
+      return <EmployeeAppraisalDashboard />;
+    case "quarterly-ratings":
+    case "annual-ratings":
+      return <QuarterlyRatingsView />;
+    case "quarterly-review":
+      return <QuarterlyReviewResponsive />;
+    case "review":
+      return <QuarterlyReviewForm />;
+    case "about":
+      return <About />;
     default:
       return <Navigate to="/admin-dashboard" replace />;
   }
@@ -288,7 +309,7 @@ function AppContent() {
                   path="/admin-dashboard"
                   element={
                     <ProtectedRoute
-                      allowedRoles={[UserType.ADMIN, UserType.RECEPTIONIST]}
+                      allowedRoles={[UserType.ADMIN, UserType.RECEPTIONIST, UserType.CEO]}
                     >
                       <AdminLayout />
                     </ProtectedRoute>
@@ -328,6 +349,22 @@ function AppContent() {
                   <Route
                     path="manager-employees/:managerId"
                     element={<ManagerEmployeesView />}
+                  />
+                  <Route
+                    path="review/:date?"
+                    element={<QuarterlyReviewForm />}
+                  />
+                  <Route
+                    path="quarterly-review"
+                    element={<QuarterlyReviewResponsive />}
+                  />
+                  <Route
+                    path="quarterly-review/:employeeId"
+                    element={<QuarterlyReviewResponsive />}
+                  />
+                  <Route
+                    path="quarterly-review/:employeeId/:quarterPeriod"
+                    element={<QuarterlyReviewResponsive />}
                   />
                   <Route path=":tab/:date?" element={<AdminTabWrapper />} />
                 </Route>
@@ -376,7 +413,19 @@ function AppContent() {
                     element={<ManagerEmployeesView />}
                   />
                   <Route
-                    path="quarterly-review/:employeeId?"
+                    path="review/:date?"
+                    element={<QuarterlyReviewForm />}
+                  />
+                  <Route
+                    path="quarterly-review"
+                    element={<QuarterlyReviewResponsive />}
+                  />
+                  <Route
+                    path="quarterly-review/:employeeId"
+                    element={<QuarterlyReviewResponsive />}
+                  />
+                  <Route
+                    path="quarterly-review/:employeeId/:quarterPeriod"
                     element={<QuarterlyReviewResponsive />}
                   />
                   <Route path=":tab/:date?" element={<AdminTabWrapper />} />
@@ -395,6 +444,9 @@ function AppContent() {
                     element={<MobileTimesheet />}
                   />
                   <Route index element={<TodayAttendance />} />
+                  <Route path="employee-notes" element={<EmployeeNotes />} />
+                  <Route path="employee-notes/*" element={<EmployeeNotes />} />
+                  <Route path=":projectName/employee-notes" element={<EmployeeNotes />} />
                   <Route path=":tab/:date?" element={<EmployeeTabWrapper />} />
                 </Route>
 
@@ -450,7 +502,10 @@ function AppContent() {
 function App() {
   return (
     <Router>
-      <AppContent />
+      <RevealedRatingsProvider>
+        <AppContent />
+        <AuthenticateRatingModal />
+      </RevealedRatingsProvider>
     </Router>
   );
 }

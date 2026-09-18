@@ -28,7 +28,7 @@ import { TimesheetEntry, BlockerEntry, HolidayEntry } from "../../types";
 import { AttendanceStatus, UserType, WorkLocationKeyword } from "../../enums";
 import { generateMonthlyEntries } from "../../utils/attendanceUtils";
 import { saveAs } from "file-saver";
-import "./MobileTimesheetHistory.css";
+import "./MobileTimeSheetHistory.css";
 
 interface MobileTimesheetHistoryProps {
     employeeId?: string;
@@ -400,7 +400,7 @@ const MobileTimesheetHistory = ({
         (state: RootState) => state.timesheetBlocker ?? { blockers: [] }
     );
 
-    const isAdmin = currentUser?.userType === UserType.ADMIN;
+    const isAdmin = currentUser?.userType === UserType.ADMIN || currentUser?.userType === UserType.CEO;
     const isManager =
         currentUser?.userType === UserType.MANAGER ||
         !!currentUser?.role?.toUpperCase().includes(UserType.MANAGER);

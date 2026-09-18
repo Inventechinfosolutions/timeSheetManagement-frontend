@@ -31,7 +31,7 @@ const Registration = () => {
     (state: RootState) => state.masterDepartments,
   );
   const currentUser = useAppSelector((state: RootState) => state.user.currentUser);
-  const isAdmin = currentUser?.userType === UserType.ADMIN;
+  const isAdmin = currentUser?.userType === UserType.ADMIN || currentUser?.userType === UserType.CEO;
   const { loading: userCreateLoading, error: userCreateError } = useAppSelector(
     (state: RootState) => state.user,
   );

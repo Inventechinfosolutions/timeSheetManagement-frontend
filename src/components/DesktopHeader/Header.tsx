@@ -1,4 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
+import { getNotificationTargetRoute } from "../../utils/notificationNavigation";
 import dayjs from "dayjs";
 import {
   LogOut,
@@ -6,8 +7,11 @@ import {
   User,
   ChevronDown,
   ArrowLeft,
+  ArrowRight,
+  ExternalLink,
   Check,
   RotateCcw,
+  X,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../../hooks";
 import { logoutUser } from "../../reducers/user.reducer";
@@ -36,7 +40,7 @@ import {
   UserType,
 } from "../../enums";
 import "./Header.css";
-import workspherelogo from "../../assets/worksphere_Logo_white.svg";
+import workspherelogo from "../../assets/WorkSphere_Logo_white.svg";
 import MobileHeader from "../HeaderMobileResposive/MobileHeader";
 
 export interface HeaderProps {
@@ -58,7 +62,8 @@ const Header = ({
   const { currentUser } = useAppSelector((state) => state.user);
 
   // Permissions
-  const isAdmin = currentUser?.userType === UserType.ADMIN;
+  const isAdmin = currentUser?.userType === UserType.ADMIN || currentUser?.userType === UserType.CEO;
+  const isCEO = currentUser?.userType === UserType.CEO;
   const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
   const isManager = currentUser?.userType === UserType.MANAGER;
   const isApprover = isAdmin || isManager || isReceptionist;
@@ -81,8 +86,17 @@ const Header = ({
 
   // Total count for the bell bubble
   const unreadCount = isApprover
-    ? leaveNotifications.length
+    ? leaveNotifications.length + attendanceUnreadCount
     : attendanceUnreadCount + employeeUpdates.length;
+
+  const [approverTab, setApproverTab] = useState<"requests" | "notifications">("requests");
+
+  // Default to notifications tab if there are no leave requests but there are general/appraisal notifications
+  useEffect(() => {
+    if (leaveNotifications.length === 0 && attendanceUnreadCount > 0) {
+      setApproverTab("notifications");
+    }
+  }, [leaveNotifications.length, attendanceUnreadCount]);
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -120,22 +134,47 @@ const Header = ({
       : requestType;
   };
 
-  // Fetch notifications on mount
+  const fetchedEmpIdRef = useRef<string | null>(null);
+  const fetchedApproverRef = useRef<boolean>(false);
+  const fetchedProfileImageIdRef = useRef<string | null>(null);
+
+  // Fetch notifications on mount (only once, no unwanted periodic interval)
   useEffect(() => {
-    if (isApprover) {
+    if (!currentUser) return;
+
+    if (isApprover && !fetchedApproverRef.current) {
+      fetchedApproverRef.current = true;
       dispatch(fetchUnreadNotifications());
     }
-    if (entity?.employeeId && currentUser) {
+
+    const targetEmpId = entity?.employeeId || currentUser?.employeeId || currentUser?.loginId;
+    if (targetEmpId && fetchedEmpIdRef.current !== String(targetEmpId)) {
+      fetchedEmpIdRef.current = String(targetEmpId);
+      dispatch(fetchNotifications(String(targetEmpId)));
       if (!isAdmin) {
-        dispatch(fetchNotifications(entity?.employeeId));
-        dispatch(fetchEmployeeUpdates(entity?.employeeId));
+        dispatch(fetchEmployeeUpdates(String(targetEmpId)));
       }
     }
-  }, [dispatch, isApprover, isAdmin, entity?.employeeId, currentUser]);
+  }, [dispatch, isApprover, isAdmin, entity?.employeeId, currentUser?.employeeId, currentUser?.loginId]);
 
   const handleNotificationClick = (id: number) => {
     dispatch(fetchNotificationDetails(id));
     setViewMode("detail");
+  };
+
+  const handleNotificationItemClick = (notif: any) => {
+    if (!notif.isRead) {
+      handleMarkAsRead(notif.id, "attendance");
+    }
+    setIsNotificationOpen(false);
+    setViewMode("list");
+    dispatch(clearSelectedNotification());
+    const targetRoute = getNotificationTargetRoute(
+      notif,
+      currentUser?.userType,
+      location.pathname
+    );
+    navigate(targetRoute);
   };
 
   const handleBackToList = () => {
@@ -169,9 +208,12 @@ const Header = ({
     if (isApprover) {
       dispatch(markAllLeaveRequestsRead());
     }
-    if (!isAdmin && entity?.employeeId) {
-      dispatch(markAllNotificationsRead(entity.employeeId));
-      dispatch(markAllEmployeeUpdatesRead(entity.employeeId));
+    const targetEmpId = entity?.employeeId || currentUser?.employeeId || currentUser?.loginId;
+    if (targetEmpId) {
+      dispatch(markAllNotificationsRead(targetEmpId));
+      if (!isAdmin) {
+        dispatch(markAllEmployeeUpdatesRead(targetEmpId));
+      }
     }
   };
 
@@ -215,8 +257,10 @@ const Header = ({
     const shouldFetch =
       !loggedInUserProfileImageUrl &&
       (loggedInUserImageStatus === "idle" ||
-        loggedInUserImageStatus === undefined);
+        loggedInUserImageStatus === undefined) &&
+      fetchedProfileImageIdRef.current !== String(profileId);
     if (profileId && shouldFetch) {
+      fetchedProfileImageIdRef.current = String(profileId);
       dispatch(fetchLoggedInUserProfileImage(String(profileId)));
     }
   }, [
@@ -291,7 +335,22 @@ const Header = ({
                 <button
                   onClick={() => {
                     setIsDropdownOpen(false);
-                    setIsNotificationOpen((prev) => !prev);
+                    setIsNotificationOpen((prev) => {
+                      const next = !prev;
+                      if (next) {
+                        if (isApprover) {
+                          dispatch(fetchUnreadNotifications());
+                        }
+                        const targetEmpId = entity?.employeeId || currentUser?.employeeId || currentUser?.loginId;
+                        if (targetEmpId) {
+                          dispatch(fetchNotifications(targetEmpId));
+                          if (!isAdmin) {
+                            dispatch(fetchEmployeeUpdates(targetEmpId));
+                          }
+                        }
+                      }
+                      return next;
+                    });
                   }}
                   className={`notification-trigger relative p-2.5 xl:p-3 rounded-xl transition-all group ${isNotificationOpen
                     ? "bg-white text-[#4318FF]"
@@ -328,16 +387,53 @@ const Header = ({
                             </button>
                           )}
                         </div>
-                        <div className="flex items-center gap-6 px-6 border-b border-gray-50">
-                          <button className="py-3 text-sm font-bold text-[#1B2559] border-b-2 border-[#1B2559] relative">
-                            {isApprover ? "Pending Approvals" : "Inbox"}
-                            <span className="ml-2 bg-[#1B2559] text-white text-[10px] px-1.5 py-0.5 rounded-md">
-                              {unreadCount}
-                            </span>
-                          </button>
-                        </div>
+                        {isApprover ? (
+                          <div className="flex items-center gap-4 px-6 border-b border-gray-50">
+                            <button
+                              type="button"
+                              onClick={() => setApproverTab("requests")}
+                              className={`py-3 text-sm font-bold transition-all relative ${
+                                approverTab === "requests"
+                                  ? "text-[#1B2559] border-b-2 border-[#1B2559]"
+                                  : "text-gray-400 hover:text-gray-600"
+                              }`}
+                            >
+                              Leave Requests
+                              {leaveNotifications.length > 0 && (
+                                <span className="ml-2 bg-[#1B2559] text-white text-[10px] px-1.5 py-0.5 rounded-md">
+                                  {leaveNotifications.length}
+                                </span>
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setApproverTab("notifications")}
+                              className={`py-3 text-sm font-bold transition-all relative ${
+                                approverTab === "notifications"
+                                  ? "text-[#1B2559] border-b-2 border-[#1B2559]"
+                                  : "text-gray-400 hover:text-gray-600"
+                              }`}
+                            >
+                              Notifications
+                              {attendanceUnreadCount > 0 && (
+                                <span className="ml-2 bg-[#4318FF] text-white text-[10px] px-1.5 py-0.5 rounded-md">
+                                  {attendanceUnreadCount}
+                                </span>
+                              )}
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-6 px-6 border-b border-gray-50">
+                            <button className="py-3 text-sm font-bold text-[#1B2559] border-b-2 border-[#1B2559] relative">
+                              Inbox
+                              <span className="ml-2 bg-[#1B2559] text-white text-[10px] px-1.5 py-0.5 rounded-md">
+                                {unreadCount}
+                              </span>
+                            </button>
+                          </div>
+                        )}
                         <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
-                          {isApprover ? (
+                          {isApprover && approverTab === "requests" ? (
                             leaveNotifications.length > 0 ? (
                               leaveNotifications.map((notif) => {
                                 const getNotificationContent = (
@@ -489,6 +585,66 @@ const Header = ({
                                 </p>
                                 <p className="text-xs text-gray-400 mt-1">
                                   All leave applications have been reviewed.
+                                </p>
+                              </div>
+                            )
+                          ) : isApprover && approverTab === "notifications" ? (
+                            notifications.length > 0 ? (
+                              notifications.map((notif) => (
+                                <div
+                                  key={notif.id}
+                                  onClick={() => handleNotificationItemClick(notif)}
+                                  className={`flex gap-4 p-5 hover:bg-gray-50/80 transition-colors border-b border-gray-50 last:border-0 group cursor-pointer relative ${!notif.isRead ? "bg-blue-50/30" : ""
+                                    }`}
+                                >
+                                  <div className="relative shrink-0">
+                                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-[#4318FF]">
+                                      <Bell size={18} />
+                                    </div>
+                                  </div>
+                                  <div className="flex-1 space-y-1">
+                                    <div className="flex justify-between items-start">
+                                      <p className="text-sm text-[#1B2559] leading-snug">
+                                        <span className="font-bold">
+                                          {notif.title}
+                                        </span>
+                                      </p>
+                                      {!notif.isRead && (
+                                        <span className="w-2 h-2 bg-[#4318FF] rounded-full shrink-0 mt-1.5"></span>
+                                      )}
+                                    </div>
+                                    <div className="flex flex-col gap-1">
+                                      <span className="text-xs text-gray-500 font-medium line-clamp-2">
+                                        {notif.message}
+                                      </span>
+                                      <span className="text-[10px] text-gray-400">
+                                        {new Date(
+                                          notif.createdAt,
+                                        ).toLocaleDateString()}{" "}
+                                        {new Date(
+                                          notif.createdAt,
+                                        ).toLocaleTimeString([], {
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                        })}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-3">
+                                  <Bell
+                                    size={24}
+                                    className="text-gray-300"
+                                  />
+                                </div>
+                                <p className="text-sm font-bold text-[#1B2559]">
+                                  No new notifications
+                                </p>
+                                <p className="text-xs text-gray-400 mt-1">
+                                  You are all caught up.
                                 </p>
                               </div>
                             )
@@ -742,9 +898,7 @@ const Header = ({
                                 ? notifications.map((notif) => (
                                   <div
                                     key={notif.id}
-                                    onClick={() =>
-                                      handleNotificationClick(notif.id)
-                                    }
+                                    onClick={() => handleNotificationItemClick(notif)}
                                     className={`flex gap-4 p-5 hover:bg-gray-50/80 transition-colors border-b border-gray-50 last:border-0 group cursor-pointer relative ${!notif.isRead ? "bg-blue-50/30" : ""
                                       }`}
                                   >
@@ -855,29 +1009,42 @@ const Header = ({
                             </div>
                           )}
                         </div>
-                        {selectedNotification &&
-                          !selectedNotification.isRead &&
-                          !isReceptionist && (
-                            <div className="p-6 border-t border-gray-50 bg-gray-50/50">
+                        {selectedNotification && (
+                          <div className="p-4 border-t border-gray-100 bg-gray-50/70 flex items-center gap-2.5">
+                            <button
+                              onClick={() => {
+                                const targetRoute = getNotificationTargetRoute(
+                                  selectedNotification,
+                                  currentUser?.userType,
+                                  location.pathname
+                                );
+                                setIsNotificationOpen(false);
+                                setViewMode("list");
+                                navigate(targetRoute);
+                              }}
+                              className="flex-1 py-2.5 px-4 rounded-xl bg-[#4318FF] text-white font-bold text-xs shadow-md shadow-blue-500/20 hover:bg-[#3713d3] hover:-translate-y-0.5 active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                            >
+                              <ExternalLink size={15} />
+                              Go to Page
+                            </button>
+                            {!selectedNotification.isRead && !isReceptionist && (
                               <button
                                 onClick={() =>
                                   handleMarkAsRead(selectedNotification.id)
                                 }
-                                className="w-full py-3 rounded-xl bg-[#4318FF] text-white font-bold text-sm shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:-translate-y-0.5 active:scale-95 transition-all flex items-center justify-center gap-2"
+                                className="py-2.5 px-3.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 font-bold text-xs transition-all flex items-center justify-center gap-1.5"
                               >
-                                <Check size={18} />
+                                <Check size={14} />
                                 Mark as Read
                               </button>
-                            </div>
-                          )}
-                        {selectedNotification &&
-                          selectedNotification.isRead && (
-                            <div className="p-6 border-t border-gray-50 bg-gray-50/50 text-center">
-                              <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-100 text-green-700 text-xs font-bold uppercase tracking-wide">
-                                <Check size={14} /> Read
+                            )}
+                            {selectedNotification.isRead && (
+                              <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-green-50 text-green-700 text-[11px] font-bold border border-green-200">
+                                <Check size={13} /> Read
                               </span>
-                            </div>
-                          )}
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -911,20 +1078,24 @@ const Header = ({
                   </div>
                   <div className="profile-user-info flex flex-col items-start min-w-[70px]">
                     <span className="text-sm font-bold text-white truncate max-w-[120px] xl:max-w-[160px]">
-                      {isAdmin
-                        ? "Admin"
-                        : isReceptionist
-                          ? "Receptionist"
-                          : currentUser?.aliasLoginName?.split(" ")[0] || "User"}
+                      {isCEO
+                        ? "CEO"
+                        : isAdmin
+                          ? "Admin"
+                          : isReceptionist
+                            ? "Receptionist"
+                            : currentUser?.aliasLoginName?.split(" ")[0] || "User"}
                     </span>
                     <span className="text-[11px] text-blue-100/80 truncate max-w-[120px] xl:max-w-[160px]">
-                      {isAdmin
-                        ? "Administrator"
-                        : isReceptionist
-                          ? "View only"
-                          : isManager
-                            ? "Manager"
-                            : "Employee"}
+                      {isCEO
+                        ? "Chief Executive Officer"
+                        : isAdmin
+                          ? "Administrator"
+                          : isReceptionist
+                            ? "View only"
+                            : isManager
+                              ? "Manager"
+                              : "Employee"}
                     </span>
                   </div>
                   <ChevronDown
@@ -937,7 +1108,16 @@ const Header = ({
                 {/* Desktop Profile Menu Dropdown */}
                 {isDropdownOpen && (
                   <div className="profile-menu absolute right-0 top-14 w-[300px] xl:w-[330px] bg-white rounded-xl shadow-[0px_20px_50px_0px_#111c440d] border border-gray-100 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                    {isAdmin ? (
+                    {isCEO ? (
+                      <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
+                        <p className="text-sm font-bold text-[#1B2559]">
+                          CEO
+                        </p>
+                        <p className="text-xs text-[#667eea] font-medium">
+                          Chief Executive Officer
+                        </p>
+                      </div>
+                    ) : isAdmin ? (
                       <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
                         <p className="text-sm font-bold text-[#1B2559]">
                           Admin

@@ -105,6 +105,14 @@ const ManagerLayout = () => {
     if (path.includes("/manager-dashboard/leave-management")) {
       return "Request Management ";
     }
+    if (
+      path.includes("/manager-dashboard/appraisal") ||
+      path.includes("/manager-dashboard/quarterly-ratings") ||
+      path.includes("/manager-dashboard/annual-ratings") ||
+      path.includes("/manager-dashboard/review")
+    ) {
+      return "Appraisal";
+    }
     if (path.includes("/manager-dashboard/quarterly-review")) {
       return "Quarterly Review";
     }
@@ -135,6 +143,11 @@ const ManagerLayout = () => {
         return "Account Settings";
       case "leave-management":
         return "Request Management ";
+      case "appraisal":
+      case "review":
+      case "quarterly-ratings":
+      case "annual-ratings":
+        return "Appraisal";
       case "quarterly-review":
         return "Quarterly Review";
       default:
@@ -145,7 +158,7 @@ const ManagerLayout = () => {
   const dispatch = useAppDispatch();
   const { entity } = useAppSelector((state) => state.employeeDetails);
   const { currentUser } = useAppSelector((state) => state.user);
-  const isAdmin = currentUser?.userType === UserType.ADMIN;
+  const isAdmin = currentUser?.userType === UserType.ADMIN || currentUser?.userType === UserType.CEO;
 
   const handleTabChange = (tabName: string) => {
     if (tabName === "My Dashboard" || tabName === "Employee Dashboard") {
@@ -184,6 +197,8 @@ const ManagerLayout = () => {
       navigate("/manager-dashboard/my-profile");
     } else if (tabName === "Request Management ") {
       navigate("/manager-dashboard/leave-management");
+    } else if (tabName === "Appraisal") {
+      navigate("/manager-dashboard/appraisal");
     } else if (tabName === "Quarterly Review") {
       navigate("/manager-dashboard/quarterly-review");
     }

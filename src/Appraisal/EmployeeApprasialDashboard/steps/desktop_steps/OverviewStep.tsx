@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Form, Input, Card } from 'antd';
+import { Form, Input } from 'antd';
+import { ClipboardList } from 'lucide-react';
 import { MobileOverviewStep } from '../mobile_steps/overview/MobileOverviewStep';
+import { ReviewStepCard } from '../../desktop/ReviewStepCard';
 
 interface StepProps {
   disabled?: boolean;
@@ -48,55 +50,52 @@ export const OverviewStep: React.FC<StepProps> = ({ disabled }) => {
     background: transparent;
   }
 `}</style>
-      <Card
-        className="shadow-md border border-slate-100 rounded-2xl p-4 bg-white/80 backdrop-blur-sm"
-        styles={{
-          body: {
-            padding: "10px",
-            textAlign: 'justify',
-          },
-        }}
+      <ReviewStepCard
+        icon={ClipboardList}
+        stepNumber={1}
+        title="Quarter Overview"
+        description={
+          disabled
+            ? undefined
+            : 'Provide a summary of your performance, key responsibilities, and contributions during this review period.'
+        }
       >
-        <h1 className='text-base font-semibold mb-2'>1. Quarter Overview</h1>
-        {!disabled && (
-          <p className="text-slate-500 text-sm mb-6 leading-relaxed">
-            Provide a summary of your performance, key responsibilities, and contributions during this review period.
-          </p>
-        )}
-        <div className="border border-slate-100 rounded-2xl py-3 px-2 bg-slate-50/50 relative">
-        <Form.Item
-          name="overview"
-          label={<span className="font-medium text-slate-700"><span className="text-rose-500">*</span>Performance Summary</span>}
-          labelCol={{ span: 24 }}
-        // rules={[
-        //   { required: true, message: 'Please provide your overview summary.' },
-        //   // { min: 10, message: 'Overview must be at least 10 characters long.' },
-        // ]}
-        >
-          <Input.TextArea
-            rows={6}
-            disabled={disabled}
-            placeholder={disabled ? undefined : "Summarize your performance, key responsibilities, and contributions during this review period...."}
-            className="rounded-xl border-slate-200 hover:border-indigo-400 focus:border-indigo-500 focus:shadow-[0_0_0_2px_rgba(99,102,241,0.1)] transition-all duration-200 p-3 hide-scrollbar hover:-translate-y-0.5"
-            style={{
-              borderRadius: '12px',
-              backgroundColor: '#fff',
-              borderColor: '#e2e8f0',
-            }}
-            styles={{
-              textarea: {
-                color: "#000",
-                resize: 'none',
-                backgroundColor: '#fff',
-                borderRadius: '12px',
-              },
-            }}
-            showCount
-            maxLength={2000}
-          />
-        </Form.Item>
+        <div className="qr-field-shell rounded-2xl p-5 relative">
+          <Form.Item
+            name="overview"
+            label={
+              <span className="relative z-[1] inline-flex items-center gap-2 font-semibold text-slate-800">
+                <span className="text-rose-500">*</span>
+                Performance Summary
+                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 bg-white/50 border border-white/70 px-2 py-0.5 rounded-full">
+                  Required
+                </span>
+              </span>
+            }
+            labelCol={{ span: 24 }}
+          >
+            <Input.TextArea
+              rows={7}
+              disabled={disabled}
+              placeholder={disabled ? undefined : "Summarize your performance, key responsibilities, and contributions during this review period...."}
+              className="relative z-[1] rounded-2xl transition-all duration-200 p-4 hide-scrollbar"
+              style={{
+                borderRadius: '16px',
+                minHeight: '180px',
+              }}
+              styles={{
+                textarea: {
+                  color: "#0f172a",
+                  resize: 'none',
+                  borderRadius: '16px',
+                },
+              }}
+              showCount
+              maxLength={2000}
+            />
+          </Form.Item>
         </div>
-      </Card>
+      </ReviewStepCard>
     </>
   );
 };

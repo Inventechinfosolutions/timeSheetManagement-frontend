@@ -33,12 +33,41 @@ export interface ManagerReviewItem {
   [key: string]: any;
 }
 
+export interface AssignmentSummary {
+  quarter: string;
+  financialYear: string;
+  canonicalQuarter?: string;
+  totalEmployees: number;
+  assignedCount: number;
+  notAssignedCount: number;
+  assignedEmployees: Array<{
+    employeeId: string;
+    employeeName: string;
+    designation: string;
+    department: string;
+    quarter?: string;
+    financialYear?: string;
+    status?: string;
+    assignedAt?: string | null;
+    deadlineAt?: string | null;
+    assignedByName?: string | null;
+  }>;
+  notAssignedEmployees: Array<{
+    employeeId: string;
+    employeeName: string;
+    designation: string;
+    department: string;
+    email?: string;
+  }>;
+}
+
 export interface ReviewStats {
   totalTeamMembers: number;
   totalSubmissions: number;
   pendingReviews: number;
   inReview: number;
   completed: number;
+  assignmentSummary?: AssignmentSummary;
 }
 
 export interface ManagerEvaluationPayload {
@@ -83,10 +112,9 @@ const initialState: ManagerQuarterlyReviewState = {
 };
 
 // ---------- Thunks ----------
-// NOTE: axios.defaults.baseURL is set to '/api' globally in the axios
-// interceptor setup file, so paths here must NOT be prefixed with /api.
+const apiUrl = "/api/manager-quarterly-review";
 
-// GET /manager-quarterly-review
+// GET /api/manager-quarterly-review
 export const fetchManagerReviewSubmissions = createAsyncThunk(
   "managerQuarterlyReview/fetchSubmissions",
   async (
@@ -94,7 +122,7 @@ export const fetchManagerReviewSubmissions = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const response = await axios.get("/manager-quarterly-review", {
+      const response = await axios.get(apiUrl, {
         params,
       });
       return response.data;
@@ -106,12 +134,12 @@ export const fetchManagerReviewSubmissions = createAsyncThunk(
   }
 );
 
-// GET /manager-quarterly-review/stats
+// GET /api/manager-quarterly-review/stats
 export const fetchManagerReviewStats = createAsyncThunk(
   "managerQuarterlyReview/fetchStats",
   async (_: void, { rejectWithValue }) => {
     try {
-      const response = await axios.get("/manager-quarterly-review/stats");
+      const response = await axios.get(`${apiUrl}/stats`);
       return response.data;
     } catch (err: any) {
       return rejectWithValue(
@@ -121,12 +149,12 @@ export const fetchManagerReviewStats = createAsyncThunk(
   }
 );
 
-// GET /manager-quarterly-review/:id
+// GET /api/manager-quarterly-review/:id
 export const fetchManagerReviewById = createAsyncThunk(
   "managerQuarterlyReview/fetchById",
   async (id: number, { rejectWithValue }) => {
     try {
-      const response = await axios.get(`/manager-quarterly-review/${id}`);
+      const response = await axios.get(`${apiUrl}/${id}`);
       return response.data;
     } catch (err: any) {
       return rejectWithValue(
@@ -136,7 +164,7 @@ export const fetchManagerReviewById = createAsyncThunk(
   }
 );
 
-// POST /manager-quarterly-review/:id/draft
+// POST /api/manager-quarterly-review/:id/draft
 export const saveManagerReviewDraft = createAsyncThunk(
   "managerQuarterlyReview/saveDraft",
   async (
@@ -145,7 +173,7 @@ export const saveManagerReviewDraft = createAsyncThunk(
   ) => {
     try {
       const response = await axios.post(
-        `/manager-quarterly-review/${id}/draft`,
+        `${apiUrl}/${id}/draft`,
         payload
       );
       return response.data;
@@ -157,7 +185,7 @@ export const saveManagerReviewDraft = createAsyncThunk(
   }
 );
 
-// POST /manager-quarterly-review/:id/review
+// POST /api/manager-quarterly-review/:id/review
 export const submitManagerReview = createAsyncThunk(
   "managerQuarterlyReview/submitReview",
   async (
@@ -166,7 +194,7 @@ export const submitManagerReview = createAsyncThunk(
   ) => {
     try {
       const response = await axios.post(
-        `/manager-quarterly-review/${id}/review`,
+        `${apiUrl}/${id}/review`,
         payload
       );
       return response.data;

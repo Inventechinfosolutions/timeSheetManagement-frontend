@@ -50,6 +50,55 @@ export interface QuarterlyReview {
     updatedAt?: string;
     createdBy?: string;
     updatedBy?: string;
+    // Assignment-workflow fields
+    assignment?: {
+      id: string | number;
+      assignedById?: string;
+      assignedByName?: string;
+      assignedByRole?: string | null;
+      assignedAt?: string;
+      notes?: string;
+    } | null;
+    /** Whether the submission was done manually by the employee or auto-submitted after the assignment deadline */
+    submissionType?: 'MANUAL' | 'AUTO' | null;
+    /** The exact datetime by which the employee must submit before auto-submission kicks in */
+    deadlineAt?: string | null;
+    /** The datetime until which the employee can request access to re-edit a submitted review (24-hour window) */
+    accessRequestEligibleUntil?: string | null;
+    financialYear?: string | null;
+    quarterCode?: string | null;
+    assignedAt?: string | null;
+    fromDate?: string | null;
+    toDate?: string | null;
+    startDate?: string | null;
+    endDate?: string | null;
+    assignedBy?: string | null;
+    submissionStatus?: string | null;
+    quarterRating?: number | string | null;
+    hasFinalRating?: boolean;
+    isFinalRatingHidden?: boolean;
+    notes?: string | null;
+    description?: string | null;
+    assignmentNotes?: string | null;
+    evaluatorName?: string | null;
+    evaluatorRole?: string | null;
+    evaluatorId?: string | null;
+    autoSubmitted?: number | boolean | null;
+    accessUntil?: string | null;
+    isReopened?: number | null;
+    accessGranted?: boolean | null;
+    assignmentId?: number | null;
+    accessRequest?: {
+      id?: number;
+      status?: string | AccessRequestStatus;
+      rejectionReason?: string | null;
+      remarks?: string | null;
+      reason?: string | null;
+      canReRequest?: boolean;
+      totalAttempts?: number;
+      attemptNumber?: number;
+      accessUntil?: string | null;
+    } | null;
 }
 export type StatusStyle = {
     bg: string;

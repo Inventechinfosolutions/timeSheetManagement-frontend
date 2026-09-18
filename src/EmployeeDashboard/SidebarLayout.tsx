@@ -1,6 +1,5 @@
 import { useState, useMemo, useRef } from "react";
 import MobileBottomNav from "../components/FooterMobileResponsive/MobileFooter";
-import { Info } from "lucide-react";
 import {
   LayoutGrid,
   Calendar,
@@ -11,6 +10,7 @@ import {
   X,
   LogOut,
   Award,
+  StickyNote,
 } from "lucide-react";
 import { useAppSelector, useAppDispatch } from "../hooks";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
@@ -49,12 +49,20 @@ const SidebarLayout = ({
     if (activeTab && activeTab !== "Dashboard") return activeTab;
 
     const path = location.pathname.toLowerCase();
-    if (path.includes("/quarterly-review") || path.includes("/appraisal")) return "Appraisal";
+    if (
+      path.includes("/quarterly-review") ||
+      path.includes("/quarterly-ratings") ||
+      path.includes("/annual-ratings") ||
+      path.includes("/appraisal")
+    ) {
+      return "Appraisal";
+    }
     if (path.includes("/my-timesheet") || path.includes("/mobile-timesheet")) return "My Timesheet";
     if (path.includes("/timesheet-view") || path.includes("/calendar-view")) return "Timesheet History";
     if (path.includes("/my-profile") || path.includes("/change-password")) return "Account Settings";
     if (path.includes("/leave-management") || path.includes("/leave-balance")) return "Request Management";
     if (path.includes("/about")) return "About";
+    if (path.includes("/employee-notes")) return "Employee Notes";
 
     switch (tab) {
       case "my-timesheet":
@@ -71,9 +79,13 @@ const SidebarLayout = ({
         return "Request Management";
       case "appraisal":
       case "quarterly-review":
+      case "quarterly-ratings":
+      case "annual-ratings":
         return "Appraisal";
       case "about":
         return "About";
+      case "employee-notes":
+        return "Employee Notes";
       default:
         return "Dashboard";
     }
@@ -109,15 +121,25 @@ const SidebarLayout = ({
     });
   };
 
+  // NOTE: verify these paths match your actual route definitions
+  // (the router config you referenced uses "/employee-dashboard/..." style paths).
   const sidebarItems = [
-    { name: "Dashboard", icon: LayoutGrid },
-    { name: "My Timesheet", icon: Calendar },
-    { name: "Timesheet History", icon: Eye },
-    { name: "Request Management", icon: Calendar },
-    { name: "Appraisal", icon: Award },
-    { name: "Account Settings", icon: User },
-    { name: "About", icon: Info },
+    { name: "Dashboard", icon: LayoutGrid, path: "/employee-dashboard" },
+    { name: "My Timesheet", icon: Calendar, path: "/employee-dashboard/my-timesheet" },
+    { name: "Timesheet History", icon: Eye, path: "/employee-dashboard/timesheet-view" },
+    { name: "Request Management", icon: Calendar, path: "/employee-dashboard/leave-management" },
+    { name: "Appraisal", icon: Award, path: "/employee-dashboard/quarterly-review" },
+    { name: "Employee Notes", icon: StickyNote, path: "/employee-dashboard/employee-notes" },
   ];
+
+  const handleNavClick = (item: (typeof sidebarItems)[number]) => {
+    // Navigate directly instead of relying solely on the parent's onTabChange
+    // handler to map the tab name to a route (that mapping was missing an
+    // "Employee Notes" case, which is why it fell through to Dashboard).
+    navigate(item.path);
+    onTabChange?.(item.name);
+    setIsMobileOpen(false);
+  };
 
   return (
     <div className="flex flex-col w-full h-screen bg-[#f8f9fa] font-sans text-[#2B3674] overflow-hidden relative">
@@ -161,7 +183,7 @@ const SidebarLayout = ({
                 <User className="w-6 h-6 text-white" />
               </div>
               <span className="text-xl font-bold text-white tracking-tight whitespace-nowrap">
-                {currentUser?.userType === UserType.ADMIN
+                {(currentUser?.userType === UserType.ADMIN || currentUser?.userType === UserType.CEO)
                   ? "Admin"
                   : currentUser?.userType === UserType.MANAGER
                     ? "Manager"
@@ -202,7 +224,7 @@ const SidebarLayout = ({
                   {entity?.employeeId || "EMP001"}
                 </span>
                 <span className="text-[10px] font-medium text-blue-100 uppercase tracking-widest whitespace-nowrap">
-                  {currentUser?.userType === UserType.ADMIN
+                  {(currentUser?.userType === UserType.ADMIN || currentUser?.userType === UserType.CEO)
                     ? "Admin"
                     : currentUser?.userType === UserType.MANAGER
                       ? "Manager"
@@ -235,27 +257,11 @@ const SidebarLayout = ({
             style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
           >
             {sidebarItems.map((item) => {
-              const isActive =
-                item.name === "About"
-                  ? location.pathname.includes("/about")
-                  : derivedActiveTab === item.name;
+              const isActive = derivedActiveTab === item.name;
               return (
                 <div key={item.name} className="relative group">
                   <button
-                    onClick={() => {
-                      if (item.name === "About") {
-                        if (location.pathname.includes("/manager-dashboard")) {
-                          navigate("/manager-dashboard/about");
-                        } else if (location.pathname.includes("/admin-dashboard")) {
-                          navigate("/admin-dashboard/about");
-                        } else {
-                          navigate("/employee-dashboard/about");
-                        }
-                      } else {
-                        onTabChange?.(item.name);
-                      }
-                      setIsMobileOpen(false);
-                    }}
+                    onClick={() => handleNavClick(item)}
                     className={navItemClass(isActive, isOpen || isMobileOpen)}
                   >
                     {isActive && (isOpen || isMobileOpen) && (

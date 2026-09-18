@@ -3,95 +3,150 @@
  * Quarter format: "Q2 FY2026-27"
  */
 
+// ── Financial Year & Quarter Constants ──────────────────────────────────────
+const QUARTER_REGEX_PATTERN = /^Q(\d) FY(\d{4})-\d{2}$/;
+const SLUG_REGEX_PATTERN = /^Q\d-FY\d{4}-\d{2}$/i;
+const SLUG_CAPTURE_REGEX_PATTERN = /^(Q\d)-(FY\d{4}-\d{2})$/i;
+const MULTIPLE_WHITESPACE_REGEX = /\s+/g;
+
+const QUARTER_NUMBER_ONE = 1;
+const QUARTER_NUMBER_TWO = 2;
+const QUARTER_NUMBER_THREE = 3;
+const QUARTER_NUMBER_FOUR = 4;
+
+const JANUARY_MONTH_INDEX = 0;
+const MARCH_MONTH_INDEX = 2;
+const APRIL_MONTH_INDEX = 3;
+const JUNE_MONTH_INDEX = 5;
+const JULY_MONTH_INDEX = 6;
+const SEPTEMBER_MONTH_INDEX = 8;
+const OCTOBER_MONTH_INDEX = 9;
+const DECEMBER_MONTH_INDEX = 11;
+
+const FIRST_DAY_OF_MONTH = 1;
+const END_DAY_OF_JUNE = 30;
+const END_DAY_OF_SEPTEMBER = 30;
+const END_DAY_OF_DECEMBER = 31;
+const END_DAY_OF_MARCH = 31;
+
+const END_OF_DAY_HOUR = 23;
+const END_OF_DAY_MINUTE = 59;
+const END_OF_DAY_SECOND = 59;
+
+const EMPTY_FALLBACK_STRING = '—';
+const SLUG_DELIMITER_HYPHEN = '-';
+const NEXT_YEAR_OFFSET = 1;
+
 export interface ParsedQuarter {
   quarterNum: number;   // 1–4
   fyStartYear: number;  // e.g. 2026 for FY2026-27
 }
 
 /** Parse "Q2 FY2026-27" → { quarterNum: 2, fyStartYear: 2026 } */
-export function parseQuarter(q: string): ParsedQuarter | null {
-  const match = q?.match(/^Q(\d) FY(\d{4})-\d{2}$/);
-  if (!match) return null;
-  return { quarterNum: parseInt(match[1]), fyStartYear: parseInt(match[2]) };
+export function parseQuarter(quarterString: string): ParsedQuarter | null {
+  const matchResult = quarterString?.match(QUARTER_REGEX_PATTERN);
+  if (!matchResult) return null;
+  return { 
+    quarterNum: parseInt(matchResult[1], 10), 
+    fyStartYear: parseInt(matchResult[2], 10) 
+  };
 }
 
 /** Returns the last moment of the quarter's final day */
-export function getQuarterEndDate(q: string): Date | null {
-  const parsed = parseQuarter(q);
-  if (!parsed) return null;
-  const { quarterNum, fyStartYear } = parsed;
+export function getQuarterEndDate(quarterString: string): Date | null {
+  const parsedQuarterData = parseQuarter(quarterString);
+  if (!parsedQuarterData) return null;
+  const { quarterNum, fyStartYear } = parsedQuarterData;
   switch (quarterNum) {
-    case 1: return new Date(fyStartYear, 5, 30, 23, 59, 59);       // Jun 30
-    case 2: return new Date(fyStartYear, 8, 30, 23, 59, 59);       // Sep 30
-    case 3: return new Date(fyStartYear, 11, 31, 23, 59, 59);      // Dec 31
-    case 4: return new Date(fyStartYear + 1, 2, 31, 23, 59, 59);   // Mar 31
-    default: return null;
+    case QUARTER_NUMBER_ONE: 
+      return new Date(fyStartYear, JUNE_MONTH_INDEX, END_DAY_OF_JUNE, END_OF_DAY_HOUR, END_OF_DAY_MINUTE, END_OF_DAY_SECOND);
+    case QUARTER_NUMBER_TWO: 
+      return new Date(fyStartYear, SEPTEMBER_MONTH_INDEX, END_DAY_OF_SEPTEMBER, END_OF_DAY_HOUR, END_OF_DAY_MINUTE, END_OF_DAY_SECOND);
+    case QUARTER_NUMBER_THREE: 
+      return new Date(fyStartYear, DECEMBER_MONTH_INDEX, END_DAY_OF_DECEMBER, END_OF_DAY_HOUR, END_OF_DAY_MINUTE, END_OF_DAY_SECOND);
+    case QUARTER_NUMBER_FOUR: 
+      return new Date(fyStartYear + NEXT_YEAR_OFFSET, MARCH_MONTH_INDEX, END_DAY_OF_MARCH, END_OF_DAY_HOUR, END_OF_DAY_MINUTE, END_OF_DAY_SECOND);
+    default: 
+      return null;
   }
 }
 
 /** Returns the first day of the quarter */
-export function getQuarterStartDate(q: string): Date | null {
-  const parsed = parseQuarter(q);
-  if (!parsed) return null;
-  const { quarterNum, fyStartYear } = parsed;
+export function getQuarterStartDate(quarterString: string): Date | null {
+  const parsedQuarterData = parseQuarter(quarterString);
+  if (!parsedQuarterData) return null;
+  const { quarterNum, fyStartYear } = parsedQuarterData;
   switch (quarterNum) {
-    case 1: return new Date(fyStartYear, 3, 1);       // Apr 1
-    case 2: return new Date(fyStartYear, 6, 1);       // Jul 1
-    case 3: return new Date(fyStartYear, 9, 1);       // Oct 1
-    case 4: return new Date(fyStartYear + 1, 0, 1);   // Jan 1
-    default: return null;
+    case QUARTER_NUMBER_ONE: 
+      return new Date(fyStartYear, APRIL_MONTH_INDEX, FIRST_DAY_OF_MONTH);
+    case QUARTER_NUMBER_TWO: 
+      return new Date(fyStartYear, JULY_MONTH_INDEX, FIRST_DAY_OF_MONTH);
+    case QUARTER_NUMBER_THREE: 
+      return new Date(fyStartYear, OCTOBER_MONTH_INDEX, FIRST_DAY_OF_MONTH);
+    case QUARTER_NUMBER_FOUR: 
+      return new Date(fyStartYear + NEXT_YEAR_OFFSET, JANUARY_MONTH_INDEX, FIRST_DAY_OF_MONTH);
+    default: 
+      return null;
   }
 }
 
 /** True if today is strictly after the quarter's last day */
-export function isQuarterOver(q: string): boolean {
-  const end = getQuarterEndDate(q);
-  if (!end) return false;
-  return new Date() > end;
+export function isQuarterOver(quarterString: string): boolean {
+  const quarterEndDate = getQuarterEndDate(quarterString);
+  if (!quarterEndDate) return false;
+  return new Date() > quarterEndDate;
 }
 
 /** "Jul 2026 – Sep 2026" */
-export function formatQuarterRange(q: string): string {
-  const parsed = parseQuarter(q);
-  if (!parsed) return q;
-  const { quarterNum, fyStartYear } = parsed;
-  const ranges: Record<number, string> = {
-    1: `Apr ${fyStartYear} – Jun ${fyStartYear}`,
-    2: `Jul ${fyStartYear} – Sep ${fyStartYear}`,
-    3: `Oct ${fyStartYear} – Dec ${fyStartYear}`,
-    4: `Jan ${fyStartYear + 1} – Mar ${fyStartYear + 1}`,
+export function formatQuarterRange(quarterString: string): string {
+  const parsedQuarterData = parseQuarter(quarterString);
+  if (!parsedQuarterData) return quarterString;
+  const { quarterNum, fyStartYear } = parsedQuarterData;
+  const nextFinancialYear = fyStartYear + NEXT_YEAR_OFFSET;
+  const quarterDateRanges: Record<number, string> = {
+    [QUARTER_NUMBER_ONE]: `Apr ${fyStartYear} – Jun ${fyStartYear}`,
+    [QUARTER_NUMBER_TWO]: `Jul ${fyStartYear} – Sep ${fyStartYear}`,
+    [QUARTER_NUMBER_THREE]: `Oct ${fyStartYear} – Dec ${fyStartYear}`,
+    [QUARTER_NUMBER_FOUR]: `Jan ${nextFinancialYear} – Mar ${nextFinancialYear}`,
   };
-  return ranges[quarterNum] ?? q;
+  return quarterDateRanges[quarterNum] ?? quarterString;
 }
 
 /** "30 Sep 2026" */
-export function formatQuarterEndDate(q: string): string {
-  const end = getQuarterEndDate(q);
-  if (!end) return '—';
-  return end.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+export function formatQuarterEndDate(quarterString: string): string {
+  const quarterEndDate = getQuarterEndDate(quarterString);
+  if (!quarterEndDate) return EMPTY_FALLBACK_STRING;
+  return quarterEndDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 /** Financial year label "FY 2026-27" */
-export function getFinancialYear(q: string): string {
-  const parsed = parseQuarter(q);
-  if (!parsed) return '—';
-  const { fyStartYear } = parsed;
-  return `FY ${fyStartYear}-${String(fyStartYear + 1).slice(2)}`;
+export function getFinancialYear(quarterString: string): string {
+  const parsedQuarterData = parseQuarter(quarterString);
+  if (!parsedQuarterData) return EMPTY_FALLBACK_STRING;
+  const { fyStartYear } = parsedQuarterData;
+  const nextYearTwoDigits = String(fyStartYear + NEXT_YEAR_OFFSET).slice(2);
+  return `FY ${fyStartYear}-${nextYearTwoDigits}`;
 }
 
 /** "Q2 FY2026-27" → "Q2-FY2026-27" */
-export function quarterToSlug(q: string): string {
-  if (!q) return '';
-  return q.trim().replace(/\s+/g, '-');
+export function convertQuarterNameToUrlSlug(quarterString: string): string {
+  if (!quarterString) return '';
+  return quarterString.trim().replace(MULTIPLE_WHITESPACE_REGEX, SLUG_DELIMITER_HYPHEN);
 }
+
+/** Alias for backward compatibility */
+export const quarterToSlug = convertQuarterNameToUrlSlug;
 
 /** "Q2-FY2026-27" → "Q2 FY2026-27" */
-export function slugToQuarter(slug: string): string {
-  if (!slug) return '';
+export function convertUrlSlugToQuarterName(quarterSlug: string): string {
+  if (!quarterSlug) return '';
   // Convert "Q2-FY2026-27" back to "Q2 FY2026-27"
-  if (/^Q\d-FY\d{4}-\d{2}$/i.test(slug)) {
-    return slug.replace(/^(Q\d)-(FY\d{4}-\d{2})$/i, '$1 $2');
+  if (SLUG_REGEX_PATTERN.test(quarterSlug)) {
+    return quarterSlug.replace(SLUG_CAPTURE_REGEX_PATTERN, '$1 $2');
   }
-  return slug;
+  return quarterSlug;
 }
 
+/** Descriptive name requested by user, plus backward compatible alias */
+export const convertSlugToQuarter = convertUrlSlugToQuarterName;
+export const slugToQuarter = convertUrlSlugToQuarterName;

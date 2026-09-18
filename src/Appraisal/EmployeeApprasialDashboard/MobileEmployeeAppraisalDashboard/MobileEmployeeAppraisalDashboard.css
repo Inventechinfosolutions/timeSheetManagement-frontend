@@ -399,6 +399,12 @@
   font-size: 13px;
 }
 
+.mobile-filter-select .ant-select-prefix {
+  margin-inline-end: 6px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
 /* History Card List */
 .mobile-card-list {
   display: flex;

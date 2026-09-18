@@ -1,607 +1,585 @@
+import { HiddenRatingBadge } from '../../components/HiddenRatingBadge';
 import React from 'react';
-import { Button, Spin, Tooltip, Select, message } from 'antd';
+import { Spin, Tooltip, Select, Button } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import {
-    Plus,
-    Edit3,
-    Eye,
-    Clock,
-    Star,
-    ClipboardList,
-    BarChart3,
-    Download,
-    Trash2,
-    User,
-    ChevronDown,
-    FileCheck2,
+  Edit3,
+  Eye,
+  Clock,
+  Calendar,
+  ClipboardList,
+  BarChart3,
+  Download,
+  Key,
+  User,
+  ChevronDown,
+  Award,
+  AlertTriangle,
 } from 'lucide-react';
-import { ReviewStatus } from '../enums/Appraisal.enums';
+import {
+  ReviewStatus,
+  AppraisalReviewStatus,
+  FormMode,
+  AccessRequestStatus,
+  SubmissionType,
+  REVIEW_STATUS_FILTER_OPTIONS,
+  QuarterFilter,
+} from '../enums/Appraisal.enums';
 import { QuarterlyReview } from '../types/Appraisal.types';
 import EmptyReviewImage from '../../../assets/EmptyReviewImage.png';
+import { getFinancialYear, quarterToSlug } from '../utils/fyQuarter.utils';
+import { formatQuarterWithDateRange, QuarterDropdownOption } from '../../../master/financialYear.master';
 import {
-    formatQuarterRange,
-    formatQuarterEndDate,
-    getFinancialYear,
-    isQuarterOver,
-    quarterToSlug,
-} from '../utils/fyQuarter.utils';
-import { StatusBadge, getDisplayAverageRating } from '../EmployeeAppraisalDashboard';
+  StatusBadge,
+  getDisplayAverageRating,
+  getReviewDisplayStatus,
+  getAccessRequestCountdown,
+  formatDeadlineRemaining,
+  StatCard,
+} from '../utils/appraisalHelpers';
 import './MobileEmployeeAppraisalDashboard.css';
 
-interface MobileEmployeeAppraisalDashboardProps {
-    reviews: QuarterlyReview[];
-    currentQuarter: string;
-    loading: boolean;
-    fyOptions: string[];
-    selectedFY: string;
-    fyLoading: boolean;
-    onFYChange: (fy: string) => void;
-    onWithdraw?: (record: QuarterlyReview) => void;
-    onDownload?: (record: QuarterlyReview) => void;
+export interface MobileEmployeeAppraisalDashboardProps {
+  reviews: QuarterlyReview[];
+  loading: boolean;
+  fyOptions: string[];
+  selectedFY: string;
+  selectedQuarter?: string;
+  selectedReviewStatus?: string;
+  quarterOptions?: QuarterDropdownOption[];
+  deadlineAlertQuarters: QuarterlyReview[];
+  hasCurrentYearRating: boolean;
+  normalizedTargetYear: string;
+  targetYear: string;
+  currentYearRatingScore: number | null;
+  isCurrentYearRatingHidden?: boolean;
+  academicYearRating: string | null;
+  isAcademicRatingHidden?: boolean;
+  fyLoading?: boolean;
+  quarterFilterLoading?: boolean;
+  downloadingQuarter?: string | null;
+  reviewPath: string;
+  onFYChange: (financialYear?: string) => void;
+  onQuarterChange: (quarter?: string) => void;
+  onReviewStatusChange: (status?: string) => void;
+  onDownload?: (record: QuarterlyReview) => void;
+  onOpenRequestAccess?: (record: QuarterlyReview) => void;
+  onFillReview?: (quarter: string) => Promise<void>;
 }
 
-/* ---------- Small building blocks ---------- */
+/* ---------- Reusable Button & Stat Components ---------- */
 
 const CircleIconButton: React.FC<{
-    icon: React.ReactNode;
-    onClick: () => void;
-    tooltip: string;
-    tone?: 'outline' | 'filled' | 'withdraw';
-}> = ({ icon, onClick, tooltip, tone = 'outline' }) => (
-    <Tooltip title={tooltip}>
-        <button
-            type="button"
-            onClick={onClick}
-            className={`mobile-circle-btn mobile-circle-btn-${tone}`}
-        >
-            {icon}
-        </button>
-    </Tooltip>
+  icon: React.ReactNode;
+  onClick: () => void;
+  tooltip: string;
+  tone?: 'outline' | 'filled';
+  disabled?: boolean;
+}> = ({ icon, onClick, tooltip, tone = 'outline', disabled = false }) => (
+  <Tooltip title={tooltip}>
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`mobile-circle-btn mobile-circle-btn-${tone} disabled:opacity-50 disabled:cursor-not-allowed`}
+    >
+      {icon}
+    </button>
+  </Tooltip>
 );
 
-const InfoRow: React.FC<{
-    icon: React.ReactNode;
-    iconTone: 'emerald' | 'indigo' | 'amber';
-    label: string;
-    sublabel: string;
-    value: React.ReactNode;
-}> = ({ icon, iconTone, label, sublabel, value }) => (
-    <div className="mobile-info-row">
-        <span className={`mobile-info-icon-bg mobile-info-icon-${iconTone}`}>
-            {icon}
-        </span>
-
-        <div className="mobile-info-row-content">
-            <p className="mobile-info-row-label">{label}</p>
-            <p className="mobile-info-row-sublabel">{sublabel}</p>
-        </div>
-
-        <div className="mobile-info-row-value">
-            {value}
-        </div>
-    </div>
-);
-
-const StatCol: React.FC<{
-    label: string;
-    children: React.ReactNode;
+const StatColumn: React.FC<{
+  label: string;
+  children: React.ReactNode;
 }> = ({ label, children }) => (
-    <div className="mobile-review-statcol">
-        <p className="mobile-review-statcol-label">{label}</p>
-        <div className="mobile-review-statcol-value">
-            {children}
-        </div>
-    </div>
+  <div className="mobile-review-statcol">
+    <p className="mobile-review-statcol-label">{label}</p>
+    <div className="mobile-review-statcol-value">{children}</div>
+  </div>
 );
 
 const ReviewCard: React.FC<{
-    record: QuarterlyReview;
-    currentQuarter: string;
-    onView: () => void;
-    onEdit: () => void;
-    onDownload: () => void;
-    onWithdraw: () => void;
+  record: QuarterlyReview;
+  reviewPath: string;
+  downloadingQuarter?: string | null;
+  onView: () => void;
+  onEdit: () => void;
+  onDownload?: () => void;
+  onOpenRequestAccess?: () => void;
 }> = ({
-    record,
-    currentQuarter,
-    onView,
-    onEdit,
-    onDownload,
-    onWithdraw,
+  record,
+  downloadingQuarter,
+  onView,
+  onEdit,
+  onDownload,
+  onOpenRequestAccess,
 }) => {
-        const isEditable =
-            record.quarter === currentQuarter &&
-            record.status === ReviewStatus.DRAFT;
+    const statusLower = String(record.status || '').trim().toLowerCase();
+    const subStatusLower = String(record.submissionStatus || '').trim().toLowerCase();
+    const revStatusLower = String(record.reviewStatus || '').trim().toLowerCase();
+    const displayStatus = getReviewDisplayStatus(record);
 
-        const isCompleted =
-            record.reviewStatus === ReviewStatus.COMPLETED ||
-            record.reviewStatus === ReviewStatus.REVIEWED ||
-            record.status === ReviewStatus.APPROVED ||
-            record.status === ReviewStatus.COMPLETED;
+    const isCompleted =
+      displayStatus === AppraisalReviewStatus.REVIEWED ||
+      record.reviewStatus === AppraisalReviewStatus.REVIEWED ||
+      record.reviewStatus === ReviewStatus.REVIEWED ||
+      record.status === ReviewStatus.REVIEWED ||
+      statusLower === ReviewStatus.REVIEWED.toLowerCase();
 
-        const canWithdraw =
-            !isCompleted &&
-            record.status !== ReviewStatus.DRAFT &&
-            record.status !== ReviewStatus.NOT_STARTED;
+    const isSubmitted =
+      !isCompleted &&
+      (statusLower === ReviewStatus.SUBMITTED.toLowerCase() ||
+        statusLower === ReviewStatus.AUTO_SUBMITTED.toLowerCase() ||
+        statusLower === AppraisalReviewStatus.AWAITING_REVIEW.toLowerCase() ||
+        subStatusLower === ReviewStatus.SUBMITTED.toLowerCase() ||
+        subStatusLower === ReviewStatus.AUTO_SUBMITTED.toLowerCase() ||
+        revStatusLower === AppraisalReviewStatus.AWAITING_REVIEW.toLowerCase() ||
+        record.submissionType === SubmissionType.AUTO ||
+        record.submissionType === SubmissionType.MANUAL ||
+        record.autoSubmitted === 1 ||
+        Boolean(record.submittedDate) ||
+        displayStatus === AppraisalReviewStatus.AWAITING_REVIEW);
 
-        return (
-            <div className="mobile-review-card">
-                <div className="mobile-review-card-top">
-                    <div className="mobile-review-card-heading">
-                        <p className="mobile-review-quarter-line">
-                            {record.quarter?.split(' ')[0] ?? record.quarter}
+    const isNotSubmitted =
+      !isSubmitted &&
+      !isCompleted &&
+      (record.status === ReviewStatus.NOT_STARTED ||
+        record.status === ReviewStatus.DRAFT ||
+        record.status === ReviewStatus.INITIAL ||
+        statusLower === ReviewStatus.INITIAL.toLowerCase() ||
+        statusLower === ReviewStatus.DRAFT.toLowerCase() ||
+        statusLower === AppraisalReviewStatus.ASSIGNED.toLowerCase() ||
+        record.submissionStatus === ReviewStatus.NOT_STARTED ||
+        record.submissionStatus === ReviewStatus.DRAFT);
 
-                            <span className="mobile-review-fy-inline">
-                                {' '}
-                                · {getFinancialYear(record.quarter)}
-                            </span>
-                        </p>
+    const hasAccessOpen = Boolean(
+      (record as any).assignment?.isAccessOpen ||
+      (record as any).accessGranted ||
+      (record as any).isReopened === 1 ||
+      (record.accessUntil && new Date(record.accessUntil) > new Date())
+    );
+    const isEditable = hasAccessOpen || isNotSubmitted;
 
-                        <p className="mobile-review-manager-line">
-                            <User className="mobile-review-manager-icon" />
-                            Submitted to {record.managerName ?? '—'}
-                        </p>
-                    </div>
+    const accessRequestCountdown = getAccessRequestCountdown(
+      record.submittedDate,
+      record.accessRequestEligibleUntil ||
+      (record as any).assignment?.accessRequestEligibleUntil,
+      (record as any).updatedAt || (record as any).createdAt
+    );
 
-                    <div className="mobile-review-card-actions">
-                        <CircleIconButton
-                            icon={<Eye className="w-4 h-4" />}
-                            tooltip="View"
-                            tone="outline"
-                            onClick={onView}
-                        />
+    const isEvaluated = displayStatus === AppraisalReviewStatus.REVIEWED;
+    const evaluatedAverageRating = isEvaluated
+      ? record.finalRating || record.quarterRating || getDisplayAverageRating(record)
+      : null;
 
-                        {isEditable && (
-                            <CircleIconButton
-                                icon={<Edit3 className="w-4 h-4" />}
-                                tooltip="Edit"
-                                tone="outline"
-                                onClick={onEdit}
-                            />
-                        )}
+    return (
+      <div className="mobile-review-card">
+        <div className="mobile-review-card-top">
+          <div className="mobile-review-card-heading">
+            <p className="mobile-review-quarter-line">
+              {formatQuarterWithDateRange(record.quarterCode || record.quarter, record.financialYear)}
+              <span className="mobile-review-fy-inline">
+                {' '}
+                · {record.financialYear || getFinancialYear(record.quarter)}
+              </span>
+            </p>
 
-                        {isCompleted && (
-                            <CircleIconButton
-                                icon={<Download className="w-4 h-4" />}
-                                tooltip="Download"
-                                tone="outline"
-                                onClick={onDownload}
-                            />
-                        )}
+            <p className="mobile-review-manager-line">
+              <User className="mobile-review-manager-icon" />
+              Submitted to {record.managerName || (typeof window !== 'undefined' && window.location.pathname.startsWith('/manager-dashboard') ? 'CEO & Admin' : '—')}
+            </p>
+          </div>
 
-                        {canWithdraw && (
-                            <CircleIconButton
-                                icon={<Trash2 className="w-4 h-4" />}
-                                tooltip="Withdraw"
-                                tone="outline"
-                                onClick={onWithdraw}
-                            />
-                        )}
-                    </div>
-                </div>
+          <div className="mobile-review-card-actions">
+            {/* View Button */}
+            <CircleIconButton
+              icon={<Eye className="w-4 h-4" />}
+              tooltip="View Review"
+              tone="outline"
+              onClick={onView}
+            />
 
-                <div className="mobile-review-statrow">
-                    <StatCol label="Reviewed On">
-                        {record.reviewedOn
-                            ? new Date(record.reviewedOn).toLocaleDateString('en-IN')
-                            : '—'}
-                    </StatCol>
-
-                    <StatCol label="Final Rating">
-                        {(() => {
-                            const avg = getDisplayAverageRating(record);
-                            return avg ? (
-                                <span
-                                    style={{
-                                        fontWeight: 600,
-                                        color: '#4338ca',
-                                    }}
-                                >
-                                    {avg}
-                                </span>
-                            ) : (
-                                '—'
-                            );
-                        })()}
-                    </StatCol>
-
-                    <StatCol label="Review Status">
-                        {(() => {
-                            const isDraftOrNotStarted =
-                                record.status === ReviewStatus.DRAFT ||
-                                record.status === ReviewStatus.NOT_STARTED;
-
-                            return !isDraftOrNotStarted && record.reviewStatus ? (
-                                <StatusBadge
-                                    status={record.reviewStatus}
-                                    showStatusIndicator={false}
-                                />
-                            ) : (
-                                '—'
-                            );
-                        })()}
-                    </StatCol>
-                </div>
-            </div>
-        );
-    };
-
-/* ---------- Main component ---------- */
-
-const MobileEmployeeAppraisalDashboard: React.FC<
-    MobileEmployeeAppraisalDashboardProps
-> = ({
-    reviews,
-    currentQuarter,
-    loading,
-    fyOptions,
-    selectedFY,
-    fyLoading,
-    onFYChange,
-    onWithdraw,
-    onDownload,
-}) => {
-        const navigate = useNavigate();
-        const [messageApi, contextHolder] = message.useMessage();
-
-        if (loading) {
-            return (
-                <div className="mobile-spinner-container">
-                    <Spin size="large" tip="Loading..." />
-                </div>
-            );
-        }
-
-        const currentReview = reviews.find(
-            (r) => r.quarter === currentQuarter
-        );
-
-        const currentStatus = !currentReview
-            ? ReviewStatus.NOT_STARTED
-            : currentReview.status === ReviewStatus.DRAFT
-                ? ReviewStatus.DRAFT
-                : ReviewStatus.SUBMITTED;
-
-        const hasCurrentQuarterReview =
-            !!currentReview;
-
-        const quarterRange =
-            formatQuarterRange(currentQuarter);
-
-        const quarterEndDate =
-            formatQuarterEndDate(currentQuarter);
-
-        const quarterOver =
-            isQuarterOver(currentQuarter);
-
-        /*
-         * Create button
-         *
-         * Same behavior as desktop:
-         *
-         * 1. If a review already exists for the current quarter:
-         *    - Keep the button visible
-         *    - Make it disabled-looking
-         *    - Show an info message when clicked
-         *
-         * 2. If no review exists:
-         *    - Navigate to the current-quarter review page
-         */
-        const actionButton = (
-            <Button
-                type="primary"
-                icon={
-                    <span className="!flex !items-center !justify-center">
-                        <Plus className="!w-4 !h-4" />
-                    </span>
+            {/* Edit / Start Review Button */}
+            {isEditable && (
+              <CircleIconButton
+                icon={<Edit3 className="w-4 h-4" />}
+                tooltip={
+                  record.status === ReviewStatus.NOT_STARTED || record.submissionStatus === ReviewStatus.NOT_STARTED
+                    ? 'Start Review'
+                    : 'Edit Review'
                 }
-                onClick={() => {
-                    if (hasCurrentQuarterReview) {
-                        messageApi.info(
-                            'You have already created a review for the current quarter.'
-                        );
-                        return;
-                    }
+                tone="filled"
+                onClick={onEdit}
+              />
+            )}
 
-                    navigate(
-                        currentQuarter
-                            ? `/employee-dashboard/quarterly-review/${quarterToSlug(
-                                currentQuarter
-                            )}`
-                            : '/employee-dashboard/quarterly-review'
-                    );
-                }}
-                aria-disabled={hasCurrentQuarterReview}
-                className={`
-                !flex !items-center !justify-center !gap-2
-                !h-9 !px-4 !rounded-xl
-                !font-semibold !text-sm
-                !border-none
-                !transition-all !duration-300
+            {/* Download PDF Button */}
+            {isCompleted && onDownload && (
+              <CircleIconButton
+                icon={downloadingQuarter === record.quarter ? <Spin size="small" /> : <Download className="w-4 h-4" />}
+                tooltip="Download PDF"
+                tone="outline"
+                disabled={downloadingQuarter === record.quarter}
+                onClick={onDownload}
+              />
+            )}
 
-                ${hasCurrentQuarterReview
-                        ? '!bg-gray-300 !text-gray-500 !cursor-not-allowed !shadow-none'
-                        : '!bg-blue-600 hover:!bg-blue-700 !text-white !shadow-sm hover:!-translate-y-0.5 hover:!shadow-md'
-                    }
-            `}
-            >
-                Create
-            </Button>
-        );
+            {/* 24-Hour Request Access Button */}
+            {isSubmitted && !hasAccessOpen && onOpenRequestAccess && (
+              (() => {
+                const req = (record as any).accessRequest;
+                const isPending = req?.status === AccessRequestStatus.PENDING;
+                const isRejected = req?.status === AccessRequestStatus.REJECTED;
+                const canRetry = req ? req.canReRequest && req.totalAttempts < 2 : true;
 
-        return (
-            <>
-                {contextHolder}
+                if (isPending) {
+                  return (
+                    <Tooltip title={`Access Request Pending Approval (Attempt ${req.attemptNumber || 1} of 2)`}>
+                      <button
+                        type="button"
+                        disabled
+                        className="mobile-circle-btn mobile-circle-btn-outline !border-amber-300 !bg-amber-50 text-amber-600 opacity-70 cursor-not-allowed"
+                      >
+                        <Key className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
+                      </button>
+                    </Tooltip>
+                  );
+                }
 
-                <div className="mobile-dashboard-container">
+                if (isRejected && !canRetry) {
+                  return (
+                    <Tooltip title={`Access Request Rejected: "${req.rejectionReason || req.remarks || 'Rejected'}". Maximum limit reached.`}>
+                      <button
+                        type="button"
+                        disabled
+                        className="mobile-circle-btn mobile-circle-btn-outline !border-rose-200 !bg-rose-50 text-rose-400 opacity-50 cursor-not-allowed"
+                      >
+                        <Key className="w-3.5 h-3.5 text-rose-400" />
+                      </button>
+                    </Tooltip>
+                  );
+                }
 
-                    {/* Top Header */}
-                    <div className="mobile-top-header">
-                        <div className="mobile-top-header-row">
-                            <div>
-                                <h1 className="mobile-title">
-                                    Quarterly Review
-                                </h1>
+                if (accessRequestCountdown?.isEligible && canRetry) {
+                  const retryTooltip = isRejected
+                    ? `Previous request rejected: "${req.rejectionReason || req.remarks || 'Rejected'}". 1 re-request remaining (${accessRequestCountdown.text})`
+                    : `Request Access (${accessRequestCountdown.text})`;
 
-                                <p className="mobile-subtitle">
-                                    Submit your quarterly achievements and view
-                                    your performance review status.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
+                  return (
+                    <Tooltip title={retryTooltip}>
+                      <button
+                        type="button"
+                        onClick={onOpenRequestAccess}
+                        className="mobile-circle-btn mobile-circle-btn-outline !border-amber-400 text-amber-700 bg-amber-50 hover:bg-amber-100 transition-colors shadow-sm cursor-pointer"
+                      >
+                        <Key className="w-3.5 h-3.5 text-amber-600" />
+                      </button>
+                    </Tooltip>
+                  );
+                }
 
-                    {/* Current Quarter Header Card */}
-                    <div className="mobile-quarter-header-card">
+                if (!accessRequestCountdown?.isEligible) {
+                  return (
+                    <Tooltip title="24-hour access request window has closed">
+                      <button
+                        type="button"
+                        disabled
+                        className="mobile-circle-btn mobile-circle-btn-outline !border-slate-200 !bg-slate-50 text-slate-400 opacity-40 cursor-not-allowed"
+                      >
+                        <Key className="w-3.5 h-3.5 text-slate-400" />
+                      </button>
+                    </Tooltip>
+                  );
+                }
 
-                        <div className="mobile-quarter-card-top">
+                return null;
+              })()
+            )}
+          </div>
+        </div>
 
-                            <div className="mobile-quarter-fy-row">
-                                <p className="mobile-quarter-fy-text">
-                                    {getFinancialYear(currentQuarter)}
-                                </p>
+        <div className="mobile-review-statrow">
+          <StatColumn label="Reviewed On">
+            {record.reviewedOn ? new Date(record.reviewedOn).toLocaleDateString('en-IN') : '—'}
+          </StatColumn>
 
-                                <span className="mobile-badge-tag">
-                                    Current Quarter
-                                </span>
-                            </div>
+          <StatColumn label="Final Rating">
+            {isEvaluated && evaluatedAverageRating !== null ? (
+              <HiddenRatingBadge
+                reviewId={record.id}
+                quarter={record.quarter}
+                finalRating={evaluatedAverageRating}
+                ratings={record.ratings}
+                isFinalRatingHidden={(record as any).isFinalRatingHidden}
+                hasFinalRating={true}
+              />
+            ) : (
+              '—'
+            )}
+          </StatColumn>
 
-                            <h2 className="mobile-quarter-title">
-                                {currentQuarter?.split(' ')[0] || '—'}
+          <StatColumn label="Status">
+            <div className="flex flex-col items-start gap-0.5">
+              <StatusBadge status={displayStatus} showStatusIndicator={false} />
+            </div>
+          </StatColumn>
+        </div>
+      </div>
+    );
+  };
 
-                                {quarterRange && (
-                                    <span className="mobile-quarter-range-inline">
-                                        {' '}
-                                        • {quarterRange}
-                                    </span>
-                                )}
-                            </h2>
+/* ---------- Main Component ---------- */
 
-                        </div>
-                    </div>
+const MobileEmployeeAppraisalDashboard: React.FC<MobileEmployeeAppraisalDashboardProps> = ({
+  reviews,
+  loading,
+  fyOptions,
+  selectedFY,
+  selectedQuarter,
+  selectedReviewStatus,
+  quarterOptions,
+  deadlineAlertQuarters,
+  hasCurrentYearRating,
+  normalizedTargetYear,
+  targetYear,
+  currentYearRatingScore,
+  isCurrentYearRatingHidden,
+  academicYearRating,
+  isAcademicRatingHidden,
+  fyLoading = false,
+  quarterFilterLoading = false,
+  downloadingQuarter = null,
+  reviewPath,
+  onFYChange,
+  onQuarterChange,
+  onReviewStatusChange,
+  onDownload,
+  onOpenRequestAccess,
+  onFillReview,
+}) => {
+  const navigate = useNavigate();
 
-                    {/* Current Quarter Stats Card */}
-                    <div className="mobile-quarter-card">
-                        {actionButton}
-                        <div className="mobile-submission-row">
+  if (loading) {
+    return (
+      <div className="mobile-spinner-container">
+        <Spin size="large" tip="Loading..." />
+      </div>
+    );
+  }
 
-                            <div className="mobile-submission-label-group">
-                                <span className="mobile-submission-icon-bg">
-                                    <FileCheck2 className="mobile-submission-icon" />
-                                </span>
+  return (
+    <div className="mobile-dashboard-container">
+      {/* Top Header (Matches Desktop) */}
+      <div className="mobile-top-header">
+        <div className="mobile-top-header-row">
+          <div>
+            <h1 className="mobile-title">Quarterly Review</h1>
+            <p className="mobile-subtitle">
+              Complete authorized quarterly review assignments and track your performance appraisals.
+            </p>
+          </div>
+        </div>
+      </div>
 
-                                <span className="mobile-submission-label">
-                                    Submission Status
-                                </span>
-                            </div>
+      {/* Deadline Alert Card (When any assigned review deadline is within 24 hours) */}
+      {deadlineAlertQuarters.length > 0 && (
+        <div className="min-w-0 px-4 py-3 rounded-2xl bg-gradient-to-r from-red-50 to-amber-50 border-2 border-red-300 shadow-md flex flex-col gap-2.5">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-red-500 text-white flex items-center justify-center shrink-0 shadow-sm">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <span className="font-bold text-red-700 text-sm block truncate">
+                Deadline Alert
+              </span>
+              <span className="text-xs text-red-500">
+                {deadlineAlertQuarters.length} quarter{deadlineAlertQuarters.length > 1 ? 's' : ''} deadline within 24 hours
+              </span>
+            </div>
+          </div>
 
-                            <StatusBadge
-                                status={currentStatus}
-                            />
-                        </div>
+          <div className="flex flex-col gap-2">
+            {deadlineAlertQuarters.map((reviewRecord) => {
+              const rawDeadline = reviewRecord.deadlineAt || (reviewRecord.assignment as any)?.deadlineAt;
+              const remainingTimeText = rawDeadline ? formatDeadlineRemaining(rawDeadline) : '';
+              return (
+                <div
+                  key={reviewRecord.quarter}
+                  className="flex items-center justify-between gap-2.5 px-3 py-2 rounded-xl border bg-white border-red-200 shadow-sm"
+                >
+                  <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                    <span className="text-sm font-semibold truncate text-slate-800">
+                      {formatQuarterWithDateRange(reviewRecord.quarterCode || reviewRecord.quarter, reviewRecord.financialYear)}
+                    </span>
+                    <span className="text-xs font-medium text-slate-500">
+                      {reviewRecord.financialYear || getFinancialYear(reviewRecord.quarter)}
+                    </span>
+                    {remainingTimeText && (
+                      <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-600 whitespace-nowrap shrink-0 flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {remainingTimeText}
+                      </span>
+                    )}
+                  </div>
 
-                        <div className="mobile-info-rows">
-
-                            <InfoRow
-                                icon={
-                                    <Clock
-                                        style={{
-                                            width: 18,
-                                            height: 18,
-                                            color: '#10b981',
-                                        }}
-                                    />
-                                }
-                                iconTone="emerald"
-                                label="Due date"
-                                sublabel={
-                                    quarterOver
-                                        ? 'Quarter ended'
-                                        : 'Draft editable until then'
-                                }
-                                value={
-                                    currentStatus === ReviewStatus.NOT_STARTED ||
-                                        !currentQuarter
-                                        ? '—'
-                                        : quarterEndDate
-                                }
-                            />
-
-                            <InfoRow
-                                icon={
-                                    <ClipboardList
-                                        style={{
-                                            width: 18,
-                                            height: 18,
-                                            color: '#6366f1',
-                                        }}
-                                    />
-                                }
-                                iconTone="indigo"
-                                label="Review status"
-                                sublabel="Manager evaluation"
-                                value={
-                                    (currentStatus === ReviewStatus.SUBMITTED && currentReview?.reviewStatus)
-                                        ? currentReview.reviewStatus
-                                        : '—'
-                                }
-                            />
-
-                            <InfoRow
-                                icon={
-                                    <Star
-                                        style={{
-                                            width: 18,
-                                            height: 18,
-                                            color: '#fbbf24',
-                                        }}
-                                    />
-                                }
-                                iconTone="amber"
-                                label="Final rating"
-                                sublabel={
-                                    (currentReview?.reviewStatus === ReviewStatus.REVIEWED || currentReview?.reviewStatus === ReviewStatus.COMPLETED || currentReview?.status === ReviewStatus.COMPLETED || currentReview?.status === ReviewStatus.APPROVED) && currentReview?.reviewedOn
-                                        ? `Reviewed ${new Date(
-                                            currentReview.reviewedOn
-                                        ).toLocaleDateString('en-IN')}`
-                                        : 'Not available yet'
-                                }
-                                value={
-                                    getDisplayAverageRating(currentReview) ?? '—'
-                                }
-                            />
-
-                        </div>
-                    </div>
-
-                    {/* History Section */}
-                    <div className="mobile-history-container">
-
-                        <div className="mobile-history-header">
-
-                            <div className="mobile-history-title-group">
-
-                                <span className="mobile-history-icon-bg">
-                                    <BarChart3
-                                        style={{
-                                            width: 14,
-                                            height: 14,
-                                        }}
-                                    />
-                                </span>
-
-                                <h2 className="mobile-history-title">
-                                    Review History
-                                </h2>
-
-                            </div>
-
-                        </div>
-
-                        {/* Financial Year Filter */}
-                        {fyOptions.length > 0 && (
-                            <div className="mobile-filter-wrapper">
-
-                                <Select
-                                    className="mobile-filter-select"
-                                    allowClear
-                                    value={
-                                        selectedFY || undefined
-                                    }
-                                    onChange={onFYChange}
-                                    loading={fyLoading}
-                                    placeholder="Financial Year"
-                                    variant="outlined"
-                                    suffixIcon={
-                                        <ChevronDown className="w-4 h-4 text-slate-400" />
-                                    }
-                                    popupMatchSelectWidth
-                                    options={fyOptions.map((fy) => ({
-                                        label: fy,
-                                        value: fy,
-                                    }))}
-                                />
-
-                            </div>
-                        )}
-
-                        {/* Review History */}
-                        {reviews.length > 0 ? (
-
-                            <div className="mobile-card-list">
-
-                                {fyLoading ? (
-
-                                    <div
-                                        style={{
-                                            display: 'flex',
-                                            justifyContent: 'center',
-                                            padding: '32px 0',
-                                        }}
-                                    >
-                                        <Spin size="small" />
-                                    </div>
-
-                                ) : (
-
-                                    reviews.map((record) => (
-                                        <ReviewCard
-                                            key={record.quarter}
-                                            record={record}
-                                            currentQuarter={currentQuarter}
-
-                                            onView={() =>
-                                                navigate(
-                                                    `/employee-dashboard/quarterly-review/${quarterToSlug(
-                                                        record.quarter
-                                                    )}?mode=view`
-                                                )
-                                            }
-
-                                            onEdit={() =>
-                                                navigate(
-                                                    `/employee-dashboard/quarterly-review/${quarterToSlug(
-                                                        record.quarter
-                                                    )}`
-                                                )
-                                            }
-
-                                            onDownload={() => onDownload && onDownload(record)}
-
-                                            onWithdraw={() => onWithdraw && onWithdraw(record)}
-                                        />
-                                    ))
-
-                                )}
-
-                            </div>
-
-                        ) : (
-
-                            <div className="mobile-empty-state">
-
-                                <img
-                                    src={EmptyReviewImage}
-                                    alt="No quarterly reviews"
-                                    className="mobile-empty-img"
-                                />
-
-                                <p className="mobile-empty-title">
-                                    No quarterly reviews found.
-                                </p>
-
-                                <p className="mobile-empty-subtext">
-                                    Create your first quarterly review to get started.
-                                </p>
-
-                            </div>
-
-                        )}
-
-                    </div>
+                  <Button
+                    type="primary"
+                    size="small"
+                    className="!bg-red-500 hover:!bg-red-600 !text-white !font-semibold !rounded-lg !h-7 !px-3 shrink-0"
+                    onClick={() => {
+                      if (onFillReview) {
+                        onFillReview(reviewRecord.quarter);
+                      } else {
+                        navigate(`${reviewPath}/${quarterToSlug(reviewRecord.quarter)}`);
+                      }
+                    }}
+                  >
+                    Fill
+                  </Button>
                 </div>
-            </>
-        );
-    };
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Top Rating Card: Only Current Year Rating */}
+      <div className="grid grid-cols-1 gap-3.5">
+        {/* Current Year Rating */}
+        <StatCard
+          accent="emerald"
+          icon={<Award className="w-5 h-5 text-emerald-500" />}
+          label="Current Year Rating"
+          value={
+            hasCurrentYearRating ? (
+              <HiddenRatingBadge
+                reviewId={`year-${normalizedTargetYear}`}
+                quarter={targetYear}
+                finalRating={currentYearRatingScore}
+                label="Current Year Rating"
+                isFinalRatingHidden={isCurrentYearRatingHidden}
+                hasFinalRating={true}
+                size="lg"
+                navigateOnSuccess={true}
+              />
+            ) : (
+              <span className="text-2xl font-bold text-slate-400">—</span>
+            )
+          }
+          subtext={hasCurrentYearRating ? `Overall rating for ${targetYear}` : 'Not Available'}
+          delay={80}
+        />
+      </div>
+
+      {/* Quarterly Review History Section (Matches Desktop) */}
+      <div className="mobile-history-container">
+        <div className="mobile-history-header">
+          <div className="mobile-history-title-group">
+            <span className="mobile-history-icon-bg">
+              <BarChart3 style={{ width: 14, height: 14 }} />
+            </span>
+            <h2 className="mobile-history-title">Quarterly Review History</h2>
+          </div>
+        </div>
+
+        {/* Filter Controls (Financial Year, Quarter, Status) */}
+        <div className="mobile-filter-wrapper flex gap-2 flex-wrap">
+          {fyOptions.length > 0 && (
+            <Select
+              className="mobile-filter-select flex-1 min-w-[130px]"
+              allowClear
+              value={selectedFY === QuarterFilter.ALL ? undefined : (selectedFY || undefined)}
+              onChange={(val) => onFYChange(val || QuarterFilter.ALL)}
+              loading={fyLoading}
+              placeholder="Financial Year"
+              variant="outlined"
+              prefix={<Calendar className="w-4 h-4 text-indigo-500 shrink-0" />}
+              popupMatchSelectWidth
+              options={[
+                { label: 'All Years', value: QuarterFilter.ALL },
+                ...fyOptions.map((financialYearOption) => ({
+                  label: financialYearOption,
+                  value: financialYearOption,
+                })),
+              ]}
+            />
+          )}
+
+          <Select
+            className="mobile-filter-select flex-1 min-w-[100px]"
+            allowClear
+            value={selectedQuarter || undefined}
+            onChange={onQuarterChange}
+            loading={quarterFilterLoading}
+            placeholder="Quarter"
+            variant="outlined"
+            prefix={<Clock className="w-4 h-4 text-indigo-500 shrink-0" />}
+            popupMatchSelectWidth
+            options={(quarterOptions || []).map((opt) => ({
+              label: opt.label,
+              value: opt.code,
+            }))}
+          />
+
+          <Select
+            className="mobile-filter-select flex-1 min-w-[130px]"
+            allowClear
+            value={selectedReviewStatus || undefined}
+            onChange={onReviewStatusChange}
+            placeholder="Status"
+            variant="outlined"
+            prefix={<ClipboardList className="w-4 h-4 text-indigo-500 shrink-0" />}
+            popupMatchSelectWidth
+            options={REVIEW_STATUS_FILTER_OPTIONS}
+          />
+        </div>
+
+        {/* Review Cards List */}
+        {reviews.length > 0 ? (
+          <div className="mobile-card-list">
+            {fyLoading ? (
+              <div className="flex justify-center py-8">
+                <Spin size="small" />
+              </div>
+            ) : (
+              reviews.map((reviewRecord) => (
+                <ReviewCard
+                  key={reviewRecord.quarter}
+                  record={reviewRecord}
+                  reviewPath={reviewPath}
+                  downloadingQuarter={downloadingQuarter}
+                  onView={() =>
+                    navigate(`${reviewPath}/${quarterToSlug(reviewRecord.quarter)}?mode=${FormMode.VIEW}`)
+                  }
+                  onEdit={async () => {
+                    if (onFillReview) {
+                      await onFillReview(reviewRecord.quarter);
+                    } else {
+                      navigate(`${reviewPath}/${quarterToSlug(reviewRecord.quarter)}`);
+                    }
+                  }}
+                  onDownload={onDownload ? () => onDownload(reviewRecord) : undefined}
+                  onOpenRequestAccess={onOpenRequestAccess ? () => onOpenRequestAccess(reviewRecord) : undefined}
+                />
+              ))
+            )}
+          </div>
+        ) : (
+          <div className="mobile-empty-state">
+            <img
+              src={EmptyReviewImage}
+              alt="No quarterly reviews found"
+              className="mobile-empty-img"
+            />
+            <p className="mobile-empty-title">No Reviews Found</p>
+            <p className="mobile-empty-subtext">
+              You haven't submitted any quarterly reviews yet. Complete your first assigned review to see your history.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 export default MobileEmployeeAppraisalDashboard;
