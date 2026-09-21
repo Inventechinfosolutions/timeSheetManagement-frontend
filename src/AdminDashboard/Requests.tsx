@@ -204,6 +204,14 @@ const Requests = () => {
   const statusDropdownRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
 
+  // ── Bulk select state ──────────────────────────────────────────
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+  const [bulkModal, setBulkModal] = useState<{
+    isOpen: boolean;
+    action: LeaveRequestStatus.APPROVED | LeaveRequestStatus.REJECTED | null;
+  }>({ isOpen: false, action: null });
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -365,6 +373,8 @@ const Requests = () => {
 
   useEffect(() => {
     setCurrentPage(1);
+    // Clear bulk selections whenever filters change
+    setSelectedIds(new Set());
   }, [selectedDept, selectedMonth, selectedYear, selectedRequestType, selectedStatus]);
 
   const handleDownloadExcel = async () => {
@@ -390,6 +400,48 @@ const Requests = () => {
     } finally {
       setIsDownloading(false);
     }
+  };
+
+  // ── Bulk action executor ──────────────────────────────────────
+  const executeBulkAction = async () => {
+    if (!bulkModal.action || selectedIds.size === 0) return;
+    setIsBulkProcessing(true);
+    let successCount = 0;
+    let failCount = 0;
+    for (const id of Array.from(selectedIds)) {
+      try {
+        await dispatch(updateLeaveRequestStatus({ id, status: bulkModal.action })).unwrap();
+        successCount++;
+      } catch {
+        failCount++;
+      }
+    }
+    setBulkModal({ isOpen: false, action: null });
+    setSelectedIds(new Set());
+    if (successCount > 0) {
+      message.success(
+        `${successCount} request${successCount > 1 ? 's' : ''} ${
+          bulkModal.action === LeaveRequestStatus.APPROVED ? 'approved' : 'rejected'
+        } successfully`
+      );
+    }
+    if (failCount > 0) {
+      message.error(`${failCount} request${failCount > 1 ? 's' : ''} failed`);
+    }
+    // Refetch with current filters
+    dispatch(
+      getAllLeaveRequests({
+        department: selectedDept,
+        search: debouncedSearchTerm,
+        month: selectedMonth,
+        year: selectedYear,
+        requestType: selectedRequestType,
+        status: selectedStatus,
+        page: currentPage,
+        limit: itemsPerPage,
+      })
+    );
+    setIsBulkProcessing(false);
   };
 
   const filteredRequests = (entities || []).filter((req) => {
@@ -567,6 +619,7 @@ const Requests = () => {
               month: selectedMonth,
               year: selectedYear,
               requestType: selectedRequestType,
+              status: selectedStatus,
               page: currentPage,
               limit: itemsPerPage,
             }),
@@ -880,6 +933,7 @@ const Requests = () => {
           month: selectedMonth,
           year: selectedYear,
           requestType: selectedRequestType,
+          status: selectedStatus,
           page: currentPage,
           limit: itemsPerPage,
         }),
@@ -1215,6 +1269,55 @@ const Requests = () => {
             </button>
           </div>
 
+          {/* Bulk Select Checkbox + Approve/Reject Selected — only when Pending filter is active */}
+          {selectedStatus === LeaveRequestStatus.PENDING && (
+            <div className="flex items-center gap-2 self-end mb-0.5">
+              {/* Checkbox to toggle all visible rows */}
+              <label
+                className="flex items-center gap-1.5 cursor-pointer select-none px-3 py-2.5 rounded-full border border-[#4318FF]/30 bg-white hover:bg-blue-50 transition-all"
+                title="Select / Deselect all visible pending rows"
+              >
+                <input
+                  type="checkbox"
+                  className="accent-[#4318FF] w-4 h-4 cursor-pointer"
+                  checked={filteredRequests.length > 0 && filteredRequests.every((r) => selectedIds.has(r.id))}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedIds(new Set(filteredRequests.map((r) => r.id)));
+                    } else {
+                      setSelectedIds(new Set());
+                    }
+                  }}
+                />
+                <span className="text-xs font-bold text-[#4318FF] whitespace-nowrap">
+                  {selectedIds.size > 0 ? `${selectedIds.size} selected` : "Select"}
+                </span>
+              </label>
+
+              {/* Approve / Reject Selected — only when ≥1 row checked */}
+              {selectedIds.size > 0 && (
+                <>
+                  <button
+                    onClick={() => setBulkModal({ isOpen: true, action: LeaveRequestStatus.APPROVED })}
+                    className="flex items-center gap-1.5 px-3 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-full text-xs font-bold transition-all active:scale-95 shadow-sm whitespace-nowrap"
+                    title="Approve all selected"
+                  >
+                    <CheckCircle size={14} />
+                    Approve Selected
+                  </button>
+                  <button
+                    onClick={() => setBulkModal({ isOpen: true, action: LeaveRequestStatus.REJECTED })}
+                    className="flex items-center gap-1.5 px-3 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-full text-xs font-bold transition-all active:scale-95 shadow-sm whitespace-nowrap"
+                    title="Reject all selected"
+                  >
+                    <XCircle size={14} />
+                    Reject Selected
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+
           {/* Clear Filters Button */}
           {(searchTerm ||
             selectedDept !== "All" ||
@@ -1326,6 +1429,25 @@ const Requests = () => {
                     >
                       <td className="py-3 pl-6 pr-4 align-middle">
                         <div className="flex items-center gap-3">
+                          {/* Checkbox — only when Pending filter active */}
+                          {selectedStatus === LeaveRequestStatus.PENDING && (
+                            <input
+                              type="checkbox"
+                              className="accent-[#4318FF] w-4 h-4 cursor-pointer shrink-0"
+                              checked={selectedIds.has(req.id)}
+                              onChange={(e) => {
+                                setSelectedIds((prev) => {
+                                  const next = new Set(prev);
+                                  if (e.target.checked) {
+                                    next.add(req.id);
+                                  } else {
+                                    next.delete(req.id);
+                                  }
+                                  return next;
+                                });
+                              }}
+                            />
+                          )}
                           <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-[#4318FF] font-bold text-xs ring-2 ring-blue-50">
                             {req.fullName ? (
                               req.fullName.charAt(0)
@@ -1593,7 +1715,9 @@ const Requests = () => {
                             <Eye size={18} />
                           </button>
                           {!isReceptionist &&
-                            req.status === LeaveRequestStatus.PENDING && (
+                            req.status === LeaveRequestStatus.PENDING &&
+                            /* Hide individual approve/reject when this row is checked */
+                            !selectedIds.has(req.id) && (
                               <>
                                 <button
                                   onClick={() =>
@@ -1759,6 +1883,77 @@ const Requests = () => {
           </div>
         </div>
       </div>
+
+      {/* ── Bulk Confirmation Modal ────────────────────────────── */}
+      {bulkModal.isOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-[#2B3674]/40 backdrop-blur-sm"
+            onClick={() => !isBulkProcessing && setBulkModal({ isOpen: false, action: null })}
+          />
+          <div className="relative w-full max-w-lg bg-white rounded-[24px] overflow-hidden shadow-[0px_20px_40px_rgba(0,0,0,0.15)] animate-in fade-in zoom-in duration-200">
+            <div className="p-6">
+              {/* Header */}
+              <div className={`mx-auto w-14 h-14 rounded-full flex items-center justify-center mb-4 ${
+                bulkModal.action === LeaveRequestStatus.APPROVED ? "bg-green-50" : "bg-red-50"
+              }`}>
+                {bulkModal.action === LeaveRequestStatus.APPROVED
+                  ? <CheckCircle size={28} className="text-green-500" />
+                  : <XCircle size={28} className="text-red-500" />}
+              </div>
+              <h3 className="text-xl font-black text-[#2B3674] text-center mb-1">
+                {bulkModal.action === LeaveRequestStatus.APPROVED ? "Approve" : "Reject"} {selectedIds.size} Request{selectedIds.size > 1 ? "s" : ""}?
+              </h3>
+              <p className="text-sm text-gray-400 text-center mb-5">
+                The following requests will be {bulkModal.action === LeaveRequestStatus.APPROVED ? "approved" : "rejected"}:
+              </p>
+
+              {/* Selected employees list */}
+              <div className="max-h-60 overflow-y-auto flex flex-col gap-2 pr-1 mb-6">
+                {(entities || [])
+                  .filter((r) => selectedIds.has(r.id))
+                  .map((r) => (
+                    <div key={r.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-[#4318FF] font-bold text-xs shrink-0">
+                        {r.fullName?.charAt(0) || "?"}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-[#2B3674] truncate">{r.fullName || "Unknown"}</p>
+                        <p className="text-xs text-gray-400 truncate">{getRequestTypeLabel(r)}</p>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setBulkModal({ isOpen: false, action: null })}
+                  disabled={isBulkProcessing}
+                  className="flex-1 py-3 rounded-xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={executeBulkAction}
+                  disabled={isBulkProcessing}
+                  className={`flex-1 py-3 rounded-xl font-bold text-white transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-70 ${
+                    bulkModal.action === LeaveRequestStatus.APPROVED
+                      ? "bg-green-500 hover:bg-green-600 shadow-green-200"
+                      : "bg-red-500 hover:bg-red-600 shadow-red-200"
+                  } shadow-lg`}
+                >
+                  {isBulkProcessing ? (
+                    <><Loader2 size={16} className="animate-spin" /> Processing...</>
+                  ) : (
+                    <>{bulkModal.action === LeaveRequestStatus.APPROVED ? "Confirm Approve All" : "Confirm Reject All"}</>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Confirmation Modal */}
       {confirmModal.isOpen && (
