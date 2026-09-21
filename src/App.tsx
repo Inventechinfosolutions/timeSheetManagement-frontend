@@ -142,6 +142,8 @@ const AdminTabWrapper = () => {
       return <QuarterlyReviewForm />;
     case "about":
       return <About />;
+    case "employee-notes":
+      return <EmployeeNotes />;
     default:
       return <Navigate to="/admin-dashboard" replace />;
   }
@@ -405,6 +407,9 @@ function AppContent() {
                     path="quarterly-review/:employeeId?"
                     element={<QuarterlyReviewResponsive />}
                   />
+                  <Route path="employee-notes" element={<EmployeeNotes />} />
+                  <Route path="employee-notes/*" element={<EmployeeNotes />} />
+                  <Route path=":projectName/employee-notes" element={<EmployeeNotes />} />
                   <Route path=":tab/:date?" element={<AdminTabWrapper />} />
                 </Route>
 
