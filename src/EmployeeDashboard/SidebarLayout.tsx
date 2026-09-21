@@ -128,7 +128,7 @@ const SidebarLayout = ({
     { name: "My Timesheet", icon: Calendar, path: "/employee-dashboard/my-timesheet" },
     { name: "Timesheet History", icon: Eye, path: "/employee-dashboard/timesheet-view" },
     { name: "Request Management", icon: Calendar, path: "/employee-dashboard/leave-management" },
-    { name: "Appraisal", icon: Award, path: "/employee-dashboard/quarterly-review" },
+    // { name: "Appraisal", icon: Award, path: "/employee-dashboard/quarterly-review" },
     { name: "Employee Notes", icon: StickyNote, path: "/employee-dashboard/employee-notes" },
   ];
 

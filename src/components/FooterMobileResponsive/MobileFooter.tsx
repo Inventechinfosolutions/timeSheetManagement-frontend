@@ -61,7 +61,7 @@ const MobileBottomNav = ({
       icon: ClipboardList,
       label: "Requests",
     },
-    { name: "Appraisal", icon: Award, label: "Appraisal" },
+    // { name: "Appraisal", icon: Award, label: "Appraisal" },
     { name: "Account Settings", icon: User, label: "Profile" },
     { name: "About", icon: Info, label: "About" },
   ];
