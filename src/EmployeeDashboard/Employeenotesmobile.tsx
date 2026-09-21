@@ -89,8 +89,11 @@ export const EmployeeNotesMobile: React.FC<EmployeeNotesMobileProps> = ({
   openViewNote,
   openEditModal,
   setNoteToDelete,
+  handleDeleteNote,
   openSubTableCreateNote,
   uploadingNoteId,
+  actionLoadingNoteId,
+  actionLoadingType,
   handleTableDirectUpload,
   handleTableRemoveFile,
   openFilePreview,
@@ -106,6 +109,10 @@ export const EmployeeNotesMobile: React.FC<EmployeeNotesMobileProps> = ({
         const hasFiles = note.files && note.files.length > 0;
         const isUploadingThisNote = uploadingNoteId === note.id;
         const isExpanded = expandedRowProjectNotes.includes(note.id);
+        const isThisNoteLoading = actionLoadingNoteId === note.id;
+        const isViewLoading = isThisNoteLoading && actionLoadingType === "view";
+        const isEditLoading = isThisNoteLoading && actionLoadingType === "edit";
+        const isDeleteLoading = isThisNoteLoading && actionLoadingType === "delete";
 
         // Child notes belonging to this parent note
         const childNotes = allNotes.filter((n) => n.parentNoteId === note.id);
@@ -256,29 +263,50 @@ export const EmployeeNotesMobile: React.FC<EmployeeNotesMobileProps> = ({
             <div className="flex items-center gap-2">
               <button
                 type="button"
+                disabled={Boolean(actionLoadingNoteId)}
                 onClick={() => openViewNote(note)}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-indigo-50 text-[#4318FF] hover:bg-indigo-100 transition-colors cursor-pointer text-xs font-semibold"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-indigo-50 text-[#4318FF] hover:bg-indigo-100 disabled:opacity-60 disabled:cursor-not-allowed transition-colors cursor-pointer text-xs font-semibold"
               >
-                <Eye size={13} />
-                <span>View</span>
+                {isViewLoading ? (
+                  <Loader2 size={13} className="animate-spin text-[#4318FF]" />
+                ) : (
+                  <Eye size={13} />
+                )}
+                <span>{isViewLoading ? "Loading..." : "View"}</span>
               </button>
               {canManageNotes && (
                 <>
                   <button
                     type="button"
+                    disabled={Boolean(actionLoadingNoteId)}
                     onClick={() => openEditModal(note)}
-                    className="flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-blue-50 text-[#4318FF] hover:bg-blue-100 transition-colors cursor-pointer text-xs font-semibold"
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-blue-50 text-[#4318FF] hover:bg-blue-100 disabled:opacity-60 disabled:cursor-not-allowed transition-colors cursor-pointer text-xs font-semibold"
                   >
-                    <Pencil size={13} />
-                    <span>Edit</span>
+                    {isEditLoading ? (
+                      <Loader2 size={13} className="animate-spin text-[#4318FF]" />
+                    ) : (
+                      <Pencil size={13} />
+                    )}
+                    <span>{isEditLoading ? "Loading..." : "Edit"}</span>
                   </button>
                   <button
                     type="button"
-                    onClick={() => setNoteToDelete(note)}
-                    className="flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors cursor-pointer text-xs font-semibold"
+                    disabled={Boolean(actionLoadingNoteId)}
+                    onClick={() => {
+                      if (handleDeleteNote) {
+                        handleDeleteNote(note);
+                      } else {
+                        setNoteToDelete(note);
+                      }
+                    }}
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 disabled:opacity-60 disabled:cursor-not-allowed transition-colors cursor-pointer text-xs font-semibold"
                   >
-                    <Trash2 size={13} />
-                    <span>Delete</span>
+                    {isDeleteLoading ? (
+                      <Loader2 size={13} className="animate-spin text-red-500" />
+                    ) : (
+                      <Trash2 size={13} />
+                    )}
+                    <span>{isDeleteLoading ? "Deleting..." : "Delete"}</span>
                   </button>
                 </>
               )}
@@ -365,39 +393,68 @@ export const EmployeeNotesMobile: React.FC<EmployeeNotesMobileProps> = ({
                           </div>
 
                           {/* Sub-card bottom: Action buttons */}
-                          <div className="flex items-center justify-end gap-1.5 pt-1.5 border-t border-gray-100">
-                            <button
-                              type="button"
-                              onClick={() => openViewNote(child)}
-                              title="View Note"
-                              className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-indigo-50 text-[#4318FF] hover:bg-indigo-100 text-[11px] font-semibold cursor-pointer transition-colors"
-                            >
-                              <Eye size={12} />
-                              <span>View</span>
-                            </button>
-                            {canManageNotes && (
-                              <>
+                          {(() => {
+                            const isChildLoading = actionLoadingNoteId === child.id;
+                            const isChildViewLoading = isChildLoading && actionLoadingType === "view";
+                            const isChildEditLoading = isChildLoading && actionLoadingType === "edit";
+                            const isChildDeleteLoading = isChildLoading && actionLoadingType === "delete";
+                            return (
+                              <div className="flex items-center justify-end gap-1.5 pt-1.5 border-t border-gray-100">
                                 <button
-                              type="button"
-                              onClick={() => openEditModal(child)}
-                              title="Edit Note"
-                              className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-50 text-[#4318FF] hover:bg-blue-100 text-[11px] font-semibold cursor-pointer transition-colors"
-                            >
-                              <Pencil size={12} />
-                              <span>Edit</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setNoteToDelete(child)}
-                              title="Delete Note"
-                              className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-red-50 text-red-500 hover:bg-red-100 text-[11px] font-semibold cursor-pointer transition-colors"
-                            >
-                              <Trash2 size={12} />
-                              <span>Delete</span>
-                            </button>
-                              </>
-                            )}
-                          </div>
+                                  type="button"
+                                  disabled={Boolean(actionLoadingNoteId)}
+                                  onClick={() => openViewNote(child)}
+                                  title="View Note"
+                                  className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-indigo-50 text-[#4318FF] hover:bg-indigo-100 disabled:opacity-60 disabled:cursor-not-allowed text-[11px] font-semibold cursor-pointer transition-colors"
+                                >
+                                  {isChildViewLoading ? (
+                                    <Loader2 size={12} className="animate-spin text-[#4318FF]" />
+                                  ) : (
+                                    <Eye size={12} />
+                                  )}
+                                  <span>{isChildViewLoading ? "..." : "View"}</span>
+                                </button>
+                                {canManageNotes && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      disabled={Boolean(actionLoadingNoteId)}
+                                      onClick={() => openEditModal(child)}
+                                      title="Edit Note"
+                                      className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-50 text-[#4318FF] hover:bg-blue-100 disabled:opacity-60 disabled:cursor-not-allowed text-[11px] font-semibold cursor-pointer transition-colors"
+                                    >
+                                      {isChildEditLoading ? (
+                                        <Loader2 size={12} className="animate-spin text-[#4318FF]" />
+                                      ) : (
+                                        <Pencil size={12} />
+                                      )}
+                                      <span>{isChildEditLoading ? "..." : "Edit"}</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={Boolean(actionLoadingNoteId)}
+                                      onClick={() => {
+                                        if (handleDeleteNote) {
+                                          handleDeleteNote(child);
+                                        } else {
+                                          setNoteToDelete(child);
+                                        }
+                                      }}
+                                      title="Delete Note"
+                                      className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-red-50 text-red-500 hover:bg-red-100 disabled:opacity-60 disabled:cursor-not-allowed text-[11px] font-semibold cursor-pointer transition-colors"
+                                    >
+                                      {isChildDeleteLoading ? (
+                                        <Loader2 size={12} className="animate-spin text-red-500" />
+                                      ) : (
+                                        <Trash2 size={12} />
+                                      )}
+                                      <span>{isChildDeleteLoading ? "..." : "Delete"}</span>
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
                       );
                     })}

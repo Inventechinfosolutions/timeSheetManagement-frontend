@@ -15,6 +15,25 @@
   animation: notesFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+@keyframes notesPopIn {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -24px) scale(0.92);
+  }
+  60% {
+    opacity: 1;
+    transform: translate(-50%, 4px) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+.animate-popIn {
+  animation: notesPopIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 /* Custom Scrollbar for Note Editor & Table Containers */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
@@ -39,9 +58,9 @@
 .notes-rich-editor-content {
   width: 100%;
   flex: 1 1 0%;
-  min-height: 180px;
+  min-height: 320px;
   overflow-y: auto;
-  padding: 1rem 1.25rem;
+  padding: 1.25rem 1.25rem 1rem 1.25rem;
   background-color: #ffffff;
   color: #1e293b;
   font-family: inherit;
@@ -51,7 +70,8 @@
 
 @media (min-width: 640px) {
   .notes-rich-editor-content {
-    min-height: 210px;
+    min-height: 350px;
+    padding: 1rem 1.25rem;
   }
 }
 
@@ -97,26 +117,65 @@
 }
 
 .notes-rich-editor-content p {
-  margin-bottom: 0.625rem;
+  margin-bottom: 0.75rem;
   color: #1e293b;
 }
 
 .notes-rich-editor-content ul {
-  list-style-type: disc;
-  padding-left: 1.25rem;
-  margin-bottom: 0.625rem;
+  list-style-type: disc !important;
+  list-style-position: outside !important;
+  margin-left: 1.125rem !important;
+  padding-left: 0.25rem !important;
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.75rem !important;
   color: #1e293b;
 }
 
 .notes-rich-editor-content ol {
-  list-style-type: decimal;
-  padding-left: 1.25rem;
-  margin-bottom: 0.625rem;
+  list-style-type: decimal !important;
+  list-style-position: outside !important;
+  margin-left: 1.375rem !important;
+  padding-left: 0.25rem !important;
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.75rem !important;
   color: #1e293b;
+}
+
+@media (max-width: 640px) {
+  .notes-rich-editor-content ul {
+    margin-left: 1rem !important;
+    padding-left: 0.25rem !important;
+  }
+  .notes-rich-editor-content ol {
+    margin-left: 1.25rem !important;
+    padding-left: 0.25rem !important;
+  }
 }
 
 .notes-rich-editor-content li {
   color: #1e293b;
+  margin-bottom: 0.5rem !important;
+  padding-left: 0.125rem !important;
+  line-height: 1.625 !important;
+}
+
+.notes-rich-editor-content li:last-child {
+  margin-bottom: 0 !important;
+}
+
+.notes-rich-editor-content ul ul,
+.notes-rich-editor-content ol ul {
+  list-style-type: circle !important;
+  margin-left: 1rem !important;
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.notes-rich-editor-content ol ol,
+.notes-rich-editor-content ul ol {
+  list-style-type: lower-alpha !important;
+  margin-left: 1rem !important;
+  margin-top: 0.25rem;
   margin-bottom: 0.25rem;
 }
 

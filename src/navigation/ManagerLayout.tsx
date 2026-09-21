@@ -116,6 +116,9 @@ const ManagerLayout = () => {
     if (path.includes("/manager-dashboard/quarterly-review")) {
       return "Quarterly Review";
     }
+    if (path.includes("/manager-dashboard/employee-notes")) {
+      return "Employee Notes";
+    }
 
     switch (tab) {
       case "employees":
@@ -150,6 +153,8 @@ const ManagerLayout = () => {
         return "Appraisal";
       case "quarterly-review":
         return "Quarterly Review";
+      case "employee-notes":
+        return "Employee Notes";
       default:
         return "Employee Dashboard";
     }
@@ -201,6 +206,8 @@ const ManagerLayout = () => {
       navigate("/manager-dashboard/appraisal");
     } else if (tabName === "Quarterly Review") {
       navigate("/manager-dashboard/quarterly-review");
+    } else if (tabName === "Employee Notes") {
+      navigate("/manager-dashboard/employee-notes");
     }
   };
 

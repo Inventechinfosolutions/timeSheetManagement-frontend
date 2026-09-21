@@ -38,10 +38,15 @@ import {
   Quote,
   ArrowLeft,
   Palette,
+  Highlighter,
 } from "lucide-react";
 import { useAppSelector } from "../hooks";
 import { Storage } from "../utils/storage-util";
 import { EmployeeNotesMobile } from "./Employeenotesmobile";
+import jsPDF from "jspdf";
+import LogoTop from "../assets/logo_top.png";
+import LogoBottom from "../assets/logo_bottom.png";
+import "../components/ApiLoadingSpinner.css";
 import type {
   NoteCategory,
   NoteFile,
@@ -49,6 +54,7 @@ import type {
   EmployeeNote,
   RichTextEditorProps,
   NoteModalMode,
+  NoteActionType,
   NoteToastMessage,
   NoteFormErrors,
   RowModalErrors,
@@ -77,6 +83,44 @@ export type {
 };
 export { NoteCategoryEnum, NoteFilter, STORAGE_KEY_PREFIX, EMPLOYEE_NOTES_API };
 
+const escapeHtml = (text: string): string => {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};
+
+const isDescriptionEmpty = (html?: string): boolean => {
+  if (!html) return true;
+  const stripped = html.replace(/<[^>]*>/g, "").replace(/&nbsp;/gi, " ").trim();
+  if (stripped.length > 0) return false;
+  return !/<(img|table|iframe|video|audio)\b/i.test(html);
+};
+
+const isColorMatch = (c1?: string | null, c2?: string | null): boolean => {
+  if (!c1 || !c2) return false;
+  const s1 = c1.trim().toLowerCase();
+  const s2 = c2.trim().toLowerCase();
+  if (s1 === s2) return true;
+
+  const toRgb = (hexOrRgb: string) => {
+    if (hexOrRgb.startsWith("#")) {
+      const clean = hexOrRgb.replace("#", "");
+      if (clean.length === 6) {
+        const r = parseInt(clean.substring(0, 2), 16);
+        const g = parseInt(clean.substring(2, 4), 16);
+        const b = parseInt(clean.substring(4, 6), 16);
+        return `rgb(${r}, ${g}, ${b})`;
+      }
+    }
+    return hexOrRgb.replace(/\s+/g, ", ").replace(/,\s+/g, ", ");
+  };
+
+  return toRgb(s1) === toRgb(s2);
+};
+
 /*
  * RICH TEXT / HTML EDITOR COMPONENT
  * Provides rich text formatting (Bold, Italic, Underline, Strikethrough,
@@ -87,6 +131,7 @@ const RichTextEditor = ({
   initialValue,
   onChange,
   placeholder,
+  minHeight = "380px",
 }: RichTextEditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const [isFocused, setIsFocused] = useState(false);
@@ -135,20 +180,252 @@ const RichTextEditor = ({
     }
   };
 
+  // Active formatting state tracking
+  const [activeHeading, setActiveHeading] = useState<"h1" | "h2" | "p">("p");
+  const [activeColor, setActiveColor] = useState<string | null>(null);
+  const [isBold, setIsBold] = useState(false);
+  const [isItalic, setIsItalic] = useState(false);
+  const [isUnderline, setIsUnderline] = useState(false);
+  const [isStrike, setIsStrike] = useState(false);
+  const [isList, setIsList] = useState(false);
+  const [isOrderedList, setIsOrderedList] = useState(false);
+  const [isBlockquoteActive, setIsBlockquoteActive] = useState(false);
+
+  const checkEditorState = () => {
+    if (!editorRef.current) return;
+    try {
+      setIsBold(document.queryCommandState("bold"));
+      setIsItalic(document.queryCommandState("italic"));
+      setIsUnderline(document.queryCommandState("underline"));
+      setIsStrike(document.queryCommandState("strikeThrough"));
+      setIsList(document.queryCommandState("insertUnorderedList"));
+      setIsOrderedList(document.queryCommandState("insertOrderedList"));
+    } catch {
+      // ignore
+    }
+
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && editorRef.current) {
+      let node: Node | null = sel.getRangeAt(0).commonAncestorContainer;
+      let heading: "h1" | "h2" | "p" = "p";
+      let inBq = false;
+      let bgCol: string | null = null;
+
+      while (node && node !== editorRef.current) {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          const el = node as HTMLElement;
+          const tag = el.tagName.toLowerCase();
+          if (tag === "h1") heading = "h1";
+          else if (tag === "h2") heading = "h2";
+          else if (tag === "blockquote") inBq = true;
+
+          if (!bgCol) {
+            const bg = el.style.backgroundColor || el.getAttribute("bgcolor");
+            if (bg && bg !== "transparent" && bg !== "rgba(0, 0, 0, 0)") {
+              bgCol = bg;
+            }
+          }
+        }
+        node = node.parentNode;
+      }
+
+      setActiveHeading(heading);
+      setIsBlockquoteActive(inBq);
+      setActiveColor(bgCol);
+    }
+  };
+
   const execute = (command: string, arg?: string) => {
     if (!editorRef.current) return;
     editorRef.current.focus();
     document.execCommand(command, false, arg);
     onChange(editorRef.current.innerHTML);
+    setTimeout(checkEditorState, 20);
   };
 
+  // Toggle heading 1 or 2 on/off (select & unselect)
+  const toggleHeading = (target: "h1" | "h2") => {
+    if (!editorRef.current) return;
+    editorRef.current.focus();
+
+    const sel = window.getSelection();
+    let isCurrentlyTarget = false;
+    if (sel && sel.rangeCount > 0) {
+      let node: Node | null = sel.getRangeAt(0).commonAncestorContainer;
+      while (node && node !== editorRef.current) {
+        if (
+          node.nodeType === Node.ELEMENT_NODE &&
+          (node as HTMLElement).tagName.toLowerCase() === target
+        ) {
+          isCurrentlyTarget = true;
+          break;
+        }
+        node = node.parentNode;
+      }
+    }
+
+    if (isCurrentlyTarget || activeHeading === target) {
+      // UNSELECT: already this heading, convert back to normal paragraph
+      document.execCommand("formatBlock", false, "<p>");
+      setActiveHeading("p");
+    } else {
+      // SELECT: apply target heading
+      document.execCommand("formatBlock", false, `<${target}>`);
+      setActiveHeading(target);
+    }
+
+    onChange(editorRef.current.innerHTML);
+    setTimeout(checkEditorState, 20);
+  };
+
+  const toggleNormal = () => {
+    if (!editorRef.current) return;
+    editorRef.current.focus();
+    document.execCommand("formatBlock", false, "<p>");
+    setActiveHeading("p");
+    onChange(editorRef.current.innerHTML);
+    setTimeout(checkEditorState, 20);
+  };
+
+  // Toggle blockquote on/off and prevent/remove multiple nested blockquotes
+  const toggleBlockquote = () => {
+    if (!editorRef.current) return;
+    editorRef.current.focus();
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+
+    // 1. Check if selection is within an existing blockquote -> unwrap it (unselect)
+    let node: Node | null = range.commonAncestorContainer;
+    let bq: HTMLElement | null = null;
+    while (node && node !== editorRef.current) {
+      if (
+        node.nodeType === Node.ELEMENT_NODE &&
+        (node as HTMLElement).tagName.toLowerCase() === "blockquote"
+      ) {
+        bq = node as HTMLElement;
+        break;
+      }
+      node = node.parentNode;
+    }
+
+    if (bq && editorRef.current.contains(bq)) {
+      const parent = bq.parentNode;
+      if (parent) {
+        const frag = document.createDocumentFragment();
+        while (bq.firstChild) {
+          frag.appendChild(bq.firstChild);
+        }
+        parent.replaceChild(frag, bq);
+      }
+      setIsBlockquoteActive(false);
+      onChange(editorRef.current.innerHTML);
+      setTimeout(checkEditorState, 20);
+      return;
+    }
+
+    // 2. Check if selection spans across any blockquote(s) -> unwrap them (removes multiple selection quotes)
+    const internalBqs = Array.from(editorRef.current.querySelectorAll("blockquote"));
+    let anyUnwrapped = false;
+    internalBqs.forEach((existingBq) => {
+      try {
+        if (range.intersectsNode(existingBq)) {
+          anyUnwrapped = true;
+          const parent = existingBq.parentNode;
+          if (parent) {
+            const frag = document.createDocumentFragment();
+            while (existingBq.firstChild) {
+              frag.appendChild(existingBq.firstChild);
+            }
+            parent.replaceChild(frag, existingBq);
+          }
+        }
+      } catch {
+        // ignore
+      }
+    });
+
+    if (anyUnwrapped) {
+      setIsBlockquoteActive(false);
+      onChange(editorRef.current.innerHTML);
+      setTimeout(checkEditorState, 20);
+      return;
+    }
+
+    // 3. Otherwise apply blockquote
+    document.execCommand("formatBlock", false, "<blockquote>");
+
+    // Clean up any nested blockquotes (blockquote inside blockquote)
+    const nestedBqs = Array.from(
+      editorRef.current.querySelectorAll("blockquote blockquote")
+    );
+    nestedBqs.forEach((nbq) => {
+      const p = nbq.parentNode;
+      if (p) {
+        while (nbq.firstChild) {
+          p.insertBefore(nbq.firstChild, nbq);
+        }
+        p.removeChild(nbq);
+      }
+    });
+
+    setIsBlockquoteActive(true);
+    onChange(editorRef.current.innerHTML);
+    setTimeout(checkEditorState, 20);
+  };
+
+  // Apply color with select & unselect (toggle) functionality
   const applyColor = (colorHex: string) => {
     if (!editorRef.current) return;
     editorRef.current.focus();
     restoreSelection();
-    document.execCommand("foreColor", false, colorHex);
-    setCurrentColor(colorHex);
+
+    // Check if the current selection already has this color highlight applied
+    let alreadyHasColor = false;
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      let node: Node | null = sel.getRangeAt(0).commonAncestorContainer;
+      while (node && node !== editorRef.current) {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          const bg = (node as HTMLElement).style.backgroundColor;
+          if (isColorMatch(bg, colorHex)) {
+            alreadyHasColor = true;
+            break;
+          }
+        }
+        node = node.parentNode;
+      }
+    }
+
+    if (alreadyHasColor || isColorMatch(activeColor, colorHex)) {
+      // UNSELECT: already applied -> clear background highlight
+      if (!document.execCommand("hiliteColor", false, "transparent")) {
+        document.execCommand("backColor", false, "transparent");
+      }
+      setActiveColor(null);
+    } else {
+      // SELECT: apply background highlight
+      if (!document.execCommand("hiliteColor", false, colorHex)) {
+        document.execCommand("backColor", false, colorHex);
+      }
+      setCurrentColor(colorHex);
+      setActiveColor(colorHex);
+    }
+
     onChange(editorRef.current.innerHTML);
+    setTimeout(checkEditorState, 20);
+  };
+
+  const clearColor = () => {
+    if (!editorRef.current) return;
+    editorRef.current.focus();
+    restoreSelection();
+    if (!document.execCommand("hiliteColor", false, "transparent")) {
+      document.execCommand("backColor", false, "transparent");
+    }
+    setActiveColor(null);
+    onChange(editorRef.current.innerHTML);
+    setTimeout(checkEditorState, 20);
   };
 
   const handleInput = () => {
@@ -157,9 +434,87 @@ const RichTextEditor = ({
     }
   };
 
+  const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+    const text = e.clipboardData.getData("text/plain");
+    if (!text) return;
+
+    // Check if the pasted text has bullet characters or numbered list prefixes
+    const lines = text.split(/\r?\n/);
+    const hasBulletOrListLines = lines.some((line) =>
+      /^\s*([•●○▪■◆–—⁃∙·\uf0b7\-\*]|\d+[\.\)])\s+/.test(line)
+    );
+
+    if (hasBulletOrListLines) {
+      e.preventDefault();
+      let html = "";
+      let inUl = false;
+      let inOl = false;
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const trimmed = line.trim();
+
+        if (!trimmed) {
+          if (inUl) {
+            html += "</ul>";
+            inUl = false;
+          }
+          if (inOl) {
+            html += "</ol>";
+            inOl = false;
+          }
+          continue;
+        }
+
+        const ulMatch = line.match(/^\s*[•●○▪■◆–—⁃∙·\uf0b7\-\*]\s+(.*)$/);
+        const olMatch = line.match(/^\s*\d+[\.\)]\s+(.*)$/);
+
+        if (ulMatch) {
+          if (inOl) {
+            html += "</ol>";
+            inOl = false;
+          }
+          if (!inUl) {
+            html += "<ul>";
+            inUl = true;
+          }
+          html += `<li>${escapeHtml(ulMatch[1])}</li>`;
+        } else if (olMatch) {
+          if (inUl) {
+            html += "</ul>";
+            inUl = false;
+          }
+          if (!inOl) {
+            html += "<ol>";
+            inOl = true;
+          }
+          html += `<li>${escapeHtml(olMatch[1])}</li>`;
+        } else {
+          if (inUl) {
+            html += "</ul>";
+            inUl = false;
+          }
+          if (inOl) {
+            html += "</ol>";
+            inOl = false;
+          }
+          html += `<p>${escapeHtml(line)}</p>`;
+        }
+      }
+
+      if (inUl) html += "</ul>";
+      if (inOl) html += "</ol>";
+
+      document.execCommand("insertHTML", false, html);
+      if (editorRef.current) {
+        onChange(editorRef.current.innerHTML);
+      }
+    }
+  };
+
   return (
     <div
-      style={{ resize: "vertical", minHeight: "220px" }}
+      style={{ resize: "vertical", minHeight }}
       className={`rounded-2xl border transition-all overflow-hidden bg-white resize-y flex flex-col ${isFocused
           ? "border-[#4318FF] ring-2 ring-[#4318FF]/15 shadow-sm"
           : "border-gray-200"
@@ -174,8 +529,12 @@ const RichTextEditor = ({
             e.preventDefault();
             execute("bold");
           }}
-          className="p-1 rounded-lg hover:bg-white hover:text-[#4318FF] hover:shadow-2xs transition-colors font-bold text-xs w-7 h-7 flex items-center justify-center cursor-pointer"
-          title="Bold (Ctrl+B)"
+          className={`p-1 rounded-lg transition-colors font-bold text-xs w-7 h-7 flex items-center justify-center cursor-pointer ${
+            isBold
+              ? "bg-[#4318FF]/15 text-[#4318FF] ring-1 ring-[#4318FF]/30 font-bold shadow-2xs"
+              : "hover:bg-white hover:text-[#4318FF] hover:shadow-2xs text-slate-700"
+          }`}
+          title={isBold ? "Bold (click to unselect)" : "Bold (Ctrl+B)"}
         >
           <Bold size={14} />
         </button>
@@ -187,8 +546,12 @@ const RichTextEditor = ({
             e.preventDefault();
             execute("italic");
           }}
-          className="p-1 rounded-lg hover:bg-white hover:text-[#4318FF] hover:shadow-2xs transition-colors italic text-xs w-7 h-7 flex items-center justify-center cursor-pointer"
-          title="Italic (Ctrl+I)"
+          className={`p-1 rounded-lg transition-colors italic text-xs w-7 h-7 flex items-center justify-center cursor-pointer ${
+            isItalic
+              ? "bg-[#4318FF]/15 text-[#4318FF] ring-1 ring-[#4318FF]/30 font-bold shadow-2xs"
+              : "hover:bg-white hover:text-[#4318FF] hover:shadow-2xs text-slate-700"
+          }`}
+          title={isItalic ? "Italic (click to unselect)" : "Italic (Ctrl+I)"}
         >
           <Italic size={14} />
         </button>
@@ -200,8 +563,12 @@ const RichTextEditor = ({
             e.preventDefault();
             execute("underline");
           }}
-          className="p-1 rounded-lg hover:bg-white hover:text-[#4318FF] hover:shadow-2xs transition-colors underline text-xs w-7 h-7 flex items-center justify-center cursor-pointer"
-          title="Underline (Ctrl+U)"
+          className={`p-1 rounded-lg transition-colors underline text-xs w-7 h-7 flex items-center justify-center cursor-pointer ${
+            isUnderline
+              ? "bg-[#4318FF]/15 text-[#4318FF] ring-1 ring-[#4318FF]/30 font-bold shadow-2xs"
+              : "hover:bg-white hover:text-[#4318FF] hover:shadow-2xs text-slate-700"
+          }`}
+          title={isUnderline ? "Underline (click to unselect)" : "Underline (Ctrl+U)"}
         >
           <Underline size={14} />
         </button>
@@ -213,97 +580,125 @@ const RichTextEditor = ({
             e.preventDefault();
             execute("strikeThrough");
           }}
-          className="p-1 rounded-lg hover:bg-white hover:text-[#4318FF] hover:shadow-2xs transition-colors line-through text-xs w-7 h-7 flex items-center justify-center cursor-pointer"
-          title="Strikethrough"
+          className={`p-1 rounded-lg transition-colors line-through text-xs w-7 h-7 flex items-center justify-center cursor-pointer ${
+            isStrike
+              ? "bg-[#4318FF]/15 text-[#4318FF] ring-1 ring-[#4318FF]/30 font-bold shadow-2xs"
+              : "hover:bg-white hover:text-[#4318FF] hover:shadow-2xs text-slate-700"
+          }`}
+          title={isStrike ? "Strikethrough (click to unselect)" : "Strikethrough"}
         >
           <Strikethrough size={14} />
         </button>
 
         <div className="w-px h-4 bg-gray-200 mx-1" />
 
-        {/* Heading 1 */}
+        {/* Heading 1 — select & unselect */}
         <button
           type="button"
           onMouseDown={(e) => {
             e.preventDefault();
-            execute("formatBlock", "<h1>");
+            toggleHeading("h1");
           }}
-          className="px-1.5 py-0.5 rounded-lg hover:bg-white hover:text-[#4318FF] hover:shadow-2xs transition-colors font-bold text-[11px] h-7 flex items-center justify-center cursor-pointer"
-          title="Heading 1"
+          className={`px-1.5 py-0.5 rounded-lg transition-colors font-bold text-[11px] h-7 flex items-center justify-center cursor-pointer ${
+            activeHeading === "h1"
+              ? "bg-[#4318FF]/15 text-[#4318FF] ring-1 ring-[#4318FF]/30 font-bold shadow-2xs"
+              : "hover:bg-white hover:text-[#4318FF] hover:shadow-2xs text-slate-700"
+          }`}
+          title={activeHeading === "h1" ? "Heading 1 (click to unselect)" : "Heading 1"}
         >
           <Heading1 size={14} />
         </button>
 
-        {/* Heading 2 */}
+        {/* Heading 2 — select & unselect */}
         <button
           type="button"
           onMouseDown={(e) => {
             e.preventDefault();
-            execute("formatBlock", "<h2>");
+            toggleHeading("h2");
           }}
-          className="px-1.5 py-0.5 rounded-lg hover:bg-white hover:text-[#4318FF] hover:shadow-2xs transition-colors font-bold text-[11px] h-7 flex items-center justify-center cursor-pointer"
-          title="Heading 2"
+          className={`px-1.5 py-0.5 rounded-lg transition-colors font-bold text-[11px] h-7 flex items-center justify-center cursor-pointer ${
+            activeHeading === "h2"
+              ? "bg-[#4318FF]/15 text-[#4318FF] ring-1 ring-[#4318FF]/30 font-bold shadow-2xs"
+              : "hover:bg-white hover:text-[#4318FF] hover:shadow-2xs text-slate-700"
+          }`}
+          title={activeHeading === "h2" ? "Heading 2 (click to unselect)" : "Heading 2"}
         >
           <Heading2 size={14} />
         </button>
 
-        {/* Paragraph */}
+        {/* Normal Text — select / reset to paragraph */}
         <button
           type="button"
           onMouseDown={(e) => {
             e.preventDefault();
-            execute("formatBlock", "<p>");
+            toggleNormal();
           }}
-          className="px-1.5 py-0.5 rounded-lg hover:bg-white hover:text-[#4318FF] hover:shadow-2xs transition-colors text-[11px] font-semibold h-7 flex items-center justify-center cursor-pointer text-slate-600"
-          title="Normal Text"
+          className={`px-1.5 py-0.5 rounded-lg transition-colors text-[11px] font-semibold h-7 flex items-center justify-center cursor-pointer ${
+            activeHeading === "p" && !isBlockquoteActive
+              ? "bg-[#4318FF]/15 text-[#4318FF] ring-1 ring-[#4318FF]/30 font-bold shadow-2xs"
+              : "hover:bg-white hover:text-[#4318FF] hover:shadow-2xs text-slate-600"
+          }`}
+          title="Normal Text (Paragraph)"
         >
           Normal
         </button>
 
         <div className="w-px h-4 bg-gray-200 mx-1" />
 
-        {/* Bullet List */}
+        {/* Bullet List — select & unselect */}
         <button
           type="button"
           onMouseDown={(e) => {
             e.preventDefault();
             execute("insertUnorderedList");
           }}
-          className="p-1 rounded-lg hover:bg-white hover:text-[#4318FF] hover:shadow-2xs transition-colors text-xs w-7 h-7 flex items-center justify-center cursor-pointer"
-          title="Bullet List"
+          className={`p-1 rounded-lg transition-colors text-xs w-7 h-7 flex items-center justify-center cursor-pointer ${
+            isList
+              ? "bg-[#4318FF]/15 text-[#4318FF] ring-1 ring-[#4318FF]/30 font-bold shadow-2xs"
+              : "hover:bg-white hover:text-[#4318FF] hover:shadow-2xs text-slate-700"
+          }`}
+          title={isList ? "Bullet List (click to unselect)" : "Bullet List"}
         >
           <List size={14} />
         </button>
 
-        {/* Numbered List */}
+        {/* Numbered List — select & unselect */}
         <button
           type="button"
           onMouseDown={(e) => {
             e.preventDefault();
             execute("insertOrderedList");
           }}
-          className="p-1 rounded-lg hover:bg-white hover:text-[#4318FF] hover:shadow-2xs transition-colors text-xs w-7 h-7 flex items-center justify-center cursor-pointer"
-          title="Numbered List"
+          className={`p-1 rounded-lg transition-colors text-xs w-7 h-7 flex items-center justify-center cursor-pointer ${
+            isOrderedList
+              ? "bg-[#4318FF]/15 text-[#4318FF] ring-1 ring-[#4318FF]/30 font-bold shadow-2xs"
+              : "hover:bg-white hover:text-[#4318FF] hover:shadow-2xs text-slate-700"
+          }`}
+          title={isOrderedList ? "Numbered List (click to unselect)" : "Numbered List"}
         >
           <ListOrdered size={14} />
         </button>
 
-        {/* Blockquote */}
+        {/* Blockquote — toggles on/off and unselects cleanly */}
         <button
           type="button"
           onMouseDown={(e) => {
             e.preventDefault();
-            execute("formatBlock", "<blockquote>");
+            toggleBlockquote();
           }}
-          className="p-1 rounded-lg hover:bg-white hover:text-[#4318FF] hover:shadow-2xs transition-colors text-xs w-7 h-7 flex items-center justify-center cursor-pointer"
-          title="Quote"
+          className={`p-1 rounded-lg transition-colors text-xs w-7 h-7 flex items-center justify-center cursor-pointer ${
+            isBlockquoteActive
+              ? "bg-[#4318FF]/15 text-[#4318FF] font-bold ring-1 ring-[#4318FF]/30 shadow-2xs"
+              : "hover:bg-white hover:text-[#4318FF] hover:shadow-2xs text-slate-700"
+          }`}
+          title={isBlockquoteActive ? "Quote (click to unselect)" : "Quote"}
         >
           <Quote size={14} />
         </button>
 
         <div className="w-px h-4 bg-gray-200 mx-1" />
 
-        {/* Text Color Picker */}
+        {/* Highlight Color Picker (Background) — select & unselect */}
         <div className="relative" ref={colorPickerRef}>
           <button
             type="button"
@@ -312,58 +707,69 @@ const RichTextEditor = ({
               saveSelection();
               setIsColorPickerOpen((prev) => !prev);
             }}
-            className="p-1 rounded-lg hover:bg-white hover:text-[#4318FF] hover:shadow-2xs transition-colors text-xs w-7 h-7 flex flex-col items-center justify-center cursor-pointer relative"
-            title="Text Color"
+            className={`p-1 rounded-lg transition-colors text-xs w-7 h-7 flex flex-col items-center justify-center cursor-pointer relative ${
+              isColorPickerOpen || activeColor
+                ? "bg-[#4318FF]/15 text-[#4318FF] ring-1 ring-[#4318FF]/30 shadow-2xs font-bold"
+                : "hover:bg-white hover:text-[#4318FF] hover:shadow-2xs text-slate-700"
+            }`}
+            title="Highlight Color (Click to select/unselect highlight)"
           >
-            <Palette size={13} />
+            <Highlighter size={13} />
             <span
               className="w-3.5 h-[2.5px] rounded-full mt-[1px]"
-              style={{ backgroundColor: currentColor }}
+              style={{ backgroundColor: activeColor || currentColor }}
             />
           </button>
 
           {isColorPickerOpen && (
             <div
-              className="absolute left-0 top-full mt-1 z-30 bg-white border border-gray-200 rounded-xl shadow-lg p-2.5 w-48 space-y-2 animate-fadeIn"
+              className="absolute left-0 top-full mt-1 z-30 bg-white border border-gray-200 rounded-xl shadow-lg p-2.5 w-52 space-y-2 animate-fadeIn"
               onMouseDown={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
-                  Text Color
+                  Highlight Color
                 </span>
                 <button
                   type="button"
                   onMouseDown={(e) => {
                     e.preventDefault();
-                    applyColor("#1B2559");
+                    clearColor();
                     setIsColorPickerOpen(false);
                   }}
-                  className="text-[10px] font-semibold text-slate-400 hover:text-slate-700 cursor-pointer"
+                  className="text-[10px] font-bold text-slate-500 hover:text-red-600 cursor-pointer bg-slate-100 hover:bg-red-50 px-1.5 py-0.5 rounded transition-colors"
                 >
-                  Reset
+                  Unselect / Clear
                 </button>
               </div>
 
               {/* Preset Swatches */}
               <div className="grid grid-cols-6 gap-1.5">
-                {PRESET_COLORS.map((c) => (
-                  <button
-                    key={c.value}
-                    type="button"
-                    title={c.label}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      applyColor(c.value);
-                      setIsColorPickerOpen(false);
-                    }}
-                    style={{ backgroundColor: c.value }}
-                    className={`w-6 h-6 rounded-md transition-transform hover:scale-110 cursor-pointer border ${
-                      currentColor === c.value
-                        ? "ring-2 ring-[#4318FF] ring-offset-1 border-transparent"
-                        : "border-gray-200/80"
-                    }`}
-                  />
-                ))}
+                {PRESET_COLORS.map((c) => {
+                  const isSelected = isColorMatch(c.value, activeColor);
+                  return (
+                    <button
+                      key={c.value}
+                      type="button"
+                      title={isSelected ? `${c.label} (click to unselect)` : c.label}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        applyColor(c.value);
+                        setIsColorPickerOpen(false);
+                      }}
+                      style={{ backgroundColor: c.value }}
+                      className={`w-6 h-6 rounded-md transition-transform hover:scale-110 cursor-pointer border relative flex items-center justify-center ${
+                        isSelected
+                          ? "ring-2 ring-[#4318FF] ring-offset-1 border-transparent shadow-2xs scale-105"
+                          : "border-gray-200/80"
+                      }`}
+                    >
+                      {isSelected && (
+                        <Check size={12} className="text-slate-800 stroke-[3]" />
+                      )}
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Custom Color Input */}
@@ -392,7 +798,14 @@ const RichTextEditor = ({
         ref={editorRef}
         contentEditable
         onInput={handleInput}
-        onFocus={() => setIsFocused(true)}
+        onPaste={handlePaste}
+        onKeyUp={checkEditorState}
+        onMouseUp={checkEditorState}
+        onSelect={checkEditorState}
+        onFocus={() => {
+          setIsFocused(true);
+          checkEditorState();
+        }}
         onBlur={() => {
           setIsFocused(false);
           handleInput();
@@ -401,7 +814,8 @@ const RichTextEditor = ({
           placeholder ||
           "Write your notes, key updates, documentation, or action items here..."
         }
-        className="notes-rich-editor-content custom-scrollbar"
+        className="notes-rich-editor-content custom-scrollbar flex-1"
+        style={{ minHeight: "330px" }}
       />
     </div>
   );
@@ -529,12 +943,108 @@ const stripHtmlTags = (html?: string) => {
   return html.replace(/<[^>]*>?/gm, "").trim();
 };
 
-const htmlToPlainText = (html?: string) => {
+const htmlToPlainText = (html?: string): string => {
   if (!html) return "";
   try {
     const temp = document.createElement("div");
     temp.innerHTML = html;
-    return (temp.innerText || temp.textContent || "").trim();
+
+    const lines: string[] = [];
+
+    const walkNode = (node: Node, listType: "ul" | "ol" | null, listIndex: { n: number }) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const text = node.textContent || "";
+        if (text.trim()) {
+          // Append to the last line if inside a block element that already started a line
+          if (lines.length > 0 && lines[lines.length - 1] !== "") {
+            lines[lines.length - 1] += text;
+          } else {
+            lines.push(text);
+          }
+        }
+        return;
+      }
+      if (node.nodeType !== Node.ELEMENT_NODE) return;
+      const el = node as Element;
+      const tag = el.tagName.toLowerCase();
+
+      if (tag === "ul" || tag === "ol") {
+        const newListType = tag as "ul" | "ol";
+        const counter = { n: 0 };
+        el.childNodes.forEach((child) => walkNode(child, newListType, counter));
+        return;
+      }
+
+      if (tag === "li") {
+        listIndex.n += 1;
+        const prefix = listType === "ol" ? `${listIndex.n}. ` : "• ";
+        // Collect all text inside this li
+        const liTemp = document.createElement("div");
+        liTemp.innerHTML = (el as HTMLElement).innerHTML;
+        const liText = (liTemp.innerText || liTemp.textContent || "").replace(/\n/g, " ").trim();
+        if (liText) {
+          lines.push(`${prefix}${liText}`);
+        }
+        return;
+      }
+
+      // Block-level elements that start a new line
+      const isBlock = [
+        "p", "div", "h1", "h2", "h3", "h4", "h5", "h6",
+        "blockquote", "pre", "br",
+      ].includes(tag);
+
+      if (tag === "br") {
+        lines.push("");
+        return;
+      }
+
+      if (isBlock) {
+        // Ensure previous block is separated
+        if (lines.length > 0 && lines[lines.length - 1] !== "") {
+          lines.push("");
+        }
+        const innerTemp = document.createElement("div");
+        // Only collect direct text/inline children (not nested blocks/lists)
+        el.childNodes.forEach((child) => {
+          if (child.nodeType === Node.TEXT_NODE) {
+            innerTemp.appendChild(child.cloneNode(true));
+          } else if (child.nodeType === Node.ELEMENT_NODE) {
+            const childTag = (child as Element).tagName.toLowerCase();
+            if (!["ul", "ol", "li", "p", "div", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "pre"].includes(childTag)) {
+              innerTemp.appendChild(child.cloneNode(true));
+            }
+          }
+        });
+        const blockText = (innerTemp.innerText || innerTemp.textContent || "").trim();
+        if (blockText) {
+          lines.push(blockText);
+          lines.push("");
+        }
+        // Now walk nested block/list children
+        el.childNodes.forEach((child) => {
+          if (child.nodeType === Node.ELEMENT_NODE) {
+            const childTag = (child as Element).tagName.toLowerCase();
+            if (["ul", "ol", "p", "div", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "pre"].includes(childTag)) {
+              walkNode(child, null, { n: 0 });
+            }
+          }
+        });
+        return;
+      }
+
+      // Inline elements — just walk children
+      el.childNodes.forEach((child) => walkNode(child, listType, listIndex));
+    };
+
+    temp.childNodes.forEach((child) => walkNode(child, null, { n: 0 }));
+
+    // Clean up: collapse multiple consecutive blank lines, trim leading/trailing blank lines
+    const result = lines
+      .join("\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+    return result;
   } catch {
     return stripHtmlTags(html);
   }
@@ -570,6 +1080,24 @@ const getAuthHeaders = () => {
   };
 };
 
+const getDecodedToken = () => {
+  try {
+    const rawToken =
+      Storage.local.get("TimeSheet-authenticationToken") ||
+      Storage.session.get("TimeSheet-authenticationToken") ||
+      localStorage.getItem("TimeSheet-authenticationToken") ||
+      sessionStorage.getItem("TimeSheet-authenticationToken");
+    if (!rawToken || typeof rawToken !== "string") return null;
+    const parts = rawToken.split(".");
+    if (parts.length >= 2) {
+      return JSON.parse(atob(parts[1]));
+    }
+  } catch {
+    // Ignore decode error
+  }
+  return null;
+};
+
 // Optional Manager/Admin access: checks common role/authority shapes so
 // managers or admins can manage notes for employees other than themselves.
 // Adjust the field names below if your auth payload uses different keys.
@@ -593,13 +1121,113 @@ const hasManagerAccess = (user: any): boolean => {
   );
 };
 
+interface NoteDownloadDropdownProps {
+  hasContent: boolean;
+  onDownload: (format: "doc" | "pdf") => void;
+}
+
+const NoteDownloadDropdown = ({
+  hasContent,
+  onDownload,
+}: NoteDownloadDropdownProps) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener("mousedown", handleOutsideClick);
+    }
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [isOpen]);
+
+  if (!hasContent) return null;
+
+  return (
+    <div className="relative inline-block text-left" ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-[#4318FF] bg-blue-50/70 hover:bg-blue-100/70 rounded-lg transition-all cursor-pointer border border-blue-100/80 shadow-2xs"
+        title="Download description (PDF, Word Document)"
+      >
+        <Download size={13} />
+        <span>Download</span>
+        <ChevronDown
+          size={11}
+          className={`transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {isOpen && (
+        <div className="absolute right-0 top-full mt-1.5 z-50 w-44 bg-white border border-gray-200 rounded-xl shadow-xl p-1.5 space-y-0.5 animate-fadeIn">
+          <div className="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+            Choose Format
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setIsOpen(false);
+              onDownload("pdf");
+            }}
+            className="w-full flex items-center gap-2.5 px-2.5 py-1.5 text-xs text-slate-700 hover:bg-red-50 hover:text-red-700 rounded-lg transition-colors cursor-pointer font-medium text-left"
+          >
+            <span className="w-5 h-5 rounded bg-red-100 text-red-600 flex items-center justify-center text-[10px] font-bold shrink-0">
+              PDF
+            </span>
+            <div className="flex-1 min-w-0">
+              <span className="font-semibold block text-[12px] leading-tight">PDF Document</span>
+              <span className="text-[10px] text-slate-400 block">.pdf format</span>
+            </div>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setIsOpen(false);
+              onDownload("doc");
+            }}
+            className="w-full flex items-center gap-2.5 px-2.5 py-1.5 text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-colors cursor-pointer font-medium text-left"
+          >
+            <span className="w-5 h-5 rounded bg-blue-100 text-[#4318FF] flex items-center justify-center text-[10px] font-bold shrink-0">
+              DOC
+            </span>
+            <div className="flex-1 min-w-0">
+              <span className="font-semibold block text-[12px] leading-tight">Word Document</span>
+              <span className="text-[10px] text-slate-400 block">.doc format</span>
+            </div>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const EmployeeNotes = () => {
   const { entity } = useAppSelector((state) => state.employeeDetails);
   const { currentUser } = useAppSelector((state) => state.user);
   const navigate = useNavigate();
   const location = useLocation();
 
-  const employeeId = entity?.employeeId || currentUser?.loginId || "";
+  const isManagerRoute = location.pathname.startsWith("/manager-dashboard");
+  const baseDashboardPath = isManagerRoute ? "/manager-dashboard" : "/employee-dashboard";
+  const baseNotesPath = `${baseDashboardPath}/employee-notes`;
+
+  const tokenPayload = useMemo(() => getDecodedToken(), []);
+
+  const employeeId =
+    entity?.employeeId ||
+    currentUser?.employeeId ||
+    currentUser?.loginId ||
+    (currentUser as any)?.id ||
+    tokenPayload?.employeeId ||
+    tokenPayload?.sub ||
+    tokenPayload?.loginId ||
+    localStorage.getItem("employeeId") ||
+    "";
   const authorName =
     currentUser?.aliasLoginName ||
     entity?.fullName ||
@@ -741,12 +1369,335 @@ const EmployeeNotes = () => {
   const [rowModalParentNoteId, setRowModalParentNoteId] = useState<string | null>(null);
   const rowModalFileInputRef = useRef<HTMLInputElement>(null);
 
+  // Action Loading State (for View, Edit, Delete buttons)
+  const [actionLoadingNoteId, setActionLoadingNoteId] = useState<string | null>(null);
+  const [actionLoadingType, setActionLoadingType] = useState<NoteActionType | null>(null);
+  const [isCenterLoading, setIsCenterLoading] = useState(false);
+
   // Toast notification
   const [toastMessage, setToastMessage] = useState<NoteToastMessage | null>(null);
+  const toastTimeoutRef = useRef<number | null>(null);
 
-  const showToast = (text: string, type: "success" | "error" | "info" = "success") => {
+  const showToast = (
+    text: string,
+    type: "success" | "error" | "info" | "delete" | "loading" = "success"
+  ) => {
+    if (toastTimeoutRef.current) {
+      window.clearTimeout(toastTimeoutRef.current);
+    }
     setToastMessage({ text, type });
-    window.setTimeout(() => setToastMessage(null), 3000);
+    if (type !== "loading") {
+      toastTimeoutRef.current = window.setTimeout(() => setToastMessage(null), 3500);
+    }
+  };
+
+  // Drag and drop states for file uploads
+  const [isMainModalDragging, setIsMainModalDragging] = useState(false);
+  const [isRowModalDragging, setIsRowModalDragging] = useState(false);
+
+  const processUploadedFiles = (
+    files: FileList | File[],
+    target: "main" | "row"
+  ) => {
+    if (!files || files.length === 0) return;
+    const fileList = Array.from(files);
+    fileList.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const newFile: NoteFile = {
+          id: `file-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          dataUrl: reader.result as string,
+        };
+        if (target === "row") {
+          setRowModalFiles((prev) => [...prev, newFile]);
+        } else {
+          setFormFiles((prev) => [...prev, newFile]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const downloadDescriptionAsPdf = (
+    htmlContent: string,
+    fileName: string,
+    title?: string
+  ) => {
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 44;
+    const maxLineWidth = pageWidth - margin * 2;
+    const normalLineHeight = 16;
+    let y = margin + 14;
+
+    const ensureSpace = (needed: number) => {
+      if (y + needed > pageHeight - margin) {
+        doc.addPage();
+        y = margin + 14;
+      }
+    };
+
+    // Render title above description in large text size with black color
+    if (title && title.trim()) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(20);
+      doc.setTextColor(0, 0, 0);
+      const titleLines = doc.splitTextToSize(title.trim(), maxLineWidth);
+      ensureSpace(titleLines.length * 24 + 14);
+      doc.text(titleLines, margin, y);
+      y += titleLines.length * 24 + 14;
+    }
+
+    const parser = new DOMParser();
+    const parsed = parser.parseFromString(`<div>${htmlContent || ""}</div>`, "text/html");
+    const container = parsed.body.firstElementChild || parsed.body;
+
+    const renderNode = (node: Node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const text = node.textContent?.replace(/\s+/g, " ").trim();
+        if (text) {
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(11);
+          doc.setTextColor(30, 41, 59);
+          const lines = doc.splitTextToSize(text, maxLineWidth);
+          ensureSpace(lines.length * normalLineHeight + 6);
+          doc.text(lines, margin, y);
+          y += lines.length * normalLineHeight + 6;
+        }
+        return;
+      }
+
+      if (node.nodeType !== Node.ELEMENT_NODE) return;
+      const el = node as HTMLElement;
+      const tag = el.tagName.toLowerCase();
+
+      if (tag === "h1") {
+        const text = el.textContent?.trim();
+        if (text) {
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(16);
+          doc.setTextColor(15, 23, 42);
+          const lines = doc.splitTextToSize(text, maxLineWidth);
+          ensureSpace(lines.length * 20 + 8);
+          doc.text(lines, margin, y);
+          y += lines.length * 20 + 8;
+        }
+        return;
+      }
+
+      if (tag === "h2" || tag === "h3") {
+        const text = el.textContent?.trim();
+        if (text) {
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(13);
+          doc.setTextColor(15, 23, 42);
+          const lines = doc.splitTextToSize(text, maxLineWidth);
+          ensureSpace(lines.length * 18 + 6);
+          doc.text(lines, margin, y);
+          y += lines.length * 18 + 6;
+        }
+        return;
+      }
+
+      if (tag === "ul") {
+        const lis = Array.from(el.querySelectorAll(":scope > li"));
+        lis.forEach((li) => {
+          const text = li.textContent?.trim();
+          if (!text) return;
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(11);
+          doc.setTextColor(30, 41, 59);
+          const bulletIndent = 16;
+          const lines = doc.splitTextToSize(text, maxLineWidth - bulletIndent);
+          ensureSpace(lines.length * normalLineHeight + 5);
+          doc.text("\u2022", margin, y);
+          doc.text(lines, margin + bulletIndent, y);
+          y += lines.length * normalLineHeight + 5;
+        });
+        y += 4;
+        return;
+      }
+
+      if (tag === "ol") {
+        const lis = Array.from(el.querySelectorAll(":scope > li"));
+        lis.forEach((li, idx) => {
+          const text = li.textContent?.trim();
+          if (!text) return;
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(11);
+          doc.setTextColor(30, 41, 59);
+          const prefix = `${idx + 1}.`;
+          const numIndent = 20;
+          const lines = doc.splitTextToSize(text, maxLineWidth - numIndent);
+          ensureSpace(lines.length * normalLineHeight + 5);
+          doc.text(prefix, margin, y);
+          doc.text(lines, margin + numIndent, y);
+          y += lines.length * normalLineHeight + 5;
+        });
+        y += 4;
+        return;
+      }
+
+      if (tag === "blockquote") {
+        const text = el.textContent?.trim();
+        if (text) {
+          doc.setFont("helvetica", "italic");
+          doc.setFontSize(11);
+          doc.setTextColor(71, 85, 105);
+          const bqIndent = 16;
+          const lines = doc.splitTextToSize(text, maxLineWidth - bqIndent);
+          const blockHeight = lines.length * normalLineHeight + 8;
+          ensureSpace(blockHeight);
+          doc.setDrawColor(67, 24, 255);
+          doc.setLineWidth(2.5);
+          doc.line(margin, y - 9, margin, y - 9 + blockHeight - 4);
+          doc.text(lines, margin + bqIndent, y);
+          y += blockHeight;
+        }
+        return;
+      }
+
+      if (tag === "p") {
+        const text = el.textContent?.trim();
+        if (text) {
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(11);
+          doc.setTextColor(30, 41, 59);
+          const lines = doc.splitTextToSize(text, maxLineWidth);
+          ensureSpace(lines.length * normalLineHeight + 6);
+          doc.text(lines, margin, y);
+          y += lines.length * normalLineHeight + 6;
+        } else {
+          y += 8;
+        }
+        return;
+      }
+
+      if (tag === "br") {
+        y += 8;
+        return;
+      }
+
+      Array.from(el.childNodes).forEach(renderNode);
+    };
+
+    Array.from(container.childNodes).forEach(renderNode);
+    doc.save(`${fileName}.pdf`);
+  };
+
+  const downloadDescriptionAsDoc = (
+    htmlContent: string,
+    fileName: string,
+    title?: string
+  ) => {
+    const displayTitle = title?.trim() || "";
+    const titleHtml = displayTitle
+      ? `<h1 style="font-size: 20pt; font-weight: bold; color: #000000; margin-top: 0; margin-bottom: 14pt; line-height: 1.3;">${escapeHtml(displayTitle)}</h1>`
+      : "";
+    const htmlDoc = `<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+  body { font-family: Calibri, Arial, sans-serif; margin: 2cm; color: #1e293b; }
+  .note-body { font-size: 11pt; line-height: 1.65; color: #334155; }
+  .note-body p { margin-bottom: 8pt; }
+  .note-body ul, .note-body ol { padding-left: 20pt; margin-bottom: 8pt; }
+  .note-body li { margin-bottom: 4pt; }
+  .note-body blockquote { border-left: 4px solid #4318FF; background: #f8fafc; padding: 6pt 12pt; color: #475569; font-style: italic; margin: 8pt 0; }
+</style></head><body>
+${titleHtml}
+<div class="note-body">
+${htmlContent || "<p></p>"}
+</div>
+</body></html>`;
+    const blob = new Blob([htmlDoc], { type: "application/msword;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${fileName}.doc`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadDescription = async (
+    htmlContent?: string,
+    noteTitle?: string,
+    format: "doc" | "pdf" | "docx" | "txt" = "pdf"
+  ) => {
+    const text = htmlToPlainText(htmlContent || "");
+    if (!text.trim()) {
+      showToast("Description is empty, nothing to download", "info");
+      return;
+    }
+    const cleanTitle = (noteTitle || "description")
+      .trim()
+      .replace(/[^a-zA-Z0-9_\-\s]/g, "")
+      .replace(/\s+/g, "_")
+      .toLowerCase() || "description";
+
+    // Call backend API to export document
+    try {
+      if (ENABLE_REMOTE_API) {
+        const response = await fetch(`${EMPLOYEE_NOTES_API}/export`, {
+          method: "POST",
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            htmlContent: htmlContent || "",
+            title: noteTitle || "",
+            format,
+            employeeId,
+            noteId: activeNoteId || undefined,
+          }),
+        });
+
+        if (response.ok) {
+          const blob = await response.blob();
+          const ext = format === "doc" || format === "docx" ? "doc" : format === "txt" ? "txt" : "pdf";
+          const filename = `${cleanTitle}.${ext}`;
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+
+          showToast(
+            format === "doc" || format === "docx"
+              ? "Downloaded Word document (.doc) successfully"
+              : format === "txt"
+              ? "Downloaded text document successfully"
+              : "Downloaded PDF successfully",
+            "success"
+          );
+          return;
+        } else {
+          console.warn(`Export API returned status ${response.status}, using client fallback`);
+        }
+      }
+    } catch (apiErr) {
+      console.warn("Export API request failed, using client fallback:", apiErr);
+    }
+
+    // Client-side fallback
+    if (format === "doc" || format === "docx") {
+      downloadDescriptionAsDoc(htmlContent || "", cleanTitle || "description", noteTitle);
+      showToast("Downloaded Word document (.doc) successfully", "success");
+    } else {
+      try {
+        downloadDescriptionAsPdf(htmlContent || "", cleanTitle || "description", noteTitle);
+        showToast("Downloaded PDF successfully", "success");
+      } catch (err) {
+        console.error("Failed to generate PDF:", err);
+        showToast("Failed to generate PDF. Please try Word format.", "error");
+      }
+    }
   };
 
   /*
@@ -784,8 +1735,32 @@ const EmployeeNotes = () => {
 
             if (cancelled) return;
 
-            setNotes(apiNotes);
-            localStorage.setItem(storageKey, JSON.stringify(apiNotes));
+            const raw = localStorage.getItem(storageKey);
+            const localNotes: EmployeeNote[] = raw ? JSON.parse(raw) : [];
+            const apiIds = new Set(apiNotes.map((an) => String(an.id)));
+            const mergedApiNotes = apiNotes.map((an) => {
+              const localMatch = localNotes.find(
+                (ln) => String(ln.id) === String(an.id)
+              );
+              const parentNoteId =
+                an.parentNoteId || localMatch?.parentNoteId || null;
+              const category =
+                an.category ||
+                localMatch?.category ||
+                (an.projectName ? "Project Note" : "Personal Note");
+              return {
+                ...an,
+                category,
+                parentNoteId,
+              };
+            });
+            const localUnsynced = localNotes.filter(
+              (ln) => !apiIds.has(String(ln.id))
+            );
+            const allNotesList = [...mergedApiNotes, ...localUnsynced];
+
+            setNotes(allNotesList);
+            localStorage.setItem(storageKey, JSON.stringify(allNotesList));
             return;
           }
 
@@ -824,9 +1799,9 @@ const EmployeeNotes = () => {
 
   // Extract project name parameter from URL (/employee-dashboard/:projectName/employee-notes or /employee-dashboard/employee-notes/:projectName)
   const getProjectNameFromUrl = (): string | null => {
-    // Pattern 1: /employee-dashboard/:projectName/employee-notes
+    // Pattern 1: /(employee-dashboard|manager-dashboard)/:projectName/employee-notes
     const match1 = location.pathname.match(
-      /\/employee-dashboard\/([^/]+)\/employee-notes/i
+      /\/(?:employee-dashboard|manager-dashboard)\/([^/]+)\/employee-notes/i
     );
     if (match1 && match1[1]) {
       try {
@@ -852,18 +1827,46 @@ const EmployeeNotes = () => {
     return null;
   };
 
+  const skipUrlSyncRef = useRef(false);
+
   // Sync editor view state with URL (for direct links and browser back/forward navigation)
   useEffect(() => {
+    if (skipUrlSyncRef.current) {
+      skipUrlSyncRef.current = false;
+      return;
+    }
+
     const urlProject = getProjectNameFromUrl();
 
     if (urlProject) {
       if (notes.length > 0) {
         const decoded = urlProject.toLowerCase();
-        // Priority 1: Top-level project note matching projectName
-        // Priority 2: Any note matching projectName
-        // Priority 3: Note matching title
-        // Priority 4: Note matching id
+
+        // If the editor is already open in view mode displaying this exact note, keep it
+        if (isEditorOpen && activeNoteId && modalMode === "view") {
+          const currentActive = notes.find((n) => n.id === activeNoteId);
+          if (currentActive) {
+            const currentSlug = getNoteProjectSlug(currentActive).toLowerCase();
+            if (
+              currentSlug === decoded ||
+              currentActive.id === urlProject ||
+              (currentActive.title || "").trim().toLowerCase() === decoded ||
+              (currentActive.projectName || "").trim().toLowerCase() === decoded
+            ) {
+              return;
+            }
+          }
+        }
+
+        // Priority 1: Match by exact note ID
+        // Priority 2: Match note by exact title (sub-notes or personal notes)
+        // Priority 3: Match top-level project note by project name
+        // Priority 4: Match any note by project name
         const matched =
+          notes.find((n) => n.id === urlProject) ||
+          notes.find(
+            (n) => (n.title || "").trim().toLowerCase() === decoded
+          ) ||
           notes.find(
             (n) =>
               (n.projectName || "").trim().toLowerCase() === decoded &&
@@ -871,11 +1874,7 @@ const EmployeeNotes = () => {
           ) ||
           notes.find(
             (n) => (n.projectName || "").trim().toLowerCase() === decoded
-          ) ||
-          notes.find(
-            (n) => (n.title || "").trim().toLowerCase() === decoded
-          ) ||
-          notes.find((n) => n.id === urlProject);
+          );
 
         if (matched) {
           if (!isEditorOpen || activeNoteId !== matched.id || modalMode !== "view") {
@@ -890,6 +1889,7 @@ const EmployeeNotes = () => {
             setFormRows(matched.rows ? [...matched.rows] : []);
             setFormErrors({});
             setDraftSavedAt(null);
+            setEditorParentNoteId(matched.parentNoteId || null);
             setIsEditorOpen(true);
           }
         }
@@ -907,17 +1907,14 @@ const EmployeeNotes = () => {
     }
   }, [location.pathname, notes, isEditorOpen, activeNoteId, modalMode]);
  
-  // Ensure "Project" notes filter is default whenever user navigates to Employee Notes
-  const prevPathRef = useRef(location.pathname);
+  // Ensure "Project" notes filter is default on initial mount only
+  const hasSetInitialFilterRef = useRef(false);
   useEffect(() => {
-    if (
-      prevPathRef.current !== location.pathname &&
-      location.pathname === "/employee-dashboard/employee-notes"
-    ) {
+    if (!hasSetInitialFilterRef.current) {
+      hasSetInitialFilterRef.current = true;
       setSelectedFilter("Project");
     }
-    prevPathRef.current = location.pathname;
-  }, [location.pathname]);
+  }, []);
 
   // Filter and Search — exclude child notes (they live in sub-tables only)
   const filteredNotes = useMemo(() => {
@@ -925,10 +1922,21 @@ const EmployeeNotes = () => {
       // Child notes (added via a row's sub-table) should not appear in the main table
       if (n.parentNoteId) return false;
 
+      const cat = (n.category || "").trim().toLowerCase();
+      const hasProject = Boolean(n.projectName && n.projectName.trim());
+
+      const isProjectNote =
+        cat.includes("project") ||
+        (hasProject && !cat.includes("personal"));
+
+      const isPersonalNote =
+        cat.includes("personal") ||
+        (!hasProject && !cat.includes("project"));
+
       const matchesFilter =
         selectedFilter === "All" ||
-        (selectedFilter === "Project" && n.category === "Project Note") ||
-        (selectedFilter === "Personal" && n.category === "Personal Note") ||
+        (selectedFilter === "Project" && isProjectNote) ||
+        (selectedFilter === "Personal" && isPersonalNote) ||
         n.category === selectedFilter;
 
       if (!search.trim()) return matchesFilter;
@@ -955,6 +1963,27 @@ const EmployeeNotes = () => {
       return matchesFilter && matchesSearch;
     });
   }, [notes, search, selectedFilter]);
+
+  // Count visible parent notes by category
+  const projectNotesCount = useMemo(() => {
+    return notes.filter((n) => {
+      if (n.parentNoteId) return false;
+      const cat = (n.category || "").trim().toLowerCase();
+      const hasProject = Boolean(n.projectName && n.projectName.trim());
+      return cat.includes("project") || (hasProject && !cat.includes("personal"));
+    }).length;
+  }, [notes]);
+
+  const personalNotesCount = useMemo(() => {
+    return notes.filter((n) => {
+      if (n.parentNoteId) return false;
+      const cat = (n.category || "").trim().toLowerCase();
+      const hasProject = Boolean(n.projectName && n.projectName.trim());
+      return cat.includes("personal") || (!hasProject && !cat.includes("project"));
+    }).length;
+  }, [notes]);
+
+  const totalParentNotesCount = projectNotesCount + personalNotesCount;
 
   // Reset pagination when search or filter changes
   useEffect(() => {
@@ -994,26 +2023,9 @@ const EmployeeNotes = () => {
    * MODAL FILE UPLOAD HANDLING
    */
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    const fileList = Array.from(files);
-    fileList.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const newFile: NoteFile = {
-          id: `file-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          dataUrl: reader.result as string,
-        };
-
-        setFormFiles((prev) => [...prev, newFile]);
-      };
-      reader.readAsDataURL(file);
-    });
-
+    if (e.target.files && e.target.files.length > 0) {
+      processUploadedFiles(e.target.files, "main");
+    }
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -1173,17 +2185,18 @@ const EmployeeNotes = () => {
   };
 
   /*
-   * DETERMINES THE PROJECT SLUG FOR URL (e.g. /employee-dashboard/employee-notes/:projectName)
+   * DETERMINES THE PROJECT SLUG FOR URL (e.g. /employee-dashboard/:projectName/employee-notes)
    */
   const getNoteProjectSlug = (note: EmployeeNote): string => {
+    // Child notes (sub-table notes) should use their own title or ID so the URL uniquely identifies this specific sub-note
+    if (note.parentNoteId) {
+      if (note.title && note.title.trim()) {
+        return note.title.trim();
+      }
+      return note.id;
+    }
     if (note.projectName && note.projectName.trim()) {
       return note.projectName.trim();
-    }
-    if (note.parentNoteId) {
-      const parent = notes.find((p) => p.id === note.parentNoteId);
-      if (parent?.projectName && parent.projectName.trim()) {
-        return parent.projectName.trim();
-      }
     }
     if (note.title && note.title.trim()) {
       return note.title.trim();
@@ -1195,8 +2208,8 @@ const EmployeeNotes = () => {
    * OPEN CREATE NOTE / EDIT NOTE (Full Page In-Place View)
    */
   const openCreateNote = (category: NoteCategory = "Project Note") => {
-    if (location.pathname !== "/employee-dashboard/employee-notes") {
-      navigate("/employee-dashboard/employee-notes");
+    if (location.pathname !== baseNotesPath) {
+      navigate(baseNotesPath);
     }
     setModalMode("create");
     setActiveNoteId(null);
@@ -1209,102 +2222,222 @@ const EmployeeNotes = () => {
     setFormRows([]);
     setFormErrors({});
     setDraftSavedAt(null);
+    setEditorParentNoteId(null);
+    if (category === "Project Note") {
+      setSelectedFilter("Project");
+    } else {
+      setSelectedFilter("Personal");
+    }
+    setSearch("");
+    setCurrentPage(1);
     setIsEditorOpen(true);
 
-    // Auto Save recovery: offer to restore an unsaved draft
+    // Discard any leftover draft from a previous session — open fresh every time
     try {
-      const raw = localStorage.getItem(draftKey);
-      if (raw) {
-        const draft = JSON.parse(raw);
-        if (
-          draft?.mode === "create" &&
-          (draft.projectName || draft.title || draft.description || draft.rows?.length)
-        ) {
-          const wantsRestore = window.confirm(
-            "We found an unsaved draft from a previous session. Restore it?"
-          );
-          if (wantsRestore) {
-            setFormProjectName(draft.projectName || "");
-            setFormTitle(draft.title || "");
-            setFormCategory(draft.category || category);
-            setFormDescription(draft.description || "");
-            setFormRows(draft.rows || []);
-            setDraftSavedAt(draft.savedAt || null);
-          } else {
-            localStorage.removeItem(draftKey);
-          }
-        }
-      }
+      localStorage.removeItem(draftKey);
     } catch {
-      // ignore malformed draft data
+      // ignore
     }
   };
 
-  const openEditModal = (note: EmployeeNote) => {
-    if (location.pathname !== "/employee-dashboard/employee-notes") {
-      navigate("/employee-dashboard/employee-notes");
-    }
-    setModalMode("edit");
-    setActiveNoteId(note.id);
-    setActiveNote(note);
-    setFormProjectName(note.projectName || "");
-    setFormTitle(note.title || "");
-    setFormCategory(note.category || "Personal Note");
-    setFormDescription(note.content || "");
-    setFormFiles(note.files ? [...note.files] : []);
-    setFormRows(note.rows ? [...note.rows] : []);
-    setFormErrors({});
-    setDraftSavedAt(null);
-    setIsEditorOpen(true);
+  const openEditModal = async (note: EmployeeNote) => {
+    if (!note || !note.id) return;
+    if (actionLoadingNoteId || isCenterLoading) return;
+    setActionLoadingNoteId(note.id);
+    setActionLoadingType("edit");
+    setIsCenterLoading(true);
 
-    // Auto Save recovery: offer to restore edits left unsaved for this note
+    const startTime = Date.now();
+
     try {
-      const raw = localStorage.getItem(draftKey);
-      if (raw) {
-        const draft = JSON.parse(raw);
-        if (draft?.mode === "edit" && draft.noteId === note.id) {
-          const wantsRestore = window.confirm(
-            "We found unsaved changes for this note from a previous session. Restore them?"
+      let resolvedNote = { ...note };
+
+      // Call GET API to fetch latest note details on edit
+      if (ENABLE_REMOTE_API && note.id) {
+        const empId =
+          note.employeeId ||
+          employeeId ||
+          currentUser?.employeeId ||
+          currentUser?.loginId ||
+          tokenPayload?.employeeId ||
+          tokenPayload?.sub ||
+          "default";
+        try {
+          const response = await fetch(
+            `${EMPLOYEE_NOTES_API}/${encodeURIComponent(empId)}/${encodeURIComponent(note.id)}`,
+            {
+              method: "GET",
+              headers: getAuthHeaders(),
+            }
           );
-          if (wantsRestore) {
-            setFormProjectName(draft.projectName ?? note.projectName ?? "");
-            setFormTitle(draft.title ?? note.title ?? "");
-            setFormCategory(draft.category || note.category || "Personal Note");
-            setFormDescription(draft.description ?? note.content ?? "");
-            setFormRows(draft.rows || note.rows || []);
-            setDraftSavedAt(draft.savedAt || null);
-          } else {
-            localStorage.removeItem(draftKey);
+          if (response.ok) {
+            const freshData = await response.json();
+            const freshNote: EmployeeNote = freshData?.data ?? freshData;
+            if (freshNote) {
+              resolvedNote = { ...resolvedNote, ...freshNote };
+            }
+          } else if (response.status === 404) {
+            try {
+              const fallbackResp = await fetch(
+                `${EMPLOYEE_NOTES_API}/${encodeURIComponent(note.id)}`,
+                {
+                  method: "GET",
+                  headers: getAuthHeaders(),
+                }
+              );
+              if (fallbackResp.ok) {
+                const freshData = await fallbackResp.json();
+                const freshNote: EmployeeNote = freshData?.data ?? freshData;
+                if (freshNote) {
+                  resolvedNote = { ...resolvedNote, ...freshNote };
+                }
+              }
+            } catch {
+              // Ignore fallback error
+            }
           }
+        } catch (err) {
+          console.warn("Failed to fetch note details on edit:", err);
         }
       }
-    } catch {
-      // ignore malformed draft data
+
+      // Ensure spinner in center of page displays for 1 second (1000ms)
+      const elapsed = Date.now() - startTime;
+      if (elapsed < 1000) {
+        await new Promise((resolve) => setTimeout(resolve, 1000 - elapsed));
+      }
+
+      skipUrlSyncRef.current = true;
+      if (location.pathname !== baseNotesPath) {
+        navigate(baseNotesPath);
+      }
+      setActiveNoteId(resolvedNote.id);
+      setActiveNote(resolvedNote);
+      setFormProjectName(resolvedNote.projectName || "");
+      setFormTitle(resolvedNote.title || "");
+      setFormCategory(resolvedNote.category || (resolvedNote.projectName ? "Project Note" : "Personal Note"));
+      setFormDescription(resolvedNote.content || "");
+      setFormFiles(resolvedNote.files ? [...resolvedNote.files] : []);
+      setFormRows(resolvedNote.rows ? [...resolvedNote.rows] : []);
+      setFormErrors({});
+      setDraftSavedAt(null);
+      setEditorParentNoteId(resolvedNote.parentNoteId || null);
+
+      // Discard any leftover edit draft — always load note fresh from the server
+      try {
+        localStorage.removeItem(draftKey);
+      } catch {
+        // ignore
+      }
+
+      setModalMode("edit");
+      setIsEditorOpen(true);
+    } finally {
+      setIsCenterLoading(false);
+      setActionLoadingNoteId(null);
+      setActionLoadingType(null);
+      setToastMessage(null);
     }
   };
 
-  const openViewNote = (note: EmployeeNote) => {
-    setModalMode("view");
-    setActiveNoteId(note.id);
-    setActiveNote(note);
-    setFormProjectName(note.projectName || "");
-    setFormTitle(note.title || "");
-    setFormCategory(note.category || "Project Note");
-    setFormDescription(note.content || "");
-    setFormFiles(note.files ? [...note.files] : []);
-    setFormRows(note.rows ? [...note.rows] : []);
-    setFormErrors({});
-    setDraftSavedAt(null);
-    setIsEditorOpen(true);
+  const openViewNote = async (note: EmployeeNote) => {
+    if (!note || !note.id) return;
+    if (actionLoadingNoteId || isCenterLoading) return;
+    setActionLoadingNoteId(note.id);
+    setActionLoadingType("view");
+    setIsCenterLoading(true);
 
-    const projectSlug = getNoteProjectSlug(note);
-    const targetUrl = `/employee-dashboard/${encodeURIComponent(projectSlug)}/employee-notes`;
-    if (location.pathname !== targetUrl) {
-      navigate(targetUrl);
+    const startTime = Date.now();
+
+    try {
+      let resolvedNote = { ...note };
+
+      // Call GET API to fetch latest note details on view
+      if (ENABLE_REMOTE_API && note.id) {
+        const empId =
+          note.employeeId ||
+          employeeId ||
+          currentUser?.employeeId ||
+          currentUser?.loginId ||
+          tokenPayload?.employeeId ||
+          tokenPayload?.sub ||
+          "default";
+        try {
+          const response = await fetch(
+            `${EMPLOYEE_NOTES_API}/${encodeURIComponent(empId)}/${encodeURIComponent(note.id)}`,
+            {
+              method: "GET",
+              headers: getAuthHeaders(),
+            }
+          );
+          if (response.ok) {
+            const freshData = await response.json();
+            const freshNote: EmployeeNote = freshData?.data ?? freshData;
+            if (freshNote) {
+              resolvedNote = { ...resolvedNote, ...freshNote };
+            }
+          } else if (response.status === 404) {
+            try {
+              const fallbackResp = await fetch(
+                `${EMPLOYEE_NOTES_API}/${encodeURIComponent(note.id)}`,
+                {
+                  method: "GET",
+                  headers: getAuthHeaders(),
+                }
+              );
+              if (fallbackResp.ok) {
+                const freshData = await fallbackResp.json();
+                const freshNote: EmployeeNote = freshData?.data ?? freshData;
+                if (freshNote) {
+                  resolvedNote = { ...resolvedNote, ...freshNote };
+                }
+              }
+            } catch {
+              // Ignore fallback error
+            }
+          }
+        } catch (err) {
+          console.warn("Failed to fetch note details on view:", err);
+        }
+      }
+
+      // Ensure spinner in center of page displays for 1 second (1000ms)
+      const elapsed = Date.now() - startTime;
+      if (elapsed < 1000) {
+        await new Promise((resolve) => setTimeout(resolve, 1000 - elapsed));
+      }
+
+      skipUrlSyncRef.current = true;
+      setActiveNoteId(resolvedNote.id);
+      setActiveNote(resolvedNote);
+      setFormProjectName(resolvedNote.projectName || "");
+      setFormTitle(resolvedNote.title || "");
+      setFormCategory(resolvedNote.category || (resolvedNote.projectName ? "Project Note" : "Personal Note"));
+      setFormDescription(resolvedNote.content || "");
+      setFormFiles(resolvedNote.files ? [...resolvedNote.files] : []);
+      setFormRows(resolvedNote.rows ? [...resolvedNote.rows] : []);
+      setFormErrors({});
+      setDraftSavedAt(null);
+      setEditorParentNoteId(resolvedNote.parentNoteId || null);
+
+      const projectSlug = getNoteProjectSlug(resolvedNote);
+      const targetUrl = `${baseDashboardPath}/${encodeURIComponent(projectSlug)}/employee-notes`;
+      if (location.pathname !== targetUrl) {
+        navigate(targetUrl);
+      }
+
+      setModalMode("view");
+      setIsEditorOpen(true);
+    } finally {
+      setIsCenterLoading(false);
+      setActionLoadingNoteId(null);
+      setActionLoadingType(null);
+      setToastMessage(null);
     }
   };
 
   const closeEditor = () => {
+    skipUrlSyncRef.current = true;
     try {
       localStorage.removeItem(draftKey);
     } catch {
@@ -1323,15 +2456,15 @@ const EmployeeNotes = () => {
     setFormFiles([]);
     setFormRows([]);
 
-    if (location.pathname !== "/employee-dashboard/employee-notes") {
-      navigate("/employee-dashboard/employee-notes");
+    if (location.pathname !== baseNotesPath) {
+      navigate(baseNotesPath);
     }
   };
 
   // Opens the full-page editor in create mode pre-filled for the parent note's category.
   const openSubTableCreateNote = (projectName: string, parentNoteId: string, category: NoteCategory = "Project Note") => {
-    if (location.pathname !== "/employee-dashboard/employee-notes") {
-      navigate("/employee-dashboard/employee-notes");
+    if (location.pathname !== baseNotesPath) {
+      navigate(baseNotesPath);
     }
     setModalMode("create");
     setActiveNoteId(null);
@@ -1374,25 +2507,9 @@ const EmployeeNotes = () => {
   };
 
   const handleRowModalFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    const fileList = Array.from(files);
-    fileList.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const newFile: NoteFile = {
-          id: `file-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          dataUrl: reader.result as string,
-        };
-        setRowModalFiles((prev) => [...prev, newFile]);
-      };
-      reader.readAsDataURL(file);
-    });
-
+    if (e.target.files && e.target.files.length > 0) {
+      processUploadedFiles(e.target.files, "row");
+    }
     if (rowModalFileInputRef.current) {
       rowModalFileInputRef.current.value = "";
     }
@@ -1406,7 +2523,7 @@ const EmployeeNotes = () => {
     e.preventDefault();
     if (!employeeId || isRowModalSubmitting) return;
 
-    const errors: { title?: string; projectName?: string } = {};
+    const errors: RowModalErrors = {};
     const trimmedTitle = rowModalTitle.trim();
     const trimmedProjectName = rowModalProjectName.trim();
 
@@ -1415,6 +2532,9 @@ const EmployeeNotes = () => {
     }
     if (!trimmedTitle) {
       errors.title = "Project Title is required";
+    }
+    if (isDescriptionEmpty(rowModalDescription)) {
+      errors.description = "Description is required";
     }
 
     if (Object.keys(errors).length > 0) {
@@ -1478,7 +2598,7 @@ const EmployeeNotes = () => {
           setNotes(updated);
           localStorage.setItem(storageKey, JSON.stringify(updated));
           closeRowCreateNoteModal();
-          showToast("Note created and saved to server!");
+          showToast("Successfully saved your note");
           return;
         }
       }
@@ -1488,13 +2608,13 @@ const EmployeeNotes = () => {
       setNotes(updated);
       localStorage.setItem(storageKey, JSON.stringify(updated));
       closeRowCreateNoteModal();
-      showToast("Note created successfully!");
+      showToast("Successfully saved your note");
     } catch {
       const updated = [newNote, ...notes];
       setNotes(updated);
       localStorage.setItem(storageKey, JSON.stringify(updated));
       closeRowCreateNoteModal();
-      showToast("Note created locally!");
+      showToast("Successfully saved your note");
     } finally {
       setIsRowModalSubmitting(false);
     }
@@ -1557,7 +2677,7 @@ const EmployeeNotes = () => {
     if (modalMode === "view") return;
     if (!employeeId || isSubmitting) return;
 
-    const errors: { title?: string; projectName?: string } = {};
+    const errors: NoteFormErrors = {};
     const trimmedTitle = formTitle.trim();
     const trimmedProjectName = formProjectName.trim();
 
@@ -1569,6 +2689,9 @@ const EmployeeNotes = () => {
         formCategory === "Project Note"
           ? "Project Title is required"
           : "Title is required";
+    }
+    if (isDescriptionEmpty(formDescription)) {
+      errors.description = "Description is required";
     }
 
     if (Object.keys(errors).length > 0) {
@@ -1625,17 +2748,26 @@ const EmployeeNotes = () => {
 
           if (response.ok) {
             const result = await response.json();
-            // Always preserve parentNoteId from newNote (API may not return it)
+            // Always preserve parentNoteId and category from newNote
             const saved: EmployeeNote = {
               ...(result?.data || result || newNote),
               parentNoteId: newNote.parentNoteId || null,
+              category: formCategory,
+              projectName:
+                formCategory === "Project Note" ? trimmedProjectName : undefined,
+              title: trimmedTitle,
             };
             const updated = [saved, ...notes];
             setNotes(updated);
             localStorage.setItem(storageKey, JSON.stringify(updated));
             localStorage.removeItem(draftKey);
+            if (!newNote.parentNoteId) {
+              setSelectedFilter(formCategory === "Project Note" ? "Project" : "Personal");
+              setSearch("");
+              setCurrentPage(1);
+            }
             closeEditor();
-            showToast("Note created and saved to server!");
+            showToast("Successfully saved your note");
             return;
           }
         }
@@ -1645,15 +2777,25 @@ const EmployeeNotes = () => {
         setNotes(updated);
         localStorage.setItem(storageKey, JSON.stringify(updated));
         localStorage.removeItem(draftKey);
+        if (!newNote.parentNoteId) {
+          setSelectedFilter(formCategory === "Project Note" ? "Project" : "Personal");
+          setSearch("");
+          setCurrentPage(1);
+        }
         closeEditor();
-        showToast("Note created successfully!");
+        showToast("Successfully saved your note");
       } catch {
         const updated = [newNote, ...notes];
         setNotes(updated);
         localStorage.setItem(storageKey, JSON.stringify(updated));
         localStorage.removeItem(draftKey);
+        if (!newNote.parentNoteId) {
+          setSelectedFilter(formCategory === "Project Note" ? "Project" : "Personal");
+          setSearch("");
+          setCurrentPage(1);
+        }
         closeEditor();
-        showToast("Note created locally!");
+        showToast("Successfully saved your note");
       } finally {
         setIsSubmitting(false);
       }
@@ -1662,6 +2804,7 @@ const EmployeeNotes = () => {
       if (!activeNoteId) return;
 
       const existing = notes.find((n) => n.id === activeNoteId);
+      const parentId = existing?.parentNoteId ?? editorParentNoteId ?? null;
       const updatedNote: EmployeeNote = {
         id: activeNoteId,
         employeeId,
@@ -1677,6 +2820,7 @@ const EmployeeNotes = () => {
         updatedBy: currentCreator,
         createdAt: existing?.createdAt || nowIso,
         updatedAt: nowIso,
+        parentNoteId: parentId,
       };
 
       try {
@@ -1690,6 +2834,7 @@ const EmployeeNotes = () => {
             rows: updatedNote.rows,
             files: updatedNote.files,
             updatedBy: currentCreator,
+            parentNoteId: parentId,
           };
 
           const response = await fetch(
@@ -1705,15 +2850,27 @@ const EmployeeNotes = () => {
 
           if (response.ok) {
             const result = await response.json();
-            const saved: EmployeeNote = result?.data || result || updatedNote;
+            const saved: EmployeeNote = {
+              ...(result?.data || result || updatedNote),
+              parentNoteId: parentId,
+              category: formCategory,
+              projectName:
+                formCategory === "Project Note" ? trimmedProjectName : undefined,
+              title: trimmedTitle,
+            };
             const updated = notes.map((n) =>
               n.id === activeNoteId ? saved : n
             );
             setNotes(updated);
             localStorage.setItem(storageKey, JSON.stringify(updated));
             localStorage.removeItem(draftKey);
+            if (!parentId) {
+              setSelectedFilter(formCategory === "Project Note" ? "Project" : "Personal");
+              setSearch("");
+              setCurrentPage(1);
+            }
             closeEditor();
-            showToast("Note updated on server!");
+            showToast("Successfully saved your note");
             return;
           }
         }
@@ -1725,8 +2882,13 @@ const EmployeeNotes = () => {
         setNotes(updated);
         localStorage.setItem(storageKey, JSON.stringify(updated));
         localStorage.removeItem(draftKey);
+        if (!parentId) {
+          setSelectedFilter(formCategory === "Project Note" ? "Project" : "Personal");
+          setSearch("");
+          setCurrentPage(1);
+        }
         closeEditor();
-        showToast("Note updated successfully!");
+        showToast("Successfully saved your note");
       } catch {
         const updated = notes.map((n) =>
           n.id === activeNoteId ? updatedNote : n
@@ -1734,8 +2896,13 @@ const EmployeeNotes = () => {
         setNotes(updated);
         localStorage.setItem(storageKey, JSON.stringify(updated));
         localStorage.removeItem(draftKey);
+        if (!parentId) {
+          setSelectedFilter(formCategory === "Project Note" ? "Project" : "Personal");
+          setSearch("");
+          setCurrentPage(1);
+        }
         closeEditor();
-        showToast("Note updated locally!");
+        showToast("Successfully saved your note");
       } finally {
         setIsSubmitting(false);
       }
@@ -1745,48 +2912,143 @@ const EmployeeNotes = () => {
   /*
    * DELETE NOTE (DELETE to Backend API)
    */
-  const confirmDelete = async () => {
-    if (!noteToDelete || !employeeId || isDeleting) return;
+  const executeDeleteNoteApi = async (note: EmployeeNote) => {
+    if (!note || !note.id || isDeleting) return;
 
-    const id = noteToDelete.id;
+    const id = note.id;
+    const empId =
+      note.employeeId ||
+      employeeId ||
+      currentUser?.employeeId ||
+      currentUser?.loginId ||
+      tokenPayload?.employeeId ||
+      tokenPayload?.sub ||
+      "default";
+
     setIsDeleting(true);
+    setActionLoadingNoteId(id);
+    setActionLoadingType("delete");
 
     try {
       if (ENABLE_REMOTE_API) {
-        await fetch(
-          `${EMPLOYEE_NOTES_API}/${encodeURIComponent(
-            employeeId
-          )}/${encodeURIComponent(id)}`,
+        const response = await fetch(
+          `${EMPLOYEE_NOTES_API}/${encodeURIComponent(empId)}/${encodeURIComponent(id)}`,
           {
             method: "DELETE",
             headers: getAuthHeaders(),
           }
         );
+
+        if (!response.ok && response.status === 404) {
+          try {
+            await fetch(`${EMPLOYEE_NOTES_API}/${encodeURIComponent(id)}`, {
+              method: "DELETE",
+              headers: getAuthHeaders(),
+            });
+          } catch {
+            // ignore fallback error
+          }
+        }
       }
-    } catch {
-      // Continue to remove locally
+    } catch (err) {
+      console.warn("Failed to delete note via API:", err);
     } finally {
-      const updated = notes.filter((n) => n.id !== id);
+      const updated = notes.filter(
+        (n) =>
+          String(n.id) !== String(id) &&
+          String(n.parentNoteId || "") !== String(id)
+      );
       setNotes(updated);
       localStorage.setItem(storageKey, JSON.stringify(updated));
       setIsDeleting(false);
+      setActionLoadingNoteId(null);
+      setActionLoadingType(null);
       setNoteToDelete(null);
-      showToast("Note deleted successfully!");
     }
+  };
+
+  const handleDeleteNote = async (note: EmployeeNote) => {
+    if (!note || !note.id || isDeleting || isCenterLoading) return;
+    setActionLoadingNoteId(note.id);
+    setActionLoadingType("delete");
+    setIsCenterLoading(true);
+
+    try {
+      // 1 second spinner loading in center of page
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Open pop message in center of page to cancel or confirm
+      setNoteToDelete(note);
+    } finally {
+      setIsCenterLoading(false);
+      setActionLoadingNoteId(null);
+      setActionLoadingType(null);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!noteToDelete || isDeleting) return;
+    await executeDeleteNoteApi(noteToDelete);
   };
 
   return (
     <div className="flex-1 flex flex-col px-3 md:px-5 py-3 min-h-0 bg-[#F4F7FE] font-sans">
-      {/* Toast Notification */}
+      {/* Center Page Spinner (Worksphere Logo Loader) */}
+      {isCenterLoading && (
+        <div
+          className="fixed inset-0 z-[99999] flex items-center justify-center bg-white/60 backdrop-blur-[2px] animate-fadeIn"
+          aria-busy="true"
+          aria-label="Loading"
+        >
+          <div className="logo-loader">
+            <img src={LogoTop} alt="Top" className="logo-top" />
+            <img src={LogoBottom} alt="Bottom" className="logo-bottom" />
+          </div>
+        </div>
+      )}
+
+      {/* Pop Message Notification on Header Top Middle */}
       {toastMessage && (
         <div
-          className={`fixed top-5 right-5 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg text-sm font-medium transition-all ${toastMessage.type === "success"
-            ? "bg-emerald-600 text-white"
-            : "bg-red-600 text-white"
-            }`}
+          role="alert"
+          aria-live="assertive"
+          style={{ left: "50%", transform: "translateX(-50%)" }}
+          className={`fixed top-4 sm:top-5 z-[99999] flex items-center gap-2.5 px-5 py-2.5 rounded-full shadow-[0px_16px_36px_rgba(0,0,0,0.18)] bg-white/95 backdrop-blur-md border pointer-events-none animate-popIn ring-1 ring-black/5 ${
+            toastMessage.type === "delete" || toastMessage.type === "error"
+              ? "border-rose-200/90 text-slate-800"
+              : toastMessage.type === "loading"
+              ? "border-blue-200/90 text-slate-800"
+              : "border-emerald-200/90 text-slate-800"
+          }`}
         >
-          <Check size={16} />
-          {toastMessage.text}
+          <div
+            className={`flex items-center justify-center w-6 h-6 rounded-full shrink-0 shadow-xs ${
+              toastMessage.type === "delete" || toastMessage.type === "error"
+                ? "bg-rose-500 text-white shadow-rose-400/40"
+                : toastMessage.type === "loading"
+                ? "bg-[#4318FF] text-white shadow-blue-400/40"
+                : "bg-emerald-500 text-white shadow-emerald-400/40"
+            }`}
+          >
+            {toastMessage.type === "delete" ? (
+              <Trash2 size={13} className="stroke-[2.5]" />
+            ) : toastMessage.type === "loading" ? (
+              <Loader2 size={13} className="animate-spin stroke-[2.5]" />
+            ) : (
+              <Check size={14} className="stroke-[3]" />
+            )}
+          </div>
+          <span className="text-slate-800 font-bold text-xs sm:text-sm tracking-normal whitespace-nowrap">
+            {toastMessage.text}
+          </span>
+          <span
+            className={`w-1.5 h-1.5 rounded-full shrink-0 ml-0.5 ${
+              toastMessage.type === "delete" || toastMessage.type === "error"
+                ? "bg-rose-500 animate-pulse"
+                : toastMessage.type === "loading"
+                ? "bg-[#4318FF] animate-pulse"
+                : "bg-emerald-500 animate-pulse"
+            }`}
+          />
         </div>
       )}
 
@@ -1798,7 +3060,7 @@ const EmployeeNotes = () => {
             <form
               id="note-fullpage-form"
               onSubmit={handleSaveModal}
-              className="max-w-5xl mx-auto space-y-3 pb-8"
+              className="w-full space-y-3 pb-8"
             >
               {/* 1. TOP HEADER ROW: Project Name & Title + Back button on top */}
               <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 pb-2.5 border-b border-gray-200">
@@ -1911,46 +3173,26 @@ const EmployeeNotes = () => {
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="block text-xs sm:text-[13px] font-bold font-sans text-black uppercase tracking-wider">
-                    Description
+                    Description {modalMode !== "view" && <span className="text-red-500">*</span>}
                   </label>
-                  {modalMode === "view" && formDescription && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleCopyText(
-                          htmlToPlainText(formDescription) || formDescription
+                  <div className="flex items-center gap-3">
+                    <NoteDownloadDropdown
+                      hasContent={Boolean(formDescription && formDescription.trim())}
+                      onDownload={(format) =>
+                        handleDownloadDescription(
+                          formDescription,
+                          formTitle || formProjectName,
+                          format
                         )
                       }
-                      className={`inline-flex items-center gap-1.5 text-xs font-semibold cursor-pointer transition-all ${
-                        isCopied
-                          ? "text-emerald-600 font-bold"
-                          : "text-[#4318FF] hover:underline"
-                      }`}
-                      title={
-                        isCopied
-                          ? "Copied to clipboard"
-                          : "Copy description text"
-                      }
-                    >
-                      {isCopied ? (
-                        <>
-                          <Check size={14} className="text-emerald-600 stroke-[2.5]" />
-                          <span className="text-emerald-600 font-bold">Copied</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy size={13} />
-                          <span>Copy text</span>
-                        </>
-                      )}
-                    </button>
-                  )}
+                    />
+                  </div>
                 </div>
 
                 {modalMode === "view" ? (
                   <div
                     style={{ resize: "vertical" }}
-                    className="w-full min-h-[140px] max-h-[750px] overflow-auto resize-y p-4 bg-gray-50/50 rounded-xl border border-gray-200 text-sm font-sans text-slate-800 leading-relaxed shadow-2xs prose prose-slate max-w-none [&_b]:font-bold [&_strong]:font-bold [&_i]:italic [&_em]:italic [&_u]:underline [&_h1]:text-lg [&_h1]:font-bold [&_h2]:text-base [&_h2]:font-bold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5"
+                    className="w-full min-h-[350px] max-h-[850px] overflow-auto resize-y p-4 sm:p-5 bg-gray-50/50 rounded-xl border border-gray-200 text-sm font-sans text-slate-800 leading-relaxed shadow-2xs prose prose-slate max-w-none [&_b]:font-bold [&_strong]:font-bold [&_i]:italic [&_em]:italic [&_u]:underline [&_h1]:text-lg [&_h1]:font-bold [&_h2]:text-base [&_h2]:font-bold [&_ul]:list-disc [&_ul]:ml-4.5 [&_ul]:pl-1 [&_ul_li]:mb-2 [&_ol]:list-decimal [&_ol]:ml-5.5 [&_ol]:pl-1 [&_ol_li]:mb-2 [&_blockquote]:border-l-4 [&_blockquote]:border-[#4318FF] [&_blockquote]:bg-indigo-50/60 [&_blockquote]:py-1.5 [&_blockquote]:px-3.5 [&_blockquote]:rounded-r-xl [&_blockquote]:italic [&_blockquote]:my-2.5 [&_blockquote]:text-slate-700"
                     dangerouslySetInnerHTML={{
                       __html:
                         formDescription ||
@@ -1958,11 +3200,41 @@ const EmployeeNotes = () => {
                     }}
                   />
                 ) : (
-                  <RichTextEditor
-                    initialValue={formDescription}
-                    onChange={(html) => setFormDescription(html)}
-                    placeholder="Write your notes, key updates, documentation, or action items here..."
-                  />
+                  <>
+                    <div
+                      className={
+                        formErrors.description
+                          ? "rounded-xl border border-red-400 ring-2 ring-red-100"
+                          : ""
+                      }
+                    >
+                      <RichTextEditor
+                        initialValue={formDescription}
+                        onChange={(html) => {
+                          setFormDescription(html);
+                          if (formErrors.description) {
+                            setFormErrors((prev) => ({
+                              ...prev,
+                              description: undefined,
+                            }));
+                          }
+                        }}
+                        placeholder="Write your notes, key updates, documentation, or action items here..."
+                        minHeight="380px"
+                        onDownload={() =>
+                          handleDownloadDescription(
+                            formDescription,
+                            formTitle || formProjectName
+                          )
+                        }
+                      />
+                    </div>
+                    {formErrors.description && (
+                      <p className="mt-1 text-xs font-semibold text-red-500">
+                        {formErrors.description}
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -1986,16 +3258,43 @@ const EmployeeNotes = () => {
                 {modalMode !== "view" && (
                   <div
                     onClick={() => fileInputRef.current?.click()}
-                    className="inline-flex items-center gap-2.5 border border-dashed border-gray-200 hover:border-[#4318FF] rounded-xl py-2 px-4 bg-gray-50/60 hover:bg-blue-50/30 transition-all cursor-pointer group"
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsMainModalDragging(true);
+                    }}
+                    onDragEnter={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsMainModalDragging(true);
+                    }}
+                    onDragLeave={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsMainModalDragging(false);
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsMainModalDragging(false);
+                      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                        processUploadedFiles(e.dataTransfer.files, "main");
+                      }
+                    }}
+                    className={`inline-flex items-center gap-2.5 border rounded-xl py-2 px-4 transition-all cursor-pointer group ${
+                      isMainModalDragging
+                        ? "border-[#4318FF] bg-blue-50/70 ring-2 ring-[#4318FF]/20"
+                        : "border-dashed border-gray-200 hover:border-[#4318FF] bg-gray-50/60 hover:bg-blue-50/30"
+                    }`}
                   >
                     <div className="w-7 h-7 rounded-lg bg-blue-50 group-hover:bg-blue-100 flex items-center justify-center text-[#4318FF] transition-colors shrink-0 shadow-2xs">
                       <UploadCloud size={16} />
                     </div>
                     <p className="text-xs font-bold font-sans text-slate-800 whitespace-nowrap">
                       <span className="text-[#4318FF] underline underline-offset-2 font-extrabold">
-                        Click to upload
+                        {isMainModalDragging ? "Drop files now" : "Click to upload"}
                       </span>{" "}
-                      or drag and drop
+                      {isMainModalDragging ? "to attach" : "or drag and drop"}
                       <span className="hidden md:inline text-[11px] text-slate-400 font-normal ml-1.5">
                         (PDF, Word, Excel, images)
                       </span>
@@ -2213,36 +3512,112 @@ const EmployeeNotes = () => {
                 </div>
               ) : filteredNotes.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-64 text-center p-6">
-                  <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-[#4318FF] mb-3">
-                    <FileText size={22} />
-                  </div>
-                  <p className="text-sm font-bold text-[#2B3674]">
-                    {notes.length === 0
-                      ? "No notes created yet"
-                      : "No matching notes found"}
-                  </p>
-                  <p className="text-xs text-[#707EAE] mt-1 max-w-xs">
-                    {notes.length === 0
-                      ? "Click '+ Create Note' to add your project or personal details."
-                      : "Try clearing your search query or switching filters."}
-                  </p>
-                  {notes.length === 0 && canManageNotes && (
-                    <div className="mt-4 flex items-center gap-2.5 flex-wrap justify-center">
-                      <button
-                        onClick={() => openCreateNote("Project Note")}
-                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#4318FF] hover:bg-[#3410d1] text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-2xs"
-                      >
-                        <Plus size={14} className="stroke-[2.5]" />
-                        Create Project Note
-                      </button>
-                      <button
-                        onClick={() => openCreateNote("Personal Note")}
-                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-white hover:bg-gray-50 text-[#4318FF] border border-gray-200 text-xs font-bold rounded-xl transition-all cursor-pointer shadow-2xs"
-                      >
-                        <Plus size={14} className="stroke-[2.5]" />
-                        Create Personal Note
-                      </button>
-                    </div>
+                  {totalParentNotesCount === 0 ? (
+                    <>
+                      <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-[#4318FF] mb-3">
+                        <FileText size={22} />
+                      </div>
+                      <p className="text-sm sm:text-base font-bold text-[#2B3674]">
+                        No notes created yet
+                      </p>
+                      <p className="text-xs text-[#707EAE] mt-1 max-w-sm">
+                        Click &apos;+ Create Project Note&apos; or &apos;+ Create Personal Note&apos; above to add your notes.
+                      </p>
+                    </>
+                  ) : search.trim() ? (
+                    <>
+                      <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-[#4318FF] mb-3">
+                        <Search size={22} />
+                      </div>
+                      <p className="text-sm sm:text-base font-bold text-[#2B3674]">
+                        No matching notes found
+                      </p>
+                      <p className="text-xs text-[#707EAE] mt-1 max-w-sm">
+                        No {selectedFilter === "Personal" ? "personal" : "project"} notes match &quot;{search}&quot;. Try clearing your search query.
+                      </p>
+                      <div className="mt-4 flex items-center gap-2.5 flex-wrap justify-center">
+                        <button
+                          type="button"
+                          onClick={() => setSearch("")}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#4318FF] hover:bg-[#3410d1] text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-2xs"
+                        >
+                          Clear Search
+                        </button>
+                        {((selectedFilter === "Project" && personalNotesCount > 0) ||
+                          (selectedFilter === "Personal" && projectNotesCount > 0)) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedFilter(
+                                selectedFilter === "Personal" ? "Project" : "Personal"
+                              );
+                              setSearch("");
+                            }}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gray-100 hover:bg-gray-200 text-slate-700 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                          >
+                            Switch to{" "}
+                            {selectedFilter === "Personal"
+                              ? `Project Notes (${projectNotesCount})`
+                              : `Personal Notes (${personalNotesCount})`}
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-[#4318FF] mb-3">
+                        <FileText size={22} />
+                      </div>
+                      <p className="text-sm sm:text-base font-bold text-[#2B3674]">
+                        {selectedFilter === "Personal"
+                          ? "No Personal Notes found"
+                          : "No Project Notes found"}
+                      </p>
+                      <p className="text-xs text-[#707EAE] mt-1 max-w-sm">
+                        {selectedFilter === "Personal"
+                          ? `You haven't created any personal notes yet. You have ${projectNotesCount} project note${projectNotesCount === 1 ? "" : "s"}.`
+                          : `You haven't created any project notes yet. You have ${personalNotesCount} personal note${personalNotesCount === 1 ? "" : "s"}.`}
+                      </p>
+                      <div className="mt-4 flex items-center gap-2.5 flex-wrap justify-center">
+                        {canManageNotes && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              openCreateNote(
+                                selectedFilter === "Personal"
+                                  ? "Personal Note"
+                                  : "Project Note"
+                              )
+                            }
+                            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#4318FF] hover:bg-[#3410d1] text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-2xs"
+                          >
+                            <Plus size={14} className="stroke-[2.5]" />
+                            Create{" "}
+                            {selectedFilter === "Personal"
+                              ? "Personal Note"
+                              : "Project Note"}
+                          </button>
+                        )}
+                        {((selectedFilter === "Project" && personalNotesCount > 0) ||
+                          (selectedFilter === "Personal" && projectNotesCount > 0)) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedFilter(
+                                selectedFilter === "Personal" ? "Project" : "Personal"
+                              );
+                              setSearch("");
+                            }}
+                            className="inline-flex items-center gap-1.5 px-4 py-2 bg-white hover:bg-gray-50 text-[#4318FF] border border-gray-200 text-xs font-bold rounded-xl transition-all cursor-pointer shadow-2xs"
+                          >
+                            Switch to{" "}
+                            {selectedFilter === "Personal"
+                              ? `Project Notes (${projectNotesCount})`
+                              : `Personal Notes (${personalNotesCount})`}
+                          </button>
+                        )}
+                      </div>
+                    </>
                   )}
                 </div>
               ) : (
@@ -2337,14 +3712,12 @@ const EmployeeNotes = () => {
 
                                 {/* 3. Title */}
                                 <td className="py-4 px-4 text-left">
-                                  <button
-                                    type="button"
-                                    onClick={() => openViewNote(note)}
-                                    className="text-slate-800 hover:text-[#4318FF] text-sm font-semibold hover:underline transition-colors text-left cursor-pointer truncate max-w-[320px] block"
+                                  <span
+                                    className="text-slate-800 text-sm font-semibold truncate max-w-[320px] block"
                                     title={note.title || "Untitled note"}
                                   >
                                     {note.title || "Untitled note"}
-                                  </button>
+                                  </span>
                                 </td>
 
                                 {/* 4. Created by */}
@@ -2361,40 +3734,63 @@ const EmployeeNotes = () => {
 
                                 {/* 5. Action */}
                                 <td className="py-4 pl-2 pr-6 text-center whitespace-nowrap">
-                                  <div className="inline-flex items-center justify-center gap-1.5">
-                                    <button
-                                      type="button"
-                                      onClick={() => openViewNote(note)}
-                                      title="View Note Details"
-                                      className="p-2 rounded-lg bg-indigo-50 text-[#4318FF] hover:bg-indigo-100 hover:text-[#3311CC] transition-colors cursor-pointer"
-                                    >
-                                      <Eye size={15} />
-                                    </button>
-                                    {canManageNotes ? (
-                                      <>
+                                  {(() => {
+                                    const isNoteLoading = actionLoadingNoteId === note.id;
+                                    const isViewLoading = isNoteLoading && actionLoadingType === "view";
+                                    const isEditLoading = isNoteLoading && actionLoadingType === "edit";
+                                    const isDeleteLoading = isNoteLoading && actionLoadingType === "delete";
+                                    return (
+                                      <div className="inline-flex items-center justify-center gap-1.5">
                                         <button
                                           type="button"
-                                          onClick={() => openEditModal(note)}
-                                          title="Edit Note"
-                                          className="p-2 rounded-lg bg-blue-50 text-[#4318FF] hover:bg-blue-100 transition-colors cursor-pointer"
+                                          disabled={Boolean(actionLoadingNoteId)}
+                                          onClick={() => openViewNote(note)}
+                                          title={isViewLoading ? "Loading details..." : "View Note Details"}
+                                          className="p-2 rounded-lg bg-indigo-50 text-[#4318FF] hover:bg-indigo-100 hover:text-[#3311CC] disabled:opacity-60 disabled:cursor-not-allowed transition-colors cursor-pointer"
                                         >
-                                          <Pencil size={15} />
+                                          {isViewLoading ? (
+                                            <Loader2 size={15} className="animate-spin text-[#4318FF]" />
+                                          ) : (
+                                            <Eye size={15} />
+                                          )}
                                         </button>
-                                        <button
-                                          type="button"
-                                          onClick={() => setNoteToDelete(note)}
-                                          title="Delete Note"
-                                          className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors cursor-pointer"
-                                        >
-                                          <Trash2 size={15} />
-                                        </button>
-                                      </>
-                                    ) : (
-                                      <span className="text-xs text-slate-500 font-medium ml-1">
-                                        View only
-                                      </span>
-                                    )}
-                                  </div>
+                                        {canManageNotes ? (
+                                          <>
+                                            <button
+                                              type="button"
+                                              disabled={Boolean(actionLoadingNoteId)}
+                                              onClick={() => openEditModal(note)}
+                                              title={isEditLoading ? "Opening editor..." : "Edit Note"}
+                                              className="p-2 rounded-lg bg-blue-50 text-[#4318FF] hover:bg-blue-100 disabled:opacity-60 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                                            >
+                                              {isEditLoading ? (
+                                                <Loader2 size={15} className="animate-spin text-[#4318FF]" />
+                                              ) : (
+                                                <Pencil size={15} />
+                                              )}
+                                            </button>
+                                            <button
+                                              type="button"
+                                              disabled={Boolean(actionLoadingNoteId)}
+                                              onClick={() => handleDeleteNote(note)}
+                                              title={isDeleteLoading ? "Deleting note..." : "Delete Note"}
+                                              className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 disabled:opacity-60 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                                            >
+                                              {isDeleteLoading ? (
+                                                <Loader2 size={15} className="animate-spin text-red-500" />
+                                              ) : (
+                                                <Trash2 size={15} />
+                                              )}
+                                            </button>
+                                          </>
+                                        ) : (
+                                          <span className="text-xs text-slate-500 font-medium ml-1">
+                                            View only
+                                          </span>
+                                        )}
+                                      </div>
+                                    );
+                                  })()}
                                 </td>
                               </tr>
 
@@ -2445,14 +3841,12 @@ const EmployeeNotes = () => {
                                                       {cIdx + 1}
                                                     </td>
                                                     <td className="py-2.5 px-3 font-semibold text-slate-900">
-                                                      <button
-                                                        type="button"
-                                                        onClick={() => openViewNote(child)}
-                                                        className="text-slate-900 hover:text-[#4318FF] hover:underline text-left cursor-pointer truncate max-w-[280px] block"
+                                                      <span
+                                                        className="text-slate-900 truncate max-w-[280px] block"
                                                         title={child.title || "Untitled"}
                                                       >
                                                         {child.title || "Untitled"}
-                                                      </button>
+                                                      </span>
                                                     </td>
                                                     <td className="py-2.5 px-3 text-slate-600">
                                                       <div className="flex flex-col">
@@ -2465,36 +3859,59 @@ const EmployeeNotes = () => {
                                                       </div>
                                                     </td>
                                                     <td className="py-2.5 pr-4 pl-2 text-center">
-                                                      <div className="inline-flex items-center justify-center gap-1.5">
-                                                        <button
-                                                          type="button"
-                                                          onClick={() => openViewNote(child)}
-                                                          title="View Note"
-                                                          className="p-1 rounded-md bg-indigo-50 text-[#4318FF] hover:bg-indigo-100 transition-colors cursor-pointer"
-                                                        >
-                                                          <Eye size={13} />
-                                                        </button>
-                                                        {canManageNotes && (
-                                                          <>
+                                                      {(() => {
+                                                        const isChildLoading = actionLoadingNoteId === child.id;
+                                                        const isChildViewLoading = isChildLoading && actionLoadingType === "view";
+                                                        const isChildEditLoading = isChildLoading && actionLoadingType === "edit";
+                                                        const isChildDeleteLoading = isChildLoading && actionLoadingType === "delete";
+                                                        return (
+                                                          <div className="inline-flex items-center justify-center gap-1.5">
                                                             <button
                                                               type="button"
-                                                              onClick={() => openEditModal(child)}
-                                                              title="Edit Note"
-                                                              className="p-1 rounded-md bg-blue-50 text-[#4318FF] hover:bg-blue-100 transition-colors cursor-pointer"
+                                                              disabled={Boolean(actionLoadingNoteId)}
+                                                              onClick={() => openViewNote(child)}
+                                                              title={isChildViewLoading ? "Loading details..." : "View Note"}
+                                                              className="p-1 rounded-md bg-indigo-50 text-[#4318FF] hover:bg-indigo-100 disabled:opacity-60 disabled:cursor-not-allowed transition-colors cursor-pointer"
                                                             >
-                                                              <Pencil size={13} />
+                                                              {isChildViewLoading ? (
+                                                                <Loader2 size={13} className="animate-spin text-[#4318FF]" />
+                                                              ) : (
+                                                                <Eye size={13} />
+                                                              )}
                                                             </button>
-                                                            <button
-                                                              type="button"
-                                                              onClick={() => setNoteToDelete(child)}
-                                                              title="Delete Note"
-                                                              className="p-1 rounded-md bg-red-50 text-red-500 hover:bg-red-100 transition-colors cursor-pointer"
-                                                            >
-                                                              <Trash2 size={13} />
-                                                            </button>
-                                                          </>
-                                                        )}
-                                                      </div>
+                                                            {canManageNotes && (
+                                                              <>
+                                                                <button
+                                                                  type="button"
+                                                                  disabled={Boolean(actionLoadingNoteId)}
+                                                                  onClick={() => openEditModal(child)}
+                                                                  title={isChildEditLoading ? "Opening editor..." : "Edit Note"}
+                                                                  className="p-1 rounded-md bg-blue-50 text-[#4318FF] hover:bg-blue-100 disabled:opacity-60 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                                                                >
+                                                                  {isChildEditLoading ? (
+                                                                    <Loader2 size={13} className="animate-spin text-[#4318FF]" />
+                                                                  ) : (
+                                                                    <Pencil size={13} />
+                                                                  )}
+                                                                </button>
+                                                                <button
+                                                                  type="button"
+                                                                  disabled={Boolean(actionLoadingNoteId)}
+                                                                  onClick={() => handleDeleteNote(child)}
+                                                                  title={isChildDeleteLoading ? "Deleting note..." : "Delete Note"}
+                                                                  className="p-1 rounded-md bg-red-50 text-red-500 hover:bg-red-100 disabled:opacity-60 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                                                                >
+                                                                  {isChildDeleteLoading ? (
+                                                                    <Loader2 size={13} className="animate-spin text-red-500" />
+                                                                  ) : (
+                                                                    <Trash2 size={13} />
+                                                                  )}
+                                                                </button>
+                                                              </>
+                                                            )}
+                                                          </div>
+                                                        );
+                                                      })()}
                                                     </td>
                                                   </tr>
                                                 );
@@ -2527,8 +3944,11 @@ const EmployeeNotes = () => {
                       openViewNote={openViewNote}
                       openEditModal={openEditModal}
                       setNoteToDelete={setNoteToDelete}
+                      handleDeleteNote={handleDeleteNote}
                       openSubTableCreateNote={openSubTableCreateNote}
                       uploadingNoteId={uploadingNoteId}
+                      actionLoadingNoteId={actionLoadingNoteId}
+                      actionLoadingType={actionLoadingType}
                       handleTableDirectUpload={handleTableDirectUpload}
                       handleTableRemoveFile={handleTableRemoveFile}
                       openFilePreview={openFilePreview}
@@ -2961,14 +4381,54 @@ const EmployeeNotes = () => {
 
               {/* Description */}
               <div>
-                <label className="block text-xs sm:text-[13px] font-bold font-sans text-black mb-1.5 uppercase tracking-wider">
-                  Description
-                </label>
-                <RichTextEditor
-                  initialValue={rowModalDescription}
-                  onChange={(html) => setRowModalDescription(html)}
-                  placeholder="Write your notes, key updates, documentation, or action items here..."
-                />
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs sm:text-[13px] font-bold font-sans text-black uppercase tracking-wider">
+                    Description <span className="text-red-500">*</span>
+                  </label>
+                  <NoteDownloadDropdown
+                    hasContent={Boolean(rowModalDescription && rowModalDescription.trim())}
+                    onDownload={(format) =>
+                      handleDownloadDescription(
+                        rowModalDescription,
+                        rowModalTitle || rowModalProjectName,
+                        format
+                      )
+                    }
+                  />
+                </div>
+                <div
+                  className={
+                    rowModalErrors.description
+                      ? "rounded-xl border border-red-400 ring-2 ring-red-100"
+                      : ""
+                  }
+                >
+                  <RichTextEditor
+                    initialValue={rowModalDescription}
+                    onChange={(html) => {
+                      setRowModalDescription(html);
+                      if (rowModalErrors.description) {
+                        setRowModalErrors((prev) => ({
+                          ...prev,
+                          description: undefined,
+                        }));
+                      }
+                    }}
+                    placeholder="Write your notes, key updates, documentation, or action items here..."
+                    minHeight="240px"
+                    onDownload={() =>
+                      handleDownloadDescription(
+                        rowModalDescription,
+                        rowModalTitle || rowModalProjectName
+                      )
+                    }
+                  />
+                </div>
+                {rowModalErrors.description && (
+                  <p className="mt-1 text-xs font-semibold text-red-500">
+                    {rowModalErrors.description}
+                  </p>
+                )}
               </div>
 
               {/* Files & Attachments */}
@@ -2988,7 +4448,34 @@ const EmployeeNotes = () => {
                 {/* Drop zone */}
                 <div
                   onClick={() => rowModalFileInputRef.current?.click()}
-                  className="border border-dashed border-gray-200 hover:border-[#4318FF] rounded-xl py-2 px-3 flex items-center justify-center gap-2.5 bg-gray-50/60 hover:bg-blue-50/30 transition-all cursor-pointer group text-center"
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsRowModalDragging(true);
+                  }}
+                  onDragEnter={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsRowModalDragging(true);
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsRowModalDragging(false);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsRowModalDragging(false);
+                    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                      processUploadedFiles(e.dataTransfer.files, "row");
+                    }
+                  }}
+                  className={`border rounded-xl py-2 px-3 flex items-center justify-center gap-2.5 transition-all cursor-pointer group text-center ${
+                    isRowModalDragging
+                      ? "border-[#4318FF] bg-blue-50/70 ring-2 ring-[#4318FF]/20"
+                      : "border-dashed border-gray-200 hover:border-[#4318FF] bg-gray-50/60 hover:bg-blue-50/30"
+                  }`}
                 >
                   <div className="w-7 h-7 rounded-lg bg-blue-50 group-hover:bg-blue-100 flex items-center justify-center text-[#4318FF] transition-colors shrink-0 shadow-2xs">
                     <UploadCloud size={16} />
@@ -2996,9 +4483,9 @@ const EmployeeNotes = () => {
                   <div className="text-left sm:text-center">
                     <p className="text-xs font-bold font-sans text-slate-800">
                       <span className="text-[#4318FF] underline underline-offset-2 font-extrabold">
-                        Click to upload
+                        {isRowModalDragging ? "Drop files now" : "Click to upload"}
                       </span>{" "}
-                      or drag and drop multiple files
+                      {isRowModalDragging ? "to attach" : "or drag and drop multiple files"}
                       <span className="hidden md:inline text-[11px] text-slate-400 font-normal ml-2">
                         (PDF, Word, Excel, images, or documents)
                       </span>
@@ -3098,30 +4585,30 @@ const EmployeeNotes = () => {
         </div>
       )}
 
-      {/* DELETE CONFIRMATION MODAL */}
+      {/* DELETE CONFIRMATION POPUP MODAL */}
       {noteToDelete && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-gray-100">
-            <div className="w-11 h-11 rounded-full bg-red-50 text-red-600 flex items-center justify-center mb-3.5">
-              <Trash2 size={20} />
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-gray-100 text-center flex flex-col items-center">
+            <div className="w-12 h-12 rounded-full bg-red-50 text-red-500 flex items-center justify-center mb-3.5 shadow-xs">
+              <Trash2 size={22} className="stroke-[2.5]" />
             </div>
 
-            <h3 className="text-base font-bold text-[#1B2559]">Delete Note</h3>
+            <h3 className="text-base sm:text-lg font-bold text-[#1B2559]">Delete Note</h3>
 
-            <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">
+            <p className="text-xs sm:text-sm text-gray-500 mt-2 leading-relaxed">
               Are you sure you want to delete &quot;
-              <span className="font-semibold text-gray-700">
+              <span className="font-semibold text-gray-800">
                 {noteToDelete.title || "Untitled note"}
               </span>
               &quot;? This action cannot be undone.
             </p>
 
-            <div className="flex items-center justify-end gap-2 mt-5">
+            <div className="flex items-center justify-center gap-3 mt-6 w-full">
               <button
                 type="button"
                 onClick={() => setNoteToDelete(null)}
                 disabled={isDeleting}
-                className="px-3.5 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                className="flex-1 px-4 py-2 text-xs sm:text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors cursor-pointer disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -3130,10 +4617,10 @@ const EmployeeNotes = () => {
                 type="button"
                 onClick={confirmDelete}
                 disabled={isDeleting}
-                className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors cursor-pointer"
+                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-xs sm:text-sm font-bold bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-xs shadow-red-500/25 transition-all cursor-pointer disabled:opacity-50"
               >
-                {isDeleting && <Loader2 size={13} className="animate-spin" />}
-                Delete
+                {isDeleting && <Loader2 size={14} className="animate-spin" />}
+                Confirm
               </button>
             </div>
           </div>
