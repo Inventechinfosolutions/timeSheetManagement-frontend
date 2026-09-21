@@ -431,8 +431,7 @@ function AppContent() {
                     element={<QuarterlyReviewResponsive />}
                   />
                   <Route path="employee-notes" element={<EmployeeNotes />} />
-                  <Route path="employee-notes/*" element={<EmployeeNotes />} />
-                  <Route path=":projectName/employee-notes" element={<EmployeeNotes />} />
+                  <Route path="employee-notes/:noteId" element={<EmployeeNotes />} />
                   <Route path=":tab/:date?" element={<AdminTabWrapper />} />
                 </Route>
 
@@ -450,8 +449,7 @@ function AppContent() {
                   />
                   <Route index element={<TodayAttendance />} />
                   <Route path="employee-notes" element={<EmployeeNotes />} />
-                  <Route path="employee-notes/*" element={<EmployeeNotes />} />
-                  <Route path=":projectName/employee-notes" element={<EmployeeNotes />} />
+                  <Route path="employee-notes/:noteId" element={<EmployeeNotes />} />
                   <Route path=":tab/:date?" element={<EmployeeTabWrapper />} />
                 </Route>
 

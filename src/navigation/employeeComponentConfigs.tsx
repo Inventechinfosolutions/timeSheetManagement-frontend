@@ -35,11 +35,7 @@ export const employeeComponentConfigs = [
     Component: ChangePassword,
   },
   {
-    path: "/employee-dashboard/employee-notes/:projectName?",
-    Component: EmployeeNotes,
-  },
-  {
-    path: "/employee-dashboard/:projectName/employee-notes",
+    path: "/employee-dashboard/employee-notes/:noteId?",
     Component: EmployeeNotes,
   },
 ];

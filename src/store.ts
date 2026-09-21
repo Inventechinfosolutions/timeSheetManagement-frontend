@@ -13,6 +13,7 @@ import managerMappingReducer from './reducers/managerMapping.reducer';
 import masterDepartmentReducer from './reducers/masterDepartment.reducer';
 import apiLoadingReducer from './reducers/apiLoading.reducer';
 import quarterlyReviewReducer from './reducers/quarterlyReview.reducer';
+import employeeNoteReducer from './reducers/employeeNote.reducer';
 
 export const store = configureStore({
   reducer: {
@@ -30,6 +31,7 @@ export const store = configureStore({
     managerMapping: managerMappingReducer,
     masterDepartments: masterDepartmentReducer,
     quarterlyReview: quarterlyReviewReducer,
+    employeeNote: employeeNoteReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
