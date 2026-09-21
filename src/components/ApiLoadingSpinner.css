@@ -1,0 +1,60 @@
+.logo-loader {
+    position: relative;
+    width: 52px;
+    height: 58px;
+}
+
+/* Tree */
+.logo-bottom {
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    width: 44px;
+    transform-origin: bottom center;
+    animation: treeSwing 1.8s ease-in-out infinite;
+}
+
+/* Circle */
+.logo-top {
+    position: absolute;
+    left: 50%;
+    top: 12px;
+    /* Increase this if there's too much gap */
+    width: 16px;
+    transform: translateX(-50%);
+    animation: orbFloat 1.8s ease-in-out infinite;
+}
+
+/* Floating circle */
+@keyframes orbFloat {
+
+    0%,
+    100% {
+        transform: translateX(-50%) translateY(0) scale(1);
+    }
+
+    50% {
+        transform: translateX(-50%) translateY(-6px) scale(1.12);
+    }
+}
+
+/* Tree animation */
+@keyframes treeSwing {
+
+    0%,
+    100% {
+        transform: translateX(-50%) rotate(0deg) scale(1);
+    }
+
+    25% {
+        transform: translateX(-50%) rotate(-2deg) scale(0.98);
+    }
+
+    50% {
+        transform: translateX(-50%) rotate(0deg) scale(1.04);
+    }
+
+    75% {
+        transform: translateX(-50%) rotate(2deg) scale(0.98);
+    }
+}

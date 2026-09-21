@@ -1,0 +1,475 @@
+/* =========================================
+   Main Card
+   ========================================= */
+.mobile-width {
+    width: 100%;
+}
+
+.mobile-ces-card {
+    width: 100%;
+    box-sizing: border-box;
+
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
+
+    border: 1px solid rgb(241 245 249);
+
+    border-radius: 1rem;
+
+    background-color: rgba(255, 255, 255, 0.8);
+
+    backdrop-filter: blur(4px);
+}
+
+
+/* =========================================
+   Header
+   ========================================= */
+
+.mobile-ces-card__title {
+    font-size: 1.125rem;
+
+    font-weight: 500;
+
+    margin-bottom: 0.5rem;
+}
+
+.mobile-ces-card__subtitle {
+    color: rgb(100 116 139);
+
+    font-size: 0.8125rem;
+
+    margin-bottom: 1.25rem;
+
+    line-height: 1.5;
+}
+
+
+/* =========================================
+   Gray Container
+   ========================================= */
+
+.mobile-ces-fields {
+    width: 100%;
+
+    box-sizing: border-box;
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 5px;
+
+    border: 1px solid rgb(241 245 249);
+
+    border-radius: 1rem;
+
+    padding: 0.625rem;
+
+    background-color: rgba(248, 250, 252, 0.5);
+
+    margin: 0 auto;
+}
+
+
+/* =========================================
+   Individual Field Cards
+   ========================================= */
+
+/* .mobile-ces-field-card {
+    width: 100%;
+
+    box-sizing: border-box;
+
+    border-radius: 0.75rem;
+
+    border: 1px solid rgb(226 232 240);
+
+    background-color: #ffffff;
+
+    padding: 1rem;
+} */
+
+
+/* =========================================
+   Labels
+   ========================================= */
+
+.mobile-ces-field-card__label {
+    font-weight: 500;
+
+    color: rgb(51 65 85);
+
+    font-size: 0.8125rem;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 4px;
+
+    /* margin-bottom: 0.25rem; */
+}
+
+.mobile-ces-field-card__required {
+    color: rgb(244 63 94);
+}
+
+.mobile-ces-field-card__hint {
+    color: rgb(100 116 139);
+
+    font-size: 0.75rem;
+
+    margin-bottom: 0.5rem;
+
+    line-height: 1.5;
+}
+
+
+/* =========================================
+   Rating Section
+   ========================================= */
+
+.mobile-ces-rating-section {
+    width: 100%;
+
+    box-sizing: border-box;
+
+    padding: 0.25rem 0.5rem;
+}
+
+.mobile-ces-rating-label {
+    margin-bottom: 0.75rem;
+}
+
+
+/* =========================================
+   Text Area
+   ========================================= */
+
+.mobile-ces-textarea {
+    width: 100%;
+
+    box-sizing: border-box;
+
+    border-radius: 0.75rem;
+
+    border-color: rgb(226 232 240);
+
+    padding: 0.75rem;
+
+    color: rgb(15 23 42);
+
+    transition: all 0.2s ease;
+
+    scrollbar-width: none;
+
+    -ms-overflow-style: none;
+}
+
+.mobile-ces-textarea:hover {
+    border-color: rgb(129 140 248);
+}
+
+.mobile-ces-textarea:focus {
+    border-color: rgb(99 102 241);
+
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+}
+
+.mobile-ces-textarea textarea::-webkit-scrollbar {
+    width: 0;
+
+    height: 0;
+
+    display: none;
+}
+
+
+/* =========================================
+   Emoji Rating Wrapper
+   ========================================= */
+
+.mobile-ces-emoji-wrapper {
+    width: 100%;
+
+    box-sizing: border-box;
+}
+
+
+/* =========================================
+   Emoji Rating Row
+   Same desktop-style layout
+   ========================================= */
+
+.mobile-ces-emoji-row {
+    width: 100%;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 0.5rem;
+}
+
+
+/* =========================================
+   Emoji Card
+   Same style as CompanyEnvironmentStep
+   ========================================= */
+
+.mobile-ces-emoji {
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    justify-content: center;
+
+    width: 16%;
+
+    min-width: 50px;
+
+    height: 64px;
+
+    border-radius: 6px;
+
+    border-width: 1px;
+
+    border-style: solid;
+
+    transition: all 0.2s ease;
+
+    cursor: pointer;
+}
+
+
+/* Hover */
+
+.mobile-ces-emoji:not(:disabled):hover {
+    transform: scale(1.05);
+
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+}
+
+
+/* Selected */
+
+.mobile-ces-emoji--selected {
+    font-weight: 700;
+
+    box-shadow: 0 4px 10px -1px rgba(15, 23, 42, 0.16);
+
+    transform: scale(1.05);
+
+    opacity: 1 !important;
+
+    z-index: 10;
+}
+
+
+/* Disabled */
+
+.mobile-ces-emoji--disabled:not(.mobile-ces-emoji--selected) {
+    opacity: 0.4;
+
+    cursor: default;
+}
+
+.mobile-ces-emoji--disabled.mobile-ces-emoji--selected {
+    opacity: 1 !important;
+
+    cursor: default;
+}
+
+
+/* =========================================
+   Emoji Icon
+   ========================================= */
+
+.mobile-ces-emoji__icon {
+    font-size: 1.5rem;
+
+    line-height: 1;
+
+    transition: transform 0.2s ease;
+}
+
+.mobile-ces-emoji:not(:disabled):hover .mobile-ces-emoji__icon {
+    transform: scale(1.1);
+}
+
+
+/* =========================================
+   Emoji Label
+   ========================================= */
+
+.mobile-ces-emoji__label {
+    margin-top: 0.375rem;
+
+    font-size: 0.6875rem;
+
+    font-weight: 500;
+
+    white-space: nowrap;
+
+    line-height: 1;
+
+    text-align: center;
+}
+
+
+/* =========================================
+   Rose
+   ========================================= */
+
+.mobile-ces-emoji--idle-rose {
+    border-color: rgb(254 205 211);
+
+    background-color: rgb(255 241 242);
+
+    color: rgb(244 63 94);
+}
+
+.mobile-ces-emoji--selected-rose {
+    border-color: rgb(244 63 94);
+
+    background-color: rgb(244 63 94);
+
+    color: #ffffff;
+}
+
+
+/* =========================================
+   Orange
+   ========================================= */
+
+.mobile-ces-emoji--idle-orange {
+    border-color: rgb(254 215 170);
+
+    background-color: rgb(255 247 237);
+
+    color: rgb(249 115 22);
+}
+
+.mobile-ces-emoji--selected-orange {
+    border-color: rgb(249 115 22);
+
+    background-color: rgb(249 115 22);
+
+    color: #ffffff;
+}
+
+
+/* =========================================
+   Slate
+   ========================================= */
+
+.mobile-ces-emoji--idle-slate {
+    border-color: rgb(226 232 240);
+
+    background-color: rgb(248 250 252);
+
+    color: rgb(100 116 139);
+}
+
+.mobile-ces-emoji--selected-slate {
+    border-color: rgb(100 116 139);
+
+    background-color: rgb(100 116 139);
+
+    color: #ffffff;
+}
+
+
+/* =========================================
+   Emerald
+   ========================================= */
+
+.mobile-ces-emoji--idle-emerald {
+    border-color: rgb(167 243 208);
+
+    background-color: rgb(236 253 245);
+
+    color: rgb(16 185 129);
+}
+
+.mobile-ces-emoji--selected-emerald {
+    border-color: rgb(16 185 129);
+
+    background-color: rgb(16 185 129);
+
+    color: #ffffff;
+}
+
+
+/* =========================================
+   Violet
+   ========================================= */
+
+.mobile-ces-emoji--idle-violet {
+    border-color: rgb(221 214 254);
+
+    background-color: rgb(245 243 255);
+
+    color: rgb(139 92 246);
+}
+
+.mobile-ces-emoji--selected-violet {
+    border-color: rgb(139 92 246);
+
+    background-color: rgb(139 92 246);
+
+    color: #ffffff;
+}
+
+
+/* =========================================
+   Small Mobile
+   ========================================= */
+
+@media (max-width: 380px) {
+    .mobile-ces-card {
+        padding: 4px;
+    }
+
+    .mobile-ces-fields {
+        width: 100%;
+
+        padding: 0.5rem;
+    }
+
+    .mobile-ces-field-card {
+        padding: 0.75rem;
+    }
+
+    .mobile-ces-rating-section {
+        padding: 0.25rem;
+    }
+
+    .mobile-ces-emoji-row {
+        gap: 0.3rem;
+    }
+
+    .mobile-ces-emoji {
+        min-width: 0;
+
+        width: 18%;
+
+        height: 58px;
+
+        border-radius: 0.625rem;
+    }
+
+    .mobile-ces-emoji__icon {
+        font-size: 1.25rem;
+    }
+
+    .mobile-ces-emoji__label {
+        font-size: 0.55rem;
+
+        margin-top: 0.25rem;
+    }
+}

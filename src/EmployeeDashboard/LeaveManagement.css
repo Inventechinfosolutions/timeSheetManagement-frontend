@@ -1,0 +1,23 @@
+.leave-management-page {
+  min-width: 0;
+}
+
+.leave-management-page .ant-picker {
+  width: 100%;
+}
+
+.leave-management-page .ant-select-selector {
+  font-weight: 700;
+}
+
+@media (max-width: 767px) {
+  .leave-management-page {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .application-modal .ant-modal {
+    max-width: calc(100vw - 1rem);
+  }
+}
+
