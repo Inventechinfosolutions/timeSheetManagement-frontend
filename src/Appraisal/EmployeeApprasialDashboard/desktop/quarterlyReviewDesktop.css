@@ -1,0 +1,286 @@
+.qr-form-page {
+  position: relative;
+}
+
+.qr-form-inner {
+  position: relative;
+  z-index: 1;
+}
+
+.qr-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 42%, #4f46e5 100%);
+  box-shadow: 0 14px 32px rgba(37, 99, 235, 0.22);
+}
+
+.qr-stepper-card,
+.qr-footer-bar {
+  position: relative;
+  background: linear-gradient(180deg, #ffffff 0%, #f4f8ff 100%);
+  border: 1px solid #d6e4ff;
+  box-shadow:
+    0 14px 32px rgba(77, 124, 255, 0.16),
+    0 4px 10px rgba(15, 23, 42, 0.05);
+}
+
+.qr-stepper-card {
+  overflow: visible;
+}
+
+.qr-footer-bar {
+  overflow: hidden;
+}
+
+.qr-step-circle-active {
+  background: radial-gradient(circle at 32% 28%, #9ec2ff 0%, #5b8cff 48%, #3d6bff 100%) !important;
+  color: #fff !important;
+  border: 3px solid #ffffff !important;
+  box-shadow:
+    0 0 0 3px #3d6bff,
+    0 10px 18px rgba(61, 107, 255, 0.42) !important;
+}
+
+.qr-step-circle-done {
+  background: linear-gradient(180deg, #6b9bff 0%, #3d6bff 100%) !important;
+  color: #fff !important;
+  border: 2px solid #3d6bff !important;
+  box-shadow: 0 6px 12px rgba(61, 107, 255, 0.28);
+}
+
+.qr-step-circle-upcoming {
+  background: #ffffff !important;
+  border: 3px solid #3d6bff !important;
+  color: #3d6bff !important;
+  box-shadow: 0 4px 10px rgba(61, 107, 255, 0.2);
+}
+
+.qr-progress-line {
+  background: #4d7cff;
+}
+
+.qr-stepper-art {
+  flex-shrink: 0;
+  display: block;
+}
+
+.qr-step-card.ant-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px !important;
+  border: 1px solid #d6e4ff !important;
+  background: linear-gradient(180deg, #ffffff 0%, #f4f8ff 100%) !important;
+  box-shadow:
+    0 16px 36px rgba(77, 124, 255, 0.16),
+    0 6px 14px rgba(15, 23, 42, 0.06) !important;
+}
+
+.qr-step-card .ant-card-body {
+  position: relative;
+  z-index: 1;
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+.qr-glass-shine {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 80% 55% at 0% 0%, rgba(56, 189, 248, 0.32), transparent 58%),
+    radial-gradient(ellipse 60% 50% at 100% 8%, rgba(99, 102, 241, 0.22), transparent 52%),
+    linear-gradient(180deg, rgba(239, 246, 255, 0.9) 0%, rgba(255, 255, 255, 0.55) 55%, rgba(255, 255, 255, 0.2) 100%);
+}
+
+.qr-field-shell {
+  position: relative;
+  overflow: hidden;
+  border: none !important;
+  outline: none;
+  box-shadow: none;
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.52) 0%,
+    rgba(224, 242, 254, 0.38) 48%,
+    rgba(238, 242, 255, 0.42) 100%
+  );
+  backdrop-filter: blur(18px) saturate(170%);
+  -webkit-backdrop-filter: blur(18px) saturate(170%);
+}
+
+.qr-field-shell::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  right: -50px;
+  top: -70px;
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.22);
+  filter: blur(8px);
+}
+
+.qr-field-shell::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  width: 140px;
+  height: 140px;
+  left: -40px;
+  bottom: -60px;
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.16);
+  filter: blur(10px);
+}
+
+.qr-field-shell > * {
+  position: relative;
+  z-index: 1;
+}
+
+.qr-glass-tile {
+  background: rgba(255, 255, 255, 0.5) !important;
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  border: 1px solid #94a3b8 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 8px 20px rgba(37, 99, 235, 0.06);
+}
+
+.quarterly-review-form-wrapper .ant-input,
+.quarterly-review-form-wrapper textarea.ant-input {
+  background: #ffffff !important;
+  border: 1px solid #94a3b8 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  color: #0f172a !important;
+}
+
+.quarterly-review-form-wrapper .ant-input:hover,
+.quarterly-review-form-wrapper textarea.ant-input:hover {
+  border-color: #64748b !important;
+}
+
+.quarterly-review-form-wrapper .ant-input:focus,
+.quarterly-review-form-wrapper textarea.ant-input:focus,
+.quarterly-review-form-wrapper .ant-input-focused {
+  border-color: #2563eb !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Ant Design wraps TextArea (showCount) in .ant-input-outlined — that extra
+   wrapper was drawing a second border. Keep the border on the textarea only. */
+.quarterly-review-form-wrapper .ant-input-textarea,
+.quarterly-review-form-wrapper .ant-input-outlined.ant-input-textarea,
+.quarterly-review-form-wrapper .ant-input-textarea.ant-input-outlined,
+.quarterly-review-form-wrapper .ant-input-outlined:not(input):not(textarea):not(.ant-input-affix-wrapper) {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.quarterly-review-form-wrapper .ant-input-affix-wrapper {
+  border: 1px solid #94a3b8 !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.quarterly-review-form-wrapper .ant-input-affix-wrapper .ant-input {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.quarterly-review-form-wrapper .ant-input-affix-wrapper:hover {
+  border-color: #64748b !important;
+}
+
+.quarterly-review-form-wrapper .ant-input-affix-wrapper-focused {
+  border-color: #2563eb !important;
+  box-shadow: none !important;
+}
+
+.quarterly-review-form-wrapper .ant-input-data-count {
+  color: #64748b;
+  font-weight: 500;
+  font-size: 12px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  border-radius: 0;
+  margin-top: 4px;
+}
+
+.quarterly-review-form-wrapper .ant-form-item-label > label {
+  height: auto !important;
+}
+
+.qr-footer-bar > *:not(.qr-glass-shine) {
+  position: relative;
+  z-index: 1;
+}
+
+.qr-hero .qr-hero-save.ant-btn {
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.16) !important;
+  border-color: rgba(255, 255, 255, 0.42) !important;
+}
+
+.qr-hero .qr-hero-save.ant-btn:hover,
+.qr-hero .qr-hero-save.ant-btn:focus {
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.26) !important;
+  border-color: rgba(255, 255, 255, 0.65) !important;
+}
+
+.qr-hero .qr-hero-save.ant-btn .anticon,
+.qr-hero .qr-hero-save.ant-btn svg {
+  color: #fff !important;
+}
+
+.qr-next-btn.ant-btn-primary {
+  background: linear-gradient(90deg, #0ea5e9 0%, #2563eb 50%, #4f46e5 100%) !important;
+  border: none !important;
+  color: #fff !important;
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.28) !important;
+}
+
+.qr-next-btn.ant-btn-primary:hover,
+.qr-next-btn.ant-btn-primary:focus {
+  background: linear-gradient(90deg, #0284c7 0%, #1d4ed8 50%, #4338ca 100%) !important;
+  color: #fff !important;
+}
+
+.qr-next-btn.ant-btn-primary[disabled],
+.qr-next-btn.ant-btn-primary.ant-btn-disabled {
+  opacity: 0.5 !important;
+  background: linear-gradient(90deg, #93c5fd 0%, #818cf8 100%) !important;
+}
+
+.qr-review-section {
+  border: 1.5px solid #93c5fd !important;
+  background: linear-gradient(180deg, #f0f7ff 0%, #ffffff 58%) !important;
+  box-shadow:
+    0 10px 22px rgba(37, 99, 235, 0.12),
+    0 2px 6px rgba(15, 23, 42, 0.05);
+}
+
+.qr-review-inner {
+  border: 1.5px solid #7dd3fc !important;
+  background: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.1);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .qr-field-shell {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: #ffffff;
+  }
+}

@@ -40,7 +40,7 @@ const Landing = () => {
   useEffect(() => {
     const link = document.createElement("link");
     link.href =
-      "https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap";
+      "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap";
     link.rel = "stylesheet";
     document.head.appendChild(link);
     return () => {
@@ -61,6 +61,7 @@ const Landing = () => {
         navigate("/manager-dashboard");
       } else if (
         currentUser.userType?.toUpperCase() === UserType.ADMIN ||
+        currentUser.userType?.toUpperCase() === UserType.CEO ||
         currentUser.userType?.toUpperCase() === UserType.RECEPTIONIST
       ) {
         navigate("/admin-dashboard");
@@ -116,7 +117,7 @@ const Landing = () => {
           font-family: 'Playfair Display', Georgia, serif;
         }
         .font-sans {
-          font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+          font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
       `}</style>
 

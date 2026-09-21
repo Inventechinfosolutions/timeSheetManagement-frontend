@@ -1,8 +1,12 @@
 import { useState, useEffect } from "react";
 import CalendarView from "./CalendarView";
-import MobileResponsiveCalendarPage from "./MobileResponsiveCalendarPage"; // This import is now used
-
+// import MobileResponsiveCalendarPage from "./MobileResponsiveCalendarPage"; // This import is now used
+import MobileTimesheetHistory from "./MobileTimesheetHistory/MobileTimesheetHistory";
 import { TimesheetEntry } from "../types";
+import {
+  DESKTOP_POINTER_QUERY,
+  isDesktopPointerViewport,
+} from "../utils/responsiveViewport";
 
 interface AttendanceViewWrapperProps {
   now?: Date;
@@ -18,12 +22,17 @@ interface AttendanceViewWrapperProps {
 }
 
 const AttendanceViewWrapper = (props: AttendanceViewWrapperProps) => {
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+  const [isMobile, setIsMobile] = useState(!isDesktopPointerViewport());
 
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 1024);
+    const handleResize = () => setIsMobile(!isDesktopPointerViewport());
+    const desktopPointerMedia = window.matchMedia(DESKTOP_POINTER_QUERY);
     window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    desktopPointerMedia.addEventListener?.("change", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      desktopPointerMedia.removeEventListener?.("change", handleResize);
+    };
   }, []);
 
   // For the 'large' variant (main calendar view), we want responsive switching.
@@ -33,12 +42,19 @@ const AttendanceViewWrapper = (props: AttendanceViewWrapperProps) => {
 
   if (isMobile && isLargeView) {
     return (
-      <MobileResponsiveCalendarPage
+      // <MobileResponsiveCalendarPage
+      //   employeeId={props.employeeId}
+      //   entries={props.entries}
+      //   currentDate={props.currentDate}
+      //   hideMonthNavigation={props.hideMonthNavigation}
+      //   onNavigateToDate={props.onNavigateToDate}
+      // />
+      <MobileTimesheetHistory
         employeeId={props.employeeId}
         entries={props.entries}
         currentDate={props.currentDate}
-        hideMonthNavigation={props.hideMonthNavigation}
         onNavigateToDate={props.onNavigateToDate}
+        hideMonthNavigation={props.hideMonthNavigation}
       />
     );
   }

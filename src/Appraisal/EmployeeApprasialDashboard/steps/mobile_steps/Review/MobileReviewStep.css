@@ -1,0 +1,447 @@
+/* MobileReviewStep.css */
+
+.mobile-review-outer-card {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgb(241 245 249);
+  border-radius: 1rem;
+  background-color: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(4px);
+}
+
+.mobile-review-outer-card__title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: rgb(30 41 59);
+  font-weight: 600;
+  font-size: 1.0625rem;
+}
+
+.mobile-review-intro {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background-color: rgb(238 242 255);
+  border-radius: 0.75rem;
+  border: 1px solid rgb(224 231 255);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mobile-review-intro__text {
+  color: rgb(67 56 202);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  margin-bottom: 0;
+  line-height: 1.5;
+}
+
+.mobile-review-manager-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  color: rgb(67 56 202);
+  background-color: rgba(224, 231, 255, 0.5);
+  border-radius: 0.5rem;
+  padding: 0.375rem 0.625rem;
+  margin-top: 0.25rem;
+  border: 1px solid rgba(224, 231, 255, 0.8);
+  width: fit-content;
+}
+
+.mobile-review-manager-badge strong {
+  color: rgb(49 46 129);
+}
+
+/* Generic summary card */
+
+.mobile-review-card {
+  border-radius: 1rem;
+  border: 1px solid rgb(241, 245, 249);
+  padding: 1rem;
+  background-color: rgba(248, 250, 252, 0.6);
+  margin-bottom: 1rem;
+}
+
+.mobile-review-card__header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.mobile-review-card__header--split {
+  justify-content: space-between;
+  flex-wrap: wrap;
+  row-gap: 0.5rem;
+}
+
+.mobile-review-card__header--bordered {
+  border-bottom: 1px solid rgb(241 245 249);
+  padding-bottom: 0.5rem;
+}
+
+.mobile-review-card__title {
+  font-weight: 600;
+  color: rgb(30 41 59);
+  font-size: 0.8125rem;
+}
+
+.mobile-review-card__body {
+  color: rgb(71 85 105);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
+
+.mobile-review-empty {
+  font-style: italic;
+  color: rgb(148 163 184);
+}
+
+.mobile-review-plain-text {
+  background-color: #ffffff;
+  border: 1px solid rgb(241, 245, 249);
+  border-radius: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  color: rgb(71, 85, 105);
+  white-space: pre-wrap;
+  margin-bottom: 0;
+}
+
+/* Goals list (Overview / Learning Goals) */
+
+.mobile-review-goal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.mobile-review-goal-item {
+  border-radius: 0.75rem;
+  border: 1px solid rgb(241, 245, 249);
+  padding: 1rem;
+  background-color: #ffffff;
+}
+
+.mobile-review-goal-item__title {
+  font-weight: 600;
+  color: rgb(67 56 202);
+  margin-bottom: 0.5rem;
+}
+
+.mobile-review-goal-item__text {
+  white-space: pre-wrap;
+  margin-bottom: 0;
+}
+
+/* Projects (Achievements & Challenges) */
+
+.mobile-review-project-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.mobile-review-project-item {
+  border-radius: 0.75rem;
+  border: 1px solid rgb(241, 245, 249);
+  padding: 1rem;
+  background-color: #ffffff;
+}
+
+.mobile-review-project-item__title {
+  font-weight: 700;
+  color: rgb(67 56 202);
+  font-size: 0.8125rem;
+  margin-bottom: 0.75rem;
+}
+
+.mobile-review-project-item__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  font-size: 0.75rem;
+  line-height: 1.6;
+}
+
+.mobile-review-project-item__label {
+  font-weight: 600;
+  color: rgb(51 65 85);
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.mobile-review-project-item__text {
+  color: rgb(71 85 105);
+  margin-bottom: 0;
+  white-space: pre-wrap;
+}
+
+/* Attachment file cards inside project items */
+
+.mobile-review-attachment-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin-top: 0.25rem;
+}
+
+@media (min-width: 768px) {
+  .mobile-review-attachment-stack {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    box-sizing: border-box;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .mobile-review-attachment-stack::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.mobile-review-file-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 5px 12px;
+  width: 100%;
+  gap: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s ease;
+  height: 44px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+@media (min-width: 768px) {
+  .mobile-review-file-card {
+    flex: 0 0 250px;
+    width: 250px;
+    min-width: 250px;
+    max-width: 250px;
+    flex-shrink: 0;
+  }
+}
+
+.mobile-review-file-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.mobile-review-file-card__left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.mobile-review-file-card__icon-box {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background-color: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.mobile-review-file-card__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.mobile-review-file-card__name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-review-file-card__ext {
+  font-size: 10px;
+  font-weight: 400;
+  color: #64748b;
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-review-file-card__eye-btn {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  transition: background 0.2s ease;
+  margin-left: auto;
+}
+
+.mobile-review-file-card__eye-btn:hover {
+  background: #f1f5f9;
+}
+
+
+/* Team contribution */
+
+.mobile-review-avg-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  background-color: rgb(255 251 235);
+  border: 1px solid rgb(253 230 138);
+  border-radius: 6px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: rgb(146 64 14);
+}
+
+.mobile-review-tc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.mobile-review-tc-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(241, 245, 249);
+  background-color: #ffffff;
+}
+
+.mobile-review-tc-item__label {
+  font-weight: 600;
+  color: rgb(51 65 85);
+  font-size: 0.75rem;
+}
+
+.mobile-review-tc-item__rate {
+  color: rgb(251 191 36);
+  font-size: 0.875rem;
+}
+
+/* Company environment */
+
+.mobile-review-env-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: rgb(71 85 105);
+}
+
+
+.mobile-review-env-fields__label {
+  font-weight: 600;
+  color: rgb(51 65 85);
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+
+.mobile-review-env-fields__text {
+  background-color: #ffffff;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(241, 245, 249);
+  margin-bottom: 0;
+  white-space: pre-wrap;
+}
+
+
+/* Selected Company Environment Rating */
+
+.mobile-review-env-rating {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin-top: 0.75rem;
+}
+
+
+.mobile-review-env-rating__label {
+  font-weight: 600;
+  color: rgb(51 65 85);
+  font-size: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.mobile-review-emoji-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.mobile-review-emoji-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 18%;
+  min-width: 50px;
+  height: 64px;
+  border-radius: 6px;
+  border-width: 1px;
+  border-style: solid;
+  transition: all 0.2s ease;
+}
+
+
+.mobile-review-env-rating__emoji {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+
+.mobile-review-env-rating__text {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgb(71 85 105);
+}
+
+/* Footer */
+
+.mobile-review-divider {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+.mobile-review-note {
+  padding: 0.75rem;
+  background-color: rgb(248 250 252);
+  border-radius: 0.75rem;
+  border: 1px solid rgb(226 232 240);
+  font-size: 0.75rem;
+  color: rgb(100 116 139);
+  line-height: 1.6;
+}

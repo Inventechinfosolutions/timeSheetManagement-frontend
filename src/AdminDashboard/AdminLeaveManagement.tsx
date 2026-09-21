@@ -1715,6 +1715,7 @@ const AdminLeaveManagement = () => {
     const isAdminOrManager =
       !isReceptionist &&
       (currentUser?.userType === UserType.ADMIN ||
+        currentUser?.userType === UserType.CEO ||
         currentUser?.userType === UserType.MANAGER);
 
     // Original policy: next day 10am

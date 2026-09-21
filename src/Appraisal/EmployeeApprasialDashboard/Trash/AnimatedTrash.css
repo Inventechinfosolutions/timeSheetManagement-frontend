@@ -1,0 +1,33 @@
+.animated-trash {
+  color: #ef4444;
+    width: 48px;
+    height: 30px;
+}
+
+.trash-lid {
+  transform-origin: 12px 7px;
+}
+
+.animate .trash-lid {
+  animation: lidOpen .45s ease;
+}
+
+@keyframes lidOpen {
+
+  0%{
+    transform:rotate(0deg);
+  }
+
+  30%{
+    transform:rotate(-35deg);
+  }
+
+  70%{
+    transform:rotate(-35deg);
+  }
+
+  100%{
+    transform:rotate(0deg);
+  }
+
+}
