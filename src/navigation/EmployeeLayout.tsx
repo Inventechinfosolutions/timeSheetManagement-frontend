@@ -12,7 +12,14 @@ const EmployeeLayout = () => {
   // Determine active tab based on path parameter or current URL
   const getActiveTab = () => {
     const path = location.pathname.toLowerCase();
-    if (path.includes("/quarterly-review") || path.includes("/appraisal")) return "Appraisal";
+    if (
+      path.includes("/quarterly-review") ||
+      path.includes("/quarterly-ratings") ||
+      path.includes("/annual-ratings") ||
+      path.includes("/appraisal")
+    ) {
+      return "Appraisal";
+    }
     if (path.includes("/my-timesheet") || path.includes("/mobile-timesheet")) return "My Timesheet";
     if (path.includes("/timesheet-view") || path.includes("/calendar-view")) return "Timesheet History";
     if (path.includes("/my-profile") || path.includes("/change-password")) return "Account Settings";
@@ -35,6 +42,8 @@ const EmployeeLayout = () => {
         return "Request Management";
       case "appraisal":
       case "quarterly-review":
+      case "quarterly-ratings":
+      case "annual-ratings":
         return "Appraisal";
       case "about":
         return "About";

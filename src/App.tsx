@@ -39,6 +39,7 @@ import AttendanceViewWrapper from "./EmployeeDashboard/CalenderViewWrapper";
 // import MobileResponsiveCalendarPage from "./EmployeeDashboard/MobileResponsiveCalendarPage";
 import MobileTimesheetHistory from "./EmployeeDashboard/MobileTimesheetHistory/MobileTimesheetHistory";
 import EmployeeAppraisalDashboard from "./Appraisal/EmployeeApprasialDashboard/EmployeeAppraisalDashboard";
+import QuarterlyRatingsView from "./Appraisal/EmployeeApprasialDashboard/QuarterlyRatingsView";
 import QuarterlyReviewForm from "./Appraisal/EmployeeApprasialDashboard/QuarterlyReviewForm";
 import LeaveManagement from "./EmployeeDashboard/LeaveManagement";
 import LeaveBalance from "./EmployeeDashboard/LeaveBalance";
@@ -85,6 +86,9 @@ const EmployeeTabWrapper = () => {
       return <LeaveManagement />;
     case "appraisal":
       return <EmployeeAppraisalDashboard />;
+    case "quarterly-ratings":
+    case "annual-ratings":
+      return <QuarterlyRatingsView />;
     case "quarterly-review":
       return <QuarterlyReviewForm />;
     case "leave-balance":
@@ -136,6 +140,9 @@ const AdminTabWrapper = () => {
       return <LeaveManagement />;
     case "appraisal":
       return <EmployeeAppraisalDashboard />;
+    case "quarterly-ratings":
+    case "annual-ratings":
+      return <QuarterlyRatingsView />;
     case "quarterly-review":
       return <QuarterlyReviewResponsive />;
     case "review":
@@ -350,7 +357,15 @@ function AppContent() {
                     element={<QuarterlyReviewForm />}
                   />
                   <Route
-                    path="quarterly-review/:employeeId?"
+                    path="quarterly-review"
+                    element={<QuarterlyReviewResponsive />}
+                  />
+                  <Route
+                    path="quarterly-review/:employeeId"
+                    element={<QuarterlyReviewResponsive />}
+                  />
+                  <Route
+                    path="quarterly-review/:employeeId/:quarterPeriod"
                     element={<QuarterlyReviewResponsive />}
                   />
                   <Route path=":tab/:date?" element={<AdminTabWrapper />} />
@@ -404,7 +419,15 @@ function AppContent() {
                     element={<QuarterlyReviewForm />}
                   />
                   <Route
-                    path="quarterly-review/:employeeId?"
+                    path="quarterly-review"
+                    element={<QuarterlyReviewResponsive />}
+                  />
+                  <Route
+                    path="quarterly-review/:employeeId"
+                    element={<QuarterlyReviewResponsive />}
+                  />
+                  <Route
+                    path="quarterly-review/:employeeId/:quarterPeriod"
                     element={<QuarterlyReviewResponsive />}
                   />
                   <Route path="employee-notes" element={<EmployeeNotes />} />

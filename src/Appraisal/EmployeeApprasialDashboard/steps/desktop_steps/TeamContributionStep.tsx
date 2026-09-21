@@ -95,7 +95,7 @@ export const TeamContributionStep: React.FC<StepProps> = ({ disabled }) => {
           0
         ) /
           validRatings.length) *
-          10
+        10
       ) / 10
     );
   }, [teamContribution]);
