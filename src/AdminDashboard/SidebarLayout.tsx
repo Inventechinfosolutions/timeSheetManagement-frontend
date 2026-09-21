@@ -16,6 +16,7 @@ import {
   LogOut,
   X,
   Award,
+  StickyNote,
 } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
@@ -67,6 +68,7 @@ const SidebarLayout = ({
           { name: "My Timesheet History", icon: Eye },
           { name: "Request Management ", icon: Calendar },
           { name : "Appraisal", icon: Award},
+          { name: "Employee Notes", icon: StickyNote },
           { name: "Account Settings", icon: User },
         ],
       },
@@ -126,6 +128,7 @@ const SidebarLayout = ({
       Notification: "requests",
       "Admin Dashboard": "admin-dashboard",
       "Manager Mapping": "manager-mapping",
+      "Employee Notes": "employee-notes",
     }),
     [],
   );
@@ -173,6 +176,8 @@ const SidebarLayout = ({
         return "My Timesheet History";
       case "my-profile":
         return "Account Settings";
+      case "employee-notes":
+        return "Employee Notes";
       case "admin-dashboard":
         return "Employee Dashboard";
       default:

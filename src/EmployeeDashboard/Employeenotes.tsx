@@ -1212,6 +1212,10 @@ const EmployeeNotes = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const isManagerRoute = location.pathname.startsWith("/manager-dashboard");
+  const baseDashboardPath = isManagerRoute ? "/manager-dashboard" : "/employee-dashboard";
+  const baseNotesPath = `${baseDashboardPath}/employee-notes`;
+
   const tokenPayload = useMemo(() => getDecodedToken(), []);
 
   const employeeId =
@@ -1795,9 +1799,9 @@ ${htmlContent || "<p></p>"}
 
   // Extract project name parameter from URL (/employee-dashboard/:projectName/employee-notes or /employee-dashboard/employee-notes/:projectName)
   const getProjectNameFromUrl = (): string | null => {
-    // Pattern 1: /employee-dashboard/:projectName/employee-notes
+    // Pattern 1: /(employee-dashboard|manager-dashboard)/:projectName/employee-notes
     const match1 = location.pathname.match(
-      /\/employee-dashboard\/([^/]+)\/employee-notes/i
+      /\/(?:employee-dashboard|manager-dashboard)\/([^/]+)\/employee-notes/i
     );
     if (match1 && match1[1]) {
       try {
@@ -2204,8 +2208,8 @@ ${htmlContent || "<p></p>"}
    * OPEN CREATE NOTE / EDIT NOTE (Full Page In-Place View)
    */
   const openCreateNote = (category: NoteCategory = "Project Note") => {
-    if (location.pathname !== "/employee-dashboard/employee-notes") {
-      navigate("/employee-dashboard/employee-notes");
+    if (location.pathname !== baseNotesPath) {
+      navigate(baseNotesPath);
     }
     setModalMode("create");
     setActiveNoteId(null);
@@ -2304,8 +2308,8 @@ ${htmlContent || "<p></p>"}
       }
 
       skipUrlSyncRef.current = true;
-      if (location.pathname !== "/employee-dashboard/employee-notes") {
-        navigate("/employee-dashboard/employee-notes");
+      if (location.pathname !== baseNotesPath) {
+        navigate(baseNotesPath);
       }
       setActiveNoteId(resolvedNote.id);
       setActiveNote(resolvedNote);
@@ -2417,7 +2421,7 @@ ${htmlContent || "<p></p>"}
       setEditorParentNoteId(resolvedNote.parentNoteId || null);
 
       const projectSlug = getNoteProjectSlug(resolvedNote);
-      const targetUrl = `/employee-dashboard/${encodeURIComponent(projectSlug)}/employee-notes`;
+      const targetUrl = `${baseDashboardPath}/${encodeURIComponent(projectSlug)}/employee-notes`;
       if (location.pathname !== targetUrl) {
         navigate(targetUrl);
       }
@@ -2452,15 +2456,15 @@ ${htmlContent || "<p></p>"}
     setFormFiles([]);
     setFormRows([]);
 
-    if (location.pathname !== "/employee-dashboard/employee-notes") {
-      navigate("/employee-dashboard/employee-notes");
+    if (location.pathname !== baseNotesPath) {
+      navigate(baseNotesPath);
     }
   };
 
   // Opens the full-page editor in create mode pre-filled for the parent note's category.
   const openSubTableCreateNote = (projectName: string, parentNoteId: string, category: NoteCategory = "Project Note") => {
-    if (location.pathname !== "/employee-dashboard/employee-notes") {
-      navigate("/employee-dashboard/employee-notes");
+    if (location.pathname !== baseNotesPath) {
+      navigate(baseNotesPath);
     }
     setModalMode("create");
     setActiveNoteId(null);
