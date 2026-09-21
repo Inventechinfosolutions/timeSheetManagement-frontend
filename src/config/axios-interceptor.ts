@@ -29,9 +29,14 @@ const setupAxiosInterceptors = (
     const user = Storage.session.get("user");
     const existingContentType =
       config.headers?.["Content-Type"] || config.headers?.["content-type"];
+    const isFormData =
+      typeof FormData !== "undefined" && config.data instanceof FormData;
 
     config.headers.Accept = "application/json";
-    if (!existingContentType) {
+    if (isFormData) {
+      delete config.headers["Content-Type"];
+      delete config.headers["content-type"];
+    } else if (!existingContentType) {
       config.headers["Content-Type"] = "application/json";
     }
 

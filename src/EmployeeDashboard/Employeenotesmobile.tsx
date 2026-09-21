@@ -14,9 +14,10 @@ import {
 } from "lucide-react";
 import {
   EmployeeNote,
-  NoteFile,
-  NoteCategory,
   EmployeeNotesMobileProps,
+  NoteCategoryEnum,
+  NoteType,
+  ALLOWED_FILE_ACCEPT,
 } from "./Employeenotes.types";
 import "./Employeenotes.css";
 
@@ -61,16 +62,6 @@ const getFileIcon = (fileName: string) => {
 };
 
 const getNotePreview = (note: EmployeeNote) => {
-  if (note.rows && note.rows.length > 0) {
-    const first = note.rows[0];
-    const firstLabel = first.notes || first.title || "Project details added";
-    if (note.rows.length > 1) {
-      return `${firstLabel} (+${note.rows.length - 1} more project${
-        note.rows.length - 1 === 1 ? "" : "s"
-      })`;
-    }
-    return firstLabel;
-  }
   if (note.content) {
     const plain = stripHtmlTags(note.content);
     return plain || "No description added yet";
@@ -104,18 +95,22 @@ export const EmployeeNotesMobile: React.FC<EmployeeNotesMobileProps> = ({
     <div className="divide-y divide-gray-100">
       {paginatedNotes.map((note, idx) => {
         const slNo = (currentPage - 1) * itemsPerPage + idx + 1;
-        const isProject = note.category === "Project Note";
+        const isProject = note.category === NoteCategoryEnum.PROJECT_NOTE;
         const createdDate = note.createdAt || note.updatedAt;
         const hasFiles = note.files && note.files.length > 0;
-        const isUploadingThisNote = uploadingNoteId === note.id;
-        const isExpanded = expandedRowProjectNotes.includes(note.id);
-        const isThisNoteLoading = actionLoadingNoteId === note.id;
+        const isUploadingThisNote = uploadingNoteId != null && String(uploadingNoteId) === String(note.id);
+        const isExpanded = expandedRowProjectNotes.some((id) => String(id) === String(note.id));
+        const isThisNoteLoading = actionLoadingNoteId != null && String(actionLoadingNoteId) === String(note.id);
         const isViewLoading = isThisNoteLoading && actionLoadingType === "view";
         const isEditLoading = isThisNoteLoading && actionLoadingType === "edit";
         const isDeleteLoading = isThisNoteLoading && actionLoadingType === "delete";
 
         // Child notes belonging to this parent note
-        const childNotes = allNotes.filter((n) => n.parentNoteId === note.id);
+        const childNotes = allNotes.filter(
+          (n) =>
+            (n.type === NoteType.CHILD || n.parentNoteId != null) &&
+            String(n.parentNoteId) === String(note.id)
+        );
 
         return (
           <div key={note.id} className="p-4 bg-white transition-colors">
@@ -197,7 +192,7 @@ export const EmployeeNotesMobile: React.FC<EmployeeNotesMobileProps> = ({
                       {getFileIcon(f.name)}
                       <button
                         type="button"
-                        onClick={() => openFilePreview(f)}
+                        onClick={() => openFilePreview(f, note.id)}
                         title={`View file: ${f.name}`}
                         className="truncate max-w-[100px] hover:underline cursor-pointer font-semibold"
                       >
@@ -205,16 +200,16 @@ export const EmployeeNotesMobile: React.FC<EmployeeNotesMobileProps> = ({
                       </button>
                       <button
                         type="button"
-                        onClick={() => openFilePreview(f)}
+                        onClick={() => openFilePreview(f, note.id)}
                         title="Preview"
                         className="text-[#4318FF] hover:text-[#3311CC] p-0.5 cursor-pointer"
                       >
                         <Eye size={11} />
                       </button>
-                      {f.dataUrl && (
+                      {(f.s3Key || f.id || f.rawFile) && (
                         <button
                           type="button"
-                          onClick={() => downloadFile(f)}
+                          onClick={() => downloadFile(f, note.id)}
                           title="Download"
                           className="text-emerald-600 hover:text-emerald-700 p-0.5 cursor-pointer"
                         >
@@ -244,6 +239,7 @@ export const EmployeeNotesMobile: React.FC<EmployeeNotesMobileProps> = ({
                       <input
                         type="file"
                         multiple
+                        accept={ALLOWED_FILE_ACCEPT}
                         className="hidden"
                         onChange={(e) => handleTableDirectUpload(note, e)}
                       />
