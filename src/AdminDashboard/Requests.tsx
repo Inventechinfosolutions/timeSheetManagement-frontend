@@ -1870,7 +1870,7 @@ const Requests = () => {
         footer={null}
         closable={false}
         centered
-        width={720}
+        width={840}
         style={{ maxWidth: "95vw" }}
         className="application-modal"
       >
@@ -1908,24 +1908,24 @@ const Requests = () => {
                     <div className="relative">
                       <div className="flex items-start">
                         {emailConfig.assignedManagerEmail && (
-                          <div className="flex-1">
+                          <div className="flex-1 min-w-0">
                             <span className="text-xs font-bold text-[#A3AED0] block mb-2 uppercase tracking-wide">
                               Assigned Manager
                             </span>
-                            <div className="text-sm font-bold text-[#1B2559]">
+                            <div className="text-sm font-bold text-[#1B2559] break-words">
                               {emailConfig.assignedManagerEmail}
                             </div>
                           </div>
                         )}
 
                         {/* Vertical Divider */}
-                        <div className="w-[1px] bg-[#E0E7FF] self-stretch mx-8 h-auto min-h-[40px]" />
+                        <div className="w-[1px] bg-[#E0E7FF] self-stretch mx-6 h-auto min-h-[40px]" />
 
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
                           <span className="text-xs font-bold text-[#A3AED0] block mb-2 uppercase tracking-wide">
                             HR
                           </span>
-                          <div className="text-sm font-bold text-[#A3AED0]">
+                          <div className="text-sm font-bold text-[#A3AED0] break-words">
                             {emailConfig.hrEmail || "Not configured"}
                           </div>
                         </div>
