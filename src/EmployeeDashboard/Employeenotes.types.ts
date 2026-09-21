@@ -38,6 +38,7 @@ export interface RichTextEditorProps {
   onChange: (html: string) => void;
   placeholder?: string;
   minHeight?: string;
+  onDownload?: () => void;
 }
 
 export type NoteModalMode = "create" | "edit" | "view";
@@ -51,11 +52,13 @@ export interface NoteToastMessage {
 export interface NoteFormErrors {
   title?: string;
   projectName?: string;
+  description?: string;
 }
 
 export interface RowModalErrors {
   projectName?: string;
   title?: string;
+  description?: string;
 }
 
 export interface PresetColor {

@@ -34,16 +34,16 @@ export const ALLOWED_EXTENSIONS = [
 ] as const;
 
 export const PRESET_COLORS: PresetColor[] = [
-  { label: "Black", value: "#000000" },
-  { label: "Dark Slate", value: "#1E293B" },
-  { label: "Gray", value: "#64748B" },
-  { label: "Blue", value: "#4318FF" },
-  { label: "Sky Blue", value: "#0284C7" },
-  { label: "Indigo", value: "#4F46E5" },
-  { label: "Purple", value: "#9333EA" },
-  { label: "Pink", value: "#DB2777" },
-  { label: "Red", value: "#DC2626" },
-  { label: "Orange", value: "#EA580C" },
-  { label: "Amber", value: "#D97706" },
-  { label: "Emerald Green", value: "#059669" },
+  { label: "Yellow", value: "#FEF08A" },
+  { label: "Orange", value: "#FED7AA" },
+  { label: "Red", value: "#FCA5A5" },
+  { label: "Green", value: "#BBF7D0" },
+  { label: "Blue", value: "#BAE6FD" },
+  { label: "Nylon", value: "#D9F99D" },
+  { label: "Sky Blue", value: "#7DD3FC" },
+  { label: "Purple", value: "#E9D5FF" },
+  { label: "Pink", value: "#FBCFE8" },
+  { label: "Teal", value: "#99F6E4" },
+  { label: "Amber", value: "#FDE68A" },
+  { label: "Gray", value: "#E2E8F0" },
 ];

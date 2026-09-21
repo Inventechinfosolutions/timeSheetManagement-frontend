@@ -38,10 +38,12 @@ import {
   Quote,
   ArrowLeft,
   Palette,
+  Highlighter,
 } from "lucide-react";
 import { useAppSelector } from "../hooks";
 import { Storage } from "../utils/storage-util";
 import { EmployeeNotesMobile } from "./Employeenotesmobile";
+import jsPDF from "jspdf";
 import LogoTop from "../assets/logo_top.png";
 import LogoBottom from "../assets/logo_bottom.png";
 import "../components/ApiLoadingSpinner.css";
@@ -80,6 +82,44 @@ export type {
   RowModalErrors,
 };
 export { NoteCategoryEnum, NoteFilter, STORAGE_KEY_PREFIX, EMPLOYEE_NOTES_API };
+
+const escapeHtml = (text: string): string => {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};
+
+const isDescriptionEmpty = (html?: string): boolean => {
+  if (!html) return true;
+  const stripped = html.replace(/<[^>]*>/g, "").replace(/&nbsp;/gi, " ").trim();
+  if (stripped.length > 0) return false;
+  return !/<(img|table|iframe|video|audio)\b/i.test(html);
+};
+
+const isColorMatch = (c1?: string | null, c2?: string | null): boolean => {
+  if (!c1 || !c2) return false;
+  const s1 = c1.trim().toLowerCase();
+  const s2 = c2.trim().toLowerCase();
+  if (s1 === s2) return true;
+
+  const toRgb = (hexOrRgb: string) => {
+    if (hexOrRgb.startsWith("#")) {
+      const clean = hexOrRgb.replace("#", "");
+      if (clean.length === 6) {
+        const r = parseInt(clean.substring(0, 2), 16);
+        const g = parseInt(clean.substring(2, 4), 16);
+        const b = parseInt(clean.substring(4, 6), 16);
+        return `rgb(${r}, ${g}, ${b})`;
+      }
+    }
+    return hexOrRgb.replace(/\s+/g, ", ").replace(/,\s+/g, ", ");
+  };
+
+  return toRgb(s1) === toRgb(s2);
+};
 
 /*
  * RICH TEXT / HTML EDITOR COMPONENT
@@ -140,25 +180,335 @@ const RichTextEditor = ({
     }
   };
 
+  // Active formatting state tracking
+  const [activeHeading, setActiveHeading] = useState<"h1" | "h2" | "p">("p");
+  const [activeColor, setActiveColor] = useState<string | null>(null);
+  const [isBold, setIsBold] = useState(false);
+  const [isItalic, setIsItalic] = useState(false);
+  const [isUnderline, setIsUnderline] = useState(false);
+  const [isStrike, setIsStrike] = useState(false);
+  const [isList, setIsList] = useState(false);
+  const [isOrderedList, setIsOrderedList] = useState(false);
+  const [isBlockquoteActive, setIsBlockquoteActive] = useState(false);
+
+  const checkEditorState = () => {
+    if (!editorRef.current) return;
+    try {
+      setIsBold(document.queryCommandState("bold"));
+      setIsItalic(document.queryCommandState("italic"));
+      setIsUnderline(document.queryCommandState("underline"));
+      setIsStrike(document.queryCommandState("strikeThrough"));
+      setIsList(document.queryCommandState("insertUnorderedList"));
+      setIsOrderedList(document.queryCommandState("insertOrderedList"));
+    } catch {
+      // ignore
+    }
+
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && editorRef.current) {
+      let node: Node | null = sel.getRangeAt(0).commonAncestorContainer;
+      let heading: "h1" | "h2" | "p" = "p";
+      let inBq = false;
+      let bgCol: string | null = null;
+
+      while (node && node !== editorRef.current) {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          const el = node as HTMLElement;
+          const tag = el.tagName.toLowerCase();
+          if (tag === "h1") heading = "h1";
+          else if (tag === "h2") heading = "h2";
+          else if (tag === "blockquote") inBq = true;
+
+          if (!bgCol) {
+            const bg = el.style.backgroundColor || el.getAttribute("bgcolor");
+            if (bg && bg !== "transparent" && bg !== "rgba(0, 0, 0, 0)") {
+              bgCol = bg;
+            }
+          }
+        }
+        node = node.parentNode;
+      }
+
+      setActiveHeading(heading);
+      setIsBlockquoteActive(inBq);
+      setActiveColor(bgCol);
+    }
+  };
+
   const execute = (command: string, arg?: string) => {
     if (!editorRef.current) return;
     editorRef.current.focus();
     document.execCommand(command, false, arg);
     onChange(editorRef.current.innerHTML);
+    setTimeout(checkEditorState, 20);
   };
 
+  // Toggle heading 1 or 2 on/off (select & unselect)
+  const toggleHeading = (target: "h1" | "h2") => {
+    if (!editorRef.current) return;
+    editorRef.current.focus();
+
+    const sel = window.getSelection();
+    let isCurrentlyTarget = false;
+    if (sel && sel.rangeCount > 0) {
+      let node: Node | null = sel.getRangeAt(0).commonAncestorContainer;
+      while (node && node !== editorRef.current) {
+        if (
+          node.nodeType === Node.ELEMENT_NODE &&
+          (node as HTMLElement).tagName.toLowerCase() === target
+        ) {
+          isCurrentlyTarget = true;
+          break;
+        }
+        node = node.parentNode;
+      }
+    }
+
+    if (isCurrentlyTarget || activeHeading === target) {
+      // UNSELECT: already this heading, convert back to normal paragraph
+      document.execCommand("formatBlock", false, "<p>");
+      setActiveHeading("p");
+    } else {
+      // SELECT: apply target heading
+      document.execCommand("formatBlock", false, `<${target}>`);
+      setActiveHeading(target);
+    }
+
+    onChange(editorRef.current.innerHTML);
+    setTimeout(checkEditorState, 20);
+  };
+
+  const toggleNormal = () => {
+    if (!editorRef.current) return;
+    editorRef.current.focus();
+    document.execCommand("formatBlock", false, "<p>");
+    setActiveHeading("p");
+    onChange(editorRef.current.innerHTML);
+    setTimeout(checkEditorState, 20);
+  };
+
+  // Toggle blockquote on/off and prevent/remove multiple nested blockquotes
+  const toggleBlockquote = () => {
+    if (!editorRef.current) return;
+    editorRef.current.focus();
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+
+    // 1. Check if selection is within an existing blockquote -> unwrap it (unselect)
+    let node: Node | null = range.commonAncestorContainer;
+    let bq: HTMLElement | null = null;
+    while (node && node !== editorRef.current) {
+      if (
+        node.nodeType === Node.ELEMENT_NODE &&
+        (node as HTMLElement).tagName.toLowerCase() === "blockquote"
+      ) {
+        bq = node as HTMLElement;
+        break;
+      }
+      node = node.parentNode;
+    }
+
+    if (bq && editorRef.current.contains(bq)) {
+      const parent = bq.parentNode;
+      if (parent) {
+        const frag = document.createDocumentFragment();
+        while (bq.firstChild) {
+          frag.appendChild(bq.firstChild);
+        }
+        parent.replaceChild(frag, bq);
+      }
+      setIsBlockquoteActive(false);
+      onChange(editorRef.current.innerHTML);
+      setTimeout(checkEditorState, 20);
+      return;
+    }
+
+    // 2. Check if selection spans across any blockquote(s) -> unwrap them (removes multiple selection quotes)
+    const internalBqs = Array.from(editorRef.current.querySelectorAll("blockquote"));
+    let anyUnwrapped = false;
+    internalBqs.forEach((existingBq) => {
+      try {
+        if (range.intersectsNode(existingBq)) {
+          anyUnwrapped = true;
+          const parent = existingBq.parentNode;
+          if (parent) {
+            const frag = document.createDocumentFragment();
+            while (existingBq.firstChild) {
+              frag.appendChild(existingBq.firstChild);
+            }
+            parent.replaceChild(frag, existingBq);
+          }
+        }
+      } catch {
+        // ignore
+      }
+    });
+
+    if (anyUnwrapped) {
+      setIsBlockquoteActive(false);
+      onChange(editorRef.current.innerHTML);
+      setTimeout(checkEditorState, 20);
+      return;
+    }
+
+    // 3. Otherwise apply blockquote
+    document.execCommand("formatBlock", false, "<blockquote>");
+
+    // Clean up any nested blockquotes (blockquote inside blockquote)
+    const nestedBqs = Array.from(
+      editorRef.current.querySelectorAll("blockquote blockquote")
+    );
+    nestedBqs.forEach((nbq) => {
+      const p = nbq.parentNode;
+      if (p) {
+        while (nbq.firstChild) {
+          p.insertBefore(nbq.firstChild, nbq);
+        }
+        p.removeChild(nbq);
+      }
+    });
+
+    setIsBlockquoteActive(true);
+    onChange(editorRef.current.innerHTML);
+    setTimeout(checkEditorState, 20);
+  };
+
+  // Apply color with select & unselect (toggle) functionality
   const applyColor = (colorHex: string) => {
     if (!editorRef.current) return;
     editorRef.current.focus();
     restoreSelection();
-    document.execCommand("foreColor", false, colorHex);
-    setCurrentColor(colorHex);
+
+    // Check if the current selection already has this color highlight applied
+    let alreadyHasColor = false;
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      let node: Node | null = sel.getRangeAt(0).commonAncestorContainer;
+      while (node && node !== editorRef.current) {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          const bg = (node as HTMLElement).style.backgroundColor;
+          if (isColorMatch(bg, colorHex)) {
+            alreadyHasColor = true;
+            break;
+          }
+        }
+        node = node.parentNode;
+      }
+    }
+
+    if (alreadyHasColor || isColorMatch(activeColor, colorHex)) {
+      // UNSELECT: already applied -> clear background highlight
+      if (!document.execCommand("hiliteColor", false, "transparent")) {
+        document.execCommand("backColor", false, "transparent");
+      }
+      setActiveColor(null);
+    } else {
+      // SELECT: apply background highlight
+      if (!document.execCommand("hiliteColor", false, colorHex)) {
+        document.execCommand("backColor", false, colorHex);
+      }
+      setCurrentColor(colorHex);
+      setActiveColor(colorHex);
+    }
+
     onChange(editorRef.current.innerHTML);
+    setTimeout(checkEditorState, 20);
+  };
+
+  const clearColor = () => {
+    if (!editorRef.current) return;
+    editorRef.current.focus();
+    restoreSelection();
+    if (!document.execCommand("hiliteColor", false, "transparent")) {
+      document.execCommand("backColor", false, "transparent");
+    }
+    setActiveColor(null);
+    onChange(editorRef.current.innerHTML);
+    setTimeout(checkEditorState, 20);
   };
 
   const handleInput = () => {
     if (editorRef.current) {
       onChange(editorRef.current.innerHTML);
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+    const text = e.clipboardData.getData("text/plain");
+    if (!text) return;
+
+    // Check if the pasted text has bullet characters or numbered list prefixes
+    const lines = text.split(/\r?\n/);
+    const hasBulletOrListLines = lines.some((line) =>
+      /^\s*([•●○▪■◆–—⁃∙·\uf0b7\-\*]|\d+[\.\)])\s+/.test(line)
+    );
+
+    if (hasBulletOrListLines) {
+      e.preventDefault();
+      let html = "";
+      let inUl = false;
+      let inOl = false;
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const trimmed = line.trim();
+
+        if (!trimmed) {
+          if (inUl) {
+            html += "</ul>";
+            inUl = false;
+          }
+          if (inOl) {
+            html += "</ol>";
+            inOl = false;
+          }
+          continue;
+        }
+
+        const ulMatch = line.match(/^\s*[•●○▪■◆–—⁃∙·\uf0b7\-\*]\s+(.*)$/);
+        const olMatch = line.match(/^\s*\d+[\.\)]\s+(.*)$/);
+
+        if (ulMatch) {
+          if (inOl) {
+            html += "</ol>";
+            inOl = false;
+          }
+          if (!inUl) {
+            html += "<ul>";
+            inUl = true;
+          }
+          html += `<li>${escapeHtml(ulMatch[1])}</li>`;
+        } else if (olMatch) {
+          if (inUl) {
+            html += "</ul>";
+            inUl = false;
+          }
+          if (!inOl) {
+            html += "<ol>";
+            inOl = true;
+          }
+          html += `<li>${escapeHtml(olMatch[1])}</li>`;
+        } else {
+          if (inUl) {
+            html += "</ul>";
+            inUl = false;
+          }
+          if (inOl) {
+            html += "</ol>";
+            inOl = false;
+          }
+          html += `<p>${escapeHtml(line)}</p>`;
+        }
+      }
+
+      if (inUl) html += "</ul>";
+      if (inOl) html += "</ol>";
+
+      document.execCommand("insertHTML", false, html);
+      if (editorRef.current) {
+        onChange(editorRef.current.innerHTML);
+      }
     }
   };
 
@@ -179,8 +529,12 @@ const RichTextEditor = ({
             e.preventDefault();
             execute("bold");
           }}
-          className="p-1 rounded-lg hover:bg-white hover:text-[#4318FF] hover:shadow-2xs transition-colors font-bold text-xs w-7 h-7 flex items-center justify-center cursor-pointer"
-          title="Bold (Ctrl+B)"
+          className={`p-1 rounded-lg transition-colors font-bold text-xs w-7 h-7 flex items-center justify-center cursor-pointer ${
+            isBold
+              ? "bg-[#4318FF]/15 text-[#4318FF] ring-1 ring-[#4318FF]/30 font-bold shadow-2xs"
+              : "hover:bg-white hover:text-[#4318FF] hover:shadow-2xs text-slate-700"
+          }`}
+          title={isBold ? "Bold (click to unselect)" : "Bold (Ctrl+B)"}
         >
           <Bold size={14} />
         </button>
@@ -192,8 +546,12 @@ const RichTextEditor = ({
             e.preventDefault();
             execute("italic");
           }}
-          className="p-1 rounded-lg hover:bg-white hover:text-[#4318FF] hover:shadow-2xs transition-colors italic text-xs w-7 h-7 flex items-center justify-center cursor-pointer"
-          title="Italic (Ctrl+I)"
+          className={`p-1 rounded-lg transition-colors italic text-xs w-7 h-7 flex items-center justify-center cursor-pointer ${
+            isItalic
+              ? "bg-[#4318FF]/15 text-[#4318FF] ring-1 ring-[#4318FF]/30 font-bold shadow-2xs"
+              : "hover:bg-white hover:text-[#4318FF] hover:shadow-2xs text-slate-700"
+          }`}
+          title={isItalic ? "Italic (click to unselect)" : "Italic (Ctrl+I)"}
         >
           <Italic size={14} />
         </button>
@@ -205,8 +563,12 @@ const RichTextEditor = ({
             e.preventDefault();
             execute("underline");
           }}
-          className="p-1 rounded-lg hover:bg-white hover:text-[#4318FF] hover:shadow-2xs transition-colors underline text-xs w-7 h-7 flex items-center justify-center cursor-pointer"
-          title="Underline (Ctrl+U)"
+          className={`p-1 rounded-lg transition-colors underline text-xs w-7 h-7 flex items-center justify-center cursor-pointer ${
+            isUnderline
+              ? "bg-[#4318FF]/15 text-[#4318FF] ring-1 ring-[#4318FF]/30 font-bold shadow-2xs"
+              : "hover:bg-white hover:text-[#4318FF] hover:shadow-2xs text-slate-700"
+          }`}
+          title={isUnderline ? "Underline (click to unselect)" : "Underline (Ctrl+U)"}
         >
           <Underline size={14} />
         </button>
@@ -218,97 +580,125 @@ const RichTextEditor = ({
             e.preventDefault();
             execute("strikeThrough");
           }}
-          className="p-1 rounded-lg hover:bg-white hover:text-[#4318FF] hover:shadow-2xs transition-colors line-through text-xs w-7 h-7 flex items-center justify-center cursor-pointer"
-          title="Strikethrough"
+          className={`p-1 rounded-lg transition-colors line-through text-xs w-7 h-7 flex items-center justify-center cursor-pointer ${
+            isStrike
+              ? "bg-[#4318FF]/15 text-[#4318FF] ring-1 ring-[#4318FF]/30 font-bold shadow-2xs"
+              : "hover:bg-white hover:text-[#4318FF] hover:shadow-2xs text-slate-700"
+          }`}
+          title={isStrike ? "Strikethrough (click to unselect)" : "Strikethrough"}
         >
           <Strikethrough size={14} />
         </button>
 
         <div className="w-px h-4 bg-gray-200 mx-1" />
 
-        {/* Heading 1 */}
+        {/* Heading 1 — select & unselect */}
         <button
           type="button"
           onMouseDown={(e) => {
             e.preventDefault();
-            execute("formatBlock", "<h1>");
+            toggleHeading("h1");
           }}
-          className="px-1.5 py-0.5 rounded-lg hover:bg-white hover:text-[#4318FF] hover:shadow-2xs transition-colors font-bold text-[11px] h-7 flex items-center justify-center cursor-pointer"
-          title="Heading 1"
+          className={`px-1.5 py-0.5 rounded-lg transition-colors font-bold text-[11px] h-7 flex items-center justify-center cursor-pointer ${
+            activeHeading === "h1"
+              ? "bg-[#4318FF]/15 text-[#4318FF] ring-1 ring-[#4318FF]/30 font-bold shadow-2xs"
+              : "hover:bg-white hover:text-[#4318FF] hover:shadow-2xs text-slate-700"
+          }`}
+          title={activeHeading === "h1" ? "Heading 1 (click to unselect)" : "Heading 1"}
         >
           <Heading1 size={14} />
         </button>
 
-        {/* Heading 2 */}
+        {/* Heading 2 — select & unselect */}
         <button
           type="button"
           onMouseDown={(e) => {
             e.preventDefault();
-            execute("formatBlock", "<h2>");
+            toggleHeading("h2");
           }}
-          className="px-1.5 py-0.5 rounded-lg hover:bg-white hover:text-[#4318FF] hover:shadow-2xs transition-colors font-bold text-[11px] h-7 flex items-center justify-center cursor-pointer"
-          title="Heading 2"
+          className={`px-1.5 py-0.5 rounded-lg transition-colors font-bold text-[11px] h-7 flex items-center justify-center cursor-pointer ${
+            activeHeading === "h2"
+              ? "bg-[#4318FF]/15 text-[#4318FF] ring-1 ring-[#4318FF]/30 font-bold shadow-2xs"
+              : "hover:bg-white hover:text-[#4318FF] hover:shadow-2xs text-slate-700"
+          }`}
+          title={activeHeading === "h2" ? "Heading 2 (click to unselect)" : "Heading 2"}
         >
           <Heading2 size={14} />
         </button>
 
-        {/* Paragraph */}
+        {/* Normal Text — select / reset to paragraph */}
         <button
           type="button"
           onMouseDown={(e) => {
             e.preventDefault();
-            execute("formatBlock", "<p>");
+            toggleNormal();
           }}
-          className="px-1.5 py-0.5 rounded-lg hover:bg-white hover:text-[#4318FF] hover:shadow-2xs transition-colors text-[11px] font-semibold h-7 flex items-center justify-center cursor-pointer text-slate-600"
-          title="Normal Text"
+          className={`px-1.5 py-0.5 rounded-lg transition-colors text-[11px] font-semibold h-7 flex items-center justify-center cursor-pointer ${
+            activeHeading === "p" && !isBlockquoteActive
+              ? "bg-[#4318FF]/15 text-[#4318FF] ring-1 ring-[#4318FF]/30 font-bold shadow-2xs"
+              : "hover:bg-white hover:text-[#4318FF] hover:shadow-2xs text-slate-600"
+          }`}
+          title="Normal Text (Paragraph)"
         >
           Normal
         </button>
 
         <div className="w-px h-4 bg-gray-200 mx-1" />
 
-        {/* Bullet List */}
+        {/* Bullet List — select & unselect */}
         <button
           type="button"
           onMouseDown={(e) => {
             e.preventDefault();
             execute("insertUnorderedList");
           }}
-          className="p-1 rounded-lg hover:bg-white hover:text-[#4318FF] hover:shadow-2xs transition-colors text-xs w-7 h-7 flex items-center justify-center cursor-pointer"
-          title="Bullet List"
+          className={`p-1 rounded-lg transition-colors text-xs w-7 h-7 flex items-center justify-center cursor-pointer ${
+            isList
+              ? "bg-[#4318FF]/15 text-[#4318FF] ring-1 ring-[#4318FF]/30 font-bold shadow-2xs"
+              : "hover:bg-white hover:text-[#4318FF] hover:shadow-2xs text-slate-700"
+          }`}
+          title={isList ? "Bullet List (click to unselect)" : "Bullet List"}
         >
           <List size={14} />
         </button>
 
-        {/* Numbered List */}
+        {/* Numbered List — select & unselect */}
         <button
           type="button"
           onMouseDown={(e) => {
             e.preventDefault();
             execute("insertOrderedList");
           }}
-          className="p-1 rounded-lg hover:bg-white hover:text-[#4318FF] hover:shadow-2xs transition-colors text-xs w-7 h-7 flex items-center justify-center cursor-pointer"
-          title="Numbered List"
+          className={`p-1 rounded-lg transition-colors text-xs w-7 h-7 flex items-center justify-center cursor-pointer ${
+            isOrderedList
+              ? "bg-[#4318FF]/15 text-[#4318FF] ring-1 ring-[#4318FF]/30 font-bold shadow-2xs"
+              : "hover:bg-white hover:text-[#4318FF] hover:shadow-2xs text-slate-700"
+          }`}
+          title={isOrderedList ? "Numbered List (click to unselect)" : "Numbered List"}
         >
           <ListOrdered size={14} />
         </button>
 
-        {/* Blockquote */}
+        {/* Blockquote — toggles on/off and unselects cleanly */}
         <button
           type="button"
           onMouseDown={(e) => {
             e.preventDefault();
-            execute("formatBlock", "<blockquote>");
+            toggleBlockquote();
           }}
-          className="p-1 rounded-lg hover:bg-white hover:text-[#4318FF] hover:shadow-2xs transition-colors text-xs w-7 h-7 flex items-center justify-center cursor-pointer"
-          title="Quote"
+          className={`p-1 rounded-lg transition-colors text-xs w-7 h-7 flex items-center justify-center cursor-pointer ${
+            isBlockquoteActive
+              ? "bg-[#4318FF]/15 text-[#4318FF] font-bold ring-1 ring-[#4318FF]/30 shadow-2xs"
+              : "hover:bg-white hover:text-[#4318FF] hover:shadow-2xs text-slate-700"
+          }`}
+          title={isBlockquoteActive ? "Quote (click to unselect)" : "Quote"}
         >
           <Quote size={14} />
         </button>
 
         <div className="w-px h-4 bg-gray-200 mx-1" />
 
-        {/* Text Color Picker */}
+        {/* Highlight Color Picker (Background) — select & unselect */}
         <div className="relative" ref={colorPickerRef}>
           <button
             type="button"
@@ -317,58 +707,69 @@ const RichTextEditor = ({
               saveSelection();
               setIsColorPickerOpen((prev) => !prev);
             }}
-            className="p-1 rounded-lg hover:bg-white hover:text-[#4318FF] hover:shadow-2xs transition-colors text-xs w-7 h-7 flex flex-col items-center justify-center cursor-pointer relative"
-            title="Text Color"
+            className={`p-1 rounded-lg transition-colors text-xs w-7 h-7 flex flex-col items-center justify-center cursor-pointer relative ${
+              isColorPickerOpen || activeColor
+                ? "bg-[#4318FF]/15 text-[#4318FF] ring-1 ring-[#4318FF]/30 shadow-2xs font-bold"
+                : "hover:bg-white hover:text-[#4318FF] hover:shadow-2xs text-slate-700"
+            }`}
+            title="Highlight Color (Click to select/unselect highlight)"
           >
-            <Palette size={13} />
+            <Highlighter size={13} />
             <span
               className="w-3.5 h-[2.5px] rounded-full mt-[1px]"
-              style={{ backgroundColor: currentColor }}
+              style={{ backgroundColor: activeColor || currentColor }}
             />
           </button>
 
           {isColorPickerOpen && (
             <div
-              className="absolute left-0 top-full mt-1 z-30 bg-white border border-gray-200 rounded-xl shadow-lg p-2.5 w-48 space-y-2 animate-fadeIn"
+              className="absolute left-0 top-full mt-1 z-30 bg-white border border-gray-200 rounded-xl shadow-lg p-2.5 w-52 space-y-2 animate-fadeIn"
               onMouseDown={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
-                  Text Color
+                  Highlight Color
                 </span>
                 <button
                   type="button"
                   onMouseDown={(e) => {
                     e.preventDefault();
-                    applyColor("#1B2559");
+                    clearColor();
                     setIsColorPickerOpen(false);
                   }}
-                  className="text-[10px] font-semibold text-slate-400 hover:text-slate-700 cursor-pointer"
+                  className="text-[10px] font-bold text-slate-500 hover:text-red-600 cursor-pointer bg-slate-100 hover:bg-red-50 px-1.5 py-0.5 rounded transition-colors"
                 >
-                  Reset
+                  Unselect / Clear
                 </button>
               </div>
 
               {/* Preset Swatches */}
               <div className="grid grid-cols-6 gap-1.5">
-                {PRESET_COLORS.map((c) => (
-                  <button
-                    key={c.value}
-                    type="button"
-                    title={c.label}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      applyColor(c.value);
-                      setIsColorPickerOpen(false);
-                    }}
-                    style={{ backgroundColor: c.value }}
-                    className={`w-6 h-6 rounded-md transition-transform hover:scale-110 cursor-pointer border ${
-                      currentColor === c.value
-                        ? "ring-2 ring-[#4318FF] ring-offset-1 border-transparent"
-                        : "border-gray-200/80"
-                    }`}
-                  />
-                ))}
+                {PRESET_COLORS.map((c) => {
+                  const isSelected = isColorMatch(c.value, activeColor);
+                  return (
+                    <button
+                      key={c.value}
+                      type="button"
+                      title={isSelected ? `${c.label} (click to unselect)` : c.label}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        applyColor(c.value);
+                        setIsColorPickerOpen(false);
+                      }}
+                      style={{ backgroundColor: c.value }}
+                      className={`w-6 h-6 rounded-md transition-transform hover:scale-110 cursor-pointer border relative flex items-center justify-center ${
+                        isSelected
+                          ? "ring-2 ring-[#4318FF] ring-offset-1 border-transparent shadow-2xs scale-105"
+                          : "border-gray-200/80"
+                      }`}
+                    >
+                      {isSelected && (
+                        <Check size={12} className="text-slate-800 stroke-[3]" />
+                      )}
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Custom Color Input */}
@@ -397,7 +798,14 @@ const RichTextEditor = ({
         ref={editorRef}
         contentEditable
         onInput={handleInput}
-        onFocus={() => setIsFocused(true)}
+        onPaste={handlePaste}
+        onKeyUp={checkEditorState}
+        onMouseUp={checkEditorState}
+        onSelect={checkEditorState}
+        onFocus={() => {
+          setIsFocused(true);
+          checkEditorState();
+        }}
         onBlur={() => {
           setIsFocused(false);
           handleInput();
@@ -535,12 +943,108 @@ const stripHtmlTags = (html?: string) => {
   return html.replace(/<[^>]*>?/gm, "").trim();
 };
 
-const htmlToPlainText = (html?: string) => {
+const htmlToPlainText = (html?: string): string => {
   if (!html) return "";
   try {
     const temp = document.createElement("div");
     temp.innerHTML = html;
-    return (temp.innerText || temp.textContent || "").trim();
+
+    const lines: string[] = [];
+
+    const walkNode = (node: Node, listType: "ul" | "ol" | null, listIndex: { n: number }) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const text = node.textContent || "";
+        if (text.trim()) {
+          // Append to the last line if inside a block element that already started a line
+          if (lines.length > 0 && lines[lines.length - 1] !== "") {
+            lines[lines.length - 1] += text;
+          } else {
+            lines.push(text);
+          }
+        }
+        return;
+      }
+      if (node.nodeType !== Node.ELEMENT_NODE) return;
+      const el = node as Element;
+      const tag = el.tagName.toLowerCase();
+
+      if (tag === "ul" || tag === "ol") {
+        const newListType = tag as "ul" | "ol";
+        const counter = { n: 0 };
+        el.childNodes.forEach((child) => walkNode(child, newListType, counter));
+        return;
+      }
+
+      if (tag === "li") {
+        listIndex.n += 1;
+        const prefix = listType === "ol" ? `${listIndex.n}. ` : "• ";
+        // Collect all text inside this li
+        const liTemp = document.createElement("div");
+        liTemp.innerHTML = (el as HTMLElement).innerHTML;
+        const liText = (liTemp.innerText || liTemp.textContent || "").replace(/\n/g, " ").trim();
+        if (liText) {
+          lines.push(`${prefix}${liText}`);
+        }
+        return;
+      }
+
+      // Block-level elements that start a new line
+      const isBlock = [
+        "p", "div", "h1", "h2", "h3", "h4", "h5", "h6",
+        "blockquote", "pre", "br",
+      ].includes(tag);
+
+      if (tag === "br") {
+        lines.push("");
+        return;
+      }
+
+      if (isBlock) {
+        // Ensure previous block is separated
+        if (lines.length > 0 && lines[lines.length - 1] !== "") {
+          lines.push("");
+        }
+        const innerTemp = document.createElement("div");
+        // Only collect direct text/inline children (not nested blocks/lists)
+        el.childNodes.forEach((child) => {
+          if (child.nodeType === Node.TEXT_NODE) {
+            innerTemp.appendChild(child.cloneNode(true));
+          } else if (child.nodeType === Node.ELEMENT_NODE) {
+            const childTag = (child as Element).tagName.toLowerCase();
+            if (!["ul", "ol", "li", "p", "div", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "pre"].includes(childTag)) {
+              innerTemp.appendChild(child.cloneNode(true));
+            }
+          }
+        });
+        const blockText = (innerTemp.innerText || innerTemp.textContent || "").trim();
+        if (blockText) {
+          lines.push(blockText);
+          lines.push("");
+        }
+        // Now walk nested block/list children
+        el.childNodes.forEach((child) => {
+          if (child.nodeType === Node.ELEMENT_NODE) {
+            const childTag = (child as Element).tagName.toLowerCase();
+            if (["ul", "ol", "p", "div", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "pre"].includes(childTag)) {
+              walkNode(child, null, { n: 0 });
+            }
+          }
+        });
+        return;
+      }
+
+      // Inline elements — just walk children
+      el.childNodes.forEach((child) => walkNode(child, listType, listIndex));
+    };
+
+    temp.childNodes.forEach((child) => walkNode(child, null, { n: 0 }));
+
+    // Clean up: collapse multiple consecutive blank lines, trim leading/trailing blank lines
+    const result = lines
+      .join("\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+    return result;
   } catch {
     return stripHtmlTags(html);
   }
@@ -614,6 +1118,91 @@ const hasManagerAccess = (user: any): boolean => {
 
   return roleCandidates.some((r) =>
     MANAGER_ROLE_KEYWORDS.some((keyword) => (r || "").toUpperCase().includes(keyword))
+  );
+};
+
+interface NoteDownloadDropdownProps {
+  hasContent: boolean;
+  onDownload: (format: "doc" | "pdf") => void;
+}
+
+const NoteDownloadDropdown = ({
+  hasContent,
+  onDownload,
+}: NoteDownloadDropdownProps) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener("mousedown", handleOutsideClick);
+    }
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [isOpen]);
+
+  if (!hasContent) return null;
+
+  return (
+    <div className="relative inline-block text-left" ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-[#4318FF] bg-blue-50/70 hover:bg-blue-100/70 rounded-lg transition-all cursor-pointer border border-blue-100/80 shadow-2xs"
+        title="Download description (PDF, Word Document)"
+      >
+        <Download size={13} />
+        <span>Download</span>
+        <ChevronDown
+          size={11}
+          className={`transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {isOpen && (
+        <div className="absolute right-0 top-full mt-1.5 z-50 w-44 bg-white border border-gray-200 rounded-xl shadow-xl p-1.5 space-y-0.5 animate-fadeIn">
+          <div className="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+            Choose Format
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setIsOpen(false);
+              onDownload("pdf");
+            }}
+            className="w-full flex items-center gap-2.5 px-2.5 py-1.5 text-xs text-slate-700 hover:bg-red-50 hover:text-red-700 rounded-lg transition-colors cursor-pointer font-medium text-left"
+          >
+            <span className="w-5 h-5 rounded bg-red-100 text-red-600 flex items-center justify-center text-[10px] font-bold shrink-0">
+              PDF
+            </span>
+            <div className="flex-1 min-w-0">
+              <span className="font-semibold block text-[12px] leading-tight">PDF Document</span>
+              <span className="text-[10px] text-slate-400 block">.pdf format</span>
+            </div>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setIsOpen(false);
+              onDownload("doc");
+            }}
+            className="w-full flex items-center gap-2.5 px-2.5 py-1.5 text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-colors cursor-pointer font-medium text-left"
+          >
+            <span className="w-5 h-5 rounded bg-blue-100 text-[#4318FF] flex items-center justify-center text-[10px] font-bold shrink-0">
+              DOC
+            </span>
+            <div className="flex-1 min-w-0">
+              <span className="font-semibold block text-[12px] leading-tight">Word Document</span>
+              <span className="text-[10px] text-slate-400 block">.doc format</span>
+            </div>
+          </button>
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -798,6 +1387,315 @@ const EmployeeNotes = () => {
     }
   };
 
+  // Drag and drop states for file uploads
+  const [isMainModalDragging, setIsMainModalDragging] = useState(false);
+  const [isRowModalDragging, setIsRowModalDragging] = useState(false);
+
+  const processUploadedFiles = (
+    files: FileList | File[],
+    target: "main" | "row"
+  ) => {
+    if (!files || files.length === 0) return;
+    const fileList = Array.from(files);
+    fileList.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const newFile: NoteFile = {
+          id: `file-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          dataUrl: reader.result as string,
+        };
+        if (target === "row") {
+          setRowModalFiles((prev) => [...prev, newFile]);
+        } else {
+          setFormFiles((prev) => [...prev, newFile]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const downloadDescriptionAsPdf = (
+    htmlContent: string,
+    fileName: string,
+    title?: string
+  ) => {
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 44;
+    const maxLineWidth = pageWidth - margin * 2;
+    const normalLineHeight = 16;
+    let y = margin + 14;
+
+    const ensureSpace = (needed: number) => {
+      if (y + needed > pageHeight - margin) {
+        doc.addPage();
+        y = margin + 14;
+      }
+    };
+
+    // Render title above description in large text size with black color
+    if (title && title.trim()) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(20);
+      doc.setTextColor(0, 0, 0);
+      const titleLines = doc.splitTextToSize(title.trim(), maxLineWidth);
+      ensureSpace(titleLines.length * 24 + 14);
+      doc.text(titleLines, margin, y);
+      y += titleLines.length * 24 + 14;
+    }
+
+    const parser = new DOMParser();
+    const parsed = parser.parseFromString(`<div>${htmlContent || ""}</div>`, "text/html");
+    const container = parsed.body.firstElementChild || parsed.body;
+
+    const renderNode = (node: Node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const text = node.textContent?.replace(/\s+/g, " ").trim();
+        if (text) {
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(11);
+          doc.setTextColor(30, 41, 59);
+          const lines = doc.splitTextToSize(text, maxLineWidth);
+          ensureSpace(lines.length * normalLineHeight + 6);
+          doc.text(lines, margin, y);
+          y += lines.length * normalLineHeight + 6;
+        }
+        return;
+      }
+
+      if (node.nodeType !== Node.ELEMENT_NODE) return;
+      const el = node as HTMLElement;
+      const tag = el.tagName.toLowerCase();
+
+      if (tag === "h1") {
+        const text = el.textContent?.trim();
+        if (text) {
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(16);
+          doc.setTextColor(15, 23, 42);
+          const lines = doc.splitTextToSize(text, maxLineWidth);
+          ensureSpace(lines.length * 20 + 8);
+          doc.text(lines, margin, y);
+          y += lines.length * 20 + 8;
+        }
+        return;
+      }
+
+      if (tag === "h2" || tag === "h3") {
+        const text = el.textContent?.trim();
+        if (text) {
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(13);
+          doc.setTextColor(15, 23, 42);
+          const lines = doc.splitTextToSize(text, maxLineWidth);
+          ensureSpace(lines.length * 18 + 6);
+          doc.text(lines, margin, y);
+          y += lines.length * 18 + 6;
+        }
+        return;
+      }
+
+      if (tag === "ul") {
+        const lis = Array.from(el.querySelectorAll(":scope > li"));
+        lis.forEach((li) => {
+          const text = li.textContent?.trim();
+          if (!text) return;
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(11);
+          doc.setTextColor(30, 41, 59);
+          const bulletIndent = 16;
+          const lines = doc.splitTextToSize(text, maxLineWidth - bulletIndent);
+          ensureSpace(lines.length * normalLineHeight + 5);
+          doc.text("\u2022", margin, y);
+          doc.text(lines, margin + bulletIndent, y);
+          y += lines.length * normalLineHeight + 5;
+        });
+        y += 4;
+        return;
+      }
+
+      if (tag === "ol") {
+        const lis = Array.from(el.querySelectorAll(":scope > li"));
+        lis.forEach((li, idx) => {
+          const text = li.textContent?.trim();
+          if (!text) return;
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(11);
+          doc.setTextColor(30, 41, 59);
+          const prefix = `${idx + 1}.`;
+          const numIndent = 20;
+          const lines = doc.splitTextToSize(text, maxLineWidth - numIndent);
+          ensureSpace(lines.length * normalLineHeight + 5);
+          doc.text(prefix, margin, y);
+          doc.text(lines, margin + numIndent, y);
+          y += lines.length * normalLineHeight + 5;
+        });
+        y += 4;
+        return;
+      }
+
+      if (tag === "blockquote") {
+        const text = el.textContent?.trim();
+        if (text) {
+          doc.setFont("helvetica", "italic");
+          doc.setFontSize(11);
+          doc.setTextColor(71, 85, 105);
+          const bqIndent = 16;
+          const lines = doc.splitTextToSize(text, maxLineWidth - bqIndent);
+          const blockHeight = lines.length * normalLineHeight + 8;
+          ensureSpace(blockHeight);
+          doc.setDrawColor(67, 24, 255);
+          doc.setLineWidth(2.5);
+          doc.line(margin, y - 9, margin, y - 9 + blockHeight - 4);
+          doc.text(lines, margin + bqIndent, y);
+          y += blockHeight;
+        }
+        return;
+      }
+
+      if (tag === "p") {
+        const text = el.textContent?.trim();
+        if (text) {
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(11);
+          doc.setTextColor(30, 41, 59);
+          const lines = doc.splitTextToSize(text, maxLineWidth);
+          ensureSpace(lines.length * normalLineHeight + 6);
+          doc.text(lines, margin, y);
+          y += lines.length * normalLineHeight + 6;
+        } else {
+          y += 8;
+        }
+        return;
+      }
+
+      if (tag === "br") {
+        y += 8;
+        return;
+      }
+
+      Array.from(el.childNodes).forEach(renderNode);
+    };
+
+    Array.from(container.childNodes).forEach(renderNode);
+    doc.save(`${fileName}.pdf`);
+  };
+
+  const downloadDescriptionAsDoc = (
+    htmlContent: string,
+    fileName: string,
+    title?: string
+  ) => {
+    const displayTitle = title?.trim() || "";
+    const titleHtml = displayTitle
+      ? `<h1 style="font-size: 20pt; font-weight: bold; color: #000000; margin-top: 0; margin-bottom: 14pt; line-height: 1.3;">${escapeHtml(displayTitle)}</h1>`
+      : "";
+    const htmlDoc = `<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+  body { font-family: Calibri, Arial, sans-serif; margin: 2cm; color: #1e293b; }
+  .note-body { font-size: 11pt; line-height: 1.65; color: #334155; }
+  .note-body p { margin-bottom: 8pt; }
+  .note-body ul, .note-body ol { padding-left: 20pt; margin-bottom: 8pt; }
+  .note-body li { margin-bottom: 4pt; }
+  .note-body blockquote { border-left: 4px solid #4318FF; background: #f8fafc; padding: 6pt 12pt; color: #475569; font-style: italic; margin: 8pt 0; }
+</style></head><body>
+${titleHtml}
+<div class="note-body">
+${htmlContent || "<p></p>"}
+</div>
+</body></html>`;
+    const blob = new Blob([htmlDoc], { type: "application/msword;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${fileName}.doc`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadDescription = async (
+    htmlContent?: string,
+    noteTitle?: string,
+    format: "doc" | "pdf" | "docx" | "txt" = "pdf"
+  ) => {
+    const text = htmlToPlainText(htmlContent || "");
+    if (!text.trim()) {
+      showToast("Description is empty, nothing to download", "info");
+      return;
+    }
+    const cleanTitle = (noteTitle || "description")
+      .trim()
+      .replace(/[^a-zA-Z0-9_\-\s]/g, "")
+      .replace(/\s+/g, "_")
+      .toLowerCase() || "description";
+
+    // Call backend API to export document
+    try {
+      if (ENABLE_REMOTE_API) {
+        const response = await fetch(`${EMPLOYEE_NOTES_API}/export`, {
+          method: "POST",
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            htmlContent: htmlContent || "",
+            title: noteTitle || "",
+            format,
+            employeeId,
+            noteId: activeNoteId || undefined,
+          }),
+        });
+
+        if (response.ok) {
+          const blob = await response.blob();
+          const ext = format === "doc" || format === "docx" ? "doc" : format === "txt" ? "txt" : "pdf";
+          const filename = `${cleanTitle}.${ext}`;
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+
+          showToast(
+            format === "doc" || format === "docx"
+              ? "Downloaded Word document (.doc) successfully"
+              : format === "txt"
+              ? "Downloaded text document successfully"
+              : "Downloaded PDF successfully",
+            "success"
+          );
+          return;
+        } else {
+          console.warn(`Export API returned status ${response.status}, using client fallback`);
+        }
+      }
+    } catch (apiErr) {
+      console.warn("Export API request failed, using client fallback:", apiErr);
+    }
+
+    // Client-side fallback
+    if (format === "doc" || format === "docx") {
+      downloadDescriptionAsDoc(htmlContent || "", cleanTitle || "description", noteTitle);
+      showToast("Downloaded Word document (.doc) successfully", "success");
+    } else {
+      try {
+        downloadDescriptionAsPdf(htmlContent || "", cleanTitle || "description", noteTitle);
+        showToast("Downloaded PDF successfully", "success");
+      } catch (err) {
+        console.error("Failed to generate PDF:", err);
+        showToast("Failed to generate PDF. Please try Word format.", "error");
+      }
+    }
+  };
+
   /*
    * LOAD NOTES FROM BACKEND API
    */
@@ -835,9 +1733,11 @@ const EmployeeNotes = () => {
 
             const raw = localStorage.getItem(storageKey);
             const localNotes: EmployeeNote[] = raw ? JSON.parse(raw) : [];
-            const apiIds = new Set(apiNotes.map((an) => an.id));
+            const apiIds = new Set(apiNotes.map((an) => String(an.id)));
             const mergedApiNotes = apiNotes.map((an) => {
-              const localMatch = localNotes.find((ln) => ln.id === an.id);
+              const localMatch = localNotes.find(
+                (ln) => String(ln.id) === String(an.id)
+              );
               const parentNoteId =
                 an.parentNoteId || localMatch?.parentNoteId || null;
               const category =
@@ -850,7 +1750,9 @@ const EmployeeNotes = () => {
                 parentNoteId,
               };
             });
-            const localUnsynced = localNotes.filter((ln) => !apiIds.has(ln.id));
+            const localUnsynced = localNotes.filter(
+              (ln) => !apiIds.has(String(ln.id))
+            );
             const allNotesList = [...mergedApiNotes, ...localUnsynced];
 
             setNotes(allNotesList);
@@ -1058,6 +1960,27 @@ const EmployeeNotes = () => {
     });
   }, [notes, search, selectedFilter]);
 
+  // Count visible parent notes by category
+  const projectNotesCount = useMemo(() => {
+    return notes.filter((n) => {
+      if (n.parentNoteId) return false;
+      const cat = (n.category || "").trim().toLowerCase();
+      const hasProject = Boolean(n.projectName && n.projectName.trim());
+      return cat.includes("project") || (hasProject && !cat.includes("personal"));
+    }).length;
+  }, [notes]);
+
+  const personalNotesCount = useMemo(() => {
+    return notes.filter((n) => {
+      if (n.parentNoteId) return false;
+      const cat = (n.category || "").trim().toLowerCase();
+      const hasProject = Boolean(n.projectName && n.projectName.trim());
+      return cat.includes("personal") || (!hasProject && !cat.includes("project"));
+    }).length;
+  }, [notes]);
+
+  const totalParentNotesCount = projectNotesCount + personalNotesCount;
+
   // Reset pagination when search or filter changes
   useEffect(() => {
     setCurrentPage(1);
@@ -1096,26 +2019,9 @@ const EmployeeNotes = () => {
    * MODAL FILE UPLOAD HANDLING
    */
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    const fileList = Array.from(files);
-    fileList.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const newFile: NoteFile = {
-          id: `file-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          dataUrl: reader.result as string,
-        };
-
-        setFormFiles((prev) => [...prev, newFile]);
-      };
-      reader.readAsDataURL(file);
-    });
-
+    if (e.target.files && e.target.files.length > 0) {
+      processUploadedFiles(e.target.files, "main");
+    }
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -1322,32 +2228,11 @@ const EmployeeNotes = () => {
     setCurrentPage(1);
     setIsEditorOpen(true);
 
-    // Auto Save recovery: offer to restore an unsaved draft
+    // Discard any leftover draft from a previous session — open fresh every time
     try {
-      const raw = localStorage.getItem(draftKey);
-      if (raw) {
-        const draft = JSON.parse(raw);
-        if (
-          draft?.mode === "create" &&
-          (draft.projectName || draft.title || draft.description || draft.rows?.length)
-        ) {
-          const wantsRestore = window.confirm(
-            "We found an unsaved draft from a previous session. Restore it?"
-          );
-          if (wantsRestore) {
-            setFormProjectName(draft.projectName || "");
-            setFormTitle(draft.title || "");
-            setFormCategory(draft.category || category);
-            setFormDescription(draft.description || "");
-            setFormRows(draft.rows || []);
-            setDraftSavedAt(draft.savedAt || null);
-          } else {
-            localStorage.removeItem(draftKey);
-          }
-        }
-      }
+      localStorage.removeItem(draftKey);
     } catch {
-      // ignore malformed draft data
+      // ignore
     }
   };
 
@@ -1434,29 +2319,11 @@ const EmployeeNotes = () => {
       setDraftSavedAt(null);
       setEditorParentNoteId(resolvedNote.parentNoteId || null);
 
-      // Auto Save recovery: offer to restore edits left unsaved for this note
+      // Discard any leftover edit draft — always load note fresh from the server
       try {
-        const raw = localStorage.getItem(draftKey);
-        if (raw) {
-          const draft = JSON.parse(raw);
-          if (draft?.mode === "edit" && draft.noteId === resolvedNote.id) {
-            const wantsRestore = window.confirm(
-              "We found unsaved changes for this note from a previous session. Restore them?"
-            );
-            if (wantsRestore) {
-              setFormProjectName(draft.projectName ?? resolvedNote.projectName ?? "");
-              setFormTitle(draft.title ?? resolvedNote.title ?? "");
-              setFormCategory(draft.category || resolvedNote.category || "Personal Note");
-              setFormDescription(draft.description ?? resolvedNote.content ?? "");
-              setFormRows(draft.rows || resolvedNote.rows || []);
-              setDraftSavedAt(draft.savedAt || null);
-            } else {
-              localStorage.removeItem(draftKey);
-            }
-          }
-        }
+        localStorage.removeItem(draftKey);
       } catch {
-        // ignore malformed draft data
+        // ignore
       }
 
       setModalMode("edit");
@@ -1636,25 +2503,9 @@ const EmployeeNotes = () => {
   };
 
   const handleRowModalFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    const fileList = Array.from(files);
-    fileList.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const newFile: NoteFile = {
-          id: `file-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          dataUrl: reader.result as string,
-        };
-        setRowModalFiles((prev) => [...prev, newFile]);
-      };
-      reader.readAsDataURL(file);
-    });
-
+    if (e.target.files && e.target.files.length > 0) {
+      processUploadedFiles(e.target.files, "row");
+    }
     if (rowModalFileInputRef.current) {
       rowModalFileInputRef.current.value = "";
     }
@@ -1668,7 +2519,7 @@ const EmployeeNotes = () => {
     e.preventDefault();
     if (!employeeId || isRowModalSubmitting) return;
 
-    const errors: { title?: string; projectName?: string } = {};
+    const errors: RowModalErrors = {};
     const trimmedTitle = rowModalTitle.trim();
     const trimmedProjectName = rowModalProjectName.trim();
 
@@ -1677,6 +2528,9 @@ const EmployeeNotes = () => {
     }
     if (!trimmedTitle) {
       errors.title = "Project Title is required";
+    }
+    if (isDescriptionEmpty(rowModalDescription)) {
+      errors.description = "Description is required";
     }
 
     if (Object.keys(errors).length > 0) {
@@ -1819,7 +2673,7 @@ const EmployeeNotes = () => {
     if (modalMode === "view") return;
     if (!employeeId || isSubmitting) return;
 
-    const errors: { title?: string; projectName?: string } = {};
+    const errors: NoteFormErrors = {};
     const trimmedTitle = formTitle.trim();
     const trimmedProjectName = formProjectName.trim();
 
@@ -1831,6 +2685,9 @@ const EmployeeNotes = () => {
         formCategory === "Project Note"
           ? "Project Title is required"
           : "Title is required";
+    }
+    if (isDescriptionEmpty(formDescription)) {
+      errors.description = "Description is required";
     }
 
     if (Object.keys(errors).length > 0) {
@@ -2092,7 +2949,11 @@ const EmployeeNotes = () => {
     } catch (err) {
       console.warn("Failed to delete note via API:", err);
     } finally {
-      const updated = notes.filter((n) => n.id !== id);
+      const updated = notes.filter(
+        (n) =>
+          String(n.id) !== String(id) &&
+          String(n.parentNoteId || "") !== String(id)
+      );
       setNotes(updated);
       localStorage.setItem(storageKey, JSON.stringify(updated));
       setIsDeleting(false);
@@ -2308,46 +3169,26 @@ const EmployeeNotes = () => {
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="block text-xs sm:text-[13px] font-bold font-sans text-black uppercase tracking-wider">
-                    Description
+                    Description {modalMode !== "view" && <span className="text-red-500">*</span>}
                   </label>
-                  {modalMode === "view" && formDescription && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleCopyText(
-                          htmlToPlainText(formDescription) || formDescription
+                  <div className="flex items-center gap-3">
+                    <NoteDownloadDropdown
+                      hasContent={Boolean(formDescription && formDescription.trim())}
+                      onDownload={(format) =>
+                        handleDownloadDescription(
+                          formDescription,
+                          formTitle || formProjectName,
+                          format
                         )
                       }
-                      className={`inline-flex items-center gap-1.5 text-xs font-semibold cursor-pointer transition-all ${
-                        isCopied
-                          ? "text-emerald-600 font-bold"
-                          : "text-[#4318FF] hover:underline"
-                      }`}
-                      title={
-                        isCopied
-                          ? "Copied to clipboard"
-                          : "Copy description text"
-                      }
-                    >
-                      {isCopied ? (
-                        <>
-                          <Check size={14} className="text-emerald-600 stroke-[2.5]" />
-                          <span className="text-emerald-600 font-bold">Copied</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy size={13} />
-                          <span>Copy text</span>
-                        </>
-                      )}
-                    </button>
-                  )}
+                    />
+                  </div>
                 </div>
 
                 {modalMode === "view" ? (
                   <div
                     style={{ resize: "vertical" }}
-                    className="w-full min-h-[350px] max-h-[850px] overflow-auto resize-y p-4 bg-gray-50/50 rounded-xl border border-gray-200 text-sm font-sans text-slate-800 leading-relaxed shadow-2xs prose prose-slate max-w-none [&_b]:font-bold [&_strong]:font-bold [&_i]:italic [&_em]:italic [&_u]:underline [&_h1]:text-lg [&_h1]:font-bold [&_h2]:text-base [&_h2]:font-bold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5"
+                    className="w-full min-h-[350px] max-h-[850px] overflow-auto resize-y p-4 sm:p-5 bg-gray-50/50 rounded-xl border border-gray-200 text-sm font-sans text-slate-800 leading-relaxed shadow-2xs prose prose-slate max-w-none [&_b]:font-bold [&_strong]:font-bold [&_i]:italic [&_em]:italic [&_u]:underline [&_h1]:text-lg [&_h1]:font-bold [&_h2]:text-base [&_h2]:font-bold [&_ul]:list-disc [&_ul]:ml-4.5 [&_ul]:pl-1 [&_ul_li]:mb-2 [&_ol]:list-decimal [&_ol]:ml-5.5 [&_ol]:pl-1 [&_ol_li]:mb-2 [&_blockquote]:border-l-4 [&_blockquote]:border-[#4318FF] [&_blockquote]:bg-indigo-50/60 [&_blockquote]:py-1.5 [&_blockquote]:px-3.5 [&_blockquote]:rounded-r-xl [&_blockquote]:italic [&_blockquote]:my-2.5 [&_blockquote]:text-slate-700"
                     dangerouslySetInnerHTML={{
                       __html:
                         formDescription ||
@@ -2355,12 +3196,41 @@ const EmployeeNotes = () => {
                     }}
                   />
                 ) : (
-                  <RichTextEditor
-                    initialValue={formDescription}
-                    onChange={(html) => setFormDescription(html)}
-                    placeholder="Write your notes, key updates, documentation, or action items here..."
-                    minHeight="380px"
-                  />
+                  <>
+                    <div
+                      className={
+                        formErrors.description
+                          ? "rounded-xl border border-red-400 ring-2 ring-red-100"
+                          : ""
+                      }
+                    >
+                      <RichTextEditor
+                        initialValue={formDescription}
+                        onChange={(html) => {
+                          setFormDescription(html);
+                          if (formErrors.description) {
+                            setFormErrors((prev) => ({
+                              ...prev,
+                              description: undefined,
+                            }));
+                          }
+                        }}
+                        placeholder="Write your notes, key updates, documentation, or action items here..."
+                        minHeight="380px"
+                        onDownload={() =>
+                          handleDownloadDescription(
+                            formDescription,
+                            formTitle || formProjectName
+                          )
+                        }
+                      />
+                    </div>
+                    {formErrors.description && (
+                      <p className="mt-1 text-xs font-semibold text-red-500">
+                        {formErrors.description}
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -2384,16 +3254,43 @@ const EmployeeNotes = () => {
                 {modalMode !== "view" && (
                   <div
                     onClick={() => fileInputRef.current?.click()}
-                    className="inline-flex items-center gap-2.5 border border-dashed border-gray-200 hover:border-[#4318FF] rounded-xl py-2 px-4 bg-gray-50/60 hover:bg-blue-50/30 transition-all cursor-pointer group"
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsMainModalDragging(true);
+                    }}
+                    onDragEnter={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsMainModalDragging(true);
+                    }}
+                    onDragLeave={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsMainModalDragging(false);
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsMainModalDragging(false);
+                      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                        processUploadedFiles(e.dataTransfer.files, "main");
+                      }
+                    }}
+                    className={`inline-flex items-center gap-2.5 border rounded-xl py-2 px-4 transition-all cursor-pointer group ${
+                      isMainModalDragging
+                        ? "border-[#4318FF] bg-blue-50/70 ring-2 ring-[#4318FF]/20"
+                        : "border-dashed border-gray-200 hover:border-[#4318FF] bg-gray-50/60 hover:bg-blue-50/30"
+                    }`}
                   >
                     <div className="w-7 h-7 rounded-lg bg-blue-50 group-hover:bg-blue-100 flex items-center justify-center text-[#4318FF] transition-colors shrink-0 shadow-2xs">
                       <UploadCloud size={16} />
                     </div>
                     <p className="text-xs font-bold font-sans text-slate-800 whitespace-nowrap">
                       <span className="text-[#4318FF] underline underline-offset-2 font-extrabold">
-                        Click to upload
+                        {isMainModalDragging ? "Drop files now" : "Click to upload"}
                       </span>{" "}
-                      or drag and drop
+                      {isMainModalDragging ? "to attach" : "or drag and drop"}
                       <span className="hidden md:inline text-[11px] text-slate-400 font-normal ml-1.5">
                         (PDF, Word, Excel, images)
                       </span>
@@ -2611,59 +3508,112 @@ const EmployeeNotes = () => {
                 </div>
               ) : filteredNotes.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-64 text-center p-6">
-                  <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-[#4318FF] mb-3">
-                    <FileText size={22} />
-                  </div>
-                  <p className="text-sm font-bold text-[#2B3674]">
-                    {notes.length === 0
-                      ? "No notes created yet"
-                      : "No matching notes found"}
-                  </p>
-                  <p className="text-xs text-[#707EAE] mt-1 max-w-xs">
-                    {notes.length === 0
-                      ? "Click '+ Create Note' to add your project or personal details."
-                      : "Try clearing your search query or switching filters."}
-                  </p>
-                  {notes.length === 0 && canManageNotes && (
-                    <div className="mt-4 flex items-center gap-2.5 flex-wrap justify-center">
-                      <button
-                        onClick={() => openCreateNote("Project Note")}
-                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#4318FF] hover:bg-[#3410d1] text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-2xs"
-                      >
-                        <Plus size={14} className="stroke-[2.5]" />
-                        Create Project Note
-                      </button>
-                      <button
-                        onClick={() => openCreateNote("Personal Note")}
-                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-white hover:bg-gray-50 text-[#4318FF] border border-gray-200 text-xs font-bold rounded-xl transition-all cursor-pointer shadow-2xs"
-                      >
-                        <Plus size={14} className="stroke-[2.5]" />
-                        Create Personal Note
-                      </button>
-                    </div>
-                  )}
-                  {notes.length > 0 && (
-                    <div className="mt-4 flex items-center gap-2.5 flex-wrap justify-center">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedFilter(selectedFilter === "Personal" ? "Project" : "Personal");
-                          setSearch("");
-                        }}
-                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#4318FF] hover:bg-[#3410d1] text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-2xs"
-                      >
-                        Switch to {selectedFilter === "Personal" ? "Project Notes" : "Personal Notes"}
-                      </button>
-                      {search && (
+                  {totalParentNotesCount === 0 ? (
+                    <>
+                      <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-[#4318FF] mb-3">
+                        <FileText size={22} />
+                      </div>
+                      <p className="text-sm sm:text-base font-bold text-[#2B3674]">
+                        No notes created yet
+                      </p>
+                      <p className="text-xs text-[#707EAE] mt-1 max-w-sm">
+                        Click &apos;+ Create Project Note&apos; or &apos;+ Create Personal Note&apos; above to add your notes.
+                      </p>
+                    </>
+                  ) : search.trim() ? (
+                    <>
+                      <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-[#4318FF] mb-3">
+                        <Search size={22} />
+                      </div>
+                      <p className="text-sm sm:text-base font-bold text-[#2B3674]">
+                        No matching notes found
+                      </p>
+                      <p className="text-xs text-[#707EAE] mt-1 max-w-sm">
+                        No {selectedFilter === "Personal" ? "personal" : "project"} notes match &quot;{search}&quot;. Try clearing your search query.
+                      </p>
+                      <div className="mt-4 flex items-center gap-2.5 flex-wrap justify-center">
                         <button
                           type="button"
                           onClick={() => setSearch("")}
-                          className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gray-100 hover:bg-gray-200 text-slate-700 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                          className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#4318FF] hover:bg-[#3410d1] text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-2xs"
                         >
                           Clear Search
                         </button>
-                      )}
-                    </div>
+                        {((selectedFilter === "Project" && personalNotesCount > 0) ||
+                          (selectedFilter === "Personal" && projectNotesCount > 0)) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedFilter(
+                                selectedFilter === "Personal" ? "Project" : "Personal"
+                              );
+                              setSearch("");
+                            }}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gray-100 hover:bg-gray-200 text-slate-700 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                          >
+                            Switch to{" "}
+                            {selectedFilter === "Personal"
+                              ? `Project Notes (${projectNotesCount})`
+                              : `Personal Notes (${personalNotesCount})`}
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-[#4318FF] mb-3">
+                        <FileText size={22} />
+                      </div>
+                      <p className="text-sm sm:text-base font-bold text-[#2B3674]">
+                        {selectedFilter === "Personal"
+                          ? "No Personal Notes found"
+                          : "No Project Notes found"}
+                      </p>
+                      <p className="text-xs text-[#707EAE] mt-1 max-w-sm">
+                        {selectedFilter === "Personal"
+                          ? `You haven't created any personal notes yet. You have ${projectNotesCount} project note${projectNotesCount === 1 ? "" : "s"}.`
+                          : `You haven't created any project notes yet. You have ${personalNotesCount} personal note${personalNotesCount === 1 ? "" : "s"}.`}
+                      </p>
+                      <div className="mt-4 flex items-center gap-2.5 flex-wrap justify-center">
+                        {canManageNotes && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              openCreateNote(
+                                selectedFilter === "Personal"
+                                  ? "Personal Note"
+                                  : "Project Note"
+                              )
+                            }
+                            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#4318FF] hover:bg-[#3410d1] text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-2xs"
+                          >
+                            <Plus size={14} className="stroke-[2.5]" />
+                            Create{" "}
+                            {selectedFilter === "Personal"
+                              ? "Personal Note"
+                              : "Project Note"}
+                          </button>
+                        )}
+                        {((selectedFilter === "Project" && personalNotesCount > 0) ||
+                          (selectedFilter === "Personal" && projectNotesCount > 0)) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedFilter(
+                                selectedFilter === "Personal" ? "Project" : "Personal"
+                              );
+                              setSearch("");
+                            }}
+                            className="inline-flex items-center gap-1.5 px-4 py-2 bg-white hover:bg-gray-50 text-[#4318FF] border border-gray-200 text-xs font-bold rounded-xl transition-all cursor-pointer shadow-2xs"
+                          >
+                            Switch to{" "}
+                            {selectedFilter === "Personal"
+                              ? `Project Notes (${projectNotesCount})`
+                              : `Personal Notes (${personalNotesCount})`}
+                          </button>
+                        )}
+                      </div>
+                    </>
                   )}
                 </div>
               ) : (
@@ -2758,15 +3708,12 @@ const EmployeeNotes = () => {
 
                                 {/* 3. Title */}
                                 <td className="py-4 px-4 text-left">
-                                  <button
-                                    type="button"
-                                    disabled={Boolean(actionLoadingNoteId)}
-                                    onClick={() => openViewNote(note)}
-                                    className="text-slate-800 hover:text-[#4318FF] text-sm font-semibold hover:underline transition-colors text-left cursor-pointer truncate max-w-[320px] block disabled:opacity-60 disabled:cursor-not-allowed"
+                                  <span
+                                    className="text-slate-800 text-sm font-semibold truncate max-w-[320px] block"
                                     title={note.title || "Untitled note"}
                                   >
                                     {note.title || "Untitled note"}
-                                  </button>
+                                  </span>
                                 </td>
 
                                 {/* 4. Created by */}
@@ -2890,15 +3837,12 @@ const EmployeeNotes = () => {
                                                       {cIdx + 1}
                                                     </td>
                                                     <td className="py-2.5 px-3 font-semibold text-slate-900">
-                                                      <button
-                                                        type="button"
-                                                        disabled={Boolean(actionLoadingNoteId)}
-                                                        onClick={() => openViewNote(child)}
-                                                        className="text-slate-900 hover:text-[#4318FF] hover:underline text-left cursor-pointer truncate max-w-[280px] block disabled:opacity-60 disabled:cursor-not-allowed"
+                                                      <span
+                                                        className="text-slate-900 truncate max-w-[280px] block"
                                                         title={child.title || "Untitled"}
                                                       >
                                                         {child.title || "Untitled"}
-                                                      </button>
+                                                      </span>
                                                     </td>
                                                     <td className="py-2.5 px-3 text-slate-600">
                                                       <div className="flex flex-col">
@@ -3433,15 +4377,54 @@ const EmployeeNotes = () => {
 
               {/* Description */}
               <div>
-                <label className="block text-xs sm:text-[13px] font-bold font-sans text-black mb-1.5 uppercase tracking-wider">
-                  Description
-                </label>
-                <RichTextEditor
-                  initialValue={rowModalDescription}
-                  onChange={(html) => setRowModalDescription(html)}
-                  placeholder="Write your notes, key updates, documentation, or action items here..."
-                  minHeight="240px"
-                />
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs sm:text-[13px] font-bold font-sans text-black uppercase tracking-wider">
+                    Description <span className="text-red-500">*</span>
+                  </label>
+                  <NoteDownloadDropdown
+                    hasContent={Boolean(rowModalDescription && rowModalDescription.trim())}
+                    onDownload={(format) =>
+                      handleDownloadDescription(
+                        rowModalDescription,
+                        rowModalTitle || rowModalProjectName,
+                        format
+                      )
+                    }
+                  />
+                </div>
+                <div
+                  className={
+                    rowModalErrors.description
+                      ? "rounded-xl border border-red-400 ring-2 ring-red-100"
+                      : ""
+                  }
+                >
+                  <RichTextEditor
+                    initialValue={rowModalDescription}
+                    onChange={(html) => {
+                      setRowModalDescription(html);
+                      if (rowModalErrors.description) {
+                        setRowModalErrors((prev) => ({
+                          ...prev,
+                          description: undefined,
+                        }));
+                      }
+                    }}
+                    placeholder="Write your notes, key updates, documentation, or action items here..."
+                    minHeight="240px"
+                    onDownload={() =>
+                      handleDownloadDescription(
+                        rowModalDescription,
+                        rowModalTitle || rowModalProjectName
+                      )
+                    }
+                  />
+                </div>
+                {rowModalErrors.description && (
+                  <p className="mt-1 text-xs font-semibold text-red-500">
+                    {rowModalErrors.description}
+                  </p>
+                )}
               </div>
 
               {/* Files & Attachments */}
@@ -3461,7 +4444,34 @@ const EmployeeNotes = () => {
                 {/* Drop zone */}
                 <div
                   onClick={() => rowModalFileInputRef.current?.click()}
-                  className="border border-dashed border-gray-200 hover:border-[#4318FF] rounded-xl py-2 px-3 flex items-center justify-center gap-2.5 bg-gray-50/60 hover:bg-blue-50/30 transition-all cursor-pointer group text-center"
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsRowModalDragging(true);
+                  }}
+                  onDragEnter={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsRowModalDragging(true);
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsRowModalDragging(false);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsRowModalDragging(false);
+                    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                      processUploadedFiles(e.dataTransfer.files, "row");
+                    }
+                  }}
+                  className={`border rounded-xl py-2 px-3 flex items-center justify-center gap-2.5 transition-all cursor-pointer group text-center ${
+                    isRowModalDragging
+                      ? "border-[#4318FF] bg-blue-50/70 ring-2 ring-[#4318FF]/20"
+                      : "border-dashed border-gray-200 hover:border-[#4318FF] bg-gray-50/60 hover:bg-blue-50/30"
+                  }`}
                 >
                   <div className="w-7 h-7 rounded-lg bg-blue-50 group-hover:bg-blue-100 flex items-center justify-center text-[#4318FF] transition-colors shrink-0 shadow-2xs">
                     <UploadCloud size={16} />
@@ -3469,9 +4479,9 @@ const EmployeeNotes = () => {
                   <div className="text-left sm:text-center">
                     <p className="text-xs font-bold font-sans text-slate-800">
                       <span className="text-[#4318FF] underline underline-offset-2 font-extrabold">
-                        Click to upload
+                        {isRowModalDragging ? "Drop files now" : "Click to upload"}
                       </span>{" "}
-                      or drag and drop multiple files
+                      {isRowModalDragging ? "to attach" : "or drag and drop multiple files"}
                       <span className="hidden md:inline text-[11px] text-slate-400 font-normal ml-2">
                         (PDF, Word, Excel, images, or documents)
                       </span>
