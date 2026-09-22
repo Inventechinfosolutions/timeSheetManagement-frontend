@@ -111,8 +111,7 @@ const useResponsive = () => {
   return { isMobile, isTablet };
 };
 
-const REPORTING_MANAGER_EMAIL = "vadiraj.karanam@inventechinfo.com";
-const HR_EMAIL = "timesheetattendance@inventechinfo.com";
+
 
 const LeaveManagementDesktop = () => {
   const navigate = useNavigate();
@@ -165,8 +164,10 @@ const LeaveManagementDesktop = () => {
   const isAdmin = currentUser?.userType === UserType.ADMIN || currentUser?.userType === UserType.CEO;
   const isManager =
     currentUser?.userType === UserType.MANAGER ||
+    currentUser?.userType === "MANAGER" ||
     (currentUser?.role &&
-      currentUser.role.toUpperCase().includes(UserType.MANAGER));
+      currentUser.role.toUpperCase().includes(UserType.MANAGER)) ||
+    location.pathname.includes("/manager-dashboard");
   const isPrivileged = isAdmin || isManager;
 
   const isCancellationAllowed = (toDate: string) => {
@@ -230,8 +231,8 @@ const LeaveManagementDesktop = () => {
     ccEmails: [],
   });
   const [emailConfig, setEmailConfig] = useState<LeaveManagementEmailConfig>({
-    assignedManagerEmail: REPORTING_MANAGER_EMAIL,
-    hrEmail: HR_EMAIL,
+    assignedManagerEmail: null,
+    hrEmail: null,
   });
   const [ccEmails, setCcEmails] = useState<string[]>([]);
   const [ccEmailInput, setCcEmailInput] = useState("");
@@ -291,6 +292,22 @@ const LeaveManagementDesktop = () => {
     );
     dispatch(getLeaveStats({ employeeId }));
   };
+
+  useEffect(() => {
+    if (employeeId) {
+      dispatch(getLeaveRequestEmailConfig(employeeId))
+        .unwrap()
+        .then((data) =>
+          setEmailConfig({
+            assignedManagerEmail: data?.assignedManagerEmail ?? null,
+            hrEmail: data?.hrEmail ?? null,
+          }),
+        )
+        .catch(() =>
+          setEmailConfig({ assignedManagerEmail: null, hrEmail: null }),
+        );
+    }
+  }, [employeeId, dispatch]);
 
   useEffect(() => {
     if (modifyModal.isOpen && modifyModal.request?.employeeId) {
@@ -1292,9 +1309,14 @@ const LeaveManagementDesktop = () => {
         const processedDates = apiDates.map((d: any) => {
           const dateStr = dayjs(d.date).format("YYYY-MM-DD");
 
-          // Check for 6:30 PM cutoff for regular users
+          // 6:30 PM cutoff applies to Approved only.
+          // Pending / in-flight cancellation & modification stay editable on any date.
           const cutoff = dayjs(d.date).hour(18).minute(30).second(0);
           const isTimePassed = dayjs().isAfter(cutoff);
+          const bypassDateDeadline =
+            request.status === LeaveRequestStatus.PENDING ||
+            request.status === LeaveRequestStatus.REQUESTING_FOR_CANCELLATION ||
+            request.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION;
 
           if (lockedDates.has(dateStr)) {
             return {
@@ -1304,13 +1326,16 @@ const LeaveManagementDesktop = () => {
             };
           }
 
-          if (isPrivileged) {
+          if (isPrivileged || bypassDateDeadline) {
             return {
               ...d,
               isCancellable: true,
-              reason: d.reason.includes("Deadline")
-                ? "Admin/Manager Bypass"
-                : d.reason,
+              reason:
+                isPrivileged && d.reason?.includes("Deadline")
+                  ? "Admin/Manager Bypass"
+                  : bypassDateDeadline
+                    ? "Eligible"
+                    : d.reason,
             };
           }
 
@@ -1509,11 +1534,9 @@ const LeaveManagementDesktop = () => {
     }
   };
 
-  const isUndoable = (req: any) => {
-    // Rule: Next Day 10 AM
-    const submissionTime = dayjs(req.submittedDate || req.created_at);
-    const deadline = submissionTime.add(1, "day").hour(10).minute(0).second(0);
-    return dayjs().isBefore(deadline);
+  const isUndoable = (_req: any) => {
+    // In-flight cancellation/modification can be undone regardless of date.
+    return true;
   };
 
   const executeCancel = () => {
@@ -1720,6 +1743,7 @@ const LeaveManagementDesktop = () => {
         modifyCcError={modifyCcError}
         uploadedDocumentKeys={uploadedDocumentKeys}
         refreshData={refreshData}
+        isManager={isManager}
       />
     );
   }
@@ -1829,6 +1853,7 @@ const LeaveManagementDesktop = () => {
         modifyCcError={modifyCcError}
         uploadedDocumentKeys={uploadedDocumentKeys}
         refreshData={refreshData}
+        isManager={isManager}
       />
     );
   }
@@ -2499,9 +2524,9 @@ const LeaveManagementDesktop = () => {
                             >
                               <Eye size={18} />
                             </button>
-                            {(item.status === LeaveRequestStatus.PENDING ||
-                              item.status === LeaveRequestStatus.APPROVED) &&
-                            isCancellationAllowed(item.toDate) ? (
+                            {item.status === LeaveRequestStatus.PENDING ||
+                            (item.status === LeaveRequestStatus.APPROVED &&
+                              isCancellationAllowed(item.toDate)) ? (
                               <button
                                 onClick={() => handleCancel(item.id)}
                                 className="p-1.5 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
@@ -2510,8 +2535,7 @@ const LeaveManagementDesktop = () => {
                                 <XCircle size={18} />
                               </button>
                             ) : item.status ===
-                                LeaveRequestStatus.REQUESTING_FOR_CANCELLATION &&
-                              isUndoable(item) ? (
+                                LeaveRequestStatus.REQUESTING_FOR_CANCELLATION ? (
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -2640,19 +2664,21 @@ const LeaveManagementDesktop = () => {
                 </label>
                 <div className="space-y-4">
                   <div className="flex flex-wrap gap-4 items-start">
-                    <div className="min-w-0 flex-1">
-                      <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
-                        Reporting Manager
-                      </span>
-                      <input
-                        type="text"
-                        readOnly
-                        disabled
-                        value={REPORTING_MANAGER_EMAIL}
-                        placeholder="Not configured"
-                        className="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-gray-50 text-gray-700 cursor-not-allowed"
-                      />
-                    </div>
+                    {!isManager && (
+                      <div className="min-w-0 flex-1">
+                        <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
+                          Reporting Manager
+                        </span>
+                        <input
+                          type="text"
+                          readOnly
+                          disabled
+                          value={emailConfig.assignedManagerEmail || ""}
+                          placeholder="Not configured"
+                          className="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-gray-50 text-gray-700 cursor-not-allowed"
+                        />
+                      </div>
+                    )}
                     <div className="min-w-0 flex-1">
                       <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
                         HR
@@ -2661,7 +2687,7 @@ const LeaveManagementDesktop = () => {
                         type="text"
                         readOnly
                         disabled
-                        value={HR_EMAIL}
+                        value={emailConfig.hrEmail || ""}
                         placeholder="Not configured"
                         className="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-gray-50 text-gray-700 cursor-not-allowed"
                       />
@@ -3424,18 +3450,21 @@ const LeaveManagementDesktop = () => {
                 </label>
                 <div className="space-y-4">
                   <div className="flex flex-wrap gap-4 items-start">
-                    <div className="min-w-0 flex-1">
-                      <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
-                        Reporting Manager
-                      </span>
-                      <input
-                        type="text"
-                        readOnly
-                        disabled
-                        value={REPORTING_MANAGER_EMAIL}
-                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-gray-700 cursor-not-allowed"
-                      />
-                    </div>
+                    {!isManager && (
+                      <div className="min-w-0 flex-1">
+                        <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
+                          Reporting Manager
+                        </span>
+                        <input
+                          type="text"
+                          readOnly
+                          disabled
+                          value={emailConfig.assignedManagerEmail || ""}
+                          placeholder="Not configured"
+                          className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-gray-700 cursor-not-allowed"
+                        />
+                      </div>
+                    )}
                     <div className="min-w-0 flex-1">
                       <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
                         HR
@@ -3444,7 +3473,7 @@ const LeaveManagementDesktop = () => {
                         type="text"
                         readOnly
                         disabled
-                        value={HR_EMAIL}
+                        value={emailConfig.hrEmail || ""}
                         placeholder="Not configured"
                         className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-gray-700 cursor-not-allowed"
                       />
@@ -3924,12 +3953,7 @@ const LeaveManagementDesktop = () => {
             <div className="space-y-4">
               <p className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-100">
                 Choose the dates you want to revert.
-                {!(
-                  requestToCancel?.status ===
-                    LeaveRequestStatus.REQUESTING_FOR_CANCELLATION ||
-                  requestToCancel?.status ===
-                    LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
-                ) && (
+                {requestToCancel?.status === LeaveRequestStatus.APPROVED && (
                   <>
                     <br />
                     <span className="text-xs text-red-500 font-semibold">
