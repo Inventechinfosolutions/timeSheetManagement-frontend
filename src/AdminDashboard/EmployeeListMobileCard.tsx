@@ -1,4 +1,4 @@
-import { Pencil, RefreshCw, Eye, Mail } from "lucide-react";
+import { Pencil, RefreshCw, Eye, Mail, User } from "lucide-react";
 import { UserStatus } from "../enums";
 
 interface Employee {
@@ -162,9 +162,9 @@ const EmployeeListMobileCard = ({
                 <button
                   onClick={() => onViewDetails(emp.rawId)}
                   className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#4318FF]/5 text-[#4318FF] font-bold text-sm hover:bg-[#4318FF] hover:text-white transition-all active:scale-95 shadow-sm"
-                  title="Edit Details"
+                  title={isAdmin ? "Edit Details" : "View Details"}
                 >
-                  <Pencil size={16} />
+                  {isAdmin ? <Pencil size={16} /> : <User size={16} />}
                 </button>
               </div>
             </div>

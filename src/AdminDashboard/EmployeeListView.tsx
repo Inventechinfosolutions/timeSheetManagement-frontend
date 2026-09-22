@@ -910,15 +910,13 @@ const EmployeeListView = () => {
                         >
                           <Eye size={16} />
                         </button>
-                        {canEdit && (
-                          <button
-                            onClick={() => handleViewDetails(emp.rawId)}
-                            className="inline-flex items-center justify-center bg-transparent border-none cursor-pointer text-[#4318FF] hover:scale-110 active:scale-95 transition-all"
-                            title="Edit Details"
-                          >
-                            <Pencil size={16} />
-                          </button>
-                        )}
+                        <button
+                          onClick={() => handleViewDetails(emp.rawId)}
+                          className="inline-flex items-center justify-center bg-transparent border-none cursor-pointer text-[#4318FF] hover:scale-110 active:scale-95 transition-all"
+                          title={canEdit ? "Edit Details" : "View Details"}
+                        >
+                          {canEdit ? <Pencil size={16} /> : <User size={16} />}
+                        </button>
                       </div>
                     </td>
                   </tr>
