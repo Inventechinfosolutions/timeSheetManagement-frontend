@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "../store";
 import { useState, useEffect } from "react";
@@ -34,6 +34,7 @@ import defaultAvatar from "../assets/default-avatar.jpg";
 const EmployeeDetailsView = () => {
   const { employeeId } = useParams<{ employeeId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch<AppDispatch>();
   const { entities, entity, loading, errorMessage } = useSelector(
     (state: RootState) => state.employeeDetails,
@@ -44,6 +45,12 @@ const EmployeeDetailsView = () => {
   const { departments } = useSelector(
     (state: RootState) => state.masterDepartments,
   );
+  const currentUser = useSelector((state: RootState) => state.user.currentUser);
+  const isAdmin =
+    currentUser?.userType === UserType.ADMIN ||
+    currentUser?.userType === UserType.CEO;
+  const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
+  const canEdit = isAdmin && !isReceptionist;
   const [viewedProfileImage, setViewedProfileImage] = useState<string | null>(
     null,
   );
@@ -171,11 +178,20 @@ const EmployeeDetailsView = () => {
   }
 
   if (!employee && !loading) {
+    const isManager =
+      location.pathname.startsWith("/manager-dashboard") ||
+      currentUser?.userType === UserType.MANAGER;
     return (
       <div className="flex flex-col items-center justify-center h-full text-gray-500">
         <p className="mb-4 text-xl font-bold">Employee not found</p>
         <button
-          onClick={() => navigate("/admin-dashboard/employees")}
+          onClick={() =>
+            navigate(
+              isManager
+                ? "/manager-dashboard/employees"
+                : "/admin-dashboard/employees"
+            )
+          }
           className="px-6 py-2 bg-[#4318FF] text-white rounded-xl shadow-lg hover:bg-[#3311CC] transition-all"
         >
           Back to Employee List
@@ -441,28 +457,30 @@ const EmployeeDetailsView = () => {
               Personal Information
             </h2>
           </div>
-          {!isEditing ? (
-            <button
-              onClick={handleEdit}
-              className="px-4 py-2 bg-[#4318FF] text-white rounded-xl font-bold text-sm hover:bg-[#3311CC] transition-all"
-            >
-              Edit
-            </button>
-          ) : (
-            <div className="flex gap-2">
+          {canEdit && (
+            !isEditing ? (
               <button
-                onClick={handleSave}
-                className="px-4 py-2 bg-green-500 text-white rounded-xl font-bold text-sm hover:bg-green-600 transition-all"
+                onClick={handleEdit}
+                className="px-4 py-2 bg-[#4318FF] text-white rounded-xl font-bold text-sm hover:bg-[#3311CC] transition-all"
               >
-                Save
+                Edit
               </button>
-              <button
-                onClick={handleCancel}
-                className="px-4 py-2 bg-gray-500 text-white rounded-xl font-bold text-sm hover:bg-gray-600 transition-all"
-              >
-                Cancel
-              </button>
-            </div>
+            ) : (
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSave}
+                  className="px-4 py-2 bg-green-500 text-white rounded-xl font-bold text-sm hover:bg-green-600 transition-all"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={handleCancel}
+                  className="px-4 py-2 bg-gray-500 text-white rounded-xl font-bold text-sm hover:bg-gray-600 transition-all"
+                >
+                  Cancel
+                </button>
+              </div>
+            )
           )}
         </div>
 
