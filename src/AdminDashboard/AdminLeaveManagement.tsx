@@ -74,13 +74,6 @@ const isCancellationAllowed = (submittedDate: string) => {
   return dayjs().isBefore(deadline);
 };
 
-const isUndoable = (req: any) => {
-  // Rule: Next Day 10 AM
-  const submissionTime = dayjs(req.submittedDate || req.created_at);
-  const deadline = submissionTime.add(1, "day").hour(10).minute(0).second(0);
-  return dayjs().isBefore(deadline);
-};
-
 const datePickerTheme = {
   token: {
     borderRadius: 16,
@@ -2475,8 +2468,7 @@ const AdminLeaveManagement = () => {
                                   LeaveRequestStatus.APPROVED) &&
                                   renderCancelButton(item)}
                                 {item.status ===
-                                  LeaveRequestStatus.REQUESTING_FOR_CANCELLATION &&
-                                  isUndoable(item) && (
+                                  LeaveRequestStatus.REQUESTING_FOR_CANCELLATION && (
                                     <button
                                       onClick={() =>
                                         handleUndoCancellation(item)

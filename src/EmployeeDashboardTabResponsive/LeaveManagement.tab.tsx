@@ -51,8 +51,7 @@ import {
   modifyLeaveRequest,
 } from "../reducers/leaveRequest.reducer";
 
-const REPORTING_MANAGER_EMAIL = "vadiraj.karanam@inventechinfo.com";
-const HR_EMAIL = "timesheetattendance@inventechinfo.com";
+
 
 export interface LeaveManagementTabProps {
   navigate: any;
@@ -157,6 +156,7 @@ export interface LeaveManagementTabProps {
   toggleDateSelection: (date: string) => void;
   formatModalDate: (dateStr: string) => string;
   isPrivileged: boolean;
+  isManager?: boolean;
   addModifyCcEmail: (email: string) => void;
   removeModifyCcEmail: (email: string) => void;
   modifyCcInput: string;
@@ -261,6 +261,7 @@ const LeaveManagementTab: React.FC<LeaveManagementTabProps> = ({
   toggleDateSelection,
   formatModalDate,
   isPrivileged,
+  isManager,
   addModifyCcEmail,
   removeModifyCcEmail,
   modifyCcInput,
@@ -976,9 +977,9 @@ const LeaveManagementTab: React.FC<LeaveManagementTabProps> = ({
                               >
                                 <Eye size={18} />
                               </button>
-                              {(item.status === LeaveRequestStatus.PENDING ||
-                                item.status === LeaveRequestStatus.APPROVED) &&
-                              isCancellationAllowed(item.toDate) ? (
+                              {item.status === LeaveRequestStatus.PENDING ||
+                              (item.status === LeaveRequestStatus.APPROVED &&
+                                isCancellationAllowed(item.toDate)) ? (
                                 <button
                                   onClick={() => handleCancel(item.id)}
                                   className="p-1.5 text-red-600 bg-red-50/50 hover:bg-red-600 hover:text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-red-200 active:scale-90"
@@ -987,8 +988,7 @@ const LeaveManagementTab: React.FC<LeaveManagementTabProps> = ({
                                   <XCircle size={18} />
                                 </button>
                               ) : item.status ===
-                                  LeaveRequestStatus.REQUESTING_FOR_CANCELLATION &&
-                                isUndoable(item) ? (
+                                  LeaveRequestStatus.REQUESTING_FOR_CANCELLATION ? (
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -1127,18 +1127,21 @@ const LeaveManagementTab: React.FC<LeaveManagementTabProps> = ({
                   </label>
                   <div className="space-y-4">
                     <div className="flex flex-col gap-4">
-                      <div className="w-full">
-                        <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
-                          Reporting Manager
-                        </span>
-                        <input
-                          type="text"
-                          readOnly
-                          disabled
-                          value={REPORTING_MANAGER_EMAIL}
-                          className="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-gray-50 text-gray-700 cursor-not-allowed text-sm whitespace-nowrap overflow-hidden text-ellipsis"
-                        />
-                      </div>
+                      {!isManager && (
+                        <div className="w-full">
+                          <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
+                            Reporting Manager
+                          </span>
+                          <input
+                            type="text"
+                            readOnly
+                            disabled
+                            value={emailConfig?.assignedManagerEmail || ""}
+                            placeholder="Not configured"
+                            className="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-gray-50 text-gray-700 cursor-not-allowed text-sm whitespace-nowrap overflow-hidden text-ellipsis"
+                          />
+                        </div>
+                      )}
                       <div className="w-full">
                         <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
                           HR
@@ -1147,7 +1150,7 @@ const LeaveManagementTab: React.FC<LeaveManagementTabProps> = ({
                           type="text"
                           readOnly
                           disabled
-                          value={HR_EMAIL}
+                          value={emailConfig?.hrEmail || ""}
                           placeholder="Not configured"
                           className="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-gray-50 text-gray-700 cursor-not-allowed text-sm whitespace-nowrap overflow-hidden text-ellipsis"
                         />
@@ -1929,18 +1932,21 @@ const LeaveManagementTab: React.FC<LeaveManagementTabProps> = ({
                   </label>
                   <div className="space-y-4">
                     <div className="flex flex-col gap-4">
-                      <div className="w-full">
-                        <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
-                          Reporting Manager
-                        </span>
-                        <input
-                          type="text"
-                          readOnly
-                          disabled
-                          value={REPORTING_MANAGER_EMAIL}
-                          className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-gray-700 cursor-not-allowed text-sm whitespace-nowrap overflow-hidden text-ellipsis"
-                        />
-                      </div>
+                      {!isManager && (
+                        <div className="w-full">
+                          <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
+                            Reporting Manager
+                          </span>
+                          <input
+                            type="text"
+                            readOnly
+                            disabled
+                            value={emailConfig?.assignedManagerEmail || ""}
+                            placeholder="Not configured"
+                            className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-gray-700 cursor-not-allowed text-sm whitespace-nowrap overflow-hidden text-ellipsis"
+                          />
+                        </div>
+                      )}
                       <div className="w-full">
                         <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
                           HR
@@ -1949,7 +1955,7 @@ const LeaveManagementTab: React.FC<LeaveManagementTabProps> = ({
                           type="text"
                           readOnly
                           disabled
-                          value={HR_EMAIL}
+                          value={emailConfig?.hrEmail || ""}
                           placeholder="Not configured"
                           className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-gray-700 cursor-not-allowed text-sm whitespace-nowrap overflow-hidden text-ellipsis"
                         />
@@ -2486,12 +2492,7 @@ const LeaveManagementTab: React.FC<LeaveManagementTabProps> = ({
               <div className="space-y-4">
                 <p className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-100">
                   Choose the dates you want to revert.
-                  {!(
-                    requestToCancel?.status ===
-                      LeaveRequestStatus.REQUESTING_FOR_CANCELLATION ||
-                    requestToCancel?.status ===
-                      LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
-                  ) && (
+                  {requestToCancel?.status === LeaveRequestStatus.APPROVED && (
                     <>
                       <br />
                       <span className="text-xs text-red-500 font-semibold">
