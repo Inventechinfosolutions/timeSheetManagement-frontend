@@ -352,9 +352,9 @@ const LeaveManagementDesktop = () => {
         selectedLeaveType === AttendanceStatus.HALF_DAY ||
         selectedLeaveType === AttendanceStatus.LEAVE
       ) {
-        // Only past 7 days for Leave/WFH
-        const sevenDaysAgo = today.subtract(7, "day");
-        if (currentDate.isBefore(sevenDaysAgo)) {
+        // Only past 1 month for Leave/WFH
+        const oneMonthAgo = today.subtract(1, "month");
+        if (currentDate.isBefore(oneMonthAgo)) {
           return true;
         }
       } else if (currentDate.isBefore(today)) {
@@ -460,8 +460,8 @@ const LeaveManagementDesktop = () => {
       selectedLeaveType === AttendanceStatus.HALF_DAY ||
       selectedLeaveType === AttendanceStatus.LEAVE
     ) {
-      const sevenDaysAgo = today.subtract(7, "day");
-      if (currentDate.isBefore(sevenDaysAgo)) return true;
+      const oneMonthAgo = today.subtract(1, "month");
+      if (currentDate.isBefore(oneMonthAgo)) return true;
     } else if (currentDate.isBefore(today)) {
       return true;
     }
