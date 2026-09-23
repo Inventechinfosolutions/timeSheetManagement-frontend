@@ -164,7 +164,6 @@ const LeaveManagementDesktop = () => {
   const isAdmin = currentUser?.userType === UserType.ADMIN || currentUser?.userType === UserType.CEO;
   const isManager =
     currentUser?.userType === UserType.MANAGER ||
-    currentUser?.userType === "MANAGER" ||
     (currentUser?.role &&
       currentUser.role.toUpperCase().includes(UserType.MANAGER)) ||
     location.pathname.includes("/manager-dashboard");
@@ -199,7 +198,6 @@ const LeaveManagementDesktop = () => {
   const [isLoadingDates, setIsLoadingDates] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [viewDetailsLoading, setViewDetailsLoading] = useState(false);
   const [isViewMode, setIsViewMode] = useState(false);
   const [selectedRequestId, setSelectedRequestId] = useState<number | null>(
     null,
@@ -256,7 +254,7 @@ const LeaveManagementDesktop = () => {
   );
   const [halfDayType, setHalfDayType] = useState<string | null>(null);
   const [otherHalfType, setOtherHalfType] = useState<string | null>(null);
-  const [isHalfDay, setIsHalfDay] = useState<boolean>(false);
+  const [, setIsHalfDay] = useState<boolean>(false);
   const [uploadedDocumentKeys, setUploadedDocumentKeys] = useState<string[]>(
     [],
   );
@@ -1685,6 +1683,7 @@ const LeaveManagementDesktop = () => {
         ccEmailInput={ccEmailInput}
         setCcEmailInput={setCcEmailInput}
         ccEmailError={ccEmailError}
+        setCcEmailError={setCcEmailError}
         addCcEmail={addCcEmail}
         titleRef={titleRef}
         errors={errors}
@@ -1713,6 +1712,7 @@ const LeaveManagementDesktop = () => {
         handleSubmit={handleSubmit}
         cancelModal={cancelModal}
         setCancelModal={setCancelModal}
+        requestToCancel={requestToCancel}
         executeCancel={executeCancel}
         isCancelling={isCancelling}
         undoModal={undoModal}
@@ -1723,6 +1723,7 @@ const LeaveManagementDesktop = () => {
         setModifyModal={setModifyModal}
         setModifyErrors={setModifyErrors}
         isModifying={isModifying}
+        setIsModifying={setIsModifying}
         modifyFormData={modifyFormData}
         setModifyFormData={setModifyFormData}
         modifyErrors={modifyErrors}
@@ -2375,11 +2376,7 @@ const LeaveManagementDesktop = () => {
                                     return "Half Day Leave";
                                   return normalizeTypeName(item.requestType);
                                 })()}
-                                {item.isModified && (
-                                  <span className="bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter shadow-sm border border-orange-200">
-                                    Modified
-                                  </span>
-                                )}
+                              
                               </span>
                             </div>
                           </div>
