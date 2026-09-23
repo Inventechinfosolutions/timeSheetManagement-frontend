@@ -270,6 +270,56 @@ export const updateLeaveRequestStatus = createAsyncThunk(
   }
 );
 
+export const bulkApproveAll = createAsyncThunk(
+  "leaveRequest/bulkApproveAll",
+  async (
+    payload: {
+      status?: LeaveRequestStatus | string;
+      department?: string;
+      search?: string;
+      month?: string;
+      year?: string;
+      requestType?: string;
+      ids?: number[];
+    },
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await axios.post(`${apiUrl}/bulk/approve`, payload);
+      return response.data as { successCount: number; failCount: number; total: number };
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to bulk approve requests");
+    }
+  }
+);
+
+export const bulkRejectAll = createAsyncThunk(
+  "leaveRequest/bulkRejectAll",
+  async (
+    payload: {
+      status?: LeaveRequestStatus | string;
+      department?: string;
+      search?: string;
+      month?: string;
+      year?: string;
+      requestType?: string;
+      ids?: number[];
+    },
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await axios.post(`${apiUrl}/bulk/reject`, payload);
+      return response.data as { successCount: number; failCount: number; total: number };
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to bulk reject requests");
+    }
+  }
+);
+
+// Keep old export as alias for backward compatibility
+export const bulkUpdateAllLeaveStatus = bulkApproveAll;
+
+
 // Async Thunk for Explicit Attendance Clearance
 export const clearAttendanceForRequest = createAsyncThunk(
   "leaveRequest/clearAttendance",

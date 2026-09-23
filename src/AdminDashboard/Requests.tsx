@@ -38,6 +38,8 @@ import {
   submitRequestModification,
   clearAttendanceForRequest,
   clearRequests,
+  bulkApproveAll,
+  bulkRejectAll,
   LeaveRequest,
   getLeaveRequestEmailConfig,
 } from "../reducers/leaveRequest.reducer";
@@ -204,13 +206,20 @@ const Requests = () => {
   const statusDropdownRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
 
-  // ── Bulk select state ──────────────────────────────────────────
+  // ── Bulk select state ──────────────────────────────
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [selectedRequestsMap, setSelectedRequestsMap] = useState<Map<number, any>>(new Map());
+  const [isFetchingAllIds, setIsFetchingAllIds] = useState(false);
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
   const [bulkModal, setBulkModal] = useState<{
     isOpen: boolean;
-    action: LeaveRequestStatus.APPROVED | LeaveRequestStatus.REJECTED | null;
+    action: LeaveRequestStatus | null;
   }>({ isOpen: false, action: null });
+
+  const isBulkEligibleStatus =
+    selectedStatus === LeaveRequestStatus.PENDING ||
+    selectedStatus === LeaveRequestStatus.REQUESTING_FOR_CANCELLATION ||
+    selectedStatus === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -375,6 +384,7 @@ const Requests = () => {
     setCurrentPage(1);
     // Clear bulk selections whenever filters change
     setSelectedIds(new Set());
+    setSelectedRequestsMap(new Map());
   }, [selectedDept, selectedMonth, selectedYear, selectedRequestType, selectedStatus]);
 
   const handleDownloadExcel = async () => {
@@ -402,32 +412,74 @@ const Requests = () => {
     }
   };
 
-  // ── Bulk action executor ──────────────────────────────────────
+  // ── Fetch all requests across all pages for current active status ─────
+  const fetchAllPendingRequests = async (): Promise<any[]> => {
+    try {
+      const params = new URLSearchParams();
+      if (isBulkEligibleStatus) {
+        params.set('status', selectedStatus);
+      }
+      params.set('limit', '99999');
+      params.set('page', '1');
+      if (selectedDept && selectedDept !== 'All') params.set('department', selectedDept);
+      if (debouncedSearchTerm) params.set('search', debouncedSearchTerm);
+      if (selectedMonth && selectedMonth !== 'All') params.set('month', selectedMonth);
+      if (selectedYear && selectedYear !== 'All') params.set('year', selectedYear);
+      if (selectedRequestType && selectedRequestType !== 'All') params.set('requestType', selectedRequestType);
+      const response = await import('axios').then(m => m.default.get(`/api/leave-requests?${params.toString()}`));
+      const data = response.data?.data || response.data || [];
+      return Array.isArray(data) ? data : [];
+    } catch {
+      return [];
+    }
+  };
+
+  // ── Bulk action executor ──────────────────────────────
   const executeBulkAction = async () => {
     if (!bulkModal.action || selectedIds.size === 0) return;
     setIsBulkProcessing(true);
-    let successCount = 0;
-    let failCount = 0;
-    for (const id of Array.from(selectedIds)) {
-      try {
-        await dispatch(updateLeaveRequestStatus({ id, status: bulkModal.action })).unwrap();
-        successCount++;
-      } catch {
-        failCount++;
+
+    const ids = Array.from(selectedIds);
+    const isApproval =
+      bulkModal.action === LeaveRequestStatus.APPROVED ||
+      bulkModal.action === LeaveRequestStatus.CANCELLATION_APPROVED ||
+      bulkModal.action === LeaveRequestStatus.MODIFICATION_APPROVED;
+
+    const payload = {
+      ids,
+      status: bulkModal.action,
+      department: selectedDept,
+      search: debouncedSearchTerm,
+      month: selectedMonth,
+      year: selectedYear,
+      requestType: selectedRequestType,
+    };
+
+    try {
+      let result: any;
+      if (isApproval) {
+        result = await dispatch(bulkApproveAll(payload)).unwrap();
+      } else {
+        result = await dispatch(bulkRejectAll(payload)).unwrap();
       }
+
+      setBulkModal({ isOpen: false, action: null });
+      setSelectedIds(new Set());
+      setSelectedRequestsMap(new Map());
+
+      if (result?.successCount > 0) {
+        message.success(
+          `${result.successCount} request${result.successCount > 1 ? "s" : ""} processed successfully`
+        );
+      }
+      if (result?.failCount > 0) {
+        message.error(`${result.failCount} request${result.failCount > 1 ? "s" : ""} failed`);
+      }
+    } catch (err: any) {
+      message.error(err?.message || "Bulk operation failed");
+      setBulkModal({ isOpen: false, action: null });
     }
-    setBulkModal({ isOpen: false, action: null });
-    setSelectedIds(new Set());
-    if (successCount > 0) {
-      message.success(
-        `${successCount} request${successCount > 1 ? 's' : ''} ${
-          bulkModal.action === LeaveRequestStatus.APPROVED ? 'approved' : 'rejected'
-        } successfully`
-      );
-    }
-    if (failCount > 0) {
-      message.error(`${failCount} request${failCount > 1 ? 's' : ''} failed`);
-    }
+
     // Refetch with current filters
     dispatch(
       getAllLeaveRequests({
@@ -1269,62 +1321,14 @@ const Requests = () => {
             </button>
           </div>
 
-          {/* Bulk Select Checkbox + Approve/Reject Selected — only when Pending filter is active */}
-          {selectedStatus === LeaveRequestStatus.PENDING && (
-            <div className="flex items-center gap-2 self-end mb-0.5">
-              {/* Checkbox to toggle all visible rows */}
-              <label
-                className="flex items-center gap-1.5 cursor-pointer select-none px-3 py-2.5 rounded-full border border-[#4318FF]/30 bg-white hover:bg-blue-50 transition-all"
-                title="Select / Deselect all visible pending rows"
-              >
-                <input
-                  type="checkbox"
-                  className="accent-[#4318FF] w-4 h-4 cursor-pointer"
-                  checked={filteredRequests.length > 0 && filteredRequests.every((r) => selectedIds.has(r.id))}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setSelectedIds(new Set(filteredRequests.map((r) => r.id)));
-                    } else {
-                      setSelectedIds(new Set());
-                    }
-                  }}
-                />
-                <span className="text-xs font-bold text-[#4318FF] whitespace-nowrap">
-                  {selectedIds.size > 0 ? `${selectedIds.size} selected` : "Select"}
-                </span>
-              </label>
-
-              {/* Approve / Reject Selected — only when ≥1 row checked */}
-              {selectedIds.size > 0 && (
-                <>
-                  <button
-                    onClick={() => setBulkModal({ isOpen: true, action: LeaveRequestStatus.APPROVED })}
-                    className="flex items-center gap-1.5 px-3 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-full text-xs font-bold transition-all active:scale-95 shadow-sm whitespace-nowrap"
-                    title="Approve all selected"
-                  >
-                    <CheckCircle size={14} />
-                    Approve Selected
-                  </button>
-                  <button
-                    onClick={() => setBulkModal({ isOpen: true, action: LeaveRequestStatus.REJECTED })}
-                    className="flex items-center gap-1.5 px-3 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-full text-xs font-bold transition-all active:scale-95 shadow-sm whitespace-nowrap"
-                    title="Reject all selected"
-                  >
-                    <XCircle size={14} />
-                    Reject Selected
-                  </button>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* Clear Filters Button */}
-          {(searchTerm ||
-            selectedDept !== "All" ||
-            selectedMonth !== "All" ||
-            selectedYear !== "All" ||
-            selectedRequestType !== "All" ||
-            selectedStatus !== "All") && (
+          {/* Clear Filters Button + Approve/Reject Selected */}
+          <div className="flex items-center gap-2 self-end mb-0.5">
+            {(searchTerm ||
+              selectedDept !== "All" ||
+              selectedMonth !== "All" ||
+              selectedYear !== "All" ||
+              selectedRequestType !== "All" ||
+              selectedStatus !== "All") && (
               <button
                 onClick={() => {
                   setSearchTerm("");
@@ -1335,13 +1339,61 @@ const Requests = () => {
                   setSelectedStatus("All");
                   setCurrentPage(1);
                 }}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#5B4FFF] text-white rounded-full hover:bg-[#4318FF] active:scale-95 transition-all text-sm font-bold border border-[#4318FF]/50 whitespace-nowrap self-end mb-0.5"
+                className="cursor-pointer flex items-center justify-center gap-2 px-4 h-10 bg-[#5B4FFF] text-white rounded-xl hover:bg-[#4318FF] active:scale-95 transition-all text-sm font-bold border border-[#4318FF]/50 whitespace-nowrap shadow-sm shadow-[#4318FF]/20"
                 title="Clear all filters"
               >
-                <X size={16} />
+                <X size={15} />
                 <span>Clear All</span>
               </button>
             )}
+          </div>
+
+          {/* Approve / Reject + Total Selected — far right */}
+          {isBulkEligibleStatus && selectedIds.size > 0 && (() => {
+            const isCanc = selectedStatus === LeaveRequestStatus.REQUESTING_FOR_CANCELLATION;
+            const isMod = selectedStatus === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION;
+            const approveAction = isCanc
+              ? LeaveRequestStatus.CANCELLATION_APPROVED
+              : isMod
+              ? LeaveRequestStatus.MODIFICATION_APPROVED
+              : LeaveRequestStatus.APPROVED;
+            const rejectAction = isCanc
+              ? LeaveRequestStatus.CANCELLATION_REJECTED
+              : isMod
+              ? LeaveRequestStatus.MODIFICATION_REJECTED
+              : LeaveRequestStatus.REJECTED;
+            const approveText = isCanc ? "Approve Cancellation" : isMod ? "Approve Modification" : "Approve";
+            const rejectText = isCanc ? "Reject Cancellation" : isMod ? "Reject Modification" : "Reject";
+
+            return (
+              <div className="ml-auto self-end mb-0.5 flex items-center gap-2">
+                <button
+                  onClick={() => setBulkModal({ isOpen: true, action: approveAction })}
+                  className="cursor-pointer flex items-center gap-2 px-4 h-10 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white rounded-xl text-sm font-bold transition-all shadow-sm shadow-emerald-500/30 whitespace-nowrap"
+                  title={`${approveText} all selected`}
+                >
+                  <CheckCircle size={16} strokeWidth={2.5} />
+                  {approveText}
+                </button>
+                <button
+                  onClick={() => setBulkModal({ isOpen: true, action: rejectAction })}
+                  className="cursor-pointer flex items-center gap-2 px-4 h-10 bg-red-500 hover:bg-red-600 active:scale-95 text-white rounded-xl text-sm font-bold transition-all shadow-sm shadow-red-500/30 whitespace-nowrap"
+                  title={`${rejectText} all selected`}
+                >
+                  <XCircle size={16} strokeWidth={2.5} />
+                  {rejectText}
+                </button>
+                <div className="flex items-center gap-2 px-4 h-10 bg-white border border-[#4318FF]/20 rounded-xl shadow-sm whitespace-nowrap">
+                  <span className="text-xs text-gray-400 font-medium">Total Selected</span>
+                  <span className="text-sm font-bold text-[#4318FF]">
+                    {selectedIds.size} request{selectedIds.size !== 1 ? "s" : ""}
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
+
+
         </div>
       </div>
 
@@ -1352,7 +1404,41 @@ const Requests = () => {
             <thead>
               <tr className="bg-[#4318FF] text-white">
                 <th className="py-4 pl-6 pr-4 text-[13px] font-bold uppercase tracking-wider text-left whitespace-nowrap min-w-[200px]">
-                  Employee
+                  <div className="flex items-center gap-3">
+                    {isBulkEligibleStatus && (
+                      isFetchingAllIds ? (
+                        <Loader2 size={14} className="animate-spin text-white shrink-0" />
+                      ) : (
+                        <input
+                          type="checkbox"
+                          className="accent-white w-4 h-4 cursor-pointer shrink-0"
+                          title="Select all requests across all pages"
+                          checked={filteredRequests.length > 0 && filteredRequests.every((r) => selectedIds.has(r.id))}
+                          onChange={async (e) => {
+                            if (e.target.checked) {
+                              setIsFetchingAllIds(true);
+                              const allRequests = await fetchAllPendingRequests();
+                              const newIds = new Set<number>();
+                              const newMap = new Map<number, any>();
+                              for (const r of allRequests) {
+                                if (r?.id) {
+                                  newIds.add(r.id);
+                                  newMap.set(r.id, r);
+                                }
+                              }
+                              setSelectedIds(newIds);
+                              setSelectedRequestsMap(newMap);
+                              setIsFetchingAllIds(false);
+                            } else {
+                              setSelectedIds(new Set());
+                              setSelectedRequestsMap(new Map());
+                            }
+                          }}
+                        />
+                      )
+                    )}
+                    Employee
+                  </div>
                 </th>
                 <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
                   Request Type
@@ -1429,8 +1515,8 @@ const Requests = () => {
                     >
                       <td className="py-3 pl-6 pr-4 align-middle">
                         <div className="flex items-center gap-3">
-                          {/* Checkbox — only when Pending filter active */}
-                          {selectedStatus === LeaveRequestStatus.PENDING && (
+                          {/* Checkbox — enabled for Pending, Cancellation Requested, Modification Requested */}
+                          {isBulkEligibleStatus && (
                             <input
                               type="checkbox"
                               className="accent-[#4318FF] w-4 h-4 cursor-pointer shrink-0"
@@ -1440,6 +1526,15 @@ const Requests = () => {
                                   const next = new Set(prev);
                                   if (e.target.checked) {
                                     next.add(req.id);
+                                  } else {
+                                    next.delete(req.id);
+                                  }
+                                  return next;
+                                });
+                                setSelectedRequestsMap((prev) => {
+                                  const next = new Map(prev);
+                                  if (e.target.checked) {
+                                    next.set(req.id, req);
                                   } else {
                                     next.delete(req.id);
                                   }
@@ -1751,7 +1846,8 @@ const Requests = () => {
                             )}
                           {!isReceptionist &&
                             req.status ===
-                            LeaveRequestStatus.REQUESTING_FOR_CANCELLATION && (
+                            LeaveRequestStatus.REQUESTING_FOR_CANCELLATION &&
+                            !selectedIds.has(req.id) && (
                               <>
                                 <button
                                   onClick={() =>
@@ -1785,7 +1881,8 @@ const Requests = () => {
                             )}
                           {!isReceptionist &&
                             req.status ===
-                            LeaveRequestStatus.REQUESTING_FOR_MODIFICATION && (
+                            LeaveRequestStatus.REQUESTING_FOR_MODIFICATION &&
+                            !selectedIds.has(req.id) && (
                               <>
                                 <button
                                   onClick={() =>
@@ -1894,35 +1991,81 @@ const Requests = () => {
           <div className="relative w-full max-w-lg bg-white rounded-[24px] overflow-hidden shadow-[0px_20px_40px_rgba(0,0,0,0.15)] animate-in fade-in zoom-in duration-200">
             <div className="p-6">
               {/* Header */}
-              <div className={`mx-auto w-14 h-14 rounded-full flex items-center justify-center mb-4 ${
-                bulkModal.action === LeaveRequestStatus.APPROVED ? "bg-green-50" : "bg-red-50"
-              }`}>
-                {bulkModal.action === LeaveRequestStatus.APPROVED
-                  ? <CheckCircle size={28} className="text-green-500" />
-                  : <XCircle size={28} className="text-red-500" />}
-              </div>
-              <h3 className="text-xl font-black text-[#2B3674] text-center mb-1">
-                {bulkModal.action === LeaveRequestStatus.APPROVED ? "Approve" : "Reject"} {selectedIds.size} Request{selectedIds.size > 1 ? "s" : ""}?
-              </h3>
-              <p className="text-sm text-gray-400 text-center mb-5">
-                The following requests will be {bulkModal.action === LeaveRequestStatus.APPROVED ? "approved" : "rejected"}:
-              </p>
+              {(() => {
+                const isApproval =
+                  bulkModal.action === LeaveRequestStatus.APPROVED ||
+                  bulkModal.action === LeaveRequestStatus.CANCELLATION_APPROVED ||
+                  bulkModal.action === LeaveRequestStatus.MODIFICATION_APPROVED;
+                const actionVerb =
+                  bulkModal.action === LeaveRequestStatus.CANCELLATION_APPROVED ? "Approve Cancellation for"
+                  : bulkModal.action === LeaveRequestStatus.CANCELLATION_REJECTED ? "Reject Cancellation for"
+                  : bulkModal.action === LeaveRequestStatus.MODIFICATION_APPROVED ? "Approve Modification for"
+                  : bulkModal.action === LeaveRequestStatus.MODIFICATION_REJECTED ? "Reject Modification for"
+                  : isApproval ? "Approve" : "Reject";
+                const actionPast =
+                  bulkModal.action === LeaveRequestStatus.CANCELLATION_APPROVED ? "cancelled (cancellation approved)"
+                  : bulkModal.action === LeaveRequestStatus.CANCELLATION_REJECTED ? "kept (cancellation rejected)"
+                  : bulkModal.action === LeaveRequestStatus.MODIFICATION_APPROVED ? "modified (modification approved)"
+                  : bulkModal.action === LeaveRequestStatus.MODIFICATION_REJECTED ? "kept (modification rejected)"
+                  : isApproval ? "approved" : "rejected";
+
+                return (
+                  <>
+                    <div className={`mx-auto w-14 h-14 rounded-full flex items-center justify-center mb-4 ${
+                      isApproval ? "bg-green-50" : "bg-red-50"
+                    }`}>
+                      {isApproval
+                        ? <CheckCircle size={28} className="text-green-500" />
+                        : <XCircle size={28} className="text-red-500" />}
+                    </div>
+                    <h3 className="text-xl font-black text-[#2B3674] text-center mb-1">
+                      {actionVerb} {selectedIds.size} Request{selectedIds.size > 1 ? "s" : ""}?
+                    </h3>
+                    <p className="text-sm text-gray-400 text-center mb-5">
+                      The following requests will be {actionPast}:
+                    </p>
+                  </>
+                );
+              })()}
 
               {/* Selected employees list */}
-              <div className="max-h-60 overflow-y-auto flex flex-col gap-2 pr-1 mb-6">
-                {(entities || [])
-                  .filter((r) => selectedIds.has(r.id))
-                  .map((r) => (
-                    <div key={r.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-[#4318FF] font-bold text-xs shrink-0">
-                        {r.fullName?.charAt(0) || "?"}
+              <div className="max-h-60 overflow-y-auto flex flex-col gap-2 pr-1 mb-6 custom-scrollbar">
+                {Array.from(selectedIds).map((id) => {
+                  const r = selectedRequestsMap.get(id) || (entities || []).find((e) => e.id === id) || { id };
+                  const displayName = r.fullName || r.employeeName || (r.employeeId ? `Employee ${r.employeeId}` : `Request #${id}`);
+                  const fromD = r.fromDate ? dayjs(r.fromDate) : null;
+                  const toD = r.toDate && r.toDate !== r.fromDate ? dayjs(r.toDate) : null;
+                  let dateDisplay = "";
+                  if (fromD?.isValid()) {
+                    if (toD?.isValid()) {
+                      dateDisplay = `${fromD.format("DD MMM YYYY")} - ${toD.format("DD MMM YYYY")}`;
+                    } else {
+                      dateDisplay = fromD.format("DD MMM YYYY");
+                    }
+                  }
+                  const typeLabel = getRequestTypeLabel(r) || r.requestType || "Leave";
+
+                  return (
+                    <div key={id} className="flex items-center justify-between gap-3 p-3 bg-gray-50 hover:bg-gray-100/80 rounded-xl transition-colors">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-[#4318FF] font-bold text-xs shrink-0">
+                          {displayName.charAt(0).toUpperCase() || "?"}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-[#2B3674] truncate">{displayName}</p>
+                          <p className="text-xs text-gray-400 truncate">
+                            {typeLabel}{dateDisplay ? ` • ${dateDisplay}` : ""}
+                          </p>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-bold text-[#2B3674] truncate">{r.fullName || "Unknown"}</p>
-                        <p className="text-xs text-gray-400 truncate">{getRequestTypeLabel(r)}</p>
-                      </div>
+                      {r.duration != null && (
+                        <span className="text-xs font-semibold text-gray-500 bg-white px-2.5 py-1 rounded-lg border border-gray-200 shrink-0">
+                          {r.duration} {Number(r.duration) === 1 ? "day" : "days"}
+                        </span>
+                      )}
                     </div>
-                  ))}
+                  );
+                })}
               </div>
 
               {/* Actions */}
@@ -1938,7 +2081,9 @@ const Requests = () => {
                   onClick={executeBulkAction}
                   disabled={isBulkProcessing}
                   className={`flex-1 py-3 rounded-xl font-bold text-white transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-70 ${
-                    bulkModal.action === LeaveRequestStatus.APPROVED
+                    bulkModal.action === LeaveRequestStatus.APPROVED ||
+                    bulkModal.action === LeaveRequestStatus.CANCELLATION_APPROVED ||
+                    bulkModal.action === LeaveRequestStatus.MODIFICATION_APPROVED
                       ? "bg-green-500 hover:bg-green-600 shadow-green-200"
                       : "bg-red-500 hover:bg-red-600 shadow-red-200"
                   } shadow-lg`}
@@ -1946,7 +2091,13 @@ const Requests = () => {
                   {isBulkProcessing ? (
                     <><Loader2 size={16} className="animate-spin" /> Processing...</>
                   ) : (
-                    <>{bulkModal.action === LeaveRequestStatus.APPROVED ? "Confirm Approve All" : "Confirm Reject All"}</>
+                    <>
+                      {bulkModal.action === LeaveRequestStatus.APPROVED ||
+                      bulkModal.action === LeaveRequestStatus.CANCELLATION_APPROVED ||
+                      bulkModal.action === LeaveRequestStatus.MODIFICATION_APPROVED
+                        ? "Confirm Approve All"
+                        : "Confirm Reject All"}
+                    </>
                   )}
                 </button>
               </div>
