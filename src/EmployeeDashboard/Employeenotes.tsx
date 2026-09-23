@@ -2752,7 +2752,7 @@ ${htmlContent || "<p></p>"}
                   {formCategory === NoteCategoryEnum.PROJECT_NOTE && (
                     <div className="flex-1 flex items-center gap-2.5 min-w-0">
                       <label className="text-xs sm:text-[13px] font-bold font-sans text-black uppercase tracking-wider shrink-0 whitespace-nowrap">
-                        Project Name:
+                        Project Name:<span className="text-red-500">*</span>
                       </label>
                       <div className="flex-1 min-w-0">
                         <input
@@ -2789,7 +2789,7 @@ ${htmlContent || "<p></p>"}
                   {/* Title */}
                   <div className="flex-1 flex items-center gap-2.5 min-w-0">
                     <label className="text-xs sm:text-[13px] font-bold font-sans text-black uppercase tracking-wider shrink-0 whitespace-nowrap">
-                      Title:
+                      Title:<span className="text-red-500">*</span>
                     </label>
                     <div className="flex-1 min-w-0">
                       <input

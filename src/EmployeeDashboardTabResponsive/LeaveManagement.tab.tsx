@@ -62,10 +62,10 @@ export interface LeaveManagementTabProps {
   stats: any;
   selectedMonth: string;
   setSelectedMonth: (val: string) => void;
-  months: any[];
+  months: any;
   selectedYear: string;
   setSelectedYear: (val: string) => void;
-  years: string[];
+  years: any;
   isStatusOpen: boolean;
   setIsStatusOpen: (val: boolean) => void;
   filterStatus: string;
@@ -97,21 +97,21 @@ export interface LeaveManagementTabProps {
   ccEmailError: string;
   setCcEmailError: (val: string) => void;
   addCcEmail: (email: string) => void;
-  titleRef: React.RefObject<HTMLDivElement | null>;
+  titleRef: any;
   errors: any;
   formData: any;
   setFormData: React.Dispatch<React.SetStateAction<any>>;
   setErrors: React.Dispatch<React.SetStateAction<any>>;
-  leaveDurationType: string;
-  setLeaveDurationType: (val: string) => void;
+  leaveDurationType: any;
+  setLeaveDurationType: (val: any) => void;
   setIsHalfDay: (val: boolean) => void;
-  setHalfDayType: (val: string | null) => void;
+  setHalfDayType: (val: any) => void;
   otherHalfType: string | null;
   setOtherHalfType: (val: string | null) => void;
   halfDayType: string | null;
-  startDateRef: React.RefObject<HTMLDivElement | null>;
+  startDateRef: any;
   disabledDate: (current: any) => boolean;
-  endDateRef: React.RefObject<HTMLDivElement | null>;
+  endDateRef: any;
   disabledEndDate: (current: any) => boolean;
   calculateDurationExcludingWeekends: (
     startDate: string,
@@ -123,7 +123,7 @@ export interface LeaveManagementTabProps {
     h2: string | null | undefined,
   ) => number;
   selectedRequestId: number | null;
-  descriptionRef: React.RefObject<HTMLDivElement | null>;
+  descriptionRef: any;
   uploaderKey: number;
   setUploadedDocumentKeys: React.Dispatch<React.SetStateAction<string[]>>;
   error: any;
@@ -142,7 +142,7 @@ export interface LeaveManagementTabProps {
   setModifyModal: React.Dispatch<React.SetStateAction<any>>;
   setModifyErrors: React.Dispatch<React.SetStateAction<any>>;
   isModifying: boolean;
-  setIsModifying: React.Dispatch<React.SetStateAction<boolean>>;
+  setIsModifying: any;
   modifyFormData: any;
   setModifyFormData: React.Dispatch<React.SetStateAction<any>>;
   modifyErrors: any;
@@ -189,7 +189,6 @@ const LeaveManagementTab: React.FC<LeaveManagementTabProps> = ({
   handleViewApplication,
   isCancellationAllowed,
   handleCancel,
-  isUndoable,
   handleUndoCancellation,
   setUndoModal,
   totalItems,
@@ -262,11 +261,6 @@ const LeaveManagementTab: React.FC<LeaveManagementTabProps> = ({
   formatModalDate,
   isPrivileged,
   isManager,
-  addModifyCcEmail,
-  removeModifyCcEmail,
-  modifyCcInput,
-  setModifyCcInput,
-  modifyCcError,
   uploadedDocumentKeys,
   refreshData,
 }) => {
@@ -463,7 +457,7 @@ const LeaveManagementTab: React.FC<LeaveManagementTabProps> = ({
                     }
                   >
                     <Select.Option value="All">All Months</Select.Option>
-                    {(months ?? []).map((m) => (
+                    {(months ?? []).map((m: any) => (
                       <Select.Option key={m.value} value={m.value}>
                         {m.label}
                       </Select.Option>
@@ -494,7 +488,7 @@ const LeaveManagementTab: React.FC<LeaveManagementTabProps> = ({
                       />
                     }
                   >
-                    {(years ?? []).map((y) => (
+                    {(years ?? []).map((y: any) => (
                       <Select.Option key={y} value={y}>
                         {y === "All" ? "All Years" : y}
                       </Select.Option>
@@ -822,11 +816,7 @@ const LeaveManagementTab: React.FC<LeaveManagementTabProps> = ({
                                       return "Half Day Leave";
                                     return normalizeTypeName(item.requestType);
                                   })()}
-                                  {item.isModified && (
-                                    <span className="bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter shadow-sm border border-orange-200">
-                                      Modified
-                                    </span>
-                                  )}
+                          
                                 </span>
                               </div>
                             </div>
