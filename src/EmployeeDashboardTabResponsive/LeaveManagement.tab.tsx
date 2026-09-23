@@ -1086,13 +1086,14 @@ const LeaveManagementTab: React.FC<LeaveManagementTabProps> = ({
           footer={null}
           closable={true}
           centered
-          width={750}
+          width="calc(100vw - 20px)"
+          style={{ maxWidth: "min(850px, calc(100vw - 20px))", margin: "10px auto", padding: 0 }}
           destroyOnHidden
           className="application-modal"
         >
           <div className="relative overflow-hidden bg-white flex flex-col max-h-[82vh]">
             {/* Modal Header */}
-            <div className="pt-5 pb-3 px-6 border-b border-gray-100 shrink-0">
+            <div className="pt-5 pb-3 px-4 border-b border-gray-100 shrink-0">
               <div className="flex justify-between items-start">
                 <h2 className="text-xl md:text-2xl font-bold text-[#2B3674] tracking-tight">
                   {selectedLeaveType === LeaveRequestType.APPLY_LEAVE
@@ -1107,19 +1108,19 @@ const LeaveManagementTab: React.FC<LeaveManagementTabProps> = ({
             {/* Modal Body */}
             <div
               ref={modalBodyRef}
-              className="p-6 space-y-5 overflow-y-auto flex-1 custom-scrollbar"
+              className="px-3 py-4 space-y-4 overflow-y-auto flex-1 custom-scrollbar"
             >
               {/* Email recipients - in card */}
-              <div className="rounded-2xl border border-[#E0E7FF] bg-[#F8FAFC] p-4 shadow-sm">
+              <div className="rounded-xl border border-[#E0E7FF] bg-[#F8FAFC] p-3 shadow-sm">
                 <div className="space-y-3">
-                  <label className="text-sm font-bold text-[#2B3674] ml-1 block">
+                  <label className="text-sm font-bold text-[#2B3674] block">
                     Email recipients
                   </label>
                   <div className="space-y-4">
-                    <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-3">
                       {!isManager && (
                         <div className="w-full">
-                          <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
+                          <span className="text-xs font-medium text-gray-600 block mb-1">
                             Reporting Manager
                           </span>
                           <input
@@ -1128,12 +1129,12 @@ const LeaveManagementTab: React.FC<LeaveManagementTabProps> = ({
                             disabled
                             value={emailConfig?.assignedManagerEmail || ""}
                             placeholder="Not configured"
-                            className="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-gray-50 text-gray-700 cursor-not-allowed text-sm whitespace-nowrap overflow-hidden text-ellipsis"
+                            className="w-full px-3 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-gray-700 cursor-not-allowed text-sm whitespace-nowrap overflow-hidden text-ellipsis"
                           />
                         </div>
                       )}
                       <div className="w-full">
-                        <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
+                        <span className="text-xs font-medium text-gray-600 block mb-1">
                           HR
                         </span>
                         <input
@@ -1142,12 +1143,12 @@ const LeaveManagementTab: React.FC<LeaveManagementTabProps> = ({
                           disabled
                           value={emailConfig?.hrEmail || ""}
                           placeholder="Not configured"
-                          className="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-gray-50 text-gray-700 cursor-not-allowed text-sm whitespace-nowrap overflow-hidden text-ellipsis"
+                          className="w-full px-3 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-gray-700 cursor-not-allowed text-sm whitespace-nowrap overflow-hidden text-ellipsis"
                         />
                       </div>
                     </div>
                     <div>
-                      <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
+                      <span className="text-xs font-medium text-gray-600 block mb-1">
                         CC
                       </span>
                       <div className="flex flex-wrap gap-2 items-center">
@@ -1899,12 +1900,13 @@ const LeaveManagementTab: React.FC<LeaveManagementTabProps> = ({
           footer={null}
           closable={true}
           centered
-          width={750}
+          width="calc(100vw - 20px)"
+          style={{ maxWidth: "min(850px, calc(100vw - 20px))", margin: "10px auto", padding: 0 }}
           className="application-modal"
         >
           <div className="relative overflow-hidden bg-white flex flex-col max-h-[82vh]">
             {/* Modal Header */}
-            <div className="pt-5 pb-3 px-6 border-b border-gray-100 shrink-0">
+            <div className="pt-5 pb-3 px-4 border-b border-gray-100 shrink-0">
               <div className="flex justify-between items-start">
                 <h2 className="text-xl md:text-2xl font-bold text-[#2B3674] tracking-tight">
                   Modify Request
@@ -1913,9 +1915,9 @@ const LeaveManagementTab: React.FC<LeaveManagementTabProps> = ({
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 space-y-5 overflow-y-auto flex-1 custom-scrollbar px-1">
+            <div className="px-3 py-4 space-y-4 overflow-y-auto flex-1 custom-scrollbar px-1">
               {/* Email recipients + Subject card */}
-              <div className="rounded-2xl border border-[#E0E7FF] bg-[#F8FAFC] p-4 shadow-sm">
+              <div className="rounded-xl border border-[#E0E7FF] bg-[#F8FAFC] p-3 shadow-sm">
                 <div className="space-y-3">
                   <label className="text-sm font-bold text-[#2B3674] ml-1 block">
                     Email recipients

@@ -7,6 +7,7 @@ import {
   LogOut,
   Bell,
   User,
+  Info,
   ArrowLeft,
   ExternalLink,
   Check,
@@ -216,6 +217,17 @@ const MobileHeader = ({
       navigate("/admin-dashboard/my-profile");
     } else {
       navigate("/employee-dashboard/my-profile");
+    }
+    setIsDropdownOpen(false);
+  };
+
+  const handleAboutClick = () => {
+    if (currentUser?.userType === UserType.MANAGER) {
+      navigate("/manager-dashboard/about");
+    } else if (isAdminOrReceptionist) {
+      navigate("/admin-dashboard/about");
+    } else {
+      navigate("/employee-dashboard/about");
     }
     setIsDropdownOpen(false);
   };
@@ -1141,7 +1153,23 @@ const MobileHeader = ({
                       </button>
                     </div>
                   )}
-
+ <button
+                    onClick={handleAboutClick}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                      <Info size={16} className="text-[#667eea]" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-[#1B2559]">
+                        About
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        About Worksphere
+                      </p>
+                    </div>
+                  </button>
+                  
                   {!isAdminOrReceptionist && (
                     <button
                       onClick={handleProfileClick}
@@ -1160,6 +1188,8 @@ const MobileHeader = ({
                       </div>
                     </button>
                   )}
+
+                 
 
                   <div className="border-t border-gray-100 mt-1 pt-1">
                     <button

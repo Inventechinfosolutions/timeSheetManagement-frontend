@@ -554,3 +554,75 @@
     width: clamp(7px, 2vw, 11px);
     height: clamp(7px, 2vw, 11px);
   }
+
+  /* ==========================================================
+      ATTENDANCE POLICY ENFORCEMENT / CONFIRM MODAL BUTTONS
+      Keep Cancel and Confirm side-by-side in one row on mobile
+      ========================================================== */
+  .attractive-unified-modal .ant-modal,
+  .ant-modal-confirm.attractive-unified-modal .ant-modal {
+    max-width: calc(100vw - 20px) !important;
+  }
+
+  .attractive-unified-modal .ant-modal-content,
+  .ant-modal-confirm.attractive-unified-modal .ant-modal-content {
+    border-radius: 16px !important;
+  }
+
+  .attractive-unified-modal .ant-modal-confirm-btns,
+  .ant-modal-confirm.attractive-unified-modal .ant-modal-confirm-btns {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 8px !important;
+    margin-top: 20px !important;
+    float: none !important;
+    width: 100% !important;
+  }
+
+  .attractive-unified-modal .ant-modal-confirm-btns .ant-btn,
+  .ant-modal-confirm.attractive-unified-modal .ant-modal-confirm-btns .ant-btn {
+    margin: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    white-space: nowrap !important;
+  }
+
+  @media (max-width: 640px) {
+    .attractive-unified-modal .ant-modal-content,
+    .ant-modal-confirm.attractive-unified-modal .ant-modal-content {
+      padding: 16px 14px !important;
+    }
+
+    .attractive-unified-modal .ant-modal-confirm-btns,
+    .ant-modal-confirm.attractive-unified-modal .ant-modal-confirm-btns {
+      gap: 8px !important;
+      justify-content: flex-end !important;
+    }
+
+    .attractive-unified-modal .ant-modal-confirm-btns .ant-btn,
+    .ant-modal-confirm.attractive-unified-modal .ant-modal-confirm-btns .ant-btn {
+      height: 40px !important;
+      padding: 0 12px !important;
+      font-size: 14px !important;
+      border-radius: 6px !important;
+      line-height: normal !important;
+    }
+
+    .attractive-unified-modal .ant-modal-confirm-btns .ant-btn:first-child,
+    .ant-modal-confirm.attractive-unified-modal .ant-modal-confirm-btns .ant-btn:first-child {
+      flex-shrink: 0 !important;
+      padding: 0 16px !important;
+      font-size: 14px !important;
+    }
+
+    .attractive-unified-modal .ant-modal-confirm-btns .ant-btn-primary,
+    .ant-modal-confirm.attractive-unified-modal .ant-modal-confirm-btns .ant-btn-primary {
+      flex-shrink: 0 !important;
+      padding: 0 16px !important;
+      font-size: 14px !important;
+      font-weight: 600 !important;
+    }
+  }

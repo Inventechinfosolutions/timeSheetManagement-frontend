@@ -213,9 +213,9 @@ const AdminEmployeeTimesheetWrapper = () => {
     );
   }
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-[#F4F7FE] px-4 md:px-6 py-3 md:py-4 relative">
+    <div className="flex flex-col h-full overflow-hidden bg-[#F4F7FE] px-0 md:px-6 py-2 md:py-4 relative">
       {/* Premium Responsive Header */}
-      <div className="mb-2 flex flex-col gap-2 bg-white/40 md:bg-transparent p-3 md:p-0 rounded-2xl md:rounded-none border border-white/50 md:border-none backdrop-blur-sm md:backdrop-blur-none shadow-sm md:shadow-none shrink-0">
+      <div className="mb-2 flex flex-col gap-2 bg-white/40 md:bg-transparent p-3 md:p-0 rounded-2xl md:rounded-none border border-white/50 md:border-none backdrop-blur-sm md:backdrop-blur-none shadow-sm md:shadow-none shrink-0 mx-3 md:mx-0">
         <div className="flex flex-col gap-1">
           <button
             onClick={handleBack}
@@ -252,7 +252,7 @@ const AdminEmployeeTimesheetWrapper = () => {
 
       <div className="flex-1 overflow-y-auto no-scrollbar min-h-0">
         {/* Summary Stats Section - Matching img 1 */}
-        <div className="px-1 pt-2 pb-4">
+        <div className="px-3 md:px-1 pt-2 pb-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 md:p-5 shadow-sm border border-white/50 flex items-center gap-4 hover:shadow-md transition-all">
               <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-[#01B574] shrink-0 border border-emerald-100/50">

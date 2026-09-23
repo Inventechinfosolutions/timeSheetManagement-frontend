@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import axios from "axios";
 import { RootState } from "../store";
 import {
   getEntities,
@@ -8,6 +9,7 @@ import {
   clearUploadResult,
   downloadBulkTemplate,
   createEntity,
+  createCeo,
   resendActivationLink,
   updateEmployeeStatus,
   fetchRoles,
@@ -34,8 +36,11 @@ import {
   CheckCircle,
   CreditCard,
   Eye,
+  EyeOff,
   Calendar,
   Download,
+  Crown,
+  Lock,
 } from "lucide-react";
 import EmployeeListMobileCard from "./EmployeeListMobileCard";
 import Toast from "../components/Toast";
@@ -54,6 +59,7 @@ const EmployeeListView = () => {
   const currentUser = useAppSelector((state) => state.user.currentUser);
   const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
   const canEdit = isAdmin && !isReceptionist;
+  const isOnlyAdmin = currentUser?.userType === UserType.ADMIN;
 
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -114,9 +120,28 @@ const EmployeeListView = () => {
     type: "success" | "error" | "info";
   } | null>(null);
   const [showDownloadConfirm, setShowDownloadConfirm] = useState(false);
-  // const [copySuccess, setCopySuccess] = useState<string>("");
-
-  // const [copySuccess, setCopySuccess] = useState<string>("");
+  // CEO Modal State
+  const [isCreateCeoModalOpen, setIsCreateCeoModalOpen] = useState(false);
+  const [ceoFormData, setCeoFormData] = useState({
+    fullName: "",
+    email: "",
+    designation: "Chief Executive Officer",
+    gender: "" as "" | "MALE" | "FEMALE",
+    password: "",
+  });
+  const [ceoFieldErrors, setCeoFieldErrors] = useState({
+    fullName: "",
+    email: "",
+    designation: "",
+    gender: "",
+    password: "",
+  });
+  const [ceoGeneralError, setCeoGeneralError] = useState("");
+  const [ceoLoading, setCeoLoading] = useState(false);
+  const [showCeoSuccess, setShowCeoSuccess] = useState(false);
+  const [showCeoPassword, setShowCeoPassword] = useState(false);
+  const [showCeoTooltip, setShowCeoTooltip] = useState(false);
+  const [hasCeoAccount, setHasCeoAccount] = useState(false);
 
   const dispatch = useAppDispatch();
   const {
@@ -136,6 +161,19 @@ const EmployeeListView = () => {
     dispatch(fetchDepartments());
     dispatch(fetchRoles());
   }, [dispatch]);
+
+  const checkCeoStatus = useCallback(async () => {
+    try {
+      const res = await axios.get("/api/employee-details/has-ceo");
+      setHasCeoAccount(Boolean(res.data?.hasCeo));
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    checkCeoStatus();
+  }, [checkCeoStatus, entities]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -212,8 +250,20 @@ const EmployeeListView = () => {
     lastLoggedIn: emp.lastLoggedIn,
     lastLinkSentAt: emp.lastLinkSentAt,
     isActive: emp.userStatus !== UserStatus.INACTIVE,
-    isAdmin: emp.userType === UserType.ADMIN || emp.userType === UserType.CEO,
+    isAdmin: emp.userType === UserType.ADMIN || emp.userType === UserType.CEO
+      || String(emp.role).toLowerCase() === 'admin' || String(emp.role).toLowerCase() === 'ceo',
   }));
+
+  // Detect if a CEO already exists via API status or anywhere in the entity list
+  const ceoExists =
+    hasCeoAccount ||
+    entities.some(
+      (emp: any) =>
+        emp.userType === UserType.CEO ||
+        String(emp.role).toLowerCase() === "ceo" ||
+        emp.employeeId === "CEO" ||
+        emp.rawId === "CEO"
+    );
 
   const currentItems = employees.filter((emp) => {
     if (!debouncedSearchTerm) return true;
@@ -423,6 +473,126 @@ const EmployeeListView = () => {
     setShowSuccess(false);
   };
 
+  const handleCeoChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setCeoFormData((prev) => ({ ...prev, [name]: value }));
+    setCeoFieldErrors((prev) => ({ ...prev, [name]: "" }));
+    setCeoGeneralError("");
+  };
+
+  const handleCloseCeoModal = () => {
+    setIsCreateCeoModalOpen(false);
+    setCeoFormData({
+      fullName: "",
+      email: "",
+      designation: "Chief Executive Officer",
+      gender: "" as any,
+      password: "",
+    });
+    setCeoFieldErrors({
+      fullName: "",
+      email: "",
+      designation: "",
+      gender: "",
+      password: "",
+    });
+    setCeoGeneralError("");
+    setShowCeoSuccess(false);
+    setShowCeoPassword(false);
+  };
+
+  const handleCeoSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCeoGeneralError("");
+
+    const errors = {
+      fullName: "",
+      email: "",
+      designation: "",
+      gender: "",
+      password: "",
+    };
+    let hasError = false;
+
+    if (!ceoFormData.fullName.trim()) {
+      errors.fullName = "Full name is required";
+      hasError = true;
+    }
+    if (!ceoFormData.email.trim()) {
+      errors.email = "Email is required";
+      hasError = true;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ceoFormData.email.trim())) {
+      errors.email = "Please enter a valid email address";
+      hasError = true;
+    }
+    if (!ceoFormData.designation.trim()) {
+      errors.designation = "Designation is required";
+      hasError = true;
+    }
+    if (!ceoFormData.gender) {
+      errors.gender = "Gender is required";
+      hasError = true;
+    }
+    if (!ceoFormData.password) {
+      errors.password = "Password is required";
+      hasError = true;
+    } else if (ceoFormData.password.length < 6) {
+      errors.password = "Password must be at least 6 characters";
+      hasError = true;
+    }
+
+    if (hasError) {
+      setCeoFieldErrors(errors);
+      return;
+    }
+
+    setCeoLoading(true);
+    try {
+      const resultAction = await dispatch(
+        createCeo({
+          fullName: ceoFormData.fullName.trim(),
+          email: ceoFormData.email.trim().toLowerCase(),
+          designation: ceoFormData.designation.trim(),
+          gender: ceoFormData.gender,
+          password: ceoFormData.password,
+        })
+      );
+
+      if (createCeo.fulfilled.match(resultAction)) {
+        setShowCeoSuccess(true);
+        setHasCeoAccount(true);
+        checkCeoStatus();
+        setToast({
+          message: "CEO Account created successfully! Welcome email sent.",
+          type: "success",
+        });
+        setTimeout(() => {
+          handleCloseCeoModal();
+          dispatch(
+            getEntities({
+              page: currentPage,
+              limit: itemsPerPage,
+              search: debouncedSearchTerm,
+              department:
+                selectedDepartment === "All" ? undefined : selectedDepartment,
+              userStatus: selectedStatus === "All" ? undefined : selectedStatus,
+            })
+          );
+        }, 1800);
+      } else {
+        const errorMsg =
+          (resultAction.payload as string) || "Failed to create CEO";
+        setCeoGeneralError(errorMsg);
+      }
+    } catch (err: any) {
+      setCeoGeneralError(err.message || "An unexpected error occurred");
+    } finally {
+      setCeoLoading(false);
+    }
+  };
+
   const handleToggleStatus = (employeeId: string) => {
     const emp = entities.find(
       (e) => e.employeeId === employeeId || e.id === Number(employeeId),
@@ -568,224 +738,296 @@ const EmployeeListView = () => {
   };
 
   return (
-    <div className="p-5 bg-[#F4F7FE] font-sans">
+    <div className="p-2 bg-[#F4F7FE] font-sans">
       <div className="max-w-[1600px] mx-auto">
-        <div className="flex flex-row flex-wrap justify-between items-center gap-3 mb-8">
-          {/* <h1 className="text-xl md:text-2xl font-bold text-[#2B3674] m-0 whitespace-nowrap">
+        <div className="flex flex-col gap-3 mb-6 w-full">
+            <h1 className="text-xl md:text-2xl font-bold text-[#2B3674] m-0 whitespace-nowrap">
             Employee Directory
-          </h1> */}
+          </h1>
 
-          <div className="flex flex-row flex-wrap items-center gap-3">
-            {/* Modern Custom Dropdown */}
-            {canEdit && (
-              <div className="relative min-w-[200px] sm:min-w-[240px] md:min-w-[280px]" ref={dropdownRef}>
-                <button
-                  onClick={() => {
-                    setIsDropdownOpen(!isDropdownOpen);
-                    setIsStatusDropdownOpen(false);
-                  }}
-                  className={`w-full flex items-center justify-between gap-2 px-5 py-2.5 bg-white rounded-full border border-gray-200 font-bold text-sm hover:bg-gray-50 transition-all focus:border-[#4318FF]/40 ${selectedDepartment !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Filter size={16} className="text-[#4318FF] shrink-0" />
-                    <span className="truncate">
-                      {selectedDepartment === "All" ? "All Departments" : selectedDepartment}
-                    </span>
-                  </div>
-                  <ChevronDown
-                    size={16}
-                    className={`shrink-0 text-[#A3AED0] transition-transform duration-300 ${isDropdownOpen ? "rotate-180" : ""}`}
-                  />
-                </button>
-
-                {isDropdownOpen && (
-                  <div className="absolute top-full left-0 mt-2 w-full min-w-full bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-gray-100 p-3 z-50 max-h-64 overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="mb-2">
-                      <span className="text-[10px] font-black text-[#A3AED0] uppercase tracking-widest">
-                        Departments
+          {/* Row 1: Filters (Full Width) */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 w-full">
+            {/* Dropdowns wrapper: 2 columns on mobile, auto width on tablet/desktop */}
+            <div className="order-1 sm:order-1 grid grid-cols-2 gap-2.5 w-full sm:w-auto sm:flex sm:items-center sm:gap-3 shrink-0">
+              {/* Modern Custom Dropdown */}
+              {canEdit && (
+                <div className="relative w-full sm:w-auto sm:min-w-[180px] md:min-w-[210px]" ref={dropdownRef}>
+                  <button
+                    onClick={() => {
+                      setIsDropdownOpen(!isDropdownOpen);
+                      setIsStatusDropdownOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between gap-2 px-4 sm:px-5 py-2.5 bg-white rounded-full border border-gray-200 font-bold text-xs sm:text-sm hover:bg-gray-50 transition-all focus:border-[#4318FF]/40 ${selectedDepartment !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+                  >
+                    <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                      <Filter size={15} className="text-[#4318FF] shrink-0" />
+                      <span className="truncate">
+                        {selectedDepartment === "All" ? "Department" : selectedDepartment}
                       </span>
                     </div>
-                    <div className="flex flex-col gap-2">
-                      <button
-                        key="All"
-                        onClick={() => {
-                          setSelectedDepartment("All");
-                          setIsDropdownOpen(false);
-                          setCurrentPage(1);
-                        }}
-                        className={`w-full flex items-center justify-center px-3 py-2 rounded-full text-xs font-bold border transition-all ${departmentTagClass("All", selectedDepartment === "All")}`}
-                      >
-                        All Departments
-                      </button>
-                      {departments.map((dept) => (
+                    <ChevronDown
+                      size={15}
+                      className={`shrink-0 text-[#A3AED0] transition-transform duration-300 ${isDropdownOpen ? "rotate-180" : ""}`}
+                    />
+                  </button>
+
+                  {isDropdownOpen && (
+                    <div className="absolute top-full left-0 mt-2 w-full sm:w-64 min-w-full bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-gray-100 p-3 z-50 max-h-64 overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="mb-2">
+                        <span className="text-[10px] font-black text-[#A3AED0] uppercase tracking-widest">
+                          Departments
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-2">
                         <button
-                          key={dept.id}
+                          key="All"
                           onClick={() => {
-                            setSelectedDepartment(dept.departmentName);
+                            setSelectedDepartment("All");
                             setIsDropdownOpen(false);
                             setCurrentPage(1);
                           }}
-                          className={`w-full flex items-center justify-center px-3 py-2 rounded-full text-xs font-bold border transition-all text-center ${departmentTagClass(dept.departmentName, selectedDepartment === dept.departmentName)}`}
+                          className={`w-full flex items-center justify-center px-3 py-2 rounded-full text-xs font-bold border transition-all ${departmentTagClass("All", selectedDepartment === "All")}`}
                         >
-                          {dept.departmentName}
+                          All Departments
                         </button>
-                      ))}
+                        {departments.map((dept) => (
+                          <button
+                            key={dept.id}
+                            onClick={() => {
+                              setSelectedDepartment(dept.departmentName);
+                              setIsDropdownOpen(false);
+                              setCurrentPage(1);
+                            }}
+                            className={`w-full flex items-center justify-center px-3 py-2 rounded-full text-xs font-bold border transition-all text-center ${departmentTagClass(dept.departmentName, selectedDepartment === dept.departmentName)}`}
+                          >
+                            {dept.departmentName}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            )}
+                  )}
+                </div>
+              )}
 
-            {/* Modern Status Dropdown */}
-            {canEdit && (
-              <div className="relative min-w-[160px] sm:min-w-[180px]" ref={statusDropdownRef}>
-                <button
-                  onClick={() => {
-                    setIsStatusDropdownOpen(!isStatusDropdownOpen);
-                    setIsDropdownOpen(false);
-                  }}
-                  className={`w-full flex items-center justify-between gap-2 px-5 py-2.5 bg-white rounded-full border border-gray-200 font-bold text-sm hover:bg-gray-50 transition-all focus:border-[#4318FF]/40 ${selectedStatus !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Filter size={16} className="text-[#4318FF] shrink-0" />
-                    <span className="truncate">
-                      {selectedStatus === "All" ? "Status" : formatStatusLabel(selectedStatus)}
-                    </span>
-                  </div>
-                  <ChevronDown
-                    size={16}
-                    className={`shrink-0 text-[#A3AED0] transition-transform duration-300 ${isStatusDropdownOpen ? "rotate-180" : ""}`}
-                  />
-                </button>
-
-                {isStatusDropdownOpen && (
-                  <div className="absolute top-full left-0 mt-2 w-full min-w-full bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-gray-100 p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="mb-2">
-                      <span className="text-[10px] font-black text-[#A3AED0] uppercase tracking-widest">
-                        Status
+              {/* Modern Status Dropdown */}
+              {canEdit && (
+                <div className="relative w-full sm:w-auto sm:min-w-[130px] md:min-w-[160px]" ref={statusDropdownRef}>
+                  <button
+                    onClick={() => {
+                      setIsStatusDropdownOpen(!isStatusDropdownOpen);
+                      setIsDropdownOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between gap-2 px-4 sm:px-5 py-2.5 bg-white rounded-full border border-gray-200 font-bold text-xs sm:text-sm hover:bg-gray-50 transition-all focus:border-[#4318FF]/40 ${selectedStatus !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+                  >
+                    <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                      <Filter size={15} className="text-[#4318FF] shrink-0" />
+                      <span className="truncate">
+                        {selectedStatus === "All" ? "Status" : formatStatusLabel(selectedStatus)}
                       </span>
                     </div>
-                    <div className="flex flex-col gap-2">
-                      {["All", "DRAFT", "ACTIVE", "INACTIVE"].map((status) => (
-                        <button
-                          key={status}
-                          onClick={() => {
-                            setSelectedStatus(status);
-                            setIsStatusDropdownOpen(false);
-                            setCurrentPage(1);
-                          }}
-                          className={`w-full flex items-center justify-center px-3 py-2 rounded-full text-xs font-bold border transition-all ${statusTagClass(status, selectedStatus === status)}`}
-                        >
-                          {formatStatusLabel(status)}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+                    <ChevronDown
+                      size={15}
+                      className={`shrink-0 text-[#A3AED0] transition-transform duration-300 ${isStatusDropdownOpen ? "rotate-180" : ""}`}
+                    />
+                  </button>
 
-            {/* Search Box */}
-            <div className="flex items-center bg-white rounded-full px-5 py-2.5 min-w-[200px] border border-gray-200 focus-within:border-[#4318FF]/40 transition-all">
-              <Search size={18} className="text-[#A3AED0] mr-2" />
-              <input
-                type="text"
-                placeholder="Search by name or employee ID..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="border-none outline-none bg-transparent text-[#2B3674] w-full text-sm font-semibold placeholder:text-[#A3AED0]/60"
-              />
-              {searchTerm && (
-                <button
-                  onClick={() => setSearchTerm("")}
-                  className="ml-2 text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <X size={16} />
-                </button>
+                  {isStatusDropdownOpen && (
+                    <div className="absolute top-full left-0 mt-2 w-full sm:w-48 min-w-full bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-gray-100 p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="mb-2">
+                        <span className="text-[10px] font-black text-[#A3AED0] uppercase tracking-widest">
+                          Status
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        {["All", "DRAFT", "ACTIVE", "INACTIVE"].map((status) => (
+                          <button
+                            key={status}
+                            onClick={() => {
+                              setSelectedStatus(status);
+                              setIsStatusDropdownOpen(false);
+                              setCurrentPage(1);
+                            }}
+                            className={`w-full flex items-center justify-center px-3 py-2 rounded-full text-xs font-bold border transition-all ${statusTagClass(status, selectedStatus === status)}`}
+                          >
+                            {formatStatusLabel(status)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 
-            {basePath === "/admin-dashboard" && canEdit && (
-              <>
-                <button
-                  onClick={handleDownloadClick}
-                  className="flex items-center justify-center gap-2 px-6 py-2.5 bg-[#4318FF] text-white rounded-xl font-black text-xs transition-all shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transform hover:-translate-y-0.5 active:scale-95 tracking-widest uppercase"
-                  title="Download Excel Template"
-                >
-                  <Download size={18} />
-                  <span className="hidden sm:inline">Download Template</span>
-                </button>
+            {/* Search Box and Clear Button in one line */}
+            <div className="order-2 sm:order-2 flex items-center gap-2 sm:gap-2.5 w-full sm:w-auto flex-1 min-w-0">
+              <div className="w-full flex-1 min-w-0 flex items-center bg-white rounded-full px-4 sm:px-5 py-2.5 border border-gray-200 focus-within:border-[#4318FF]/40 transition-all shadow-[0px_4px_20px_rgba(0,0,0,0.02)]">
+                <Search size={18} className="text-[#A3AED0] mr-2 shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Search by name or employee ID..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="border-none outline-none bg-transparent text-[#2B3674] w-full min-w-0 text-xs sm:text-sm font-semibold placeholder:text-[#A3AED0]/60"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm("")}
+                    className="ml-2 text-gray-400 hover:text-gray-600 transition-colors shrink-0"
+                  >
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
 
+              {/* Clear Filters Button */}
+              {(searchTerm || selectedDepartment !== "All" || selectedStatus !== "All") && (
                 <button
-                  onClick={() => setIsUploadModalOpen(true)}
-                  className="flex items-center justify-center gap-2 px-6 py-2.5 bg-white text-[#4318FF] border-2 border-[#4318FF] rounded-xl font-black text-xs transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 active:scale-95 tracking-widest uppercase"
+                  onClick={() => {
+                    setSearchTerm("");
+                    setDebouncedSearchTerm("");
+                    setSelectedDepartment("All");
+                    setSelectedStatus("All");
+                    setCurrentPage(1);
+                    setSortConfig({ key: null, direction: "asc" });
+                  }}
+                  className="flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2.5 bg-[#5B4FFF] text-white rounded-full hover:bg-[#4318FF] active:scale-95 transition-all text-xs sm:text-sm font-bold border border-[#4318FF]/50 whitespace-nowrap shrink-0"
+                  title="Clear all filters"
                 >
-                  <Upload size={18} />
-                  <span className="hidden sm:inline">Upload</span>
+                  <X size={15} />
+                  <span>Clear All</span>
                 </button>
-
-                <button
-                  onClick={() => setIsCreateModalOpen(true)}
-                  className="flex items-center justify-center gap-2 px-6 py-2.5 bg-[#4318FF] text-white rounded-xl font-black text-xs transition-all shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transform hover:-translate-y-0.5 active:scale-95 tracking-widest uppercase"
-                >
-                  <UserPlus size={18} />
-                  <span className="hidden sm:inline">Create Employee</span>
-                </button>
-              </>
-            )}
-
-            {/* Clear Filters Button */}
-            {(searchTerm || selectedDepartment !== "All" || selectedStatus !== "All") && (
-              <button
-                onClick={() => {
-                  setSearchTerm("");
-                  setDebouncedSearchTerm("");
-                  setSelectedDepartment("All");
-                  setSelectedStatus("All");
-                  setCurrentPage(1);
-                  setSortConfig({ key: null, direction: "asc" });
-                }}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#5B4FFF] text-white rounded-full hover:bg-[#4318FF] active:scale-95 transition-all text-sm font-bold border border-[#4318FF]/50 whitespace-nowrap"
-                title="Clear all filters"
-              >
-                <X size={16} />
-                <span>Clear All</span>
-              </button>
-            )}
+              )}
+            </div>
           </div>
+
+          {/* Row 2: Action Buttons */}
+          {basePath === "/admin-dashboard" && canEdit && (
+            <div className="flex items-center gap-1.5 sm:gap-2.5 md:gap-3 w-full flex-nowrap overflow-x-auto no-scrollbar py-0.5">
+              <button
+                onClick={handleDownloadClick}
+                className="flex-1 sm:flex-initial h-10 sm:h-11 flex items-center justify-center gap-1 xs:gap-1.5 sm:gap-2 px-1.5 xs:px-2.5 sm:px-3.5 md:px-4 lg:px-5 bg-[#4318FF] text-white rounded-xl font-black text-[11px] sm:text-xs transition-all shadow-md shadow-blue-500/20 hover:shadow-blue-500/40 transform hover:-translate-y-0.5 active:scale-95 tracking-tight xs:tracking-normal sm:tracking-widest uppercase whitespace-nowrap shrink-0"
+                title="Download Excel Template"
+              >
+                <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                <div className="flex flex-col leading-[1.05] sm:hidden text-left text-[7.5px] xs:text-[8.5px]">
+                  <span>Download</span>
+                  <span>Template</span>
+                </div>
+                <span className="hidden sm:inline">Download Template</span>
+              </button>
+
+              <button
+                onClick={() => setIsUploadModalOpen(true)}
+                className="flex-1 sm:flex-initial h-10 sm:h-11 flex items-center justify-center gap-1 xs:gap-1.5 sm:gap-2 px-1.5 xs:px-2.5 sm:px-3.5 md:px-4 lg:px-5 bg-white text-[#4318FF] border-2 border-[#4318FF] rounded-xl font-black text-[11px] sm:text-xs transition-all shadow-sm hover:shadow-md transform hover:-translate-y-0.5 active:scale-95 tracking-tight xs:tracking-normal sm:tracking-widest uppercase whitespace-nowrap shrink-0"
+                title="Upload Employees"
+              >
+                <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                <span className="text-[8.5px] xs:text-[9.5px] sm:text-xs font-black">Upload</span>
+              </button>
+
+              <button
+                onClick={() => setIsCreateModalOpen(true)}
+                className="flex-1 sm:flex-initial h-10 sm:h-11 flex items-center justify-center gap-1 xs:gap-1.5 sm:gap-2 px-1.5 xs:px-2.5 sm:px-3.5 md:px-4 lg:px-5 bg-[#4318FF] text-white rounded-xl font-black text-[11px] sm:text-xs transition-all shadow-md shadow-blue-500/20 hover:shadow-blue-500/40 transform hover:-translate-y-0.5 active:scale-95 tracking-tight xs:tracking-normal sm:tracking-widest uppercase whitespace-nowrap shrink-0"
+                title="Create Employee"
+              >
+                <UserPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                <div className="flex flex-col leading-[1.05] sm:hidden text-left text-[7.5px] xs:text-[8.5px]">
+                  <span>Create</span>
+                  <span>Employee</span>
+                </div>
+                <span className="hidden sm:inline">Create Employee</span>
+              </button>
+
+              {isOnlyAdmin && (
+                <div
+                  className="flex-1 sm:flex-initial h-10 sm:h-11 relative group/ceo cursor-pointer flex items-center shrink-0"
+                  onClick={() => {
+                    if (ceoExists) {
+                      setShowCeoTooltip(true);
+                      setTimeout(() => setShowCeoTooltip(false), 2500);
+                    }
+                  }}
+                >
+                  <button
+                    onClick={(e) => {
+                      if (ceoExists) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setShowCeoTooltip(true);
+                        setTimeout(() => setShowCeoTooltip(false), 2500);
+                        return;
+                      }
+                      setCeoGeneralError("");
+                      setCeoFieldErrors({ fullName: "", email: "", designation: "", gender: "", password: "" });
+                      setShowCeoSuccess(false);
+                      setIsCreateCeoModalOpen(true);
+                    }}
+                    disabled={ceoExists}
+                    className={`w-full h-full flex items-center justify-center gap-1 xs:gap-1.5 sm:gap-2 px-1.5 xs:px-2.5 sm:px-3.5 md:px-4 lg:px-5 rounded-xl font-black text-[11px] sm:text-xs transition-all tracking-tight xs:tracking-normal sm:tracking-widest uppercase whitespace-nowrap ${
+                      ceoExists
+                        ? "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none pointer-events-none"
+                        : "bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-md shadow-amber-500/20 hover:shadow-amber-500/40 transform hover:-translate-y-0.5 active:scale-95"
+                    }`}
+                    title={ceoExists ? "A CEO account already exists" : "Create CEO Account"}
+                  >
+                    <Crown className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                    <div className="flex flex-col leading-[1.05] sm:hidden text-left text-[7.5px] xs:text-[8.5px]">
+                      <span>Create</span>
+                      <span>CEO</span>
+                    </div>
+                    <span className="hidden sm:inline">Create CEO</span>
+                  </button>
+                  {/* Tooltip shown when CEO exists on hover or click */}
+                  {ceoExists && (
+                    <div
+                      className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[220px] bg-gray-900 text-white text-[11px] font-semibold px-3 py-1.5 rounded-lg shadow-lg pointer-events-none transition-all duration-200 z-50 text-center ${
+                        showCeoTooltip
+                          ? "opacity-100 scale-100"
+                          : "opacity-0 scale-95 group-hover/ceo:opacity-100 group-hover/ceo:scale-100"
+                      }`}
+                    >
+                      A CEO account already exists
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="bg-white rounded-[20px] p-0 overflow-hidden border border-gray-100">
-          {/* Desktop Table View */}
-          <div className="hidden lg:block">
+          {/* Desktop & Tablet Table View */}
+          <div className="hidden md:block overflow-x-auto w-full custom-scrollbar">
             <table className="w-full border-separate border-spacing-0">
               <thead>
                 <tr className="bg-[#4318FF] text-white">
                   <th
-                    className="text-left py-4 pl-10 pr-4 text-[13px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-[#3d16e5] transition-colors w-[30%]"
+                    className="text-left py-4 pl-6 pr-3 text-[13px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-[#3d16e5] transition-colors whitespace-nowrap"
                     onClick={() => handleSort("fullName")}
                   >
                     Name
                   </th>
                   <th
-                    className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-[#3d16e5] transition-colors w-[15%]"
+                    className="text-center py-4 px-3 text-[13px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-[#3d16e5] transition-colors whitespace-nowrap"
                     onClick={() => handleSort("employeeId")}
                   >
                     ID
                   </th>
-                  <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider w-[20%]">
+                  <th className="text-center py-4 px-3 text-[13px] font-bold uppercase tracking-wider whitespace-nowrap">
                     Department
                   </th>
-                  <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider w-[15%]">
+                  <th className="text-center py-4 px-3 text-[13px] font-bold uppercase tracking-wider whitespace-nowrap">
                     Role
                   </th>
-                  <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider w-[15%]">
+                  <th className="text-center py-4 px-3 text-[13px] font-bold uppercase tracking-wider whitespace-nowrap">
                     Status
                   </th>
-                  <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider w-[15%]">
+                  <th className="text-center py-4 px-3 text-[13px] font-bold uppercase tracking-wider whitespace-nowrap">
                     Activation
                   </th>
-                  <th className="py-4 px-4 text-[13px] font-bold uppercase tracking-wider text-center w-[20%]">
+                  <th className="py-4 pl-3 pr-6 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
                     Actions
                   </th>
                 </tr>
@@ -796,19 +1038,19 @@ const EmployeeListView = () => {
                     key={emp.id}
                     className={`group transition-all duration-200 ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} hover:bg-[#F1F4FF] cursor-pointer`}
                   >
-                    <td className="py-4 pl-10 pr-4 text-[#2B3674] text-sm font-bold">
+                    <td className="py-4 pl-6 pr-3 text-[#2B3674] text-sm font-bold whitespace-nowrap">
                       {emp.name}
                     </td>
-                    <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
+                    <td className="py-4 px-3 text-center text-[#475569] text-sm font-semibold whitespace-nowrap">
                       {emp.id}
                     </td>
-                    <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
+                    <td className="py-4 px-3 text-center text-[#475569] text-sm font-semibold whitespace-nowrap">
                       {emp.department || "General"}
                     </td>
-                    <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
+                    <td className="py-4 px-3 text-center text-[#475569] text-sm font-semibold whitespace-nowrap">
                       {emp.role || "-"}
                     </td>
-                    <td className="py-4 px-4 text-center">
+                    <td className="py-4 px-3 text-center whitespace-nowrap">
                       {emp.userStatus === UserStatus.DRAFT ? (
                         <span className="inline-flex px-3 py-1 rounded-full text-xs font-bold bg-gray-200 text-gray-700 border border-gray-300">
                           Draft
@@ -861,7 +1103,7 @@ const EmployeeListView = () => {
                       )}
                     </td>
                     {/* Activation Column - Shows "Send Link" (first) or "Resend Link" (after 24h) */}
-                    <td className="py-4 px-4 text-center">
+                    <td className="py-4 px-3 text-center whitespace-nowrap">
                       {canEdit &&
                       emp.userStatus === UserStatus.DRAFT &&
                       (() => {
@@ -901,8 +1143,8 @@ const EmployeeListView = () => {
                         </span>
                       )}
                     </td>
-                    <td className="py-4 px-4 text-center">
-                      <div className="flex items-center justify-center gap-3">
+                    <td className="py-4 pl-3 pr-6 text-center whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-2.5">
                         <button
                           onClick={() => handleViewDashboard(emp.rawId)}
                           className="inline-flex items-center justify-center bg-transparent border-none cursor-pointer text-[#4318FF] hover:scale-110 active:scale-95 transition-all"
@@ -925,8 +1167,8 @@ const EmployeeListView = () => {
             </table>
           </div>
 
-          {/* Mobile/Tablet Card View */}
-          <div className="block lg:hidden p-4">
+          {/* Mobile Card View (Cards only on mobile) */}
+          <div className="block md:hidden p-4">
             {currentItems.length > 0 ? (
               <EmployeeListMobileCard
                 employees={currentItems}
@@ -1434,7 +1676,8 @@ ${
                                 normalized !== "ADMIN" &&
                                 normalized !== "RECEPTIONIST" &&
                                 normalized !== "TEAM LEAD" &&
-                                normalized !== "TEAMLEAD"
+                                normalized !== "TEAMLEAD" &&
+                                normalized !== "CEO"
                               );
                             })
                             .map((r) => (
@@ -1748,6 +1991,247 @@ ${
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create CEO Modal */}
+      {isCreateCeoModalOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg border border-gray-100 animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex-none flex items-center justify-between p-6 border-b border-gray-100 bg-gradient-to-r from-amber-50/60 to-white">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shadow-sm">
+                  <Crown size={22} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-[#2B3674]">
+                    Create CEO Account
+                  </h3>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Chief Executive Officer lifecycle setup (Single account only)
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleCloseCeoModal}
+                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-4">
+              {ceoGeneralError && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm flex items-start gap-2.5 animate-in fade-in slide-in-from-top-2">
+                  <AlertCircle size={18} className="flex-shrink-0 mt-0.5" />
+                  <span className="font-semibold">{ceoGeneralError}</span>
+                </div>
+              )}
+
+              {showCeoSuccess && (
+                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 flex items-center gap-3 animate-in fade-in zoom-in-95">
+                  <div className="bg-emerald-100 p-2 rounded-full">
+                    <CheckCircle className="w-5 h-5 text-emerald-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold">CEO Account Created Successfully!</p>
+                    <p className="text-xs text-emerald-600/80">
+                      Welcome email has been sent to {ceoFormData.email}. Form closing...
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="p-3.5 bg-amber-50/70 border border-amber-200/60 rounded-xl text-xs text-amber-800 leading-relaxed">
+                <strong>Account Credentials Note:</strong> The CEO account will be assigned Login ID <strong>CEO</strong>. The password will be hashed with bcrypt. CEO receives a welcome confirmation email.
+              </div>
+
+              <form onSubmit={handleCeoSubmit} className="space-y-4" autoComplete="off">
+                {/* Prevent browser password manager / autofill from pre-filling saved admin credentials */}
+                <input
+                  type="text"
+                  name="prevent_autofill_username"
+                  style={{ display: "none" }}
+                  tabIndex={-1}
+                  autoComplete="off"
+                  aria-hidden="true"
+                />
+                <input
+                  type="password"
+                  name="prevent_autofill_password"
+                  style={{ display: "none" }}
+                  tabIndex={-1}
+                  autoComplete="new-password"
+                  aria-hidden="true"
+                />
+
+                {/* Full Name */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wide">
+                    Full Name <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      name="fullName"
+                      placeholder="e.g. Johnathan Smith"
+                      autoComplete="off"
+                      className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 outline-none transition-all text-sm font-medium"
+                      value={ceoFormData.fullName}
+                      onChange={handleCeoChange}
+                      required
+                    />
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  </div>
+                  {ceoFieldErrors.fullName && (
+                    <p className="text-red-500 text-xs mt-1 font-semibold">{ceoFieldErrors.fullName}</p>
+                  )}
+                </div>
+
+                {/* Registered Email */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wide">
+                    Registered Email <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="email"
+                      name="email"
+                      id="ceo-create-email"
+                      placeholder="e.g. ceo@worksphere.com"
+                      autoComplete="new-password"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      data-lpignore="true"
+                      data-form-type="other"
+                      className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 outline-none transition-all text-sm font-medium"
+                      value={ceoFormData.email}
+                      onChange={handleCeoChange}
+                      required
+                    />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  </div>
+                  {ceoFieldErrors.email && (
+                    <p className="text-red-500 text-xs mt-1 font-semibold">{ceoFieldErrors.email}</p>
+                  )}
+                </div>
+
+                {/* Designation */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wide">
+                    Designation <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      name="designation"
+                      placeholder="e.g. Chief Executive Officer"
+                      autoComplete="off"
+                      className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 outline-none transition-all text-sm font-medium"
+                      value={ceoFormData.designation}
+                      onChange={handleCeoChange}
+                      required
+                    />
+                    <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  </div>
+                  {ceoFieldErrors.designation && (
+                    <p className="text-red-500 text-xs mt-1 font-semibold">{ceoFieldErrors.designation}</p>
+                  )}
+                </div>
+
+                {/* Gender */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wide">
+                    Gender <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <select
+                      name="gender"
+                      className="w-full pl-10 pr-10 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 outline-none transition-all text-sm font-medium bg-white appearance-none"
+                      value={ceoFormData.gender}
+                      onChange={handleCeoChange}
+                      required
+                    >
+                      <option value="">Select Gender</option>
+                      <option value="MALE">Male</option>
+                      <option value="FEMALE">Female</option>
+                    </select>
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <ChevronDown size={16} className="text-gray-400" />
+                    </div>
+                  </div>
+                  {ceoFieldErrors.gender && (
+                    <p className="text-red-500 text-xs mt-1 font-semibold">{ceoFieldErrors.gender}</p>
+                  )}
+                </div>
+
+                {/* Password */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wide">
+                    Password <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showCeoPassword ? "text" : "password"}
+                      name="password"
+                      id="ceo-create-password"
+                      placeholder="Enter secure initial password"
+                      autoComplete="new-password"
+                      data-lpignore="true"
+                      data-form-type="other"
+                      className="w-full pl-10 pr-10 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 outline-none transition-all text-sm font-medium"
+                      value={ceoFormData.password}
+                      onChange={handleCeoChange}
+                      required
+                    />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <button
+                      type="button"
+                      onClick={() => setShowCeoPassword(!showCeoPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                      title={showCeoPassword ? "Hide Password" : "Show Password"}
+                    >
+                      {showCeoPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                  {ceoFieldErrors.password && (
+                    <p className="text-red-500 text-xs mt-1 font-semibold">{ceoFieldErrors.password}</p>
+                  )}
+                </div>
+
+                {/* Modal Footer */}
+                <div className="pt-4 flex items-center justify-end gap-3 border-t border-gray-100">
+                  <button
+                    type="button"
+                    onClick={handleCloseCeoModal}
+                    className="px-5 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-bold transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={ceoLoading || showCeoSuccess}
+                    className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-xl text-sm font-bold shadow-lg shadow-amber-500/30 transition-all disabled:opacity-50"
+                  >
+                    {ceoLoading ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        <span>Creating CEO...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Crown size={16} />
+                        <span>Create CEO</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>

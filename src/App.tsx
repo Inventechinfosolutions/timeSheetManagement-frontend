@@ -106,6 +106,9 @@ const AdminTabWrapper = () => {
   const { tab } = useParams<{ tab: string }>();
 
   switch (tab?.toLowerCase()) {
+    case "admin-dashboard":
+    case "employee-dashboard":
+      return <AdminDashboard />;
     case "registration":
       return <EmpRegistration />;
     case "employees":
@@ -379,7 +382,9 @@ function AppContent() {
                     </ProtectedRoute>
                   }
                 >
-                  <Route index element={<AdminDashboard />} />
+                  <Route index element={<Navigate to="/manager-dashboard/my-dashboard" replace />} />
+                  <Route path="admin-dashboard" element={<AdminDashboard />} />
+                  <Route path="employee-dashboard" element={<AdminDashboard />} />
                   <Route
                     path="timesheet/:employeeId/:date?"
                     element={

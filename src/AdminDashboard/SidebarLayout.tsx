@@ -25,9 +25,11 @@ import { logoutUser } from "../reducers/user.reducer";
 import ApiLoadingSpinner from "../components/ApiLoadingSpinner";
 import Header from "../components/DesktopHeader/Header";
 import Footer from "../components/Footer";
+import MobileBottomNav from "../components/FooterMobileResponsive/MobileFooter";
 import { useSelector } from "react-redux";
 import { RootState } from "../store";
 import { UserType } from "../enums";
+import "../EmployeeDashboard/SidebarLayout.css";
 
 interface SidebarLayoutProps {
   children: React.ReactNode;
@@ -109,6 +111,51 @@ const SidebarLayout = ({
     [title, adminSidebarItems],
   );
 
+  const adminMobileNavItems = useMemo(
+    () => [
+      { name: "Admin Dashboard", icon: LayoutGrid, label: "Dashboard", fullLabel: "Dashboard" },
+      { name: "Employee Directory", icon: Users, label: "Directory", fullLabel: "Directory" },
+      { name: "Employee Timesheet", icon: Calendar, label: "Timesheet", fullLabel: "Timesheet" },
+      { name: "Request Management", icon: Calendar, label: "Requests", fullLabel: "Requests" },
+      { name: "Manager Mapping", icon: Users, label: "Mapping", fullLabel: "Mapping" },
+      { name: "Notification", icon: Bell, label: "Alerts", fullLabel: "Notification" },
+    ],
+    [],
+  );
+
+  const managerMobileNavGroups = useMemo(
+    () => [
+      {
+        title: "My Workspace",
+        items: [
+          { name: "My Dashboard", icon: LayoutGrid, label: "Dashboard", fullLabel: "Dashboard" },
+          { name: "My Timesheet", icon: Calendar, label: "Timesheet", fullLabel: "Timesheet" },
+          { name: "My Timesheet History", icon: Eye, label: "History", fullLabel: "History" },
+          { name: "Request Management ", icon: Calendar, label: "Requests", fullLabel: "Requests" },
+          { name: "Employee Notes", icon: StickyNote, label: "Notes", fullLabel: "Employee Notes" },
+        ],
+      },
+      {
+        title: "Team Management",
+        items: [
+          { name: "Employee Dashboard", icon: LayoutGrid, label: "Dashboard", fullLabel: "Dashboard" },
+          { name: "Employee Directory", icon: Users, label: "Directory", fullLabel: "Directory" },
+          { name: "Employee Timesheet", icon: Calendar, label: "Timesheet", fullLabel: "Timesheet" },
+          { name: "Request Management", icon: Calendar, label: "Requests", fullLabel: "Requests" },
+          { name: "Notification", icon: Bell, label: "Alerts", fullLabel: "Notification" },
+        ],
+      },
+    ],
+    [],
+  );
+
+  const mobileNavItems = useMemo(() => {
+    if (title === "Receptionist") {
+      return adminMobileNavItems.filter((i) => i.name !== "Request Management");
+    }
+    return adminMobileNavItems;
+  }, [title, adminMobileNavItems]);
+
   // Maps sidebar item names -> URL tab slugs.
   // Used to navigate directly, independent of the onTabChange prop
   // (which some parent layouts don't wire up for every tab, e.g. Quarterly Review).
@@ -183,7 +230,7 @@ const SidebarLayout = ({
       case "employee-notes":
         return "Employee Notes";
       case "admin-dashboard":
-        return "Employee Dashboard";
+        return title === "Manager" ? "Employee Dashboard" : "Admin Dashboard";
       default:
         break;
     }
@@ -269,9 +316,10 @@ const SidebarLayout = ({
       isActive
         ? expanded
           ? "bg-white/95 text-[#2B3674] font-semibold shadow-[0_4px_20px_rgba(0,0,0,0.12)]"
-          : "md:justify-center"
+          : "xl:justify-center"
         : "text-white/80 hover:bg-white/10 hover:text-white",
-      expanded ? "gap-3 px-3 py-2.5" : "md:justify-center md:px-0 py-2",
+      expanded ? "gap-3 px-3 py-2.5" : "xl:justify-center xl:px-0 py-2",
+      !expanded ? "sidebar-collapsed-center" : "",
     ].join(" ");
 
   const navIconWrapClass = (isActive: boolean, expanded = true) =>
@@ -288,54 +336,33 @@ const SidebarLayout = ({
   return (
     <div className="flex flex-col w-full h-screen bg-[#f8f9fa] font-sans text-[#2B3674] overflow-hidden relative">
       <Header onMobileMenuClick={() => setIsMobileOpen(true)} />
-      <div className="flex flex-1 min-h-0 relative overflow-hidden">
+      <div className="flex flex-1 min-h-0 relative overflow-hidden w-full">
         {shouldRenderSidebarShell && (
           <>
-            {/* Premium Mobile/Drawer Backdrop.
-                FIX: this used to be unconditionally `md:hidden`, so on a
-                tablet-width ("tab view") viewport (>= md, 768px) it
-                never appeared even while the drawer was deliberately
-                open via the hamburger. For hideSidebar pages the drawer
-                is meant to work at ANY width, so the backdrop should only
-                be forced away at md+ for normal (persistent-rail) pages. */}
+            {/* Mobile / Drawer Backdrop */}
             <div
-              className={`sidebar-backdrop fixed inset-0 bg-[#111c44]/60 backdrop-blur-md z-2000 transition-all duration-500 ease-in-out
-                        ${hideSidebar ? "" : "md:hidden"}
-                        ${isMobileOpen
+              className={`sidebar-mobile-backdrop fixed inset-0 bg-[#111c44]/60 backdrop-blur-md z-[2000] transition-all duration-300 ease-in-out
+                ${hideSidebar ? "" : "xl:hidden"}
+                ${isMobileOpen
                   ? "opacity-100 pointer-events-auto"
                   : "opacity-0 pointer-events-none"
                 }
-                    `}
+              `}
               onClick={() => setIsMobileOpen(false)}
             />
-
-            {/* Spacer to prevent layout shift when locked — desktop-only,
-                and intentionally still skipped for hideSidebar pages even
-                while the mobile drawer is open, since it has no effect on
-                mobile layout anyway (hidden md:block). */}
-            {!hideSidebar && (
-              <div
-                className={`sidebar-spacer shrink-0 transition-all duration-300 ease-in-out ${isOpen ? "w-64" : "w-20"
-                  } hidden md:block`}
-              ></div>
-            )}
 
             <aside
               className={
                 hideSidebar
-                  ? // FIX: hideSidebar pages should ALWAYS behave as a
-                  // slide-in drawer, at any viewport width — never
-                  // switch into the persistent "md:absolute / md:w-64"
-                  // desktop rail. Previously this branch still carried
-                  // `md:translate-x-0` (forcing it visible-by-default at
-                  // md+) plus a blanket `md:hidden` that then fought it
-                  // and always won, hiding the drawer even when
-                  // isMobileOpen was true on tablet-width screens.
-                  `sidebar-aside fixed top-0 left-0 h-full flex flex-col shrink-0 transition-all duration-300 ease-in-out z-2001 text-white w-72
-                     ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}`
-                  : `sidebar-aside fixed top-0 md:absolute md:top-0 md:left-0 h-full md:h-full flex flex-col shrink-0 transition-all duration-300 ease-in-out z-2001 md:z-30 text-white
-                     ${isMobileOpen ? "translate-x-0 w-72" : "-translate-x-full md:translate-x-0"}
-                     ${isOpen ? "md:w-64" : "md:w-20"}`
+                  ? `fixed top-0 left-0 h-full flex flex-col shrink-0 transition-all duration-300 ease-in-out z-[2001] text-white w-72
+                     ${isMobileOpen ? "translate-x-0 visible" : "-translate-x-[calc(100%+20px)] invisible"}`
+                  : `app-sidebar ${isOpen ? "app-sidebar--open" : "app-sidebar--collapsed"} fixed top-0 left-0 h-full flex flex-col shrink-0 transition-all duration-300 ease-in-out text-white w-72 xl:w-auto
+                     xl:sticky xl:top-0
+                     ${isMobileOpen
+                    ? "translate-x-0 visible z-[2001]"
+                    : "-translate-x-[calc(100%+20px)] max-xl:invisible xl:translate-x-0 z-30"
+                  }
+                     ${isOpen ? "xl:w-64" : "xl:w-20"}`
               }
               style={{
                 background:
@@ -346,37 +373,31 @@ const SidebarLayout = ({
               onMouseEnter={() => !isLocked && !hideSidebar && setIsHovered(true)}
               onMouseLeave={() => !isLocked && !hideSidebar && setIsHovered(false)}
             >
-              {/* Mobile Drawer Navigation Header.
-                  For hideSidebar pages this is the ONLY header shown, at
-                  any width, since those pages never switch into the
-                  persistent-rail/branding-bar mode below. For normal
-                  pages it stays mobile-only (md:hidden) as before. */}
+              {/* Mobile Drawer Navigation Header */}
               <div
-                className={`${hideSidebar ? "" : "md:hidden"} flex items-center justify-between p-6 mb-2 border-b border-white/10`}
+                className={`sidebar-drawer-header ${hideSidebar ? "" : "xl:hidden"} flex items-center p-6 mb-2 border-b border-white/10 relative w-full`}
               >
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl border border-white/10">
+                <div className="flex items-center gap-3 pr-12">
+                  <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl border border-white/10 shrink-0">
                     <User className="w-6 h-6 text-white" />
                   </div>
-                  <span className="text-xl font-bold text-white tracking-tight">
+                  <span className="text-xl font-bold text-white tracking-tight whitespace-nowrap">
                     {title}
                   </span>
                 </div>
 
                 <button
                   onClick={() => setIsMobileOpen(false)}
-                  className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                  className="absolute right-6 top-1/2 -translate-y-1/2 p-2 rounded-lg hover:bg-white/10 transition-colors z-50"
                   aria-label="Close menu"
                 >
                   <X className="w-6 h-6 text-white" />
                 </button>
               </div>
 
-              {/* Branding & Lock Toggle - Desktop persistent-rail only.
-                  Never shown for hideSidebar pages, which only ever use
-                  the drawer header above regardless of width. */}
+              {/* Branding & Lock Toggle - Desktop persistent-rail */}
               <div
-                className={`${hideSidebar ? "hidden" : "hidden md:flex"} h-14 items-center justify-between px-0 relative mb-0`}
+                className={`sidebar-desktop-profile ${hideSidebar ? "hidden" : "hidden xl:flex"} h-14 items-center justify-between px-0 relative mb-0 mt-4`}
               >
                 {/* Logo Area */}
                 <div
@@ -486,29 +507,29 @@ const SidebarLayout = ({
                               <div key={item.name} className="relative group">
                                 <button
                                   onClick={() => handleNavItemClick(item.name)}
-                                  className={navItemClass(isActive, isOpen)}
+                                  className={navItemClass(isActive, isOpen || isMobileOpen)}
                                 >
-                                  {isActive && isOpen && (
+                                  {isActive && (isOpen || isMobileOpen) && (
                                     <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 bg-[#4318FF] rounded-r-full" />
                                   )}
-                                  <div className={navIconWrapClass(isActive, isOpen)}>
-                                    <Icon className={navIconClass(isActive, isOpen)} />
+                                  <div className={navIconWrapClass(isActive, isOpen || isMobileOpen)}>
+                                    <Icon className={navIconClass(isActive, isOpen || isMobileOpen)} />
                                   </div>
                                   <span
                                     className={`text-sm whitespace-nowrap transition-all duration-300 relative z-10
-                                                            ${isOpen
+                                      ${isOpen || isMobileOpen
                                         ? "opacity-100 translate-x-0 w-auto"
                                         : "opacity-0 -translate-x-4 w-0 overflow-hidden absolute"
                                       }
-                                                        `}
+                                    `}
                                   >
                                     {item.name}
                                   </span>
                                 </button>
 
                                 {/* Tooltip for collapsed mode */}
-                                {!isOpen && (
-                                  <div className="hidden md:block absolute left-[calc(100%+10px)] top-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#111c44] text-white text-xs font-bold rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 whitespace-nowrap z-50">
+                                {!isOpen && !isMobileOpen && (
+                                  <div className="sidebar-tooltip hidden xl:block absolute left-[calc(100%+10px)] top-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#111c44] text-white text-xs font-bold rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 whitespace-nowrap z-50">
                                     {item.name}
                                     <div className="absolute top-1/2 -left-1 -translate-y-1/2 border-4 border-r-[#111c44] border-l-transparent border-t-transparent border-b-transparent"></div>
                                   </div>
@@ -527,28 +548,28 @@ const SidebarLayout = ({
                       <div key={item.name} className="relative group mb-1">
                         <button
                           onClick={() => handleNavItemClick(item.name)}
-                          className={navItemClass(isActive, isOpen)}
+                          className={navItemClass(isActive, isOpen || isMobileOpen)}
                         >
-                          {isActive && isOpen && (
+                          {isActive && (isOpen || isMobileOpen) && (
                             <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 bg-[#4318FF] rounded-r-full" />
                           )}
-                          <div className={navIconWrapClass(isActive, isOpen)}>
-                            <Icon className={navIconClass(isActive, isOpen)} />
+                          <div className={navIconWrapClass(isActive, isOpen || isMobileOpen)}>
+                            <Icon className={navIconClass(isActive, isOpen || isMobileOpen)} />
                           </div>
                           <span
                             className={`text-sm whitespace-nowrap transition-all duration-300 relative z-10
-                                            ${isOpen
+                              ${isOpen || isMobileOpen
                                 ? "opacity-100 translate-x-0 w-auto"
                                 : "opacity-0 -translate-x-4 w-0 overflow-hidden absolute"
                               }
-                                        `}
+                            `}
                           >
                             {item.name}
                           </span>
                         </button>
 
-                        {!isOpen && (
-                          <div className="hidden md:block absolute left-[calc(100%+10px)] top-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#111c44] text-white text-xs font-bold rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 whitespace-nowrap z-50">
+                        {!isOpen && !isMobileOpen && (
+                          <div className="sidebar-tooltip hidden xl:block absolute left-[calc(100%+10px)] top-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#111c44] text-white text-xs font-bold rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 whitespace-nowrap z-50">
                             {item.name}
                             <div className="absolute top-1/2 -left-1 -translate-y-1/2 border-4 border-r-[#111c44] border-l-transparent border-t-transparent border-b-transparent"></div>
                           </div>
@@ -560,64 +581,75 @@ const SidebarLayout = ({
 
               {/* Logout Button */}
               <div className="px-4 pb-6 mt-2 border-t border-white/10 pt-4">
-  <div className="relative group">
-    <button
-      onClick={handleLogout}
-      className={`w-full flex items-center p-3 rounded-2xl cursor-pointer transition-all duration-300 relative overflow-hidden
+                <div className="relative group">
+                  <button
+                    onClick={handleLogout}
+                    className={`w-full flex items-center p-3 rounded-2xl cursor-pointer transition-all duration-300 relative overflow-hidden
         text-white hover:bg-white hover:text-red-600
         ${isOpen || isMobileOpen
-          ? "gap-4 px-4"
-          : "xl:justify-center xl:px-0 gap-0"
-        }
+                        ? "gap-4 px-4"
+                        : "xl:justify-center xl:px-0 gap-0"
+                      }
       `}
-    >
-      <div
-        className="
+                  >
+                    <div
+                      className="
           shrink-0 relative z-10
           text-white
           transition-all duration-300
           group-hover:text-red-600
           group-hover:scale-110
         "
-      >
-        <LogOut className="w-5 h-5 transition-colors duration-300" />
-      </div>
+                    >
+                      <LogOut className="w-5 h-5 transition-colors duration-300" />
+                    </div>
 
-      <span
-        className={`text-md font-semibold whitespace-nowrap
+                    <span
+                      className={`text-md font-semibold whitespace-nowrap
           transition-all duration-300 relative z-10
           text-white group-hover:text-red-600
-          ${
-            isOpen || isMobileOpen
-              ? "opacity-100 translate-x-0 w-auto"
-              : "opacity-0 -translate-x-4 w-0 overflow-hidden absolute"
-          }
+          ${isOpen || isMobileOpen
+                          ? "opacity-100 translate-x-0 w-auto"
+                          : "opacity-0 -translate-x-4 w-0 overflow-hidden absolute"
+                        }
         `}
-      >
-        Logout
-      </span>
-    </button>
+                    >
+                      Logout
+                    </span>
+                  </button>
 
-    {!isOpen && !isMobileOpen && (
-      <div className="sidebar-tooltip hidden xl:block absolute left-[calc(100%+10px)] top-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#111c44] text-white text-md font-bold rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 whitespace-nowrap z-50">
-        Logout
-        <div className="absolute top-1/2 -left-1 -translate-y-1/2 border-4 border-r-[#111c44] border-l-transparent border-t-transparent border-b-transparent"></div>
-      </div>
-    )}
-  </div>
-</div>
+                  {!isOpen && !isMobileOpen && (
+                    <div className="sidebar-tooltip hidden xl:block absolute left-[calc(100%+10px)] top-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#111c44] text-white text-md font-bold rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 whitespace-nowrap z-50">
+                      Logout
+                      <div className="absolute top-1/2 -left-1 -translate-y-1/2 border-4 border-r-[#111c44] border-l-transparent border-t-transparent border-b-transparent"></div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </aside>
           </>
         )}
 
         <main
           ref={mainContentRef}
-          className="flex-1 min-h-0 h-full relative custom-scrollbar flex flex-col bg-[#F4F7FE] overflow-y-auto overflow-x-hidden"
+          className="app-main-content flex-1 min-h-0 h-full relative custom-scrollbar flex flex-col bg-[#F4F7FE] overflow-y-auto overflow-x-hidden pb-28 xl:pb-0"
         >
-          <div className="relative grow shrink-0 flex flex-col">
+          <div className="relative grow shrink-0 flex flex-col w-full">
             {children}
             <ApiLoadingSpinner contained contentAreaRef={mainContentRef} />
           </div>
+
+          {/* Bottom Responsive Mobile Navigation */}
+          <div className="app-mobile-bottom-nav xl:hidden">
+            <MobileBottomNav
+              activeTab={derivedActiveTab}
+              onTabChange={handleNavItemClick}
+              isSidebarOpen={isMobileOpen}
+              items={title === "Manager" ? undefined : mobileNavItems}
+              groups={title === "Manager" ? managerMobileNavGroups : undefined}
+            />
+          </div>
+
           <Footer className="sidebar-footer" />
         </main>
       </div>

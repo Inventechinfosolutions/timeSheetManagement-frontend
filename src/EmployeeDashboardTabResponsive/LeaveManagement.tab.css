@@ -210,8 +210,11 @@
    Modal
    ============================================================ */
  
-.leave-management-tab .application-modal .ant-modal {
-  max-width: min(720px, calc(100vw - 48px));
+.leave-management-tab .application-modal .ant-modal,
+.ant-modal.application-modal {
+  width: calc(100vw - 20px) !important;
+  max-width: min(850px, calc(100vw - 20px)) !important;
+  margin: 10px auto !important;
 }
  
 /* ============================================================

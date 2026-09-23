@@ -59,7 +59,7 @@ const ForgotPassword: React.FC = () => {
     if (e) e.preventDefault();
 
     if (!searchId.trim()) {
-      message.error("Please enter your Employee ID");
+      message.error("Please enter your Registered Email or Employee ID");
       return;
     }
 
@@ -77,7 +77,7 @@ const ForgotPassword: React.FC = () => {
       }
     } catch (error: any) {
       console.error("Identification error:", error);
-      message.error(error || "Employee not found. Please check your ID.");
+      message.error(error || "Account not found. Please check your email or Employee ID.");
     } finally {
       setIsIdentifying(false);
     }
@@ -129,7 +129,7 @@ const ForgotPassword: React.FC = () => {
                 Forgot Password?
               </h1>
               <p className="text-gray-500 text-[14px] font-medium leading-relaxed">
-                Enter your Employee ID to identify your account.
+                Enter your registered email or Employee ID to identify your account.
               </p>
             </>
           )}
@@ -176,12 +176,12 @@ const ForgotPassword: React.FC = () => {
           <form onSubmit={handleIdSubmit} className="space-y-6">
             <div className="space-y-2">
               <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">
-                Employee ID
+                Registered Email or Employee ID
               </label>
               <div className="relative group">
                 <input
                   type="text"
-                  placeholder="e.g. EMP123"
+                  placeholder="e.g. CEO, emp@company.com or EMP123"
                   className="w-full pl-12 pr-4 py-4 bg-[#F0F2F5] border-none rounded-2xl text-[#2D3748] placeholder-gray-400 text-sm focus:ring-2 focus:ring-[#006CF1]/20 focus:bg-[#E8EAED] transition-all duration-200 font-semibold"
                   value={searchId}
                   onChange={(e) => setSearchId(e.target.value)}

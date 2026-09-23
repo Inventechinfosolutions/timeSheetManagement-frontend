@@ -1006,7 +1006,7 @@ const MobileTimesheet = ({
                       </div>
                     )}
 
-                    {(isBlocked || isSunday || isSaturday) && (
+                    {isBlocked && !isSunday && !isSaturday && (
                       <div
                         className="absolute top-0.5 right-0.5 cursor-pointer z-30 p-0.5"
                         onClick={(event) => {

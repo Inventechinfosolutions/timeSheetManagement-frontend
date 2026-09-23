@@ -1071,13 +1071,14 @@ const LeaveManagementMobile: React.FC<LeaveManagementMobileProps> = ({
           footer={null}
           closable={true}
           centered
-          width={750}
+          width="calc(100vw - 8px)"
+          style={{ maxWidth: "calc(100vw - 8px)", margin: "4px auto", padding: 0 }}
           destroyOnHidden
           className="application-modal"
         >
           <div className="relative overflow-hidden bg-white flex flex-col max-h-[82vh]">
             {/* Modal Header */}
-            <div className="pt-5 pb-3 px-6 border-b border-gray-100 shrink-0">
+            <div className="pt-4 pb-2.5 px-3 border-b border-gray-100 shrink-0">
               <div className="flex justify-between items-start">
                 <h2 className="text-xl md:text-2xl font-bold text-[#2B3674] tracking-tight">
                   {selectedLeaveType === LeaveRequestType.APPLY_LEAVE
@@ -1090,18 +1091,18 @@ const LeaveManagementMobile: React.FC<LeaveManagementMobileProps> = ({
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 space-y-5 overflow-y-auto flex-1 custom-scrollbar">
+            <div className="px-1.5 py-3 space-y-3 overflow-y-auto flex-1 custom-scrollbar">
               {/* Email recipients - in card */}
-              <div className="rounded-2xl border border-[#E0E7FF] bg-[#F8FAFC] p-4 shadow-sm">
-                <div className="space-y-3">
-                  <label className="text-sm font-bold text-[#2B3674] ml-1 block">
+              <div className="rounded-xl border border-[#E0E7FF] bg-[#F8FAFC] p-2.5 shadow-sm">
+                <div className="space-y-2.5">
+                  <label className="text-sm font-bold text-[#2B3674] block">
                     Email recipients
                   </label>
                   <div className="space-y-4">
-                    <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-3">
                       {!isManager && (
                         <div className="w-full">
-                          <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
+                          <span className="text-xs font-medium text-gray-600 block mb-1">
                             Reporting Manager
                           </span>
                           <input
@@ -1110,12 +1111,12 @@ const LeaveManagementMobile: React.FC<LeaveManagementMobileProps> = ({
                             disabled
                             value={emailConfig?.assignedManagerEmail || ""}
                             placeholder="Not configured"
-                            className="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-gray-50 text-gray-700 cursor-not-allowed text-sm whitespace-nowrap overflow-hidden text-ellipsis"
+                            className="w-full px-3 py-2 border border-gray-200 rounded-xl bg-gray-50 text-gray-700 cursor-not-allowed text-sm whitespace-nowrap overflow-hidden text-ellipsis"
                           />
                         </div>
                       )}
                       <div className="w-full">
-                        <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
+                        <span className="text-xs font-medium text-gray-600 block mb-1">
                           HR
                         </span>
                         <input
@@ -1124,12 +1125,12 @@ const LeaveManagementMobile: React.FC<LeaveManagementMobileProps> = ({
                           disabled
                           value={emailConfig?.hrEmail || ""}
                           placeholder="Not configured"
-                          className="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-gray-50 text-gray-700 cursor-not-allowed text-sm whitespace-nowrap overflow-hidden text-ellipsis"
+                          className="w-full px-3 py-2 border border-gray-200 rounded-xl bg-gray-50 text-gray-700 cursor-not-allowed text-sm whitespace-nowrap overflow-hidden text-ellipsis"
                         />
                       </div>
                     </div>
                     <div>
-                      <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
+                      <span className="text-xs font-medium text-gray-600 block mb-1">
                         CC
                       </span>
                       <div className="flex flex-wrap gap-2 items-center">
@@ -1196,12 +1197,12 @@ const LeaveManagementMobile: React.FC<LeaveManagementMobileProps> = ({
                     </div>
                   </div>
                   {/* Subject - inside card */}
-                  <div className="space-y-2 pt-2" ref={titleRef}>
-                    <label className="text-sm font-bold text-[#2B3674] ml-1">
+                  <div className="space-y-1.5 pt-1" ref={titleRef}>
+                    <label className="text-sm font-bold text-[#2B3674]">
                       Subject <span className="text-red-500">*</span>
                     </label>
                     {isViewMode ? (
-                      <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none break-words">
+                      <div className="w-full px-3 py-2 rounded-xl bg-[#F4F7FE] font-bold text-[#2B3674] border-none break-words">
                         {formData.title}
                       </div>
                     ) : (
@@ -1209,7 +1210,7 @@ const LeaveManagementMobile: React.FC<LeaveManagementMobileProps> = ({
                         <input
                           type="text"
                           placeholder="e.g. Annual Vacation"
-                          className={`w-full px-5 py-3 rounded-xl bg-white border ${
+                          className={`w-full px-3 py-2 rounded-xl bg-white border ${
                             errors.title ? "border-red-500" : "border-gray-200"
                           } text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400`}
                           value={formData.title}
@@ -1239,7 +1240,7 @@ const LeaveManagementMobile: React.FC<LeaveManagementMobileProps> = ({
                   selectedLeaveType === LeaveRequestType.HALF_DAY) && (
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <label className="text-sm font-bold text-[#2B3674] ml-1">
+                      <label className="text-sm font-bold text-[#2B3674]">
                         Type
                       </label>
                       <Select
@@ -1339,9 +1340,9 @@ const LeaveManagementMobile: React.FC<LeaveManagementMobileProps> = ({
                 )}
 
               {/* Dates Row + Total Days */}
-              <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-4 items-end">
-                <div className="space-y-2" ref={startDateRef}>
-                  <label className="text-sm font-bold text-[#2B3674] ml-1">
+              <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 items-end">
+                <div className="space-y-1.5" ref={startDateRef}>
+                  <label className="text-sm font-bold text-[#2B3674]">
                     From <span className="text-red-500">*</span>
                   </label>
                   {isViewMode ? (
@@ -1402,8 +1403,8 @@ const LeaveManagementMobile: React.FC<LeaveManagementMobileProps> = ({
                     </>
                   )}
                 </div>
-                <div className="space-y-2" ref={endDateRef}>
-                  <label className="text-sm font-bold text-[#2B3674] ml-1">
+                <div className="space-y-1.5" ref={endDateRef}>
+                  <label className="text-sm font-bold text-[#2B3674]">
                     To <span className="text-red-500">*</span>
                   </label>
                   {isViewMode ? (
@@ -1447,8 +1448,8 @@ const LeaveManagementMobile: React.FC<LeaveManagementMobileProps> = ({
                     </>
                   )}
                 </div>
-                <div className="space-y-2 flex flex-col justify-end">
-                  <label className="text-sm font-bold text-[#2B3674] ml-1">
+                <div className="space-y-1.5 flex flex-col justify-end">
+                  <label className="text-sm font-bold text-[#2B3674]">
                     Duration:
                   </label>
                   <div className="px-4 py-3 rounded-2xl bg-[#F4F7FE] font-bold text-[#4318FF] inline-flex items-center gap-2 min-h-[48px]">
@@ -1550,8 +1551,8 @@ const LeaveManagementMobile: React.FC<LeaveManagementMobileProps> = ({
                 })()}
 
               {/* Description Field */}
-              <div className="space-y-2" ref={descriptionRef}>
-                <label className="text-sm font-bold text-[#2B3674] ml-1">
+              <div className="space-y-1.5" ref={descriptionRef}>
+                <label className="text-sm font-bold text-[#2B3674]">
                   Reason for Request<span className="text-red-500">*</span>
                 </label>
                 {isViewMode ? (
@@ -1589,12 +1590,12 @@ const LeaveManagementMobile: React.FC<LeaveManagementMobileProps> = ({
               </div>
 
               {/* Document Upload Section */}
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-800 ml-1">
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-slate-800">
                   Attachments {isViewMode ? "" : "(Optional)"}
                 </label>
                 {!isViewMode && (
-                  <p className="text-xs text-gray-500 ml-1 mb-1">
+                  <p className="text-xs text-gray-500 mb-1">
                     Accepted formats: PDF, JPG, PNG, JPEG (Max 5 files, 5MB per
                     file)
                   </p>
@@ -1645,7 +1646,7 @@ const LeaveManagementMobile: React.FC<LeaveManagementMobileProps> = ({
 
             {/* Actions Footer */}
             {!isViewMode && (
-              <div className="p-4 bg-white border-t border-gray-100 flex gap-4 shrink-0">
+              <div className="p-3 bg-white border-t border-gray-100 flex gap-3 shrink-0">
                 <button
                   onClick={handleCloseModal}
                   className="flex-1 py-2.5 rounded-xl font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 transition-all active:scale-95 text-sm"
@@ -1780,7 +1781,7 @@ const LeaveManagementMobile: React.FC<LeaveManagementMobileProps> = ({
 
         {/* Undo Confirmation Modal */}
         {undoModal.isOpen && (
-          <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
             <div
               className="absolute inset-0 bg-[#2B3674]/40 backdrop-blur-sm transition-opacity"
               onClick={() =>
@@ -1881,12 +1882,13 @@ const LeaveManagementMobile: React.FC<LeaveManagementMobileProps> = ({
           footer={null}
           closable={true}
           centered
-          width={750}
+          width="calc(100vw - 8px)"
+          style={{ maxWidth: "calc(100vw - 8px)", margin: "4px auto", padding: 0 }}
           className="application-modal"
         >
           <div className="relative overflow-hidden bg-white flex flex-col max-h-[82vh]">
             {/* Modal Header */}
-            <div className="pt-5 pb-3 px-6 border-b border-gray-100 shrink-0">
+            <div className="pt-4 pb-2.5 px-3 border-b border-gray-100 shrink-0">
               <div className="flex justify-between items-start">
                 <h2 className="text-xl md:text-2xl font-bold text-[#2B3674] tracking-tight">
                   Modify Request
@@ -1895,9 +1897,9 @@ const LeaveManagementMobile: React.FC<LeaveManagementMobileProps> = ({
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 space-y-5 overflow-y-auto flex-1 custom-scrollbar px-1">
+            <div className="px-1.5 py-3 space-y-3 overflow-y-auto flex-1 custom-scrollbar">
               {/* Email recipients + Subject card */}
-              <div className="rounded-2xl border border-[#E0E7FF] bg-[#F8FAFC] p-4 shadow-sm">
+              <div className="rounded-xl border border-[#E0E7FF] bg-[#F8FAFC] p-2.5 shadow-sm">
                 <div className="space-y-3">
                   <label className="text-sm font-bold text-[#2B3674] ml-1 block">
                     Email recipients

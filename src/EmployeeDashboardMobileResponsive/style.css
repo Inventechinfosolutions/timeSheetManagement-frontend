@@ -16,7 +16,8 @@
 }
 
 .dashboard-header-mobile__card {
-  width: 100%;
+  width: calc(100% + 10px);
+  margin-left: -6px;
   background: #ffffff;
   border-radius: 16px;
   padding: 16px;
@@ -561,7 +562,7 @@
 .today-attendance-mobile__content {
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 0 3% 12px;
+  padding: 0 2% 12px;
   display: flex;
   flex-direction: column;
   gap: 16px;

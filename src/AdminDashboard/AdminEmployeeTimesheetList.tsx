@@ -285,178 +285,190 @@ const AdminEmployeeTimesheetList = () => {
   };
 
   return (
-    <div className="p-4 md:p-6 bg-[#F4F7FE] font-sans">
+    <div className="p-2 md:p-6 bg-[#F4F7FE] font-sans">
       <div className="max-w-[1600px] mx-auto">
-        {/* <h1 className="text-xl md:text-2xl font-bold text-[#2B3674] m-0 mb-5">
+        <h1 className="text-xl md:text-2xl font-bold text-[#2B3674] m-0 mb-5">
           Employee Timesheet
-        </h1> */}
+        </h1>
 
         {/* Filters Row */}
-        <div className="flex flex-wrap items-center gap-3 mb-6">
-          {/* Month/Year Selector */}
-          <div className="flex items-center gap-1.5 bg-white px-3 py-2 rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] border border-transparent">
-            <button
-              onClick={handlePreviousMonth}
-              className="p-1.5 rounded-lg hover:bg-gray-50 transition-all active:scale-95"
-              title="Previous Month"
-            >
-              <ChevronLeft size={16} className="text-[#2B3674]" />
-            </button>
-            <div className="min-w-[110px] text-center">
-              <span className="text-sm font-bold text-[#2B3674]">
-                {getMonthYearDisplay()}
-              </span>
+        <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 mb-6 w-full">
+          {/* Row 1 on mobile: Month/Year Selector & Export Excel */}
+          <div className="flex items-center justify-between gap-2.5 w-full sm:w-auto">
+            {/* Month/Year Selector */}
+            <div className="flex-1 sm:flex-initial flex items-center justify-between sm:justify-start gap-1.5 bg-white px-3 py-2 rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] border border-transparent">
+              <button
+                onClick={handlePreviousMonth}
+                className="p-1.5 rounded-lg hover:bg-gray-50 transition-all active:scale-95"
+                title="Previous Month"
+              >
+                <ChevronLeft size={16} className="text-[#2B3674]" />
+              </button>
+              <div className="min-w-[100px] sm:min-w-[110px] text-center">
+                <span className="text-xs sm:text-sm font-bold text-[#2B3674]">
+                  {getMonthYearDisplay()}
+                </span>
+              </div>
+              <button
+                onClick={handleNextMonth}
+                className="p-1.5 rounded-lg hover:bg-gray-50 transition-all active:scale-95"
+                title="Next Month"
+              >
+                <ChevronRight size={16} className="text-[#2B3674]" />
+              </button>
             </div>
+
             <button
-              onClick={handleNextMonth}
-              className="p-1.5 rounded-lg hover:bg-gray-50 transition-all active:scale-95"
-              title="Next Month"
+              onClick={handleOpenDownloadModal}
+              className="flex-shrink-0 flex items-center justify-center gap-2 px-4 py-2.5 bg-[#01B574] text-white rounded-full shadow-lg shadow-green-500/20 hover:shadow-green-500/40 hover:-translate-y-0.5 active:scale-95 transition-all text-xs sm:text-sm font-bold"
             >
-              <ChevronRight size={16} className="text-[#2B3674]" />
+              <Download size={16} />
+              <span className="whitespace-nowrap">Export Excel</span>
             </button>
           </div>
 
-          <button
-            onClick={handleOpenDownloadModal}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#01B574] text-white rounded-full shadow-lg shadow-green-500/20 hover:shadow-green-500/40 hover:-translate-y-0.5 active:scale-95 transition-all text-sm font-bold"
-          >
-            <Download size={16} />
-            <span className="whitespace-nowrap">Export Excel</span>
-          </button>
-
-          {/* Department Dropdown */}
-          {basePath === "/admin-dashboard" && (
-            <div className="relative min-w-[240px] sm:min-w-[280px] md:min-w-[320px]" ref={dropdownRef}>
-              <button
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className={`w-full flex items-center justify-between gap-2 px-4 py-2.5 bg-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] font-bold text-sm hover:bg-gray-50 transition-all border border-transparent focus:border-[#4318FF]/20 ${selectedDepartment !== "All Departments" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <Filter size={14} className="text-[#4318FF] shrink-0" />
-                  <span className="truncate">{selectedDepartment === "All Departments" ? "Departments" : selectedDepartment}</span>
-                </div>
-                <ChevronDown
-                  size={14}
-                  className={`text-[#A3AED0] transition-transform duration-300 ${isDropdownOpen ? "rotate-180" : ""}`}
-                />
-              </button>
-
-              {isDropdownOpen && (
-                <div className="absolute top-full left-0 mt-2 w-full min-w-full bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-gray-100 p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-200 max-h-64 overflow-y-auto custom-scrollbar">
-                  <div className="mb-2">
-                    <span className="text-[10px] font-black text-[#A3AED0] uppercase tracking-widest">
-                      Departments
-                    </span>
+          {/* Row 2 on mobile: Department Dropdown & Status Dropdown side-by-side */}
+          <div className={`grid ${basePath === "/admin-dashboard" ? "grid-cols-2" : "grid-cols-1"} gap-2.5 w-full sm:w-auto sm:flex sm:items-center sm:gap-3`}>
+            {/* Department Dropdown */}
+            {basePath === "/admin-dashboard" && (
+              <div className="relative w-full sm:w-auto sm:min-w-[200px] md:min-w-[240px]" ref={dropdownRef}>
+                <button
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className={`w-full flex items-center justify-between gap-2 px-4 py-2.5 bg-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] font-bold text-xs sm:text-sm hover:bg-gray-50 transition-all border border-transparent focus:border-[#4318FF]/20 ${selectedDepartment !== "All Departments" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+                >
+                  <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                    <Filter size={14} className="text-[#4318FF] shrink-0" />
+                    <span className="truncate">{selectedDepartment === "All Departments" ? "Departments" : selectedDepartment}</span>
                   </div>
-                  <div className="flex flex-col gap-2">
-                    <button
-                      onClick={() => {
-                        setSelectedDepartment("All Departments");
-                        setIsDropdownOpen(false);
-                        setCurrentPage(1);
-                      }}
-                      className={`w-full flex items-center justify-center px-3 py-2 rounded-full text-xs font-bold border transition-all ${departmentTagClass("All Departments", selectedDepartment === "All Departments")}`}
-                    >
-                      All Departments
-                    </button>
-                    {departments.map((dept) => (
+                  <ChevronDown
+                    size={14}
+                    className={`text-[#A3AED0] transition-transform duration-300 shrink-0 ${isDropdownOpen ? "rotate-180" : ""}`}
+                  />
+                </button>
+
+                {isDropdownOpen && (
+                  <div className="absolute top-full left-0 mt-2 w-full sm:w-64 min-w-full bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-gray-100 p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-200 max-h-64 overflow-y-auto custom-scrollbar">
+                    <div className="mb-2">
+                      <span className="text-[10px] font-black text-[#A3AED0] uppercase tracking-widest">
+                        Departments
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-2">
                       <button
-                        key={dept.id}
                         onClick={() => {
-                          setSelectedDepartment(dept.departmentName);
+                          setSelectedDepartment("All Departments");
                           setIsDropdownOpen(false);
                           setCurrentPage(1);
                         }}
-                        className={`w-full flex items-center justify-center px-3 py-2 rounded-full text-xs font-bold border transition-all text-center ${departmentTagClass(dept.departmentName, selectedDepartment === dept.departmentName)}`}
+                        className={`w-full flex items-center justify-center px-3 py-2 rounded-full text-xs font-bold border transition-all ${departmentTagClass("All Departments", selectedDepartment === "All Departments")}`}
                       >
-                        {dept.departmentName}
+                        All Departments
+                      </button>
+                      {departments.map((dept) => (
+                        <button
+                          key={dept.id}
+                          onClick={() => {
+                            setSelectedDepartment(dept.departmentName);
+                            setIsDropdownOpen(false);
+                            setCurrentPage(1);
+                          }}
+                          className={`w-full flex items-center justify-center px-3 py-2 rounded-full text-xs font-bold border transition-all text-center ${departmentTagClass(dept.departmentName, selectedDepartment === dept.departmentName)}`}
+                        >
+                          {dept.departmentName}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Status Dropdown */}
+            <div className="relative w-full sm:w-auto" ref={statusDropdownRef}>
+              <button
+                onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
+                className={`w-full sm:w-auto flex items-center justify-between sm:justify-start gap-2 px-4 py-2.5 bg-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] font-bold text-xs sm:text-sm hover:bg-gray-50 transition-all border border-transparent focus:border-[#4318FF]/20 whitespace-nowrap ${selectedStatus !== "All Status" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+              >
+                <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                  <Filter size={14} className="text-[#4318FF] shrink-0" />
+                  <span className="truncate">{selectedStatus === "All Status" ? "Status" : selectedStatus}</span>
+                </div>
+                <ChevronDown
+                  size={14}
+                  className={`text-[#A3AED0] transition-transform duration-300 shrink-0 ${isStatusDropdownOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+
+              {isStatusDropdownOpen && (
+                <div className="absolute top-full left-0 mt-2 w-full sm:w-48 min-w-[200px] bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-white/20 p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="mb-2">
+                    <span className="text-[10px] font-black text-[#A3AED0] uppercase tracking-widest">
+                      Status
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {statuses.map((status) => (
+                      <button
+                        key={status}
+                        onClick={() => {
+                          setSelectedStatus(status);
+                          setIsStatusDropdownOpen(false);
+                          setCurrentPage(1);
+                        }}
+                        className={`inline-flex px-3 py-1.5 rounded-full text-xs font-bold border transition-all uppercase tracking-wide ${statusTagClass(status, selectedStatus === status)}`}
+                      >
+                        {status}
                       </button>
                     ))}
                   </div>
                 </div>
               )}
             </div>
-          )}
-
-          {/* Status Dropdown */}
-          <div className="relative" ref={statusDropdownRef}>
-            <button
-              onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
-              className={`flex items-center gap-2 px-4 py-2.5 bg-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] font-bold text-sm hover:bg-gray-50 transition-all border border-transparent focus:border-[#4318FF]/20 whitespace-nowrap ${selectedStatus !== "All Status" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
-            >
-              <Filter size={14} className="text-[#4318FF]" />
-              <span>{selectedStatus === "All Status" ? "Status" : selectedStatus}</span>
-              <ChevronDown
-                size={14}
-                className={`text-[#A3AED0] transition-transform duration-300 ${isStatusDropdownOpen ? "rotate-180" : ""}`}
-              />
-            </button>
-
-            {isStatusDropdownOpen && (
-              <div className="absolute top-full left-0 mt-2 w-full min-w-[200px] bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-white/20 p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="mb-2">
-                  <span className="text-[10px] font-black text-[#A3AED0] uppercase tracking-widest">
-                    Status
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {statuses.map((status) => (
-                    <button
-                      key={status}
-                      onClick={() => {
-                        setSelectedStatus(status);
-                        setIsStatusDropdownOpen(false);
-                        setCurrentPage(1);
-                      }}
-                      className={`inline-flex px-3 py-1.5 rounded-full text-xs font-bold border transition-all uppercase tracking-wide ${statusTagClass(status, selectedStatus === status)}`}
-                    >
-                      {status}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
 
-          {/* Search Box */}
-          <div className="flex items-center bg-white rounded-full px-4 py-2.5 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] w-full sm:w-auto min-w-[240px] sm:min-w-[300px] md:min-w-[360px] flex-1 sm:flex-none border border-transparent focus-within:border-[#4318FF]/20 transition-all">
-            <Search size={16} className="text-[#A3AED0] mr-2 flex-shrink-0" />
-            <input
-              type="text"
-              placeholder="Search by name or employee ID..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="border-none outline-none bg-transparent text-[#2B3674] w-full text-sm font-semibold placeholder:text-[#A3AED0]/60"
-            />
-            {searchTerm && (
+          {/* Search Box & Clear Button beside each other */}
+          <div className="flex items-center gap-2 w-full sm:w-auto flex-1 min-w-0">
+            <div className="flex items-center bg-white rounded-full px-4 py-2.5 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] flex-1 min-w-0 border border-transparent focus-within:border-[#4318FF]/20 transition-all">
+              <Search size={16} className="text-[#A3AED0] mr-2 flex-shrink-0" />
+              <input
+                type="text"
+                placeholder="Search by name or employee ID..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="border-none outline-none bg-transparent text-[#2B3674] w-full min-w-0 text-sm font-semibold placeholder:text-[#A3AED0]/60"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm("")}
+                  className="ml-2 text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
+            {/* Clear Filters Button beside Search */}
+            {(searchTerm ||
+              selectedDepartment !== "All Departments" ||
+              selectedStatus !== "All Status" ||
+              selectedMonth !== new Date().getMonth() + 1 ||
+              selectedYear !== new Date().getFullYear()) && (
               <button
-                onClick={() => setSearchTerm("")}
-                className="ml-2 text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
+                onClick={handleClearFilters}
+                className="flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2.5 bg-[#5B4FFF] text-white rounded-full hover:bg-[#4318FF] active:scale-95 transition-all text-xs sm:text-sm font-bold border border-[#4318FF]/50 whitespace-nowrap shrink-0 shadow-sm"
+                title="Clear all filters"
               >
-                <X size={14} />
+                <X size={14} className="shrink-0" />
+                <span className="hidden sm:inline">Clear All</span>
+                <span className="inline sm:hidden">Clear</span>
               </button>
             )}
           </div>
-
-          {(searchTerm ||
-            selectedDepartment !== "All Departments" ||
-            selectedStatus !== "All Status" ||
-            selectedMonth !== new Date().getMonth() + 1 ||
-            selectedYear !== new Date().getFullYear()) && (
-            <button
-              onClick={handleClearFilters}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#5B4FFF] text-white rounded-full hover:bg-[#4318FF] active:scale-95 transition-all text-sm font-bold border border-[#4318FF]/50 whitespace-nowrap flex-shrink-0"
-              title="Clear all filters"
-            >
-              <X size={14} />
-              <span>Clear All</span>
-            </button>
-          )}
         </div>
 
         <div className="bg-white rounded-[20px] p-0 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] overflow-hidden border border-gray-100">
-          {/* Desktop Table View */}
-          <div className="hidden lg:block">
+          {/* Desktop & Tablet Table View */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full border-separate border-spacing-0">
               <thead>
                 <tr className="bg-[#4318FF] text-white">
@@ -537,8 +549,8 @@ const AdminEmployeeTimesheetList = () => {
             </table>
           </div>
 
-          {/* Mobile/Tablet Card View */}
-          <div className="block lg:hidden p-4">
+          {/* Mobile Card View (Cards only on mobile) */}
+          <div className="block md:hidden p-4">
             {currentItems.length > 0 ? (
               <EmployeeTimeSheetMobileCard
                 employees={currentItems}

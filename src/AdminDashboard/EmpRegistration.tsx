@@ -349,7 +349,8 @@ const Registration = () => {
                             normalized !== "ADMIN" &&
                             normalized !== "RECEPTIONIST" &&
                             normalized !== "TEAM LEAD" &&
-                            normalized !== "TEAMLEAD"
+                            normalized !== "TEAMLEAD" &&
+                            normalized !== "CEO"
                           );
                         })
                         .map((role) => (

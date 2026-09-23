@@ -311,7 +311,7 @@ const AdminDashboard = () => {
   ];
 
   return (
-    <div className="p-4 md:p-8 bg-[#F4F7FE] font-sans h-full overflow-y-auto custom-scrollbar">
+    <div className="p-2 md:p-8 bg-[#F4F7FE] font-sans h-full overflow-y-auto custom-scrollbar">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>

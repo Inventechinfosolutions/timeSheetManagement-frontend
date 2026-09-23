@@ -229,6 +229,31 @@ export const createEntity = createAsyncThunk<any, any, ThunkConfig>(
   }
 );
 
+export const createCeo = createAsyncThunk<any, any, ThunkConfig>(
+  'employeeDetails/create_ceo',
+  async (ceoData, { dispatch, rejectWithValue }) => {
+    try {
+      const response = await axios.post(`${apiUrl}/create-ceo`, ceoData);
+      dispatch(getEntities({ search: '' }));
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || error.message || 'Failed to create CEO');
+    }
+  }
+);
+
+export const checkHasCeo = createAsyncThunk<any, void, ThunkConfig>(
+  'employeeDetails/check_has_ceo',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`${apiUrl}/has-ceo`);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || error.message || 'Failed to check CEO status');
+    }
+  }
+);
+
 export const updateEntity = createAsyncThunk<any, { employeeId: string; entity: any }, ThunkConfig>(
   'employeeDetails/update_entity',
   async ({ employeeId, entity }, { dispatch, rejectWithValue }) => {
@@ -527,7 +552,7 @@ export const EmployeeDetailsSlice = createSlice({
         state.totalItems = response.totalItems || response.total || state.entities.length;
       })
       .addMatcher(
-        isFulfilled(createEntity, updateEntity, partialUpdateEntity, resetPassword, resendActivationLink, updateEmployeeStatus),
+        isFulfilled(createEntity, createCeo, updateEntity, partialUpdateEntity, resetPassword, resendActivationLink, updateEmployeeStatus),
         (state: EmployeeDetailsState, action: PayloadAction<any>) => {
           state.updating = false;
           state.loading = false;
@@ -536,7 +561,7 @@ export const EmployeeDetailsSlice = createSlice({
         }
       )
       .addMatcher(
-        isPending(getEntities, getTimesheetList, getEntitiesSelect, fetchManagers, getEntity, createEntity, updateEntity, deleteEntity, partialUpdateEntity, resetPassword, resendActivationLink, updateEmployeeStatus),
+        isPending(getEntities, getTimesheetList, getEntitiesSelect, fetchManagers, getEntity, createEntity, createCeo, updateEntity, deleteEntity, partialUpdateEntity, resetPassword, resendActivationLink, updateEmployeeStatus),
         (state: EmployeeDetailsState) => {
           state.errorMessage = null;
           state.updateSuccess = false;

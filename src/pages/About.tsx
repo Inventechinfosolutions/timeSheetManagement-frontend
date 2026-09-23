@@ -33,21 +33,21 @@ const About = () => {
   ];
 
   return (
-    <div className="w-full flex-1 lg:-mt-8">
+    <div className="w-full flex-1 md:-mt-8">
       {/* Mobile View */}
-      <div className="block lg:hidden w-full">
+      <div className="block md:hidden w-full">
         <MobileAbout />
       </div>
 
-      {/* Desktop View */}
-      <div className="hidden lg:flex w-full min-h-screen bg-[#F4F7FE] px-6 flex-col">
+      {/* Desktop and Tab View */}
+      <div className="hidden md:flex w-full min-h-screen bg-[#F4F7FE] px-4 md:px-6 flex-col">
         {/* Main Container */}
         <div className="w-full mx-auto flex flex-col flex-1">
 
           {/* Hero Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
             {/* Left Text */}
-            <div className="lg:col-span-7 space-y-3">
+            <div className="md:col-span-7 space-y-3">
               <h1 className="text-4xl sm:text-4xl font-extrabold text-[#1B2559] tracking-tight leading-tight">
                 About the <br />
                 <span className="text-[#3311CC] italic font-serif">Worksphere</span> Application
@@ -58,7 +58,7 @@ const About = () => {
             </div>
 
             {/* Right Image */}
-            <div className="lg:col-span-5 flex justify-center lg:justify-end">
+            <div className="md:col-span-5 flex justify-center md:justify-end">
               <img
                 src={aboutIMG}
                 alt="Worksphere Application Illustration"
@@ -80,7 +80,7 @@ const About = () => {
           </div>
 
           {/* Two-Column Experience Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch mb-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch mb-10">
 
             {/* Employee Experience Column */}
             <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-gray-100 flex flex-col justify-between">

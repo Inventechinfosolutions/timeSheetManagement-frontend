@@ -28,6 +28,7 @@ import {
   getManagerMappingHistory,
   getMappedEmployeeIds,
 } from "../reducers/managerMapping.reducer";
+import ManagerMappingMobileCard from "./ManagerMappingMobileCard";
 
 interface Employee {
   id: string;
@@ -316,25 +317,25 @@ const ManagerMapping: React.FC = () => {
       : "bg-[#F4F7FE] text-[#4318FF] border-[#4318FF]/15 hover:bg-[#4318FF]/10";
 
   return (
-    <div className="p-4 md:p-8 bg-[#F4F7FE] font-['DM_Sans',sans-serif]">
+    <div className="p-3 sm:p-4 md:p-8 bg-[#F4F7FE] font-['DM_Sans',sans-serif] min-h-screen">
       {/* Header Card - hidden for Receptionist (view only Mapping History) */}
       {!isReceptionist && (
-      <div className="bg-white rounded-[24px] shadow-[0px_18px_40px_rgba(112,144,176,0.12)] p-6 mb-6">
-        <h1 className="text-2xl font-bold text-[#2B3674] mb-2">
+      <div className="bg-white rounded-[20px] sm:rounded-[24px] shadow-[0px_18px_40px_rgba(112,144,176,0.12)] p-4 sm:p-6 mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-[#2B3674] mb-1 sm:mb-2">
           Manager Mapping
         </h1>
-        <p className="text-sm text-[#A3AED0] font-medium">
+        <p className="text-xs sm:text-sm text-[#A3AED0] font-medium">
           Assign department leads and manage team reporting lines.
         </p>
 
         {/* Filters */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 mt-4 sm:mt-6">
           {/* Department Dropdown */}
           <div>
-            <label className="block text-sm font-bold text-[#2B3674] mb-2">
+            <label className="block text-xs sm:text-sm font-bold text-[#2B3674] mb-1.5 sm:mb-2">
               Department
             </label>
-            <div className="relative min-w-[240px] sm:min-w-[280px]" ref={deptDropdownRef}>
+            <div className="relative w-full" ref={deptDropdownRef}>
               <button
                 onClick={() => {
                   setIsDeptDropdownOpen(!isDeptDropdownOpen);
@@ -576,14 +577,14 @@ const ManagerMapping: React.FC = () => {
           </div>
 
           {/* Assignment Buttons */}
-          <div className="flex lg:flex-col items-center justify-center gap-4">
+          <div className="flex lg:flex-col items-center justify-center gap-4 py-2 lg:py-0">
             <button
               onClick={handleAssign}
               disabled={selectedEmployees.length === 0}
-              className="p-4 bg-[#4318FF] text-white rounded-full hover:bg-[#3311DD] transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+              className="p-3.5 sm:p-4 bg-[#4318FF] text-white rounded-full hover:bg-[#3311DD] transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-lg hover:shadow-xl active:scale-95"
               title="Assign selected employees"
             >
-              <ArrowRight size={24} />
+              <ArrowRight size={24} className="rotate-90 lg:rotate-0 transition-transform" />
             </button>
           </div>
 
@@ -644,17 +645,17 @@ const ManagerMapping: React.FC = () => {
 
       {/* Action Buttons */}
       {selectedDepartment && selectedManager && (
-        <div className="flex gap-4 justify-center mt-4 mb-6">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center mt-4 mb-6">
           <button
             onClick={handleClear}
-            className="px-6 py-3 bg-[#5B4FFF] border-2 border-[#4318FF]/50 text-white rounded-xl font-bold hover:bg-[#4318FF] hover:border-[#4318FF] transition-all"
+            className="w-full sm:w-auto px-6 py-3 bg-[#5B4FFF] border-2 border-[#4318FF]/50 text-white rounded-xl font-bold hover:bg-[#4318FF] hover:border-[#4318FF] transition-all text-center"
           >
             Clear All
           </button>
           <button
             onClick={() => setIsConfirmModalOpen(true)}
             disabled={assignedEmployees.length === 0}
-            className="px-6 py-3 bg-[#4318FF] text-white rounded-xl font-bold hover:bg-[#3311DD] transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+            className="w-full sm:w-auto px-6 py-3 bg-[#4318FF] text-white rounded-xl font-bold hover:bg-[#3311DD] transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-lg hover:shadow-xl text-center"
           >
             Confirm Mapping
           </button>
@@ -662,31 +663,32 @@ const ManagerMapping: React.FC = () => {
       )}
 
       {/* Mapping History - only section visible for Receptionist */}
-      <div className="bg-white rounded-[24px] shadow-[0px_18px_40px_rgba(112,144,176,0.12)] p-6">
-        <h3 className={`font-bold text-[#2B3674] ${isReceptionist ? "text-2xl mb-2" : "text-lg mb-4"}`}>
+      <div className="bg-white rounded-[20px] sm:rounded-[24px] shadow-[0px_18px_40px_rgba(112,144,176,0.12)] p-4 sm:p-6">
+        <h3 className={`font-bold text-[#2B3674] ${isReceptionist ? "text-xl sm:text-2xl mb-2" : "text-base sm:text-lg mb-4"}`}>
           Mapping History
         </h3>
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            <div className="relative min-w-[240px] sm:min-w-[280px] md:min-w-[320px]" ref={historyDeptRef}>
+        <div className="flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-3 sm:gap-4 mb-6">
+          {/* Department and Status in one line for mobile */}
+          <div className="flex items-center gap-2 sm:gap-3 w-full lg:w-auto">
+            <div className="relative flex-1 min-w-0 sm:w-auto sm:min-w-[200px] md:min-w-[240px]" ref={historyDeptRef}>
               <button
                 onClick={() => {
                   setIsHistoryDeptOpen(!isHistoryDeptOpen);
                   setIsHistoryStatusOpen(false);
                 }}
-                className="w-full flex items-center justify-between gap-2 px-4 py-2.5 bg-white rounded-xl shadow-sm border border-gray-100 text-[#2B3674] font-bold text-sm hover:bg-gray-50 transition-all"
+                className="w-full flex items-center justify-between gap-1.5 px-3 sm:px-4 py-2.5 bg-white rounded-xl shadow-sm border border-gray-100 text-[#2B3674] font-bold text-xs sm:text-sm hover:bg-gray-50 transition-all"
               >
-                <div className="flex items-center gap-2 min-w-0">
-                  <Filter size={16} className="text-[#4318FF] shrink-0" />
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Filter size={15} className="text-[#4318FF] shrink-0" />
                   <span className="truncate">{historyDepartment === "All" ? "Department" : historyDepartment}</span>
                 </div>
                 <ChevronDown
-                  size={16}
+                  size={15}
                   className={`text-[#A3AED0] transition-transform shrink-0 ${isHistoryDeptOpen ? "rotate-180" : ""}`}
                 />
               </button>
               {isHistoryDeptOpen && (
-                <div className="absolute top-full left-0 mt-2 w-full min-w-full bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-gray-100 p-3 z-20 max-h-64 overflow-y-auto custom-scrollbar">
+                <div className="absolute top-full left-0 mt-2 w-56 sm:w-full sm:min-w-[260px] bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-gray-100 p-3 z-30 max-h-64 overflow-y-auto custom-scrollbar">
                   <div className="mb-2">
                     <span className="text-[10px] font-black text-[#A3AED0] uppercase tracking-widest">
                       Departments
@@ -721,27 +723,27 @@ const ManagerMapping: React.FC = () => {
               )}
             </div>
 
-            <div className="relative min-w-[160px] sm:min-w-[180px]" ref={historyStatusRef}>
+            <div className="relative flex-1 min-w-0 sm:w-auto sm:min-w-[140px] md:min-w-[160px]" ref={historyStatusRef}>
               <button
                 onClick={() => {
                   setIsHistoryStatusOpen(!isHistoryStatusOpen);
                   setIsHistoryDeptOpen(false);
                 }}
-                className="w-full flex items-center justify-between gap-2 px-4 py-2.5 bg-white rounded-xl shadow-sm border border-gray-100 text-[#2B3674] font-bold text-sm hover:bg-gray-50 transition-all"
+                className="w-full flex items-center justify-between gap-1.5 px-3 sm:px-4 py-2.5 bg-white rounded-xl shadow-sm border border-gray-100 text-[#2B3674] font-bold text-xs sm:text-sm hover:bg-gray-50 transition-all"
               >
-                <div className="flex items-center gap-2 min-w-0">
-                  <Filter size={16} className="text-[#4318FF] shrink-0" />
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Filter size={15} className="text-[#4318FF] shrink-0" />
                   <span className="truncate">
                     {historyStatus === "All" ? "Status" : historyStatus}
                   </span>
                 </div>
                 <ChevronDown
-                  size={16}
+                  size={15}
                   className={`text-[#A3AED0] transition-transform shrink-0 ${isHistoryStatusOpen ? "rotate-180" : ""}`}
                 />
               </button>
               {isHistoryStatusOpen && (
-                <div className="absolute top-full left-0 mt-2 w-full min-w-full bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-gray-100 p-3 z-20">
+                <div className="absolute top-full right-0 sm:left-0 mt-2 w-48 sm:w-full sm:min-w-[180px] bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-gray-100 p-3 z-30">
                   <div className="mb-2">
                     <span className="text-[10px] font-black text-[#A3AED0] uppercase tracking-widest">
                       Status
@@ -767,43 +769,46 @@ const ManagerMapping: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center bg-[#F4F7FE] rounded-xl px-4 py-2 flex-1 md:w-64 border border-transparent focus-within:border-[#4318FF]/20 transition-all">
-            <Search size={18} className="text-[#A3AED0] mr-2" />
-            <input
-              type="text"
-              placeholder="Search history..."
-              value={historySearch}
-              onChange={(e) => setHistorySearch(e.target.value)}
-              className="border-none outline-none bg-transparent text-[#2B3674] w-full text-sm font-semibold placeholder:text-[#A3AED0]/60"
-            />
-            {historySearch && (
+          {/* Search history input and Clear option right after it */}
+          <div className="flex items-center gap-2 w-full lg:w-auto flex-1 lg:max-w-md">
+            <div className="flex items-center bg-[#F4F7FE] rounded-xl px-4 py-2 flex-1 border border-transparent focus-within:border-[#4318FF]/20 transition-all">
+              <Search size={18} className="text-[#A3AED0] mr-2 shrink-0" />
+              <input
+                type="text"
+                placeholder="Search history..."
+                value={historySearch}
+                onChange={(e) => setHistorySearch(e.target.value)}
+                className="border-none outline-none bg-transparent text-[#2B3674] w-full text-sm font-semibold placeholder:text-[#A3AED0]/60"
+              />
+              {historySearch && (
+                <button
+                  onClick={() => setHistorySearch("")}
+                  className="ml-2 text-gray-400 hover:text-gray-600 transition-colors shrink-0"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+
+            {/* Clear option placed after search */}
+            {(historySearch ||
+              historyDepartment !== "All" ||
+              historyStatus !== "All") && (
               <button
-                onClick={() => setHistorySearch("")}
-                className="ml-2 text-gray-400 hover:text-gray-600 transition-colors"
+                onClick={() => {
+                  setHistorySearch("");
+                  setHistoryDepartment("All");
+                  setHistoryStatus("All");
+                  setHistoryPage(1);
+                }}
+                className="flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 bg-[#5B4FFF] text-white rounded-xl hover:bg-[#4318FF] active:scale-95 transition-all text-xs sm:text-sm font-bold border border-[#4318FF]/50 whitespace-nowrap shrink-0 shadow-sm"
+                title="Clear all filters"
               >
-                <X size={16} />
+                <X size={15} className="shrink-0" />
+                <span>Clear All</span>
               </button>
             )}
           </div>
-
-          {/* Clear All Button */}
-          {(historySearch ||
-            historyDepartment !== "All" ||
-            historyStatus !== "All") && (
-            <button
-              onClick={() => {
-                setHistorySearch("");
-                setHistoryDepartment("All");
-                setHistoryStatus("All");
-                setHistoryPage(1);
-              }}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#5B4FFF] text-white rounded-full hover:bg-[#4318FF] active:scale-95 transition-all text-sm font-bold border border-[#4318FF]/50 whitespace-nowrap"
-              title="Clear all filters"
-            >
-              <X size={16} />
-              <span>Clear All</span>
-            </button>
-          )}
         </div>
 
         {mappingLoading ? (
@@ -811,141 +816,146 @@ const ManagerMapping: React.FC = () => {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4318FF]"></div>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full border-separate border-spacing-0">
-              <thead>
-                <tr className="bg-[#4318FF] text-white">
-                  <th
-                    className="text-left py-4 pl-10 pr-4 text-[13px] font-bold uppercase tracking-wider cursor-pointer hover:bg-[#3311DD] transition-colors"
-                    onClick={() =>
-                      setHistorySort({
-                        key: "managerName",
-                        order: historySort.order === "ASC" ? "DESC" : "ASC",
-                      })
-                    }
-                  >
-                    Manager
-                  </th>
-                  <th
-                    className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider cursor-pointer hover:bg-[#3311DD] transition-colors"
-                    onClick={() =>
-                      setHistorySort({
-                        key: "managerId",
-                        order: historySort.order === "ASC" ? "DESC" : "ASC",
-                      })
-                    }
-                  >
-                    Manager ID
-                  </th>
-                  <th
-                    className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider cursor-pointer hover:bg-[#3311DD] transition-colors"
-                    onClick={() =>
-                      setHistorySort({
-                        key: "employeeCount",
-                        order: historySort.order === "ASC" ? "DESC" : "ASC",
-                      })
-                    }
-                  >
-                    Team Size
-                  </th>
-                  <th
-                    className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider cursor-pointer hover:bg-[#3311DD] transition-colors"
-                    onClick={() =>
-                      setHistorySort({
-                        key: "department",
-                        order: historySort.order === "ASC" ? "DESC" : "ASC",
-                      })
-                    }
-                  >
-                    Department
-                  </th>
-                  <th
-                    className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider cursor-pointer hover:bg-[#3311DD] transition-colors"
-                    onClick={() =>
-                      setHistorySort({
-                        key: "managerStatus",
-                        order: historySort.order === "ASC" ? "DESC" : "ASC",
-                      })
-                    }
-                  >
-                    Status
-                  </th>
-                  <th className="py-4 pl-4 pr-10 text-[13px] font-bold uppercase tracking-wider text-center">
-                    Action
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {groupedMappings.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="text-center py-8 text-[#A3AED0]">
-                      <Filter size={48} className="mx-auto mb-2 opacity-30" />
-                      <p className="text-sm font-medium">
-                        No mapping history available
-                      </p>
-                    </td>
-                  </tr>
-                ) : (
-                  groupedMappings.map((mapping: any, index: number) => (
-                    <tr
-                      key={`${mapping.managerId}-${mapping.department}`}
-                      className={`group transition-all duration-200 ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} hover:bg-[#F1F4FF] cursor-pointer`}
+          <div>
+            {/* Desktop & Tablet Table View (Table on Tablet & Desktop) */}
+            <div className="hidden md:block overflow-x-auto w-full custom-scrollbar">
+              <table className="w-full border-separate border-spacing-0">
+                <thead>
+                  <tr className="bg-[#4318FF] text-white">
+                    <th
+                      className="text-left py-4 pl-10 pr-4 text-[13px] font-bold uppercase tracking-wider cursor-pointer hover:bg-[#3311DD] transition-colors"
+                      onClick={() =>
+                        setHistorySort({
+                          key: "managerName",
+                          order: historySort.order === "ASC" ? "DESC" : "ASC",
+                        })
+                      }
                     >
-                      <td className="py-4 pl-10 pr-4 text-[#2B3674] text-sm font-bold">
-                        {mapping.managerName}
-                      </td>
-                      <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
-                        {mapping.managerId}
-                      </td>
-                      <td className="py-4 px-4 text-center text-[#2B3674] text-sm font-bold">
-                        {mapping.employeeCount}
-                      </td>
-                      <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
-                        {mapping.department}
-                      </td>
-                      <td className="py-4 px-4 text-center">
-                        <span
-                          className={`inline-flex px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider border ${
-                            mapping.status === UserStatus.ACTIVE
-                              ? "bg-green-50 text-green-500 border-green-100"
-                              : "bg-red-50 text-red-500 border-red-100"
-                          }`}
-                        >
-                          {mapping.status}
-                        </span>
-                      </td>
-                      <td className="py-4 pl-4 pr-10 text-center">
-                        <button
-                          onClick={() =>
-                            navigate(
-                              `/admin-dashboard/manager-employees/${mapping.managerId}`,
-                            )
-                          }
-                          disabled={mapping.status === UserStatus.INACTIVE}
-                          className={`inline-flex items-center gap-2 bg-transparent border-none cursor-pointer text-[#4318FF] text-sm font-bold transition-all ${
-                            mapping.status === UserStatus.INACTIVE
-                              ? "opacity-30 cursor-not-allowed"
-                              : "hover:underline hover:scale-105 active:scale-95"
-                          }`}
-                          title={
-                            mapping.status === UserStatus.INACTIVE
-                              ? "Cannot view inactive manager team"
-                              : "View mapped employees"
-                          }
-                        >
-                          <Eye size={16} />
-                        </button>
+                      Manager
+                    </th>
+                    <th
+                      className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider cursor-pointer hover:bg-[#3311DD] transition-colors"
+                      onClick={() =>
+                        setHistorySort({
+                          key: "managerId",
+                          order: historySort.order === "ASC" ? "DESC" : "ASC",
+                        })
+                      }
+                    >
+                      Manager ID
+                    </th>
+                    <th
+                      className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider cursor-pointer hover:bg-[#3311DD] transition-colors"
+                      onClick={() =>
+                        setHistorySort({
+                          key: "employeeCount",
+                          order: historySort.order === "ASC" ? "DESC" : "ASC",
+                        })
+                      }
+                    >
+                      Team Size
+                    </th>
+                    <th
+                      className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider cursor-pointer hover:bg-[#3311DD] transition-colors"
+                      onClick={() =>
+                        setHistorySort({
+                          key: "department",
+                          order: historySort.order === "ASC" ? "DESC" : "ASC",
+                        })
+                      }
+                    >
+                      Department
+                    </th>
+                    <th
+                      className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider cursor-pointer hover:bg-[#3311DD] transition-colors"
+                      onClick={() =>
+                        setHistorySort({
+                          key: "managerStatus",
+                          order: historySort.order === "ASC" ? "DESC" : "ASC",
+                        })
+                      }
+                    >
+                      Status
+                    </th>
+                    <th className="py-4 pl-4 pr-10 text-[13px] font-bold uppercase tracking-wider text-center">
+                      Action
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {groupedMappings.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="text-center py-8 text-[#A3AED0]">
+                        <Filter size={48} className="mx-auto mb-2 opacity-30" />
+                        <p className="text-sm font-medium">
+                          No mapping history available
+                        </p>
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    groupedMappings.map((mapping: any, index: number) => (
+                      <tr
+                        key={`${mapping.managerId}-${mapping.department}`}
+                        className={`group transition-all duration-200 ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} hover:bg-[#F1F4FF] cursor-pointer`}
+                      >
+                        <td className="py-4 pl-10 pr-4 text-[#2B3674] text-sm font-bold">
+                          {mapping.managerName}
+                        </td>
+                        <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
+                          {mapping.managerId}
+                        </td>
+                        <td className="py-4 px-4 text-center text-[#2B3674] text-sm font-bold">
+                          {mapping.employeeCount}
+                        </td>
+                        <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
+                          {mapping.department}
+                        </td>
+                        <td className="py-4 px-4 text-center">
+                          <span
+                            className={`inline-flex px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider border ${
+                              mapping.status === UserStatus.ACTIVE
+                                ? "bg-green-50 text-green-500 border-green-100"
+                                : "bg-red-50 text-red-500 border-red-100"
+                            }`}
+                          >
+                            {mapping.status}
+                          </span>
+                        </td>
+                        <td className="py-4 pl-4 pr-10 text-center">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              navigate(
+                                `/admin-dashboard/manager-employees/${mapping.managerId}`,
+                              )
+                            }
+                            className="inline-flex items-center gap-2 bg-transparent border-none cursor-pointer text-[#4318FF] text-sm font-bold transition-all hover:underline hover:scale-105 active:scale-95"
+                            title="View mapped employees"
+                          >
+                            <Eye size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card View (Cards only on mobile < md) */}
+            <div className="block md:hidden">
+              <ManagerMappingMobileCard
+                mappings={groupedMappings}
+                onViewTeam={(managerId: string) =>
+                  navigate(`/admin-dashboard/manager-employees/${managerId}`)
+                }
+              />
+            </div>
 
             {/* Pagination Controls */}
             {historyTotalItems > 0 && (
-              <div className="flex flex-col sm:flex-row justify-between items-center mt-6 p-4 gap-4">
-                <div className="text-sm font-bold text-[#A3AED0]">
+              <div className="flex flex-col sm:flex-row justify-between items-center mt-6 pt-4 border-t border-gray-100 gap-4">
+                <div className="text-xs sm:text-sm font-bold text-[#A3AED0] text-center sm:text-left">
                   Showing{" "}
                   <span className="text-[#2B3674]">
                     {(historyPage - 1) * historyItemsPerPage + 1}

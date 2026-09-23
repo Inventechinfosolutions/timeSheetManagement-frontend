@@ -71,6 +71,9 @@ const ManagerLayout = () => {
     if (path === "/manager-dashboard/my-dashboard") {
       return "My Dashboard";
     }
+    if (path === "/manager-dashboard/admin-dashboard") {
+      return "Employee Dashboard";
+    }
     if (path === "/manager-dashboard/my-timesheet") {
       return "My Timesheet";
     }
@@ -119,6 +122,9 @@ const ManagerLayout = () => {
     if (path.includes("/manager-dashboard/employee-notes")) {
       return "Employee Notes";
     }
+    if (path.includes("/manager-dashboard/about")) {
+      return "About";
+    }
 
     switch (tab) {
       case "employees":
@@ -155,8 +161,13 @@ const ManagerLayout = () => {
         return "Quarterly Review";
       case "employee-notes":
         return "Employee Notes";
-      default:
+      case "about":
+        return "About";
+      case "admin-dashboard":
+      case "employee-dashboard":
         return "Employee Dashboard";
+      default:
+        return "My Dashboard";
     }
   };
 
@@ -191,7 +202,7 @@ const ManagerLayout = () => {
     } else if (tabName === "Manager Mapping") {
       navigate("/manager-dashboard/manager-mapping");
     } else if (tabName === "Employee Dashboard") {
-      navigate("/manager-dashboard");
+      navigate("/manager-dashboard/admin-dashboard");
     } else if (tabName === "My Dashboard") {
       navigate("/manager-dashboard/my-dashboard");
     } else if (tabName === "My Timesheet") {
@@ -208,6 +219,8 @@ const ManagerLayout = () => {
       navigate("/manager-dashboard/quarterly-review");
     } else if (tabName === "Employee Notes") {
       navigate("/manager-dashboard/employee-notes");
+    } else if (tabName === "About") {
+      navigate("/manager-dashboard/about");
     }
   };
 

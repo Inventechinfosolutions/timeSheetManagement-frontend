@@ -4,9 +4,16 @@
   display: block;
 }
 
-.sidebar-desktop-profile,
-.app-desktop-footer {
+.sidebar-desktop-profile {
   display: none;
+}
+
+@media (max-width: 1279px) {
+  .app-sidebar:not(.translate-x-0) {
+    box-shadow: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
 }
 
 @media (min-width: 1280px) {
@@ -17,6 +24,7 @@
   }
 
   .app-sidebar {
+    visibility: visible !important;
     position: sticky !important;
     top: 0 !important;
     height: 100% !important;
@@ -52,7 +60,4 @@
     padding-bottom: 0 !important;
   }
 
-  .app-desktop-footer {
-    display: block !important;
-  }
 }

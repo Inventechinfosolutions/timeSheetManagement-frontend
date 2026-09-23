@@ -58,7 +58,7 @@ const Landing = () => {
         (currentUser.role &&
           currentUser.role.toUpperCase().includes(UserType.MANAGER))
       ) {
-        navigate("/manager-dashboard");
+        navigate("/manager-dashboard/my-dashboard");
       } else if (
         currentUser.userType?.toUpperCase() === UserType.ADMIN ||
         currentUser.userType?.toUpperCase() === UserType.CEO ||

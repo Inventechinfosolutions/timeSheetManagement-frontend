@@ -343,9 +343,11 @@
   box-shadow: 0 6px 14px rgba(112, 144, 176, 0.07);
 }
  
-.leave-management-mobile .application-modal .ant-modal,
-.leave-management-mobile ~ .ant-modal-root .application-modal .ant-modal {
-  max-width: calc(100vw - 12px);
+.application-modal.ant-modal,
+.ant-modal.application-modal {
+  width: calc(100vw - 8px) !important;
+  max-width: calc(100vw - 8px) !important;
+  margin: 4px auto !important;
 }
  
 @media (max-width: 420px) {

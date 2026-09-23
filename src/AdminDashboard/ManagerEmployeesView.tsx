@@ -147,12 +147,12 @@ const ManagerEmployeesView: React.FC = () => {
   }, [managerEntity?.fullName, managerNameState, mappings, managerId]);
 
   return (
-    <div className="p-4 md:p-8 bg-[#F4F7FE] font-['DM_Sans',sans-serif]">
+    <div className="p-3 sm:p-4 md:p-8 bg-[#F4F7FE] font-['DM_Sans',sans-serif] min-h-screen">
       {/* Navigation Back */}
       <div className="flex items-center mb-4">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-gray-400 hover:text-[#4318FF] transition-colors group"
+          className="flex items-center gap-1.5 text-gray-400 hover:text-[#4318FF] transition-colors group cursor-pointer"
         >
           <ArrowLeft
             size={14}
@@ -165,7 +165,7 @@ const ManagerEmployeesView: React.FC = () => {
       </div>
 
       {/* Top Header & Stats Section */}
-      <div className="flex flex-wrap items-center gap-4 mb-8 justify-start">
+      <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-6 sm:mb-8 justify-start">
 
         {/* Team Details Card */}
         <div className="bg-white rounded-[20px] p-4 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] flex items-center gap-3 w-full sm:w-auto min-w-[240px] shrink-0 border border-gray-50">
@@ -219,15 +219,16 @@ const ManagerEmployeesView: React.FC = () => {
         </div>
       </div>
 
-      {/* Employee List Table */}
-      <div className="bg-white rounded-[24px] shadow-[0px_18px_40px_rgba(112,144,176,0.12)] p-6">
+      {/* Employee List Table / Cards */}
+      <div className="bg-white rounded-[20px] sm:rounded-[24px] shadow-[0px_18px_40px_rgba(112,144,176,0.12)] p-4 sm:p-6">
         {loading ? (
           <div className="flex justify-center items-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4318FF]"></div>
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
+            {/* Desktop & Tablet Table View */}
+            <div className="hidden md:block overflow-x-auto w-full custom-scrollbar">
               <table className="w-full border-separate border-spacing-0">
                 <thead>
                   <tr className="bg-[#4318FF] text-white">
@@ -299,10 +300,71 @@ const ManagerEmployeesView: React.FC = () => {
               </table>
             </div>
 
+            {/* Mobile Card View (Cards only on mobile < md) */}
+            <div className="block md:hidden space-y-3">
+              {mappings.length === 0 ? (
+                <div className="text-center py-10 text-[#A3AED0] bg-white rounded-2xl border border-gray-100">
+                  <Users size={36} className="mx-auto mb-2 opacity-30 text-[#4318FF]" />
+                  <p className="text-sm font-semibold">No employees found for this manager</p>
+                </div>
+              ) : (
+                mappings.map((m: any) => {
+                  const initial = m.employeeName
+                    ? m.employeeName.trim().charAt(0).toUpperCase()
+                    : "E";
+                  return (
+                    <div
+                      key={m.id}
+                      className="bg-white rounded-2xl p-4 shadow-[0px_4px_20px_rgba(0,0,0,0.04)] border border-gray-100 flex flex-col gap-3 hover:shadow-md transition-all"
+                    >
+                      {/* Top: Avatar + Name + ID, Status Badge */}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#4318FF] to-[#868CFF] text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-sm">
+                            {initial}
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="text-sm sm:text-base font-bold text-[#2B3674] truncate">
+                              {m.employeeName}
+                            </h4>
+                            <p className="text-xs font-semibold text-[#64748B]">
+                              ID: <span className="font-bold text-[#2B3674]">{m.employeeId}</span>
+                            </p>
+                          </div>
+                        </div>
+
+                        <span
+                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-black uppercase tracking-wider border shrink-0 ${
+                            m.status === UserStatus.ACTIVE
+                              ? "bg-green-50 text-green-600 border-green-200"
+                              : m.status === UserStatus.INACTIVE
+                              ? "bg-red-50 text-red-600 border-red-200"
+                              : "bg-gray-50 text-gray-600 border-gray-200"
+                          }`}
+                        >
+                          {m.status}
+                        </span>
+                      </div>
+
+                      {/* Bottom Row: Department */}
+                      <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-xs">
+                        <span className="text-[#94A3B8] text-[10px] font-black uppercase tracking-wider">
+                          DEPARTMENT
+                        </span>
+                        <span className="font-bold text-[#2B3674] truncate max-w-[200px]">
+                          {m.department || "General"}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
             {/* Pagination Controls */}
             {totalItems > 0 && (
-              <div className="flex flex-col sm:flex-row justify-between items-center mt-6 p-4 gap-4">
-                <div className="text-sm font-bold text-[#A3AED0]">
+              <div className="flex flex-col sm:flex-row justify-between items-center mt-6 pt-4 border-t border-gray-100 gap-4">
+                <div className="text-xs sm:text-sm font-bold text-[#A3AED0] text-center sm:text-left">
                   Showing{" "}
                   <span className="text-[#2B3674]">
                     {(teamPage - 1) * itemsPerPage + 1}

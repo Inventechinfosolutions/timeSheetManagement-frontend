@@ -26,57 +26,69 @@ const EmployeeTimeSheetMobileCard = ({
       {employees.map((emp) => (
         <div
           key={emp.id}
-          className="bg-white rounded-2xl p-5 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] border border-gray-100 flex flex-col gap-4 hover:shadow-md transition-all group"
+          className="bg-white rounded-2xl p-5 shadow-[0px_4px_20px_rgba(0,0,0,0.04)] border border-gray-100 flex flex-col hover:shadow-md transition-all"
         >
-          <div className="flex justify-between items-start">
-            <div className="flex flex-col gap-1">
-              <h3 className="font-bold text-[#2B3674] text-lg lg:text-xl group-hover:text-[#4318FF] transition-colors">
-                {emp.name}
-              </h3>
-              <p className="text-sm font-bold text-[#A3AED0] tracking-wider uppercase">
-                ID: <span className="text-[#475569]">{emp.id}</span>
-              </p>
-            </div>
-            <span
-              className={`inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${
-                (emp.status || "").toLowerCase() === "submitted"
-                  ? "bg-green-50 text-green-500 border-green-100"
-                  : "bg-amber-50 text-amber-500 border-amber-100"
-              }`}
-            >
-              {emp.status}
+          {/* 1. EMPLOYEE */}
+          <div className="pb-3">
+            <p className="text-[#94A3B8] text-[10px] font-black uppercase tracking-wider mb-1">
+              EMPLOYEE
+            </p>
+            <h3 className="text-base font-bold text-[#2B3674] tracking-tight">
+              {emp.name}{" "}
+              <span className="font-semibold text-[#64748B]">
+                ({emp.id})
+              </span>
+            </h3>
+          </div>
+
+          {/* 2. DEPARTMENT */}
+          <div className="py-3 border-t border-gray-100">
+            <p className="text-[#94A3B8] text-[10px] font-black uppercase tracking-wider mb-1.5">
+              DEPARTMENT
+            </p>
+            <span className="inline-block px-3 py-1 rounded-md bg-gray-100/60 text-[#475569] text-xs font-bold border border-gray-200/50">
+              {emp.department || "General"}
             </span>
           </div>
 
-          <div className="h-px bg-gray-50 -mx-5" />
-
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-[#A3AED0] text-xs font-bold uppercase tracking-widest mb-1">
-                Department
-              </p>
-              <div className="inline-flex px-3 py-1 rounded-full bg-[#F4F7FE] text-[#4318FF] text-xs font-bold border border-[#4318FF]/10">
-                {emp.department || "General"}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => onViewWorkingDetails(emp.id)}
-                className="flex items-center justify-center p-2 rounded-xl bg-[#4318FF]/5 text-[#4318FF] hover:bg-[#4318FF] hover:text-white transition-all active:scale-95 shadow-sm"
-                title="View Working Details"
-              >
-                <Eye size={16} />
-              </button>
-              {showEditButton && (
-                <button
-                  onClick={() => onViewTimesheet(emp.id)}
-                  className="flex items-center justify-center p-2 rounded-xl bg-[#4318FF]/5 text-[#4318FF] hover:bg-[#4318FF] hover:text-white transition-all active:scale-95 shadow-sm"
-                  title="Edit Timesheet"
+          {/* 3. STATUS & ACTIONS */}
+          <div className="pt-3 border-t border-gray-100">
+            <p className="text-[#94A3B8] text-[10px] font-black uppercase tracking-wider mb-2">
+              STATUS
+            </p>
+            <div className="flex items-center justify-between gap-3">
+              {/* Status Badge on Left */}
+              <div>
+                <span
+                  className={`inline-flex px-3 py-1 rounded-full text-xs font-bold border uppercase tracking-wider ${
+                    (emp.status || "").toLowerCase() === "submitted"
+                      ? "bg-green-50 text-green-600 border-green-200"
+                      : "bg-amber-50 text-amber-600 border-amber-200"
+                  }`}
                 >
-                  <Edit size={16} />
+                  {emp.status}
+                </span>
+              </div>
+
+              {/* Action Buttons on Right */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => onViewWorkingDetails(emp.id)}
+                  className="p-2 text-blue-600 bg-blue-50/70 hover:bg-blue-600 hover:text-white rounded-xl transition-all duration-200 hover:shadow-md hover:shadow-blue-200 active:scale-90"
+                  title="View Working Details"
+                >
+                  <Eye size={18} />
                 </button>
-              )}
+                {showEditButton && (
+                  <button
+                    onClick={() => onViewTimesheet(emp.id)}
+                    className="p-2 text-blue-600 bg-blue-50/70 hover:bg-blue-600 hover:text-white rounded-xl transition-all duration-200 hover:shadow-md hover:shadow-blue-200 active:scale-90"
+                    title="Edit Timesheet"
+                  >
+                    <Edit size={18} />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>

@@ -37,6 +37,7 @@ import {
 import AutoUpdateModal from "./AutoUpdateModal";
 import AutoUpdateSuccessModal from "./AutoUpdateSuccessModal";
 import MobileTimesheet from "./MyTimesheetMobileResponsive/MobileTimesheet";
+import "./MyTimesheetMobileResponsive/MobileTimesheet.css";
 import {
   DESKTOP_POINTER_QUERY,
   isDesktopPointerViewport,
@@ -1184,6 +1185,8 @@ const MyTimesheet = ({
               width: 550,
               centered: true,
               wrapClassName: "attractive-unified-modal",
+              rootClassName: "attractive-unified-modal",
+              className: "attractive-unified-modal",
               content: (
                 <div style={{ padding: "10px 0" }}>
                   <div

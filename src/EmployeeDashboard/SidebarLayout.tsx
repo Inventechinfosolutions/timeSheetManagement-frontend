@@ -159,11 +159,11 @@ const SidebarLayout = ({
 
         {/* Combined Sidebar Component */}
         <aside
-          className={`app-sidebar ${isOpen ? "app-sidebar--open" : "app-sidebar--collapsed"} fixed top-0 left-0 h-full flex flex-col shrink-0 transition-all duration-300 ease-in-out text-white
+          className={`app-sidebar ${isOpen ? "app-sidebar--open" : "app-sidebar--collapsed"} fixed top-0 left-0 h-full flex flex-col shrink-0 transition-all duration-300 ease-in-out text-white w-72 xl:w-auto
             xl:sticky xl:top-0
             ${isMobileOpen
-              ? "translate-x-0 w-72 z-[2001]"
-              : "-translate-x-full xl:translate-x-0 z-30"
+              ? "translate-x-0 visible z-[2001]"
+              : "-translate-x-[calc(100%+20px)] max-xl:invisible xl:translate-x-0 z-30"
             }
             ${isOpen ? "xl:w-64" : "xl:w-20"}
           `}
@@ -347,7 +347,7 @@ const SidebarLayout = ({
         {/* Content Render Main Target Pane */}
         <main
           ref={mainContentRef}
-          className="app-main-content flex-1 min-h-0 h-full relative flex flex-col bg-[#F4F7FE] overflow-y-auto overflow-x-hidden pb-16 xl:pb-0"
+          className="app-main-content flex-1 min-h-0 h-full relative flex flex-col bg-[#F4F7FE] overflow-y-auto overflow-x-hidden pb-28 xl:pb-0"
         >
           <div className="relative grow shrink-0 flex flex-col w-full">
             {children}
@@ -364,9 +364,7 @@ const SidebarLayout = ({
           </div>
 
           {/* Footers */}
-          <div className="app-desktop-footer hidden xl:block">
-            <Footer className="sidebar-footer" />
-          </div>
+          <Footer className="sidebar-footer" />
         </main>
       </div>
     </div>

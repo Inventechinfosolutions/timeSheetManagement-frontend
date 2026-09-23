@@ -58,12 +58,16 @@
   .footer-container {
     padding: 0 20px;
   }
+
+  .footer-content {
+    padding-right: 0 !important;
+  }
 }
 
 /* Mobile */
 @media (max-width: 640px) {
   .footer {
-    height: 42px;
+    height: 38px;
   }
 
   .footer-container {
