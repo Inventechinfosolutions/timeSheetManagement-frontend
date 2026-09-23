@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { RootState } from "../store";
@@ -201,7 +201,16 @@ const Requests = () => {
   const [selectedMonth, setSelectedMonth] = useState<string>("All");
   const [selectedYear, setSelectedYear] = useState<string>("All");
   const [selectedRequestType, setSelectedRequestType] = useState<string>("All");
-  const [selectedStatus, setSelectedStatus] = useState<string>("All");
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>(["All"]);
+
+  const selectedStatus = useMemo(() => {
+    if (selectedStatuses.includes("All") || selectedStatuses.length === 0) {
+      return "All";
+    }
+    return selectedStatuses.join(",");
+  }, [selectedStatuses]);
+
+
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState<boolean>(false);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -216,10 +225,21 @@ const Requests = () => {
     action: LeaveRequestStatus | null;
   }>({ isOpen: false, action: null });
 
-  const isBulkEligibleStatus =
-    selectedStatus === LeaveRequestStatus.PENDING ||
-    selectedStatus === LeaveRequestStatus.REQUESTING_FOR_CANCELLATION ||
-    selectedStatus === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION;
+  const ACTIONABLE_STATUSES = useMemo(
+    () => [
+      LeaveRequestStatus.PENDING,
+      LeaveRequestStatus.REQUESTING_FOR_CANCELLATION,
+      LeaveRequestStatus.REQUESTING_FOR_MODIFICATION,
+    ],
+    [],
+  );
+
+  const isBulkEligibleStatus = useMemo(() => {
+    if (selectedStatuses.includes("All") || selectedStatuses.length === 0) {
+      return false;
+    }
+    return selectedStatuses.every((s) => ACTIONABLE_STATUSES.includes(s as any));
+  }, [selectedStatuses, ACTIONABLE_STATUSES]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -1279,23 +1299,46 @@ const Requests = () => {
                 </div>
                 <div className="max-h-72 overflow-y-auto pr-1 flex flex-col gap-2">
                   {statusOptions.map((opt) => {
-                    const isSelected = selectedStatus === opt.value;
+                    const isAll = opt.value === "All";
+                    const isSelected = isAll
+                      ? selectedStatuses.includes("All") || selectedStatuses.length === 0
+                      : !selectedStatuses.includes("All") && selectedStatuses.includes(opt.value);
+
                     return (
                       <button
                         key={opt.value}
                         type="button"
                         onClick={() => {
-                          setSelectedStatus(opt.value);
-                          setIsStatusDropdownOpen(false);
                           setCurrentPage(1);
+                          if (isAll) {
+                            setSelectedStatuses(["All"]);
+                          } else {
+                            setSelectedStatuses((prev) => {
+                              const withoutAll = prev.filter((s) => s !== "All");
+                              if (withoutAll.includes(opt.value)) {
+                                const next = withoutAll.filter((s) => s !== opt.value);
+                                return next.length === 0 ? ["All"] : next;
+                              } else {
+                                return [...withoutAll, opt.value];
+                              }
+                            });
+                          }
                         }}
-                        className={`w-full py-2 px-4 rounded-full text-sm font-bold border transition-all text-center ${
+                        className={`w-full py-2 px-4 rounded-full text-sm font-bold border transition-all flex items-center gap-2.5 ${
                           isSelected
                             ? "bg-[#4318FF] text-white border-[#4318FF] shadow-md scale-[1.02]"
                             : opt.style
                         }`}
                       >
-                        {opt.label}
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          readOnly
+                          className={`w-4 h-4 cursor-pointer shrink-0 rounded ${
+                            isSelected ? "accent-white" : "accent-[#4318FF]"
+                          }`}
+                        />
+                        <span className="truncate">{opt.label}</span>
                       </button>
                     );
                   })}
@@ -1336,7 +1379,7 @@ const Requests = () => {
                   setSelectedMonth("All");
                   setSelectedYear("All");
                   setSelectedRequestType("All");
-                  setSelectedStatus("All");
+                  setSelectedStatuses(["All"]);
                   setCurrentPage(1);
                 }}
                 className="cursor-pointer flex items-center justify-center gap-2 px-4 h-10 bg-[#5B4FFF] text-white rounded-xl hover:bg-[#4318FF] active:scale-95 transition-all text-sm font-bold border border-[#4318FF]/50 whitespace-nowrap shadow-sm shadow-[#4318FF]/20"
@@ -1350,20 +1393,36 @@ const Requests = () => {
 
           {/* Approve / Reject + Total Selected — far right */}
           {isBulkEligibleStatus && selectedIds.size > 0 && (() => {
-            const isCanc = selectedStatus === LeaveRequestStatus.REQUESTING_FOR_CANCELLATION;
-            const isMod = selectedStatus === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION;
-            const approveAction = isCanc
+            const isCancOnly =
+              selectedStatuses.length === 1 &&
+              selectedStatuses[0] === LeaveRequestStatus.REQUESTING_FOR_CANCELLATION;
+            const isModOnly =
+              selectedStatuses.length === 1 &&
+              selectedStatuses[0] === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION;
+
+            const approveAction = isCancOnly
               ? LeaveRequestStatus.CANCELLATION_APPROVED
-              : isMod
+              : isModOnly
               ? LeaveRequestStatus.MODIFICATION_APPROVED
               : LeaveRequestStatus.APPROVED;
-            const rejectAction = isCanc
+
+            const rejectAction = isCancOnly
               ? LeaveRequestStatus.CANCELLATION_REJECTED
-              : isMod
+              : isModOnly
               ? LeaveRequestStatus.MODIFICATION_REJECTED
               : LeaveRequestStatus.REJECTED;
-            const approveText = isCanc ? "Approve Cancellation" : isMod ? "Approve Modification" : "Approve";
-            const rejectText = isCanc ? "Reject Cancellation" : isMod ? "Reject Modification" : "Reject";
+
+            const approveText = isCancOnly
+              ? "Approve Cancellation"
+              : isModOnly
+              ? "Approve Modification"
+              : "Approve";
+
+            const rejectText = isCancOnly
+              ? "Reject Cancellation"
+              : isModOnly
+              ? "Reject Modification"
+              : "Reject";
 
             return (
               <div className="ml-auto self-end mb-0.5 flex items-center gap-2">
@@ -2058,11 +2117,26 @@ const Requests = () => {
                           </p>
                         </div>
                       </div>
-                      {r.duration != null && (
-                        <span className="text-xs font-semibold text-gray-500 bg-white px-2.5 py-1 rounded-lg border border-gray-200 shrink-0">
-                          {r.duration} {Number(r.duration) === 1 ? "day" : "days"}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-2 shrink-0">
+                        {r.status && (
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                            r.status === LeaveRequestStatus.PENDING
+                              ? "bg-amber-50 text-amber-600 border-amber-200"
+                              : r.status === LeaveRequestStatus.REQUESTING_FOR_CANCELLATION
+                              ? "bg-orange-50 text-orange-600 border-orange-200"
+                              : r.status === LeaveRequestStatus.REQUESTING_FOR_MODIFICATION
+                              ? "bg-indigo-50 text-indigo-600 border-indigo-200"
+                              : "bg-blue-50 text-blue-600 border-blue-200"
+                          }`}>
+                            {r.status}
+                          </span>
+                        )}
+                        {r.duration != null && (
+                          <span className="text-xs font-semibold text-gray-500 bg-white px-2.5 py-1 rounded-lg border border-gray-200 shrink-0">
+                            {r.duration} {Number(r.duration) === 1 ? "day" : "days"}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
