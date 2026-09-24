@@ -25,6 +25,7 @@ import {
   WrapText,
   Calendar,
   User,
+  Clock,
   Table as TableIcon,
   Bold,
   Italic,
@@ -36,23 +37,12 @@ import {
   ListOrdered,
   Quote,
   ArrowLeft,
+  Palette,
   Highlighter,
 } from "lucide-react";
-import { useAppDispatch, useAppSelector } from "../hooks";
+import { useAppSelector } from "../hooks";
 import { Storage } from "../utils/storage-util";
 import { EmployeeNotesMobile } from "./Employeenotesmobile";
-import {
-  fetchEmployeeNotes,
-  fetchEmployeeNote,
-  createEmployeeNote,
-  updateEmployeeNote,
-  deleteEmployeeNote,
-  exportEmployeeNote,
-  uploadEmployeeNoteFile,
-  downloadEmployeeNoteFile,
-  previewEmployeeNoteFile,
-  deleteEmployeeNoteFile,
-} from "../reducers/employeeNote.reducer";
 import jsPDF from "jspdf";
 import LogoTop from "../assets/logo_top.png";
 import LogoBottom from "../assets/logo_bottom.png";
@@ -60,6 +50,7 @@ import "../components/ApiLoadingSpinner.css";
 import type {
   NoteCategory,
   NoteFile,
+  ProjectRow,
   EmployeeNote,
   RichTextEditorProps,
   NoteModalMode,
@@ -69,72 +60,28 @@ import type {
   RowModalErrors,
 } from "./Employeenotes.types";
 import {
-  DEFAULT_ITEMS_PER_PAGE,
-  FILE_SIZE_LIMIT,
-  ALLOWED_FILE_ACCEPT,
-  isAllowedNoteFile,
-  PRESET_COLORS,
-} from "./Employeenotes.types";
-import {
   NoteCategoryEnum,
-  NoteType,
   NoteFilter,
-  EntityType,
-  ReferenceType,
+  STORAGE_KEY_PREFIX,
+  EMPLOYEE_NOTES_API,
+  DEFAULT_ITEMS_PER_PAGE,
+  PRESET_COLORS,
 } from "./Employeenotes.enums";
 import "./Employeenotes.css";
 
-const isChildNote = (n: Pick<EmployeeNote, "type" | "parentNoteId">): boolean =>
-  n.type === NoteType.CHILD ||
-  (n.parentNoteId != null && String(n.parentNoteId) !== "");
-
-const resolveNoteType = (parentNoteId?: number | string | null): NoteType =>
-  parentNoteId != null && String(parentNoteId) !== "" && Number(parentNoteId) > 0
-    ? NoteType.CHILD
-    : NoteType.PARENT;
-
-const sameNoteId = (
-  a?: string | number | null,
-  b?: string | number | null
-): boolean => a != null && b != null && String(a) === String(b);
-
-const toNumericNoteId = (value?: string | number | null): number => {
-  if (value == null || value === "") return 0;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+// Re-export types and enums for backward compatibility across the codebase
+export type {
+  NoteCategory,
+  NoteFile,
+  ProjectRow,
+  EmployeeNote,
+  RichTextEditorProps,
+  NoteModalMode,
+  NoteToastMessage,
+  NoteFormErrors,
+  RowModalErrors,
 };
-
-const toParentNoteId = (value?: string | number | null): number | null => {
-  const parsed = toNumericNoteId(value);
-  return parsed > 0 ? parsed : null;
-};
-
-const toNoteFilePayload = (files: NoteFile[]): string[] =>
-  files
-    .filter((f) => !f.uploading)
-    .map((f) => f.s3Key || f.id)
-    .filter(
-      (key): key is string =>
-        !!key &&
-        !String(key).startsWith("temp-") &&
-        !String(key).startsWith("note-")
-    );
-
-const isProjectCategory = (n: Pick<EmployeeNote, "category" | "projectName">): boolean =>
-  n.category === NoteCategoryEnum.PROJECT_NOTE ||
-  (n.category !== NoteCategoryEnum.PERSONAL_NOTE && Boolean(n.projectName?.trim()));
-
-const isPersonalCategory = (n: Pick<EmployeeNote, "category" | "projectName">): boolean =>
-  !isProjectCategory(n);
-
-const normalizeNote = (n: EmployeeNote): EmployeeNote => ({
-  ...n,
-  category: isProjectCategory(n)
-    ? NoteCategoryEnum.PROJECT_NOTE
-    : NoteCategoryEnum.PERSONAL_NOTE,
-  parentNoteId: n.parentNoteId ?? null,
-  type: n.type || resolveNoteType(n.parentNoteId),
-});
+export { NoteCategoryEnum, NoteFilter, STORAGE_KEY_PREFIX, EMPLOYEE_NOTES_API };
 
 const escapeHtml = (text: string): string => {
   return text
@@ -874,7 +821,7 @@ const RichTextEditor = ({
   );
 };
 
-
+const ENABLE_REMOTE_API = true;
 
 const formatDateTime = (iso?: string) => {
   if (!iso) return "-";
@@ -911,7 +858,7 @@ const formatFileSize = (bytes: number) => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
-// Capitalizes just the first character of a display name (e.g. "alex" -> "Alex")
+// Capitalizes just the first character of a display name (e.g. "kusuma" -> "Kusuma")
 // without affecting the rest of the string's casing.
 const capitalizeFirst = (str?: string) => {
   if (!str) return str || "";
@@ -962,6 +909,33 @@ const parseCsvRows = (text: string): string[][] => {
     row.push(curr.trim());
     return row;
   });
+};
+
+// Decodes a base64 data: URL (e.g. "data:text/plain;base64,...") into a
+// readable UTF-8 string. Returns null if it can't be decoded.
+const decodeDataUrlText = (dataUrl: string): string | null => {
+  try {
+    const commaIdx = dataUrl.indexOf(",");
+    if (commaIdx === -1) {
+      return dataUrl;
+    }
+    const meta = dataUrl.slice(0, commaIdx);
+    const payload = dataUrl.slice(commaIdx + 1);
+
+    if (!/;base64/i.test(meta)) {
+      return decodeURIComponent(payload);
+    }
+
+    const cleanPayload = payload.replace(/\s+/g, "");
+    const binary = atob(cleanPayload);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return new TextDecoder("utf-8").decode(bytes);
+  } catch {
+    return null;
+  }
 };
 
 const stripHtmlTags = (html?: string) => {
@@ -1093,6 +1067,19 @@ const getFileIcon = (fileName: string) => {
   return <File className="text-gray-500 shrink-0" size={14} />;
 };
 
+const getAuthHeaders = () => {
+  const token =
+    Storage.local.get("TimeSheet-authenticationToken") ||
+    Storage.session.get("TimeSheet-authenticationToken") ||
+    localStorage.getItem("TimeSheet-authenticationToken") ||
+    sessionStorage.getItem("TimeSheet-authenticationToken");
+  return {
+    Accept: "application/json",
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+};
+
 const getDecodedToken = () => {
   try {
     const rawToken =
@@ -1220,7 +1207,6 @@ const NoteDownloadDropdown = ({
 };
 
 const EmployeeNotes = () => {
-  const dispatch = useAppDispatch();
   const { entity } = useAppSelector((state) => state.employeeDetails);
   const { currentUser } = useAppSelector((state) => state.user);
   const navigate = useNavigate();
@@ -1248,9 +1234,7 @@ const EmployeeNotes = () => {
     (entity?.firstName
       ? `${entity.firstName} ${entity.lastName || ""}`.trim()
       : "") ||
-    currentUser?.loginId ||
-    employeeId ||
-    "";
+    "kusuma";
 
   const currentCreator =
     authorName ||
@@ -1258,19 +1242,21 @@ const EmployeeNotes = () => {
     employeeId ||
     "Employee";
 
-  const getAuthorDisplay = (createdBy?: string | null): string => {
-    if (!createdBy) return authorName || currentCreator;
+  const getAuthorDisplay = (createdBy?: string) => {
+    if (!createdBy) return authorName;
     const trimmed = createdBy.trim();
+    // If it's a numeric ID (like "345") or matches the login ID / employee ID, resolve to employee's name (e.g. "kusuma")
     if (
       /^\d+$/.test(trimmed) ||
       trimmed === employeeId ||
       trimmed === currentUser?.loginId
     ) {
-      return authorName || currentCreator;
+      return authorName;
     }
     return trimmed;
   };
-  // Notes are API/DB only — no localStorage keys needed
+  const storageKey = `${STORAGE_KEY_PREFIX}:${employeeId || "guest"}`;
+  const draftKey = `${storageKey}:draft`;
 
   // Employee can view/edit their own notes only, unless the signed-in user
   // has manager/admin access, in which case they may manage any employee's notes.
@@ -1281,12 +1267,11 @@ const EmployeeNotes = () => {
 
   const [notes, setNotes] = useState<EmployeeNote[]>([]);
   const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [selectedFilter, setSelectedFilter] = useState<NoteFilter>(NoteFilter.PROJECT);
+  const [selectedFilter, setSelectedFilter] = useState<string>("Project");
 
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState("");
-  const [uploadingNoteId, setUploadingNoteId] = useState<string | number | null>(null);
+  const [uploadingNoteId, setUploadingNoteId] = useState<string | null>(null);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -1295,95 +1280,40 @@ const EmployeeNotes = () => {
   // Editor State for Create / Edit / View (Full Page View)
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [modalMode, setModalMode] = useState<NoteModalMode>("create");
-  const [activeNoteId, setActiveNoteId] = useState<string | number | null>(null);
+  const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [activeNote, setActiveNote] = useState<EmployeeNote | null>(null);
 
   // Form Fields
   const [formProjectName, setFormProjectName] = useState("");
   const [formTitle, setFormTitle] = useState("");
   const [formCategory, setFormCategory] =
-    useState<NoteCategory>(NoteCategoryEnum.PROJECT_NOTE);
+    useState<NoteCategory>("Project Note");
   const [formDescription, setFormDescription] = useState("");
   const [formFiles, setFormFiles] = useState<NoteFile[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formRows, setFormRows] = useState<ProjectRow[]>([]);
 
   // Required field validation
   const [formErrors, setFormErrors] = useState<NoteFormErrors>({});
 
+  // Save / Auto Save: last time the in-progress draft was persisted locally
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
 
 
-  // Preview file modal state (streamed from MinIO)
+
+  // Preview file modal state
   const [previewFile, setPreviewFile] = useState<NoteFile | null>(null);
-  const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
-  const [previewTextContent, setPreviewTextContent] = useState<string | null>(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
   const [isWordWrap, setIsWordWrap] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [previewTab, setPreviewTab] = useState<"content" | "table">("content");
 
-  const openFilePreview = async (file: NoteFile, noteId?: number | string) => {
+  const openFilePreview = (file: NoteFile) => {
     setIsMaximized(false);
     setIsWordWrap(false);
     setIsCopied(false);
     setPreviewTab("content");
-    setPreviewBlobUrl(null);
-    setPreviewTextContent(null);
-    setPreviewLoading(true);
-
-    const targetNoteId = toNumericNoteId(noteId || file.noteId || activeNoteId);
-    setPreviewFile({ ...file, noteId: targetNoteId });
-
-    const fileKey =
-      file.s3Key ||
-      (file.id && !file.id.startsWith("temp-") ? file.id : undefined);
-
-    try {
-      if (fileKey) {
-        const response = await dispatch(
-          previewEmployeeNoteFile({
-            entityId: targetNoteId,
-            refId: targetNoteId,
-            refType: ReferenceType.NOTE_ATTACHMENT,
-            entityType: EntityType.EMPLOYEE_NOTE,
-            key: fileKey,
-          })
-        ).unwrap();
-
-        const mimeType =
-          response.headers?.["content-type"] ||
-          (file.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "application/octet-stream");
-        const blob = new Blob([response.data], { type: mimeType });
-        const objectUrl = window.URL.createObjectURL(blob);
-        setPreviewBlobUrl(objectUrl);
-
-        if (isTextPreviewable(file) || isCsvFile(file.name)) {
-          const text = await blob.text();
-          setPreviewTextContent(text);
-        }
-      } else if (file.rawFile) {
-        const objectUrl = window.URL.createObjectURL(file.rawFile);
-        setPreviewBlobUrl(objectUrl);
-        if (isTextPreviewable(file) || isCsvFile(file.name)) {
-          const text = await file.rawFile.text();
-          setPreviewTextContent(text);
-        }
-      }
-    } catch (err) {
-      console.error("Failed to load file preview from MinIO:", err);
-    } finally {
-      setPreviewLoading(false);
-    }
-  };
-
-  const closeFilePreview = () => {
-    if (previewBlobUrl) {
-      window.URL.revokeObjectURL(previewBlobUrl);
-    }
-    setPreviewFile(null);
-    setPreviewBlobUrl(null);
-    setPreviewTextContent(null);
-    setPreviewLoading(false);
+    setPreviewFile(file);
   };
 
   const handleCopyText = (text: string | null) => {
@@ -1393,10 +1323,13 @@ const EmployeeNotes = () => {
     window.setTimeout(() => setIsCopied(false), 2000);
   };
 
-  // Text content for text/code preview in modal, streamed from MinIO
+  // Decoded text content for the file currently open in the preview modal,
+  // only computed for text/code file types (see isTextPreviewable).
   const previewText = useMemo(() => {
-    return previewTextContent;
-  }, [previewTextContent]);
+    if (!previewFile?.dataUrl) return null;
+    if (!isTextPreviewable(previewFile)) return null;
+    return decodeDataUrlText(previewFile.dataUrl);
+  }, [previewFile]);
 
   const textLines = useMemo(() => {
     if (previewText === null) return [];
@@ -1415,17 +1348,15 @@ const EmployeeNotes = () => {
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Expandable sub-table state for Project Notes (+ / - button in Project Name column)
-  const [expandedRowProjectNotes, setExpandedRowProjectNotes] = useState<(string | number)[]>([]);
-  const toggleRowProjectNotesExpand = (noteId: string | number) => {
+  const [expandedRowProjectNotes, setExpandedRowProjectNotes] = useState<string[]>([]);
+  const toggleRowProjectNotesExpand = (noteId: string) => {
     setExpandedRowProjectNotes((prev) =>
-      prev.some((id) => String(id) === String(noteId))
-        ? prev.filter((id) => String(id) !== String(noteId))
-        : [...prev, noteId]
+      prev.includes(noteId) ? prev.filter((id) => id !== noteId) : [...prev, noteId]
     );
   };
 
   // When the full-page editor is opened from a sub-table row, remember the parent note ID
-  const [editorParentNoteId, setEditorParentNoteId] = useState<string | number | null>(null);
+  const [editorParentNoteId, setEditorParentNoteId] = useState<string | null>(null);
 
   // Row-level "Create Note" Modal State
   const [isRowCreateNoteModalOpen, setIsRowCreateNoteModalOpen] = useState(false);
@@ -1435,11 +1366,11 @@ const EmployeeNotes = () => {
   const [rowModalFiles, setRowModalFiles] = useState<NoteFile[]>([]);
   const [rowModalErrors, setRowModalErrors] = useState<RowModalErrors>({});
   const [isRowModalSubmitting, setIsRowModalSubmitting] = useState(false);
-  const [rowModalParentNoteId, setRowModalParentNoteId] = useState<string | number | null>(null);
+  const [rowModalParentNoteId, setRowModalParentNoteId] = useState<string | null>(null);
   const rowModalFileInputRef = useRef<HTMLInputElement>(null);
 
   // Action Loading State (for View, Edit, Delete buttons)
-  const [actionLoadingNoteId, setActionLoadingNoteId] = useState<string | number | null>(null);
+  const [actionLoadingNoteId, setActionLoadingNoteId] = useState<string | null>(null);
   const [actionLoadingType, setActionLoadingType] = useState<NoteActionType | null>(null);
   const [isCenterLoading, setIsCenterLoading] = useState(false);
 
@@ -1464,124 +1395,30 @@ const EmployeeNotes = () => {
   const [isMainModalDragging, setIsMainModalDragging] = useState(false);
   const [isRowModalDragging, setIsRowModalDragging] = useState(false);
 
-  const processUploadedFiles = async (
+  const processUploadedFiles = (
     files: FileList | File[],
     target: "main" | "row"
   ) => {
     if (!files || files.length === 0) return;
     const fileList = Array.from(files);
-
-    const invalidType = fileList.filter((f) => !isAllowedNoteFile(f.name));
-    const tooLarge = fileList.filter((f) => f.size > FILE_SIZE_LIMIT);
-    const validFiles = fileList.filter(
-      (f) => isAllowedNoteFile(f.name) && f.size <= FILE_SIZE_LIMIT
-    );
-
-    if (invalidType.length > 0) {
-      showToast("Only PDF, Word, Excel, and images are allowed.", "error");
-    }
-    if (tooLarge.length > 0) {
-      showToast(
-        `${tooLarge[0].name} exceeds the 5 MB limit.`,
-        "error"
-      );
-    }
-    if (validFiles.length === 0) return;
-
-    const currentFiles = target === "row" ? rowModalFiles : formFiles;
-    // Distinct check: ignore files already in the list by name & size
-    const distinctFiles = validFiles.filter(
-      (nf) => !currentFiles.some((ef) => ef.name === nf.name && ef.size === nf.size)
-    );
-
-    if (distinctFiles.length === 0) {
-      showToast("Selected file(s) are already attached.", "info");
-      return;
-    }
-
-    // Temporary items with uploading: true
-    const tempFiles: NoteFile[] = distinctFiles.map((file) => ({
-      id: `temp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      uploading: true,
-      rawFile: file,
-    }));
-
-    if (target === "row") {
-      setRowModalFiles((prev) => [...prev, ...tempFiles]);
-    } else {
-      setFormFiles((prev) => [...prev, ...tempFiles]);
-    }
-
-    // Upload to object_store immediately.
-    // Existing note (edit / table): use that note's id so entityId === refId === note.id
-    // New note (create / row modal): use 0, then backend stamps the saved note id on POST.
-    const targetNoteId =
-      target === "row" ? 0 : toNumericNoteId(activeNoteId);
-    try {
-      const formData = new FormData();
-      for (const file of distinctFiles) {
-        formData.append("file", file);
-      }
-
-      const response: any = await dispatch(
-        uploadEmployeeNoteFile({
-          entityId: targetNoteId,
-          refId: targetNoteId,
-          refType: ReferenceType.NOTE_ATTACHMENT,
-          entityType: EntityType.EMPLOYEE_NOTE,
-          formData,
-        })
-      ).unwrap();
-
-      const uploadedList: any[] =
-        response?.data || (Array.isArray(response) ? response : [response]);
-
-      const finishedFiles: NoteFile[] = distinctFiles.map((file, idx) => {
-        const item = uploadedList[idx] || uploadedList[0] || {};
-        const key = item.key || item.id || item.s3Key || tempFiles[idx].id;
-        return {
-          id: key,
-          name: item.fileName || file.name,
+    fileList.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const newFile: NoteFile = {
+          id: `file-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          name: file.name,
           size: file.size,
-          type: item.mimeType || file.type,
-          s3Key: key,
-          uploading: false,
+          type: file.type,
+          dataUrl: reader.result as string,
         };
-      });
-
-      const tempIdSet = new Set(tempFiles.map((t) => t.id));
-      if (target === "row") {
-        setRowModalFiles((prev) => [
-          ...prev.filter((f) => !tempIdSet.has(f.id)),
-          ...finishedFiles,
-        ]);
-      } else {
-        setFormFiles((prev) => [
-          ...prev.filter((f) => !tempIdSet.has(f.id)),
-          ...finishedFiles,
-        ]);
-      }
-
-      showToast(
-        `${
-          distinctFiles.length === 1
-            ? distinctFiles[0].name
-            : `${distinctFiles.length} files`
-        } uploaded to storage successfully!`
-      );
-    } catch (err) {
-      console.error("Direct upload failed:", err);
-      const tempIdSet = new Set(tempFiles.map((t) => t.id));
-      if (target === "row") {
-        setRowModalFiles((prev) => prev.filter((f) => !tempIdSet.has(f.id)));
-      } else {
-        setFormFiles((prev) => prev.filter((f) => !tempIdSet.has(f.id)));
-      }
-      showToast("Failed to upload file to storage. Please try again.", "error");
-    }
+        if (target === "row") {
+          setRowModalFiles((prev) => [...prev, newFile]);
+        } else {
+          setFormFiles((prev) => [...prev, newFile]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
   const downloadDescriptionAsPdf = (
@@ -1803,138 +1640,270 @@ ${htmlContent || "<p></p>"}
       .replace(/\s+/g, "_")
       .toLowerCase() || "description";
 
+    // Call backend API to export document
     try {
-      const result = await dispatch(
-        exportEmployeeNote({
-          htmlContent: htmlContent || "",
-          title: noteTitle || "",
-          format,
-          employeeId,
-          noteId: activeNoteId != null ? String(activeNoteId) : undefined,
-        })
-      ).unwrap();
-      const blob =
-        result?.data instanceof Blob
-          ? result.data
-          : new Blob([result?.data]);
-      if (blob.type && blob.type.includes("json")) {
-        showToast("Failed to download from server. Please try again.", "error");
-        return;
-      }
-      const ext = format === "doc" || format === "docx" ? "doc" : format === "txt" ? "txt" : "pdf";
-      const filename = `${cleanTitle}.${ext}`;
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
+      if (ENABLE_REMOTE_API) {
+        const response = await fetch(`${EMPLOYEE_NOTES_API}/export`, {
+          method: "POST",
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            htmlContent: htmlContent || "",
+            title: noteTitle || "",
+            format,
+            employeeId,
+            noteId: activeNoteId || undefined,
+          }),
+        });
 
-      showToast(
-        format === "doc" || format === "docx"
-          ? "Downloaded Word document (.doc) successfully"
-          : format === "txt"
-          ? "Downloaded text document successfully"
-          : "Downloaded PDF successfully",
-        "success"
-      );
-    } catch {
-      showToast("Failed to download from server. Please try again.", "error");
+        if (response.ok) {
+          const blob = await response.blob();
+          const ext = format === "doc" || format === "docx" ? "doc" : format === "txt" ? "txt" : "pdf";
+          const filename = `${cleanTitle}.${ext}`;
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+
+          showToast(
+            format === "doc" || format === "docx"
+              ? "Downloaded Word document (.doc) successfully"
+              : format === "txt"
+              ? "Downloaded text document successfully"
+              : "Downloaded PDF successfully",
+            "success"
+          );
+          return;
+        } else {
+          console.warn(`Export API returned status ${response.status}, using client fallback`);
+        }
+      }
+    } catch (apiErr) {
+      console.warn("Export API request failed, using client fallback:", apiErr);
+    }
+
+    // Client-side fallback
+    if (format === "doc" || format === "docx") {
+      downloadDescriptionAsDoc(htmlContent || "", cleanTitle || "description", noteTitle);
+      showToast("Downloaded Word document (.doc) successfully", "success");
+    } else {
+      try {
+        downloadDescriptionAsPdf(htmlContent || "", cleanTitle || "description", noteTitle);
+        showToast("Downloaded PDF successfully", "success");
+      } catch (err) {
+        console.error("Failed to generate PDF:", err);
+        showToast("Failed to generate PDF. Please try Word format.", "error");
+      }
     }
   };
 
   /*
    * LOAD NOTES FROM BACKEND API
    */
-  /** Re-fetch all notes for this employee from the API (DB only, no localStorage). */
-  const refetchNotes = async (searchTerm?: string) => {
-    if (!employeeId) return;
-    try {
-      setIsLoading(true);
-      setApiError("");
-      const query = (searchTerm ?? debouncedSearch).trim();
-      const result = await dispatch(
-        fetchEmployeeNotes({
-          employeeId,
-          search: query || undefined,
-        })
-      ).unwrap();
-      const apiNotes: EmployeeNote[] = Array.isArray(result)
-        ? result
-        : Array.isArray(result?.data)
-        ? result.data
-        : [];
-      setNotes(apiNotes.map(normalizeNote));
-    } catch {
-      setApiError("Couldn't reach the server.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search.trim());
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [search]);
-
-  // Load notes on mount / when employeeId or debounced search changes
   useEffect(() => {
     if (!employeeId) {
       setNotes([]);
       return;
     }
-    refetchNotes(debouncedSearch);
-  }, [employeeId, debouncedSearch]);
 
-  // View URL is /employee-dashboard/employee-notes/:noteId (numeric id only)
-  const getNoteIdFromUrl = (): string | null => {
-    const match = location.pathname.match(/\/employee-notes\/(\d+)\/?$/i);
-    return match?.[1] ?? null;
+    let cancelled = false;
+
+    const loadNotes = async () => {
+      try {
+        setIsLoading(true);
+        setApiError("");
+
+        if (ENABLE_REMOTE_API) {
+          const response = await fetch(
+            `${EMPLOYEE_NOTES_API}/${encodeURIComponent(employeeId)}`,
+            {
+              method: "GET",
+              headers: getAuthHeaders(),
+            }
+          );
+
+          if (response.ok) {
+            const result = await response.json();
+            const apiNotes: EmployeeNote[] = Array.isArray(result)
+              ? result
+              : Array.isArray(result?.data)
+                ? result.data
+                : [];
+
+            if (cancelled) return;
+
+            const raw = localStorage.getItem(storageKey);
+            const localNotes: EmployeeNote[] = raw ? JSON.parse(raw) : [];
+            const apiIds = new Set(apiNotes.map((an) => String(an.id)));
+            const mergedApiNotes = apiNotes.map((an) => {
+              const localMatch = localNotes.find(
+                (ln) => String(ln.id) === String(an.id)
+              );
+              const parentNoteId =
+                an.parentNoteId || localMatch?.parentNoteId || null;
+              const category =
+                an.category ||
+                localMatch?.category ||
+                (an.projectName ? "Project Note" : "Personal Note");
+              return {
+                ...an,
+                category,
+                parentNoteId,
+              };
+            });
+            const localUnsynced = localNotes.filter(
+              (ln) => !apiIds.has(String(ln.id))
+            );
+            const allNotesList = [...mergedApiNotes, ...localUnsynced];
+
+            setNotes(allNotesList);
+            localStorage.setItem(storageKey, JSON.stringify(allNotesList));
+            return;
+          }
+
+          if (!cancelled) {
+            setApiError(
+              `Couldn't load notes from server (status ${response.status}). Showing local notes.`
+            );
+          }
+        }
+
+        const raw = localStorage.getItem(storageKey);
+        const localNotes: EmployeeNote[] = raw ? JSON.parse(raw) : [];
+        if (cancelled) return;
+        setNotes(localNotes);
+      } catch {
+        if (cancelled) return;
+        setApiError(
+          "Couldn't reach the server. Showing your saved notes locally."
+        );
+        const raw = localStorage.getItem(storageKey);
+        const localNotes: EmployeeNote[] = raw ? JSON.parse(raw) : [];
+        setNotes(localNotes);
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadNotes();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [employeeId, storageKey]);
+
+  // Extract project name parameter from URL (/employee-dashboard/:projectName/employee-notes or /employee-dashboard/employee-notes/:projectName)
+  const getProjectNameFromUrl = (): string | null => {
+    // Pattern 1: /(employee-dashboard|manager-dashboard)/:projectName/employee-notes
+    const match1 = location.pathname.match(
+      /\/(?:employee-dashboard|manager-dashboard)\/([^/]+)\/employee-notes/i
+    );
+    if (match1 && match1[1]) {
+      try {
+        return decodeURIComponent(match1[1].trim());
+      } catch {
+        return match1[1].trim();
+      }
+    }
+
+    // Pattern 2 (backward compatibility): /employee-notes/:projectName
+    const marker = "/employee-notes/";
+    const idx = location.pathname.toLowerCase().indexOf(marker);
+    if (idx !== -1) {
+      const raw = location.pathname.substring(idx + marker.length);
+      if (raw && raw.trim()) {
+        try {
+          return decodeURIComponent(raw.trim());
+        } catch {
+          return raw.trim();
+        }
+      }
+    }
+    return null;
   };
 
   const skipUrlSyncRef = useRef(false);
 
-  // Sync viewer with URL so refresh / back / forward open the same note by id
+  // Sync editor view state with URL (for direct links and browser back/forward navigation)
   useEffect(() => {
     if (skipUrlSyncRef.current) {
       skipUrlSyncRef.current = false;
       return;
     }
 
-    const urlNoteId = getNoteIdFromUrl();
+    const urlProject = getProjectNameFromUrl();
 
-    if (urlNoteId) {
-      if (notes.length === 0) return;
+    if (urlProject) {
+      if (notes.length > 0) {
+        const decoded = urlProject.toLowerCase();
 
-      if (isEditorOpen && modalMode === "view" && sameNoteId(activeNoteId, urlNoteId)) {
-        return;
+        // If the editor is already open in view mode displaying this exact note, keep it
+        if (isEditorOpen && activeNoteId && modalMode === "view") {
+          const currentActive = notes.find((n) => n.id === activeNoteId);
+          if (currentActive) {
+            const currentSlug = getNoteProjectSlug(currentActive).toLowerCase();
+            if (
+              currentSlug === decoded ||
+              currentActive.id === urlProject ||
+              (currentActive.title || "").trim().toLowerCase() === decoded ||
+              (currentActive.projectName || "").trim().toLowerCase() === decoded
+            ) {
+              return;
+            }
+          }
+        }
+
+        // Priority 1: Match by exact note ID
+        // Priority 2: Match note by exact title (sub-notes or personal notes)
+        // Priority 3: Match top-level project note by project name
+        // Priority 4: Match any note by project name
+        const matched =
+          notes.find((n) => n.id === urlProject) ||
+          notes.find(
+            (n) => (n.title || "").trim().toLowerCase() === decoded
+          ) ||
+          notes.find(
+            (n) =>
+              (n.projectName || "").trim().toLowerCase() === decoded &&
+              !n.parentNoteId
+          ) ||
+          notes.find(
+            (n) => (n.projectName || "").trim().toLowerCase() === decoded
+          );
+
+        if (matched) {
+          if (!isEditorOpen || activeNoteId !== matched.id || modalMode !== "view") {
+            setModalMode("view");
+            setActiveNoteId(matched.id);
+            setActiveNote(matched);
+            setFormProjectName(matched.projectName || "");
+            setFormTitle(matched.title || "");
+            setFormCategory(matched.category || "Project Note");
+            setFormDescription(matched.content || "");
+            setFormFiles(matched.files ? [...matched.files] : []);
+            setFormRows(matched.rows ? [...matched.rows] : []);
+            setFormErrors({});
+            setDraftSavedAt(null);
+            setEditorParentNoteId(matched.parentNoteId || null);
+            setIsEditorOpen(true);
+          }
+        }
       }
-
-      const matched = notes.find((n) => sameNoteId(n.id, urlNoteId));
-      if (!matched) return;
-
-      setModalMode("view");
-      setActiveNoteId(matched.id);
-      setActiveNote(matched);
-      setFormProjectName(matched.projectName || "");
-      setFormTitle(matched.title || "");
-      setFormCategory(matched.category || NoteCategoryEnum.PROJECT_NOTE);
-      setFormDescription(matched.content || "");
-      setFormFiles(matched.files ? [...matched.files] : []);
-      setFormErrors({});
-      setEditorParentNoteId(matched.parentNoteId || null);
-      setIsEditorOpen(true);
-    } else if (isEditorOpen && modalMode === "view") {
-      setIsEditorOpen(false);
-      setActiveNoteId(null);
-      setActiveNote(null);
-      setIsSubmitting(false);
-      setFormErrors({});
-      setEditorParentNoteId(null);
+    } else {
+      // Base URL without project name: if in view mode, close editor
+      if (isEditorOpen && modalMode === "view") {
+        setIsEditorOpen(false);
+        setActiveNoteId(null);
+        setActiveNote(null);
+        setIsSubmitting(false);
+        setFormErrors({});
+        setEditorParentNoteId(null);
+      }
     }
   }, [location.pathname, notes, isEditorOpen, activeNoteId, modalMode]);
  
@@ -1943,33 +1912,74 @@ ${htmlContent || "<p></p>"}
   useEffect(() => {
     if (!hasSetInitialFilterRef.current) {
       hasSetInitialFilterRef.current = true;
-      setSelectedFilter(NoteFilter.PROJECT);
+      setSelectedFilter("Project");
     }
   }, []);
 
   // Filter and Search — exclude child notes (they live in sub-tables only)
   const filteredNotes = useMemo(() => {
     return notes.filter((n) => {
-      if (isChildNote(n)) return false;
-      return (
-        (selectedFilter === NoteFilter.PROJECT && isProjectCategory(n)) ||
-        (selectedFilter === NoteFilter.PERSONAL && isPersonalCategory(n))
-      );
+      // Child notes (added via a row's sub-table) should not appear in the main table
+      if (n.parentNoteId) return false;
+
+      const cat = (n.category || "").trim().toLowerCase();
+      const hasProject = Boolean(n.projectName && n.projectName.trim());
+
+      const isProjectNote =
+        cat.includes("project") ||
+        (hasProject && !cat.includes("personal"));
+
+      const isPersonalNote =
+        cat.includes("personal") ||
+        (!hasProject && !cat.includes("project"));
+
+      const matchesFilter =
+        selectedFilter === "All" ||
+        (selectedFilter === "Project" && isProjectNote) ||
+        (selectedFilter === "Personal" && isPersonalNote) ||
+        n.category === selectedFilter;
+
+      if (!search.trim()) return matchesFilter;
+
+      const q = search.toLowerCase();
+      const filesText = (n.files || [])
+        .map((f) => f.name)
+        .join(" ")
+        .toLowerCase();
+      const rowsText = (n.rows || [])
+        .map((r) => `${r.title} ${r.notes}`)
+        .join(" ")
+        .toLowerCase();
+
+      const matchesSearch =
+        (n.projectName || "").toLowerCase().includes(q) ||
+        (n.title || "").toLowerCase().includes(q) ||
+        stripHtmlTags(n.content || "").toLowerCase().includes(q) ||
+        (n.folder || "").toLowerCase().includes(q) ||
+        filesText.includes(q) ||
+        rowsText.includes(q) ||
+        (n.category || "").toLowerCase().includes(q);
+
+      return matchesFilter && matchesSearch;
     });
-  }, [notes, selectedFilter]);
+  }, [notes, search, selectedFilter]);
 
   // Count visible parent notes by category
   const projectNotesCount = useMemo(() => {
     return notes.filter((n) => {
-      if (isChildNote(n)) return false;
-      return isProjectCategory(n);
+      if (n.parentNoteId) return false;
+      const cat = (n.category || "").trim().toLowerCase();
+      const hasProject = Boolean(n.projectName && n.projectName.trim());
+      return cat.includes("project") || (hasProject && !cat.includes("personal"));
     }).length;
   }, [notes]);
 
   const personalNotesCount = useMemo(() => {
     return notes.filter((n) => {
-      if (isChildNote(n)) return false;
-      return isPersonalCategory(n);
+      if (n.parentNoteId) return false;
+      const cat = (n.category || "").trim().toLowerCase();
+      const hasProject = Boolean(n.projectName && n.projectName.trim());
+      return cat.includes("personal") || (!hasProject && !cat.includes("project"));
     }).length;
   }, [notes]);
 
@@ -1991,6 +2001,24 @@ ${htmlContent || "<p></p>"}
     filteredNotes.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
   const endRecord = Math.min(currentPage * itemsPerPage, filteredNotes.length);
 
+  // Helper for row preview text
+  const getNotePreview = (note: EmployeeNote) => {
+    if (note.rows && note.rows.length > 0) {
+      const first = note.rows[0];
+      const firstLabel = first.notes || first.title || "Project details added";
+      if (note.rows.length > 1) {
+        return `${firstLabel} (+${note.rows.length - 1} more project${note.rows.length - 1 === 1 ? "" : "s"
+          })`;
+      }
+      return firstLabel;
+    }
+    if (note.content) {
+      const plain = stripHtmlTags(note.content);
+      return plain || "No description added yet";
+    }
+    return "No description added yet";
+  };
+
   /*
    * MODAL FILE UPLOAD HANDLING
    */
@@ -2003,129 +2031,106 @@ ${htmlContent || "<p></p>"}
     }
   };
 
-  const removeFormFile = async (fileId: string) => {
-    const fileToRemove = formFiles.find((f) => f.id === fileId);
+  const removeFormFile = (fileId: string) => {
     setFormFiles((prev) => prev.filter((f) => f.id !== fileId));
-    const fileKey =
-      fileToRemove?.s3Key ||
-      (fileToRemove?.id && !fileToRemove.id.startsWith("temp-")
-        ? fileToRemove.id
-        : null);
-    if (fileKey) {
-      try {
-        await dispatch(
-          deleteEmployeeNoteFile({
-            entityId: toNumericNoteId(activeNoteId),
-            refId: toNumericNoteId(activeNoteId),
-            refType: ReferenceType.NOTE_ATTACHMENT,
-            entityType: EntityType.EMPLOYEE_NOTE,
-            key: fileKey,
-          })
-        ).unwrap();
-      } catch (err) {
-        console.warn("Could not delete file from object store:", err);
-      }
-    }
   };
 
-  const downloadFile = async (file: NoteFile, noteId?: number | string) => {
-    const key = file.s3Key || file.id;
-    const targetNoteId = toNumericNoteId(
-      noteId || file.noteId || activeNoteId || (previewFile as any)?.noteId
-    );
-
-    if (key) {
-      try {
-        const response = await dispatch(
-          downloadEmployeeNoteFile({
-            entityId: targetNoteId,
-            refId: targetNoteId,
-            refType: ReferenceType.NOTE_ATTACHMENT,
-            entityType: EntityType.EMPLOYEE_NOTE,
-            key,
-          })
-        ).unwrap();
-
-        const blob = new Blob([response.data], {
-          type: response.headers?.["content-type"] || "application/octet-stream",
-        });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = file.name;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-      } catch (err) {
-        console.error("Failed to download from MinIO:", err);
-      }
-    } else if (file.rawFile) {
-      const url = window.URL.createObjectURL(file.rawFile);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = file.name;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-    }
+  const downloadFile = (file: NoteFile) => {
+    if (!file.dataUrl) return;
+    const a = document.createElement("a");
+    a.href = file.dataUrl;
+    a.download = file.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
+
+
 
   /*
-   * DIRECT TABLE ROW FILE UPLOAD (Dispatches uploadEmployeeNoteFile to MinIO)
+   * DIRECT TABLE ROW FILE UPLOAD (Saved immediately to Backend API)
    */
   const handleTableDirectUpload = async (
     note: EmployeeNote,
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
     const files = e.target.files;
-    if (!files || files.length === 0) return;
+    if (!files || files.length === 0 || !employeeId) return;
 
     const fileList = Array.from(files);
-    const invalidType = fileList.filter((f) => !isAllowedNoteFile(f.name));
-    const tooLarge = fileList.filter((f) => f.size > FILE_SIZE_LIMIT);
-    const validFiles = fileList.filter(
-      (f) => isAllowedNoteFile(f.name) && f.size <= FILE_SIZE_LIMIT
+    const readFilePromises = fileList.map(
+      (file) =>
+        new Promise<NoteFile>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            resolve({
+              id: `file-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+              name: file.name,
+              size: file.size,
+              type: file.type,
+              dataUrl: reader.result as string,
+            });
+          };
+          reader.readAsDataURL(file);
+        })
     );
 
-    if (invalidType.length > 0) {
-      showToast("Only PDF, Word, Excel, and images are allowed.", "error");
-    }
-    if (tooLarge.length > 0) {
-      showToast(`${tooLarge[0].name} exceeds the 5 MB limit.`, "error");
-    }
-    if (validFiles.length === 0) {
-      e.target.value = "";
-      return;
-    }
-
-    setUploadingNoteId(String(note.id));
-
     try {
-      const formData = new FormData();
-      for (const file of validFiles) {
-        formData.append("file", file);
+      setUploadingNoteId(note.id);
+      const newFiles = await Promise.all(readFilePromises);
+      const existingFiles = note.files || [];
+      const mergedFiles = [...existingFiles, ...newFiles];
+
+      const updatedNote: EmployeeNote = {
+        ...note,
+        files: mergedFiles,
+        folder: mergedFiles[0]?.name || note.folder || "General",
+        updatedAt: new Date().toISOString(),
+      };
+
+      if (ENABLE_REMOTE_API) {
+        const payload = {
+          title: updatedNote.title,
+          category: updatedNote.category,
+          folder: updatedNote.folder,
+          content: updatedNote.content,
+          rows: updatedNote.rows || [],
+          files: updatedNote.files,
+          updatedBy: currentCreator,
+        };
+
+        const response = await fetch(
+          `${EMPLOYEE_NOTES_API}/${encodeURIComponent(
+            employeeId
+          )}/${encodeURIComponent(note.id)}`,
+          {
+            method: "PUT",
+            headers: getAuthHeaders(),
+            body: JSON.stringify(payload),
+          }
+        );
+
+        if (response.ok) {
+          const result = await response.json();
+          const saved: EmployeeNote = result?.data || result || updatedNote;
+          const updated = notes.map((n) => (n.id === note.id ? saved : n));
+          setNotes(updated);
+          localStorage.setItem(storageKey, JSON.stringify(updated));
+          showToast(
+            `${newFiles.length === 1
+              ? newFiles[0].name
+              : `${newFiles.length} files`
+            } uploaded successfully!`
+          );
+          return;
+        }
       }
 
-      await dispatch(
-        uploadEmployeeNoteFile({
-          entityId: toNumericNoteId(note.id),
-          refId: toNumericNoteId(note.id),
-          refType: ReferenceType.NOTE_ATTACHMENT,
-          entityType: EntityType.EMPLOYEE_NOTE,
-          formData,
-        })
-      ).unwrap();
-
-      await refetchNotes();
-      showToast(
-        `${
-          validFiles.length === 1
-            ? validFiles[0].name
-            : `${validFiles.length} files`
-        } uploaded successfully!`
-      );
+      // Local fallback
+      const updated = notes.map((n) => (n.id === note.id ? updatedNote : n));
+      setNotes(updated);
+      localStorage.setItem(storageKey, JSON.stringify(updated));
+      showToast("File uploaded locally!");
     } catch {
       showToast("Failed to upload file to server.", "error");
     } finally {
@@ -2135,24 +2140,44 @@ ${htmlContent || "<p></p>"}
   };
 
   /*
-   * REMOVE FILE DIRECTLY FROM TABLE (Dispatches deleteEmployeeNoteFile from MinIO)
+   * REMOVE FILE DIRECTLY FROM TABLE (Saved to Backend API)
    */
   const handleTableRemoveFile = async (note: EmployeeNote, fileId: string) => {
-    const targetFile = (note.files || []).find((f) => f.id === fileId);
-    const fileKey = targetFile?.s3Key || targetFile?.id || fileId;
+    if (!employeeId) return;
+    const remainingFiles = (note.files || []).filter((f) => f.id !== fileId);
+    const updatedNote: EmployeeNote = {
+      ...note,
+      files: remainingFiles,
+      folder: remainingFiles[0]?.name || "General",
+      updatedAt: new Date().toISOString(),
+    };
 
     try {
-      await dispatch(
-        deleteEmployeeNoteFile({
-          entityId: toNumericNoteId(note.id),
-          refId: toNumericNoteId(note.id),
-          refType: ReferenceType.NOTE_ATTACHMENT,
-          entityType: EntityType.EMPLOYEE_NOTE,
-          key: fileKey,
-        })
-      ).unwrap();
+      if (ENABLE_REMOTE_API) {
+        const payload = {
+          title: updatedNote.title,
+          category: updatedNote.category,
+          folder: updatedNote.folder,
+          content: updatedNote.content,
+          rows: updatedNote.rows || [],
+          files: updatedNote.files,
+          updatedBy: currentCreator,
+        };
 
-      await refetchNotes();
+        await fetch(
+          `${EMPLOYEE_NOTES_API}/${encodeURIComponent(
+            employeeId
+          )}/${encodeURIComponent(note.id)}`,
+          {
+            method: "PUT",
+            headers: getAuthHeaders(),
+            body: JSON.stringify(payload),
+          }
+        );
+      }
+      const updated = notes.map((n) => (n.id === note.id ? updatedNote : n));
+      setNotes(updated);
+      localStorage.setItem(storageKey, JSON.stringify(updated));
       showToast("File removed successfully!");
     } catch {
       showToast("Failed to remove file from server.", "error");
@@ -2160,11 +2185,29 @@ ${htmlContent || "<p></p>"}
   };
 
   /*
+   * DETERMINES THE PROJECT SLUG FOR URL (e.g. /employee-dashboard/:projectName/employee-notes)
+   */
+  const getNoteProjectSlug = (note: EmployeeNote): string => {
+    // Child notes (sub-table notes) should use their own title or ID so the URL uniquely identifies this specific sub-note
+    if (note.parentNoteId) {
+      if (note.title && note.title.trim()) {
+        return note.title.trim();
+      }
+      return note.id;
+    }
+    if (note.projectName && note.projectName.trim()) {
+      return note.projectName.trim();
+    }
+    if (note.title && note.title.trim()) {
+      return note.title.trim();
+    }
+    return note.category === "Project Note" ? "Project Note" : "Personal Note";
+  };
+
+  /*
    * OPEN CREATE NOTE / EDIT NOTE (Full Page In-Place View)
    */
-  const openCreateNote = (
-    category: NoteCategory = NoteCategoryEnum.PROJECT_NOTE
-  ) => {
+  const openCreateNote = (category: NoteCategory = "Project Note") => {
     if (location.pathname !== baseNotesPath) {
       navigate(baseNotesPath);
     }
@@ -2176,18 +2219,25 @@ ${htmlContent || "<p></p>"}
     setFormCategory(category);
     setFormDescription("");
     setFormFiles([]);
+    setFormRows([]);
     setFormErrors({});
+    setDraftSavedAt(null);
     setEditorParentNoteId(null);
-    if (category === NoteCategoryEnum.PROJECT_NOTE) {
-      setSelectedFilter(NoteFilter.PROJECT);
+    if (category === "Project Note") {
+      setSelectedFilter("Project");
     } else {
-      setSelectedFilter(NoteFilter.PERSONAL);
+      setSelectedFilter("Personal");
     }
     setSearch("");
     setCurrentPage(1);
     setIsEditorOpen(true);
 
-    // Always open fresh — no draft persistence
+    // Discard any leftover draft from a previous session — open fresh every time
+    try {
+      localStorage.removeItem(draftKey);
+    } catch {
+      // ignore
+    }
   };
 
   const openEditModal = async (note: EmployeeNote) => {
@@ -2203,19 +2253,51 @@ ${htmlContent || "<p></p>"}
       let resolvedNote = { ...note };
 
       // Call GET API to fetch latest note details on edit
-      // Always fetch fresh note from API before editing
-      if (note.id) {
-        const empId = employeeId || note.employeeId;
-        if (empId) {
-          try {
-            const fresh = await dispatch(
-              fetchEmployeeNote({ employeeId: empId, id: note.id })
-            ).unwrap();
-            const freshNote: EmployeeNote = fresh?.data ?? fresh;
-            if (freshNote) resolvedNote = normalizeNote({ ...resolvedNote, ...freshNote });
-          } catch (err) {
-            console.warn("Failed to fetch note details on edit:", err);
+      if (ENABLE_REMOTE_API && note.id) {
+        const empId =
+          note.employeeId ||
+          employeeId ||
+          currentUser?.employeeId ||
+          currentUser?.loginId ||
+          tokenPayload?.employeeId ||
+          tokenPayload?.sub ||
+          "default";
+        try {
+          const response = await fetch(
+            `${EMPLOYEE_NOTES_API}/${encodeURIComponent(empId)}/${encodeURIComponent(note.id)}`,
+            {
+              method: "GET",
+              headers: getAuthHeaders(),
+            }
+          );
+          if (response.ok) {
+            const freshData = await response.json();
+            const freshNote: EmployeeNote = freshData?.data ?? freshData;
+            if (freshNote) {
+              resolvedNote = { ...resolvedNote, ...freshNote };
+            }
+          } else if (response.status === 404) {
+            try {
+              const fallbackResp = await fetch(
+                `${EMPLOYEE_NOTES_API}/${encodeURIComponent(note.id)}`,
+                {
+                  method: "GET",
+                  headers: getAuthHeaders(),
+                }
+              );
+              if (fallbackResp.ok) {
+                const freshData = await fallbackResp.json();
+                const freshNote: EmployeeNote = freshData?.data ?? freshData;
+                if (freshNote) {
+                  resolvedNote = { ...resolvedNote, ...freshNote };
+                }
+              }
+            } catch {
+              // Ignore fallback error
+            }
           }
+        } catch (err) {
+          console.warn("Failed to fetch note details on edit:", err);
         }
       }
 
@@ -2233,18 +2315,20 @@ ${htmlContent || "<p></p>"}
       setActiveNote(resolvedNote);
       setFormProjectName(resolvedNote.projectName || "");
       setFormTitle(resolvedNote.title || "");
-      setFormCategory(
-        resolvedNote.category ||
-          (resolvedNote.projectName
-            ? NoteCategoryEnum.PROJECT_NOTE
-            : NoteCategoryEnum.PERSONAL_NOTE)
-      );
+      setFormCategory(resolvedNote.category || (resolvedNote.projectName ? "Project Note" : "Personal Note"));
       setFormDescription(resolvedNote.content || "");
       setFormFiles(resolvedNote.files ? [...resolvedNote.files] : []);
+      setFormRows(resolvedNote.rows ? [...resolvedNote.rows] : []);
       setFormErrors({});
+      setDraftSavedAt(null);
       setEditorParentNoteId(resolvedNote.parentNoteId || null);
 
-      // Always load note fresh from the server
+      // Discard any leftover edit draft — always load note fresh from the server
+      try {
+        localStorage.removeItem(draftKey);
+      } catch {
+        // ignore
+      }
 
       setModalMode("edit");
       setIsEditorOpen(true);
@@ -2269,19 +2353,51 @@ ${htmlContent || "<p></p>"}
       let resolvedNote = { ...note };
 
       // Call GET API to fetch latest note details on view
-      // Always fetch fresh note from API before viewing
-      if (note.id) {
-        const empId = employeeId || note.employeeId;
-        if (empId) {
-          try {
-            const fresh = await dispatch(
-              fetchEmployeeNote({ employeeId: empId, id: note.id })
-            ).unwrap();
-            const freshNote: EmployeeNote = fresh?.data ?? fresh;
-            if (freshNote) resolvedNote = normalizeNote({ ...resolvedNote, ...freshNote });
-          } catch (err) {
-            console.warn("Failed to fetch note details on view:", err);
+      if (ENABLE_REMOTE_API && note.id) {
+        const empId =
+          note.employeeId ||
+          employeeId ||
+          currentUser?.employeeId ||
+          currentUser?.loginId ||
+          tokenPayload?.employeeId ||
+          tokenPayload?.sub ||
+          "default";
+        try {
+          const response = await fetch(
+            `${EMPLOYEE_NOTES_API}/${encodeURIComponent(empId)}/${encodeURIComponent(note.id)}`,
+            {
+              method: "GET",
+              headers: getAuthHeaders(),
+            }
+          );
+          if (response.ok) {
+            const freshData = await response.json();
+            const freshNote: EmployeeNote = freshData?.data ?? freshData;
+            if (freshNote) {
+              resolvedNote = { ...resolvedNote, ...freshNote };
+            }
+          } else if (response.status === 404) {
+            try {
+              const fallbackResp = await fetch(
+                `${EMPLOYEE_NOTES_API}/${encodeURIComponent(note.id)}`,
+                {
+                  method: "GET",
+                  headers: getAuthHeaders(),
+                }
+              );
+              if (fallbackResp.ok) {
+                const freshData = await fallbackResp.json();
+                const freshNote: EmployeeNote = freshData?.data ?? freshData;
+                if (freshNote) {
+                  resolvedNote = { ...resolvedNote, ...freshNote };
+                }
+              }
+            } catch {
+              // Ignore fallback error
+            }
           }
+        } catch (err) {
+          console.warn("Failed to fetch note details on view:", err);
         }
       }
 
@@ -2296,18 +2412,16 @@ ${htmlContent || "<p></p>"}
       setActiveNote(resolvedNote);
       setFormProjectName(resolvedNote.projectName || "");
       setFormTitle(resolvedNote.title || "");
-      setFormCategory(
-        resolvedNote.category ||
-          (resolvedNote.projectName
-            ? NoteCategoryEnum.PROJECT_NOTE
-            : NoteCategoryEnum.PERSONAL_NOTE)
-      );
+      setFormCategory(resolvedNote.category || (resolvedNote.projectName ? "Project Note" : "Personal Note"));
       setFormDescription(resolvedNote.content || "");
       setFormFiles(resolvedNote.files ? [...resolvedNote.files] : []);
+      setFormRows(resolvedNote.rows ? [...resolvedNote.rows] : []);
       setFormErrors({});
+      setDraftSavedAt(null);
       setEditorParentNoteId(resolvedNote.parentNoteId || null);
 
-      const targetUrl = `${baseNotesPath}/${resolvedNote.id}`;
+      const projectSlug = getNoteProjectSlug(resolvedNote);
+      const targetUrl = `${baseDashboardPath}/${encodeURIComponent(projectSlug)}/employee-notes`;
       if (location.pathname !== targetUrl) {
         navigate(targetUrl);
       }
@@ -2324,16 +2438,23 @@ ${htmlContent || "<p></p>"}
 
   const closeEditor = () => {
     skipUrlSyncRef.current = true;
+    try {
+      localStorage.removeItem(draftKey);
+    } catch {
+      // Storage may be unavailable
+    }
     setIsEditorOpen(false);
     setActiveNoteId(null);
     setActiveNote(null);
     setIsSubmitting(false);
     setFormErrors({});
     setEditorParentNoteId(null);
+    setDraftSavedAt(null);
     setFormProjectName("");
     setFormTitle("");
     setFormDescription("");
     setFormFiles([]);
+    setFormRows([]);
 
     if (location.pathname !== baseNotesPath) {
       navigate(baseNotesPath);
@@ -2341,27 +2462,37 @@ ${htmlContent || "<p></p>"}
   };
 
   // Opens the full-page editor in create mode pre-filled for the parent note's category.
-  const openSubTableCreateNote = (
-    projectName: string,
-    parentNoteId: string | number,
-    category: NoteCategory = NoteCategoryEnum.PROJECT_NOTE
-  ) => {
+  const openSubTableCreateNote = (projectName: string, parentNoteId: string, category: NoteCategory = "Project Note") => {
     if (location.pathname !== baseNotesPath) {
       navigate(baseNotesPath);
     }
     setModalMode("create");
     setActiveNoteId(null);
     setActiveNote(null);
-    setFormProjectName(
-      category === NoteCategoryEnum.PROJECT_NOTE ? projectName : ""
-    );
+    setFormProjectName(category === "Project Note" ? projectName : "");
     setFormTitle("");
     setFormCategory(category);
     setFormDescription("");
     setFormFiles([]);
+    setFormRows([]);
     setFormErrors({});
+    setDraftSavedAt(null);
     setEditorParentNoteId(parentNoteId);
     setIsEditorOpen(true);
+  };
+
+  /*
+   * ROW-LEVEL "+ CREATE NOTE" MODAL HANDLERS
+   */
+  const openRowCreateNoteModal = (defaultProjectName?: string, parentNoteId?: string) => {
+    setRowModalProjectName(defaultProjectName || "");
+    setRowModalTitle("");
+    setRowModalDescription("");
+    setRowModalFiles([]);
+    setRowModalErrors({});
+    setIsRowModalSubmitting(false);
+    setRowModalParentNoteId(parentNoteId || null);
+    setIsRowCreateNoteModalOpen(true);
   };
 
   const closeRowCreateNoteModal = () => {
@@ -2384,29 +2515,8 @@ ${htmlContent || "<p></p>"}
     }
   };
 
-  const removeRowModalFile = async (fileId: string) => {
-    const fileToRemove = rowModalFiles.find((f) => f.id === fileId);
+  const removeRowModalFile = (fileId: string) => {
     setRowModalFiles((prev) => prev.filter((f) => f.id !== fileId));
-    const fileKey =
-      fileToRemove?.s3Key ||
-      (fileToRemove?.id && !fileToRemove.id.startsWith("temp-")
-        ? fileToRemove.id
-        : null);
-    if (fileKey) {
-      try {
-        await dispatch(
-          deleteEmployeeNoteFile({
-            entityId: 0,
-            refId: 0,
-            refType: ReferenceType.NOTE_ATTACHMENT,
-            entityType: EntityType.EMPLOYEE_NOTE,
-            key: fileKey,
-          })
-        ).unwrap();
-      } catch (err) {
-        console.warn("Could not delete row file from object store:", err);
-      }
-    }
   };
 
   const handleRowModalSubmit = async (e: React.FormEvent) => {
@@ -2433,33 +2543,131 @@ ${htmlContent || "<p></p>"}
     }
     setRowModalErrors({});
 
+    const nowIso = new Date().toISOString();
+    const folderValue = rowModalFiles.length > 0 ? rowModalFiles[0].name : "General";
+
     setIsRowModalSubmitting(true);
 
-    try {
-      const parentId = toParentNoteId(rowModalParentNoteId);
-      const payload = {
-        employeeId,
-        projectName: trimmedProjectName,
-        title: trimmedTitle,
-        category: NoteCategoryEnum.PROJECT_NOTE,
-        type: resolveNoteType(parentId),
-        content: rowModalDescription,
-        files: toNoteFilePayload(rowModalFiles),
-        createdBy: currentCreator,
-        updatedBy: currentCreator,
-        parentNoteId: parentId,
-      };
+    const newNote: EmployeeNote = {
+      id: `note-${Date.now()}`,
+      employeeId,
+      projectName: trimmedProjectName,
+      title: trimmedTitle,
+      category: "Project Note",
+      folder: folderValue,
+      content: rowModalDescription,
+      rows: [],
+      files: rowModalFiles,
+      createdBy: currentCreator,
+      updatedBy: currentCreator,
+      createdAt: nowIso,
+      updatedAt: nowIso,
+      parentNoteId: rowModalParentNoteId || null,
+    };
 
-      await dispatch(createEmployeeNote(payload)).unwrap();
-      await refetchNotes();
+    try {
+      if (ENABLE_REMOTE_API) {
+        const payload = {
+          employeeId,
+          projectName: newNote.projectName,
+          title: newNote.title,
+          category: newNote.category,
+          folder: newNote.folder,
+          content: newNote.content,
+          rows: newNote.rows,
+          files: newNote.files,
+          createdBy: currentCreator,
+          updatedBy: currentCreator,
+          parentNoteId: newNote.parentNoteId || null,
+        };
+
+        const response = await fetch(EMPLOYEE_NOTES_API, {
+          method: "POST",
+          headers: getAuthHeaders(),
+          body: JSON.stringify(payload),
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          // Always preserve parentNoteId so the sub-table can find this note
+          const saved: EmployeeNote = {
+            ...(result?.data || result || newNote),
+            parentNoteId: newNote.parentNoteId || null,
+          };
+          const updated = [saved, ...notes];
+          setNotes(updated);
+          localStorage.setItem(storageKey, JSON.stringify(updated));
+          closeRowCreateNoteModal();
+          showToast("Successfully saved your note");
+          return;
+        }
+      }
+
+      // Fallback local storage
+      const updated = [newNote, ...notes];
+      setNotes(updated);
+      localStorage.setItem(storageKey, JSON.stringify(updated));
       closeRowCreateNoteModal();
       showToast("Successfully saved your note");
     } catch {
-      showToast("Failed to reach server. Please try again.", "error");
+      const updated = [newNote, ...notes];
+      setNotes(updated);
+      localStorage.setItem(storageKey, JSON.stringify(updated));
+      closeRowCreateNoteModal();
+      showToast("Successfully saved your note");
     } finally {
       setIsRowModalSubmitting(false);
     }
   };
+
+  /*
+   * SAVE / AUTO SAVE: while the editor is open, periodically persist the
+   * in-progress form as a local draft so unsaved work survives an accidental
+   * close, refresh, or crash.
+   */
+  useEffect(() => {
+    if (!isEditorOpen || modalMode === "view") return;
+
+    const timer = window.setTimeout(() => {
+      if (!isEditorOpen || modalMode === "view") return;
+      const hasContent =
+        formProjectName.trim() ||
+        formTitle.trim() ||
+        formDescription.trim() ||
+        formRows.length > 0;
+      if (!hasContent) return;
+
+      const draft = {
+        mode: modalMode,
+        noteId: activeNoteId,
+        projectName: formProjectName,
+        title: formTitle,
+        category: formCategory,
+        description: formDescription,
+        rows: formRows,
+        savedAt: new Date().toISOString(),
+      };
+
+      try {
+        localStorage.setItem(draftKey, JSON.stringify(draft));
+        setDraftSavedAt(draft.savedAt);
+      } catch {
+        // Storage may be unavailable
+      }
+    }, 800);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    isEditorOpen,
+    modalMode,
+    activeNoteId,
+    formProjectName,
+    formTitle,
+    formCategory,
+    formDescription,
+    formRows,
+    draftKey,
+  ]);
 
   /*
    * HANDLE SAVE NOTE (POST / PUT to Backend API)
@@ -2473,12 +2681,12 @@ ${htmlContent || "<p></p>"}
     const trimmedTitle = formTitle.trim();
     const trimmedProjectName = formProjectName.trim();
 
-    if (formCategory === NoteCategoryEnum.PROJECT_NOTE && !trimmedProjectName) {
+    if (formCategory === "Project Note" && !trimmedProjectName) {
       errors.projectName = "Project Name is required";
     }
     if (!trimmedTitle) {
       errors.title =
-        formCategory === NoteCategoryEnum.PROJECT_NOTE
+        formCategory === "Project Note"
           ? "Project Title is required"
           : "Title is required";
     }
@@ -2492,118 +2700,209 @@ ${htmlContent || "<p></p>"}
     }
     setFormErrors({});
 
+    const nowIso = new Date().toISOString();
+    const folderValue = formFiles.length > 0 ? formFiles[0].name : "General";
+
     setIsSubmitting(true);
 
     if (modalMode === "create") {
-      const parentId = toParentNoteId(editorParentNoteId);
-      try {
-        const payload = {
-          employeeId,
-          projectName:
-            formCategory === NoteCategoryEnum.PROJECT_NOTE
-              ? trimmedProjectName
-              : undefined,
-          title: trimmedTitle,
-          category: formCategory,
-          type: resolveNoteType(parentId),
-          content: formDescription,
-          files: toNoteFilePayload(formFiles),
-          createdBy: currentCreator,
-          updatedBy: currentCreator,
-          parentNoteId: parentId,
-        };
+      const newNote: EmployeeNote = {
+        id: `note-${Date.now()}`,
+        employeeId,
+        projectName:
+          formCategory === "Project Note" ? trimmedProjectName : undefined,
+        title: trimmedTitle,
+        category: formCategory,
+        folder: folderValue,
+        content: formDescription,
+        rows: formRows,
+        files: formFiles,
+        createdBy: currentCreator,
+        updatedBy: currentCreator,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+        parentNoteId: editorParentNoteId || null,
+      };
 
-        await dispatch(createEmployeeNote(payload)).unwrap();
-        await refetchNotes();
-        if (!parentId) {
-          setSelectedFilter(
-            formCategory === NoteCategoryEnum.PROJECT_NOTE
-              ? NoteFilter.PROJECT
-              : NoteFilter.PERSONAL
-          );
+      try {
+        if (ENABLE_REMOTE_API) {
+          const payload = {
+            employeeId,
+            projectName: newNote.projectName,
+            title: newNote.title,
+            category: newNote.category,
+            folder: newNote.folder,
+            content: newNote.content,
+            rows: newNote.rows,
+            files: newNote.files,
+            createdBy: currentCreator,
+            updatedBy: currentCreator,
+            parentNoteId: newNote.parentNoteId || null,
+          };
+
+          const response = await fetch(EMPLOYEE_NOTES_API, {
+            method: "POST",
+            headers: getAuthHeaders(),
+            body: JSON.stringify(payload),
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            // Always preserve parentNoteId and category from newNote
+            const saved: EmployeeNote = {
+              ...(result?.data || result || newNote),
+              parentNoteId: newNote.parentNoteId || null,
+              category: formCategory,
+              projectName:
+                formCategory === "Project Note" ? trimmedProjectName : undefined,
+              title: trimmedTitle,
+            };
+            const updated = [saved, ...notes];
+            setNotes(updated);
+            localStorage.setItem(storageKey, JSON.stringify(updated));
+            localStorage.removeItem(draftKey);
+            if (!newNote.parentNoteId) {
+              setSelectedFilter(formCategory === "Project Note" ? "Project" : "Personal");
+              setSearch("");
+              setCurrentPage(1);
+            }
+            closeEditor();
+            showToast("Successfully saved your note");
+            return;
+          }
+        }
+
+        // Fallback local
+        const updated = [newNote, ...notes];
+        setNotes(updated);
+        localStorage.setItem(storageKey, JSON.stringify(updated));
+        localStorage.removeItem(draftKey);
+        if (!newNote.parentNoteId) {
+          setSelectedFilter(formCategory === "Project Note" ? "Project" : "Personal");
           setSearch("");
           setCurrentPage(1);
         }
         closeEditor();
         showToast("Successfully saved your note");
       } catch {
-        showToast("Failed to reach server. Please try again.", "error");
+        const updated = [newNote, ...notes];
+        setNotes(updated);
+        localStorage.setItem(storageKey, JSON.stringify(updated));
+        localStorage.removeItem(draftKey);
+        if (!newNote.parentNoteId) {
+          setSelectedFilter(formCategory === "Project Note" ? "Project" : "Personal");
+          setSearch("");
+          setCurrentPage(1);
+        }
+        closeEditor();
+        showToast("Successfully saved your note");
       } finally {
         setIsSubmitting(false);
       }
     } else {
       // EDIT MODE
-      if (!activeNoteId) {
-        setIsSubmitting(false);
-        return;
-      }
+      if (!activeNoteId) return;
 
-      const existing = notes.find((n) => sameNoteId(n.id, activeNoteId));
-      const parentId = toParentNoteId(existing?.parentNoteId ?? editorParentNoteId);
+      const existing = notes.find((n) => n.id === activeNoteId);
+      const parentId = existing?.parentNoteId ?? editorParentNoteId ?? null;
+      const updatedNote: EmployeeNote = {
+        id: activeNoteId,
+        employeeId,
+        projectName:
+          formCategory === "Project Note" ? trimmedProjectName : undefined,
+        title: trimmedTitle,
+        category: formCategory,
+        folder: folderValue,
+        content: formDescription,
+        rows: formRows,
+        files: formFiles,
+        createdBy: existing?.createdBy || currentCreator,
+        updatedBy: currentCreator,
+        createdAt: existing?.createdAt || nowIso,
+        updatedAt: nowIso,
+        parentNoteId: parentId,
+      };
+
       try {
-        const payload = {
-          projectName:
-            formCategory === NoteCategoryEnum.PROJECT_NOTE
-              ? trimmedProjectName
-              : undefined,
-          title: trimmedTitle,
-          category: formCategory,
-          type: resolveNoteType(parentId),
-          content: formDescription,
-          files: toNoteFilePayload(formFiles),
-          updatedBy: currentCreator,
-          parentNoteId: parentId,
-        };
+        if (ENABLE_REMOTE_API) {
+          const payload = {
+            projectName: updatedNote.projectName,
+            title: updatedNote.title,
+            category: updatedNote.category,
+            folder: updatedNote.folder,
+            content: updatedNote.content,
+            rows: updatedNote.rows,
+            files: updatedNote.files,
+            updatedBy: currentCreator,
+            parentNoteId: parentId,
+          };
 
-        await dispatch(
-          updateEmployeeNote({
-            employeeId,
-            id: activeNoteId,
-            noteData: payload,
-          })
-        ).unwrap();
-
-        const remainingKeys = new Set(toNoteFilePayload(formFiles));
-        const removedFiles = (existing?.files || []).filter((ef) => {
-          const key = ef.s3Key || ef.id;
-          return key && !remainingKeys.has(key);
-        });
-        for (const rf of removedFiles) {
-          const fileKey = rf.s3Key || rf.id;
-          if (fileKey) {
-            try {
-              await dispatch(
-                deleteEmployeeNoteFile({
-                  entityId: toNumericNoteId(activeNoteId),
-                  refId: toNumericNoteId(activeNoteId),
-                  refType: ReferenceType.NOTE_ATTACHMENT,
-                  entityType: EntityType.EMPLOYEE_NOTE,
-                  key: fileKey,
-                })
-              ).unwrap();
-            } catch (deleteErr) {
-              console.warn(
-                "Failed to delete note attachment in edit:",
-                deleteErr
-              );
+          const response = await fetch(
+            `${EMPLOYEE_NOTES_API}/${encodeURIComponent(
+              employeeId
+            )}/${encodeURIComponent(activeNoteId)}`,
+            {
+              method: "PUT",
+              headers: getAuthHeaders(),
+              body: JSON.stringify(payload),
             }
+          );
+
+          if (response.ok) {
+            const result = await response.json();
+            const saved: EmployeeNote = {
+              ...(result?.data || result || updatedNote),
+              parentNoteId: parentId,
+              category: formCategory,
+              projectName:
+                formCategory === "Project Note" ? trimmedProjectName : undefined,
+              title: trimmedTitle,
+            };
+            const updated = notes.map((n) =>
+              n.id === activeNoteId ? saved : n
+            );
+            setNotes(updated);
+            localStorage.setItem(storageKey, JSON.stringify(updated));
+            localStorage.removeItem(draftKey);
+            if (!parentId) {
+              setSelectedFilter(formCategory === "Project Note" ? "Project" : "Personal");
+              setSearch("");
+              setCurrentPage(1);
+            }
+            closeEditor();
+            showToast("Successfully saved your note");
+            return;
           }
         }
 
-        await refetchNotes();
+        // Fallback local
+        const updated = notes.map((n) =>
+          n.id === activeNoteId ? updatedNote : n
+        );
+        setNotes(updated);
+        localStorage.setItem(storageKey, JSON.stringify(updated));
+        localStorage.removeItem(draftKey);
         if (!parentId) {
-          setSelectedFilter(
-            formCategory === NoteCategoryEnum.PROJECT_NOTE
-              ? NoteFilter.PROJECT
-              : NoteFilter.PERSONAL
-          );
+          setSelectedFilter(formCategory === "Project Note" ? "Project" : "Personal");
           setSearch("");
           setCurrentPage(1);
         }
         closeEditor();
         showToast("Successfully saved your note");
       } catch {
-        showToast("Failed to reach server. Please try again.", "error");
+        const updated = notes.map((n) =>
+          n.id === activeNoteId ? updatedNote : n
+        );
+        setNotes(updated);
+        localStorage.setItem(storageKey, JSON.stringify(updated));
+        localStorage.removeItem(draftKey);
+        if (!parentId) {
+          setSelectedFilter(formCategory === "Project Note" ? "Project" : "Personal");
+          setSearch("");
+          setCurrentPage(1);
+        }
+        closeEditor();
+        showToast("Successfully saved your note");
       } finally {
         setIsSubmitting(false);
       }
@@ -2617,25 +2916,50 @@ ${htmlContent || "<p></p>"}
     if (!note || !note.id || isDeleting) return;
 
     const id = note.id;
-    const empId = employeeId || note.employeeId;
+    const empId =
+      note.employeeId ||
+      employeeId ||
+      currentUser?.employeeId ||
+      currentUser?.loginId ||
+      tokenPayload?.employeeId ||
+      tokenPayload?.sub ||
+      "default";
 
     setIsDeleting(true);
     setActionLoadingNoteId(id);
     setActionLoadingType("delete");
 
     try {
-      await dispatch(deleteEmployeeNote({ employeeId: empId, id })).unwrap();
-      setNotes((prev) =>
-        prev.filter(
-          (n) =>
-            String(n.id) !== String(id) &&
-            String(n.parentNoteId ?? "") !== String(id)
-        )
-      );
+      if (ENABLE_REMOTE_API) {
+        const response = await fetch(
+          `${EMPLOYEE_NOTES_API}/${encodeURIComponent(empId)}/${encodeURIComponent(id)}`,
+          {
+            method: "DELETE",
+            headers: getAuthHeaders(),
+          }
+        );
+
+        if (!response.ok && response.status === 404) {
+          try {
+            await fetch(`${EMPLOYEE_NOTES_API}/${encodeURIComponent(id)}`, {
+              method: "DELETE",
+              headers: getAuthHeaders(),
+            });
+          } catch {
+            // ignore fallback error
+          }
+        }
+      }
     } catch (err) {
       console.warn("Failed to delete note via API:", err);
-      showToast("Failed to delete note. Please try again.", "error");
     } finally {
+      const updated = notes.filter(
+        (n) =>
+          String(n.id) !== String(id) &&
+          String(n.parentNoteId || "") !== String(id)
+      );
+      setNotes(updated);
+      localStorage.setItem(storageKey, JSON.stringify(updated));
       setIsDeleting(false);
       setActionLoadingNoteId(null);
       setActionLoadingType(null);
@@ -2665,13 +2989,6 @@ ${htmlContent || "<p></p>"}
     if (!noteToDelete || isDeleting) return;
     await executeDeleteNoteApi(noteToDelete);
   };
-
-  const childNotesToDelete = !noteToDelete || isChildNote(noteToDelete)
-    ? []
-    : notes.filter(
-        (n) =>
-          isChildNote(n) && String(n.parentNoteId) === String(noteToDelete.id)
-      );
 
   return (
     <div className="flex-1 flex flex-col px-3 md:px-5 py-3 min-h-0 bg-[#F4F7FE] font-sans">
@@ -2749,7 +3066,7 @@ ${htmlContent || "<p></p>"}
               <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 pb-2.5 border-b border-gray-200">
                 <div className="flex-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 min-w-0">
                   {/* Project Name (only if Project Note) */}
-                  {formCategory === NoteCategoryEnum.PROJECT_NOTE && (
+                  {formCategory === "Project Note" && (
                     <div className="flex-1 flex items-center gap-2.5 min-w-0">
                       <label className="text-xs sm:text-[13px] font-bold font-sans text-black uppercase tracking-wider shrink-0 whitespace-nowrap">
                         Project Name:<span className="text-red-500">*</span>
@@ -2979,7 +3296,7 @@ ${htmlContent || "<p></p>"}
                       </span>{" "}
                       {isMainModalDragging ? "to attach" : "or drag and drop"}
                       <span className="hidden md:inline text-[11px] text-slate-400 font-normal ml-1.5">
-                        (PDF, Word, Excel, images — max 5 MB)
+                        (PDF, Word, Excel, images)
                       </span>
                     </p>
                   </div>
@@ -2989,7 +3306,6 @@ ${htmlContent || "<p></p>"}
                   ref={fileInputRef}
                   type="file"
                   multiple
-                  accept={ALLOWED_FILE_ACCEPT}
                   className="hidden"
                   onChange={handleFileUpload}
                 />
@@ -3029,7 +3345,7 @@ ${htmlContent || "<p></p>"}
                           >
                             <Eye size={14} />
                           </button>
-                          {(file.s3Key || file.id || file.rawFile) && (
+                          {file.dataUrl && (
                             <button
                               type="button"
                               onClick={() => downloadFile(file)}
@@ -3078,7 +3394,7 @@ ${htmlContent || "<p></p>"}
                   >
                     {isSubmitting && <Loader2 size={15} className="animate-spin" />}
                     {modalMode === "create"
-                      ? formCategory === NoteCategoryEnum.PROJECT_NOTE
+                      ? formCategory === "Project Note"
                         ? "Save Project Note"
                         : "Save Personal Note"
                       : "Save Changes"}
@@ -3094,7 +3410,7 @@ ${htmlContent || "<p></p>"}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
             <div>
               <h1 className="text-2xl font-bold font-sans text-black tracking-tight">
-                {selectedFilter === NoteFilter.PERSONAL ? "Personal Notes" : "Project Notes"}
+                {selectedFilter === "Personal" ? "Personal Notes" : "Project Notes"}
               </h1>
             </div>
 
@@ -3103,7 +3419,7 @@ ${htmlContent || "<p></p>"}
                 {/* Button 1: Create Project Note */}
                 <button
                   type="button"
-                  onClick={() => openCreateNote(NoteCategoryEnum.PROJECT_NOTE)}
+                  onClick={() => openCreateNote("Project Note")}
                   className="inline-flex items-center gap-2 bg-[#4318FF] hover:bg-[#3410d1] text-white text-sm font-bold px-4 py-2.5 rounded-xl shadow-sm shadow-[#4318FF]/25 transition-all active:scale-[0.98] cursor-pointer"
                 >
                   <Plus size={16} className="stroke-[2.5]" />
@@ -3113,7 +3429,7 @@ ${htmlContent || "<p></p>"}
                 {/* Button 2: Create Personal Note */}
                 <button
                   type="button"
-                  onClick={() => openCreateNote(NoteCategoryEnum.PERSONAL_NOTE)}
+                  onClick={() => openCreateNote("Personal Note")}
                   className="inline-flex items-center gap-2 bg-white hover:bg-blue-50/60 text-[#4318FF] border border-[#4318FF]/30 hover:border-[#4318FF] text-sm font-bold px-4 py-2.5 rounded-xl shadow-2xs transition-all active:scale-[0.98] cursor-pointer"
                 >
                   <Plus size={16} className="stroke-[2.5]" />
@@ -3158,22 +3474,9 @@ ${htmlContent || "<p></p>"}
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by project name or title..."
-                className="w-full pl-10 pr-10 py-2.5 text-sm rounded-xl border border-gray-200 bg-white placeholder:text-gray-400 text-slate-800 font-medium focus:outline-none focus:border-[#4318FF] transition-colors"
+                placeholder="Search notes..."
+                className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-gray-200 bg-white placeholder:text-gray-400 text-slate-800 font-medium focus:outline-none focus:border-[#4318FF] transition-colors"
               />
-              {search.trim() !== "" && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearch("");
-                    setDebouncedSearch("");
-                  }}
-                  aria-label="Clear search"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#A3AED0] hover:text-slate-600 cursor-pointer"
-                >
-                  <X size={15} />
-                </button>
-              )}
             </div>
 
             {/* Filter Dropdown */}
@@ -3181,13 +3484,13 @@ ${htmlContent || "<p></p>"}
               <select
                 value={selectedFilter}
                 onChange={(e) => {
-                  setSelectedFilter(e.target.value as NoteFilter);
+                  setSelectedFilter(e.target.value);
                   setCurrentPage(1);
                 }}
                 className="appearance-none pl-4 pr-9 py-2.5 rounded-xl text-sm font-bold border border-gray-200 bg-white text-slate-700 focus:outline-none focus:border-[#4318FF] transition-colors cursor-pointer shadow-sm"
               >
-                <option value={NoteFilter.PROJECT}>Project Notes</option>
-                <option value={NoteFilter.PERSONAL}>Personal Notes</option>
+                <option value="Project">Project Notes</option>
+                <option value="Personal">Personal Notes</option>
               </select>
               <ChevronDown
                 size={15}
@@ -3230,33 +3533,30 @@ ${htmlContent || "<p></p>"}
                         No matching notes found
                       </p>
                       <p className="text-xs text-[#707EAE] mt-1 max-w-sm">
-                        No {selectedFilter === NoteFilter.PERSONAL ? "personal" : "project"} notes match &quot;{search}&quot;. Try clearing your search query.
+                        No {selectedFilter === "Personal" ? "personal" : "project"} notes match &quot;{search}&quot;. Try clearing your search query.
                       </p>
                       <div className="mt-4 flex items-center gap-2.5 flex-wrap justify-center">
                         <button
                           type="button"
-                          onClick={() => {
-                            setSearch("");
-                            setDebouncedSearch("");
-                          }}
+                          onClick={() => setSearch("")}
                           className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#4318FF] hover:bg-[#3410d1] text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-2xs"
                         >
                           Clear Search
                         </button>
-                        {((selectedFilter === NoteFilter.PROJECT && personalNotesCount > 0) ||
-                          (selectedFilter === NoteFilter.PERSONAL && projectNotesCount > 0)) && (
+                        {((selectedFilter === "Project" && personalNotesCount > 0) ||
+                          (selectedFilter === "Personal" && projectNotesCount > 0)) && (
                           <button
                             type="button"
                             onClick={() => {
                               setSelectedFilter(
-                                selectedFilter === NoteFilter.PERSONAL ? NoteFilter.PROJECT : NoteFilter.PERSONAL
+                                selectedFilter === "Personal" ? "Project" : "Personal"
                               );
                               setSearch("");
                             }}
                             className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gray-100 hover:bg-gray-200 text-slate-700 text-xs font-bold rounded-xl transition-all cursor-pointer"
                           >
                             Switch to{" "}
-                            {selectedFilter === NoteFilter.PERSONAL
+                            {selectedFilter === "Personal"
                               ? `Project Notes (${projectNotesCount})`
                               : `Personal Notes (${personalNotesCount})`}
                           </button>
@@ -3269,12 +3569,12 @@ ${htmlContent || "<p></p>"}
                         <FileText size={22} />
                       </div>
                       <p className="text-sm sm:text-base font-bold text-[#2B3674]">
-                        {selectedFilter === NoteFilter.PERSONAL
+                        {selectedFilter === "Personal"
                           ? "No Personal Notes found"
                           : "No Project Notes found"}
                       </p>
                       <p className="text-xs text-[#707EAE] mt-1 max-w-sm">
-                        {selectedFilter === NoteFilter.PERSONAL
+                        {selectedFilter === "Personal"
                           ? `You haven't created any personal notes yet. You have ${projectNotesCount} project note${projectNotesCount === 1 ? "" : "s"}.`
                           : `You haven't created any project notes yet. You have ${personalNotesCount} personal note${personalNotesCount === 1 ? "" : "s"}.`}
                       </p>
@@ -3284,34 +3584,34 @@ ${htmlContent || "<p></p>"}
                             type="button"
                             onClick={() =>
                               openCreateNote(
-                                selectedFilter === NoteFilter.PERSONAL
-                                  ? NoteCategoryEnum.PERSONAL_NOTE
-                                  : NoteCategoryEnum.PROJECT_NOTE
+                                selectedFilter === "Personal"
+                                  ? "Personal Note"
+                                  : "Project Note"
                               )
                             }
                             className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#4318FF] hover:bg-[#3410d1] text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-2xs"
                           >
                             <Plus size={14} className="stroke-[2.5]" />
                             Create{" "}
-                            {selectedFilter === NoteFilter.PERSONAL
-                              ? NoteCategoryEnum.PERSONAL_NOTE
-                              : NoteCategoryEnum.PROJECT_NOTE}
+                            {selectedFilter === "Personal"
+                              ? "Personal Note"
+                              : "Project Note"}
                           </button>
                         )}
-                        {((selectedFilter === NoteFilter.PROJECT && personalNotesCount > 0) ||
-                          (selectedFilter === NoteFilter.PERSONAL && projectNotesCount > 0)) && (
+                        {((selectedFilter === "Project" && personalNotesCount > 0) ||
+                          (selectedFilter === "Personal" && projectNotesCount > 0)) && (
                           <button
                             type="button"
                             onClick={() => {
                               setSelectedFilter(
-                                selectedFilter === NoteFilter.PERSONAL ? NoteFilter.PROJECT : NoteFilter.PERSONAL
+                                selectedFilter === "Personal" ? "Project" : "Personal"
                               );
                               setSearch("");
                             }}
                             className="inline-flex items-center gap-1.5 px-4 py-2 bg-white hover:bg-gray-50 text-[#4318FF] border border-gray-200 text-xs font-bold rounded-xl transition-all cursor-pointer shadow-2xs"
                           >
                             Switch to{" "}
-                            {selectedFilter === NoteFilter.PERSONAL
+                            {selectedFilter === "Personal"
                               ? `Project Notes (${projectNotesCount})`
                               : `Personal Notes (${personalNotesCount})`}
                           </button>
@@ -3329,14 +3629,14 @@ ${htmlContent || "<p></p>"}
                           <th className="py-3.5 pl-6 pr-3 text-[13px] font-bold uppercase tracking-wider text-left text-white w-24 whitespace-nowrap">
                             SL NO
                           </th>
-                          {selectedFilter !== NoteFilter.PERSONAL && (
+                          {selectedFilter !== "Personal" && (
                             <th className="py-3.5 px-4 text-[13px] font-bold uppercase tracking-wider text-left text-white w-[28%] whitespace-nowrap">
                               Project Name
                             </th>
                           )}
                           <th
                             className={`py-3.5 px-4 text-[13px] font-bold uppercase tracking-wider text-left text-white whitespace-nowrap ${
-                              selectedFilter === NoteFilter.PERSONAL ? "w-[52%]" : "w-[30%]"
+                              selectedFilter === "Personal" ? "w-[52%]" : "w-[30%]"
                             }`}
                           >
                             Title
@@ -3352,18 +3652,14 @@ ${htmlContent || "<p></p>"}
                       <tbody className="divide-y divide-gray-100 text-sm">
                         {paginatedNotes.map((note, idx) => {
                           const slNo = (currentPage - 1) * itemsPerPage + idx + 1;
-                          const isProject = note.category === NoteCategoryEnum.PROJECT_NOTE;
+                          const isProject = note.category === "Project Note";
                           const createdDate = note.createdAt || note.updatedAt;
                           const isEven = idx % 2 === 0;
 
-                          const isExpanded = expandedRowProjectNotes.some((id) =>
-                            sameNoteId(id, note.id)
-                          );
+                          const isExpanded = expandedRowProjectNotes.includes(note.id);
                           // Child notes: only notes explicitly added to this parent via the sub-table
                           const childNotes = notes.filter(
-                            (n) =>
-                              isChildNote(n) &&
-                              String(n.parentNoteId) === String(note.id)
+                            (n) => n.parentNoteId === note.id
                           );
 
                           return (
@@ -3399,17 +3695,17 @@ ${htmlContent || "<p></p>"}
                                 </td>
 
                                 {/* 2. Project Name */}
-                                {selectedFilter !== NoteFilter.PERSONAL && (
+                                {selectedFilter !== "Personal" && (
                                   <td className="py-4 px-4 text-left">
                                     <span
                                       className="text-slate-900 text-sm font-bold truncate max-w-[240px] block"
                                       title={
                                         note.projectName ||
-                                        (isProject ? "Untitled Project" : NoteCategoryEnum.PERSONAL_NOTE)
+                                        (isProject ? "Untitled Project" : "Personal Note")
                                       }
                                     >
                                       {note.projectName ||
-                                        (isProject ? "-" : NoteCategoryEnum.PERSONAL_NOTE)}
+                                        (isProject ? "-" : "Personal Note")}
                                     </span>
                                   </td>
                                 )}
@@ -3501,7 +3797,7 @@ ${htmlContent || "<p></p>"}
                               {/* Sub-table below formatted when plus symbol is clicked */}
                               {isExpanded && (
                                 <tr className="bg-gradient-to-r from-blue-50/30 via-indigo-50/20 to-purple-50/20 border-y border-blue-100 animate-fadeIn">
-                                  <td colSpan={selectedFilter === NoteFilter.PERSONAL ? 4 : 5} className="py-3 px-6 sm:px-8">
+                                  <td colSpan={selectedFilter === "Personal" ? 4 : 5} className="py-3 px-6 sm:px-8">
                                     <div className="bg-white rounded-xl border border-blue-100 shadow-xs overflow-hidden p-3.5 space-y-3">
                                       {/* Sub-table header bar */}
                                       {canManageNotes && (
@@ -3832,20 +4128,22 @@ ${htmlContent || "<p></p>"}
                 </button>
 
                 {/* Download Button */}
-                <button
-                  type="button"
-                  onClick={() => downloadFile(previewFile)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-[#4318FF] hover:bg-blue-100 text-xs font-semibold transition-colors cursor-pointer"
-                  title="Download file"
-                >
-                  <Download size={14} />
-                  <span className="hidden sm:inline">Download</span>
-                </button>
+                {previewFile.dataUrl && (
+                  <button
+                    type="button"
+                    onClick={() => downloadFile(previewFile)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-[#4318FF] hover:bg-blue-100 text-xs font-semibold transition-colors cursor-pointer"
+                    title="Download file"
+                  >
+                    <Download size={14} />
+                    <span className="hidden sm:inline">Download</span>
+                  </button>
+                )}
 
                 {/* Close Button */}
                 <button
                   type="button"
-                  onClick={closeFilePreview}
+                  onClick={() => setPreviewFile(null)}
                   className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
                   title="Close modal"
                 >
@@ -3856,19 +4154,14 @@ ${htmlContent || "<p></p>"}
 
             {/* Modal Body / Viewer */}
             <div className="flex-1 min-h-0 flex flex-col bg-gray-50/50 overflow-hidden">
-              {previewLoading ? (
-                <div className="flex-1 min-h-0 flex flex-col items-center justify-center p-8">
-                  <Loader2 size={36} className="animate-spin text-[#4318FF] mb-3" />
-                  <p className="text-xs text-slate-500 font-medium">Loading preview from MinIO...</p>
-                </div>
-              ) : (previewBlobUrl || previewFile.rawFile) &&
+              {previewFile.dataUrl &&
                 (previewFile.name.match(/\.(png|jpe?g|webp|gif|svg)$/i) ||
                   previewFile.type?.startsWith("image/")) ? (
                 /* IMAGE VIEWER */
                 <div className="flex-1 min-h-0 overflow-auto p-4 sm:p-6 flex flex-col items-center justify-center">
                   <div className="bg-white p-3 rounded-2xl border border-gray-200 shadow-sm max-w-full max-h-full flex flex-col items-center">
                     <img
-                      src={previewBlobUrl || ""}
+                      src={previewFile.dataUrl}
                       alt={previewFile.name}
                       className="max-h-[70vh] max-w-full object-contain rounded-xl"
                     />
@@ -3877,13 +4170,13 @@ ${htmlContent || "<p></p>"}
                     </p>
                   </div>
                 </div>
-              ) : (previewBlobUrl || previewFile.rawFile) &&
+              ) : previewFile.dataUrl &&
                 (previewFile.name.toLowerCase().endsWith(".pdf") ||
                   previewFile.type === "application/pdf") ? (
                 /* PDF VIEWER */
                 <div className="flex-1 min-h-0 w-full h-full p-3 sm:p-4 flex flex-col">
                   <iframe
-                    src={previewBlobUrl || ""}
+                    src={previewFile.dataUrl}
                     title={previewFile.name}
                     className="w-full flex-1 min-h-0 rounded-xl border border-gray-200 bg-white shadow-xs"
                   />
@@ -3969,14 +4262,18 @@ ${htmlContent || "<p></p>"}
                   <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-100 text-slate-700 text-xs font-semibold mb-4">
                     <span>File Size: {formatFileSize(previewFile.size)}</span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => downloadFile(previewFile)}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#4318FF] text-white text-xs font-bold hover:bg-[#3410d1] transition-all shadow-sm cursor-pointer"
-                  >
-                    <Download size={14} />
-                    Download File
-                  </button>
+                  {previewFile.dataUrl ? (
+                    <button
+                      type="button"
+                      onClick={() => downloadFile(previewFile)}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#4318FF] text-white text-xs font-bold hover:bg-[#3410d1] transition-all shadow-sm cursor-pointer"
+                    >
+                      <Download size={14} />
+                      Download File
+                    </button>
+                  ) : (
+                    <p className="text-xs text-gray-400 italic">No file data available to download.</p>
+                  )}
                 </div>
               )}
             </div>
@@ -4190,7 +4487,7 @@ ${htmlContent || "<p></p>"}
                       </span>{" "}
                       {isRowModalDragging ? "to attach" : "or drag and drop multiple files"}
                       <span className="hidden md:inline text-[11px] text-slate-400 font-normal ml-2">
-                        (PDF, Word, Excel, images — max 5 MB)
+                        (PDF, Word, Excel, images, or documents)
                       </span>
                     </p>
                   </div>
@@ -4200,7 +4497,6 @@ ${htmlContent || "<p></p>"}
                   ref={rowModalFileInputRef}
                   type="file"
                   multiple
-                  accept={ALLOWED_FILE_ACCEPT}
                   className="hidden"
                   onChange={handleRowModalFileUpload}
                 />
@@ -4240,7 +4536,7 @@ ${htmlContent || "<p></p>"}
                           >
                             <Eye size={14} />
                           </button>
-                          {(file.s3Key || file.id || file.rawFile) && (
+                          {file.dataUrl && (
                             <button
                               type="button"
                               onClick={() => downloadFile(file)}
@@ -4292,49 +4588,20 @@ ${htmlContent || "<p></p>"}
       {/* DELETE CONFIRMATION POPUP MODAL */}
       {noteToDelete && (
         <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fadeIn">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-100 text-center flex flex-col items-center">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-gray-100 text-center flex flex-col items-center">
             <div className="w-12 h-12 rounded-full bg-red-50 text-red-500 flex items-center justify-center mb-3.5 shadow-xs">
               <Trash2 size={22} className="stroke-[2.5]" />
             </div>
 
-            <h3 className="text-base sm:text-lg font-bold text-[#1B2559]">
-              {isChildNote(noteToDelete) ? "Delete Child Note" : "Delete Note"}
-            </h3>
+            <h3 className="text-base sm:text-lg font-bold text-[#1B2559]">Delete Note</h3>
 
-            {isChildNote(noteToDelete) ? (
-              <p className="text-xs sm:text-sm text-gray-500 mt-2 leading-relaxed">
-                Are you sure you want to delete the child note &quot;
-                <span className="font-semibold text-gray-800">
-                  {noteToDelete.title || "Untitled note"}
-                </span>
-                &quot;? This action cannot be undone.
-              </p>
-            ) : (
-              <>
-                <p className="text-xs sm:text-sm text-gray-500 mt-2 leading-relaxed">
-                  Are you sure you want to delete &quot;
-                  <span className="font-semibold text-gray-800">
-                    {noteToDelete.title || "Untitled note"}
-                  </span>
-                  &quot;?
-                  {childNotesToDelete.length > 0
-                    ? " The child notes listed below will also be deleted."
-                    : " This action cannot be undone."}
-                </p>
-                {childNotesToDelete.length > 0 && (
-                  <ul className="mt-3 w-full max-h-32 overflow-y-auto text-left rounded-xl border border-red-100 bg-red-50/70 px-3 py-2 space-y-1">
-                    {childNotesToDelete.map((child) => (
-                      <li
-                        key={String(child.id)}
-                        className="text-xs sm:text-sm text-slate-700 font-medium truncate"
-                      >
-                        • {child.title || "Untitled note"}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </>
-            )}
+            <p className="text-xs sm:text-sm text-gray-500 mt-2 leading-relaxed">
+              Are you sure you want to delete &quot;
+              <span className="font-semibold text-gray-800">
+                {noteToDelete.title || "Untitled note"}
+              </span>
+              &quot;? This action cannot be undone.
+            </p>
 
             <div className="flex items-center justify-center gap-3 mt-6 w-full">
               <button
