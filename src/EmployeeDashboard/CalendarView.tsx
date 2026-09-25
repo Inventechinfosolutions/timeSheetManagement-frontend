@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import dayjs from "dayjs";
 import { useNavigate, useLocation } from "react-router-dom";
+import { Tooltip } from "antd";
 import {
   ChevronLeft,
   ChevronRight,
@@ -355,7 +356,10 @@ const Calendar = ({
 
     // 2. Manual Blocker
     const blocker = getBlocker(date);
-    if (blocker) return blocker.reason || "Admin Blocked";
+    if (blocker) {
+      const by = blocker.blockedBy === UserType.ADMIN ? "Admin" : "Manager";
+      return `Blocked by ${by}${blocker.reason ? ": " + blocker.reason : ""}`;
+    }
 
     // 3. Restricted Activity
     if (!isAdmin && !isManager) {
@@ -672,7 +676,6 @@ const Calendar = ({
                 displayDate.getFullYear() === now.getFullYear();
 
               const isBlocked = isDateBlocked(cellDate);
-              const blockedReason = isBlocked ? getBlockedReason(cellDate) : "";
 
               // Sunday should always show as Weekend, regardless of any data
               const dayOfWeek = cellDate.getDay();
@@ -912,7 +915,7 @@ const Calendar = ({
                 cellClass += " cursor-not-allowed";
               }
 
-              return (
+              const cell = (
                 <div
                   key={day}
                   onClick={() => {
@@ -993,7 +996,6 @@ const Calendar = ({
                     }
                   }}
                   className={`relative flex flex-col items-start justify-between p-2 rounded-2xl border transition-all duration-300 cursor-pointer min-h-[72px] group overflow-hidden ${cellClass}`}
-                  title={isBlocked ? `Blocked by Admin: ${blockedReason}` : ""}
                 >
                   {/* Background Layer for Split Days - Always Colored */}
                   {isSplitDay ? (
@@ -1150,6 +1152,24 @@ const Calendar = ({
                     </div>
                   )}
                 </div>
+              );
+
+              const blocker = getBlocker(cellDate);
+              const blockedTip = blocker ? (
+                <div style={{ textAlign: "left", lineHeight: 1.4 }}>
+                  <div style={{ fontWeight: 600 }}>
+                    Blocked by {blocker.blockedBy === UserType.ADMIN ? "Admin" : "Manager"}
+                  </div>
+                  {blocker.reason && <div>Reason: {blocker.reason}</div>}
+                </div>
+              ) : null;
+
+              return blockedTip ? (
+                <Tooltip key={day} title={blockedTip} color="#4318FF">
+                  {cell}
+                </Tooltip>
+              ) : (
+                cell
               );
             })}
           </div>

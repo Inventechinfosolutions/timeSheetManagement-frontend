@@ -588,6 +588,9 @@ const leaveRequestSlice = createSlice({
       state.submitSuccess = false;
       state.error = null;
     },
+    clearError: (state) => {
+      state.error = null;
+    },
     clearRequests: (state) => {
       state.entities = [];
       state.totalItems = 0;
@@ -760,5 +763,5 @@ const leaveRequestSlice = createSlice({
   },
 });
 
-export const { resetSubmitSuccess, clearRequests } = leaveRequestSlice.actions;
+export const { resetSubmitSuccess, clearRequests, clearError } = leaveRequestSlice.actions;
 export default leaveRequestSlice.reducer;
