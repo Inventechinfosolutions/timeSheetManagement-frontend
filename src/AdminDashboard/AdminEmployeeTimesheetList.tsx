@@ -14,6 +14,7 @@ import {
   Download,
   X,
   Loader2,
+  FileSpreadsheet,
 } from "lucide-react";
 import { saveAs } from "file-saver";
 import {
@@ -29,6 +30,10 @@ const AdminEmployeeTimesheetList = () => {
   const location = useLocation();
   const currentUser = useAppSelector((state: RootState) => state.user.currentUser);
   const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
+  const isAdminOrManager =
+    currentUser?.userType === UserType.ADMIN ||
+    currentUser?.userType === UserType.MANAGER ||
+    (currentUser?.role && currentUser.role.toUpperCase().includes("MNG"));
 
   const basePath = location.pathname.startsWith("/manager-dashboard")
     ? "/manager-dashboard"
@@ -318,11 +323,27 @@ const AdminEmployeeTimesheetList = () => {
 
           <button
             onClick={handleOpenDownloadModal}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#01B574] text-white rounded-full shadow-lg shadow-green-500/20 hover:shadow-green-500/40 hover:-translate-y-0.5 active:scale-95 transition-all text-sm font-bold"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#01B574] text-white rounded-full shadow-lg shadow-green-500/20 hover:shadow-green-500/40 hover:-translate-y-0.5 active:scale-95 transition-all text-sm font-bold cursor-pointer"
           >
             <Download size={16} />
             <span className="whitespace-nowrap">Export Excel</span>
           </button>
+
+          {/* Excel Grid Matrix View Button - Admin & Manager Only */}
+          {isAdminOrManager && (
+            <button
+              onClick={() =>
+                navigate(`${basePath}/attendance-matrix`, {
+                  state: { month: selectedMonth, year: selectedYear },
+                })
+              }
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-[#4318FF] hover:bg-[#4318FF] hover:text-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] border border-[#4318FF]/20 active:scale-95 transition-all text-sm font-bold cursor-pointer"
+              title="Open monthly attendance matrix grid view"
+            >
+              <FileSpreadsheet size={16} />
+              <span className="whitespace-nowrap">Excel Grid View</span>
+            </button>
+          )}
 
           {/* Department Dropdown */}
           {basePath === "/admin-dashboard" && (

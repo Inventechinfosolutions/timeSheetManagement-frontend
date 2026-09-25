@@ -55,6 +55,7 @@ import AdminViewEmployeeDashboard from "./AdminDashboard/AdminViewEmployeeDashbo
 import AdminLeaveManagement from "./AdminDashboard/AdminLeaveManagement";
 import ManagerMapping from "./ManagerMapping/ManagerMapping";
 import ManagerEmployeesView from "./AdminDashboard/ManagerEmployeesView";
+import MonthlyAttendanceMatrix from "./AdminDashboard/MonthlyAttendanceMatrix";
 
 const EmployeeTabWrapper = () => {
   const { tab } = useParams<{ tab: string }>();
@@ -89,6 +90,8 @@ const AdminTabWrapper = () => {
       return <EmployeeListView />;
     case "timesheet-list":
       return <AdminEmployeeTimesheetList />;
+    case "attendance-matrix":
+      return <MonthlyAttendanceMatrix />;
     case "working-details":
       return <EmpWorkingDetails />;
     case "activation-success":
