@@ -10,6 +10,8 @@ import {
 import styled from "styled-components";
 import { useDispatch } from "react-redux";
 import ImageCardWrapper from "./ImageCardWrapper";
+import ExcelViewerModal from "../components/ExcelViewerModal";
+import { openExcelInNewTab } from "../utils/excelViewer";
 
 const StyledWrapper = styled.div`
   width: 100%;
@@ -261,7 +263,7 @@ interface CommonMultipleUploaderProps {
   showPreview?: boolean;
   fetchOnMount?: boolean;
   showDownload?: boolean;
-  allowedTypes?: ("images" | "pdf" | "docs")[];
+  allowedTypes?: ("images" | "pdf" | "docs" | "excel" | "all" | string)[];
   onFileUpload?: (file: FileListResponse) => void;
   onFileDelete?: (fileKey: string) => void;
   successMessage?: string;
@@ -319,6 +321,16 @@ const CommonMultipleUploader: React.FC<CommonMultipleUploaderProps> = ({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState("");
   const [previewTitle, setPreviewTitle] = useState("");
+
+  const [excelViewerModal, setExcelViewerModal] = useState<{
+    open: boolean;
+    fileName: string;
+    blob?: Blob | null;
+  }>({
+    open: false,
+    fileName: "",
+    blob: null,
+  });
 
   const showSuccessMessage = (msg: string) => {
     messageApi.success(msg, 4);
@@ -514,10 +526,14 @@ const CommonMultipleUploader: React.FC<CommonMultipleUploaderProps> = ({
   };
 
   const getAcceptedFileTypes = () => {
+    if (!allowedTypes || allowedTypes.includes("all")) {
+      return {};
+    }
+
     const acceptedTypes: { [key: string]: string[] } = {};
 
     if (allowedTypes.includes("images")) {
-      acceptedTypes["image/*"] = [".png", ".jpg", ".jpeg", ".webp", ".gif"];
+      acceptedTypes["image/*"] = [".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg"];
     }
 
     if (allowedTypes.includes("pdf")) {
@@ -529,6 +545,14 @@ const CommonMultipleUploader: React.FC<CommonMultipleUploaderProps> = ({
       acceptedTypes[
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
       ] = [".docx"];
+    }
+
+    if (allowedTypes.includes("excel")) {
+      acceptedTypes["application/vnd.ms-excel"] = [".xls"];
+      acceptedTypes[
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      ] = [".xlsx"];
+      acceptedTypes["text/csv"] = [".csv"];
     }
 
     return acceptedTypes;
@@ -632,6 +656,44 @@ const CommonMultipleUploader: React.FC<CommonMultipleUploaderProps> = ({
       }
     }
 
+    if (isExcelFile(file.name)) {
+      if (isValidUrl(file.url) && file.url?.startsWith("blob:")) {
+        try {
+          const res = await fetch(file.url);
+          const blob = await res.blob();
+          await openExcelInNewTab(blob, file.name);
+          return;
+        } catch (e) {
+          console.error("Local blob fetch error:", e);
+        }
+      }
+
+      try {
+        if (!previewFile) {
+          showErrorMessage("Preview action not configured");
+          return;
+        }
+        const response = await dispatch(
+          previewFile({
+            entityId: selectedFile.entityId,
+            refId: selectedFile.refId,
+            refType: selectedFile.refType,
+            entityType: selectedFile.entityType,
+            key: file.uid,
+          }),
+        ).unwrap();
+
+        const contentType =
+          response.headers?.["content-type"] || "application/octet-stream";
+        const blob = new Blob([response.data], { type: contentType });
+        await openExcelInNewTab(blob, file.name);
+        return;
+      } catch (error) {
+        showErrorMessage("Failed to preview Excel file");
+        return;
+      }
+    }
+
     if (isValidUrl(file.url) && file.url?.startsWith("blob:")) {
       window.open(file.url, "_blank");
       return;
@@ -720,6 +782,11 @@ const CommonMultipleUploader: React.FC<CommonMultipleUploaderProps> = ({
   const isImageFile = (fileName: string) => {
     const imageExtensions = [".png", ".jpg", ".jpeg", ".webp", ".gif"];
     return imageExtensions.some((ext) => fileName.toLowerCase().endsWith(ext));
+  };
+
+  const isExcelFile = (fileName: string) => {
+    const excelExtensions = [".xlsx", ".xls", ".csv"];
+    return excelExtensions.some((ext) => fileName.toLowerCase().endsWith(ext));
   };
 
   const getFileExtension = (fileName: string) => {
@@ -981,6 +1048,27 @@ const CommonMultipleUploader: React.FC<CommonMultipleUploaderProps> = ({
           src={previewImage}
         />
       </Modal>
+
+      <ExcelViewerModal
+        open={excelViewerModal.open}
+        onClose={() =>
+          setExcelViewerModal({
+            open: false,
+            fileName: "",
+            blob: null,
+          })
+        }
+        fileName={excelViewerModal.fileName}
+        blob={excelViewerModal.blob}
+        onDownload={() => {
+          const selectedUploadFile = existingFiles.find(
+            (f) => f.name === excelViewerModal.fileName,
+          );
+          if (selectedUploadFile) {
+            handleDownload(selectedUploadFile);
+          }
+        }}
+      />
     </StyledWrapper>
   );
 };

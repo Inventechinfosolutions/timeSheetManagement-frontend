@@ -15,6 +15,7 @@ import {
   ChevronDown,
   ChevronRight,
   LogOut,
+  FileText,
 } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
@@ -57,6 +58,7 @@ const SidebarLayout = ({
           { name: "My Dashboard", icon: LayoutGrid },
           { name: "My Timesheet", icon: Calendar },
           { name: "My Timesheet History", icon: Eye },
+          { name: "Notes", icon: FileText },
           { name: "Request Management ", icon: Calendar },
           { name: "Account Settings", icon: User },
         ],
@@ -81,6 +83,7 @@ const SidebarLayout = ({
       { name: "Employee Directory", icon: Users },
       { name: "Employee Timesheet", icon: AlarmClock },
       { name: "Request Management", icon: Calendar },
+      { name: "Notes", icon: FileText },
       { name: "Manager Mapping", icon: Users },
       { name: "Notification", icon: Bell },
     ],
@@ -115,6 +118,8 @@ const SidebarLayout = ({
         return "Leave Balance";
       case "work-management":
         return "Request Management";
+      case "notes":
+        return "Notes";
       case "my-dashboard":
         return "My Dashboard";
       case "my-timesheet":

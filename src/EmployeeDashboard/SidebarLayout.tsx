@@ -9,6 +9,7 @@ import {
   Eye,
   Menu,
   LogOut,
+  FileText,
 } from "lucide-react";
 import { useAppSelector, useAppDispatch } from "../hooks";
 import { useParams, useNavigate } from "react-router-dom";
@@ -59,6 +60,9 @@ const SidebarLayout = ({
         return "Request Management";
       case "leave-balance":
         return "Leave Balance";
+      case "notes":
+      case "employee-notes":
+        return "Employee Notes";
       default:
         return "Dashboard";
     }
@@ -100,6 +104,7 @@ const SidebarLayout = ({
     { name: "My Timesheet", icon: Calendar },
     { name: "Timesheet History", icon: Eye },
     { name: "Request Management", icon: Calendar },
+    { name: "Employee Notes", icon: FileText },
     { name: "Account Settings", icon: User },
     //{ name: 'Change Password', icon: Lock },
   ];
