@@ -148,6 +148,26 @@ export const downloadAttendanceReport = async (month: number, year: number) => {
   return response.data;
 };
 
+// 1.65 Fetch Monthly Matrix Data for UI Grid: GET /monthly-report-data
+export const fetchMonthlyAttendanceMatrix = async (
+  month: number,
+  year: number,
+  search?: string,
+  department?: string,
+) => {
+  const params: any = { month, year };
+  if (search && search.trim()) {
+    params.search = search.trim();
+  }
+  if (department && department.trim() && department !== "All Departments") {
+    params.department = department.trim();
+  }
+  const response = await axios.get(`${apiUrl}/monthly-report-data`, {
+    params,
+  });
+  return response.data;
+};
+
 // 1.7 Download Individual PDF Report: GET /download-pdf
 export const downloadAttendancePdfReport = async (month: number, year: number, employeeId?: string, startDate?: string, endDate?: string) => {
   const response = await axios.get(`${apiUrl}/download-pdf`, {

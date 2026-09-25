@@ -71,6 +71,7 @@ const ManagerLayout = () => {
       case "timesheet-list":
       case "timesheet-view":
       case "working-details":
+      case "attendance-matrix":
         return "Employee Timesheet";
       case "work-management":
         return "Request Management";

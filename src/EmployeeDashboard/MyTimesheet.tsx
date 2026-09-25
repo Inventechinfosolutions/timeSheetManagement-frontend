@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import dayjs from "dayjs";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
-import { Modal, message } from "antd";
+import { Modal, message, Tooltip } from "antd";
 import {
   ChevronLeft,
   ChevronRight,
@@ -509,7 +509,10 @@ const MyTimesheet = ({
 
     // 2. Manual Blocker
     const blocker = getBlocker(date);
-    if (blocker) return blocker.reason || "Admin Blocked";
+    if (blocker) {
+      const by = blocker.blockedBy === UserType.ADMIN ? "Admin" : "Manager";
+      return `Blocked by ${by}${blocker.reason ? ": " + blocker.reason : ""}`;
+    }
 
     // 3. Restricted Activity
     if (!isAdmin && !isManager) {
@@ -2320,7 +2323,7 @@ const MyTimesheet = ({
 
             const isError = inputError?.index === idx;
 
-            return (
+            const cell = (
               <div
                 key={idx}
                 id={`day-${day.fullDate.getTime()}`}
@@ -2461,6 +2464,24 @@ const MyTimesheet = ({
                               : displayStatus || AttendanceStatus.UPCOMING}
                 </div>
               </div>
+            );
+
+            const blocker = getBlocker(day.fullDate);
+            const blockedTip = blocker ? (
+              <div style={{ textAlign: "left", lineHeight: 1.4 }}>
+                <div style={{ fontWeight: 600 }}>
+                  Blocked by {blocker.blockedBy === UserType.ADMIN ? "Admin" : "Manager"}
+                </div>
+                {blocker.reason && <div>Reason: {blocker.reason}</div>}
+              </div>
+            ) : null;
+
+            return blockedTip ? (
+              <Tooltip key={idx} title={blockedTip} color="#4318FF">
+                {cell}
+              </Tooltip>
+            ) : (
+              cell
             );
           })}
         </div>

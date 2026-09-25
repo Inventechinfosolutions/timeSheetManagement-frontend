@@ -270,6 +270,52 @@ export const updateLeaveRequestStatus = createAsyncThunk(
   }
 );
 
+// Async Thunk for Bulk Approve Leave Requests (Admin)
+export const bulkApproveLeaveRequests = createAsyncThunk(
+  "leaveRequest/bulkApprove",
+  async (
+    params: {
+      department?: string;
+      search?: string;
+      month?: string;
+      year?: string;
+      requestType?: string;
+      ids?: number[];
+    },
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await axios.post(`${apiUrl}/bulk/approve`, params);
+      return response.data as { successCount: number; failCount: number; total: number };
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to bulk approve requests");
+    }
+  }
+);
+
+// Async Thunk for Bulk Reject Leave Requests (Admin)
+export const bulkRejectLeaveRequests = createAsyncThunk(
+  "leaveRequest/bulkReject",
+  async (
+    params: {
+      department?: string;
+      search?: string;
+      month?: string;
+      year?: string;
+      requestType?: string;
+      ids?: number[];
+    },
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await axios.post(`${apiUrl}/bulk/reject`, params);
+      return response.data as { successCount: number; failCount: number; total: number };
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to bulk reject requests");
+    }
+  }
+);
+
 // Async Thunk for Explicit Attendance Clearance
 export const clearAttendanceForRequest = createAsyncThunk(
   "leaveRequest/clearAttendance",
@@ -542,6 +588,9 @@ const leaveRequestSlice = createSlice({
       state.submitSuccess = false;
       state.error = null;
     },
+    clearError: (state) => {
+      state.error = null;
+    },
     clearRequests: (state) => {
       state.entities = [];
       state.totalItems = 0;
@@ -714,5 +763,5 @@ const leaveRequestSlice = createSlice({
   },
 });
 
-export const { resetSubmitSuccess, clearRequests } = leaveRequestSlice.actions;
+export const { resetSubmitSuccess, clearRequests, clearError } = leaveRequestSlice.actions;
 export default leaveRequestSlice.reducer;
