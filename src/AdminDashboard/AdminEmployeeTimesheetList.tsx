@@ -34,6 +34,7 @@ const AdminEmployeeTimesheetList = () => {
     currentUser?.userType === UserType.ADMIN ||
     currentUser?.userType === UserType.MANAGER ||
     (currentUser?.role && currentUser.role.toUpperCase().includes("MNG"));
+  const canViewAttendanceMatrix = isAdminOrManager || isReceptionist;
 
   const basePath = location.pathname.startsWith("/manager-dashboard")
     ? "/manager-dashboard"
@@ -329,8 +330,8 @@ const AdminEmployeeTimesheetList = () => {
             <span className="whitespace-nowrap">Export Excel</span>
           </button>
 
-          {/* Excel Grid Matrix View Button - Admin & Manager Only */}
-          {isAdminOrManager && (
+          {/* Excel Grid Matrix View Button - Admin, Manager & Receptionist */}
+          {canViewAttendanceMatrix && (
             <button
               onClick={() =>
                 navigate(`${basePath}/attendance-matrix`, {
