@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef } from "react";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
-import { DatePicker, ConfigProvider, Checkbox, Modal, Select } from "antd";
+import { DatePicker, ConfigProvider, Checkbox, Modal, Select, Tooltip } from "antd";
 import dayjs from "dayjs";
 import {
   getLeaveHistory,
   getLeaveStats,
   submitLeaveRequest,
   resetSubmitSuccess,
+  clearError,
   updateLeaveRequestStatus,
   uploadLeaveRequestFile,
   downloadLeaveRequestFile,
@@ -156,6 +157,8 @@ const LeaveManagement = () => {
   const startDateRef = useRef<HTMLDivElement>(null);
   const endDateRef = useRef<HTMLDivElement>(null);
   const descriptionRef = useRef<HTMLDivElement>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
+  const modalBodyRef = useRef<HTMLDivElement>(null);
   const [cancelModal, setCancelModal] = useState<{
     isOpen: boolean;
     id: number | null;
@@ -1008,6 +1011,30 @@ const LeaveManagement = () => {
   }, [submitSuccess, dispatch, employeeId]);
 
   const totalPages = totalPagesFromRedux || 0;
+
+  // Auto-scroll to error banner whenever submission fails with error
+  useEffect(() => {
+    if (error && isModalOpen) {
+      const timer = setTimeout(() => {
+        if (errorRef.current) {
+          errorRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+        } else if (modalBodyRef.current) {
+          modalBodyRef.current.scrollTo({
+            top: modalBodyRef.current.scrollHeight,
+            behavior: "smooth",
+          });
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [error, isModalOpen]);
+
+  // Clear error whenever user changes the date range
+  useEffect(() => {
+    if (error) {
+      dispatch(clearError());
+    }
+  }, [formData.startDate, formData.endDate]);
 
   const handleOpenModal = (label: string) => {
     setIsViewMode(false);
@@ -2341,7 +2368,7 @@ const LeaveManagement = () => {
           </div>
 
           {/* Modal Body */}
-          <div className="p-6 space-y-5 overflow-y-auto flex-1 custom-scrollbar">
+          <div ref={modalBodyRef} className="p-6 space-y-5 overflow-y-auto flex-1 custom-scrollbar">
             {/* Email recipients - in card */}
             <div className="rounded-2xl border border-[#E0E7FF] bg-[#F8FAFC] p-4 shadow-sm">
               <div className="space-y-3">
@@ -2603,6 +2630,7 @@ const LeaveManagement = () => {
                           formData.startDate ? dayjs(formData.startDate) : null
                         }
                         onChange={(date) => {
+                          if (error) dispatch(clearError());
                           const newStartDate = date
                             ? date.format("YYYY-MM-DD")
                             : "";
@@ -2661,6 +2689,7 @@ const LeaveManagement = () => {
                           formData.endDate ? dayjs(formData.endDate) : null
                         }
                         onChange={(date) => {
+                          if (error) dispatch(clearError());
                           setFormData({
                             ...formData,
                             endDate: date ? date.format("YYYY-MM-DD") : "",
@@ -2863,7 +2892,10 @@ const LeaveManagement = () => {
 
             {/* Error Message - shown above buttons */}
             {error && (
-              <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+              <div
+                ref={errorRef}
+                className="bg-red-50 border-l-4 border-red-500 p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2"
+              >
                 <XCircle size={20} className="text-red-500 shrink-0" />
                 <p className="text-xs font-bold text-red-600 leading-tight">
                   {typeof error === "string"

@@ -25,6 +25,9 @@ const AdminLeaveManagement = lazy(
 const AdminEmployeeCalendarView = lazy(
   () => import("../AdminDashboard/AdminEmployeeCalendarView"),
 );
+const MonthlyAttendanceMatrix = lazy(
+  () => import("../AdminDashboard/MonthlyAttendanceMatrix"),
+);
 
 export const adminComponentConfigs = [
   {
@@ -67,6 +70,10 @@ export const adminComponentConfigs = [
   {
     path: "/admin-dashboard/timesheet-list",
     Component: AdminEmployeeTimesheetList,
+  },
+  {
+    path: "/admin-dashboard/attendance-matrix",
+    Component: MonthlyAttendanceMatrix,
   },
   {
     path: "/admin-dashboard/work-management",
