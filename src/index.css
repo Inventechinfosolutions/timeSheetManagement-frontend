@@ -343,3 +343,133 @@ input[type="password"]::-webkit-password-reveal-button {
   overflow: hidden !important;
   border: 1px solid rgba(255, 255, 255, 0.5) !important;
 }
+
+/* Notes Management Rich Text Editor & Content Styles */
+.notes-rich-editor[contenteditable="true"]:empty:before {
+  content: attr(data-placeholder);
+  color: #94a3b8;
+  pointer-events: none;
+  display: block;
+}
+
+.notes-rich-editor {
+  min-height: 480px;
+  outline: none;
+}
+
+.notes-rich-editor, .notes-content-view {
+  font-size: 0.95rem;
+  line-height: 1.75;
+  color: #1B2559;
+  word-break: break-word;
+}
+
+.notes-rich-editor h1, .notes-content-view h1 {
+  font-size: 1.6rem !important;
+  font-weight: 700 !important;
+  color: #1B2559 !important;
+  margin-top: 1rem !important;
+  margin-bottom: 0.5rem !important;
+  line-height: 1.3 !important;
+}
+
+.notes-rich-editor h2, .notes-content-view h2 {
+  font-size: 1.3rem !important;
+  font-weight: 700 !important;
+  color: #1B2559 !important;
+  margin-top: 0.85rem !important;
+  margin-bottom: 0.4rem !important;
+  line-height: 1.35 !important;
+}
+
+.notes-rich-editor h3, .notes-content-view h3 {
+  font-size: 1.15rem !important;
+  font-weight: 600 !important;
+  color: #1B2559 !important;
+  margin-top: 0.75rem !important;
+  margin-bottom: 0.35rem !important;
+}
+
+.notes-rich-editor p, .notes-content-view p {
+  margin-bottom: 0.6rem !important;
+  line-height: 1.75 !important;
+}
+
+.notes-rich-editor ul, .notes-content-view ul {
+  list-style-type: disc !important;
+  padding-left: 1.75rem !important;
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.6rem !important;
+}
+
+.notes-rich-editor ol, .notes-content-view ol {
+  list-style-type: decimal !important;
+  padding-left: 1.75rem !important;
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.6rem !important;
+}
+
+.notes-rich-editor li, .notes-content-view li {
+  margin-bottom: 0.3rem !important;
+  line-height: 1.7 !important;
+}
+
+.notes-rich-editor blockquote, .notes-content-view blockquote {
+  border-left: 4px solid #4318FF !important;
+  padding: 0.5rem 1rem !important;
+  margin-top: 0.75rem !important;
+  margin-bottom: 0.75rem !important;
+  color: #475569 !important;
+  font-style: italic !important;
+  background: rgba(67, 24, 255, 0.04) !important;
+  border-radius: 0 8px 8px 0 !important;
+}
+
+.notes-rich-editor a, .notes-content-view a {
+  color: #4318FF !important;
+  text-decoration: underline !important;
+  font-weight: 500;
+}
+
+.notes-rich-editor code, .notes-content-view code {
+  background: #F1F5F9 !important;
+  color: #0F172A !important;
+  padding: 0.15rem 0.4rem !important;
+  border-radius: 4px !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  font-size: 0.875em !important;
+}
+
+.notes-rich-editor pre, .notes-content-view pre {
+  background: #0F172A !important;
+  color: #F8FAFC !important;
+  padding: 1rem !important;
+  border-radius: 10px !important;
+  overflow-x: auto !important;
+  margin: 0.75rem 0 !important;
+}
+
+.notes-rich-editor hr, .notes-content-view hr {
+  border: 0 !important;
+  border-top: 1px solid #E2E8F0 !important;
+  margin: 1.25rem 0 !important;
+}
+
+.notes-rich-editor table, .notes-content-view table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  margin: 1rem 0 !important;
+}
+
+.notes-rich-editor th, .notes-content-view th,
+.notes-rich-editor td, .notes-content-view td {
+  border: 1px solid #E2E8F0 !important;
+  padding: 8px 12px !important;
+  text-align: left !important;
+}
+
+.notes-rich-editor th, .notes-content-view th {
+  background-color: #F8FAFC !important;
+  font-weight: 600 !important;
+  color: #1B2559 !important;
+}

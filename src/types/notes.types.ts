@@ -1,4 +1,4 @@
-export type NoteType = 'PERSONAL' | 'PROJECT';
+export type NoteType = "PERSONAL" | "PROJECT";
 
 export interface NoteAttachment {
   name: string;
@@ -50,6 +50,7 @@ export interface CreateNotePayload {
     description?: string;
   }>;
   files?: File[];
+  attachmentKeys?: string[];
 }
 
 export interface UpdateNotePayload {
@@ -62,6 +63,7 @@ export interface UpdateNotePayload {
   isPinned?: boolean;
   isArchived?: boolean;
   orderIndex?: number;
+  parentId?: number | null;
 }
 
 export interface CreateSubNotePayload {
@@ -71,6 +73,7 @@ export interface CreateSubNotePayload {
   color?: string;
   orderIndex?: number;
   files?: File[];
+  attachmentKeys?: string[];
 }
 
 export interface QueryNotesParams {
