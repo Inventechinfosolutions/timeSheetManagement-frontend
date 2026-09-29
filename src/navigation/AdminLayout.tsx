@@ -38,6 +38,9 @@ const AdminLayout = () => {
     if (path.includes("/admin-dashboard/leave-balance")) {
       return "Leave Balance";
     }
+    if (path.includes("/admin-dashboard/notes")) {
+      return "Notes";
+    }
     if (
       path.includes("/admin-dashboard/manager-mapping") ||
       path.includes("/admin-dashboard/manager-employees/")
@@ -63,6 +66,8 @@ const AdminLayout = () => {
         return "Leave Balance";
       case "manager-mapping":
         return "Manager Mapping";
+      case "notes":
+        return "Notes";
       default:
         return "Admin Dashboard";
     }
@@ -91,6 +96,8 @@ const AdminLayout = () => {
       navigate("/admin-dashboard/leave-balance");
     } else if (tabName === "Manager Mapping") {
       navigate("/admin-dashboard/manager-mapping");
+    } else if (tabName === "Notes") {
+      navigate("/admin-dashboard/notes");
     }
   };
 

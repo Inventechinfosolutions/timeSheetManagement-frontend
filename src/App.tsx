@@ -55,6 +55,7 @@ import AdminViewEmployeeDashboard from "./AdminDashboard/AdminViewEmployeeDashbo
 import AdminLeaveManagement from "./AdminDashboard/AdminLeaveManagement";
 import ManagerMapping from "./ManagerMapping/ManagerMapping";
 import ManagerEmployeesView from "./AdminDashboard/ManagerEmployeesView";
+import NotesManagement from "./Notes/NotesManagement";
 
 const EmployeeTabWrapper = () => {
   const { tab } = useParams<{ tab: string }>();
@@ -74,6 +75,9 @@ const EmployeeTabWrapper = () => {
       return <LeaveManagement />;
     case "leave-balance":
       return <LeaveBalance />;
+    case "notes":
+    case "employee-notes":
+      return <NotesManagement />;
     default:
       return <Navigate to="/employee-dashboard" replace />;
   }
@@ -101,6 +105,9 @@ const AdminTabWrapper = () => {
       return <AdminLeaveManagement />;
     case "leave-balance":
       return <LeaveBalance />;
+    case "notes":
+    case "employee-notes":
+      return <NotesManagement />;
     case "manager-mapping":
       return <ManagerMapping />;
     case "manager-employees":
