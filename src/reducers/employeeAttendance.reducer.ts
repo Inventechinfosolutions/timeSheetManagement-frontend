@@ -144,7 +144,9 @@ export const downloadAttendanceReport = async (month: number, year: number) => {
   const response = await axios.get(`${apiUrl}/download-report`, {
     params: { month, year },
     responseType: "blob", // Important for file download
-  });
+    skipGlobalLoader: true,
+    headers: { "x-skip-loader": "true" },
+  } as any);
   return response.data;
 };
 
@@ -154,6 +156,7 @@ export const fetchMonthlyAttendanceMatrix = async (
   year: number,
   search?: string,
   department?: string,
+  status?: string,
 ) => {
   const params: any = { month, year };
   if (search && search.trim()) {
@@ -162,9 +165,14 @@ export const fetchMonthlyAttendanceMatrix = async (
   if (department && department.trim() && department !== "All Departments") {
     params.department = department.trim();
   }
+  if (status && status.trim() && status !== "All") {
+    params.status = status.trim();
+  }
   const response = await axios.get(`${apiUrl}/monthly-report-data`, {
     params,
-  });
+    skipGlobalLoader: true,
+    headers: { "x-skip-loader": "true" },
+  } as any);
   return response.data;
 };
 

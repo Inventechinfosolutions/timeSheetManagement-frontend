@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../hooks";
+import { useDebounce } from "../hooks/useDebounce";
 import {
   DatePicker,
   ConfigProvider,
@@ -44,6 +45,7 @@ import {
   LeaveRequestType,
   UserType,
   HalfDayType,
+  UserStatus,
 } from "../enums";
 import {
   Home,
@@ -63,6 +65,10 @@ import {
   Building2,
   ArrowRightLeft,
   Filter,
+  Users,
+  Sparkles,
+  FileText,
+  ShieldCheck,
 } from "lucide-react";
 import { message } from "antd";
 import CommonMultipleUploader from "../EmployeeDashboard/CommonMultipleUploader";
@@ -255,7 +261,7 @@ const AdminLeaveManagement = () => {
 
   const itemsPerPage = 10;
   const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const [debouncedSearchTerm, flushDebouncedSearchTerm] = useDebounce(searchTerm, 400);
   const [displayedEmployees, setDisplayedEmployees] = useState<any[]>([]);
   const [empPage, setEmpPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
@@ -444,14 +450,6 @@ const AdminLeaveManagement = () => {
     return disabledDate(current);
   };
 
-  // Debounce search term
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
-
   // Reset state when search term changes
   useEffect(() => {
     setEmpPage(1);
@@ -470,6 +468,7 @@ const AdminLeaveManagement = () => {
         page: empPage,
         limit: 20,
         includeSelf: true,
+        skipGlobalLoader: true,
       }),
     ).then((action: any) => {
       if (action.payload && action.payload.data) {
@@ -517,6 +516,7 @@ const AdminLeaveManagement = () => {
       ) {
         setIsEmployeeDropdownOpen(false);
         setSearchTerm(""); // Clear search when closing via click outside
+        flushDebouncedSearchTerm("");
       }
     };
 
@@ -524,7 +524,7 @@ const AdminLeaveManagement = () => {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, []);
+  }, [flushDebouncedSearchTerm]);
 
   // Helper to determine if a request type/half day choice is "Away" (deductible)
   const isAway = (type: string | null | undefined): boolean => {
@@ -1114,6 +1114,7 @@ const AdminLeaveManagement = () => {
     setSelectedEmployee(null);
     setIsEmployeeDropdownOpen(false);
     setSearchTerm("");
+    flushDebouncedSearchTerm("");
     setCurrentPage(1);
     setSelectedMonth("All");
     setSelectedYear("All");
@@ -1770,7 +1771,7 @@ const AdminLeaveManagement = () => {
                     setIsEmployeeDropdownOpen(!isEmployeeDropdownOpen)
                   }
                   className={`w-full px-4 py-2.5 rounded-xl bg-white border ${errors.employee ? "border-red-500" : "border-[#E9EDF7]"
-                    } hover:border-[#A3AED0] focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-semibold text-sm text-[#2B3674] flex items-center justify-between shadow-sm`}
+                    } hover:border-[#A3AED0] focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-semibold text-sm text-[#2B3674] flex items-center justify-between shadow-sm cursor-pointer`}
                 >
                   <div className="flex items-center gap-2 min-w-0">
                     <User size={16} className="text-[#4318FF] shrink-0" />
@@ -1779,23 +1780,47 @@ const AdminLeaveManagement = () => {
                         ? `${selectedEmployee.fullName || selectedEmployee.aliasLoginName || "Unknown"} (${selectedEmployee.employeeId || selectedEmployee.id})`
                         : "Please Select  employee"}
                     </span>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    {selectedEmployee && (
+                    {selectedEmployee?.userStatus && (
                       <span
-                        role="button"
-                        onClick={handleClearEmployee}
-                        className="p-1 rounded-full hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
-                        title="Clear selection"
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-[6px] border shrink-0 tracking-wide uppercase ${
+                          selectedEmployee.userStatus.toUpperCase() === UserStatus.ACTIVE
+                            ? "bg-emerald-50 text-emerald-600 border-emerald-200/80"
+                            : selectedEmployee.userStatus.toUpperCase() === UserStatus.INACTIVE
+                            ? "bg-rose-50 text-rose-600 border-rose-200/80"
+                            : selectedEmployee.userStatus.toUpperCase() === UserStatus.DRAFT
+                            ? "bg-amber-50 text-amber-600 border-amber-200/80"
+                            : "bg-gray-100 text-gray-600 border-gray-200"
+                        }`}
                       >
-                        <X size={14} />
+                        {selectedEmployee.userStatus.toUpperCase() === UserStatus.ACTIVE
+                          ? "Active"
+                          : selectedEmployee.userStatus.toUpperCase() === UserStatus.INACTIVE
+                          ? "Inactive"
+                          : selectedEmployee.userStatus.toUpperCase() === UserStatus.DRAFT
+                          ? "Draft"
+                          : selectedEmployee.userStatus}
                       </span>
                     )}
-                    <ChevronDown
-                      size={16}
-                      className={`text-gray-400 transition-transform ${isEmployeeDropdownOpen ? "rotate-180" : ""
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {selectedEmployee ? (
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        onClick={handleClearEmployee}
+                        className="p-1 rounded-full hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
+                        title="Clear selection"
+                      >
+                        <X size={15} />
+                      </span>
+                    ) : (
+                      <ChevronDown
+                        size={16}
+                        className={`text-gray-400 transition-transform cursor-pointer ${
+                          isEmployeeDropdownOpen ? "rotate-180" : ""
                         }`}
-                    />
+                      />
+                    )}
                   </div>
                 </button>
                 {errors.employee && (
@@ -1820,48 +1845,92 @@ const AdminLeaveManagement = () => {
                           placeholder="Search by employee ID..."
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
-                          className="w-full pl-9 pr-4 py-2 bg-[#F4F7FE] rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#4318FF]/20 text-[#2B3674]"
+                          className="w-full pl-9 pr-9 py-2 bg-[#F4F7FE] rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#4318FF]/20 text-[#2B3674]"
                           onClick={(e) => e.stopPropagation()}
                           autoFocus
                         />
+                        {searchTerm && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSearchTerm("");
+                              flushDebouncedSearchTerm("");
+                            }}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-200/60 transition-colors cursor-pointer"
+                            title="Clear search"
+                          >
+                            <X size={14} />
+                          </button>
+                        )}
                       </div>
                     </div>
                     {loadingEmployees && empPage === 1 ? (
-                      <div className="p-4 flex justify-center items-center text-[#4318FF]">
-                        <Loader2 size={20} className="animate-spin" />
+                      <div className="py-8 flex justify-center items-center text-[#4318FF]">
+                        <Loader2 size={22} className="animate-spin text-[#4318FF]" />
                       </div>
                     ) : displayedEmployees.length === 0 ? (
                       <div className="p-4 text-center text-gray-500 text-sm">
                         No employees found
                       </div>
                     ) : (
-                      displayedEmployees.map((emp: any) => (
-                        <button
-                          key={emp.id || emp.employeeId}
-                          onClick={() => {
-                            setSelectedEmployee(emp);
-                            setIsEmployeeDropdownOpen(false);
-                            setErrors((prev) => ({ ...prev, employee: "" }));
-                            setCurrentPage(1);
-                            setSearchTerm("");
-                          }}
-                          className={`w-full px-5 py-3 text-left hover:bg-[#F4F7FE] transition-colors flex items-center gap-3 first:rounded-t-2xl last:rounded-b-2xl ${(selectedEmployee?.employeeId ||
-                              selectedEmployee?.id) === (emp.employeeId || emp.id)
-                              ? "bg-[#F4F7FE] font-bold"
-                              : ""
-                            }`}
-                        >
-                          <User size={18} className="text-[#4318FF]" />
-                          <span className="text-sm text-[#2B3674]">
-                            {emp.fullName || emp.aliasLoginName || "Unknown"} (
-                            {emp.employeeId || emp.id})
-                          </span>
-                        </button>
-                      ))
+                      displayedEmployees.map((emp: any) => {
+                        const statusUpper = (emp.userStatus || "").toUpperCase();
+                        let badgeClass = "bg-gray-100 text-gray-600 border-gray-200";
+                        let badgeLabel = emp.userStatus;
+
+                        if (statusUpper === UserStatus.ACTIVE) {
+                          badgeClass = "bg-emerald-50 text-emerald-600 border-emerald-200/80";
+                          badgeLabel = "Active";
+                        } else if (statusUpper === UserStatus.INACTIVE) {
+                          badgeClass = "bg-rose-50 text-rose-600 border-rose-200/80";
+                          badgeLabel = "Inactive";
+                        } else if (statusUpper === UserStatus.DRAFT) {
+                          badgeClass = "bg-amber-50 text-amber-600 border-amber-200/80";
+                          badgeLabel = "Draft";
+                        } else if (statusUpper === UserStatus.RESET_REQUIRED) {
+                          badgeClass = "bg-orange-50 text-orange-600 border-orange-200/80";
+                          badgeLabel = "Reset Req.";
+                        }
+
+                        return (
+                          <button
+                            key={emp.id || emp.employeeId}
+                            onClick={() => {
+                              setSelectedEmployee(emp);
+                              setIsEmployeeDropdownOpen(false);
+                              setErrors((prev) => ({ ...prev, employee: "" }));
+                              setCurrentPage(1);
+                              setSearchTerm("");
+                              flushDebouncedSearchTerm("");
+                            }}
+                            className={`w-full px-4 py-2.5 text-left hover:bg-[#F4F7FE] transition-colors flex items-center justify-between gap-3 first:rounded-t-2xl last:rounded-b-2xl ${(selectedEmployee?.employeeId ||
+                                selectedEmployee?.id) === (emp.employeeId || emp.id)
+                                ? "bg-[#F4F7FE] font-bold"
+                                : ""
+                              }`}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                              <User size={16} className="text-[#4318FF] shrink-0" />
+                              <span className="text-sm text-[#2B3674] truncate">
+                                {emp.fullName || emp.aliasLoginName || "Unknown"} (
+                                {emp.employeeId || emp.id})
+                              </span>
+                            </div>
+                            {emp.userStatus && (
+                              <span
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-[6px] border shrink-0 tracking-wide uppercase ${badgeClass}`}
+                              >
+                                {badgeLabel}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })
                     )}
                     {loadingEmployees && empPage > 1 && (
-                      <div className="p-2 flex justify-center items-center text-[#4318FF]">
-                        <Loader2 size={16} className="animate-spin" />
+                      <div className="py-3 flex justify-center items-center text-[#4318FF]">
+                        <Loader2 size={16} className="animate-spin text-[#4318FF]" />
                       </div>
                     )}
                   </div>
@@ -2567,6 +2636,72 @@ const AdminLeaveManagement = () => {
               </div>
             </div>
           </>
+        )}
+
+        {/* Empty State when no employee is selected */}
+        {!selectedEmployee && (
+          <div className="mt-2 min-h-[440px] flex flex-col items-center justify-center p-6 sm:p-10 md:p-14 bg-white rounded-3xl border border-[#E9EDF7] shadow-[0px_10px_30px_rgba(112,144,176,0.06)] relative overflow-hidden text-center animate-in fade-in duration-300">
+            {/* Subtle Decorative Background Highlights */}
+            <div className="absolute -top-16 -left-16 w-52 h-52 bg-blue-100/40 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-16 -right-16 w-52 h-52 bg-indigo-100/40 rounded-full blur-3xl pointer-events-none" />
+
+            {/* Glowing Icon Cluster */}
+            <div className="relative mb-6">
+              <div className="w-20 h-20 rounded-3xl bg-linear-to-tr from-[#4318FF] to-[#868CFF] flex items-center justify-center text-white shadow-xl shadow-blue-500/25 transform transition-transform duration-300 hover:scale-105">
+                <Users size={38} strokeWidth={2.2} />
+              </div>
+              <div className="absolute -bottom-1.5 -right-1.5 w-8 h-8 rounded-xl bg-amber-400 text-white flex items-center justify-center shadow-md border-2 border-white">
+                <Sparkles size={16} strokeWidth={2.5} />
+              </div>
+            </div>
+
+            {/* Typography */}
+            <h3 className="text-xl sm:text-2xl font-bold text-[#2B3674] mb-2 tracking-tight">
+              Select an Employee to View Request History & Balances
+            </h3>
+            <p className="text-xs sm:text-sm text-gray-500 max-w-xl mx-auto mb-8 leading-relaxed">
+              Choose a team member from the dropdown above to review their real-time leave balances, track attendance logs, and submit or manage requests on their behalf.
+            </p>
+
+            {/* 3 Executive Feature Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto w-full text-left">
+              <div className="p-4 rounded-2xl bg-[#F8F9FE] border border-blue-50/80 hover:border-blue-200 hover:shadow-sm transition-all flex items-start gap-3.5 group">
+                <div className="w-10 h-10 rounded-xl bg-blue-100/70 text-[#4318FF] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                  <Calendar size={20} />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold text-[#2B3674]">Leave Balances</span>
+                  <span className="text-xs text-gray-500 mt-0.5 leading-snug">
+                    Real-time metrics for Leave, WFH, Client Visits, and Half Day counts.
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-[#F8F9FE] border border-blue-50/80 hover:border-blue-200 hover:shadow-sm transition-all flex items-start gap-3.5 group">
+                <div className="w-10 h-10 rounded-xl bg-emerald-100/70 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                  <FileText size={20} />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold text-[#2B3674]">Audit Trail</span>
+                  <span className="text-xs text-gray-500 mt-0.5 leading-snug">
+                    Full chronological history with month, year, and multi-state status filters.
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-[#F8F9FE] border border-blue-50/80 hover:border-blue-200 hover:shadow-sm transition-all flex items-start gap-3.5 group">
+                <div className="w-10 h-10 rounded-xl bg-amber-100/70 text-amber-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                  <ShieldCheck size={20} />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold text-[#2B3674]">Proxy Management</span>
+                  <span className="text-xs text-gray-500 mt-0.5 leading-snug">
+                    Apply on behalf of staff, modify entries, or undo cancellations.
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </div>
 
