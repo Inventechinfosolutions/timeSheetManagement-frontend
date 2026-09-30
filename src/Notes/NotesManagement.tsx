@@ -1,3 +1,4 @@
+import axios from "axios";
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   FileText,
@@ -229,6 +230,61 @@ export const NotesManagement: React.FC = () => {
   const [highlightColor, setHighlightColor] = useState("transparent");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const doclingJsonInputRef = useRef<HTMLInputElement>(null);
+  const [isImportingDocling, setIsImportingDocling] = useState(false);
+
+  const handleDoclingJsonUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validExtensions = [".pdf", ".docx", ".doc", ".png", ".jpg", ".jpeg", ".json"];
+    const fileExt = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
+    if (!validExtensions.includes(fileExt)) {
+      message.error("Please upload a PDF, DOCX, or Docling JSON file");
+      return;
+    }
+
+    const uploadData = new FormData();
+    uploadData.append("files", file);
+    uploadData.append("file", file);
+
+    try {
+      setIsImportingDocling(true);
+      message.loading({ content: "Extracting document with Docling...", key: "docling-import", duration: 0 });
+
+      const response = await axios.post("/api/notes/extract", uploadData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      const generatedHtml = response.data?.description || response.data?.html || "";
+
+      if (editorRef.current) {
+        editorRef.current.innerHTML = generatedHtml;
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        description: generatedHtml,
+        title: prev.title || file.name.replace(/\.[^/.]+$/, ""),
+      }));
+
+      message.success({
+        content: "Document extracted into Description box! You can now edit it directly.",
+        key: "docling-import",
+      });
+    } catch (err: any) {
+      console.error("Docling conversion error:", err);
+      message.error({
+        content: err.response?.data?.message || "Failed to parse document with Docling",
+        key: "docling-import",
+      });
+    } finally {
+      setIsImportingDocling(false);
+      if (e.target) e.target.value = "";
+    }
+  };
   const editorRef = useRef<HTMLDivElement>(null);
 
   // Load notes on mount and filter changes
@@ -1069,8 +1125,7 @@ export const NotesManagement: React.FC = () => {
               </span>
 
               <div
-                style={{ resize: "vertical", minHeight: "560px" }}
-                className="w-full bg-white border border-slate-200 rounded-2xl focus-within:border-[#4318FF] focus-within:ring-1 focus-within:ring-[#4318FF]/20 transition-all shadow-xs flex flex-col resize-y min-h-[560px] overflow-hidden"
+                className="w-full bg-white border border-slate-200 rounded-2xl focus-within:border-[#4318FF] focus-within:ring-1 focus-within:ring-[#4318FF]/20 transition-all shadow-xs flex flex-col overflow-hidden"
               >
                 {/* Rich Text Toolbar matching mockup */}
                 <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 p-2 px-3 bg-white border-b border-slate-100 text-slate-700 select-none shrink-0">
@@ -1385,16 +1440,42 @@ export const NotesManagement: React.FC = () => {
                       />
                     </button>
                   </Popover>
+
+                  <div className="h-4 w-px bg-slate-200 mx-0.5" />
+
+                  {/* Docling JSON Import Button */}
+                  <input
+                    type="file"
+                    ref={doclingJsonInputRef}
+                    onChange={handleDoclingJsonUpload}
+                    accept=".pdf,.docx,.doc,.png,.jpg,.jpeg,.json"
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => doclingJsonInputRef.current?.click()}
+                    disabled={isImportingDocling}
+                    className="h-8 px-2.5 flex items-center gap-1.5 rounded-lg text-xs font-semibold text-[#4318FF] bg-[#4318FF]/10 hover:bg-[#4318FF]/20 transition cursor-pointer disabled:opacity-50"
+                    title="Import / Parse PDF with Docling directly into this Description box"
+                  >
+                    <FileCode className="w-4 h-4 text-[#4318FF]" />
+                    <span>{isImportingDocling ? "Parsing PDF..." : "Import PDF / Docling"}</span>
+                  </button>
                 </div>
 
-                {/* Content Editable Area with large height */}
-                <div
-                  ref={editorRef}
-                  contentEditable
-                  onInput={handleEditorInput}
-                  data-placeholder="Write your notes, key updates, documentation, or action items here..."
-                  className="notes-rich-editor flex-1 min-h-[480px] overflow-y-auto p-4 sm:p-5 text-sm md:text-base text-slate-800 leading-relaxed outline-none"
-                />
+                {/* A4 Workspace Simulation */}
+                <div className="a4-page-workspace w-full flex justify-center items-start overflow-x-auto bg-slate-100/80 p-4 sm:p-8 min-h-[640px]">
+                  <div className="a4-page">
+                    <div
+                      ref={editorRef}
+                      contentEditable
+                      onInput={handleEditorInput}
+                      data-placeholder="Write your notes, key updates, documentation, or action items here..."
+                      className="notes-rich-editor outline-none w-full min-h-[257mm] text-slate-800 text-sm sm:text-base leading-relaxed"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1677,26 +1758,29 @@ export const NotesManagement: React.FC = () => {
               )}
             </div>
 
-            <div className="w-full bg-[#FAFCFF] rounded-2xl border border-slate-200/90 p-6 sm:p-8 min-h-[480px] shadow-2xs">
-              {activeNote.description && activeNote.description.trim() ? (
-                <div
-                  className="notes-content-view prose prose-slate max-w-none text-slate-800 text-sm sm:text-base leading-relaxed break-words"
-                  dangerouslySetInnerHTML={{ __html: activeNote.description }}
-                />
-              ) : (
-                <div className="flex flex-col items-center justify-center py-20 text-center text-slate-400 gap-3">
-                  <FileText className="w-12 h-12 text-slate-300 stroke-[1.5]" />
-                  <p className="text-sm font-medium text-slate-500">No description or notes have been added yet.</p>
-                  <button
-                    type="button"
-                    onClick={() => handleStartEdit(activeNote)}
-                    className="mt-1 px-4 py-2 bg-indigo-50 text-[#4318FF] hover:bg-indigo-100 font-semibold text-xs rounded-xl transition cursor-pointer flex items-center gap-1.5"
-                  >
-                    <Edit3 className="w-3.5 h-3.5" />
-                    <span>Add Description</span>
-                  </button>
-                </div>
-              )}
+            {/* A4 Workspace Simulation for View Mode */}
+            <div className="a4-page-workspace w-full rounded-2xl flex justify-center items-start overflow-x-auto bg-slate-100/80 p-4 sm:p-8 min-h-[640px] border border-slate-200/60">
+              <div className="a4-page">
+                {activeNote.description && activeNote.description.trim() ? (
+                  <div
+                    className="notes-content-view prose prose-slate max-w-none text-slate-800 text-sm sm:text-base leading-relaxed break-words"
+                    dangerouslySetInnerHTML={{ __html: activeNote.description }}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-24 text-center text-slate-400 gap-3">
+                    <FileText className="w-12 h-12 text-slate-300 stroke-[1.5]" />
+                    <p className="text-sm font-medium text-slate-500">No description or notes have been added yet.</p>
+                    <button
+                      type="button"
+                      onClick={() => handleStartEdit(activeNote)}
+                      className="mt-1 px-4 py-2 bg-indigo-50 text-[#4318FF] hover:bg-indigo-100 font-semibold text-xs rounded-xl transition cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      <span>Add Description</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
