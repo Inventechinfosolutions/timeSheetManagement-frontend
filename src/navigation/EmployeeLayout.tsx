@@ -17,6 +17,7 @@ const EmployeeLayout = () => {
       case "change-password": return "Change Password";
       case "leave-management": return "Request Management";
       case "leave-balance": return "Leave Balance";
+      case "quarterly-review": return "Quarterly Review";
       case "notes":
       case "employee-notes": return "Employee Notes";
       default: return "Dashboard";
@@ -30,6 +31,9 @@ const EmployeeLayout = () => {
         break;
       case "Timesheet History":
         navigate("/employee-dashboard/timesheet-view");
+        break;
+      case "Quarterly Review":
+        navigate("/employee-dashboard/quarterly-review");
         break;
       case "Account Settings":
         navigate("/employee-dashboard/my-profile");

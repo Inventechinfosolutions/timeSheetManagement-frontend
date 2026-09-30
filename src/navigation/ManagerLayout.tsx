@@ -64,6 +64,12 @@ const ManagerLayout = () => {
     if (path.includes("/manager-dashboard/notes")) {
       return "Notes";
     }
+    if (path.includes("/manager-dashboard/my-quarterly-review")) {
+      return "Quarterly Review ";
+    }
+    if (path.includes("/manager-dashboard/quarterly-review")) {
+      return "Quarterly Review";
+    }
 
     switch (tab) {
       case "employees":
@@ -92,6 +98,10 @@ const ManagerLayout = () => {
         return "Account Settings";
       case "leave-management":
         return "Request Management ";
+      case "quarterly-review":
+        return "Quarterly Review";
+      case "my-quarterly-review":
+        return "Quarterly Review ";
       case "notes":
         return "Notes";
       default:
@@ -143,6 +153,10 @@ const ManagerLayout = () => {
       navigate("/manager-dashboard/my-profile");
     } else if (tabName === "Request Management ") {
       navigate("/manager-dashboard/leave-management");
+    } else if (tabName === "Quarterly Review") {
+      navigate("/manager-dashboard/quarterly-review");
+    } else if (tabName === "Quarterly Review ") {
+      navigate("/manager-dashboard/my-quarterly-review");
     } else if (tabName === "Notes") {
       navigate("/manager-dashboard/notes");
     }

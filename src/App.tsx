@@ -57,6 +57,8 @@ import ManagerMapping from "./ManagerMapping/ManagerMapping";
 import ManagerEmployeesView from "./AdminDashboard/ManagerEmployeesView";
 import MonthlyAttendanceMatrix from "./AdminDashboard/MonthlyAttendanceMatrix";
 import NotesManagement from "./Notes/NotesManagement";
+import ManagerQuarterlyReviewPage from "./Appraisal/pages/ManagerQuarterlyReviewPage";
+import EmployeeAppraisalPage from "./Appraisal/pages/EmployeeAppraisalPage";
 
 const EmployeeTabWrapper = () => {
   const { tab } = useParams<{ tab: string }>();
@@ -76,6 +78,8 @@ const EmployeeTabWrapper = () => {
       return <LeaveManagement />;
     case "leave-balance":
       return <LeaveBalance />;
+    case "quarterly-review":
+      return <EmployeeAppraisalPage />;
     case "notes":
     case "employee-notes":
       return <NotesManagement />;
@@ -125,6 +129,10 @@ const AdminTabWrapper = () => {
       return <MyProfile />;
     case "leave-management":
       return <LeaveManagement />;
+    case "quarterly-review":
+      return <ManagerQuarterlyReviewPage />;
+    case "my-quarterly-review":
+      return <EmployeeAppraisalPage />;
     default:
       return <Navigate to="/admin-dashboard" replace />;
   }

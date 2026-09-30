@@ -58,12 +58,14 @@ export function Dropdown<T extends string = string>({
 
   const selectedOption = options.find((opt) => opt.value === value);
   const currentLabel = selectedOption?.label || placeholder;
-  const isFiltered = defaultValue !== undefined ? value !== defaultValue : false;
+  const isFiltered = defaultValue !== undefined ? value !== defaultValue : Boolean(value);
 
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (defaultValue !== undefined) {
       onChange(defaultValue);
+    } else {
+      onChange("" as T);
     }
   };
 
