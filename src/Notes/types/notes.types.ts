@@ -2,6 +2,7 @@ import { NoteTypeEnum, PageModeEnum } from "../enums/notes.enums";
 
 export type NoteType = "PERSONAL" | "PROJECT" | "ARCHIVED" | NoteTypeEnum;
 export type PageMode = "list" | "create" | "edit" | "view" | PageModeEnum;
+export type AutoSaveStatus = "idle" | "unsaved" | "saving" | "saved" | "error";
 
 export interface NoteStats {
   totalNotes: number;

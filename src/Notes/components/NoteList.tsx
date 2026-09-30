@@ -18,6 +18,7 @@ import { Popconfirm } from "antd";
 import dayjs from "dayjs";
 import { Note, NoteType } from "../types/notes.types";
 import { getCleanDescriptionSnippet } from "../utils/notesHelpers";
+import { useNoteDragDrop } from "../hooks/useNoteDragDrop";
 
 interface NoteListProps {
   loading: boolean;
@@ -30,23 +31,7 @@ interface NoteListProps {
   searchQuery: string;
   expandedNotes: Record<number, boolean>;
   currentUser?: { loginId?: string } | null;
-  dragDrop: {
-    draggedItem: any;
-    dragOverTarget: any;
-    isHeaderDropTarget: boolean;
-    fileDropTargetNoteId: number | null;
-    startNoteDrag: (e: React.DragEvent, item: any) => void;
-    handleDragEnd: () => void;
-    handleRowDragOver: (e: React.DragEvent, note: Note, index: number) => void;
-    handleRowDragLeave: (e: React.DragEvent, note: Note) => void;
-    handleRowDrop: (e: React.DragEvent, note: Note, index: number) => void;
-    handleSubRowDragOver: (e: React.DragEvent, parent: Note, sub: Note, index: number) => void;
-    handleSubRowDragLeave: (e: React.DragEvent, sub: Note) => void;
-    handleSubRowDrop: (e: React.DragEvent, parent: Note, sub: Note, index: number) => void;
-    handleHeaderDragOver: (e: React.DragEvent) => void;
-    handleHeaderDragLeave: (e: React.DragEvent) => void;
-    handleHeaderDrop: (e: React.DragEvent) => void;
-  };
+  dragDrop: ReturnType<typeof useNoteDragDrop>;
   onToggleExpand: (noteId: number) => void;
   onStartView: (note: Note) => void;
   onStartEdit: (note: Note) => void;
@@ -180,7 +165,7 @@ export const NoteList: React.FC<NoteListProps> = ({
                           title: note.title,
                           itemType: "note",
                           parentId: null,
-                          projectName: note.projectName,
+                          projectName: note.projectName || undefined,
                           index,
                         })
                       }
@@ -249,7 +234,7 @@ export const NoteList: React.FC<NoteListProps> = ({
                           >
                             {note.title}
                           </span>
-                          {isCurrentDropTarget && dragOverTarget.position === "nest" && (
+                          {isCurrentDropTarget && (dragOverTarget.position === "inside" || (dragOverTarget.position as any) === "nest") && (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#4318FF] text-white shadow-xs animate-pulse">
                               <FolderInput className="w-3 h-3" />
                               Nest as sub-note
@@ -427,7 +412,7 @@ export const NoteList: React.FC<NoteListProps> = ({
                                               title: sub.title,
                                               itemType: "sub-note",
                                               parentId: note.id,
-                                              projectName: note.projectName,
+                                              projectName: note.projectName || undefined,
                                               index: subIdx,
                                             })
                                           }

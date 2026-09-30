@@ -67,6 +67,8 @@ export const NotesManagementPage: React.FC = () => {
     handleDownloadAttachment,
     handleTogglePin,
     handleToggleArchive,
+    autoSaveStatus,
+    handleToggleAutoSave,
     sendNoteModal,
     handleOpenSendModal,
     handleCloseSendModal,
@@ -110,6 +112,8 @@ export const NotesManagementPage: React.FC = () => {
           onDownloadAttachment={handleDownloadAttachment}
           onSubmit={handleSubmitForm}
           onBack={handleBackToList}
+          autoSaveStatus={autoSaveStatus}
+          onToggleAutoSave={handleToggleAutoSave}
         />
       )}
 

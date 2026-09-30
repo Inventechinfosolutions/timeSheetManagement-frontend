@@ -12,9 +12,13 @@ import {
   Palette,
   Highlighter,
   Pin,
+  Cloud,
+  Loader2,
+  Check,
 } from "lucide-react";
 import { Popover } from "antd";
-import { Note, NotesFormData, NoteDocumentItem } from "../types/notes.types";
+import { Toggle } from "../../components/ui";
+import { Note, NotesFormData, NoteDocumentItem, AutoSaveStatus } from "../types/notes.types";
 import { NoteAttachmentChip } from "./NoteAttachmentChip";
 import { TEXT_COLORS, HIGHLIGHT_COLORS } from "../utils/notesHelpers";
 
@@ -48,6 +52,8 @@ interface NoteEditorProps {
   onDownloadAttachment: (item: NoteDocumentItem) => void;
   onSubmit: (e: React.FormEvent) => void;
   onBack: () => void;
+  autoSaveStatus?: AutoSaveStatus;
+  onToggleAutoSave?: () => void;
 }
 
 export const NoteEditor: React.FC<NoteEditorProps> = ({
@@ -80,6 +86,8 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
   onDownloadAttachment,
   onSubmit,
   onBack,
+  autoSaveStatus = "idle",
+  onToggleAutoSave,
 }) => {
   const isProjectNote = formData.type === "PROJECT";
 
@@ -139,8 +147,64 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
               </div>
             </div>
 
-            {/* Top Right Controls: Pin Button & Back Button */}
-            <div className="flex items-center gap-2.5 shrink-0 self-start lg:self-center">
+            {/* Top Right Controls: Auto-Save Toggle, Pin Button & Back Button */}
+            <div className="flex flex-wrap items-center gap-2.5 shrink-0 self-start lg:self-center">
+              {/* Auto-Save Toggle & Status */}
+              <div className="flex items-center gap-2.5 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl shadow-2xs">
+                <Toggle
+                  checked={!!formData.isAutoSave}
+                  onChange={() => {
+                    if (onToggleAutoSave) {
+                      onToggleAutoSave();
+                    } else {
+                      setFormData((prev) => ({ ...prev, isAutoSave: !prev.isAutoSave }));
+                    }
+                  }}
+                  label="Auto-Save"
+                  size="sm"
+                  activeColor="#10B981"
+                />
+
+                {/* Auto-Save Dynamic Status Badge */}
+                {formData.isAutoSave ? (
+                  <div className="flex items-center pl-2 border-l border-slate-200 min-w-[55px]">
+                    {autoSaveStatus === "saving" && (
+                      <span className="flex items-center gap-1 text-[11px] font-medium text-amber-600">
+                        <Loader2 className="w-3 h-3 animate-spin text-amber-500" />
+                        <span>Saving...</span>
+                      </span>
+                    )}
+                    {autoSaveStatus === "saved" && (
+                      <span className="flex items-center gap-1 text-[11px] font-medium text-emerald-600">
+                        <Check className="w-3 h-3 text-emerald-500" />
+                        <span>Saved</span>
+                      </span>
+                    )}
+                    {autoSaveStatus === "unsaved" && (
+                      <span className="flex items-center gap-1 text-[11px] font-medium text-slate-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                        <span>Unsaved</span>
+                      </span>
+                    )}
+                    {autoSaveStatus === "error" && (
+                      <span className="flex items-center gap-1 text-[11px] font-medium text-rose-500">
+                        <span>Save failed</span>
+                      </span>
+                    )}
+                    {autoSaveStatus === "idle" && (
+                      <span className="flex items-center gap-1 text-[11px] font-medium text-slate-400">
+                        <Cloud className="w-3 h-3 text-slate-400" />
+                        <span>Ready</span>
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <span className="pl-2 border-l border-slate-200 text-[11px] font-medium text-slate-400">
+                    Off
+                  </span>
+                )}
+              </div>
+
               {/* Pin Note Toggle Button */}
               <button
                 type="button"

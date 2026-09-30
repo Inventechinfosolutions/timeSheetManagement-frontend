@@ -110,7 +110,10 @@ export const createNote = createAsyncThunk(
       if (payload.parentId) formData.append("parentId", String(payload.parentId));
       if (payload.color) formData.append("color", payload.color);
       if (payload.isPinned !== undefined) formData.append("isPinned", String(payload.isPinned));
-      if (payload.isAutoSave !== undefined) formData.append("isAutoSave", String(payload.isAutoSave));
+      if (payload.isAutoSave !== undefined) {
+        formData.append("isAutoSave", String(payload.isAutoSave));
+        formData.append("autoSave", String(payload.isAutoSave));
+      }
 
       if (payload.subNotes && payload.subNotes.length > 0) {
         formData.append("subNotes", JSON.stringify(payload.subNotes));
@@ -141,7 +144,22 @@ export const updateNote = createAsyncThunk(
   "notes/updateNote",
   async ({ id, ...data }: UpdateNotePayload, { rejectWithValue }) => {
     try {
-      const response = await axios.patch(`${API_BASE}/${id}`, data);
+      const sanitized: Record<string, any> = {};
+      if (data.title !== undefined) sanitized.title = data.title;
+      if (data.description !== undefined) sanitized.description = data.description;
+      if (data.type !== undefined) sanitized.type = data.type;
+      if (data.projectName !== undefined) sanitized.projectName = data.projectName;
+      if (data.color !== undefined) sanitized.color = data.color;
+      if (data.isPinned !== undefined) sanitized.isPinned = data.isPinned;
+      if (data.isArchived !== undefined) sanitized.isArchived = data.isArchived;
+      if (data.autoSave !== undefined) {
+        sanitized.autoSave = data.autoSave;
+      } else if (data.isAutoSave !== undefined) {
+        sanitized.autoSave = data.isAutoSave;
+      }
+      if (data.orderIndex !== undefined) sanitized.orderIndex = data.orderIndex;
+
+      const response = await axios.patch(`${API_BASE}/${id}`, sanitized);
       return response.data as Note;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || "Failed to update note");
@@ -220,9 +238,11 @@ export const togglePinNote = createAsyncThunk(
 // Toggle AutoSave
 export const toggleAutoSaveNote = createAsyncThunk(
   "notes/toggleAutoSave",
-  async (id: number, { rejectWithValue }) => {
+  async (payload: number | { id: number; autoSave?: boolean }, { rejectWithValue }) => {
     try {
-      const response = await axios.patch(`${API_BASE}/${id}/auto-save`);
+      const id = typeof payload === "number" ? payload : payload.id;
+      const body = typeof payload === "number" ? {} : { autoSave: payload.autoSave };
+      const response = await axios.patch(`${API_BASE}/${id}/auto-save`, body);
       return response.data as Note;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || "Failed to toggle auto-save");

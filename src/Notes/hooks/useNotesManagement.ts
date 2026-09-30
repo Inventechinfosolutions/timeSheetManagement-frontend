@@ -16,6 +16,7 @@ import {
   uploadDirectNoteFiles,
   deleteNoteAttachment,
   togglePinNote,
+  toggleAutoSaveNote,
   toggleArchiveNote,
   downloadNoteAttachment,
   previewNoteAttachment,
@@ -27,6 +28,7 @@ import {
   Note,
   NoteType,
   PageMode,
+  AutoSaveStatus,
   NotesFormData,
   NoteDocumentItem,
   PreviewImageModalState,
@@ -110,6 +112,21 @@ export const useNotesManagement = () => {
     files: [],
     isPinned: false,
     isAutoSave: true,
+  });
+
+  const [autoSaveStatus, setAutoSaveStatus] = useState<AutoSaveStatus>("idle");
+  const autoSaveTimerRef = useRef<any>(null);
+  const isSavingRef = useRef<boolean>(false);
+  const lastSavedRef = useRef<{
+    title: string;
+    description: string;
+    projectName: string;
+    isPinned: boolean;
+  }>({
+    title: "",
+    description: "",
+    projectName: "",
+    isPinned: false,
   });
 
   const [isDraggingModalFile, setIsDraggingModalFile] = useState(false);
@@ -246,42 +263,75 @@ export const useNotesManagement = () => {
 
   // Start Create Root Note
   const handleStartCreate = (noteType: NoteType = activeTab) => {
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
     setParentNoteContext(null);
     setActiveNote(null);
+    const initialProject = noteType === "PROJECT" ? selectedProject || "" : "";
     setFormData({
       title: "",
       description: "",
       type: noteType,
-      projectName: noteType === "PROJECT" ? selectedProject || "" : "",
+      projectName: initialProject,
       attachmentKeys: [],
       attachments: [],
       files: [],
       isPinned: false,
+      isAutoSave: true,
     });
+    if (editorRef.current) {
+      editorRef.current.innerHTML = "";
+    }
+    lastSavedRef.current = {
+      title: "",
+      description: "",
+      projectName: initialProject,
+      isPinned: false,
+    };
+    setAutoSaveStatus("idle");
     setPageMode("create");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   // Start Create Sub-Note (+ Add Note button in Sub-Table)
   const handleStartCreateSubNote = (parent: Note) => {
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
     setParentNoteContext(parent);
     setActiveNote(null);
+    const initialProject = parent.projectName || "";
     setFormData({
       title: "",
       description: "",
       type: parent.type,
-      projectName: parent.projectName || "",
+      projectName: initialProject,
       attachmentKeys: [],
       attachments: [],
       files: [],
       isPinned: false,
+      isAutoSave: true,
     });
+    if (editorRef.current) {
+      editorRef.current.innerHTML = "";
+    }
+    lastSavedRef.current = {
+      title: "",
+      description: "",
+      projectName: initialProject,
+      isPinned: false,
+    };
+    setAutoSaveStatus("idle");
     setPageMode("create");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   // Start Edit Note or Sub-Note (fetches fresh details from API)
   const handleStartEdit = async (note: Note) => {
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
     setActiveNote(note);
     setParentNoteContext(null);
     setFormData({
@@ -293,7 +343,15 @@ export const useNotesManagement = () => {
       attachments: [],
       files: [],
       isPinned: note.isPinned || false,
+      isAutoSave: true,
     });
+    lastSavedRef.current = {
+      title: note.title,
+      description: note.description || "",
+      projectName: note.projectName || "",
+      isPinned: note.isPinned || false,
+    };
+    setAutoSaveStatus("idle");
     setPageMode("edit");
     window.scrollTo({ top: 0, behavior: "smooth" });
 
@@ -311,7 +369,14 @@ export const useNotesManagement = () => {
           attachments: [],
           files: [],
           isPinned: detailedNote.isPinned || false,
+          isAutoSave: true,
         });
+        lastSavedRef.current = {
+          title: detailedNote.title,
+          description: detailedNote.description || "",
+          projectName: detailedNote.projectName || "",
+          isPinned: detailedNote.isPinned || false,
+        };
         if (editorRef.current) {
           editorRef.current.innerHTML = detailedNote.description || "";
         }
@@ -338,6 +403,10 @@ export const useNotesManagement = () => {
 
   // Back to Main List View
   const handleBackToList = () => {
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+    setAutoSaveStatus("idle");
     setPageMode("list");
     setActiveNote(null);
     setParentNoteContext(null);
@@ -483,9 +552,205 @@ export const useNotesManagement = () => {
     }));
   };
 
+  // Perform silent background Auto-Save
+  const performAutoSave = async () => {
+    if (isSavingRef.current) return;
+
+    const trimmedTitle = formData.title.trim();
+    if (!trimmedTitle) return;
+    if (formData.type === "PROJECT" && !formData.projectName.trim()) return;
+
+    const currentDescription = editorRef.current ? editorRef.current.innerHTML : (formData.description || "");
+
+    const hasChanged =
+      trimmedTitle !== lastSavedRef.current.title ||
+      currentDescription !== lastSavedRef.current.description ||
+      formData.projectName.trim() !== lastSavedRef.current.projectName ||
+      !!formData.isPinned !== !!lastSavedRef.current.isPinned;
+
+    if (!hasChanged) {
+      return;
+    }
+
+    try {
+      isSavingRef.current = true;
+      setAutoSaveStatus("saving");
+
+      if (pageMode === "create") {
+        if (parentNoteContext) {
+          const res = await dispatch(
+            createSubNote({
+              parentId: parentNoteContext.id,
+              title: trimmedTitle,
+              description: currentDescription,
+              attachmentKeys: formData.attachmentKeys,
+              files: formData.files.length > 0 ? formData.files : undefined,
+            })
+          ).unwrap();
+
+          const createdSub = res?.subNote || res;
+          if (createdSub) {
+            lastSavedRef.current = {
+              title: trimmedTitle,
+              description: currentDescription,
+              projectName: formData.projectName.trim(),
+              isPinned: !!formData.isPinned,
+            };
+            setActiveNote(createdSub);
+            setPageMode("edit");
+            setAutoSaveStatus("saved");
+            dispatch(fetchNoteStats());
+            loadNotes();
+          }
+        } else {
+          const created = await dispatch(
+            createNote({
+              title: trimmedTitle,
+              description: currentDescription,
+              type: formData.type,
+              projectName: formData.type === "PROJECT" ? formData.projectName.trim() : undefined,
+              color: "#4318FF",
+              isPinned: formData.isPinned,
+              isAutoSave: formData.isAutoSave,
+              attachmentKeys: formData.attachmentKeys,
+              files: formData.files.length > 0 ? formData.files : undefined,
+            })
+          ).unwrap();
+
+          if (created) {
+            lastSavedRef.current = {
+              title: trimmedTitle,
+              description: currentDescription,
+              projectName: formData.type === "PROJECT" ? formData.projectName.trim() : "",
+              isPinned: !!formData.isPinned,
+            };
+            setActiveNote(created);
+            setPageMode("edit");
+            setAutoSaveStatus("saved");
+            dispatch(fetchNoteStats());
+            loadNotes();
+          }
+        }
+      } else if (pageMode === "edit" && activeNote?.id) {
+        const updated = await dispatch(
+          updateNote({
+            id: activeNote.id,
+            title: trimmedTitle,
+            description: currentDescription,
+            type: formData.type,
+            projectName: formData.type === "PROJECT" ? formData.projectName.trim() : undefined,
+            isPinned: formData.isPinned,
+            autoSave: formData.isAutoSave,
+          })
+        ).unwrap();
+
+        if (updated) {
+          lastSavedRef.current = {
+            title: trimmedTitle,
+            description: currentDescription,
+            projectName: formData.type === "PROJECT" ? formData.projectName.trim() : "",
+            isPinned: !!formData.isPinned,
+          };
+          setActiveNote(updated);
+          setAutoSaveStatus("saved");
+          dispatch(fetchNoteStats());
+        }
+      }
+    } catch (err) {
+      console.warn("Auto-save error:", err);
+      setAutoSaveStatus("error");
+    } finally {
+      isSavingRef.current = false;
+    }
+  };
+
+  // Watch for form changes to trigger debounced auto-save
+  useEffect(() => {
+    if (pageMode !== "create" && pageMode !== "edit") {
+      return;
+    }
+
+    if (!formData.isAutoSave) {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+      return;
+    }
+
+    const trimmedTitle = formData.title.trim();
+    if (!trimmedTitle) {
+      return;
+    }
+
+    if (formData.type === "PROJECT" && !formData.projectName.trim()) {
+      return;
+    }
+
+    const currentDesc = editorRef.current ? editorRef.current.innerHTML : (formData.description || "");
+    const hasChanged =
+      trimmedTitle !== lastSavedRef.current.title ||
+      currentDesc !== lastSavedRef.current.description ||
+      formData.projectName.trim() !== lastSavedRef.current.projectName ||
+      !!formData.isPinned !== !!lastSavedRef.current.isPinned;
+
+    if (!hasChanged) {
+      return;
+    }
+
+    setAutoSaveStatus("unsaved");
+
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+
+    autoSaveTimerRef.current = setTimeout(() => {
+      performAutoSave();
+    }, 1200);
+
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, [
+    formData.title,
+    formData.description,
+    formData.projectName,
+    formData.isPinned,
+    formData.isAutoSave,
+    pageMode,
+    activeNote?.id,
+  ]);
+
+  // Toggle Auto-Save Setting
+  const handleToggleAutoSave = async () => {
+    const nextVal = !formData.isAutoSave;
+    setFormData((prev) => ({ ...prev, isAutoSave: nextVal }));
+    if (!nextVal) {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+      setAutoSaveStatus("idle");
+    } else {
+      setAutoSaveStatus("unsaved");
+    }
+
+    if (activeNote?.id) {
+      try {
+        await dispatch(toggleAutoSaveNote({ id: activeNote.id, autoSave: nextVal })).unwrap();
+      } catch (err) {
+        console.warn("Failed to update autoSave setting on server:", err);
+      }
+    }
+  };
+
   // Submit Note Form
   const handleSubmitForm = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
 
     if (!formData.title.trim()) {
       message.error("Note title is required");
@@ -522,6 +787,7 @@ export const useNotesManagement = () => {
               projectName: formData.type === "PROJECT" ? formData.projectName.trim() : undefined,
               color: "#4318FF",
               isPinned: formData.isPinned,
+              isAutoSave: formData.isAutoSave,
               attachmentKeys: formData.attachmentKeys,
               files: formData.files.length > 0 ? formData.files : undefined,
             })
@@ -536,7 +802,8 @@ export const useNotesManagement = () => {
             type: formData.type,
             projectName: formData.type === "PROJECT" ? formData.projectName.trim() : undefined,
             isPinned: formData.isPinned,
-                      })
+            autoSave: formData.isAutoSave,
+          })
         ).unwrap();
 
         if (updatedNote) {
@@ -553,6 +820,13 @@ export const useNotesManagement = () => {
         }
       }
 
+      lastSavedRef.current = {
+        title: formData.title.trim(),
+        description: currentDescription,
+        projectName: formData.type === "PROJECT" ? formData.projectName.trim() : "",
+        isPinned: !!formData.isPinned,
+      };
+      setAutoSaveStatus("saved");
       triggerSuccessToast();
       dispatch(fetchNoteStats());
       dispatch(fetchProjectsList());
@@ -822,6 +1096,8 @@ export const useNotesManagement = () => {
     totalAttachmentsCount,
     handleTogglePin,
     handleToggleArchive,
+    autoSaveStatus,
+    handleToggleAutoSave,
     sendNoteModal,
     setSendNoteModal,
     handleOpenSendModal,

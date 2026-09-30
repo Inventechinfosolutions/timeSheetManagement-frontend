@@ -1,6 +1,8 @@
-import React from "react";
-import { Plus, ChevronDown, Search, X } from "lucide-react";
+import React, { useMemo } from "react";
+import { Plus } from "lucide-react";
 import { NoteType } from "../types/notes.types";
+import { Dropdown, SearchBox } from "../../components/ui";
+import type { DropdownOption } from "../../components/ui";
 
 interface NoteHeaderProps {
   activeTab: NoteType;
@@ -21,7 +23,23 @@ export const NoteHeader: React.FC<NoteHeaderProps> = ({
   onCreateProjectNote,
   onCreatePersonalNote,
 }) => {
-  const isProjectNotesTab = activeTab === "PROJECT";
+  const tabOptions: DropdownOption<NoteType>[] = useMemo(
+    () => [
+      {
+        value: "PROJECT",
+        label: "Project Notes",
+      },
+      {
+        value: "PERSONAL",
+        label: "Personal Notes",
+      },
+      {
+        value: "ARCHIVED",
+        label: "Archived Notes",
+      },
+    ],
+    [],
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -57,41 +75,27 @@ export const NoteHeader: React.FC<NoteHeaderProps> = ({
           </button>
 
           {/* Filter Dropdown */}
-          <div className="relative">
-            <select
-              value={activeTab}
-              onChange={(e) => onTabSwitch(e.target.value as NoteType)}
-              className="px-4 py-2 pr-9 bg-white border border-slate-200 rounded-xl text-xs md:text-sm font-semibold text-slate-700 outline-none focus:ring-1 focus:ring-[#4318FF] transition cursor-pointer appearance-none shadow-xs"
-            >
-              <option value="PROJECT">Project Notes</option>
-              <option value="PERSONAL">Personal Notes</option>
-              <option value="ARCHIVED">Archived Notes</option>
-            </select>
-            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-          </div>
+          <Dropdown<NoteType>
+            options={tabOptions}
+            value={activeTab}
+            onChange={(val) => onTabSwitch(val as NoteType)}
+            maxLabelWidth="max-w-[140px]"
+            buttonClassName="!bg-white !border-slate-200 hover:!bg-slate-50 !py-2 !px-3.5 !text-xs md:!text-sm !font-semibold !text-slate-700 shadow-xs"
+            menuClassName="right-0 left-auto w-44"
+          />
         </div>
       </div>
 
       {/* Search Bar */}
       <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
-        <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search notes..."
-            className="w-full pl-10 pr-9 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm text-slate-700 outline-none focus:bg-white focus:ring-1 focus:ring-[#4318FF] transition placeholder:text-slate-400"
-          />
-          {searchQuery && (
-            <button
-              onClick={onClearSearch}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
+        <SearchBox
+          placeholder="Search notes..."
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
+          onClear={onClearSearch}
+          inputSize="lg"
+          containerClassName="w-full max-w-md"
+        />
       </div>
     </div>
   );

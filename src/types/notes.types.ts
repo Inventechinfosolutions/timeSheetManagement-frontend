@@ -1,4 +1,4 @@
-export type NoteType = "PERSONAL" | "PROJECT";
+export type NoteType = "PERSONAL" | "PROJECT" | "ARCHIVED";
 
 export interface NoteAttachment {
   name: string;
@@ -65,6 +65,7 @@ export interface UpdateNotePayload {
   isPinned?: boolean;
   isArchived?: boolean;
   isAutoSave?: boolean;
+  autoSave?: boolean;
   orderIndex?: number;
   parentId?: number | null;
 }
@@ -77,6 +78,25 @@ export interface CreateSubNotePayload {
   orderIndex?: number;
   files?: File[];
   attachmentKeys?: string[];
+}
+
+export interface ReorderNotesPayload {
+  items: Array<{
+    id: number;
+    orderIndex: number;
+    parentId?: number | null;
+  }>;
+}
+
+export interface MoveNotePayload {
+  id: number;
+  targetParentId?: number | null;
+  orderIndex?: number;
+}
+
+export interface BulkMoveNotesPayload {
+  noteIds: number[];
+  targetParentId?: number | null;
 }
 
 export interface QueryNotesParams {
