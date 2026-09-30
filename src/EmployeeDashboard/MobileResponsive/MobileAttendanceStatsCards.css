@@ -1,0 +1,677 @@
+/* 
+   MAIN CONTAINER
+ */
+
+.mobile-stats-container {
+  width: 100%;
+  box-sizing: border-box;
+  transition: opacity 0.3s ease;
+}
+
+.mobile-stats-loading {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+
+/* 
+   5 CARDS - ONE ROW
+ */
+
+.mobile-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+
+  width: 100%;
+  box-sizing: border-box;
+}
+
+
+/* 
+   INDIVIDUAL ITEM
+ */
+
+.mobile-stat-item {
+  position: relative;
+
+  min-width: 0;
+  width: 100%;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  gap: 5px;
+
+  animation: statCardEnter 0.7s cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+}
+
+
+/* 
+   STAGGERED CARD ENTRANCE
+ */
+
+.mobile-stat-item:nth-child(1) {
+  animation-delay: 0.05s;
+}
+
+.mobile-stat-item:nth-child(2) {
+  animation-delay: 0.12s;
+}
+
+.mobile-stat-item:nth-child(3) {
+  animation-delay: 0.19s;
+}
+
+.mobile-stat-item:nth-child(4) {
+  animation-delay: 0.26s;
+}
+
+.mobile-stat-item:nth-child(5) {
+  animation-delay: 0.33s;
+}
+
+
+/* 
+   CARD
+ */
+
+.mobile-stat-card {
+  position: relative;
+
+  width: 100%;
+  height: 60px;
+
+  padding: 5px 2px;
+
+  box-sizing: border-box;
+
+  background: #ffffff;
+
+  border-radius: 12px;
+
+  border: 1px solid rgba(251, 113, 133, 0.35);
+  box-shadow: 0 2px 8px rgba(225, 29, 72, 0.06);
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+
+  overflow: hidden;
+
+  /*
+    Floating movement
+  */
+  animation:
+    cardFloat 3.6s ease-in-out infinite;
+
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+}
+
+.mobile-stat-icon-wrap {
+  position: relative;
+  z-index: 3;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.mobile-stat-icon-wrap.icon-annual {
+  background: #FFE4E6;
+  color: #E11D48;
+}
+
+.mobile-stat-icon-wrap.icon-carry {
+  background: #FEF3C7;
+  color: #D97706;
+}
+
+.mobile-stat-icon-wrap.icon-used {
+  background: #FCE7F3;
+  color: #BE185D;
+}
+
+.mobile-stat-icon-wrap.icon-lop {
+  background: #FFEDD5;
+  color: #EA580C;
+}
+
+.mobile-stat-icon-wrap.icon-balance {
+  background: rgba(255, 255, 255, 0.28);
+  color: #ffffff;
+}
+
+
+/* 
+   DIFFERENT FLOAT TIMING
+ */
+
+.mobile-stat-item:nth-child(1) .mobile-stat-card {
+  animation-delay: 0s, 0s;
+}
+
+.mobile-stat-item:nth-child(2) .mobile-stat-card {
+  animation-delay: 0.35s, 0.35s;
+}
+
+.mobile-stat-item:nth-child(3) .mobile-stat-card {
+  animation-delay: 0.7s, 0.7s;
+}
+
+.mobile-stat-item:nth-child(4) .mobile-stat-card {
+  animation-delay: 1.05s, 1.05s;
+}
+
+.mobile-stat-item:nth-child(5) .mobile-stat-card {
+  animation-delay: 1.4s, 1.4s;
+}
+
+
+/* 
+   SVG SHINE
+   MOVING ACROSS ALL CARDS
+ */
+
+.mobile-stat-card::before {
+  content: "";
+
+  position: absolute;
+
+  top: -70%;
+  left: -100%;
+
+  width: 65%;
+  height: 240%;
+
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 240'%3E%3Cpath d='M10 0 C55 55 55 185 10 240 L42 240 C87 185 87 55 42 0 Z' fill='%23FF7A59' fill-opacity='.12'/%3E%3C/svg%3E");
+
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+
+  pointer-events: none;
+
+  z-index: 1;
+
+  animation: svgShine 3.2s ease-in-out infinite;
+}
+
+
+/* 
+   DIFFERENT SVG SHINE DELAYS
+ */
+
+.mobile-stat-item:nth-child(1)
+.mobile-stat-card::before {
+  animation-delay: 0s;
+}
+
+.mobile-stat-item:nth-child(2)
+.mobile-stat-card::before {
+  animation-delay: 0.55s;
+}
+
+.mobile-stat-item:nth-child(3)
+.mobile-stat-card::before {
+  animation-delay: 1.1s;
+}
+
+.mobile-stat-item:nth-child(4)
+.mobile-stat-card::before {
+  animation-delay: 1.65s;
+}
+
+.mobile-stat-item:nth-child(5)
+.mobile-stat-card::before {
+  animation-delay: 2.2s;
+}
+
+
+/* 
+   VALUE
+ */
+
+.mobile-stat-value {
+  position: relative;
+
+  z-index: 3;
+
+  font-size: 1rem;
+
+  line-height: 1;
+
+  font-weight: 800;
+
+  color: #1b2559;
+
+  letter-spacing: -0.03em;
+
+  text-shadow:
+    0 1px 1px rgba(255, 255, 255, 0.8);
+
+  animation: valuePulse 3.6s ease-in-out infinite;
+}
+
+
+/* 
+   VALUE DELAY
+ */
+
+.mobile-stat-item:nth-child(1) .mobile-stat-value {
+  animation-delay: 0s;
+}
+
+.mobile-stat-item:nth-child(2) .mobile-stat-value {
+  animation-delay: 0.4s;
+}
+
+.mobile-stat-item:nth-child(3) .mobile-stat-value {
+  animation-delay: 0.8s;
+}
+
+.mobile-stat-item:nth-child(4) .mobile-stat-value {
+  animation-delay: 1.2s;
+}
+
+.mobile-stat-item:nth-child(5) .mobile-stat-value {
+  animation-delay: 1.6s;
+}
+
+
+/* 
+   TITLE BELOW CARD
+ */
+
+.mobile-stat-title {
+  width: 100%;
+
+  min-height: 18px;
+
+  display: flex;
+
+  align-items: flex-start;
+
+  justify-content: center;
+
+  gap: 2px;
+
+  padding: 0 1px;
+
+  box-sizing: border-box;
+
+  text-align: center;
+
+  font-size: 9px;
+
+  line-height: 1.2;
+
+  font-weight: 800;
+
+  text-transform: uppercase;
+
+  letter-spacing: 0.02em;
+
+  color: #1b2559;
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+
+/* 
+   INFO ICON
+ */
+
+.mobile-stat-info {
+  display: inline-flex;
+
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  color: #4318ff;
+
+  cursor: pointer;
+
+  animation: infoPulse 2s ease-in-out infinite;
+}
+
+
+/* 
+   AVAILABLE LEAVE CARD
+   SPECIAL PURPLE STYLE
+ */
+
+.mobile-card-balance {
+  background:
+    linear-gradient(
+      135deg,
+      #E11D48 0%,
+      #FB7185 50%,
+      #FBBF24 100%
+    );
+
+  border: none;
+
+  box-shadow:
+    0 4px 16px rgba(225, 29, 72, 0.38);
+
+  animation:
+    balanceFloat 3.4s ease-in-out infinite,
+    balanceGlow 2.8s ease-in-out infinite;
+}
+
+
+/* 
+   AVAILABLE LEAVE VALUE
+ */
+
+.mobile-card-balance .mobile-stat-value {
+  color: #ffffff;
+
+  text-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.18);
+}
+
+
+/* 
+   AVAILABLE LEAVE WHITE SVG SHINE
+ */
+
+.mobile-card-balance::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 240'%3E%3Cpath d='M10 0 C55 55 55 185 10 240 L42 240 C87 185 87 55 42 0 Z' fill='white' fill-opacity='.20'/%3E%3C/svg%3E");
+}
+
+
+
+/* 
+   CARD HOVER
+ */
+
+.mobile-stat-card:hover {
+  border-color: rgba(255, 122, 89, 0.4);
+
+  box-shadow:
+    0 8px 20px rgba(255, 122, 89, 0.16),
+    0 0 0 2px rgba(255, 122, 89, 0.05);
+
+  transform: translateY(-4px) scale(1.015);
+}
+
+
+/* 
+   ACTIVE / PRESS
+ */
+
+.mobile-stat-card:active {
+  transform: scale(0.94);
+}
+
+
+/* 
+   ENTRY ANIMATION
+ */
+
+@keyframes statCardEnter {
+  0% {
+    opacity: 0;
+
+    transform:
+      translateY(18px)
+      scale(0.88)
+      rotateX(12deg);
+  }
+
+  60% {
+    opacity: 1;
+
+    transform:
+      translateY(-3px)
+      scale(1.02)
+      rotateX(0deg);
+  }
+
+  100% {
+    opacity: 1;
+
+    transform:
+      translateY(0)
+      scale(1)
+      rotateX(0deg);
+  }
+}
+
+
+/* 
+   FLOATING ANIMATION
+ */
+
+@keyframes cardFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  25% {
+    transform: translateY(-1px);
+  }
+
+  50% {
+    transform: translateY(-3px);
+  }
+
+  75% {
+    transform: translateY(-1px);
+  }
+}
+
+
+/* 
+   CARD GLOW
+ */
+
+@keyframes cardGlow {
+  0%,
+  100% {
+    box-shadow:
+      0 3px 10px rgba(67, 24, 255, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  }
+
+  50% {
+    box-shadow:
+      0 7px 18px rgba(67, 24, 255, 0.15),
+      0 0 10px rgba(67, 24, 255, 0.05),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  }
+}
+
+
+/* 
+   SVG SHINE ANIMATION
+ */
+
+@keyframes svgShine {
+  0% {
+    left: -100%;
+    opacity: 0;
+  }
+
+  12% {
+    opacity: 1;
+  }
+
+  48% {
+    left: 130%;
+    opacity: 1;
+  }
+
+  58% {
+    left: 150%;
+    opacity: 0;
+  }
+
+  100% {
+    left: 150%;
+    opacity: 0;
+  }
+}
+
+
+/* 
+   DECORATIVE CIRCLE ROTATION
+ */
+
+@keyframes circleRotate {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
+/* 
+   NUMBER PULSE
+ */
+
+@keyframes valuePulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+
+/* 
+   INFO ICON PULSE
+ */
+
+@keyframes infoPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.15);
+  }
+}
+
+
+/* 
+   AVAILABLE LEAVE FLOAT
+ */
+
+@keyframes balanceFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+
+/* 
+   AVAILABLE LEAVE GLOW
+ */
+
+@keyframes balanceGlow {
+  0%,
+  100% {
+    box-shadow:
+      0 5px 16px rgba(67, 24, 255, 0.24);
+  }
+
+  50% {
+    box-shadow:
+      0 8px 24px rgba(67, 24, 255, 0.38),
+      0 0 14px rgba(67, 24, 255, 0.15);
+  }
+}
+
+
+/* 
+   INTERN LAYOUT
+ */
+
+.mobile-stats-grid.intern-grid {
+  grid-template-columns: repeat(
+    5,
+    minmax(0, 1fr)
+  );
+
+  gap: 6px;
+}
+
+
+/* 
+   SMALL PHONES
+ */
+
+@media (max-width: 360px) {
+
+  .mobile-stats-grid {
+    gap: 4px;
+  }
+
+  .mobile-stat-card {
+    height: 54px;
+
+    border-radius: 9px;
+  }
+
+  .mobile-stat-value {
+    font-size: 0.9rem;
+  }
+
+  .mobile-stat-title {
+    font-size: 7px;
+  }
+
+  .mobile-stat-card::after {
+    width: 45px;
+    height: 45px;
+
+    right: -25px;
+    bottom: -25px;
+  }
+}
+
+
+/* 
+   REDUCED MOTION
+ */
+
+@media (prefers-reduced-motion: reduce) {
+
+  .mobile-stat-item,
+  .mobile-stat-card,
+  .mobile-stat-card::before,
+  .mobile-stat-card::after,
+  .mobile-stat-value,
+  .mobile-stat-info {
+    animation: none !important;
+  }
+}

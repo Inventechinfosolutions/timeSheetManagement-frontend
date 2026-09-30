@@ -1,0 +1,489 @@
+/* Mobile Responsive TodayAttendance Styles */
+@import url('https://fonts.cdnfonts.com/css/Runiga');
+@import url('https://fonts.cdnfonts.com/css/Mending');
+
+.mobile-today-attendance-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100%;
+  background: linear-gradient(180deg, #FFFDFE 0%, #FFF5F7 280px, #FFF9FB 100%);
+  padding: 10px 14px 28px 14px;
+  box-sizing: border-box;
+  gap: 14px;
+}
+
+.mobile-attendance-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #E11D48;
+  background: linear-gradient(135deg, #E11D48 0%, #FB7185 50%, #F59E0B 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -0.02em;
+  margin: 0 0 2px 2px;
+  line-height: 1.25;
+  font-family: 'Mending', serif;
+  width: fit-content;
+  overflow: hidden;
+  white-space: nowrap;
+  animation: attendanceTitleTyping 1.6s steps(30, end) forwards;
+}
+
+/* Typing animation */
+@keyframes attendanceTitleTyping {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+/* Header Card (Welcome back, date, month navigator) */
+.mobile-attendance-header-card {
+  position: relative;
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 16px;
+  box-shadow: 0px 4px 20px rgba(225, 29, 72, 0.08);
+  border: 1px solid rgba(251, 113, 133, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all 0.2s ease-in-out;
+  overflow: hidden;
+}
+
+.mobile-card-svg-bg {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 150px;
+  height: 90px;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.mobile-attendance-subtitle {
+  font-size: 0.875rem;
+  color: #64748B;
+  margin: 0;
+  font-weight: 500;
+  font-family: 'Runiga', serif;
+  animation: greetingIn 0.7s ease-out both;
+  position: relative;
+  z-index: 1;
+}
+
+.mobile-attendance-username {
+  font-weight: 700;
+  color: #E11D48;
+  display: inline-block;
+  animation: usernameIn 0.8s ease-out 0.15s both;
+}
+
+.mobile-wave-hand {
+  display: inline-block;
+  animation: waveHand 2.4s ease-in-out infinite;
+  transform-origin: 70% 70%;
+}
+
+@keyframes waveHand {
+  0%, 100% { transform: rotate(0deg); }
+  20%, 60% { transform: rotate(14deg); }
+  40%, 80% { transform: rotate(-10deg); }
+}
+
+.mobile-attendance-welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+}
+
+/* Main greeting animation */
+@keyframes greetingIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Name + hand animation */
+@keyframes usernameIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Date Pill */
+/* .mobile-attendance-date-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background-color: #F8FAFC;
+  border-radius: 12px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  color: #2B3674;
+  font-size: 0.875rem;
+  font-weight: 700;
+  box-sizing: border-box;
+  width: 100%;
+  transition: all 0.2s ease;
+}
+
+.mobile-attendance-date-pill .date-icon {
+  color: #4318FF;
+  flex-shrink: 0;
+} */
+
+/* ─────────────────────────────
+   Attached Animated Date Calendar
+   ───────────────────────────── */
+
+.mobile-date-calendar {
+  position: absolute;
+  top: -8px;
+  right: 14px;
+
+  width: 52px;
+  height: 68px;
+
+  perspective: 500px;
+  z-index: 10;
+
+  transform-origin: top center;
+
+  /* Continuous swing - NO STOP */
+  animation: calendarSwing 2.5s linear infinite;
+}
+
+/* ───────── Calendar Month Header ───────── */
+
+.calendar-top {
+  position: absolute;
+  top: 5px;
+  left: 0;
+
+  width: 100%;
+  height: 17px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: linear-gradient(135deg, #F43F5E, #FB7185);
+
+  color: #ffffff;
+
+  font-size: 8px;
+  font-weight: 800;
+
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+
+  border-radius: 5px 5px 0 0;
+
+  z-index: 3;
+}
+
+
+/* ───────── Calendar White Page ───────── */
+
+.calendar-page {
+  position: absolute;
+
+  top: 22px;
+  left: 2px;
+
+  width: calc(100% - 4px);
+  height: 43px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+
+  background: #ffffff;
+
+  border-radius: 0 0 6px 6px;
+
+  box-shadow:
+    0 3px 8px rgba(0, 0, 0, 0.16);
+
+  transform-origin: top center;
+
+  /* Flip only once */
+  animation: calendarPageFlip 1.2s ease-out 0.35s forwards;
+
+  backface-visibility: hidden;
+}
+
+
+/* ───────── Date ───────── */
+
+.calendar-day {
+  display: block;
+
+  margin-top: 3px;
+
+  font-size: 20px;
+  line-height: 20px;
+
+  font-weight: 900;
+
+  color: #1B2559;
+
+  white-space: nowrap;
+}
+
+
+/* ───────── Weekday ───────── */
+
+.calendar-weekday {
+  display: block;
+
+  margin-top: 1px;
+
+  font-size: 7px;
+  line-height: 9px;
+
+  font-weight: 800;
+
+  color: #707EAE;
+
+  text-transform: uppercase;
+
+  white-space: nowrap;
+}
+
+
+/* ───────── Year ───────── */
+
+.calendar-year {
+  display: block;
+
+  margin-top: 1px;
+
+  font-size: 7px;
+  line-height: 9px;
+
+  font-weight: 700;
+
+  color: #9AA4BF;
+
+  white-space: nowrap;
+}
+
+
+/* ───────── Binding Rings ───────── */
+
+.calendar-rings {
+  position: absolute;
+
+  top: 0;
+  left: 0;
+
+  width: 100%;
+  height: 14px;
+
+  display: flex;
+  justify-content: space-around;
+
+  z-index: 20;
+
+  pointer-events: none;
+}
+
+.calendar-rings span {
+  width: 4px;
+  height: 13px;
+
+  background: #596273;
+
+  border-radius: 3px;
+
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+
+/* ─────────────────────────────
+   Calendar Entrance
+   Plays ONCE
+   ───────────────────────────── */
+
+@keyframes calendarSwing {
+  0% {
+    transform: rotate(-6deg);
+  }
+
+  25% {
+    transform: rotate(6deg);
+  }
+
+  50% {
+    transform: rotate(-6deg);
+  }
+
+  75% {
+    transform: rotate(6deg);
+  }
+
+  100% {
+    transform: rotate(-6deg);
+  }
+}
+
+
+/* ─────────────────────────────
+   Calendar Page Flip
+   Plays ONCE
+   ───────────────────────────── */
+
+@keyframes calendarPageFlip {
+  0% {
+    transform: rotateX(-90deg);
+    opacity: 0;
+  }
+
+  35% {
+    transform: rotateX(-45deg);
+    opacity: 0.5;
+  }
+
+  65% {
+    transform: rotateX(10deg);
+    opacity: 0.9;
+  }
+
+  85% {
+    transform: rotateX(-3deg);
+    opacity: 1;
+  }
+
+  100% {
+    transform: rotateX(0deg);
+    opacity: 1;
+  }
+}
+
+/* Month Navigation Row */
+.mobile-attendance-month-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  margin: 0;
+}
+
+.mobile-attendance-month-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+
+  background: #ffffff;
+  border-radius: 9999px;
+
+  padding: 3px 7px;
+
+  border: 1px solid rgba(251, 113, 133, 0.4);
+  background: #FFF1F2;
+  box-shadow: 0 1px 4px rgba(225, 29, 72, 0.08);
+}
+
+.mobile-attendance-month-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 20px;
+  height: 20px;
+
+  padding: 0;
+
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+
+  color: #E11D48;
+
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.mobile-attendance-month-btn:active {
+  transform: scale(0.85);
+  color: #9F1239;
+}
+
+.mobile-attendance-month-text {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #9F1239;
+  min-width: 95px;
+  text-align: center;
+  user-select: none;
+}
+
+/* Banners in Mobile */
+.mobile-banner-badge {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.mobile-banner-intern {
+  background-color: #FFF1F2;
+  border: 1px solid #FECDD3;
+  color: #BE123C;
+}
+
+.mobile-banner-conversion {
+  background-color: #F0FDF4;
+  border: 1px solid #BBF7D0;
+  color: #15803D;
+}
+
+/* Log Today Hours Button */
+.mobile-log-hours-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 28px;
+  border-radius: 14px;
+  color: #ffffff;
+  font-size: 0.875rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #E11D48 0%, #F43F5E 50%, #F59E0B 100%);
+  box-shadow: 0px 4px 14px rgba(225, 29, 72, 0.28);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  touch-action: manipulation;
+}
+
+.mobile-log-hours-btn:active {
+  transform: scale(0.96);
+  box-shadow: 0px 2px 8px rgba(225, 29, 72, 0.2);
+}

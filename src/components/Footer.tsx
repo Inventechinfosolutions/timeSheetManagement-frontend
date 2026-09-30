@@ -1,6 +1,6 @@
 import "./Footer.css";
-import inventechLogo from "../assets/inventech-logo.jpg";
-import worksphereLogo from "../assets/workspherelogo.png";
+import inventLogo from "../assets/invent-logo.svg";
+import MobileFooter from "./mobileHeader/MobileFooter";
 
 interface FooterProps {
   className?: string;
@@ -10,29 +10,36 @@ const Footer = ({ className = "" }: FooterProps) => {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className={`footer ${className}`}>
-      <div className="footer-container">
-        <div className="footer-content">
-          <img
-            src={inventechLogo}
-            alt="InvenTech Logo"
-            className="footer-logo"
-          />
+    <>
+      {/* Mobile View - Separate dedicated file matching mobile header & sidebar */}
+      <div className="block md:hidden">
+        <MobileFooter className={className} />
+      </div>
 
-          <p className="footer-small">
-            &copy; {currentYear} Worksphere Powered by{" "}
+      {/* Desktop View */}
+      <footer className={`footer ${className} hidden md:block`}>
+        <div className="footer-container">
+          <div className="footer-content">
+            <span className="footer-small">
+              &copy; {currentYear} Worksphere Powered by
+            </span>
             <a
               href="https://inventechinfo.com/"
               target="_blank"
               rel="noopener noreferrer"
               className="footer-brand"
+              title="InvenTech Info Solutions"
             >
-              InvenTech Info Solutions
+              <img
+                src={inventLogo}
+                alt="InvenTech"
+                className="footer-logo"
+              />
             </a>
-          </p>
+          </div>
         </div>
-      </div>
-    </footer>
+      </footer>
+    </>
   );
 };
 

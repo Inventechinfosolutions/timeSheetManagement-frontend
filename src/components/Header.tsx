@@ -42,7 +42,7 @@ import {
 import "./Header.css";
 import InventLogo from "../assets/invent-logo.svg";
 import workspherelogo from "../assets/worksphere_white.svg";
-
+import MobileHeader from "./mobileHeader/MobileHeader";
 interface HeaderProps {
   hideNotifications?: boolean;
   hideProfile?: boolean;
@@ -280,14 +280,16 @@ const Header = ({
   }, []);
 
   return (
-    <header
-      className="header"
-      style={{
-        background:
-          "linear-gradient(37deg, #3B82F6 4.06%, #2563EB 62.76%, #1E3A8A 121.45%)",
-        borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
-      }}
-    >
+    <>
+      {/* Desktop Header */}
+      <header
+        className="header hidden md:block"
+        style={{
+          background:
+            "linear-gradient(37deg, #3B82F6 4.06%, #2563EB 62.76%, #1E3A8A 121.45%)",
+          borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+        }}
+      >
       <div className="header-container relative">
         <div
           className="p-[1px] bg-gradient-to-tr from-cyan-400 to-indigo-500 rounded-2xl shadow-[0_8px_30px_rgba(59,130,246,0.15)] inline-flex cursor-pointer hover:scale-[1.02] transition-all duration-300"
@@ -305,7 +307,7 @@ const Header = ({
         </div>
 
         <div className="flex items-center gap-1.5 md:gap-3 ml-auto">
-          <Link
+          {/* <Link
             to="/about"
             className={`px-3 py-1.5 rounded-xl font-bold text-sm md:text-[15px] transition-all duration-200 
                 ${location.pathname === "/about"
@@ -314,7 +316,7 @@ const Header = ({
               }`}
           >
             About
-          </Link>
+          </Link> */}
 
           {/* Notification Bell */}
           {!hideNotifications && (
@@ -340,7 +342,7 @@ const Header = ({
 
               {/* Modern Notification Popup */}
               {isNotificationOpen && (
-                <div className="fixed md:absolute left-[16px] right-[16px] md:left-auto md:right-0 top-[110px] md:top-auto md:mt-3 md:w-[400px] bg-white rounded-3xl shadow-[0px_20px_60px_-10px_rgba(0,0,0,0.15)] ring-1 ring-gray-100 z-[10000] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 origin-top md:origin-top-right">
+                <div className="absolute right-0 mt-3 w-[400px] bg-white rounded-3xl shadow-[0px_20px_60px_-10px_rgba(0,0,0,0.15)] ring-1 ring-gray-100 z-[10000] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 origin-top-right">
                   {viewMode === "list" ? (
                     <>
                       {/* Header */}
@@ -1033,7 +1035,25 @@ const Header = ({
                       </p>
                     </div>
                   )}
+                  {/* About */}
+                  <Link
+                    to="/about"
+                    onClick={() => setIsDropdownOpen(false)}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center">
+                      <span className="text-orange-500 font-bold text-sm">i</span>
+                    </div>
 
+                    <div>
+                      <p className="text-sm font-semibold text-[#1B2559]">
+                        About
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        Learn more about WorkSphere
+                      </p>
+                    </div>
+                  </Link>
                   {/* Account Settings - Only show for employees (not Admin/Receptionist in this block; Receptionist can use Change Password from sidebar) */}
                   {!isAdminOrReceptionist && (
                     <button
@@ -1079,6 +1099,43 @@ const Header = ({
         </div>
       </div>
     </header>
+
+    {/* Mobile Header */}
+    <div className="block md:hidden">
+      <MobileHeader
+        hideNotifications={hideNotifications}
+        hideProfile={hideProfile}
+        isAdmin={isAdmin}
+        isReceptionist={isReceptionist}
+        isManager={isManager}
+        isApprover={isApprover}
+        isAdminOrReceptionist={isAdminOrReceptionist}
+        unreadCount={unreadCount}
+        leaveNotifications={leaveNotifications}
+        employeeUpdates={employeeUpdates}
+        notifications={notifications}
+        selectedNotification={selectedNotification}
+        loading={loading}
+        viewMode={viewMode}
+        setViewMode={setViewMode}
+        handleNotificationClick={handleNotificationClick}
+        handleBackToList={handleBackToList}
+        handleMarkAsRead={handleMarkAsRead}
+        handleMarkAllAsRead={handleMarkAllAsRead}
+        handleLogout={handleLogout}
+        handleProfileClick={handleProfileClick}
+        formatRequestTypeLabel={formatRequestTypeLabel}
+        avatarLetter={avatarLetter}
+        loggedInUserProfileImageUrl={loggedInUserProfileImageUrl}
+        imageError={imageError}
+        setImageError={setImageError}
+        currentUser={currentUser}
+        entity={entity}
+        location={location}
+        navigate={navigate}
+      />
+    </div>
+  </>
   );
 };
 

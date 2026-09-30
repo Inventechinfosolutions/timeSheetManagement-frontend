@@ -1,0 +1,299 @@
+/* Mobile Header Styles - Modern Fluid Amber Design */
+
+.mobile-header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  width: 100%;
+  height: 56px;
+  background: transparent;
+  user-select: none;
+}
+
+/* Background Art & Fluid Curves */
+.mobile-header-bg-art {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  overflow: visible;
+}
+
+.mobile-header-waves-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.mobile-header-container {
+  width: 100%;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  position: relative;
+  z-index: 2;
+  box-sizing: border-box;
+}
+
+/* Left: Frosted Hamburger Squircle Button */
+.mobile-header-menu-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  touch-action: manipulation;
+  outline: none;
+  flex-shrink: 0;
+}
+
+.mobile-header-menu-btn:active {
+  transform: scale(0.92);
+  background: rgba(255, 255, 255, 0.35);
+}
+
+/* Centered Mobile Logo */
+.mobile-header-logo {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  pointer-events: auto;
+}
+
+.mobile-header-logo img {
+  height: 32px;
+  max-height: 36px;
+  width: auto;
+  object-fit: contain;
+}
+
+/* Right Action Controls Group */
+.mobile-header-right-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  position: relative;
+  z-index: 2;
+}
+
+/* Notification Bell Circular Button */
+.mobile-header-bell-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #ffffff;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  touch-action: manipulation;
+  outline: none;
+  flex-shrink: 0;
+}
+
+.mobile-header-bell-btn:active {
+  transform: scale(0.92);
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.mobile-header-bell-btn.active {
+  background: #ffffff;
+  color: #E11D48;
+  border-color: #ffffff;
+  box-shadow: 0 2px 10px rgba(225, 29, 72, 0.35);
+}
+
+.mobile-header-bell-btn.active svg {
+  color: #E11D48 !important;
+  animation: bellRing 0.5s ease-in-out;
+}
+
+@keyframes bellRing {
+  0% { transform: rotate(0); }
+  20% { transform: rotate(15deg); }
+  40% { transform: rotate(-12deg); }
+  60% { transform: rotate(8deg); }
+  80% { transform: rotate(-4deg); }
+  100% { transform: rotate(0); }
+}
+
+/* Red Notification Count Badge */
+.mobile-header-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 17px;
+  height: 17px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background-color: #ef4444;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  padding: 0 3.5px;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4);
+  border: 1.5px solid rgba(255, 255, 255, 0.6);
+}
+
+/* Thin Divider Line */
+.mobile-header-divider {
+  width: 1px;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.4);
+  margin: 0 2px;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+
+/* Profile Avatar & Chevron Button */
+.mobile-header-profile-btn {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px;
+  border-radius: 9999px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  touch-action: manipulation;
+  outline: none;
+  flex-shrink: 0;
+}
+
+.mobile-header-profile-btn:active {
+  transform: scale(0.93);
+}
+
+/* Avatar Circle */
+.mobile-header-avatar-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.28);
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 14px;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Transparent backdrop for outside clicks */
+.mobile-dropdown-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.25);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  z-index: 9999;
+  animation: mobileFadeIn 0.15s ease-out forwards;
+}
+
+/* Notification Dropdown (Anchor below header) */
+.mobile-notification-dropdown {
+  position: fixed;
+  top: 64px;
+  left: 12px;
+  right: 12px;
+  max-width: 420px;
+  margin-left: auto;
+  background: #ffffff;
+  border-radius: 20px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 20px 50px -10px rgba(17, 28, 68, 0.25), 0 10px 20px -5px rgba(0, 0, 0, 0.1);
+  z-index: 10000;
+  overflow: hidden;
+  animation: mobileDropdownIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: top right;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Profile Dropdown (Anchor below profile avatar) */
+.mobile-profile-dropdown {
+  position: absolute;
+  top: 60px;
+  right: 12px;
+  width: 240px;
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 20px 50px 0 rgba(17, 28, 68, 0.18), 0 8px 16px -4px rgba(0, 0, 0, 0.08);
+  padding: 8px 0;
+  z-index: 10000;
+  animation: mobileDropdownIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: top right;
+}
+
+/* Scroll area */
+.mobile-scroll-container {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+.mobile-scroll-container::-webkit-scrollbar {
+  width: 4px;
+}
+
+.mobile-scroll-container::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 4px;
+}
+
+/* Keyframes */
+@keyframes mobileFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes mobileDropdownIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}

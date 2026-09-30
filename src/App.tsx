@@ -125,6 +125,9 @@ const AdminTabWrapper = () => {
       return <MyProfile />;
     case "leave-management":
       return <LeaveManagement />;
+    case "employee-dashboard":
+    case "team-dashboard":
+      return <AdminDashboard />;
     default:
       return <Navigate to="/admin-dashboard" replace />;
   }
@@ -332,7 +335,8 @@ function AppContent() {
                     </ProtectedRoute>
                   }
                 >
-                  <Route index element={<AdminDashboard />} />
+                  <Route index element={<Navigate to="/manager-dashboard/my-dashboard" replace />} />
+                  <Route path="employee-dashboard" element={<AdminDashboard />} />
                   <Route
                     path="timesheet/:employeeId/:date?"
                     element={

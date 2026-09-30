@@ -27,7 +27,7 @@ const AdminLogin = () => {
         currentUser.userType === UserType.MANAGER ||
         (currentUser.role && currentUser.role.toUpperCase().includes(UserType.MANAGER))
       ) {
-        navigate("/manager-dashboard");
+        navigate("/manager-dashboard/my-dashboard");
       } else {
         navigate("/admin-dashboard");
       }

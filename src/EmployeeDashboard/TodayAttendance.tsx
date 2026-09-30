@@ -3,13 +3,6 @@ import dayjs from "dayjs";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import {
   Calendar as CalendarIcon,
-  CheckCircle,
-  TrendingUp,
-  Clock,
-  Briefcase,
-  AlertCircle,
-  MapPin,
-  Laptop,
   Edit,
   ChevronLeft,
   ChevronRight,
@@ -23,6 +16,7 @@ import AttendanceViewWrapper from "./CalenderViewWrapper";
 import AttendancePieChart from "./AttendancePieChart";
 import WorkTrendsGraph from "./WorkTrendsGraph";
 import AttendanceStatsCards from "./AttendanceStatsCards";
+import MobileTodayAttendance from "./MobileResponsive/TodayAttendance";
 import { RootState } from "../store";
 
 interface Props {
@@ -334,8 +328,10 @@ const TodayAttendance = ({
     );
 
   return (
-    <div className="flex flex-col h-full w-full overflow-hidden bg-[#F4F7FE]">
-      {/* Header */}
+    <>
+      {/* Desktop Dashboard View */}
+      <div className="hidden md:flex flex-col h-full w-full overflow-hidden bg-[#F4F7FE]">
+        {/* Header */}
       {!viewOnly && (
         <div className="px-4 md:px-8 pt-4 md:pt-6 pb-2">
           <div className="bg-white rounded-2xl p-4 md:p-5 shadow-[0px_8px_24px_rgba(112,144,176,0.1)] border border-gray-100/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -508,6 +504,34 @@ const TodayAttendance = ({
         </div>
       </div>
     </div>
+
+      {/* Mobile Dashboard View */}
+      <div className="block md:hidden h-full w-full overflow-y-auto custom-scrollbar">
+        <MobileTodayAttendance
+          viewOnly={viewOnly}
+          currentUser={currentUser}
+          currentEmployeeId={currentEmployeeId}
+          entity={entity}
+          isMyRoute={isMyRoute}
+          displayEntry={displayEntry}
+          calendarDate={calendarDate}
+          setCalendarDate={setCalendarDate}
+          now={now}
+          showInternDataBanner={showInternDataBanner}
+          showConversionBanner={showConversionBanner}
+          handleNavigate={handleNavigate}
+          leaveBalance={leaveBalance}
+          monthlyLeaveBalance={monthlyLeaveBalance}
+          leaveLoading={leaveLoading}
+          yearlyRecords={yearlyRecords}
+          trends={trends}
+          isIntern={isIntern}
+          currentMonthEntries={currentMonthEntries}
+          fetchDashboardData={fetchDashboardData}
+          dashboardFetchedKey={dashboardFetchedKey}
+        />
+      </div>
+    </>
   );
 };
 

@@ -1,0 +1,79 @@
+/* 
+   MOBILE FOOTER STYLES
+   Fixed at the bottom of the screen
+   Matches Mobile Header & Sidebar Warm Rose Gold / Ruby Berry Theme
+ */
+
+.mobile-footer,
+.mobile-footer.sidebar-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  background: linear-gradient(135deg, #E11D48 0%, #F43F5E 45%, #FB7185 85%, #F472B6 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: 0 -3px 16px rgba(225, 29, 72, 0.25);
+  box-sizing: border-box;
+  z-index: 1000;
+}
+
+.mobile-footer-container {
+  width: 100%;
+  padding: 7px 14px 8px;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.mobile-footer-content {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.mobile-footer-text {
+  margin: 0;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+.mobile-footer-brand-link {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+  text-decoration: none;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.mobile-footer-brand-link:active {
+  transform: scale(0.96);
+  opacity: 0.9;
+}
+
+.mobile-footer-logo-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  padding: 2.5px 7px;
+  border-radius: 7px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  line-height: 1;
+}
+
+.mobile-footer-logo {
+  height: 13.5px;
+  width: auto;
+  object-fit: contain;
+  display: inline-block;
+  vertical-align: middle;
+}

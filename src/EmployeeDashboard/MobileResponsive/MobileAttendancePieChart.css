@@ -1,0 +1,511 @@
+/* 
+   MOBILE ATTENDANCE PIE CHART
+ */
+
+.mobile-pie-chart-container {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 14px;
+    border-radius: 20px;
+    background: #ffffff;
+    box-shadow: 0px 4px 20px rgba(225, 29, 72, 0.08);
+    border: 1px solid rgba(251, 113, 133, 0.35);
+    overflow: hidden;
+    position: relative;
+    animation: mobileCardEntrance 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mobile-pie-chart-container:hover {
+    transform: translateY(-2px);
+    box-shadow: 0px 8px 24px rgba(225, 29, 72, 0.12);
+}
+
+/* Subtle radiant top accent line */
+.mobile-pie-chart-container::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #E11D48, #FB7185, #F59E0B);
+    opacity: 0.85;
+}
+
+@keyframes mobileCardEntrance {
+    0% {
+        opacity: 0;
+        transform: translateY(16px) scale(0.98);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* 
+   HEADER
+ */
+
+.mobile-pie-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.mobile-pie-title-group {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.mobile-section-icon-badge {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    background: #FFE4E6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.mobile-section-icon-badge svg {
+    animation: mobileDonutSpin 10s linear infinite;
+    transform-origin: center;
+}
+
+@keyframes mobileDonutSpin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.mobile-pie-title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 800;
+    line-height: 1.2;
+    color: #172033;
+}
+
+.mobile-pie-subtitle {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: #64748B;
+    text-transform: uppercase;
+}
+
+.mobile-live-dot {
+    width: 6px;
+    height: 6px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: #E11D48;
+    box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.2);
+    animation: mobileLivePulse 1.8s ease-in-out infinite;
+}
+
+@keyframes mobileLivePulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(0.7);
+        opacity: 0.55;
+    }
+}
+
+.mobile-pie-date-badge {
+    flex-shrink: 0;
+    padding: 5px 9px;
+    border-radius: 9px;
+    background: #FFF1F2;
+    color: #E11D48;
+    font-size: 10px;
+    font-weight: 700;
+    white-space: nowrap;
+    border: 1px solid rgba(251, 113, 133, 0.4);
+}
+
+/* 
+   MAIN CHART + SUMMARY LAYOUT
+ */
+
+.mobile-pie-main-layout {
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(115px, 0.95fr);
+    align-items: center;
+    gap: 10px;
+}
+
+/* 
+   DONUT CHART
+ */
+
+.mobile-pie-chart-wrapper {
+    position: relative;
+    width: 100%;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: mobilePieChartEntrance 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes mobilePieChartEntrance {
+    0% {
+        opacity: 0;
+        transform: scale(0.85);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* 
+   PIE CENTER TEXT
+ */
+
+.mobile-pie-center-label {
+    pointer-events: none;
+}
+
+.mobile-pie-center-name {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    transition: fill 0.3s ease, color 0.3s ease;
+}
+
+.mobile-pie-center-value {
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    transition: fill 0.3s ease, color 0.3s ease;
+}
+
+/* 
+   SUMMARY CARDS (ALL CARDS ON THE RIGHT SIDE)
+ */
+
+.mobile-pie-summary-cards {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    max-height: 230px;
+    overflow-y: auto;
+    scrollbar-width: none;
+    padding: 2px 1px;
+}
+
+.mobile-pie-summary-cards::-webkit-scrollbar {
+    display: none;
+}
+
+/* Compact layout when more than 4 cards are present */
+.mobile-pie-summary-cards.compact-cards {
+    gap: 4px;
+}
+
+.mobile-pie-summary-cards.compact-cards .mobile-pie-summary-card {
+    min-height: 29px;
+    padding: 4px 8px;
+    border-radius: 9px;
+}
+
+.mobile-pie-summary-cards.compact-cards .summary-card-label {
+    font-size: 8.5px;
+}
+
+.mobile-pie-summary-cards.compact-cards .summary-card-value {
+    font-size: 13.5px;
+}
+
+.mobile-pie-summary-card {
+    position: relative;
+    width: 100%;
+    min-height: 38px;
+    box-sizing: border-box;
+    padding: 6px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    overflow: hidden;
+    animation: mobilePillSlideIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+    transition:
+        background 0.25s ease,
+        color 0.25s ease,
+        border-color 0.25s ease,
+        box-shadow 0.25s ease,
+        transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mobile-pie-summary-cards .mobile-pie-summary-card:nth-child(1) { animation-delay: 0.08s; }
+.mobile-pie-summary-cards .mobile-pie-summary-card:nth-child(2) { animation-delay: 0.14s; }
+.mobile-pie-summary-cards .mobile-pie-summary-card:nth-child(3) { animation-delay: 0.20s; }
+.mobile-pie-summary-cards .mobile-pie-summary-card:nth-child(4) { animation-delay: 0.26s; }
+.mobile-pie-summary-cards .mobile-pie-summary-card:nth-child(5) { animation-delay: 0.32s; }
+
+@keyframes mobilePillSlideIn {
+    0% {
+        opacity: 0;
+        transform: translateX(12px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.mobile-pie-summary-card:hover {
+    transform: translateX(-2px) scale(1.02);
+}
+
+.mobile-pie-summary-card:active {
+    transform: scale(0.96);
+}
+
+.summary-card-selected {
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.16);
+    transform: translateY(-1px);
+    animation: mobileSelectedGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes mobileSelectedGlow {
+    0% {
+        box-shadow: 0 2px 8px rgba(225, 29, 72, 0.2);
+    }
+    100% {
+        box-shadow: 0 4px 14px rgba(225, 29, 72, 0.45);
+    }
+}
+
+/* 
+   SUMMARY CARD TEXT
+ */
+
+.summary-card-label {
+    position: relative;
+    z-index: 2;
+    font-size: 9.5px;
+    font-weight: 800;
+    line-height: 1.1;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: inherit;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.summary-card-value {
+    position: relative;
+    z-index: 2;
+    font-size: 16px;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: inherit;
+    margin-left: 6px;
+    flex-shrink: 0;
+}
+
+/* 
+   EMPTY STATE
+ */
+
+.mobile-pie-empty {
+    min-height: 180px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.mobile-pie-empty-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f5f7fb;
+    color: #8b93a3;
+}
+
+.mobile-pie-empty-text {
+    font-size: 11px;
+    font-weight: 700;
+    color: #8b93a3;
+}
+
+/* 
+   MOBILE - 430PX AND BELOW
+ */
+
+@media (max-width: 430px) {
+    .mobile-pie-chart-container {
+        padding: 12px 10px;
+        border-radius: 18px;
+    }
+
+    .mobile-pie-main-layout {
+        grid-template-columns: minmax(0, 1.3fr) minmax(110px, 0.95fr);
+        gap: 6px;
+    }
+
+    .mobile-pie-chart-wrapper {
+        height: 185px;
+    }
+
+    .mobile-pie-summary-cards.compact-cards {
+        gap: 3.5px;
+    }
+
+    .mobile-pie-summary-cards.compact-cards .mobile-pie-summary-card {
+        min-height: 27px;
+        padding: 3.5px 7px;
+        border-radius: 8px;
+    }
+
+    .mobile-pie-summary-cards.compact-cards .summary-card-label {
+        font-size: 8px;
+    }
+
+    .mobile-pie-summary-cards.compact-cards .summary-card-value {
+        font-size: 12.5px;
+    }
+
+    .mobile-pie-summary-card {
+        min-height: 36px;
+        padding: 5px 8px;
+        border-radius: 10px;
+    }
+
+    .summary-card-label {
+        font-size: 9px;
+    }
+
+    .summary-card-value {
+        font-size: 15px;
+    }
+
+    .mobile-pie-center-name {
+        font-size: 9px;
+    }
+
+    .mobile-pie-center-value {
+        font-size: 20px;
+    }
+}
+
+/* 
+   MOBILE - 380PX AND BELOW
+ */
+
+@media (max-width: 380px) {
+    .mobile-pie-title {
+        font-size: 14px;
+    }
+
+    .mobile-pie-date-badge {
+        padding: 4px 7px;
+        font-size: 9px;
+    }
+
+    .mobile-pie-main-layout {
+        grid-template-columns: minmax(0, 1.25fr) minmax(100px, 0.95fr);
+        gap: 6px;
+    }
+
+    .mobile-pie-chart-wrapper {
+        height: 175px;
+    }
+
+    .mobile-pie-summary-cards {
+        gap: 5px;
+    }
+
+    .mobile-pie-summary-card {
+        min-height: 35px;
+        padding: 5px 7px;
+    }
+
+    .summary-card-label {
+        font-size: 8.5px;
+    }
+
+    .summary-card-value {
+        font-size: 14px;
+    }
+}
+
+/* 
+   VERY SMALL MOBILE - 340PX AND BELOW
+ */
+
+@media (max-width: 340px) {
+    .mobile-pie-main-layout {
+        grid-template-columns: minmax(0, 1.2fr) minmax(92px, 0.95fr);
+        gap: 4px;
+    }
+
+    .mobile-pie-chart-wrapper {
+        height: 160px;
+    }
+
+    .mobile-pie-summary-card {
+        min-height: 32px;
+        padding: 4px 6px;
+    }
+
+    .summary-card-label {
+        font-size: 8px;
+    }
+
+    .summary-card-value {
+        font-size: 13px;
+    }
+}
+
+/* 
+   REDUCED MOTION
+ */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .mobile-pie-chart-wrapper,
+    .mobile-live-dot {
+        animation: none !important;
+    }
+
+    .mobile-pie-summary-card {
+        transition: none !important;
+    }
+}

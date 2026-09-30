@@ -1,11 +1,9 @@
 import { useMemo } from "react";
 import dayjs from "dayjs";
 import {
-  Calendar as CalendarIcon,
   TrendingUp,
   CheckCircle,
   Ban,
-  Clock,
   ClipboardList,
   Info,
 } from "lucide-react";
@@ -13,6 +11,7 @@ import { Tooltip } from "antd";
 import { WorkTrendData } from "../reducers/employeeAttendance.reducer";
 import { LeaveRequestStatus } from "../enums";
 import { useAppSelector } from "../hooks";
+import MobileAttendanceStatsCards from "./MobileResponsive/MobileAttendanceStatsCards";
 
 interface Props {
   year: number;
@@ -320,7 +319,8 @@ const AttendanceStatsCards = ({
 
       const isInternThisMonthFallback = isInternForMonth(m);
       let monthlyAccrualFallback = isInternThisMonthFallback ? 1 : 1.5;
-      if (year === joinYear && m === joinMonth && joinDate.date() > 10) {
+      const jd = joiningDate ? new Date(joiningDate) : null;
+      if (year === joinYear && m === joinMonth && jd && jd.getDate() > 10) {
         monthlyAccrualFallback = 0;
       }
 
@@ -453,15 +453,17 @@ const AttendanceStatsCards = ({
   }, [month, year, attendanceRecords]);
 
   return (
-    <div
-      className={`grid ${
-        isInternThisMonth
-          ? "grid-cols-2 sm:grid-cols-4"
-          : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5"
-      } gap-4 transition-opacity duration-300 ${
-        loading ? "opacity-50 pointer-events-none" : "opacity-100"
-      }`}
-    >
+    <>
+      {/* Desktop Dashboard Cards */}
+      <div
+        className={`hidden md:grid ${
+          isInternThisMonth
+            ? "grid-cols-2 sm:grid-cols-4"
+            : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5"
+        } gap-4 transition-opacity duration-300 ${
+          loading ? "opacity-50 pointer-events-none" : "opacity-100"
+        }`}
+      >
       {/* Card 1 - Total Monthly Hours */}
       {/* <div className="bg-linear-to-br from-[#36B9CC] to-[#258391] rounded-[20px] p-4 shadow-lg shadow-cyan-500/20 flex flex-col items-start gap-3 relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 min-h-[140px]">
         <div className="absolute -right-4 -top-4 w-20 h-20 bg-white/20 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500"></div>
@@ -627,7 +629,26 @@ const AttendanceStatsCards = ({
           </div>
         </div>
       </div>
-    </div>
+      </div>
+
+      {/* Mobile Dashboard Cards */}
+      <div className="block md:hidden w-full">
+        <MobileAttendanceStatsCards
+          loading={loading}
+          isInternThisMonth={isInternThisMonth}
+          isConversionMonth={isConversionMonth}
+          entitlement={entitlement}
+          dynamicCarryOver={dynamicCarryOver}
+          paidUsed={paidUsed}
+          approvedUsed={approvedUsed}
+          finalLOP={finalLOP}
+          balanceMonthly={balanceMonthly}
+          internQuota={internQuota}
+          internLeavesTaken={internLeavesTaken}
+          fullTimerAdded={fullTimerAdded}
+        />
+      </div>
+    </>
   );
 };
 

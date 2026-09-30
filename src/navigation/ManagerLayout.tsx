@@ -24,7 +24,7 @@ const ManagerLayout = () => {
     ) {
       return "Employee Directory";
     }
-    if (path === "/manager-dashboard/my-dashboard") {
+    if (path === "/manager-dashboard/my-dashboard" || path === "/manager-dashboard" || path === "/manager-dashboard/") {
       return "My Dashboard";
     }
     if (path === "/manager-dashboard/my-timesheet") {
@@ -52,7 +52,11 @@ const ManagerLayout = () => {
     if (path.includes("/manager-dashboard/manager-mapping")) {
       return "Manager Mapping";
     }
-    if (path.includes("/manager-dashboard/manager-employees/")) {
+    if (
+      path.includes("/manager-dashboard/employee-dashboard") ||
+      path.includes("/manager-dashboard/team-dashboard") ||
+      path.includes("/manager-dashboard/manager-employees/")
+    ) {
       return "Employee Dashboard";
     }
     if (path.includes("/manager-dashboard/my-profile")) {
@@ -94,8 +98,11 @@ const ManagerLayout = () => {
         return "Request Management ";
       case "notes":
         return "Notes";
-      default:
+      case "employee-dashboard":
+      case "team-dashboard":
         return "Employee Dashboard";
+      default:
+        return "My Dashboard";
     }
   };
 
@@ -132,7 +139,7 @@ const ManagerLayout = () => {
     } else if (tabName === "Manager Mapping") {
       navigate("/manager-dashboard/manager-mapping");
     } else if (tabName === "Employee Dashboard") {
-      navigate("/manager-dashboard");
+      navigate("/manager-dashboard/employee-dashboard");
     } else if (tabName === "My Dashboard") {
       navigate("/manager-dashboard/my-dashboard");
     } else if (tabName === "My Timesheet") {

@@ -81,38 +81,4 @@
   transform: translateY(0);
 }
 
-@media (max-width: 768px) {
-  .header-container {
-    height: auto;
-    padding: 8px 16px 4px 16px; /* Added right padding for screen edge gap */
-    flex-direction: column;
-    gap: 6px; /* Added gap between logo and navigation row */
-    align-items: center;
-  }
 
-  .header-logo {
-    flex: 0 1 auto;
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    padding-right: 16px; /* Keep logo centered relative to screen */
-  }
-
-  .header-logo > div {
-    transform: scale(0.9);
-    transform-origin: center center;
-  }
-
-  .header-container .ml-auto {
-    margin-left: 0;
-    width: 100%;
-    justify-content: flex-end;
-    padding: 0;
-    gap: 12px;
-  }
-
-  /* Ensure the items stay grouped on the right */
-  .header-container .ml-auto > * {
-    flex: 0 0 auto;
-  }
-}

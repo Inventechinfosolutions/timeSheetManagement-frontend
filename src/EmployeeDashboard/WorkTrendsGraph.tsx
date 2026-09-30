@@ -12,6 +12,7 @@ import {
 import { useAppSelector } from "../hooks";
 import { RootState } from "../store";
 import { WorkLocation } from "../enums";
+import MobileWorkTrendsGraph from "./MobileResponsive/MobileWorkTrendsGraph";
 
 // Interface for the data structure
 // (Ideally imported from reducer, but can keep here or import)
@@ -21,7 +22,7 @@ interface Props {
   currentMonth: Date;
 }
 
-const WorkTrendsGraph = ({ currentMonth }: Props) => {
+const WorkTrendsGraph = ({ employeeId, currentMonth }: Props) => {
   // Using selector to get data from Redux store, using separate loading state!
   const { trends, trendsLoading } = useAppSelector(
     (state: RootState) => state.attendance,
@@ -36,17 +37,29 @@ const WorkTrendsGraph = ({ currentMonth }: Props) => {
 
   if (trendsLoading) {
     return (
-      <div className="bg-white rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-col h-full min-h-[400px] items-center justify-center">
-        <div className="w-8 h-8 border-4 border-[#4318FF]/20 border-t-[#4318FF] rounded-full animate-spin"></div>
-        <div className="text-gray-400 text-sm mt-3 font-medium">
-          Loading trends...
+      <>
+        <div className="hidden md:flex bg-white rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-col h-full min-h-[400px] items-center justify-center">
+          <div className="w-8 h-8 border-4 border-[#4318FF]/20 border-t-[#4318FF] rounded-full animate-spin"></div>
+          <div className="text-gray-400 text-sm mt-3 font-medium">
+            Loading trends...
+          </div>
         </div>
-      </div>
+
+        <div className="block md:hidden w-full">
+          <MobileWorkTrendsGraph
+            employeeId={employeeId}
+            currentMonth={currentMonth}
+            data={data}
+            trendsLoading={trendsLoading}
+          />
+        </div>
+      </>
     );
   }
 
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-col h-full min-h-[400px]">
+    <>
+      <div className="hidden md:flex bg-white rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex-col h-full min-h-[400px]">
       <div className="flex items-center justify-between mb-6">
         <h4 className="text-lg font-bold text-[#1B2559]">Work Location Trend</h4>
 
@@ -206,6 +219,16 @@ const WorkTrendsGraph = ({ currentMonth }: Props) => {
         )}
       </div>
     </div>
+
+      <div className="block md:hidden w-full">
+        <MobileWorkTrendsGraph
+          employeeId={employeeId}
+          currentMonth={currentMonth}
+          data={data}
+          trendsLoading={trendsLoading}
+        />
+      </div>
+    </>
   );
 };
 
