@@ -28,13 +28,19 @@ export interface InboxItem {
   notesId: number;
   fromMail: string;
   toMail: string;
-  permission?: 'VIEW' | 'EDIT';
+  senderId?: string;
+  receiverId?: string;
+  folder?: 'INBOX' | 'SENT' | string;
+  permission?: 'VIEW' | 'EDIT' | 'CanView' | 'CanEdit' | string;
   isRead: boolean;
   createdAt: string;
   updatedAt: string;
   senderName?: string;
   senderDesignation?: string;
   senderDepartment?: string;
+  receiverName?: string;
+  receiverDesignation?: string;
+  receiverDepartment?: string;
   note: InboxNote | null;
 }
 
@@ -59,7 +65,7 @@ const apiUrl = '/api/inbox';
 // 1. Fetch User Inbox
 export const fetchInbox = createAsyncThunk(
   'inbox/fetchInbox',
-  async (params: { isRead?: boolean; search?: string } | undefined, { rejectWithValue }) => {
+  async (params: { isRead?: boolean; search?: string; folder?: 'INBOX' | 'SENT' | 'ALL' | string } | undefined, { rejectWithValue }) => {
     try {
       const response = await axios.get(apiUrl, { params });
       return response.data;

@@ -14,3 +14,9 @@ export enum NoteExportFormatEnum {
   PDF = "pdf",
   WORD = "word",
 }
+
+export enum NotePermissionEnum {
+  CanView = "CanView",
+  CanEdit = "CanEdit",
+  CanDelete = "CanDelete",
+}

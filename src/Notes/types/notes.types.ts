@@ -49,6 +49,11 @@ export interface Note {
   updatedAt: string;
   createdBy?: string;
   updatedBy?: string;
+  permission?: string;
+  userPermission?: string;
+  canView?: boolean;
+  canEdit?: boolean;
+  canDelete?: boolean;
 }
 
 export interface NoteDocumentItem {

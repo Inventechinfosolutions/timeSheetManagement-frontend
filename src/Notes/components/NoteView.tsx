@@ -15,8 +15,9 @@ import {
   Archive,
   ArchiveRestore,
   Send,
+  Trash2,
 } from "lucide-react";
-import { Dropdown, type MenuProps } from "antd";
+import { Dropdown, Popconfirm, type MenuProps } from "antd";
 import dayjs from "dayjs";
 import { Note, NoteDocumentItem } from "../types/notes.types";
 import { NoteAttachmentChip } from "./NoteAttachmentChip";
@@ -35,6 +36,9 @@ interface NoteViewProps {
   onTogglePin?: (noteId: number) => void;
   onToggleArchive?: (noteId: number) => void;
   onOpenSendModal?: (note: Note) => void;
+  canEdit?: boolean;
+  canDelete?: boolean;
+  onDelete?: (noteId: number) => void;
 }
 
 export const NoteView: React.FC<NoteViewProps> = ({
@@ -46,6 +50,9 @@ export const NoteView: React.FC<NoteViewProps> = ({
   onTogglePin,
   onToggleArchive,
   onOpenSendModal,
+  canEdit = true,
+  canDelete = false,
+  onDelete,
 }) => {
   const isProjectNote = activeNote.type === "PROJECT";
 
@@ -196,14 +203,36 @@ export const NoteView: React.FC<NoteViewProps> = ({
               </button>
             </Dropdown>
 
-            <button
-              type="button"
-              onClick={() => onStartEdit(activeNote)}
-              className="px-4 py-2.5 bg-[#4318FF] hover:bg-[#320fe0] text-white font-semibold text-xs sm:text-sm rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md shadow-[#4318FF]/20 hover:shadow-lg"
-            >
-              <Edit3 className="w-4 h-4" />
-              <span>Edit Note</span>
-            </button>
+            {canEdit !== false && (
+              <button
+                type="button"
+                onClick={() => onStartEdit(activeNote)}
+                className="px-4 py-2.5 bg-[#4318FF] hover:bg-[#320fe0] text-white font-semibold text-xs sm:text-sm rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md shadow-[#4318FF]/20 hover:shadow-lg"
+              >
+                <Edit3 className="w-4 h-4" />
+                <span>Edit Note</span>
+              </button>
+            )}
+
+            {(canDelete || activeNote.canDelete) && onDelete && (
+              <Popconfirm
+                title="Delete this note?"
+                description="Are you sure you want to delete this note and its attachments?"
+                onConfirm={() => onDelete(activeNote.id)}
+                okText="Delete"
+                cancelText="Cancel"
+                okButtonProps={{ danger: true }}
+              >
+                <button
+                  type="button"
+                  className="px-3.5 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-semibold text-xs sm:text-sm rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                  title="Delete Note"
+                >
+                  <Trash2 className="w-4 h-4 text-rose-600" />
+                  <span>Delete</span>
+                </button>
+              </Popconfirm>
+            )}
 
             <button
               type="button"

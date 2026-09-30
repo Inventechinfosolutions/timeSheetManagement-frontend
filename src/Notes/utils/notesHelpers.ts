@@ -673,9 +673,11 @@ export interface SendNotePayload {
   includeFiles: boolean;
   selectedAttachmentKeys?: string[];
   attachmentKeys?: string[];
-  permission?: 'VIEW' | 'EDIT';
+  permission?: string;
+  permissions?: string[];
   canView?: boolean;
   canEdit?: boolean;
+  canDelete?: boolean;
 }
 
 /**
@@ -695,6 +697,11 @@ export const sendNoteContent = async (payload: SendNotePayload): Promise<boolean
       recipients: recipientsList,
       to: recipientsList[0] || payload.recipientEmail,
       email: recipientsList[0] || payload.recipientEmail,
+      permission: payload.permission,
+      permissions: payload.permissions,
+      canView: payload.canView,
+      canEdit: payload.canEdit,
+      canDelete: payload.canDelete,
       attachmentKeys: payload.selectedAttachmentKeys || payload.attachmentKeys || [],
     };
     await axios.post(`/api/notes/${payload.noteId}/send`, body);

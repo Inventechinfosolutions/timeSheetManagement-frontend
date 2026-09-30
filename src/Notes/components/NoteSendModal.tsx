@@ -33,6 +33,7 @@ export const NoteSendModal: React.FC<NoteSendModalProps> = ({
   const [subject, setSubject] = useState("");
   const [canView, setCanView] = useState(true);
   const [canEdit, setCanEdit] = useState(false);
+  const [canDelete, setCanDelete] = useState(false);
   const [includeDescription, setIncludeDescription] = useState(true);
   const [includeFiles, setIncludeFiles] = useState(true);
   const [selectedFileKeys, setSelectedFileKeys] = useState<string[]>([]);
@@ -49,6 +50,7 @@ export const NoteSendModal: React.FC<NoteSendModalProps> = ({
       setEmailError("");
       setCanView(true);
       setCanEdit(false);
+      setCanDelete(false);
       setIncludeDescription(true);
       setIncludeFiles(true);
 
@@ -154,8 +156,8 @@ export const NoteSendModal: React.FC<NoteSendModalProps> = ({
       return;
     }
 
-    if (!canView && !canEdit) {
-      message.error("Please select at least one permission (View or Edit)");
+    if (!canView && !canEdit && !canDelete) {
+      message.error("Please select at least one permission (View, Edit, or Delete)");
       return;
     }
 
@@ -173,7 +175,12 @@ export const NoteSendModal: React.FC<NoteSendModalProps> = ({
     setIsSending(true);
     const hideLoading = message.loading("Sending note to recipient(s)...", 0);
 
-    const permissionMode: "VIEW" | "EDIT" = canEdit ? "EDIT" : "VIEW";
+    const selectedPerms: string[] = [];
+    if (canView) selectedPerms.push("CanView");
+    if (canEdit) selectedPerms.push("CanEdit");
+    if (canDelete) selectedPerms.push("CanDelete");
+    if (selectedPerms.length === 0) selectedPerms.push("CanView");
+    const permissionString = selectedPerms.join(",");
 
     try {
       await sendNoteContent({
@@ -181,9 +188,11 @@ export const NoteSendModal: React.FC<NoteSendModalProps> = ({
         recipientEmail: currentEmails.join(", "),
         recipients: currentEmails,
         subject: subject.trim() || note.title || "WorkSphere Note",
-        permission: permissionMode,
+        permission: permissionString,
+        permissions: selectedPerms,
         canView,
         canEdit,
+        canDelete,
         includeDescription,
         includeFiles,
         selectedAttachmentKeys: includeFiles ? selectedFileKeys : [],
@@ -318,26 +327,32 @@ export const NoteSendModal: React.FC<NoteSendModalProps> = ({
             </div>
           </div>
 
-          {/* Recipient Permission Checkboxes - independent selection */}
+          {/* Recipient Permission Checkboxes - View, Edit, Delete */}
           <div>
-            <label className="text-xs font-bold text-[#2B3674] ml-1 block mb-1">
-              Permission
-            </label>
-            <div className="flex items-center gap-6 ml-1">
+            <div className="flex items-center justify-between mb-1 ml-1">
+              <label className="text-xs font-bold text-[#2B3674]">
+                Permissions
+              </label>
+              <span className="text-[11px] text-slate-400">
+                (Select permissions to grant)
+              </span>
+            </div>
+            <div className="flex items-center gap-5 ml-1 p-2.5 bg-slate-50 border border-slate-200/80 rounded-xl">
               <Checkbox
                 checked={canView}
                 onChange={(e) => setCanView(e.target.checked)}
                 className="text-xs font-semibold text-slate-700 select-none cursor-pointer"
               >
-                View
+                Can View
               </Checkbox>
               <Checkbox
                 checked={canEdit}
                 onChange={(e) => setCanEdit(e.target.checked)}
                 className="text-xs font-semibold text-slate-700 select-none cursor-pointer"
               >
-                Edit
+                Can Edit
               </Checkbox>
+           
             </div>
           </div>
 

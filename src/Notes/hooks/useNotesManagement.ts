@@ -1,5 +1,6 @@
 import dayjs from "dayjs";
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import axios from "axios";
 import { message } from "antd";
 import { useAppDispatch, useAppSelector } from "../../hooks";
@@ -400,6 +401,32 @@ export const useNotesManagement = () => {
       console.error("Failed to load note details:", err);
     }
   };
+
+  const location = useLocation();
+
+  // Listen to navigation state (e.g. navigating to edit or view a specific note)
+  useEffect(() => {
+    const state = location.state as { editNoteId?: number; viewNoteId?: number } | null;
+    if (state?.editNoteId) {
+      dispatch(fetchNoteById(state.editNoteId))
+        .unwrap()
+        .then((note) => {
+          if (note) {
+            handleStartEdit(note);
+          }
+        })
+        .catch((err) => console.warn("Failed to load note for edit from location state:", err));
+    } else if (state?.viewNoteId) {
+      dispatch(fetchNoteById(state.viewNoteId))
+        .unwrap()
+        .then((note) => {
+          if (note) {
+            handleStartView(note);
+          }
+        })
+        .catch((err) => console.warn("Failed to load note for view from location state:", err));
+    }
+  }, [location.state]);
 
   // Back to Main List View
   const handleBackToList = () => {
