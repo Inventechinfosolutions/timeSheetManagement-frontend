@@ -195,6 +195,8 @@ export const NoteSendModal: React.FC<NoteSendModalProps> = ({
         canDelete,
         includeDescription,
         includeFiles,
+        hasDocument: includeFiles,
+        hasDescription: includeDescription,
         selectedAttachmentKeys: includeFiles ? selectedFileKeys : [],
       });
 
@@ -223,7 +225,7 @@ export const NoteSendModal: React.FC<NoteSendModalProps> = ({
       styles={{
         content: { padding: 0, borderRadius: "16px", overflow: "hidden" },
         body: { padding: 0 },
-      }}
+      } as any}
       destroyOnClose
     >
       <div className="flex flex-col max-h-[85vh] overflow-hidden bg-white">

@@ -671,6 +671,8 @@ export interface SendNotePayload {
   customMessage?: string;
   includeDescription: boolean;
   includeFiles: boolean;
+  hasDocument?: boolean;
+  hasDescription?: boolean;
   selectedAttachmentKeys?: string[];
   attachmentKeys?: string[];
   permission?: string;
@@ -692,6 +694,9 @@ export const sendNoteContent = async (payload: SendNotePayload): Promise<boolean
         .map((s) => s.trim())
         .filter(Boolean);
 
+    const hasDoc = payload.hasDocument !== undefined ? payload.hasDocument : payload.includeFiles;
+    const hasDesc = payload.hasDescription !== undefined ? payload.hasDescription : payload.includeDescription;
+
     const body = {
       ...payload,
       recipients: recipientsList,
@@ -702,6 +707,10 @@ export const sendNoteContent = async (payload: SendNotePayload): Promise<boolean
       canView: payload.canView,
       canEdit: payload.canEdit,
       canDelete: payload.canDelete,
+      hasDocument: hasDoc,
+      hasDescription: hasDesc,
+      includeFiles: hasDoc,
+      includeDescription: hasDesc,
       attachmentKeys: payload.selectedAttachmentKeys || payload.attachmentKeys || [],
     };
     await axios.post(`/api/notes/${payload.noteId}/send`, body);

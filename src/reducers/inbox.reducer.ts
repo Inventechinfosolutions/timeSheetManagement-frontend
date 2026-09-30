@@ -33,6 +33,8 @@ export interface InboxItem {
   folder?: 'INBOX' | 'SENT' | string;
   permission?: 'VIEW' | 'EDIT' | 'CanView' | 'CanEdit' | string;
   isRead: boolean;
+  hasDocument?: boolean;
+  hasDescription?: boolean;
   createdAt: string;
   updatedAt: string;
   senderName?: string;
