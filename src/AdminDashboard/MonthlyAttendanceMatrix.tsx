@@ -1,22 +1,17 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useAppDispatch, useAppSelector } from "../hooks";
+import { useAppDispatch, useAppSelector, useDebounce } from "../hooks";
 import { RootState } from "../store";
 import {
   Download,
-  ChevronLeft,
-  ChevronRight,
-  Search,
-  X,
   ArrowLeft,
   Loader2,
-  Calendar,
   FileSpreadsheet,
   FileText,
   Users,
   Building2,
-  ChevronDown,
   RotateCw,
+  Filter,
 } from "lucide-react";
 import { saveAs } from "file-saver";
 import { downloadMatrixPdf } from "../utils/downloadMatrixPdf";
@@ -27,6 +22,16 @@ import {
 import { fetchDepartments } from "../reducers/masterDepartment.reducer";
 import { UserType } from "../enums";
 import { message } from "antd";
+import {
+  Tooltip,
+  SearchBox,
+  MonthNavigator,
+  Dropdown,
+  Button,
+  Badge,
+  InventechIconLoader,
+} from "../components/ui";
+import type { DropdownOption } from "../components/ui";
 
 interface DayInfo {
   date: string;
@@ -125,23 +130,53 @@ const MonthlyAttendanceMatrix: React.FC = () => {
 
   // Filters
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>("");
+  const [debouncedSearchTerm, flushDebouncedSearchTerm] = useDebounce<string>(searchTerm, 400);
   const [selectedDepartment, setSelectedDepartment] = useState<string>(() => {
     if (isManager) {
       return entity?.department || entity?.department_name || "";
     }
     return "All Departments";
   });
-  const [isDeptDropdownOpen, setIsDeptDropdownOpen] = useState<boolean>(false);
-  const deptDropdownRef = useRef<HTMLDivElement>(null);
+  // Status Filter: All, Submitted, Pending
+  const [selectedStatus, setSelectedStatus] = useState<string>("All");
 
-  // Debounce search term to trigger backend API call
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
-    }, 350);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
+  // Status dropdown options
+  const statusOptions: DropdownOption[] = useMemo(
+    () => [
+      {
+        value: "All",
+        label: "All Status",
+        dotColor: "bg-[#4318FF]",
+      },
+      {
+        value: "Submitted",
+        label: "Submitted",
+        dotColor: "bg-[#01B574]",
+        badgeText: "All days filled",
+        badgeClass: "bg-emerald-50 text-[#01B574] border border-emerald-200",
+      },
+      {
+        value: "Pending",
+        label: "Pending",
+        dotColor: "bg-[#D97706]",
+        badgeText: "Has missing days",
+        badgeClass: "bg-amber-50 text-[#D97706] border border-amber-200",
+      },
+    ],
+    [],
+  );
+
+  // Department dropdown options
+  const departmentOptions: DropdownOption[] = useMemo(() => {
+    return [
+      { value: "All Departments", label: "All Departments" },
+      ...departments.map((dept) => ({
+        value: dept.departmentName,
+        label: dept.departmentName,
+      })),
+    ];
+  }, [departments]);
+
 
   // For manager, auto-select their department when opening / data loaded
   useEffect(() => {
@@ -155,27 +190,17 @@ const MonthlyAttendanceMatrix: React.FC = () => {
     dispatch(fetchDepartments());
   }, [dispatch]);
 
-  // Close department dropdown on outside click
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (deptDropdownRef.current && !deptDropdownRef.current.contains(e.target as Node)) {
-        setIsDeptDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  // Fetch Matrix Data from Backend with Search & Department filter
+  // Fetch Matrix Data from Backend with Search, Department, and Status filter
   const loadMatrixData = async (
     m: number,
     y: number,
     searchQuery?: string,
     deptFilter?: string,
+    statusFilter?: string,
   ) => {
     try {
       setLoading(true);
-      const data = await fetchMonthlyAttendanceMatrix(m, y, searchQuery, deptFilter);
+      const data = await fetchMonthlyAttendanceMatrix(m, y, searchQuery, deptFilter, statusFilter);
       setMatrixData(data);
     } catch (err: any) {
       console.error("Failed to load monthly attendance matrix:", err);
@@ -187,8 +212,9 @@ const MonthlyAttendanceMatrix: React.FC = () => {
 
   useEffect(() => {
     const deptToFilter = !isManager && selectedDepartment !== "All Departments" ? selectedDepartment : undefined;
-    loadMatrixData(selectedMonth, selectedYear, debouncedSearchTerm, deptToFilter);
-  }, [selectedMonth, selectedYear, debouncedSearchTerm, selectedDepartment, isManager]);
+    const statusToFilter = selectedStatus !== "All" ? selectedStatus : undefined;
+    loadMatrixData(selectedMonth, selectedYear, debouncedSearchTerm, deptToFilter, statusToFilter);
+  }, [selectedMonth, selectedYear, debouncedSearchTerm, selectedDepartment, selectedStatus, isManager]);
 
   // Month navigation
   const handlePrevMonth = () => {
@@ -229,23 +255,47 @@ const MonthlyAttendanceMatrix: React.FC = () => {
     }
   };
 
-  // PDF Export Handler (calls separate downloadMatrixPdf utility)
-  const handleExportPdf = () => {
-    if (!matrixData || filteredEmployees.length === 0) {
-      message.warning("No attendance data to export");
-      return;
-    }
-
+  // PDF Export Handler - Always exports all employees for the selected month/year (unfiltered by UI filters)
+  const handleExportPdf = async () => {
     try {
       setIsExportingPdf(true);
+
+      // Fetch complete matrix data for the selected month/year without UI filters (search, department, status)
+      const fullData = await fetchMonthlyAttendanceMatrix(
+        selectedMonth,
+        selectedYear,
+        undefined,
+        isManager ? managerDepartment : undefined,
+        undefined,
+      );
+
+      const allEmployees = fullData?.employees || [];
+      if (allEmployees.length === 0) {
+        message.warning("No attendance data to export for this month");
+        return;
+      }
+
+      // Calculate total stats across all employees
+      const allTotalStats = allEmployees.reduce(
+        (acc: any, emp: any) => ({
+          present: acc.present + (emp.summary?.fullDays || 0),
+          halfDay: acc.halfDay + (emp.summary?.halfDays || 0),
+          wfh: acc.wfh + (emp.summary?.wfh || 0),
+          cv: acc.cv + (emp.summary?.clientVisit || 0),
+          leave: acc.leave + (emp.summary?.leaves || 0),
+          notUpdated: acc.notUpdated + (emp.summary?.notUpdated || 0),
+        }),
+        { present: 0, halfDay: 0, wfh: 0, cv: 0, leave: 0, notUpdated: 0 },
+      );
+
       downloadMatrixPdf({
         monthName: monthNames[selectedMonth - 1],
         month: selectedMonth,
         year: selectedYear,
-        selectedDepartment,
-        employees: filteredEmployees,
-        totalStats,
-        daysInMonth: matrixData.daysInMonth,
+        selectedDepartment: isManager ? (managerDepartment || "All Departments") : "All Departments",
+        employees: allEmployees,
+        totalStats: allTotalStats,
+        daysInMonth: fullData.daysInMonth || matrixData?.daysInMonth || 30,
       });
       message.success("Attendance PDF downloaded successfully!");
     } catch (err: any) {
@@ -271,9 +321,15 @@ const MonthlyAttendanceMatrix: React.FC = () => {
         (emp.department && emp.department.trim().toLowerCase() === selectedDepartment.trim().toLowerCase()) ||
         (isManager && (!emp.department || emp.department.trim().toLowerCase() === selectedDepartment.trim().toLowerCase()));
 
-      return matchesSearch && matchesDept;
+      const matchesStatus =
+        !selectedStatus ||
+        selectedStatus === "All" ||
+        (selectedStatus === "Submitted" && (emp.summary?.notUpdated || 0) === 0) ||
+        (selectedStatus === "Pending" && (emp.summary?.notUpdated || 0) > 0);
+
+      return matchesSearch && matchesDept && matchesStatus;
     });
-  }, [matrixData, searchTerm, selectedDepartment, isManager]);
+  }, [matrixData, searchTerm, selectedDepartment, selectedStatus, isManager]);
 
   // Aggregate summary stats across visible employees
   const totalStats = useMemo(() => {
@@ -328,13 +384,15 @@ const MonthlyAttendanceMatrix: React.FC = () => {
     <div className="p-4 md:p-6 bg-[#F4F7FE] min-h-screen font-sans">
       <div className="max-w-[1600px] mx-auto">
         {/* Back Button */}
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={() => navigate(`${basePath}/timesheet-list`)}
-          className="inline-flex items-center gap-2 text-xs font-bold text-[#4318FF] hover:text-[#3311CC] transition-colors mb-4 cursor-pointer group"
+          leftIcon={<ArrowLeft size={14} className="group-hover:-translate-x-0.5 transition-transform" />}
+          className="text-[#4318FF] hover:text-[#3311CC] hover:bg-transparent !p-0 mb-4 group font-bold text-xs"
         >
-          <ArrowLeft size={14} className="group-hover:-translate-x-0.5 transition-transform" />
-          <span>Back to Timesheet List</span>
-        </button>
+          Back to Timesheet List
+        </Button>
 
         {/* Header Card */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 md:p-6 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -354,219 +412,166 @@ const MonthlyAttendanceMatrix: React.FC = () => {
 
           {/* Month Navigator & Export */}
           <div className="flex flex-wrap items-center gap-3">
-            {/* Quick Refresh Button */}
-            <button
+            {/* Quick Refresh & Reset Filters Button */}
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => {
-                const deptToFilter = !isManager && selectedDepartment !== "All Departments" ? selectedDepartment : undefined;
-                loadMatrixData(selectedMonth, selectedYear, debouncedSearchTerm, deptToFilter);
+                setSearchTerm("");
+                flushDebouncedSearchTerm("");
+                setSelectedStatus("All");
+                const defaultDept = isManager ? managerDepartment || "" : "All Departments";
+                setSelectedDepartment(defaultDept);
+                loadMatrixData(
+                  selectedMonth,
+                  selectedYear,
+                  undefined,
+                  isManager ? managerDepartment : undefined,
+                  undefined,
+                );
               }}
               disabled={loading}
-              className="p-2.5 bg-[#F4F7FE] hover:bg-gray-100 text-[#4318FF] border border-gray-200/80 rounded-xl shadow-2xs hover:shadow-xs active:scale-95 transition-all cursor-pointer disabled:opacity-50"
-              title="Refresh Attendance Matrix"
+              title="Reset all filters and refresh matrix"
+              className="p-2.5 h-[38px] w-[38px] !px-0 !py-0 shadow-2xs hover:shadow-xs"
             >
               <RotateCw size={16} className={loading ? "animate-spin" : ""} />
-            </button>
+            </Button>
 
             {/* Month Navigator */}
-            <div className="flex items-center gap-1.5 bg-[#F4F7FE] px-3 py-1.5 rounded-xl border border-gray-200/80">
-              <button
-                onClick={handlePrevMonth}
-                disabled={loading}
-                className="p-1.5 rounded-lg hover:bg-white active:scale-95 transition-all text-[#2B3674] disabled:opacity-50 cursor-pointer"
-                title="Previous Month"
-              >
-                <ChevronLeft size={16} />
-              </button>
-              <div className="flex items-center gap-2 min-w-[140px] justify-center px-1">
-                <Calendar size={14} className="text-[#4318FF]" />
-                <span className="text-sm font-bold text-[#2B3674]">
-                  {monthNames[selectedMonth - 1]} {selectedYear}
-                </span>
-              </div>
-              <button
-                onClick={handleNextMonth}
-                disabled={loading}
-                className="p-1.5 rounded-lg hover:bg-white active:scale-95 transition-all text-[#2B3674] disabled:opacity-50 cursor-pointer"
-                title="Next Month"
-              >
-                <ChevronRight size={16} />
-              </button>
-            </div>
+            <MonthNavigator
+              month={selectedMonth}
+              year={selectedYear}
+              onPrev={handlePrevMonth}
+              onNext={handleNextMonth}
+              disabled={loading}
+            />
 
             {/* Export Excel Button */}
-            <button
+            <Button
+              variant="success"
+              size="lg"
               onClick={handleExportExcel}
               disabled={isExporting}
-              className="flex items-center gap-2 px-5 py-2.5 bg-[#01B574] hover:bg-[#009e65] active:scale-95 text-white rounded-xl shadow-sm font-bold text-sm transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              loading={isExporting}
+              leftIcon={<Download size={16} />}
               title="Download Excel report"
             >
-              {isExporting ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                <Download size={16} />
-              )}
-              <span>{isExporting ? "Exporting..." : "Export Excel"}</span>
-            </button>
+              {isExporting ? "Exporting..." : "Export Excel"}
+            </Button>
 
             {/* Download PDF Button */}
-            <button
+            <Button
+              variant="danger"
+              size="lg"
               onClick={handleExportPdf}
               disabled={isExportingPdf}
-              className="flex items-center gap-2 px-5 py-2.5 bg-[#DC2626] hover:bg-[#B91C1C] active:scale-95 text-white rounded-xl shadow-sm font-bold text-sm transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              loading={isExportingPdf}
+              leftIcon={<FileText size={16} />}
               title="Download PDF report"
             >
-              {isExportingPdf ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                <FileText size={16} />
-              )}
-              <span>{isExportingPdf ? "Generating PDF..." : "Download PDF"}</span>
-            </button>
+              {isExportingPdf ? "Generating PDF..." : "Download PDF"}
+            </Button>
           </div>
         </div>
 
-        {/* Filter Bar & Legend Bar (Single Row, No Overflow) */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 mb-6">
-          <div className="flex flex-wrap lg:flex-nowrap items-center justify-between gap-3">
-            {/* Left Controls: Search, Dept, Count */}
-            <div className="flex items-center gap-2.5 shrink-0">
+        {/* Filter Bar & Legend Bar */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 md:p-3.5 mb-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 gap-y-2.5">
+            {/* Left Controls: Search, Status, Dept, Count */}
+            <div className="flex flex-wrap items-center gap-2">
               {/* Search Input */}
-              <div className="flex items-center bg-[#F4F7FE] rounded-xl px-3 py-1.5 w-44 lg:w-56 border border-transparent focus-within:border-[#4318FF]/30 transition-all">
-                <Search size={14} className="text-gray-400 mr-1.5 shrink-0" />
-                <input
-                  type="text"
-                  placeholder="Search name or ID..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="bg-transparent border-none outline-none text-xs font-semibold text-[#2B3674] w-full placeholder:text-gray-400"
-                />
-                {searchTerm && (
-                  <button
-                    onClick={() => {
-                      setSearchTerm("");
-                      setDebouncedSearchTerm("");
-                    }}
-                    className="text-gray-400 hover:text-gray-600 cursor-pointer"
-                  >
-                    <X size={12} />
-                  </button>
-                )}
-              </div>
+              <SearchBox
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onClear={() => {
+                  setSearchTerm("");
+                  flushDebouncedSearchTerm("");
+                }}
+              />
 
-              {/* Department Filter */}
+              {/* Status Filter (All / Submitted / Pending) - Placed FIRST */}
+              <Dropdown
+                options={statusOptions}
+                value={selectedStatus}
+                onChange={setSelectedStatus}
+                defaultValue="All"
+                prefixIcon={<Filter size={13} />}
+                allowClear
+                className="shrink-0"
+                menuClassName="w-60"
+              />
+
+              {/* Department Filter - Placed SECOND */}
               {!isManager ? (
-                <div className="relative" ref={deptDropdownRef}>
-                  <button
-                    type="button"
-                    onClick={() => setIsDeptDropdownOpen(!isDeptDropdownOpen)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#F4F7FE] hover:bg-gray-100 rounded-xl text-xs font-bold text-[#2B3674] transition-all border border-transparent cursor-pointer"
-                  >
-                    <Building2 size={13} className="text-[#4318FF]" />
-                    <span className="max-w-[140px] truncate">{selectedDepartment}</span>
-                    <ChevronDown
-                      size={12}
-                      className={`text-gray-400 transition-transform ${isDeptDropdownOpen ? "rotate-180" : ""}`}
-                    />
-                  </button>
-
-                  {isDeptDropdownOpen && (
-                    <div className="absolute top-full left-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150 max-h-60 overflow-y-auto custom-scrollbar">
-                      <button
-                        onClick={() => {
-                          setSelectedDepartment("All Departments");
-                          setIsDeptDropdownOpen(false);
-                        }}
-                        className={`w-full text-left px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                          selectedDepartment === "All Departments"
-                            ? "bg-[#4318FF] text-white"
-                            : "text-[#2B3674] hover:bg-gray-50"
-                        }`}
-                      >
-                        All Departments
-                      </button>
-                      {departments.map((dept) => (
-                        <button
-                          key={dept.id}
-                          onClick={() => {
-                            setSelectedDepartment(dept.departmentName);
-                            setIsDeptDropdownOpen(false);
-                          }}
-                          className={`w-full text-left px-3 py-1.5 rounded-xl text-xs font-bold transition-all truncate ${
-                            selectedDepartment === dept.departmentName
-                              ? "bg-[#4318FF] text-white"
-                              : "text-[#2B3674] hover:bg-gray-50"
-                          }`}
-                        >
-                          {dept.departmentName}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <Dropdown
+                  options={departmentOptions}
+                  value={selectedDepartment}
+                  onChange={setSelectedDepartment}
+                  defaultValue="All Departments"
+                  prefixIcon={<Building2 size={13} />}
+                  allowClear
+                  className="shrink-0"
+                  maxLabelWidth="max-w-[85px]"
+                />
               ) : (
-                <div
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#F4F7FE] rounded-xl text-xs font-bold text-[#4318FF] border border-[#4318FF]/15 select-none"
-                  title="Your Assigned Department"
-                >
-                  <Building2 size={13} className="text-[#4318FF]" />
-                  <span className="truncate max-w-[140px]">
-                    {selectedDepartment || managerDepartment || "Department"}
-                  </span>
-                </div>
+                <Tooltip color="#4318FF" title={selectedDepartment || managerDepartment || "Department"}>
+                  <div
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#F4F7FE] rounded-xl text-xs font-bold text-[#4318FF] border border-[#4318FF]/15 select-none"
+                    title="Your Assigned Department"
+                  >
+                    <Building2 size={13} className="text-[#4318FF] shrink-0" />
+                    <span className="truncate max-w-[85px]">
+                      {selectedDepartment || managerDepartment || "Department"}
+                    </span>
+                  </div>
+                </Tooltip>
               )}
 
               {/* Active employee count */}
-              <div className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-50 text-[#4318FF] rounded-xl text-xs font-bold border border-blue-100 shrink-0">
-                <Users size={13} />
+              <Badge variant="count" className="px-2.5 py-1.5 rounded-xl text-xs shrink-0 font-bold">
+                <Users size={13} className="mr-0.5" />
                 <span>{filteredEmployees.length} Employees</span>
-              </div>
+              </Badge>
             </div>
 
-            {/* Right: Very Small Legend Badges */}
-            <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+            {/* Right: Legend Badges */}
+            <div className="flex items-center gap-1.5 flex-wrap">
               <span className="font-bold text-gray-400 uppercase tracking-wider text-[10px] mr-0.5">
                 Legend:
               </span>
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#DCFCE7] text-[#15803D] text-[10px] font-bold border border-[#86EFAC]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#16A34A]" />
+              <Badge variant="full_day" showDot>
                 Full Day
-              </span>
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#E0F2FE] text-[#0369A1] text-[10px] font-bold border border-[#7DD3FC]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#0284C7]" />
+              </Badge>
+              <Badge variant="wfh" showDot>
                 WFH
-              </span>
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#FFF1E6] text-[#B45309] text-[10px] font-bold border border-[#FED7AA]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B]" />
+              </Badge>
+              <Badge variant="client_visit" showDot>
                 Client Visit
-              </span>
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#FEF08A] text-[#854D0E] text-[10px] font-bold border border-[#FACC15]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#EAB308]" />
+              </Badge>
+              <Badge variant="half_day" showDot>
                 Half Day
-              </span>
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#FFF0F0] text-[#DC2626] text-[10px] font-bold border border-[#FCA5A5]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#DC2626]" />
+              </Badge>
+              <Badge variant="weekend" showDot>
                 Weekend
-              </span>
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#DBEAFE] text-[#1D4ED8] text-[10px] font-bold border border-[#93C5FD]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#2563EB]" />
+              </Badge>
+              <Badge variant="holiday" showDot>
                 Holiday
-              </span>
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#FFEDD5] text-[#C2410C] text-[10px] font-bold border border-[#FB923C]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#EA580C]" />
+              </Badge>
+              <Badge variant="not_updated" showDot>
                 Not Updated
-              </span>
+              </Badge>
             </div>
           </div>
         </div>
 
         {/* Matrix Table Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-8">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-8 min-h-[420px]">
           {loading ? (
-            <div className="py-24 flex flex-col items-center justify-center gap-3">
-              <Loader2 size={36} className="animate-spin text-[#4318FF]" />
-              <p className="text-sm font-bold text-[#2B3674]">
-                Loading {monthNames[selectedMonth - 1]} {selectedYear} Attendance Matrix...
-              </p>
+            <div className="py-28 flex flex-col items-center justify-center">
+              <InventechIconLoader
+                size="md"
+                text={`Loading ${monthNames[selectedMonth - 1]} ${selectedYear} Attendance Matrix...`}
+              />
             </div>
           ) : !matrixData || filteredEmployees.length === 0 ? (
             <div className="py-20 text-center">

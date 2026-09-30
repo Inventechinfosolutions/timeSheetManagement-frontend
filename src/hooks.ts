@@ -1,5 +1,6 @@
 import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
 import type { RootState, AppDispatch } from './store';
+export * from './hooks/useDebounce';
 
 /**
  * 🚀 High-Fidelity Professional Tip:
