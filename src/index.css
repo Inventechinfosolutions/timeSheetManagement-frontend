@@ -473,3 +473,59 @@ input[type="password"]::-webkit-password-reveal-button {
   font-weight: 600 !important;
   color: #1B2559 !important;
 }
+
+/* =========================================================
+   A4 Paper Document Simulation & Print Setup
+   ========================================================= */
+@page {
+  size: A4 portrait;
+  margin: 0; /* Removes default browser headers/footers */
+}
+
+.a4-page-workspace {
+  background-color: #f1f5f9;
+  padding: 2rem 1rem;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  overflow-x: auto;
+  min-height: 640px;
+}
+
+.a4-page {
+  width: 210mm;
+  min-height: 297mm;
+  background-color: #ffffff;
+  margin: 10mm auto;
+  padding: 20mm 18mm;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  box-sizing: border-box;
+  position: relative;
+}
+
+@media print {
+  body {
+    margin: 0 !important;
+    background: none !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .a4-page-workspace {
+    padding: 0 !important;
+    background: none !important;
+    overflow: visible !important;
+  }
+
+  .a4-page {
+    width: 210mm !important;
+    min-height: 297mm !important;
+    margin: 0 !important;
+    padding: 20mm 15mm !important;
+    border: none !important;
+    box-shadow: none !important;
+    page-break-after: always;
+  }
+}
