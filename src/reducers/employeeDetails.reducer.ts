@@ -67,11 +67,12 @@ export const getEntities = createAsyncThunk<
     order?: string;
     includeSelf?: boolean;
     userStatus?: string;
+    skipGlobalLoader?: boolean;
   },
   ThunkConfig
 >(
   'employeeDetails/fetch_entity_list',
-  async ({ search, department, page, limit, sort, order, includeSelf, userStatus }, { rejectWithValue }) => {
+  async ({ search, department, page, limit, sort, order, includeSelf, userStatus, skipGlobalLoader }, { rejectWithValue }) => {
     try {
       const params: any = {
         search: search || '',
@@ -89,7 +90,10 @@ export const getEntities = createAsyncThunk<
       if (userStatus) params.userStatus = userStatus;
 
       const queryParams = new URLSearchParams(params);
-      const response = await axios.get(`${apiUrl}?${queryParams.toString()}`);
+      const response = await axios.get(`${apiUrl}?${queryParams.toString()}`, {
+        skipGlobalLoader,
+        headers: skipGlobalLoader ? { 'x-skip-loader': 'true' } : undefined,
+      });
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || error.message || 'Request failed');

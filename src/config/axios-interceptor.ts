@@ -12,16 +12,37 @@ axios.defaults.withCredentials = true;
 declare module "axios" {
   interface InternalAxiosRequestConfig {
     _apiLoadingStartTime?: number;
+    skipGlobalLoader?: boolean;
+  }
+  interface AxiosRequestConfig {
+    skipGlobalLoader?: boolean;
   }
 }
  
+const checkShouldSkipLoader = (config?: any): boolean => {
+  if (!config) return false;
+  if (config.skipGlobalLoader) return true;
+  if (config.headers) {
+    if (config.headers["x-skip-loader"] === "true" || config.headers["X-Skip-Loader"] === "true") return true;
+    if (typeof config.headers.get === "function") {
+      const val = config.headers.get("x-skip-loader") || config.headers.get("X-Skip-Loader");
+      if (val === "true" || val === true) return true;
+    }
+  }
+  return false;
+};
+
 const setupAxiosInterceptors = (
   dispatch: AppDispatch,
   _onUnauthenticated: () => void
 ) => {
   const onRequestSuccess = (config: InternalAxiosRequestConfig) => {
-    config._apiLoadingStartTime = Date.now();
-    dispatch(increment());
+    const shouldSkipLoader = checkShouldSkipLoader(config);
+
+    if (!shouldSkipLoader) {
+      config._apiLoadingStartTime = Date.now();
+      dispatch(increment());
+    }
     const token =
       Storage.local.get("TimeSheet-authenticationToken") ||
       Storage.session.get("TimeSheet-authenticationToken");
@@ -138,6 +159,8 @@ const setupAxiosInterceptors = (
  
  
   const finishWithMinDelay = (config?: InternalAxiosRequestConfig) => {
+    if (checkShouldSkipLoader(config)) return;
+
     const start = config?._apiLoadingStartTime ?? Date.now();
     const elapsed = Date.now() - start;
     const delay = Math.max(0, MIN_SPINNER_DURATION_MS - elapsed);
@@ -147,7 +170,9 @@ const setupAxiosInterceptors = (
   axios.interceptors.request.use(
     (config) => onRequestSuccess(config),
     (error) => {
-      dispatch(decrement());
+      if (!checkShouldSkipLoader(error?.config)) {
+        dispatch(decrement());
+      }
       return Promise.reject(error);
     }
   );
