@@ -591,4 +591,31 @@ export const sendNoteContent = async (payload: SendNotePayload): Promise<boolean
   }
 };
 
+export interface DirectoryEmployee {
+  id: number;
+  employeeId: string;
+  fullName: string;
+  email: string;
+  designation: string;
+}
+
+export const searchEmployeeDirectory = async (search?: string): Promise<DirectoryEmployee[]> => {
+  try {
+    const params = new URLSearchParams();
+    if (search && search.trim()) {
+      params.append('search', search.trim());
+    }
+    const res = await axios.get<DirectoryEmployee[]>(
+      `/api/employee-details/search-directory?${params.toString()}`,
+      {
+        headers: { 'x-skip-loader': 'true' },
+      }
+    );
+    return res.data || [];
+  } catch (error) {
+    console.error('Error searching employee directory:', error);
+    return [];
+  }
+};
+
 
