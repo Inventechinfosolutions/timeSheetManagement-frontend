@@ -17,6 +17,7 @@ import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { RootState } from "../store";
 import { UserType , UserStatus} from "../enums";
+import { WorksphereLogoLoader } from "../components/ApiLoadingSpinner";
 import {
   getEntities,
   getEntitiesSelect,
@@ -807,8 +808,8 @@ const ManagerMapping: React.FC = () => {
         </div>
 
         {mappingLoading ? (
-          <div className="flex justify-center items-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4318FF]"></div>
+          <div className="flex justify-center items-center py-10">
+            <WorksphereLogoLoader />
           </div>
         ) : (
           <div className="overflow-x-auto">

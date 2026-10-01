@@ -1,0 +1,343 @@
+.worksphere-loader-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  pointer-events: none;
+}
+ 
+.worksphere-logo-stage {
+  position: relative;
+  width: 84px;
+  height: 92px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  animation: stagePulse 2.8s ease-in-out infinite;
+}
+ 
+/* Outer Circular Dot-Dot-Dot Spinner */
+.worksphere-dots-spinner-svg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 84px;
+  height: 84px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 10;
+  animation: dotsCircularSpin 2.8s cubic-bezier(0.35, 0, 0.25, 1) infinite;
+}
+ 
+@keyframes dotsCircularSpin {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg);
+    opacity: 1;
+  }
+  68% {
+    transform: translate(-50%, -50%) rotate(360deg);
+    opacity: 1;
+  }
+  75%,
+  92% {
+    transform: translate(-50%, -50%) rotate(360deg);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(360deg);
+    opacity: 1;
+  }
+}
+ 
+/* Background Soft Ambient Glow */
+.worksphere-orbital-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(13, 160, 178, 0.2) 0%,
+    rgba(30, 70, 161, 0.06) 55%,
+    transparent 75%
+  );
+  filter: blur(8px);
+  pointer-events: none;
+  z-index: 1;
+  animation: glowPulse 2.8s ease-in-out infinite;
+}
+ 
+/* 1. Docked Round Logo (Reduced size: 18px x 20px) */
+.worksphere-docked-round-wrap {
+  position: absolute;
+  top: 6px;
+  left: calc(50% - 9px);
+  width: 18px;
+  height: 20px;
+  z-index: 8;
+  pointer-events: none;
+  animation: roundDockAnim 2.8s cubic-bezier(0.35, 0, 0.25, 1) infinite;
+}
+ 
+.worksphere-docked-round-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 2px 4px rgba(0, 160, 220, 0.45));
+}
+ 
+@keyframes roundDockAnim {
+  0%,
+  64% {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.65);
+  }
+  74%,
+  92% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.65);
+  }
+}
+ 
+/* Inner Logos: Tree + W */
+.worksphere-inner-logos {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 5;
+}
+ 
+/* 2. Tree_logo Wings (Reduced size: 44px x 25px) */
+.worksphere-tree-wrap {
+  position: absolute;
+  top: 20px;
+  left: calc(50% - 22px);
+  width: 44px;
+  height: 25px;
+  pointer-events: none;
+}
+ 
+.worksphere-tree-wing {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 2px 3px rgba(0, 100, 200, 0.25));
+}
+ 
+.worksphere-tree-left {
+  clip-path: inset(0 49% 0 0);
+  animation: treeLeftAnim 2.8s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
+ 
+.worksphere-tree-right {
+  clip-path: inset(0 0 0 51%);
+  animation: treeRightAnim 2.8s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
+ 
+/* 3. W_logo Lines (Reduced size: 36px x 30px) */
+.worksphere-w-wrap {
+  position: absolute;
+  top: 32px;
+  left: calc(50% - 18px);
+  width: 36px;
+  height: 30px;
+  pointer-events: none;
+}
+ 
+.worksphere-w-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 2px 4px rgba(0, 80, 180, 0.28));
+}
+ 
+.worksphere-w-line-1 {
+  clip-path: polygon(0 0, 42% 0, 32% 100%, 0 100%);
+  animation: wLine1Anim 2.8s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
+ 
+.worksphere-w-line-2 {
+  clip-path: polygon(28% 0, 68% 0, 68% 100%, 28% 100%);
+  animation: wLine2Anim 2.8s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
+ 
+.worksphere-w-line-3 {
+  clip-path: polygon(64% 0, 100% 0, 100% 100%, 64% 100%);
+  animation: wLine3Anim 2.8s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
+ 
+/* Keyframes: W segments attaching one by one */
+@keyframes wLine1Anim {
+  0% {
+    opacity: 0;
+    transform: translate(-10px, -7px) scale(0.88);
+  }
+  15%,
+  92% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.95);
+  }
+}
+ 
+@keyframes wLine2Anim {
+  0%,
+  10% {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.88);
+  }
+  28%,
+  92% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.95);
+  }
+}
+ 
+@keyframes wLine3Anim {
+  0%,
+  22% {
+    opacity: 0;
+    transform: translate(10px, -7px) scale(0.88);
+  }
+  40%,
+  92% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.95);
+  }
+}
+ 
+/* Keyframes: Tree wings coming in from left and right */
+@keyframes treeLeftAnim {
+  0%,
+  15% {
+    opacity: 0;
+    transform: translateX(-16px) scale(0.9);
+  }
+  40%,
+  92% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-6px) scale(0.95);
+  }
+}
+ 
+@keyframes treeRightAnim {
+  0%,
+  15% {
+    opacity: 0;
+    transform: translateX(16px) scale(0.9);
+  }
+  40%,
+  92% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(6px) scale(0.95);
+  }
+}
+ 
+@keyframes stagePulse {
+  0%,
+  68% {
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.05));
+  }
+  78%,
+  88% {
+    filter: drop-shadow(0 3px 12px rgba(0, 162, 192, 0.35));
+  }
+  100% {
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.05));
+  }
+}
+ 
+@keyframes glowPulse {
+  0%,
+  50% {
+    opacity: 0.35;
+    transform: translate(-50%, -50%) scale(0.92);
+  }
+  78% {
+    opacity: 0.85;
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+  100% {
+    opacity: 0.35;
+    transform: translate(-50%, -50%) scale(0.92);
+  }
+}
+
+.worksphere-loader-text {
+  margin-top: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #0284c7;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+}
+
+.worksphere-loader-dots span {
+  animation: dotBlink 1.4s infinite;
+  opacity: 0;
+}
+
+.worksphere-loader-dots span:nth-child(1) {
+  animation-delay: 0.2s;
+}
+
+.worksphere-loader-dots span:nth-child(2) {
+  animation-delay: 0.4s;
+}
+
+.worksphere-loader-dots span:nth-child(3) {
+  animation-delay: 0.6s;
+}
+
+@keyframes dotBlink {
+  0%, 20% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}

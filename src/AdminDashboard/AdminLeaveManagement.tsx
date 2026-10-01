@@ -10,6 +10,7 @@ import {
   Modal,
   Spin,
 } from "antd";
+import { WorksphereLogoLoader } from "../components/ApiLoadingSpinner";
 import dayjs from "dayjs";
 import {
   getLeaveHistory,
@@ -2730,7 +2731,7 @@ const AdminLeaveManagement = () => {
           {/* In-modal loader when fetching view details - covers full modal area */}
           {viewDetailsLoading && (
             <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/95 rounded-[16px] min-h-[70vh]">
-              <Spin size="large" tip="Loading..." />
+              <WorksphereLogoLoader />
             </div>
           )}
           {/* Modal Header */}

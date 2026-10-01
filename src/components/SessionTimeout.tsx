@@ -8,7 +8,7 @@ import { logoutUser, resetUserState } from '../reducers/user.reducer';
 const SessionTimeout: React.FC = () => {
   const navigate = useNavigate();
   const timeoutRef = useRef<any>(null);
-  const INACTIVITY_LIMIT = 5 * 60 * 1000; // 5 minutes
+  const INACTIVITY_LIMIT = 2 * 60 * 60 * 1000; // 2 hours (120 minutes)
 
   const dispatch = useAppDispatch();
 
