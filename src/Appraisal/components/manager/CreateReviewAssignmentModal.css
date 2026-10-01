@@ -1,0 +1,601 @@
+/* ==========================================================================
+   Create Review Assignment Modal - Circular Spring Expansion & Luxury Colors
+   ========================================================================== */
+
+/* 1. Modal Overlay Backdrop Entrance & Exit */
+.create-assignment-modal-overlay {
+  animation: createModalOverlayFade 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  background: rgba(27, 37, 89, 0.2) !important;
+  backdrop-filter: blur(3.5px) !important;
+  -webkit-backdrop-filter: blur(3.5px) !important;
+  z-index: 0 !important;
+  pointer-events: auto !important;
+}
+
+.create-assignment-modal-overlay.modal-overlay-is-closing {
+  animation: createModalOverlayFadeOut 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+  pointer-events: none !important;
+}
+
+@keyframes createModalOverlayFade {
+  0% {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+  }
+  100% {
+    opacity: 1;
+    backdrop-filter: blur(3.5px);
+    -webkit-backdrop-filter: blur(3.5px);
+  }
+}
+
+@keyframes createModalOverlayFadeOut {
+  0% {
+    opacity: 1;
+    backdrop-filter: blur(3.5px);
+    -webkit-backdrop-filter: blur(3.5px);
+  }
+  100% {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+  }
+}
+
+/* 1.1 Light Blur & Subtle Dim on Header, Sidebar, and Footer when modal is open */
+header,
+.header,
+aside,
+footer,
+.footer,
+.sidebar-footer {
+  transition: filter 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease !important;
+}
+
+body.modal-open-active header,
+body.modal-open-active .header,
+body.modal-open-active aside,
+body.modal-open-active footer,
+body.modal-open-active .footer,
+body.modal-open-active .sidebar-footer {
+  filter: blur(2.5px) brightness(0.92) !important;
+  opacity: 0.72 !important;
+  pointer-events: none !important;
+  user-select: none !important;
+}
+
+/* 2. Modal Dialog Card - Circular Spring Expansion & 3D Page Fold / Squeeze Exit */
+.create-assignment-modal-dialog {
+  position: relative !important;
+  z-index: 30 !important;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.98) 0%,
+    rgba(250, 248, 243, 0.96) 50%,
+    rgba(247, 242, 232, 0.94) 100%
+  ) !important;
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1.5px solid rgba(229, 201, 143, 0.55) !important;
+  box-shadow:
+    0 28px 75px -15px rgba(27, 37, 89, 0.22),
+    0 6px 24px rgba(229, 201, 143, 0.25),
+    inset 0 1px 2px rgba(255, 255, 255, 1) !important;
+  border-radius: 1.75rem !important;
+  animation: createModalCircularExpand 0.5s cubic-bezier(0.34, 1.45, 0.64, 1) forwards !important;
+  will-change: transform, opacity, border-radius, clip-path;
+  transform-origin: center center;
+}
+
+/* Modal Dialog Exit - Squeeze, 3D Page Fold & Zoom Out */
+.create-assignment-modal-dialog.modal-is-closing {
+  animation: createModalSqueezePageFoldExit 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) forwards !important;
+  transform-origin: calc(100% - 32px) 32px !important;
+  pointer-events: none !important;
+  will-change: transform, opacity, filter;
+}
+
+@keyframes createModalSqueezePageFoldExit {
+  0% {
+    opacity: 1;
+    transform: perspective(1200px) scale(1) rotateX(0deg) rotateY(0deg) rotateZ(0deg) translateY(0);
+    filter: blur(0px);
+    box-shadow:
+      0 28px 75px -15px rgba(27, 37, 89, 0.22),
+      0 6px 24px rgba(229, 201, 143, 0.25);
+  }
+  28% {
+    opacity: 0.96;
+    /* Squeeze vertically & horizontally with an initial 3D page curl/fold */
+    transform: perspective(1200px) scale(0.86, 0.92) rotateX(14deg) rotateY(-16deg) rotateZ(-4deg) translateY(6px);
+    box-shadow: 0 16px 40px -10px rgba(27, 37, 89, 0.26);
+  }
+  65% {
+    opacity: 0.55;
+    /* Deep 3D origami page fold diagonal curl while zooming out */
+    transform: perspective(1200px) scale(0.44, 0.28) rotateX(36deg) rotateY(-44deg) rotateZ(-14deg) translateY(22px);
+    filter: blur(2px);
+  }
+  100% {
+    opacity: 0;
+    /* Total squeeze, flat page fold crease, and zoom-out vanishing point into close button */
+    transform: perspective(1200px) scale(0.05, 0.01) rotateX(60deg) rotateY(-70deg) rotateZ(-26deg) translateY(38px);
+    filter: blur(8px);
+  }
+}
+
+/* Starts from compact rounded/circular shape and smoothly expands outward into full card dimensions */
+@keyframes createModalCircularExpand {
+  0% {
+    opacity: 0;
+    transform: scale(0.22) translateY(24px);
+    border-radius: 9999px !important;
+    clip-path: circle(36px at 50% 50%);
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0) !important;
+  }
+  45% {
+    opacity: 1;
+  }
+  75% {
+    transform: scale(1.03) translateY(-3px);
+    border-radius: 2rem !important;
+    clip-path: circle(125% at 50% 50%);
+  }
+  90% {
+    transform: scale(0.995) translateY(1px);
+    border-radius: 1.75rem !important;
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    border-radius: 1.75rem !important;
+    clip-path: circle(150% at 50% 50%);
+  }
+}
+
+/* 3. Card Content Reveal (Fades/reveals during expansion) */
+.create-assignment-modal-dialog > * {
+  animation: createModalContentReveal 0.45s cubic-bezier(0.16, 1, 0.3, 1) 0.12s backwards;
+}
+
+@keyframes createModalContentReveal {
+  0% {
+    opacity: 0;
+    transform: scale(0.94) translateY(10px);
+    filter: blur(5px);
+  }
+  60% {
+    filter: blur(1px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0px);
+  }
+}
+
+/* 4. Header Icon Badge */
+.create-modal-header-icon {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);
+  color: #4318FF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(67, 24, 255, 0.18), inset 0 1px 1px #FFFFFF;
+}
+
+/* 5. Header Title & Subtitle */
+.create-modal-title {
+  color: #1B2559;
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+}
+
+.create-modal-subtitle {
+  color: #707EAE;
+  font-size: 0.8rem;
+  font-weight: 400;
+  margin-top: 0.2rem;
+}
+
+/* 5.1 Close Button - Squeeze, Rotate & Page Fold Micro-Animation */
+.create-assignment-modal-dialog .create-modal-close-btn {
+  width: 2.35rem !important;
+  height: 2.35rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 0.85rem !important;
+  color: #8F9BBA !important;
+  background: #F4F7FE !important;
+  border: 1.5px solid #E2E8F0 !important;
+  cursor: pointer !important;
+  transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+  transform-origin: center center !important;
+  position: relative !important;
+  overflow: hidden !important;
+  box-shadow: 0 2px 6px rgba(112, 144, 176, 0.08) !important;
+}
+
+/* Close Button Hover: Squeeze + 90deg Spin + Soft Crimson Highlight */
+.create-assignment-modal-dialog .create-modal-close-btn:hover {
+  background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%) !important;
+  color: #EF4444 !important;
+  border-color: rgba(239, 68, 68, 0.35) !important;
+  transform: scale(0.85) rotate(90deg) !important;
+  box-shadow:
+    0 6px 18px rgba(239, 68, 68, 0.22),
+    0 2px 4px rgba(239, 68, 68, 0.12) !important;
+}
+
+/* Close Button Active: Deeper Squeeze + 180deg Flip */
+.create-assignment-modal-dialog .create-modal-close-btn:active {
+  transform: scale(0.66) rotate(180deg) !important;
+  background: #FCA5A5 !important;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.28) !important;
+}
+
+/* Inner Icon Micro-spring */
+.create-assignment-modal-dialog .create-modal-close-btn svg {
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.create-assignment-modal-dialog .create-modal-close-btn:hover svg {
+  transform: scale(1.18);
+}
+
+.create-assignment-modal-dialog .create-modal-close-btn:active svg {
+  transform: scale(0.82);
+}
+
+/* 6. Option Cards (Individual & All Members) */
+.create-modal-option {
+  background: #FFFFFF !important;
+  border: 1.5px solid #E2E8F0 !important;
+  border-radius: 1.25rem !important;
+  padding: 1rem 1.15rem !important;
+  transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(112, 144, 176, 0.08) !important;
+  position: relative;
+  overflow: hidden;
+  opacity: 1 !important;
+  filter: none !important;
+}
+
+/* Subtle light gleam sweep on hover */
+.create-modal-option::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.7),
+    transparent
+  );
+  transform: skewX(-22deg);
+  pointer-events: none;
+}
+
+.create-modal-option:hover::before {
+  left: 140%;
+  transition: left 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.create-modal-option:hover {
+  transform: translateY(-2px) !important;
+  border-color: #CBD5E1 !important;
+  box-shadow: 0 12px 26px rgba(112, 144, 176, 0.16), 0 2px 6px rgba(229, 201, 143, 0.2) !important;
+}
+
+/* Staggered entrance for option cards */
+.create-modal-option-individual {
+  animation: optionCardSlideIn 0.52s cubic-bezier(0.16, 1, 0.3, 1) 0.18s backwards;
+}
+
+.create-modal-option-all {
+  animation: optionCardSlideIn 0.52s cubic-bezier(0.16, 1, 0.3, 1) 0.26s backwards;
+}
+
+@keyframes optionCardSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.96);
+    filter: blur(5px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0px);
+  }
+}
+
+/* Individual Option Selected */
+.create-modal-option-individual.is-selected {
+  border-color: #4318FF !important;
+  background: linear-gradient(135deg, #FFFFFF 0%, #F5F7FF 100%) !important;
+  box-shadow: 0 10px 28px rgba(67, 24, 255, 0.18), 0 0 0 2px rgba(67, 24, 255, 0.2) !important;
+  animation: optionSelectedPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* All Members Option Selected */
+.create-modal-option-all.is-selected {
+  border-color: #05CD99 !important;
+  background: linear-gradient(135deg, #FFFFFF 0%, #F0FDF8 100%) !important;
+  box-shadow: 0 10px 28px rgba(5, 205, 153, 0.2), 0 0 0 2px rgba(5, 205, 153, 0.2) !important;
+  animation: optionSelectedPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+
+@keyframes optionSelectedPop {
+  0% {
+    transform: scale(0.975);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Option Icons */
+.create-option-icon-wrap-individual {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);
+  color: #4318FF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 3px 10px rgba(67, 24, 255, 0.12);
+  transition: box-shadow 0.25s ease;
+}
+
+/* Option Icons - No zoom/scaling on hover or selection */
+.create-option-icon-wrap-individual,
+.create-option-icon-wrap-all,
+.create-option-icon-wrap-individual svg,
+.create-option-icon-wrap-all svg,
+.create-modal-option:hover .create-option-icon-wrap-individual,
+.create-modal-option:hover .create-option-icon-wrap-all,
+.create-modal-option:hover .create-option-icon-wrap-individual svg,
+.create-modal-option:hover .create-option-icon-wrap-all svg,
+.create-modal-option-individual:hover .create-option-icon-wrap-individual,
+.create-modal-option-all:hover .create-option-icon-wrap-all,
+.create-modal-option-individual:hover .create-option-icon-wrap-individual svg,
+.create-modal-option-all:hover .create-option-icon-wrap-all svg {
+  transform: none !important;
+  animation: none !important;
+}
+
+.create-modal-option-individual:hover .create-option-icon-wrap-individual {
+  box-shadow: 0 6px 18px rgba(67, 24, 255, 0.24);
+}
+
+.create-modal-option-individual.is-selected .create-option-icon-wrap-individual {
+  box-shadow: 0 4px 14px rgba(67, 24, 255, 0.22);
+}
+
+.create-option-icon-wrap-all {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, #E6F9F0 0%, #D1FAE5 100%);
+  color: #05CD99;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 3px 10px rgba(5, 205, 153, 0.14);
+  transition: box-shadow 0.25s ease;
+}
+
+.create-modal-option-all:hover .create-option-icon-wrap-all {
+  box-shadow: 0 6px 18px rgba(5, 205, 153, 0.26);
+}
+
+.create-modal-option-all.is-selected .create-option-icon-wrap-all {
+  box-shadow: 0 4px 14px rgba(5, 205, 153, 0.25);
+}
+
+/* Radio button styles */
+.create-option-radio {
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 9999px;
+  border: 2px solid #CBD5E1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: border-color 0.22s ease, box-shadow 0.22s ease;
+}
+
+.create-modal-option:hover .create-option-radio {
+  border-color: #94A3B8;
+  transform: none !important;
+}
+
+.create-modal-option-individual.is-selected .create-option-radio {
+  border-color: #4318FF;
+  box-shadow: 0 0 0 3px rgba(67, 24, 255, 0.12);
+}
+
+.create-modal-option-all.is-selected .create-option-radio {
+  border-color: #05CD99;
+  box-shadow: 0 0 0 3px rgba(5, 205, 153, 0.14);
+}
+
+.create-option-radio-dot-individual {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 9999px;
+  background: #4318FF;
+  animation: radioDotSpring 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.create-option-radio-dot-all {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 9999px;
+  background: #05CD99;
+  animation: radioDotSpring 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes radioDotSpring {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  65% {
+    transform: scale(1.3);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+
+.create-option-title {
+  font-size: 0.925rem;
+  font-weight: 700;
+  color: #1B2559;
+  opacity: 1 !important;
+}
+
+.create-option-desc {
+  font-size: 0.775rem;
+  color: #707EAE;
+  margin-top: 0.15rem;
+  opacity: 1 !important;
+}
+
+/* 7. Continue Button - Activation Spring, Shimmer Gleam & Ambient Pulse */
+.create-modal-continue-btn {
+  padding: 0.7rem 2.25rem !important;
+  border-radius: 0.95rem !important;
+  font-weight: 700 !important;
+  font-size: 0.95rem !important;
+  letter-spacing: -0.01em !important;
+  position: relative !important;
+  overflow: hidden !important;
+  transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+/* Active State: Spring Pop + Vibrant Indigo Gradient + Breathing Pulse */
+.create-modal-continue-btn.is-active {
+  background: linear-gradient(135deg, #4318FF 0%, #3210D4 100%) !important;
+  color: #FFFFFF !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  box-shadow:
+    0 8px 24px rgba(67, 24, 255, 0.38),
+    0 2px 6px rgba(229, 201, 143, 0.25) !important;
+  cursor: pointer !important;
+  animation:
+    continueBtnActivate 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
+    continuePulseGlow 2.4s ease-in-out infinite 0.42s !important;
+}
+
+/* Glossy Shimmer Light Sweep across button */
+.create-modal-continue-btn.is-active::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -130%;
+  width: 90%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.38) 50%,
+    transparent 100%
+  );
+  transform: skewX(-25deg);
+  pointer-events: none;
+  animation: continueShimmerSweep 3.2s ease-in-out infinite;
+}
+
+@keyframes continueBtnActivate {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.85;
+  }
+  60% {
+    transform: scale(1.07);
+    box-shadow:
+      0 14px 34px rgba(67, 24, 255, 0.48),
+      0 0 0 5px rgba(67, 24, 255, 0.22);
+  }
+  80% {
+    transform: scale(0.98);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow:
+      0 8px 24px rgba(67, 24, 255, 0.38),
+      0 2px 6px rgba(229, 201, 143, 0.25);
+  }
+}
+
+@keyframes continuePulseGlow {
+  0%, 100% {
+    box-shadow:
+      0 8px 24px rgba(67, 24, 255, 0.36),
+      0 0 0 0 rgba(67, 24, 255, 0.35);
+  }
+  50% {
+    box-shadow:
+      0 12px 30px rgba(67, 24, 255, 0.5),
+      0 0 0 6px rgba(67, 24, 255, 0.12);
+  }
+}
+
+@keyframes continueShimmerSweep {
+  0%, 55% {
+    left: -130%;
+  }
+  100% {
+    left: 200%;
+  }
+}
+
+/* Hover: Lift + Expanded Glow */
+.create-modal-continue-btn.is-active:hover {
+  transform: translateY(-2.5px) scale(1.03) !important;
+  box-shadow:
+    0 14px 36px rgba(67, 24, 255, 0.48),
+    0 4px 10px rgba(229, 201, 143, 0.32) !important;
+}
+
+/* Active Press: Spring Tactile Squeeze */
+.create-modal-continue-btn.is-active:active {
+  transform: translateY(1px) scale(0.95) !important;
+  box-shadow:
+    0 4px 14px rgba(67, 24, 255, 0.32) !important;
+}
+
+/* Disabled State */
+.create-modal-continue-btn.is-disabled {
+  background: #F4F7FE !important;
+  color: #A3AED0 !important;
+  border: 1px solid transparent !important;
+  box-shadow: none !important;
+  cursor: not-allowed !important;
+  opacity: 0.85;
+}

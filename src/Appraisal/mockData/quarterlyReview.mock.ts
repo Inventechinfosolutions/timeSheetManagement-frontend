@@ -1,4 +1,76 @@
-import { QuarterlyReviewAssignment, ReviewFormData } from "../types/appraisal.types";
+import {
+  QuarterlyReviewAssignment,
+  ReviewFormData,
+  ManagerQuarterlyReviewRecord,
+} from "../types/appraisal.types";
+
+export const initialMockQuarterlyReviewTableData: ManagerQuarterlyReviewRecord[] = [
+  {
+    name: "Ananya Sharma",
+    id: "EMP001",
+    role: "Frontend Developer",
+    quarter: "Q1",
+    financialYear: "FY 2026-27",
+    fromDate: "01-04-2026",
+    toDate: "30-06-2026",
+    assignedOn: "05-04-2026",
+    assignedBy: "Manager",
+    finalRating: "-",
+    status: "NOT_STARTED",
+  },
+  {
+    name: "Rahul Kumar",
+    id: "EMP002",
+    role: "Backend Developer",
+    quarter: "Q1",
+    financialYear: "FY 2026-27",
+    fromDate: "01-04-2026",
+    toDate: "30-06-2026",
+    assignedOn: "06-04-2026",
+    assignedBy: "Admin",
+    finalRating: "-",
+    status: "IN_PROGRESS",
+  },
+  {
+    name: "Priya N",
+    id: "EMP003",
+    role: "UI/UX Designer",
+    quarter: "Q1",
+    financialYear: "FY 2026-27",
+    fromDate: "01-04-2026",
+    toDate: "30-06-2026",
+    assignedOn: "07-04-2026",
+    assignedBy: "Manager",
+    finalRating: "4.2",
+    status: "COMPLETED",
+  },
+  {
+    name: "Arjun R",
+    id: "EMP004",
+    role: "QA Engineer",
+    quarter: "Q1",
+    financialYear: "FY 2026-27",
+    fromDate: "01-04-2026",
+    toDate: "30-06-2026",
+    assignedOn: "08-04-2026",
+    assignedBy: "Manager",
+    finalRating: "3.8",
+    status: "SUBMITTED",
+  },
+  {
+    name: "Sneha Gowda",
+    id: "EMP005",
+    role: "Full Stack Developer",
+    quarter: "Q2",
+    financialYear: "FY 2026-27",
+    fromDate: "01-07-2026",
+    toDate: "30-09-2026",
+    assignedOn: "02-07-2026",
+    assignedBy: "Admin",
+    finalRating: "-",
+    status: "NOT_STARTED",
+  },
+];
 
 export const mockQuarterlyReviewAssignments: QuarterlyReviewAssignment[] = [
   {

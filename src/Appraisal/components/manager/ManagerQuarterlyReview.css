@@ -1,15 +1,16 @@
-
-
 /* ==========================================================================
    Manager Quarterly Review - Luxury Background & Silk Waves (All-in-One CSS)
    ========================================================================== */
 
 /* Morphing fluid aurora mesh blobs */
 @keyframes auroraMorph1 {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translate(0px, 0px) scale(1) rotate(0deg);
     border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
   }
+
   50% {
     transform: translate(-40px, 25px) scale(1.12) rotate(12deg);
     border-radius: 40% 60% 70% 30% / 40% 40% 60% 55%;
@@ -17,9 +18,12 @@
 }
 
 @keyframes auroraMorph2 {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translate(0px, 0px) scale(1);
   }
+
   50% {
     transform: translate(30px, -20px) scale(1.18);
   }
@@ -27,18 +31,24 @@
 
 /* Organic breathing wave ripples */
 @keyframes silkWaveFlow {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0px) scaleY(1);
   }
+
   50% {
     transform: translateY(-14px) scaleY(1.04);
   }
 }
 
 @keyframes silkWaveFlowBottom {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0px) scaleY(1);
   }
+
   50% {
     transform: translateY(14px) scaleY(1.04);
   }
@@ -46,19 +56,22 @@
 
 /* Twinkling starlight sparks */
 @keyframes starGlimmer {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 0.3;
     transform: scale(0.85);
   }
+
   50% {
     opacity: 0.9;
     transform: scale(1.15);
   }
 }
 
-/* Container & Layer Utility Classes */
+/* Container & Layer Utility Classes (Warm luxury 4-color mix gradient) */
 .manager-review-bg-container {
-  background: linear-gradient(135deg, #FAF8F3 0%, #F7F4EE 45%, #F2EFE9 100%);
+  background: linear-gradient(135deg, #F7F2E8 0%, #F2E9D7 35%, #EEE4D0 70%, #E5C98F 100%);
   position: relative;
   overflow: hidden;
 }
@@ -224,22 +237,25 @@
   animation: starGlimmer 5.5s ease-in-out 2.2s infinite;
 }
 
-/* Glassmorphic luxury card with F2E9D7, EEE4D0, E5C98F, F7F2E8 color mix & fade-in */
+/* Glassmorphic luxury card with Cream & Rose-Ivory Watercolor gradient and SVG texture */
 .manager-review-glass-card {
-  background: linear-gradient(
-    135deg,
-    rgba(247, 242, 232, 0.95) 0%,
-    rgba(242, 233, 215, 0.92) 35%,
-    rgba(238, 228, 208, 0.88) 70%,
-    rgba(229, 201, 143, 0.45) 100%
-  ) !important;
+  background: 
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 600' width='100%25' height='100%25' preserveAspectRatio='none'%3E%3Cpath d='M-50 80 C 200 40, 420 120, 680 70 C 850 40, 950 110, 1050 75 L 1050 220 C 850 260, 650 190, 400 240 C 200 270, 80 200, -50 230 Z' fill='%23DFC2B2' opacity='0.22'/%3E%3Cpath d='M-50 190 C 220 240, 480 180, 720 230 C 890 260, 980 210, 1050 240 L 1050 390 C 840 430, 600 370, 360 410 C 180 435, 70 380, -50 400 Z' fill='%23F3E1D3' opacity='0.35'/%3E%3Cpath d='M-50 360 C 200 420, 460 360, 700 410 C 870 440, 960 390, 1050 420 L 1050 620 L -50 620 Z' fill='%23E8D0C0' opacity='0.28'/%3E%3C/svg%3E"),
+    linear-gradient(
+      135deg,
+      #FDFCF9 0%,
+      #FAF5EE 20%,
+      #F6EDE3 45%,
+      #F1E3D6 75%,
+      #E8D3C4 100%
+    ) !important;
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1.5px solid rgba(229, 201, 143, 0.5) !important;
+  border: 1.5px solid rgba(223, 194, 178, 0.65) !important;
   box-shadow:
-    0 24px 60px rgba(180, 150, 95, 0.12),
-    0 4px 16px rgba(229, 201, 143, 0.18),
-    inset 0 1px 2px rgba(247, 242, 232, 0.95) !important;
+    0 24px 60px rgba(185, 145, 125, 0.14),
+    0 4px 18px rgba(215, 178, 160, 0.16),
+    inset 0 1px 2px rgba(255, 255, 255, 0.95) !important;
   border-radius: 1.5rem;
   animation: cardFadeIn 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.25s backwards;
 }
@@ -249,33 +265,67 @@
     opacity: 0;
     transform: translateY(22px) scale(0.985);
   }
+
   100% {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
 }
 
-/* Card Header Title: Smooth Slide-In with Animated Gold/Indigo Accent Indicator Bar */
+/* Card Header Title: Kinetic Letter-Tracking Settle & Liquid Gold-Indigo Sheen */
 .manager-review-card-title {
-  color: #1B2559;
   letter-spacing: -0.015em;
   position: relative;
   display: inline-flex;
   align-items: center;
   padding-bottom: 6px;
-  animation: cardTitleSlideIn 0.75s cubic-bezier(0.16, 1, 0.3, 1) 0.35s backwards;
+  background: linear-gradient(110deg,
+      #1B2559 0%,
+      #1B2559 30%,
+      #4318FF 46%,
+      #E5C98F 54%,
+      #1B2559 68%,
+      #1B2559 100%);
+  background-size: 240% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation:
+    cardTitleTextEntrance 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.35s backwards,
+    cardTitleTextSheen 4.5s ease-in-out 1.2s infinite;
 }
 
-@keyframes cardTitleSlideIn {
+@keyframes cardTitleTextEntrance {
   0% {
     opacity: 0;
-    transform: translateX(-12px);
-    filter: blur(4px);
+    transform: translateX(-14px);
+    letter-spacing: 0.07em;
+    filter: blur(5px);
   }
+
+  60% {
+    opacity: 0.9;
+    filter: blur(1px);
+  }
+
   100% {
     opacity: 1;
     transform: translateX(0);
+    letter-spacing: -0.015em;
     filter: blur(0);
+  }
+}
+
+@keyframes cardTitleTextSheen {
+
+  0%,
+  25% {
+    background-position: 0% 50%;
+  }
+
+  65%,
+  100% {
+    background-position: 100% 50%;
   }
 }
 
@@ -293,10 +343,223 @@
   transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease;
 }
 
+@keyframes cardTitleBarExpand {
+  0% {
+    width: 0;
+    opacity: 0;
+  }
+
+  100% {
+    width: 44px;
+    opacity: 1;
+  }
+}
+
 .manager-review-card-title:hover::after {
   width: 100%;
   box-shadow: 0 3px 12px rgba(67, 24, 255, 0.35), 0 1px 4px rgba(229, 201, 143, 0.4);
 }
+
+/* Create Button: Entrance Animation & Micro-interactions */
+.manager-review-create-btn {
+  animation: createBtnSlideIn 0.75s cubic-bezier(0.16, 1, 0.3, 1) 0.4s backwards;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.manager-review-create-btn:hover {
+  transform: translateY(-2px) scale(1.02);
+}
+
+.manager-review-create-btn:active {
+  transform: translateY(0) scale(0.98);
+}
+
+@keyframes createBtnSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateX(16px);
+    filter: blur(4px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+    filter: blur(0);
+  }
+}
+
+/* ==========================================================================
+   Filter Toolbar - Distinct Color Accents & Staggered Cascade Entrance
+   ========================================================================== */
+
+/* Staggered entrance animation */
+.filter-item-stagger-1 {
+  animation: filterItemEntrance 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.38s backwards;
+}
+
+.filter-item-stagger-2 {
+  animation: filterItemEntrance 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.44s backwards;
+}
+
+.filter-item-stagger-3 {
+  animation: filterItemEntrance 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.50s backwards;
+}
+
+.filter-item-stagger-4 {
+  animation: filterItemEntrance 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.56s backwards;
+}
+
+.filter-item-stagger-5 {
+  animation: filterItemEntrance 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.62s backwards;
+}
+
+@keyframes filterItemEntrance {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.96);
+    filter: blur(4px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+/* 1. Search Box */
+.manager-review-search-box {
+  background: rgba(255, 255, 255, 0.94) !important;
+  border: 1.5px solid rgba(224, 229, 242, 0.95) !important;
+  box-shadow: 0 2px 8px rgba(112, 144, 176, 0.08) !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.manager-review-search-box:hover {
+  border-color: rgba(67, 24, 255, 0.45) !important;
+  transform: translateY(-1.5px);
+  box-shadow: 0 8px 20px rgba(67, 24, 255, 0.1), 0 2px 6px rgba(229, 201, 143, 0.15) !important;
+}
+
+.manager-review-search-box:focus-within {
+  border-color: #4318FF !important;
+  box-shadow: 0 0 0 3px rgba(67, 24, 255, 0.12), 0 8px 22px rgba(67, 24, 255, 0.14) !important;
+  transform: translateY(-1.5px);
+}
+
+.manager-review-search-input {
+  color: #1B2559 !important;
+}
+
+.manager-review-search-input::placeholder {
+  color: #A3AED0 !important;
+}
+
+/* 2. Common Filter Dropdown Buttons & Bar */
+.manager-review-filters-bar {
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+  margin-top: -6px !important;
+  margin-bottom: 24px !important;
+}
+
+.manager-review-filter-btn {
+  background: rgba(255, 255, 255, 0.94) !important;
+  border: 1.5px solid rgba(224, 229, 242, 0.95) !important;
+  color: #2B3674 !important;
+  box-shadow: 0 2px 8px rgba(112, 144, 176, 0.08) !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  cursor: pointer;
+}
+
+.manager-review-filter-btn:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 20px rgba(112, 144, 176, 0.16), 0 2px 6px rgba(229, 201, 143, 0.15) !important;
+}
+
+/* Distinct Filter Colors & Micro-animations */
+/* Financial Year (Royal Indigo) */
+.filter-icon-fy {
+  color: #4318FF;
+  transition: transform 0.25s ease;
+}
+
+.filter-btn-fy:hover {
+  border-color: rgba(67, 24, 255, 0.5) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(238, 242, 255, 0.75)) !important;
+}
+
+.filter-btn-fy:hover .filter-icon-fy {
+  transform: scale(1.18) rotate(-6deg);
+}
+
+/* Quarters (Sky Cyan) */
+.filter-icon-quarters {
+  color: #0284C7;
+  transition: transform 0.25s ease;
+}
+
+.filter-btn-quarters:hover {
+  border-color: rgba(2, 132, 199, 0.5) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(240, 249, 255, 0.75)) !important;
+}
+
+.filter-btn-quarters:hover .filter-icon-quarters {
+  transform: scale(1.18) rotate(25deg);
+}
+
+/* All Members (Emerald Jade) */
+.filter-icon-members {
+  color: #059669;
+  transition: transform 0.25s ease;
+}
+
+.filter-btn-members:hover {
+  border-color: rgba(5, 150, 105, 0.5) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(236, 253, 245, 0.75)) !important;
+}
+
+.filter-btn-members:hover .filter-icon-members {
+  transform: scale(1.18);
+}
+
+/* All Status (Amber Gold) */
+.filter-icon-status {
+  color: #D97706;
+  transition: transform 0.25s ease;
+}
+
+.filter-btn-status:hover {
+  border-color: rgba(217, 119, 6, 0.5) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(255, 251, 235, 0.75)) !important;
+}
+
+.filter-btn-status:hover .filter-icon-status {
+  transform: scale(1.18) translateY(-1px);
+}
+
+/* Clear Filter Button */
+.manager-review-clear-btn {
+  color: #A3AED0 !important;
+  transition: all 0.22s ease !important;
+}
+
+.manager-review-clear-btn:hover {
+  color: #4318FF !important;
+  background: rgba(67, 24, 255, 0.08) !important;
+  transform: translateY(-1px);
+}
+
+.filter-clear-icon {
+  transition: transform 0.35s ease;
+}
+
+.manager-review-clear-btn:hover .filter-clear-icon {
+  transform: rotate(-180deg);
+  color: #4318FF;
+}
+
+
 
 /* Empty State Illustration & Glow (Rendered 100% via CSS) */
 .manager-review-empty-glow {
@@ -323,19 +586,25 @@
 }
 
 @keyframes floatIllustration {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0px) rotate(0deg);
   }
+
   50% {
     transform: translateY(-8px) rotate(0.8deg);
   }
 }
 
 @keyframes pulseGlow {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(0.95);
     opacity: 0.4;
   }
+
   50% {
     transform: scale(1.08);
     opacity: 0.8;
@@ -351,15 +620,13 @@
 .manager-review-title-anim,
 .manager-review-title-typing {
   display: inline-block;
-  background: linear-gradient(
-    90deg,
-    #1B2559 0%,
-    #1B2559 35%,
-    #4318FF 55%,
-    #38BDF8 70%,
-    #1B2559 85%,
-    #1B2559 100%
-  );
+  background: linear-gradient(90deg,
+      #1B2559 0%,
+      #1B2559 35%,
+      #4318FF 55%,
+      #38BDF8 70%,
+      #1B2559 85%,
+      #1B2559 100%);
   background-size: 250% 100%;
   -webkit-background-clip: text;
   background-clip: text;
@@ -375,9 +642,11 @@
     clip-path: inset(0 100% 0 0);
     transform: translateX(-14px);
   }
+
   40% {
     opacity: 0.8;
   }
+
   100% {
     opacity: 1;
     clip-path: inset(0 0 0 0);
@@ -389,6 +658,7 @@
   0% {
     background-position: 0% 50%;
   }
+
   100% {
     background-position: 100% 50%;
   }
@@ -409,10 +679,12 @@
     letter-spacing: 0.04em;
     transform: scale(0.99);
   }
+
   50% {
     opacity: 0.7;
     filter: blur(3px);
   }
+
   100% {
     opacity: 1;
     filter: blur(0px);
@@ -420,5 +692,3 @@
     transform: scale(1);
   }
 }
-
-

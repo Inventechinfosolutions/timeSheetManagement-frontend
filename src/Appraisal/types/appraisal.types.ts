@@ -11,9 +11,33 @@ export interface AssignQuarterlyReviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   assignmentType?: AssignmentType | null;
+  onAssign?: (data: {
+    quarter: string;
+    employee: string;
+    financialYear?: string;
+    fromDate?: string;
+    toDate?: string;
+    description?: string;
+  }) => void;
 }
 
 export type ReviewStatus = "not_started" | "assigned" | "in_progress" | "submitted" | "reviewed";
+
+export type ReviewAssignmentStatus = "NOT_STARTED" | "IN_PROGRESS" | "SUBMITTED" | "UNDER_REVIEW" | "COMPLETED";
+
+export interface ManagerQuarterlyReviewRecord {
+  name: string;
+  id: string;
+  role: string;
+  quarter: string;
+  financialYear: string;
+  fromDate: string;
+  toDate: string;
+  assignedOn: string;
+  assignedBy: string;
+  finalRating: string;
+  status: ReviewAssignmentStatus;
+}
 
 export interface QuarterlyReviewAssignment {
   id: string;

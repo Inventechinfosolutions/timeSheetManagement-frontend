@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Plus,
   Calendar,
@@ -7,9 +7,11 @@ import {
   ClipboardList,
   RotateCcw,
 } from "lucide-react";
-import { AssignmentType } from "../../types/appraisal.types";
+import { AssignmentType, ManagerQuarterlyReviewRecord } from "../../types/appraisal.types";
+import { initialMockQuarterlyReviewTableData } from "../../mockData/quarterlyReview.mock";
 import CreateReviewAssignmentModal from "./CreateReviewAssignmentModal";
 import AssignQuarterlyReviewModal from "./AssignQuarterlyReviewModal";
+import { QuarterlyReviewTable } from "./QuarterlyReviewTable";
 import {
   Button,
   Card,
@@ -26,6 +28,14 @@ export const ManagerQuarterlyReview: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [assignmentType, setAssignmentType] = useState<AssignmentType | null>(null);
+
+  // Mock table data state (initialized with centralized mock records)
+  const [assignments, setAssignments] = useState<ManagerQuarterlyReviewRecord[]>(
+    initialMockQuarterlyReviewTableData
+  );
+
+  // Briefly highlighted row ID after an assignment completes
+  const [highlightedRowId, setHighlightedRowId] = useState<string | null>(null);
 
   // Visual filter state
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -57,6 +67,52 @@ export const ManagerQuarterlyReview: React.FC = () => {
     setIsAssignModalOpen(false);
   };
 
+  // Mock assignment flow handler - prepends newly assigned employee to the table and highlights the row
+  const handleAssignSuccess = (data: { quarter: string; employee: string }) => {
+    const nextIndex = assignments.length + 1;
+    const assignedId = data.employee.startsWith("EMP") ? data.employee : `EMP00${nextIndex}`;
+    const newRecord: ManagerQuarterlyReviewRecord = {
+      name:
+        data.employee === "EMP001"
+          ? "Ananya Sharma"
+          : data.employee === "EMP002"
+          ? "Rahul Kumar"
+          : data.employee === "EMP003"
+          ? "Priya N"
+          : data.employee === "EMP004"
+          ? "Arjun R"
+          : data.employee === "EMP005"
+          ? "Sneha Gowda"
+          : "Deepak Verma",
+      id: assignedId,
+      role:
+        data.employee === "EMP001"
+          ? "Frontend Developer"
+          : data.employee === "EMP002"
+          ? "Backend Developer"
+          : "Software Engineer",
+      quarter: data.quarter || "Q1",
+      financialYear: data.financialYear || "FY 2026-27",
+      fromDate: data.fromDate || "01-04-2026",
+      toDate: data.toDate || "30-06-2026",
+      assignedOn: new Date().toLocaleDateString("en-GB").replace(/\//g, "-"),
+      assignedBy: "Manager",
+      finalRating: "-",
+      status: "NOT_STARTED",
+    };
+
+    // Prepend to assignments table
+    setAssignments((prev) => [newRecord, ...prev.filter((r) => !(r.id === assignedId && r.quarter === newRecord.quarter))]);
+
+    // Briefly highlight the exact row for about 1 second with a subtle background/glow
+    setHighlightedRowId(assignedId);
+
+    // After 1 second, smoothly return row to normal styling
+    setTimeout(() => {
+      setHighlightedRowId(null);
+    }, 1150);
+  };
+
   const handleClearFilters = () => {
     setSearchTerm("");
     setFinancialYear("");
@@ -64,6 +120,55 @@ export const ManagerQuarterlyReview: React.FC = () => {
     setMemberFilter("");
     setStatusFilter("");
   };
+
+  // Filtered assignments based on current filter selections
+  const filteredAssignments = useMemo(() => {
+    return assignments.filter((item) => {
+      if (searchTerm.trim()) {
+        const query = searchTerm.toLowerCase();
+        const matches =
+          item.name.toLowerCase().includes(query) ||
+          item.id.toLowerCase().includes(query) ||
+          item.role.toLowerCase().includes(query);
+        if (!matches) return false;
+      }
+
+      if (financialYear && financialYear !== "all") {
+        if (!item.financialYear.toLowerCase().includes(financialYear.toLowerCase())) {
+          return false;
+        }
+      }
+
+      if (quarter && quarter !== "all") {
+        if (item.quarter.toLowerCase() !== quarter.toLowerCase()) return false;
+      }
+
+      if (memberFilter && memberFilter !== "all") {
+        if (item.id !== memberFilter && item.name !== memberFilter) return false;
+      }
+
+      if (statusFilter && statusFilter !== "all") {
+        const itemStatusNorm = item.status.toLowerCase().replace(/_/g, " ");
+        const filterNorm = statusFilter.toLowerCase().replace(/_/g, " ");
+        if (itemStatusNorm !== filterNorm) return false;
+      }
+
+      return true;
+    });
+  }, [assignments, searchTerm, financialYear, quarter, memberFilter, statusFilter]);
+
+  // Dynamic member filter options based on assignments
+  const memberOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const opts = [{ value: "all", label: "All Members" }];
+    assignments.forEach((a) => {
+      if (!seen.has(a.id)) {
+        seen.add(a.id);
+        opts.push({ value: a.id, label: `${a.name} (${a.id})` });
+      }
+    });
+    return opts;
+  }, [assignments]);
 
   return (
     <div className="w-full min-h-screen relative overflow-hidden font-sans p-4 sm:p-6 lg:p-8 manager-review-bg-container">
@@ -111,15 +216,15 @@ export const ManagerQuarterlyReview: React.FC = () => {
             size="lg"
             leftIcon={<Plus className="w-4 h-4 stroke-[2.5]" />}
             onClick={handleOpenCreateModal}
-            className="w-full sm:w-auto font-bold shadow-md shadow-indigo-200 hover:shadow-lg"
+            className="w-full sm:w-auto font-bold shadow-md shadow-indigo-200 hover:shadow-lg manager-review-create-btn"
           >
             Create
           </Button>
         </CardHeader>
 
         <CardContent className="p-0">
-          <div className="flex items-center gap-2.5 lg:gap-3 mb-8 overflow-x-auto no-scrollbar flex-nowrap pb-1">
-            <div className="w-52 lg:w-64 shrink-0">
+          <div className="flex items-center gap-2.5 lg:gap-3 mb-6 overflow-x-auto no-scrollbar flex-nowrap py-1.5 manager-review-filters-bar">
+            <div className="w-52 lg:w-64 shrink-0 filter-item-stagger-1">
               <SearchBox
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -127,35 +232,38 @@ export const ManagerQuarterlyReview: React.FC = () => {
                 placeholder="Search employee name or..."
                 variant="outlined"
                 inputSize="lg"
-                containerClassName="w-full rounded-2xl border-[#E0E5F2] hover:border-gray-300 transition-colors bg-white/90"
-                className="text-sm text-[#1B2559] placeholder-[#A3AED0]"
+                containerClassName="w-full rounded-2xl manager-review-search-box"
+                className="text-sm manager-review-search-input"
                 allowClear
               />
             </div>
 
             <Dropdown
-              className="shrink-0"
+              className="shrink-0 filter-item-stagger-2"
               placeholder="Financial Year"
               allowClear={true}
               defaultValue=""
-              prefixIcon={<Calendar size={16} />}
+              prefixIcon={<Calendar size={16} className="filter-icon-fy" />}
               options={[
-                { value: "2025-2026", label: "Financial Year 2025-2026" },
-                { value: "2024-2025", label: "Financial Year 2024-2025" },
+                { value: "all", label: "All FY" },
+                { value: "FY 2026-27", label: "FY 2026-27" },
+                { value: "FY 2025-26", label: "FY 2025-26" },
+                { value: "FY 2024-25", label: "FY 2024-25" },
               ]}
               value={financialYear}
               onChange={setFinancialYear}
               maxLabelWidth="max-w-[110px]"
-              buttonClassName="bg-white/90 border border-[#E0E5F2] hover:border-gray-300 rounded-2xl px-3 py-2.5 text-sm font-medium text-[#707EAE] min-w-[145px] shadow-none"
+              buttonClassName="manager-review-filter-btn filter-btn-fy rounded-2xl px-3 py-2.5 text-sm font-medium min-w-[145px]"
             />
 
             <Dropdown
-              className="shrink-0"
+              className="shrink-0 filter-item-stagger-3"
               placeholder="Quarters"
               allowClear={true}
               defaultValue=""
-              prefixIcon={<Clock size={16} />}
+              prefixIcon={<Clock size={16} className="filter-icon-quarters" />}
               options={[
+                { value: "all", label: "All Quarters" },
                 { value: "Q1", label: "Quarter 1" },
                 { value: "Q2", label: "Quarter 2" },
                 { value: "Q3", label: "Quarter 3" },
@@ -164,69 +272,83 @@ export const ManagerQuarterlyReview: React.FC = () => {
               value={quarter}
               onChange={setQuarter}
               maxLabelWidth="max-w-[95px]"
-              buttonClassName="bg-white/90 border border-[#E0E5F2] hover:border-gray-300 rounded-2xl px-3 py-2.5 text-sm font-medium text-[#707EAE] min-w-[125px] shadow-none"
+              buttonClassName="manager-review-filter-btn filter-btn-quarters rounded-2xl px-3 py-2.5 text-sm font-medium min-w-[125px]"
             />
 
             <Dropdown
-              className="shrink-0"
+              className="shrink-0 filter-item-stagger-4"
               placeholder="All Members"
               allowClear={true}
               defaultValue=""
-              prefixIcon={<Users size={16} />}
-              options={[
-                { value: "all", label: "All Members" },
-              ]}
+              prefixIcon={<Users size={16} className="filter-icon-members" />}
+              options={memberOptions}
               value={memberFilter}
               onChange={setMemberFilter}
               maxLabelWidth="max-w-[105px]"
-              buttonClassName="bg-white/90 border border-[#E0E5F2] hover:border-gray-300 rounded-2xl px-3 py-2.5 text-sm font-medium text-[#707EAE] min-w-[135px] shadow-none"
+              buttonClassName="manager-review-filter-btn filter-btn-members rounded-2xl px-3 py-2.5 text-sm font-medium min-w-[135px]"
             />
 
             <Dropdown
-              className="shrink-0"
+              className="shrink-0 filter-item-stagger-5"
               placeholder="All Status"
               allowClear={true}
               defaultValue=""
-              prefixIcon={<ClipboardList size={16} />}
+              prefixIcon={<ClipboardList size={16} className="filter-icon-status" />}
               options={[
                 { value: "all", label: "All Status" },
-                { value: "pending", label: "Pending" },
-                { value: "submitted", label: "Submitted" },
-                { value: "reviewed", label: "Reviewed" },
+                { value: "NOT_STARTED", label: "Not Started" },
+                { value: "IN_PROGRESS", label: "In Progress" },
+                { value: "SUBMITTED", label: "Submitted" },
+                { value: "UNDER_REVIEW", label: "Under Review" },
+                { value: "COMPLETED", label: "Completed" },
               ]}
               value={statusFilter}
               onChange={setStatusFilter}
               maxLabelWidth="max-w-[95px]"
-              buttonClassName="bg-white/90 border border-[#E0E5F2] hover:border-gray-300 rounded-2xl px-3 py-2.5 text-sm font-medium text-[#707EAE] min-w-[125px] shadow-none"
+              buttonClassName="manager-review-filter-btn filter-btn-status rounded-2xl px-3 py-2.5 text-sm font-medium min-w-[125px]"
             />
 
             {hasActiveFilters && (
               <Button
                 variant="ghost"
                 size="sm"
-                leftIcon={<RotateCcw size={14} className="text-[#A3AED0]" />}
+                leftIcon={<RotateCcw size={14} className="filter-clear-icon" />}
                 onClick={handleClearFilters}
-                className="text-[#A3AED0] hover:text-[#707EAE] font-medium !shadow-none shrink-0 whitespace-nowrap animate-in fade-in duration-150"
+                className="manager-review-clear-btn shrink-0 whitespace-nowrap font-medium"
               >
                 Clear
               </Button>
             )}
           </div>
 
-          {/* Empty State UI with Rich Colors and Animated SVG */}
-          <div className="py-16 sm:py-24 flex flex-col items-center justify-center text-center px-4">
-            <div className="relative mb-5">
-              <div className="manager-review-empty-glow" />
-              <div className="manager-review-empty-illustration" />
-            </div>
+          {/* Table populated state vs Empty state */}
+          {filteredAssignments.length > 0 ? (
+            <QuarterlyReviewTable
+              data={filteredAssignments}
+              highlightedId={highlightedRowId}
+              onEdit={(item) => {
+                console.log("Edit review:", item);
+              }}
+              onView={(item) => {
+                console.log("View review:", item);
+              }}
+            />
+          ) : (
+            /* Empty State UI with Rich Colors and Animated SVG */
+            <div className="py-16 sm:py-24 flex flex-col items-center justify-center text-center px-4">
+              <div className="relative mb-5">
+                <div className="manager-review-empty-glow" />
+                <div className="manager-review-empty-illustration" />
+              </div>
 
-            <h3 className="text-xl font-bold text-[#1B2559]">
-              No submissions found
-            </h3>
-            <p className="text-sm text-[#707EAE] max-w-sm mt-1.5 leading-relaxed font-normal">
-              There are currently no employee quarterly review submissions matching your filters.
-            </p>
-          </div>
+              <h3 className="text-xl font-bold text-[#1B2559]">
+                No submissions found
+              </h3>
+              <p className="text-sm text-[#707EAE] max-w-sm mt-1.5 leading-relaxed font-normal">
+                There are currently no employee quarterly review submissions matching your filters.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -242,6 +364,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
         isOpen={isAssignModalOpen}
         onClose={handleCloseAssignModal}
         assignmentType={assignmentType}
+        onAssign={handleAssignSuccess}
       />
       </div>
     </div>

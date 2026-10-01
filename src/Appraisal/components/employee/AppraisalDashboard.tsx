@@ -20,6 +20,7 @@ import {
   Table,
   TableColumn,
 } from "../../../components/ui";
+import "./AppraisalDashboard.css";
 
 const renderStatusBadge = (status: string) => {
   switch (status) {
@@ -66,12 +67,30 @@ export const AppraisalDashboard: React.FC = () => {
   // If stepper is open, display 6-step review UI
   if (activeAssignment) {
     return (
-      <div className="w-full min-h-screen bg-[#F4F7FE] p-4 sm:p-6 lg:p-8 font-sans">
-        <QuarterlyReviewStepper
-          assignment={activeAssignment}
-          onBack={closeAssignment}
-          onSubmitSuccess={() => submitReview(activeAssignment.id)}
-        />
+      <div className="w-full min-h-screen relative overflow-hidden font-sans p-4 sm:p-6 lg:p-8 manager-review-bg-container">
+        {/* LUXURY BACKGROUND CANVAS (All SVGs & animations managed and loaded via CSS) */}
+        <div className="manager-review-canvas" aria-hidden="true">
+          <div className="manager-review-dot-grid" />
+          <div className="manager-review-aurora-tr" />
+          <div className="manager-review-aurora-tl" />
+          <div className="manager-review-aurora-br" />
+          <div className="manager-review-aurora-bl" />
+          <div className="manager-review-wave-top" />
+          <div className="manager-review-wave-bottom" />
+          <div className="manager-review-star-1" />
+          <div className="manager-review-star-2" />
+          <div className="manager-review-star-3" />
+          <div className="manager-review-star-4" />
+          <div className="manager-review-star-5" />
+        </div>
+
+        <div className="relative z-10">
+          <QuarterlyReviewStepper
+            assignment={activeAssignment}
+            onBack={closeAssignment}
+            onSubmitSuccess={() => submitReview(activeAssignment.id)}
+          />
+        </div>
       </div>
     );
   }
@@ -138,51 +157,73 @@ export const AppraisalDashboard: React.FC = () => {
   ];
 
   return (
-    <div className="w-full min-h-screen bg-[#F4F7FE] p-4 sm:p-6 lg:p-8 font-sans">
-      {/* Page Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-[#1B2559] tracking-tight">
-          Quarterly Review
-        </h1>
-        <p className="text-sm text-[#707EAE] mt-1 font-normal">
-          Complete authorized quarterly review assignments and track your performance appraisals.
-        </p>
+    <div className="w-full min-h-screen relative overflow-hidden font-sans p-4 sm:p-6 lg:p-8 manager-review-bg-container">
+      {/* LUXURY BACKGROUND CANVAS (All SVGs & animations managed and loaded via CSS) */}
+      <div className="manager-review-canvas" aria-hidden="true">
+        <div className="manager-review-dot-grid" />
+        <div className="manager-review-aurora-tr" />
+        <div className="manager-review-aurora-tl" />
+        <div className="manager-review-aurora-br" />
+        <div className="manager-review-aurora-bl" />
+        <div className="manager-review-wave-top" />
+        <div className="manager-review-wave-bottom" />
+        <div className="manager-review-star-1" />
+        <div className="manager-review-star-2" />
+        <div className="manager-review-star-3" />
+        <div className="manager-review-star-4" />
+        <div className="manager-review-star-5" />
       </div>
 
-      {/* CURRENT YEAR RATING CARD */}
-      <div className="mb-6">
-        <Card className="rounded-3xl p-5 bg-white border border-[#E0E5F2]/80 shadow-xs max-w-sm">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-9 h-9 rounded-xl bg-[#E6F9F0] text-[#05CD99] flex items-center justify-center shrink-0">
-              <Award className="w-5 h-5 stroke-[2.2]" />
-            </div>
-            <h2 className="text-[11px] font-bold text-[#1B2559] uppercase tracking-wider">
-              CURRENT YEAR RATING
-            </h2>
+      {/* FOREGROUND CONTENT (z-10 layer for crisp interactivity and clarity) */}
+      <div className="relative z-10">
+        {/* Page Header */}
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight w-fit">
+              <span className="manager-review-title-anim">Quarterly Review</span>
+            </h1>
+            <p className="text-sm mt-1 font-normal w-fit">
+              <span className="manager-review-subtitle-anim">
+                Complete authorized quarterly review assignments and track your performance appraisals.
+              </span>
+            </p>
           </div>
+        </div>
 
-          <div className="pl-1">
-            <span className="text-2xl font-black text-[#1B2559] tracking-tight">—</span>
-            <p className="text-xs text-[#A3AED0] mt-1 font-medium">Not Available</p>
-          </div>
-        </Card>
-      </div>
-
-      {/* MAIN SECTION: QUARTERLY REVIEW HISTORY */}
-      <Card className="w-full bg-white rounded-3xl p-5 sm:p-7 shadow-[0_18px_40px_rgba(112,144,176,0.08)] border-[#E0E5F2]/80">
-        {/* Card Header & Filters */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-[#EEF2FF] text-[#4318FF] flex items-center justify-center shrink-0">
-              <BarChart3 className="w-4 h-4" />
+        {/* CURRENT YEAR RATING CARD */}
+        <div className="mb-6">
+          <Card className="rounded-3xl p-5 manager-review-glass-card max-w-sm">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-9 h-9 rounded-xl bg-[#E6F9F0] text-[#05CD99] flex items-center justify-center shrink-0">
+                <Award className="w-5 h-5 stroke-[2.2]" />
+              </div>
+              <h2 className="text-[11px] font-bold text-[#1B2559] uppercase tracking-wider">
+                CURRENT YEAR RATING
+              </h2>
             </div>
-            <CardTitle className="text-lg font-bold text-[#1B2559]">
-              Quarterly Review History
-            </CardTitle>
-          </div>
+
+            <div className="pl-1">
+              <span className="text-2xl font-black text-[#1B2559] tracking-tight">—</span>
+              <p className="text-xs text-[#A3AED0] mt-1 font-medium">Not Available</p>
+            </div>
+          </Card>
+        </div>
+
+        {/* MAIN SECTION: QUARTERLY REVIEW HISTORY */}
+        <Card className="w-full p-5 sm:p-7 manager-review-glass-card">
+          {/* Card Header & Filters */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-[#EEF2FF] text-[#4318FF] flex items-center justify-center shrink-0">
+                <BarChart3 className="w-4 h-4" />
+              </div>
+              <CardTitle className="text-lg sm:text-xl font-bold manager-review-card-title">
+                Quarterly Review History
+              </CardTitle>
+            </div>
 
           {/* Filters Bar */}
-          <div className="flex items-center gap-2.5 flex-nowrap overflow-x-auto no-scrollbar pb-1">
+          <div className="flex items-center gap-2.5 flex-nowrap overflow-x-auto no-scrollbar py-1.5 manager-review-filters-bar">
             {/* Financial Year Dropdown */}
             <Dropdown
               className="shrink-0"
@@ -370,6 +411,7 @@ export const AppraisalDashboard: React.FC = () => {
           )}
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 };

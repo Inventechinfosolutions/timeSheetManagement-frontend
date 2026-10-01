@@ -1,4 +1,5 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
 export interface ModalProps {
@@ -9,7 +10,10 @@ export interface ModalProps {
   footer?: React.ReactNode;
   maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
   className?: string;
+  overlayClassName?: string;
+  closeBtnClassName?: string;
   closeOnBackdrop?: boolean;
+  closeOnEsc?: boolean;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -20,32 +24,48 @@ export const Modal: React.FC<ModalProps> = ({
   footer,
   maxWidth = "lg",
   className = "",
+  overlayClassName = "",
+  closeBtnClassName = "",
   closeOnBackdrop = true,
+  closeOnEsc = true,
 }) => {
-  // Prevent body scroll when open
+  const [isClosing, setIsClosing] = useState(false);
+
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      setIsClosing(false);
+      onClose();
+    }, 300);
+  };
+
+  // Prevent body scroll and blur surrounding layout when modal is active
   useEffect(() => {
-    if (open) {
+    if (open && !isClosing) {
       document.body.style.overflow = "hidden";
+      document.body.classList.add("modal-open-active");
     } else {
       document.body.style.overflow = "unset";
+      document.body.classList.remove("modal-open-active");
     }
     return () => {
       document.body.style.overflow = "unset";
+      document.body.classList.remove("modal-open-active");
     };
-  }, [open]);
+  }, [open, isClosing]);
 
   // Close on Escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && open) {
-        onClose();
+      if (e.key === "Escape" && open && !isClosing && closeOnEsc) {
+        handleClose();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [open, onClose]);
+  }, [open, isClosing, closeOnEsc]);
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
   const maxWidthClasses = {
     sm: "max-w-sm",
@@ -57,17 +77,24 @@ export const Modal: React.FC<ModalProps> = ({
     "4xl": "max-w-4xl",
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto no-scrollbar"
+      style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+    >
       {/* Backdrop */}
       <div
-        onClick={() => closeOnBackdrop && onClose()}
-        className="fixed inset-0 bg-[#2B3674]/40 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+        onClick={() => closeOnBackdrop && !isClosing && handleClose()}
+        className={`fixed inset-0 z-0 bg-[#2B3674]/40 backdrop-blur-xs transition-opacity animate-in fade-in duration-200 ${
+          isClosing ? "modal-overlay-is-closing" : ""
+        } ${overlayClassName}`}
       />
 
       {/* Modal Dialog Card */}
       <div
-        className={`relative w-full ${maxWidthClasses[maxWidth]} bg-white rounded-3xl shadow-2xl border border-gray-100 p-6 z-10 animate-in fade-in zoom-in-95 duration-200 ${className}`}
+        className={`relative z-20 w-full ${maxWidthClasses[maxWidth]} bg-white rounded-3xl shadow-2xl border border-gray-100 p-6 animate-in fade-in zoom-in-95 duration-200 ${
+          isClosing ? "modal-is-closing" : ""
+        } ${className}`}
       >
         {/* Header */}
         <div className="flex items-center justify-between pb-4 mb-4 border-b border-gray-100">
@@ -80,8 +107,8 @@ export const Modal: React.FC<ModalProps> = ({
           )}
           <button
             type="button"
-            onClick={onClose}
-            className="p-1.5 text-gray-400 hover:text-gray-600 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
+            onClick={handleClose}
+            className={`p-1.5 text-gray-400 hover:text-gray-600 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer modal-close-btn ${closeBtnClassName}`}
             title="Close modal"
           >
             <X size={18} />
@@ -98,7 +125,8 @@ export const Modal: React.FC<ModalProps> = ({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

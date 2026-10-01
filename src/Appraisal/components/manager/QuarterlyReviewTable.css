@@ -1,0 +1,409 @@
+/* ==========================================================================
+   Quarterly Review Assignment Table - Modern WorkSphere Design
+   ========================================================================== */
+
+.quarterly-review-table-card {
+  width: 100%;
+  background: #FFFFFF;
+  border-radius: 1.5rem;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 4px 20px rgba(112, 144, 176, 0.08);
+  overflow: hidden;
+  position: relative;
+  transition: box-shadow 0.3s ease;
+}
+
+.quarterly-review-table-card:hover {
+  box-shadow: 0 8px 30px rgba(112, 144, 176, 0.14);
+}
+
+/* Horizontal scrollable wrapper - isolated scrollbar */
+.quarterly-review-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Custom Scrollbar for Table */
+.quarterly-review-table-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+
+.quarterly-review-table-scroll::-webkit-scrollbar-track {
+  background: #F4F7FE;
+  border-radius: 8px;
+}
+
+.quarterly-review-table-scroll::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+.quarterly-review-table-scroll::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* Table element */
+.quarterly-review-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  text-align: left;
+  font-size: 0.8125rem;
+  min-width: 1180px;
+}
+
+/* Table Header */
+.quarterly-review-table thead tr {
+  background: #F4F7FE;
+  border-bottom: 1.5px solid #E2E8F0;
+}
+
+.quarterly-review-table th {
+  padding: 1rem 0.875rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #1B2559;
+  white-space: nowrap;
+  user-select: none;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+/* Table Body Rows */
+.quarterly-review-table tbody tr {
+  background: #FFFFFF;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.quarterly-review-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.quarterly-review-table tbody tr:hover {
+  background: #F8FAFC;
+}
+
+.quarterly-review-table td {
+  padding: 0.95rem 0.875rem;
+  color: #2B3674;
+  vertical-align: middle;
+  border-bottom: 1px solid #F1F5F9;
+  white-space: nowrap;
+}
+
+/* Employee Name cell with Avatar initials */
+.qr-employee-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.qr-avatar-badge {
+  width: 2.15rem;
+  height: 2.15rem;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);
+  color: #4318FF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.78rem;
+  flex-shrink: 0;
+  border: 1px solid rgba(67, 24, 255, 0.15);
+  box-shadow: 0 2px 6px rgba(67, 24, 255, 0.1);
+}
+
+.qr-employee-name {
+  font-weight: 700;
+  color: #1B2559;
+  font-size: 0.875rem;
+  line-height: 1.25;
+}
+
+/* Employee ID chip */
+.qr-id-chip {
+  display: inline-flex;
+  align-items: center;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #4318FF;
+  background: #EEF2FF;
+  border: 1px solid #E0E7FF;
+  padding: 0.2rem 0.55rem;
+  border-radius: 0.5rem;
+}
+
+/* Quarter badge */
+.qr-quarter-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.75rem;
+  color: #1B2559;
+  background: #F4F7FE;
+  border: 1px solid #E2E8F0;
+  padding: 0.2rem 0.65rem;
+  border-radius: 9999px;
+}
+
+/* Assign By pill */
+.qr-assigned-by-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 600;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 0.5rem;
+  background: #F0FDF4;
+  color: #15803D;
+  border: 1px solid #DCFCE7;
+}
+
+.qr-assigned-by-admin {
+  background: #FAF5FF;
+  color: #7E22CE;
+  border-color: #F3E8FF;
+}
+
+/* Final Rating Pill */
+.qr-rating-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  font-weight: 800;
+  font-size: 0.78rem;
+  background: #FFFBEB;
+  color: #B45309;
+  border: 1px solid #FDE68A;
+  box-shadow: 0 1px 3px rgba(245, 158, 11, 0.1);
+}
+
+.qr-rating-empty {
+  color: #94A3B8;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+/* Status Badges */
+.qr-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.28rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.qr-status-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+
+/* 1. Not Started / Pending */
+.qr-status-not-started,
+.qr-status-pending {
+  background: #FFFBEB;
+  color: #B45309;
+  border: 1px solid #FDE68A;
+}
+.qr-status-not-started .qr-status-dot,
+.qr-status-pending .qr-status-dot {
+  background: #F59E0B;
+}
+
+/* 2. In Progress / awaiting Review */
+.qr-status-in-progress,
+.qr-status-awaiting-review {
+  background: #EFF6FF;
+  color: #1D4ED8;
+  border: 1px solid #BFDBFE;
+}
+.qr-status-in-progress .qr-status-dot,
+.qr-status-awaiting-review .qr-status-dot {
+  background: #3B82F6;
+  animation: qrDotPulse 2s infinite ease-in-out;
+}
+
+/* 3. Submitted */
+.qr-status-submitted {
+  background: #FAF5FF;
+  color: #7E22CE;
+  border: 1px solid #E9D5FF;
+}
+.qr-status-submitted .qr-status-dot {
+  background: #A855F7;
+}
+
+/* 4. Completed / reviewed */
+.qr-status-completed,
+.qr-status-reviewed {
+  background: #ECFDF5;
+  color: #047857;
+  border: 1px solid #A7F3D0;
+}
+.qr-status-completed .qr-status-dot,
+.qr-status-reviewed .qr-status-dot {
+  background: #10B981;
+}
+
+@keyframes qrDotPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.35);
+    opacity: 0.65;
+  }
+}
+
+/* Action Buttons */
+.qr-action-btn-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: #EEF2FF;
+  color: #4318FF;
+  border: 1px solid #E0E7FF;
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.qr-action-btn-edit:hover {
+  background: #4318FF;
+  color: #FFFFFF;
+  border-color: #4318FF;
+  transform: translateY(-1.5px);
+  box-shadow: 0 4px 12px rgba(67, 24, 255, 0.25);
+}
+
+.qr-action-btn-edit:active {
+  transform: scale(0.95);
+}
+
+.qr-action-btn-view {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: #F8FAFC;
+  color: #2B3674;
+  border: 1px solid #E2E8F0;
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.qr-action-btn-view:hover {
+  background: #2B3674;
+  color: #FFFFFF;
+  border-color: #2B3674;
+  transform: translateY(-1.5px);
+  box-shadow: 0 4px 12px rgba(43, 54, 116, 0.25);
+}
+
+.qr-action-btn-view:active {
+  transform: scale(0.95);
+}
+
+/* Sticky Action Column */
+.qr-sticky-action-th {
+  position: sticky;
+  right: 0;
+  background: #F4F7FE !important;
+  z-index: 10;
+  box-shadow: -4px 0 8px rgba(0, 0, 0, 0.03);
+}
+
+.qr-sticky-action-td {
+  position: sticky;
+  right: 0;
+  background: #FFFFFF !important;
+  z-index: 5;
+  box-shadow: -4px 0 8px rgba(0, 0, 0, 0.03);
+}
+
+.quarterly-review-table tbody tr:hover .qr-sticky-action-td {
+  background: #F8FAFC !important;
+}
+
+/* ==========================================================================
+   Newly Assigned Row Highlight & Subtle Glow Animation (~1s)
+   ========================================================================== */
+.quarterly-review-table tbody tr.quarterly-review-row-highlighted {
+  position: relative;
+  z-index: 8;
+  animation: qrRowGlowHighlight 1.15s cubic-bezier(0.25, 1, 0.5, 1) forwards !important;
+}
+
+@keyframes qrRowGlowHighlight {
+  0% {
+    background-color: rgba(67, 24, 255, 0.18) !important;
+    box-shadow:
+      inset 4px 0 0 #4318FF,
+      0 4px 20px rgba(67, 24, 255, 0.22) !important;
+  }
+  30% {
+    background-color: rgba(67, 24, 255, 0.14) !important;
+    box-shadow:
+      inset 4px 0 0 #4318FF,
+      0 6px 24px rgba(67, 24, 255, 0.25) !important;
+  }
+  65% {
+    background-color: rgba(67, 24, 255, 0.07) !important;
+    box-shadow:
+      inset 2px 0 0 rgba(67, 24, 255, 0.5),
+      0 3px 12px rgba(67, 24, 255, 0.12) !important;
+  }
+  100% {
+    background-color: #FFFFFF !important;
+    box-shadow:
+      inset 0 0 0 transparent,
+      0 0 0 transparent !important;
+  }
+}
+
+.quarterly-review-table tbody tr.quarterly-review-row-highlighted td {
+  background-color: transparent !important;
+  transition: background-color 0.4s ease;
+}
+
+.quarterly-review-table tbody tr.quarterly-review-row-highlighted .qr-sticky-action-td {
+  background-color: rgba(248, 250, 252, 0.95) !important;
+}
+
+.quarterly-review-table tbody tr.quarterly-review-row-highlighted .qr-avatar-badge {
+  box-shadow: 0 0 14px rgba(67, 24, 255, 0.4) !important;
+  transform: scale(1.08);
+  transition: all 0.35s ease;
+}
+
+.quarterly-review-table tbody tr.quarterly-review-row-highlighted .qr-id-chip {
+  background: #E0E7FF !important;
+  color: #4318FF !important;
+  border-color: #A5B4FC !important;
+  box-shadow: 0 0 10px rgba(67, 24, 255, 0.25) !important;
+  transition: all 0.35s ease;
+}
