@@ -69,6 +69,7 @@ const ManagerLayout = () => {
     }
     if (path.includes("/manager-dashboard/quarterly-review")) {
       return "Quarterly Review";
+    }
     if (path.includes("/manager-dashboard/inbox")) {
       return "Inbox";
     }

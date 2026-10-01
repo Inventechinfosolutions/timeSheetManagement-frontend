@@ -43,6 +43,7 @@ const AdminLayout = () => {
     }
     if (path.includes("/admin-dashboard/quarterly-review")) {
       return "Quarterly Review";
+    }
     if (path.includes("/admin-dashboard/inbox")) {
       return "Inbox";
     }
