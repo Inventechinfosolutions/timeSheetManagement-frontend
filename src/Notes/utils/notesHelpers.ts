@@ -147,25 +147,41 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
       <div style="padding: 36px 40px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #1E293B; background-color: #FFFFFF; line-height: 1.6; box-sizing: border-box; width: 794px;">
         <!-- Structured Note Card: Project & Title -->
         <div style="background-color: #F8FAFC; border: 1.5px solid #E2E8F0; border-radius: 10px; padding: 18px 22px; margin-bottom: 22px;">
-          <!-- Project Row -->
-          <div style="margin-bottom: 12px; display: flex; align-items: center; gap: 10px;">
-            <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.8px; white-space: nowrap;">
-              PROJECT:
-            </span>
-            <span style="display: inline-block; font-size: 12.5px; font-weight: 700; line-height: normal; color: ${isProject ? "#4318FF" : "#059669"}; background-color: ${isProject ? "#EEF2FF" : "#ECFDF5"}; border: 1px solid ${isProject ? "#C7D2FE" : "#A7F3D0"}; padding: 4px 14px; border-radius: 6px;">
-              ${isProject ? projectLabel : "Personal Note"}
-            </span>
-          </div>
+          <!-- Project Row: Rendered via table for 100% pixel-perfect html2canvas alignment -->
+          <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 12px; border-collapse: separate;">
+            <tr>
+              <td style="vertical-align: middle; padding-right: 10px; white-space: nowrap;">
+                <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.8px;">
+                  PROJECT:
+                </span>
+              </td>
+              <td style="vertical-align: middle;">
+                <table cellpadding="0" cellspacing="0" border="0" style="background-color: ${isProject ? "#EEF2FF" : "#ECFDF5"}; border: 1px solid ${isProject ? "#C7D2FE" : "#A7F3D0"}; border-radius: 6px; border-collapse: separate;">
+                  <tr>
+                    <td style="padding: 4px 14px; font-size: 12px; font-weight: 700; line-height: 18px; font-family: Arial, sans-serif; color: ${isProject ? "#4318FF" : "#059669"}; vertical-align: middle; text-align: center; white-space: nowrap;">
+                      ${isProject ? projectLabel : "Personal Note"}
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
 
-          <!-- Title Row: TITLE in front of Title text on the same line -->
-          <div style="display: flex; align-items: baseline; gap: 10px;">
-            <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.8px; white-space: nowrap;">
-              TITLE:
-            </span>
-            <span style="font-size: 18px; font-weight: 800; color: #1B2559; line-height: 1.35; letter-spacing: -0.2px;">
-              ${note.title || "Untitled Note"}
-            </span>
-          </div>
+          <!-- Title Row: Rendered via table for perfect baseline alignment -->
+          <table cellpadding="0" cellspacing="0" border="0" style="border-collapse: separate;">
+            <tr>
+              <td style="vertical-align: middle; padding-right: 10px; white-space: nowrap;">
+                <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.8px;">
+                  TITLE/SUBJECT:
+                </span>
+              </td>
+              <td style="vertical-align: middle;">
+                <span style="font-size: 18px; font-weight: 800; color: #1B2559; line-height: 24px; font-family: Arial, sans-serif; letter-spacing: -0.2px;">
+                  ${note.title || "Untitled Note"}
+                </span>
+              </td>
+            </tr>
+          </table>
         </div>
 
         <!-- Structured Description Section -->
@@ -457,7 +473,7 @@ export const exportNoteToWord = async (note: Note): Promise<void> => {
               <td class="val-cell">${isProject ? projectLabel : "Personal Note"}</td>
             </tr>
             <tr>
-              <td class="label-cell">TITLE:</td>
+              <td class="label-cell">TITLE/SUBJECT:</td>
               <td class="val-cell">${note.title || "Untitled Note"}</td>
             </tr>
           </table>

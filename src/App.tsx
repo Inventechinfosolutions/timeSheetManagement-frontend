@@ -7,10 +7,9 @@ import {
   useLocation,
 } from "react-router-dom";
 import { Suspense } from "react";
-import { Spin } from "antd";
 import { lazy } from "react";
 import Layout from "./components/Layout";
-import ApiLoadingSpinner from "./components/ApiLoadingSpinner";
+import ApiLoadingSpinner, { WorksphereLogoLoader } from "./components/ApiLoadingSpinner";
 import AdminLayout from "./navigation/AdminLayout";
 import { adminComponentConfigs } from "./navigation/adminComponentConfigs";
 import ManagerLayout from "./navigation/ManagerLayout";
@@ -169,7 +168,7 @@ function AppContent() {
             <Suspense
               fallback={
                 <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                  Loading...
+                  <WorksphereLogoLoader />
                 </div>
               }
             >
@@ -183,7 +182,7 @@ function AppContent() {
             <Suspense
               fallback={
                 <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                  Loading...
+                  <WorksphereLogoLoader />
                 </div>
               }
             >
@@ -197,7 +196,7 @@ function AppContent() {
             <Suspense
               fallback={
                 <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                  Loading...
+                  <WorksphereLogoLoader />
                 </div>
               }
             >
@@ -212,7 +211,7 @@ function AppContent() {
             <Suspense
               fallback={
                 <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                  Loading...
+                  <WorksphereLogoLoader />
                 </div>
               }
             >
@@ -227,7 +226,7 @@ function AppContent() {
             <Suspense
               fallback={
                 <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                  Loading...
+                  <WorksphereLogoLoader />
                 </div>
               }
             >
@@ -243,7 +242,7 @@ function AppContent() {
             <Suspense
               fallback={
                 <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                  Loading...
+                  <WorksphereLogoLoader />
                 </div>
               }
             >
@@ -269,7 +268,7 @@ function AppContent() {
                 <Suspense
                   fallback={
                     <div className="flex items-center justify-center min-h-screen">
-                      <Spin size="large" />
+                      <WorksphereLogoLoader />
                     </div>
                   }
                 >
@@ -303,7 +302,7 @@ function AppContent() {
                   <Route
                     path="timesheet/:employeeId/:date?"
                     element={
-                      <Suspense fallback={<Spin />}>
+                      <Suspense fallback={<div className="flex items-center justify-center p-8"><WorksphereLogoLoader /></div>}>
                         <div className="flex flex-col h-full overflow-hidden">
                           <AdminEmployeeTimesheetWrapper />
                         </div>
@@ -313,7 +312,7 @@ function AppContent() {
                   <Route
                     path="timesheet-view/:employeeId/:date?"
                     element={
-                      <Suspense fallback={<Spin />}>
+                      <Suspense fallback={<div className="flex items-center justify-center p-8"><WorksphereLogoLoader /></div>}>
                         <AdminEmployeeTimesheetWrapper />
                       </Suspense>
                     }
@@ -349,7 +348,7 @@ function AppContent() {
                   <Route
                     path="timesheet/:employeeId/:date?"
                     element={
-                      <Suspense fallback={<Spin />}>
+                      <Suspense fallback={<div className="flex items-center justify-center p-8"><WorksphereLogoLoader /></div>}>
                         <div className="flex flex-col h-full overflow-hidden">
                           <AdminEmployeeTimesheetWrapper />
                         </div>
@@ -359,7 +358,7 @@ function AppContent() {
                   <Route
                     path="timesheet-view/:employeeId/:date?"
                     element={
-                      <Suspense fallback={<Spin />}>
+                      <Suspense fallback={<div className="flex items-center justify-center p-8"><WorksphereLogoLoader /></div>}>
                         <AdminEmployeeTimesheetWrapper />
                       </Suspense>
                     }
@@ -406,7 +405,7 @@ function AppContent() {
                         <Suspense
                           fallback={
                             <div className="flex items-center justify-center min-h-screen">
-                              <Spin size="large" />
+                              <WorksphereLogoLoader />
                             </div>
                           }
                         >
@@ -426,7 +425,7 @@ function AppContent() {
                         <Suspense
                           fallback={
                             <div className="flex items-center justify-center min-h-screen">
-                              <Spin size="large" />
+                              <WorksphereLogoLoader />
                             </div>
                           }
                         >

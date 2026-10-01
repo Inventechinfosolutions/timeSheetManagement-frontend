@@ -44,7 +44,11 @@ export const NoteSendModal: React.FC<NoteSendModalProps> = ({
   // Reset/Initialize state when note changes
   useEffect(() => {
     if (note && open) {
-      setSubject("");
+      const defaultSubj =
+        note.type === "PROJECT" && note.projectName
+          ? `[Project: ${note.projectName}] ${note.title}`
+          : note.title || "";
+      setSubject(defaultSubj);
       setRecipientEmails([]);
       setEmailInput("");
       setEmailError("");
@@ -188,7 +192,11 @@ export const NoteSendModal: React.FC<NoteSendModalProps> = ({
         noteId: note.id,
         recipientEmail: currentEmails.join(", "),
         recipients: currentEmails,
-        subject: subject.trim() || note.title || "WorkSphere Note",
+        subject:
+          subject.trim() ||
+          (note.type === "PROJECT" && note.projectName
+            ? `[Project: ${note.projectName}] ${note.title}`
+            : note.title || "WorkSphere Note"),
         permission: permissionString,
         permissions: selectedPerms,
         canView,
@@ -242,24 +250,43 @@ export const NoteSendModal: React.FC<NoteSendModalProps> = ({
             </div>
 
             <div className="pt-0.5">
-              <span
-                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide truncate max-w-full ${
+              <div
+                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs truncate max-w-full ${
                   isProjectNote
-                    ? "bg-indigo-50 text-[#4318FF] border border-indigo-100"
-                    : "bg-emerald-50 text-emerald-700 border border-emerald-100"
+                    ? "bg-indigo-50/80 text-slate-700 border border-indigo-100"
+                    : "bg-emerald-50/80 text-slate-700 border border-emerald-100"
                 }`}
               >
                 {isProjectNote ? (
-                  <Folder className="w-3.5 h-3.5 text-[#4318FF] shrink-0" />
+                  <>
+                    <Folder className="w-3.5 h-3.5 text-[#4318FF] shrink-0" />
+                    <span className="font-bold text-[#4318FF] uppercase tracking-wide shrink-0">
+                      Project: {note.projectName || "Worksphere"}
+                    </span>
+                    <span className="h-3 w-px bg-indigo-200 shrink-0 mx-0.5" />
+                    <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0">
+                      Title/Subject:
+                    </span>
+                    <span className="font-semibold text-slate-800 truncate" title={note.title}>
+                      {note.title}
+                    </span>
+                  </>
                 ) : (
-                  <User className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <>
+                    <User className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span className="font-bold text-emerald-700 uppercase tracking-wide shrink-0">
+                      Personal Note
+                    </span>
+                    <span className="h-3 w-px bg-emerald-200 shrink-0 mx-0.5" />
+                    <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0">
+                      Title/Subject:
+                    </span>
+                    <span className="font-semibold text-slate-800 truncate" title={note.title}>
+                      {note.title}
+                    </span>
+                  </>
                 )}
-                <span className="truncate">
-                  {isProjectNote
-                    ? `Project: ${note.projectName || "Worksphere"} - ${note.title}`
-                    : `Personal Note - ${note.title}`}
-                </span>
-              </span>
+              </div>
             </div>
           </div>
 

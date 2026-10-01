@@ -1,5 +1,6 @@
 import React from "react";
-import { Loader2, FileSpreadsheet } from "lucide-react";
+import { FileSpreadsheet } from "lucide-react";
+import { WorksphereLogoLoader } from "../ApiLoadingSpinner";
 
 export interface TableColumn<T = any> {
   key: string;
@@ -108,10 +109,9 @@ export function Table<T extends Record<string, any> = any>({
           <tbody className="divide-y divide-gray-100 bg-white">
             {loading ? (
               <tr>
-                <td colSpan={columns.length} className="py-20 text-center">
-                  <div className="flex flex-col items-center justify-center gap-2.5">
-                    <Loader2 size={32} className="animate-spin text-[#4318FF]" />
-                    <span className="text-xs font-bold text-gray-500">Loading data...</span>
+                <td colSpan={columns.length} className="py-12 text-center">
+                  <div className="flex flex-col items-center justify-center">
+                    <WorksphereLogoLoader />
                   </div>
                 </td>
               </tr>
