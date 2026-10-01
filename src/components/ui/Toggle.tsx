@@ -8,6 +8,7 @@ export interface ToggleProps {
   size?: "sm" | "md" | "lg";
   className?: string;
   activeColor?: string; // defaults to brand blue #4318FF
+  inactiveColor?: string;
 }
 
 export const Toggle: React.FC<ToggleProps> = ({
@@ -18,6 +19,7 @@ export const Toggle: React.FC<ToggleProps> = ({
   size = "md",
   className = "",
   activeColor = "#4318FF",
+  inactiveColor,
 }) => {
   const sizeMap = {
     sm: {
@@ -54,7 +56,7 @@ export const Toggle: React.FC<ToggleProps> = ({
           className="sr-only"
         />
         <div
-          style={{ backgroundColor: checked ? activeColor : "#E2E8F0" }}
+          style={{ backgroundColor: checked ? activeColor : (inactiveColor || "#E2E8F0") }}
           className={`${currentSize.track} rounded-full transition-colors duration-200 ease-in-out p-0.5`}
         >
           <div
