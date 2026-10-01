@@ -36,12 +36,7 @@ const WorkTrendsGraph = ({ currentMonth }: Props) => {
 
   if (trendsLoading) {
     return (
-      <div className="bg-white rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-col h-full min-h-[400px] items-center justify-center">
-        <div className="w-8 h-8 border-4 border-[#4318FF]/20 border-t-[#4318FF] rounded-full animate-spin"></div>
-        <div className="text-gray-400 text-sm mt-3 font-medium">
-          Loading trends...
-        </div>
-      </div>
+      <div className="bg-white rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-col h-full min-h-[400px]" />
     );
   }
 

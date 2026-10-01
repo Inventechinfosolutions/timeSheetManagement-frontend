@@ -21,7 +21,7 @@ import { getCleanDescriptionSnippet } from "../utils/notesHelpers";
 import { useNoteDragDrop } from "../hooks/useNoteDragDrop";
 
 interface NoteListProps {
-  loading: boolean;
+  loading?: boolean;
   notes: Note[];
   paginatedNotes: Note[];
   currentPage: number;
@@ -88,12 +88,7 @@ export const NoteList: React.FC<NoteListProps> = ({
 
   return (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_2px_12px_rgba(0,0,0,0.02)] overflow-hidden">
-      {loading ? (
-        <div className="flex flex-col items-center justify-center py-24">
-          <div className="w-8 h-8 border-3 border-[#4318FF]/20 border-t-[#4318FF] rounded-full animate-spin"></div>
-          <span className="mt-3 text-xs font-medium text-slate-500">Loading notes...</span>
-        </div>
-      ) : notes.length === 0 ? (
+      {notes.length === 0 ? (
         <div className="p-16 text-center flex flex-col items-center justify-center">
           <div className="w-14 h-14 bg-indigo-50 text-[#4318FF] rounded-2xl flex items-center justify-center mb-4 border border-indigo-100">
             <FileText className="w-7 h-7 text-[#4318FF]" />

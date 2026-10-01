@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { RootState } from "../store";
 import dayjs from "dayjs";
+import { WorksphereLogoLoader } from "../components/ApiLoadingSpinner";
 import {
   Check,
   CheckCircle,
@@ -1513,9 +1514,8 @@ const Requests = () => {
                     colSpan={8}
                     className="py-20 text-center text-gray-400 font-medium tracking-wide"
                   >
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="w-12 h-12 border-4 border-blue-100 border-t-[#4318FF] rounded-full animate-spin"></div>
-                      <span>Loading requests...</span>
+                    <div className="flex flex-col items-center justify-center py-6">
+                      <WorksphereLogoLoader />
                     </div>
                   </td>
                 </tr>

@@ -4,6 +4,7 @@ import { RootState, AppDispatch } from "../store";
 import { useState, useEffect } from "react";
 import axios from "axios";
 import dayjs from "dayjs";
+import { WorksphereLogoLoader } from "../components/ApiLoadingSpinner";
 import {
   getEntity,
   updateEntity,
@@ -164,8 +165,8 @@ const EmployeeDetailsView = () => {
 
   if (loading && !employee) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="w-12 h-12 border-4 border-[#4318FF] border-t-transparent rounded-full animate-spin"></div>
+      <div className="flex items-center justify-center h-full py-20">
+        <WorksphereLogoLoader />
       </div>
     );
   }

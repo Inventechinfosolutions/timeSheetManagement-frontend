@@ -14,7 +14,6 @@ import {
   Paperclip,
   User,
   Eye,
-  RefreshCw,
   Clock,
   Edit3,
   Send,
@@ -421,14 +420,7 @@ export const InboxManagement: React.FC = () => {
       </div>
 
       {/* Inbox Items List */}
-      {loading && items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl border border-slate-100 min-h-[300px]">
-          <RefreshCw className="w-8 h-8 text-[#4318FF] animate-spin mb-3" />
-          <p className="text-sm font-medium text-slate-600">
-            {folder === 'SENT' ? 'Loading sent notes...' : 'Loading your inbox...'}
-          </p>
-        </div>
-      ) : filteredItems.length === 0 ? (
+      {filteredItems.length === 0 ? (
         <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl border border-slate-100 min-h-[350px] text-center">
           <div className="w-16 h-16 rounded-3xl bg-indigo-50 flex items-center justify-center text-[#4318FF] mb-4">
             {folder === 'SENT' ? <Send className="w-8 h-8" /> : <MailOpen className="w-8 h-8" />}

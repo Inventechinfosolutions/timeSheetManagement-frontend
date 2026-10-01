@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { RootState } from "../store";
+import { WorksphereLogoLoader } from "../components/ApiLoadingSpinner";
 import { getAllManagerMappings, reset as resetMappings } from "../reducers/managerMapping.reducer";
 import {
   getEntity as getEmployeeEntity,
@@ -223,7 +224,7 @@ const ManagerEmployeesView: React.FC = () => {
       <div className="bg-white rounded-[24px] shadow-[0px_18px_40px_rgba(112,144,176,0.12)] p-6">
         {loading ? (
           <div className="flex justify-center items-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4318FF]"></div>
+            <WorksphereLogoLoader />
           </div>
         ) : (
           <>

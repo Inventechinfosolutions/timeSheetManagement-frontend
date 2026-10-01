@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Modal, Button, Input, Table, Spin, Empty, Tag, Tooltip } from "antd";
+import { WorksphereLogoLoader } from "./ApiLoadingSpinner";
 import {
   FileSpreadsheet,
   Download,
@@ -272,9 +273,8 @@ export const ExcelViewerModal: React.FC<ExcelViewerModalProps> = ({
         {/* Content Area */}
         <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white shadow-2xs">
           {loading ? (
-            <div className="py-24 flex flex-col items-center justify-center gap-3 text-gray-400">
-              <Spin size="large" />
-              <span className="text-xs font-medium">Parsing spreadsheet data...</span>
+            <div className="py-20 flex flex-col items-center justify-center">
+              <WorksphereLogoLoader />
             </div>
           ) : error ? (
             <div className="py-16 text-center text-red-500 text-sm font-medium px-4">
