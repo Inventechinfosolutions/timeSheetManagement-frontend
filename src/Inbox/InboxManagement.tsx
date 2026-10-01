@@ -19,7 +19,8 @@ import {
   Send,
   Inbox,
 } from 'lucide-react';
-import { Modal, message, Popconfirm, Tooltip } from 'antd';
+import { Modal, message, Tooltip } from 'antd';
+import { PopconfirmWithTooltip } from '../components/ui/PopconfirmWithTooltip';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { NoteEditor, NoteView } from '../Notes/components';
@@ -579,24 +580,23 @@ export const InboxManagement: React.FC = () => {
                     )}
 
                     {/* Delete Icon Button */}
-                    <Popconfirm
+                    <PopconfirmWithTooltip
                       title={isSentMode ? "Delete this message from your sent box?" : "Delete this message from your inbox?"}
+                      tooltipTitle={isSentMode ? "Delete from sent" : "Delete from inbox"}
                       onConfirm={(e) => handleDeleteItem(item.inboxId, e as any)}
                       okText="Delete"
                       cancelText="Cancel"
                       okButtonProps={{ danger: true }}
                     >
-                      <Tooltip title={isSentMode ? "Delete from sent" : "Delete from inbox"} placement="top">
-                        <button
-                          type="button"
-                          onClick={(e) => e.stopPropagation()}
-                          className="w-8 h-8 flex items-center justify-center bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
-                          aria-label={isSentMode ? "Delete from sent" : "Delete from inbox"}
-                        >
-                          <Trash2 className="w-4 h-4 text-red-500" />
-                        </button>
-                      </Tooltip>
-                    </Popconfirm>
+                      <button
+                        type="button"
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-8 h-8 flex items-center justify-center bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
+                        aria-label={isSentMode ? "Delete from sent" : "Delete from inbox"}
+                      >
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                      </button>
+                    </PopconfirmWithTooltip>
 
                     {/* Mark as read button (INBOX only) */}
                     {!isSentMode && (

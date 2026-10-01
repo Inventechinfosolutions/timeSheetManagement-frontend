@@ -228,7 +228,6 @@ export const NoteView: React.FC<NoteViewProps> = ({
                 <button
                   type="button"
                   className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-semibold text-xs rounded-lg transition cursor-pointer flex items-center gap-1.5 shadow-2xs"
-                  title="Delete Note"
                 >
                   <Trash2 className="w-3.5 h-3.5 text-rose-600" />
                   <span>Delete</span>
