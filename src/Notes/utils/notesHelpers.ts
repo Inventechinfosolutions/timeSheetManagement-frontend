@@ -160,7 +160,7 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
           <!-- Title Row: TITLE in front of Title text on the same line -->
           <div style="display: flex; align-items: baseline; gap: 10px;">
             <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.8px; white-space: nowrap;">
-              TITLE:
+              TITLE/SUBJECT:
             </span>
             <span style="font-size: 18px; font-weight: 800; color: #1B2559; line-height: 1.35; letter-spacing: -0.2px;">
               ${note.title || "Untitled Note"}
@@ -457,7 +457,7 @@ export const exportNoteToWord = async (note: Note): Promise<void> => {
               <td class="val-cell">${isProject ? projectLabel : "Personal Note"}</td>
             </tr>
             <tr>
-              <td class="label-cell">TITLE:</td>
+              <td class="label-cell">TITLE/SUBJECT:</td>
               <td class="val-cell">${note.title || "Untitled Note"}</td>
             </tr>
           </table>

@@ -90,9 +90,6 @@ export const NoteView: React.FC<NoteViewProps> = ({
                   <span>Personal Note</span>
                 </span>
               )}
-              <span className="inline-flex items-center px-2.5 py-0.5 bg-slate-100 text-slate-600 rounded-md text-[11px] font-semibold">
-                {isProjectNote ? "Project Note" : "Personal Note"}
-              </span>
               {activeNote.isPinned && (
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-md text-[11px] font-bold shadow-2xs">
                   <Pin className="w-3 h-3 fill-amber-500 text-amber-500" />
@@ -108,9 +105,14 @@ export const NoteView: React.FC<NoteViewProps> = ({
             </div>
 
             {/* Note Title */}
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1B2559] tracking-tight leading-snug break-words">
-              {activeNote.title}
-            </h1>
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <span className="text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">
+                Title/Subject:
+              </span>
+              <h1 className="text-sm sm:text-base font-semibold text-[#1B2559] tracking-normal leading-snug break-words">
+                {activeNote.title}
+              </h1>
+            </div>
 
             {/* Metadata Row: Date, Author, Attachments count */}
             <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-slate-500 pt-0.5">

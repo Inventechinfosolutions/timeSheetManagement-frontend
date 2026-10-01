@@ -44,7 +44,11 @@ export const NoteSendModal: React.FC<NoteSendModalProps> = ({
   // Reset/Initialize state when note changes
   useEffect(() => {
     if (note && open) {
-      setSubject("");
+      const defaultSubj =
+        note.type === "PROJECT" && note.projectName
+          ? `[Project: ${note.projectName}] ${note.title}`
+          : note.title || "";
+      setSubject(defaultSubj);
       setRecipientEmails([]);
       setEmailInput("");
       setEmailError("");
@@ -188,7 +192,11 @@ export const NoteSendModal: React.FC<NoteSendModalProps> = ({
         noteId: note.id,
         recipientEmail: currentEmails.join(", "),
         recipients: currentEmails,
-        subject: subject.trim() || note.title || "WorkSphere Note",
+        subject:
+          subject.trim() ||
+          (note.type === "PROJECT" && note.projectName
+            ? `[Project: ${note.projectName}] ${note.title}`
+            : note.title || "WorkSphere Note"),
         permission: permissionString,
         permissions: selectedPerms,
         canView,

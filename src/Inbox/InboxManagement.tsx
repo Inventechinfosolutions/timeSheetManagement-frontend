@@ -62,7 +62,18 @@ export const InboxManagement: React.FC = () => {
 
   const handleMarkAsRead = (item: InboxItem, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    dispatch(markInboxAsRead(item.inboxId));
+    if (!item.isRead) {
+      dispatch(markInboxAsRead(item.inboxId))
+        .unwrap()
+        .then(() => {
+          message.success('Marked as read');
+        })
+        .catch(() => {
+          // ignore
+        });
+    } else {
+      message.info('Already marked as read');
+    }
   };
 
   const handleDeleteItem = (inboxId: number, e?: React.MouseEvent) => {
@@ -143,13 +154,6 @@ export const InboxManagement: React.FC = () => {
       return email.substring(0, 2).toUpperCase();
     }
     return 'WS';
-  };
-
-  const cleanSnippet = (htmlOrText?: string, max = 160) => {
-    if (!htmlOrText) return 'No note content provided.';
-    const text = htmlOrText.replace(/<[^>]*>?/gm, '').trim();
-    if (text.length <= max) return text;
-    return text.substring(0, max) + '...';
   };
 
   // 1. Full Page Edit Mode
@@ -275,7 +279,7 @@ export const InboxManagement: React.FC = () => {
 
   // 3. Main Inbox List View
   return (
-    <div className="p-4 md:p-6 w-full max-w-7xl mx-auto space-y-5">
+    <div className="w-full min-h-full bg-[#F4F7FE] p-3 sm:p-4 md:p-6 flex flex-col gap-4 font-sans">
       {/* Top Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-5 rounded-2xl shadow-xs border border-slate-100">
         <div className="flex items-center gap-3.5">
@@ -466,8 +470,7 @@ export const InboxManagement: React.FC = () => {
             return (
               <div
                 key={`inbox-item-${item.inboxId}`}
-                onClick={() => handleOpenItem(item)}
-                className={`group relative p-4.5 rounded-2xl border transition-all duration-200 cursor-pointer ${
+                className={`group relative p-4.5 rounded-2xl border transition-all duration-200 ${
                   isUnread
                     ? 'bg-white border-[#4318FF]/30 shadow-sm shadow-indigo-100/50 hover:border-[#4318FF]'
                     : 'bg-white/80 hover:bg-white border-slate-200/80 hover:border-slate-300 shadow-2xs'
@@ -478,145 +481,153 @@ export const InboxManagement: React.FC = () => {
                   <div className="absolute left-0 top-3 bottom-3 w-1.5 bg-[#4318FF] rounded-r-full" />
                 )}
 
-                <div className="flex flex-col md:flex-row md:items-start justify-between gap-3">
-                  {/* Sender / Receiver Info & Header */}
-                  <div className="flex items-start gap-3.5 flex-1 min-w-0">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5">
+                  {/* Left Column: Sender / Receiver Identity */}
+                  <div className="flex items-center gap-3 shrink-0 min-w-0 md:max-w-xs lg:max-w-sm">
                     {/* Avatar Badge */}
-                    <div className="w-11 h-11 rounded-full bg-[#EDE9FE] text-[#6366F1] font-bold text-sm flex items-center justify-center shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-[#EDE9FE] text-[#6366F1] font-bold text-sm flex items-center justify-center shrink-0 shadow-2xs">
                       {avatarInitials}
                     </div>
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <div className="flex flex-col">
-                          <span className="text-sm font-bold text-[#1B2559]">
-                            {isSentMode ? `To: ${displayName}` : displayName}
-                          </span>
-                          <span className="text-[11px] text-slate-400">
-                            &lt;{displayEmail}&gt;
-                          </span>
-                        </div>
-
-                        {/* Badges Row matching User UI */}
-                        <div className="flex items-center gap-1.5 flex-wrap ml-1.5">
-                          {displayDesignation && (
-                            <span className="px-2.5 py-0.5 bg-slate-100 text-slate-600 rounded-md text-[11px] font-medium flex items-center gap-1">
-                              <User className="w-3 h-3 text-slate-400" />
-                              <span>{displayDesignation}</span>
-                            </span>
-                          )}
-
-                          {/* View Pill Button */}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenItem(item);
-                            }}
-                            className="px-2.5 py-0.5 bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 rounded-md text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer shadow-2xs"
-                            title="View Note"
-                          >
-                            <Eye className="w-3 h-3 text-blue-500" />
-                            <span>View</span>
-                          </button>
-
-                          {/* Edit Pill Button (when editable) */}
-                          {isEditable && (
-                            <button
-                              type="button"
-                              onClick={(e) => handleStartEditItem(item, e)}
-                              className="px-2.5 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-200 rounded-md text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer shadow-2xs"
-                              title="Edit Note"
-                            >
-                              <Edit3 className="w-3 h-3 text-emerald-500" />
-                              <span>Edit</span>
-                            </button>
-                          )}
-
-                          {/* Delete Pill Button */}
-                          <Popconfirm
-                            title={isSentMode ? "Delete this message from your sent box?" : "Delete this message from your inbox?"}
-                            onConfirm={(e) => handleDeleteItem(item.inboxId, e as any)}
-                            okText="Delete"
-                            cancelText="Cancel"
-                            okButtonProps={{ danger: true }}
-                          >
-                            <button
-                              type="button"
-                              onClick={(e) => e.stopPropagation()}
-                              className="px-2.5 py-0.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-md text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer shadow-2xs"
-                              title={isSentMode ? "Delete from sent" : "Delete from inbox"}
-                            >
-                              <Trash2 className="w-3 h-3 text-red-500" />
-                              <span>Delete</span>
-                            </button>
-                          </Popconfirm>
-
-                          {isUnread && (
-                            <span className="px-2 py-0.5 bg-indigo-50 text-[#4318FF] text-[10px] font-bold rounded-full border border-indigo-100 flex items-center gap-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-[#4318FF] animate-pulse" />
-                              New Note
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Note Title & Project */}
-                      <div className="flex items-center gap-2 mt-2 mb-1">
-                        <h4 className="text-sm font-bold text-slate-800">
-                          {item.note?.title || 'Shared Note'}
-                        </h4>
-
-                        {item.note?.projectName && (
-                          <span className="px-2 py-0.5 bg-purple-50 text-purple-700 text-[10px] font-semibold rounded-md border border-purple-100">
-                            📁 {item.note.projectName}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-sm font-bold text-[#1B2559] truncate">
+                          {isSentMode ? `To: ${displayName}` : displayName}
+                        </span>
+                        {displayDesignation && (
+                          <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md text-[10px] font-medium flex items-center gap-1 shrink-0">
+                            <User className="w-2.5 h-2.5 text-slate-400" />
+                            <span>{displayDesignation}</span>
                           </span>
                         )}
                       </div>
-
-                      {/* Note Description Snippet */}
-                      <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
-                        {cleanSnippet(item.note?.description)}
-                      </p>
-
-                      {/* Attachments and Meta Footer */}
-                      <div className="flex flex-wrap items-center gap-3 mt-3 pt-2 border-t border-slate-100">
-                        {hasAttachments && (
-                          <div className="flex items-center gap-1.5 text-xs text-[#7C3AED] bg-[#F5F3FF] px-2.5 py-1 rounded-lg border border-[#DDD6FE]">
-                            <Paperclip className="w-3.5 h-3.5" />
-                            <span className="font-semibold text-[11px]">
-                              {item.note?.attachments?.length} Attached File(s)
-                            </span>
-                          </div>
-                        )}
-
-                        <div className="flex items-center gap-1 text-[11px] text-slate-400">
-                          <Clock className="w-3.5 h-3.5" />
-                          <span>{dayjs(item.createdAt).fromNow()}</span>
-                          <span>•</span>
-                          <span>{dayjs(item.createdAt).format('MMM DD, YYYY hh:mm A')}</span>
-                        </div>
+                      <div className="text-[11px] text-slate-400 truncate">
+                        &lt;{displayEmail}&gt;
                       </div>
                     </div>
                   </div>
 
-                  {/* Actions (Right Side: Mark as read button for INBOX only) */}
-                  {!isSentMode && (
-                    <div className="flex items-center gap-2 self-end md:self-start shrink-0 pt-2 md:pt-0">
-                      <Tooltip title={isUnread ? 'Mark as read' : 'Already read'}>
+                  {/* Middle Column: Title/Subject & Context Badges (fills the middle space beautifully) */}
+                  <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0 lg:px-3">
+                    <div className="flex items-baseline gap-1.5 min-w-0">
+                      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide shrink-0">
+                        Title/Subject:
+                      </span>
+                      <h4 className="text-xs sm:text-sm font-semibold text-slate-800 truncate max-w-xs md:max-w-sm xl:max-w-md">
+                        {item.note?.title || 'Shared Note'}
+                      </h4>
+                    </div>
+
+                    {/* Nomenclature Badge */}
+                    {item.note?.projectName ? (
+                      <span className="px-2 py-0.5 bg-indigo-50 text-[#4318FF] text-[10px] font-semibold rounded-md border border-indigo-100 flex items-center gap-1 shrink-0">
+                        📁 {item.note.projectName}
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-semibold rounded-md border border-emerald-100 flex items-center gap-1 shrink-0">
+                        <User className="w-2.5 h-2.5 text-emerald-600" />
+                        Personal Note
+                      </span>
+                    )}
+
+                    {/* Attachments Pill */}
+                    {hasAttachments && (
+                      <div className="flex items-center gap-1 text-[11px] text-[#7C3AED] bg-[#F5F3FF] px-2.5 py-0.5 rounded-md border border-[#DDD6FE] shrink-0 font-semibold shadow-2xs">
+                        <Paperclip className="w-3 h-3" />
+                        <span>{item.note?.attachments?.length} Attached File(s)</span>
+                      </div>
+                    )}
+
+                    {isUnread && (
+                      <span className="px-2 py-0.5 bg-indigo-50 text-[#4318FF] text-[10px] font-bold rounded-full border border-indigo-100 flex items-center gap-1 shrink-0">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#4318FF] animate-pulse" />
+                        New
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Right Column: Timestamp & Action Buttons */}
+                  <div className="flex items-center justify-between lg:justify-end gap-3 shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-slate-100">
+                    <div className="flex items-center gap-1 text-[11px] text-slate-400 whitespace-nowrap">
+                      <Clock className="w-3.5 h-3.5 text-slate-400" />
+                      <span>{dayjs(item.createdAt).fromNow()}</span>
+                      <span className="hidden xl:inline">•</span>
+                      <span className="hidden xl:inline">{dayjs(item.createdAt).format('MMM DD, YYYY hh:mm A')}</span>
+                    </div>
+
+                    {/* Actions: Icon-only View, Edit, Delete, and Mark as read buttons */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                    {/* View Icon Button */}
+                    <Tooltip title="View Note" placement="top">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenItem(item);
+                        }}
+                        className="w-8 h-8 flex items-center justify-center bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 rounded-lg transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
+                        aria-label="View Note"
+                      >
+                        <Eye className="w-4 h-4 text-blue-500" />
+                      </button>
+                    </Tooltip>
+
+                    {/* Edit Icon Button (when editable) */}
+                    {isEditable && (
+                      <Tooltip title="Edit Note" placement="top">
                         <button
-                          onClick={(e) => handleMarkAsRead(item, e)}
-                          className={`p-2 rounded-xl border transition cursor-pointer ${
-                            isUnread
-                              ? 'bg-white hover:bg-indigo-50 text-[#4318FF] border-indigo-200'
-                              : 'bg-slate-50 text-slate-400 hover:text-slate-600 border-slate-200'
-                          }`}
+                          type="button"
+                          onClick={(e) => handleStartEditItem(item, e)}
+                          className="w-8 h-8 flex items-center justify-center bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-200 rounded-lg transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
+                          aria-label="Edit Note"
                         >
+                          <Edit3 className="w-4 h-4 text-emerald-500" />
+                        </button>
+                      </Tooltip>
+                    )}
+
+                    {/* Delete Icon Button */}
+                    <Popconfirm
+                      title={isSentMode ? "Delete this message from your sent box?" : "Delete this message from your inbox?"}
+                      onConfirm={(e) => handleDeleteItem(item.inboxId, e as any)}
+                      okText="Delete"
+                      cancelText="Cancel"
+                      okButtonProps={{ danger: true }}
+                    >
+                      <Tooltip title={isSentMode ? "Delete from sent" : "Delete from inbox"} placement="top">
+                        <button
+                          type="button"
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-8 h-8 flex items-center justify-center bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
+                          aria-label={isSentMode ? "Delete from sent" : "Delete from inbox"}
+                        >
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </button>
+                      </Tooltip>
+                    </Popconfirm>
+
+                    {/* Mark as read button (INBOX only) */}
+                    {!isSentMode && (
+                      <Tooltip title="Mark as read" placement="top" color="#4318FF">
+                        <button
+                          type="button"
+                          onClick={(e) => handleMarkAsRead(item, e)}
+                          className={`relative w-8 h-8 rounded-lg border transition-all duration-200 cursor-pointer shadow-2xs hover:shadow-md hover:scale-105 active:scale-95 flex items-center justify-center ${
+                            isUnread
+                              ? 'bg-indigo-50/90 text-[#4318FF] border-indigo-200 hover:bg-[#4318FF] hover:text-white hover:border-[#4318FF]'
+                              : 'bg-indigo-50/40 text-[#4318FF]/80 border-indigo-100 hover:bg-[#4318FF] hover:text-white hover:border-[#4318FF]'
+                          }`}
+                          aria-label="Mark as read"
+                        >
+                          {isUnread && (
+                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse" />
+                          )}
                           {isUnread ? <Mail className="w-4 h-4" /> : <MailOpen className="w-4 h-4" />}
                         </button>
                       </Tooltip>
+                    )}
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
             );
