@@ -11,10 +11,12 @@ import {
   LogOut,
   FileText,
   ClipboardCheck,
+  Inbox,
 } from "lucide-react";
 import { useAppSelector, useAppDispatch } from "../hooks";
 import { useParams, useNavigate } from "react-router-dom";
 import { logoutUser } from "../reducers/user.reducer";
+import { fetchInboxUnreadCount } from "../reducers/inbox.reducer";
 import { UserType } from "../enums";
 import ApiLoadingSpinner from "../components/ApiLoadingSpinner";
 import Header from "../components/Header";
@@ -40,6 +42,11 @@ const SidebarLayout = ({
   const { tab } = useParams<{ tab?: string }>();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const unreadInboxCount = useAppSelector((state) => state.inbox?.unreadCount || 0);
+
+  useMemo(() => {
+    dispatch(fetchInboxUnreadCount());
+  }, [dispatch]);
 
   // Get employee details from Redux
   const { entity } = useAppSelector((state) => state.employeeDetails);
@@ -66,6 +73,8 @@ const SidebarLayout = ({
       case "notes":
       case "employee-notes":
         return "Employee Notes";
+      case "inbox":
+        return "Inbox";
       default:
         return "Dashboard";
     }
@@ -109,6 +118,7 @@ const SidebarLayout = ({
     { name: "Quarterly Review", icon: ClipboardCheck },
     { name: "Request Management", icon: Calendar },
     { name: "Employee Notes", icon: FileText },
+    { name: "Inbox", icon: Inbox },
     { name: "Account Settings", icon: User },
     //{ name: 'Change Password', icon: Lock },
   ];
@@ -270,14 +280,19 @@ const SidebarLayout = ({
 
                     {/* Label */}
                     <span
-                      className={`text-sm whitespace-nowrap transition-all duration-300 relative z-10
+                      className={`text-sm whitespace-nowrap transition-all duration-300 relative z-10 flex-1 flex items-center justify-between
                                         ${isOpen || isMobileOpen
                           ? "opacity-100 translate-x-0 w-auto"
                           : "opacity-0 -translate-x-4 w-0 overflow-hidden absolute"
                         }
                                     `}
                     >
-                      {item.name}
+                      <span>{item.name}</span>
+                      {item.name === "Inbox" && unreadInboxCount > 0 && (isOpen || isMobileOpen) && (
+                        <span className="ml-2 px-2 py-0.5 bg-[#4318FF] text-white text-[10px] font-bold rounded-full shadow-xs animate-pulse">
+                          {unreadInboxCount}
+                        </span>
+                      )}
                     </span>
                   </button>
 

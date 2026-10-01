@@ -182,7 +182,7 @@ export function SearchDropdown<T extends string = string>({
           ) : (
             <ChevronDown
               size={14}
-              className={`text-gray-400 shrink-0 ml-auto transition-transform ${
+              className={`text-gray-400 shrink-0 ml-auto transition-transform cursor-pointer ${
                 isOpen ? "rotate-180" : ""
               }`}
             />
@@ -253,7 +253,7 @@ export function SearchDropdown<T extends string = string>({
                         setSearchQuery("");
                       }
                     }}
-                    className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between ${
+                    className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between cursor-pointer ${
                       isItemActive
                         ? "bg-[#4318FF] text-white shadow-xs"
                         : "text-[#2B3674] hover:bg-gray-50"

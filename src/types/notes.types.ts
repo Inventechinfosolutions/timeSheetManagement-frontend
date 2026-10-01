@@ -1,4 +1,4 @@
-export type NoteType = "PERSONAL" | "PROJECT";
+export type NoteType = "PERSONAL" | "PROJECT" | "ARCHIVED";
 
 export interface NoteAttachment {
   name: string;
@@ -30,6 +30,7 @@ export interface Note {
   color?: string;
   isPinned: boolean;
   isArchived: boolean;
+  isAutoSave?: boolean;
   orderIndex: number;
   createdAt: string;
   updatedAt: string;
@@ -45,6 +46,7 @@ export interface CreateNotePayload {
   parentId?: number;
   color?: string;
   isPinned?: boolean;
+  isAutoSave?: boolean;
   subNotes?: Array<{
     title: string;
     description?: string;
@@ -62,6 +64,8 @@ export interface UpdateNotePayload {
   color?: string;
   isPinned?: boolean;
   isArchived?: boolean;
+  isAutoSave?: boolean;
+  autoSave?: boolean;
   orderIndex?: number;
   parentId?: number | null;
 }
@@ -76,12 +80,32 @@ export interface CreateSubNotePayload {
   attachmentKeys?: string[];
 }
 
+export interface ReorderNotesPayload {
+  items: Array<{
+    id: number;
+    orderIndex: number;
+    parentId?: number | null;
+  }>;
+}
+
+export interface MoveNotePayload {
+  id: number;
+  targetParentId?: number | null;
+  orderIndex?: number;
+}
+
+export interface BulkMoveNotesPayload {
+  noteIds: number[];
+  targetParentId?: number | null;
+}
+
 export interface QueryNotesParams {
   type?: NoteType;
   projectName?: string;
   search?: string;
   isPinned?: boolean;
   isArchived?: boolean;
+  isAutoSave?: boolean;
 }
 
 export interface NoteStats {

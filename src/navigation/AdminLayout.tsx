@@ -43,6 +43,8 @@ const AdminLayout = () => {
     }
     if (path.includes("/admin-dashboard/quarterly-review")) {
       return "Quarterly Review";
+    if (path.includes("/admin-dashboard/inbox")) {
+      return "Inbox";
     }
     if (
       path.includes("/admin-dashboard/manager-mapping") ||
@@ -74,6 +76,8 @@ const AdminLayout = () => {
         return "Quarterly Review";
       case "notes":
         return "Notes";
+      case "inbox":
+        return "Inbox";
       default:
         return "Admin Dashboard";
     }
@@ -106,6 +110,8 @@ const AdminLayout = () => {
       navigate("/admin-dashboard/quarterly-review");
     } else if (tabName === "Notes") {
       navigate("/admin-dashboard/notes");
+    } else if (tabName === "Inbox") {
+      navigate("/admin-dashboard/inbox");
     }
   };
 
