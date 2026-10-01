@@ -41,6 +41,9 @@ const AdminLayout = () => {
     if (path.includes("/admin-dashboard/notes")) {
       return "Notes";
     }
+    if (path.includes("/admin-dashboard/inbox")) {
+      return "Inbox";
+    }
     if (
       path.includes("/admin-dashboard/manager-mapping") ||
       path.includes("/admin-dashboard/manager-employees/")
@@ -69,6 +72,8 @@ const AdminLayout = () => {
         return "Manager Mapping";
       case "notes":
         return "Notes";
+      case "inbox":
+        return "Inbox";
       default:
         return "Admin Dashboard";
     }
@@ -99,6 +104,8 @@ const AdminLayout = () => {
       navigate("/admin-dashboard/manager-mapping");
     } else if (tabName === "Notes") {
       navigate("/admin-dashboard/notes");
+    } else if (tabName === "Inbox") {
+      navigate("/admin-dashboard/inbox");
     }
   };
 

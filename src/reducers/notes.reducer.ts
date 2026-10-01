@@ -110,6 +110,10 @@ export const createNote = createAsyncThunk(
       if (payload.parentId) formData.append("parentId", String(payload.parentId));
       if (payload.color) formData.append("color", payload.color);
       if (payload.isPinned !== undefined) formData.append("isPinned", String(payload.isPinned));
+      if (payload.isAutoSave !== undefined) {
+        formData.append("isAutoSave", String(payload.isAutoSave));
+        formData.append("autoSave", String(payload.isAutoSave));
+      }
 
       if (payload.subNotes && payload.subNotes.length > 0) {
         formData.append("subNotes", JSON.stringify(payload.subNotes));
@@ -140,7 +144,22 @@ export const updateNote = createAsyncThunk(
   "notes/updateNote",
   async ({ id, ...data }: UpdateNotePayload, { rejectWithValue }) => {
     try {
-      const response = await axios.patch(`${API_BASE}/${id}`, data);
+      const sanitized: Record<string, any> = {};
+      if (data.title !== undefined) sanitized.title = data.title;
+      if (data.description !== undefined) sanitized.description = data.description;
+      if (data.type !== undefined) sanitized.type = data.type;
+      if (data.projectName !== undefined) sanitized.projectName = data.projectName;
+      if (data.color !== undefined) sanitized.color = data.color;
+      if (data.isPinned !== undefined) sanitized.isPinned = data.isPinned;
+      if (data.isArchived !== undefined) sanitized.isArchived = data.isArchived;
+      if (data.autoSave !== undefined) {
+        sanitized.autoSave = data.autoSave;
+      } else if (data.isAutoSave !== undefined) {
+        sanitized.autoSave = data.isAutoSave;
+      }
+      if (data.orderIndex !== undefined) sanitized.orderIndex = data.orderIndex;
+
+      const response = await axios.patch(`${API_BASE}/${id}`, sanitized);
       return response.data as Note;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || "Failed to update note");
@@ -212,6 +231,34 @@ export const togglePinNote = createAsyncThunk(
       return response.data as Note;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || "Failed to pin note");
+    }
+  }
+);
+
+// Toggle AutoSave
+export const toggleAutoSaveNote = createAsyncThunk(
+  "notes/toggleAutoSave",
+  async (payload: number | { id: number; autoSave?: boolean }, { rejectWithValue }) => {
+    try {
+      const id = typeof payload === "number" ? payload : payload.id;
+      const body = typeof payload === "number" ? {} : { autoSave: payload.autoSave };
+      const response = await axios.patch(`${API_BASE}/${id}/auto-save`, body);
+      return response.data as Note;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || "Failed to toggle auto-save");
+    }
+  }
+);
+
+// Toggle Archive
+export const toggleArchiveNote = createAsyncThunk(
+  "notes/toggleArchive",
+  async (id: number, { rejectWithValue }) => {
+    try {
+      const response = await axios.patch(`${API_BASE}/${id}/archive`);
+      return response.data as Note;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || "Failed to archive note");
     }
   }
 );
@@ -364,6 +411,37 @@ export const downloadNoteAttachment = createAsyncThunk(
   }
 );
 
+// Download Note Document in PDF or Word (.doc) format via backend API
+export const downloadNoteDocument = createAsyncThunk(
+  "notes/downloadDocument",
+  async (
+    { id, format, fileName }: { id: number; format: "pdf" | "word" | "doc"; fileName?: string },
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await axios.get(`${API_BASE}/${id}/download?format=${format}`, {
+        responseType: "blob",
+      });
+      const ext = format === "pdf" ? "pdf" : "doc";
+      const contentType =
+        response.headers?.["content-type"] ||
+        (format === "pdf" ? "application/pdf" : "application/msword;charset=utf-8");
+      const blob = new Blob([response.data], { type: contentType });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", fileName ? `${fileName}.${ext}` : `Note_${id}.${ext}`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      return { id, format };
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || `Failed to download ${format} document`);
+    }
+  }
+);
+
 // Preview Attachment URL helper
 export const getNoteAttachmentPreviewUrl = (key: string): string => {
   return `${API_BASE}/attachments/${key}/view`;
@@ -443,7 +521,16 @@ const notesSlice = createSlice({
       .addCase(updateNote.fulfilled, (state, action) => {
         const index = state.notes.findIndex((n) => n.id === action.payload.id);
         if (index !== -1) {
-          state.notes[index] = action.payload;
+          state.notes[index] = { ...state.notes[index], ...action.payload };
+        } else {
+          state.notes.forEach((n) => {
+            if (n.subNotes) {
+              const subIdx = n.subNotes.findIndex((s) => s.id === action.payload.id);
+              if (subIdx !== -1) {
+                n.subNotes[subIdx] = { ...n.subNotes[subIdx], ...action.payload };
+              }
+            }
+          });
         }
         if (state.selectedNote?.id === action.payload.id) {
           state.selectedNote = action.payload;
@@ -474,6 +561,29 @@ const notesSlice = createSlice({
 
       // Toggle Pin
       .addCase(togglePinNote.fulfilled, (state, action) => {
+        const index = state.notes.findIndex((n) => n.id === action.payload.id);
+        if (index !== -1) {
+          state.notes[index] = action.payload;
+        }
+        if (state.selectedNote?.id === action.payload.id) {
+          state.selectedNote = action.payload;
+        }
+      })
+
+      // Toggle AutoSave
+      .addCase(toggleAutoSaveNote.fulfilled, (state, action) => {
+        const index = state.notes.findIndex((n) => n.id === action.payload.id);
+        if (index !== -1) {
+          state.notes[index] = { ...state.notes[index], ...action.payload };
+        }
+        if (state.selectedNote?.id === action.payload.id) {
+          state.selectedNote = action.payload;
+        }
+      })
+
+
+      // Toggle Archive
+      .addCase(toggleArchiveNote.fulfilled, (state, action) => {
         const index = state.notes.findIndex((n) => n.id === action.payload.id);
         if (index !== -1) {
           state.notes[index] = action.payload;

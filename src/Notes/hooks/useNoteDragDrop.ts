@@ -6,7 +6,7 @@ import {
   fetchNotes,
   moveNote,
 } from "../../reducers/notes.reducer";
-import { Note } from "../../types/notes.types";
+import { Note } from "../types/notes.types";
 
 export interface DraggedItem {
   id: number;

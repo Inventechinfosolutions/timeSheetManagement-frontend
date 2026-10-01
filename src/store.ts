@@ -13,6 +13,7 @@ import managerMappingReducer from './reducers/managerMapping.reducer';
 import masterDepartmentReducer from './reducers/masterDepartment.reducer';
 import apiLoadingReducer from './reducers/apiLoading.reducer';
 import notesReducer from './reducers/notes.reducer';
+import inboxReducer from './reducers/inbox.reducer';
 
 export const store = configureStore({
   reducer: {
@@ -30,6 +31,7 @@ export const store = configureStore({
     managerMapping: managerMappingReducer,
     masterDepartments: masterDepartmentReducer,
     notes: notesReducer,
+    inbox: inboxReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

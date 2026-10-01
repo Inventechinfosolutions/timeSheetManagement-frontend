@@ -16,11 +16,14 @@ import {
   ChevronRight,
   LogOut,
   FileText,
+  Inbox,
 } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "../store";
 import { logoutUser } from "../reducers/user.reducer";
+import { fetchInboxUnreadCount } from "../reducers/inbox.reducer";
+import { useAppSelector } from "../hooks";
 import ApiLoadingSpinner from "../components/ApiLoadingSpinner";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
@@ -45,6 +48,11 @@ const SidebarLayout = ({
   const { tab } = useParams<{ tab?: string }>();
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
+  const unreadInboxCount = useAppSelector((state) => state.inbox?.unreadCount || 0);
+
+  useEffect(() => {
+    dispatch(fetchInboxUnreadCount());
+  }, [dispatch]);
 
   // Ref for the main scrollable content area
   const mainContentRef = useRef<HTMLDivElement>(null);
@@ -59,6 +67,7 @@ const SidebarLayout = ({
           { name: "My Timesheet", icon: Calendar },
           { name: "My Timesheet History", icon: Eye },
           { name: "Notes", icon: FileText },
+          { name: "Inbox", icon: Inbox },
           { name: "Request Management ", icon: Calendar },
           { name: "Account Settings", icon: User },
         ],
@@ -84,6 +93,7 @@ const SidebarLayout = ({
       { name: "Employee Timesheet", icon: AlarmClock },
       { name: "Request Management", icon: Calendar },
       { name: "Notes", icon: FileText },
+          { name: "Inbox", icon: Inbox },
       { name: "Manager Mapping", icon: Users },
       { name: "Notification", icon: Bell },
     ],
@@ -120,6 +130,8 @@ const SidebarLayout = ({
         return "Request Management";
       case "notes":
         return "Notes";
+      case "inbox":
+        return "Inbox";
       case "my-dashboard":
         return "My Dashboard";
       case "my-timesheet":
@@ -387,14 +399,19 @@ const SidebarLayout = ({
                                 <Icon className={navIconClass(isActive, isOpen)} />
                               </div>
                               <span
-                                className={`text-sm whitespace-nowrap transition-all duration-300 relative z-10
+                                className={`text-sm whitespace-nowrap transition-all duration-300 relative z-10 flex-1 flex items-center justify-between
                                                             ${isOpen
                                     ? "opacity-100 translate-x-0 w-auto"
                                     : "opacity-0 -translate-x-4 w-0 overflow-hidden absolute"
                                   }
                                                         `}
                               >
-                                {item.name}
+                                <span>{item.name}</span>
+                                {item.name === "Inbox" && unreadInboxCount > 0 && isOpen && (
+                                  <span className="ml-2 px-2 py-0.5 bg-[#4318FF] text-white text-[10px] font-bold rounded-full shadow-xs animate-pulse">
+                                    {unreadInboxCount}
+                                  </span>
+                                )}
                               </span>
                             </button>
 
@@ -431,14 +448,19 @@ const SidebarLayout = ({
                         <Icon className={navIconClass(isActive, isOpen)} />
                       </div>
                       <span
-                        className={`text-sm whitespace-nowrap transition-all duration-300 relative z-10
+                        className={`text-sm whitespace-nowrap transition-all duration-300 relative z-10 flex-1 flex items-center justify-between
                                             ${isOpen
                             ? "opacity-100 translate-x-0 w-auto"
                             : "opacity-0 -translate-x-4 w-0 overflow-hidden absolute"
                           }
                                         `}
                       >
-                        {item.name}
+                        <span>{item.name}</span>
+                        {item.name === "Inbox" && unreadInboxCount > 0 && isOpen && (
+                          <span className="ml-2 px-2 py-0.5 bg-[#4318FF] text-white text-[10px] font-bold rounded-full shadow-xs animate-pulse">
+                            {unreadInboxCount}
+                          </span>
+                        )}
                       </span>
                     </button>
 

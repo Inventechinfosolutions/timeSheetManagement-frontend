@@ -64,6 +64,9 @@ const ManagerLayout = () => {
     if (path.includes("/manager-dashboard/notes")) {
       return "Notes";
     }
+    if (path.includes("/manager-dashboard/inbox")) {
+      return "Inbox";
+    }
 
     switch (tab) {
       case "employees":
@@ -94,6 +97,8 @@ const ManagerLayout = () => {
         return "Request Management ";
       case "notes":
         return "Notes";
+      case "inbox":
+        return "Inbox";
       default:
         return "Employee Dashboard";
     }
@@ -145,6 +150,8 @@ const ManagerLayout = () => {
       navigate("/manager-dashboard/leave-management");
     } else if (tabName === "Notes") {
       navigate("/manager-dashboard/notes");
+    } else if (tabName === "Inbox") {
+      navigate("/manager-dashboard/inbox");
     }
   };
 

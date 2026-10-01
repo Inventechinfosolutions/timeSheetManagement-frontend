@@ -57,6 +57,7 @@ import ManagerMapping from "./ManagerMapping/ManagerMapping";
 import ManagerEmployeesView from "./AdminDashboard/ManagerEmployeesView";
 import MonthlyAttendanceMatrix from "./AdminDashboard/MonthlyAttendanceMatrix";
 import NotesManagement from "./Notes/NotesManagement";
+import InboxManagement from "./Inbox/InboxManagement";
 
 const EmployeeTabWrapper = () => {
   const { tab } = useParams<{ tab: string }>();
@@ -79,6 +80,8 @@ const EmployeeTabWrapper = () => {
     case "notes":
     case "employee-notes":
       return <NotesManagement />;
+    case "inbox":
+      return <InboxManagement />;
     default:
       return <Navigate to="/employee-dashboard" replace />;
   }
@@ -111,6 +114,8 @@ const AdminTabWrapper = () => {
     case "notes":
     case "employee-notes":
       return <NotesManagement />;
+    case "inbox":
+      return <InboxManagement />;
     case "manager-mapping":
       return <ManagerMapping />;
     case "manager-employees":

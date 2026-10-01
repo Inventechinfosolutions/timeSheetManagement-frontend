@@ -19,6 +19,7 @@ const EmployeeLayout = () => {
       case "leave-balance": return "Leave Balance";
       case "notes":
       case "employee-notes": return "Employee Notes";
+      case "inbox": return "Inbox";
       default: return "Dashboard";
     }
   };
@@ -45,6 +46,9 @@ const EmployeeLayout = () => {
         break;
       case "Employee Notes":
         navigate("/employee-dashboard/notes");
+        break;
+      case "Inbox":
+        navigate("/employee-dashboard/inbox");
         break;
       default:
         navigate("/employee-dashboard");
