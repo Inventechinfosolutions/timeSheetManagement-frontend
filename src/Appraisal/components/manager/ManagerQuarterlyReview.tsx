@@ -19,6 +19,7 @@ import {
   SearchBox,
   Dropdown,
 } from "../../../components/ui";
+import "./ManagerQuarterlyReview.css";
 
 export const ManagerQuarterlyReview: React.FC = () => {
   // Modal flow state (for visual presentation / prototyping)
@@ -65,22 +66,43 @@ export const ManagerQuarterlyReview: React.FC = () => {
   };
 
   return (
-    <div className="w-full min-h-screen bg-[#F4F7FE] p-4 sm:p-6 lg:p-8 font-sans">
-      {/* Page Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-[#1B2559] tracking-tight">
-          Manager Quarterly Review
-        </h1>
-        <p className="text-sm text-[#707EAE] mt-1 font-normal">
-          Review, evaluate, and provide ratings for quarterly appraisal submissions from your team members.
-        </p>
+    <div className="w-full min-h-screen relative overflow-hidden font-sans p-4 sm:p-6 lg:p-8 manager-review-bg-container">
+      {/* LUXURY BACKGROUND CANVAS (All SVGs & animations managed and loaded via ManagerQuarterlyReview.css) */}
+      <div className="manager-review-canvas" aria-hidden="true">
+        <div className="manager-review-dot-grid" />
+        <div className="manager-review-aurora-tr" />
+        <div className="manager-review-aurora-tl" />
+        <div className="manager-review-aurora-br" />
+        <div className="manager-review-aurora-bl" />
+        <div className="manager-review-wave-top" />
+        <div className="manager-review-wave-bottom" />
+        <div className="manager-review-star-1" />
+        <div className="manager-review-star-2" />
+        <div className="manager-review-star-3" />
+        <div className="manager-review-star-4" />
+        <div className="manager-review-star-5" />
       </div>
 
+      {/* FOREGROUND CONTENT (z-10 layer for crisp interactivity and clarity) */}
+      <div className="relative z-10">
+        {/* Page Header */}
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight w-fit">
+              <span className="manager-review-title-anim">Manager Quarterly Review</span>
+            </h1>
+            <p className="text-sm mt-1 font-normal w-fit">
+              <span className="manager-review-subtitle-anim">
+                Review, evaluate, and provide ratings for quarterly appraisal submissions from your team members.
+              </span>
+            </p>
+          </div>
+        </div>
+
       {/* Main Section Card */}
-      <Card className="w-full bg-white rounded-3xl p-5 sm:p-7 shadow-[0_18px_40px_rgba(112,144,176,0.08)] border-[#E0E5F2]/80">
-        {/* Card Header */}
+      <Card className="w-full p-5 sm:p-7 manager-review-glass-card">
         <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <CardTitle className="text-lg sm:text-xl font-bold text-[#1B2559]">
+          <CardTitle className="text-lg sm:text-xl font-bold manager-review-card-title">
             Quarterly Reviews
           </CardTitle>
 
@@ -96,9 +118,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
         </CardHeader>
 
         <CardContent className="p-0">
-          {/* All Filter Controls Strictly In One Single Line */}
           <div className="flex items-center gap-2.5 lg:gap-3 mb-8 overflow-x-auto no-scrollbar flex-nowrap pb-1">
-            {/* Search Input */}
             <div className="w-52 lg:w-64 shrink-0">
               <SearchBox
                 value={searchTerm}
@@ -107,13 +127,12 @@ export const ManagerQuarterlyReview: React.FC = () => {
                 placeholder="Search employee name or..."
                 variant="outlined"
                 inputSize="lg"
-                containerClassName="w-full rounded-2xl border-[#E0E5F2] hover:border-gray-300 transition-colors"
+                containerClassName="w-full rounded-2xl border-[#E0E5F2] hover:border-gray-300 transition-colors bg-white/90"
                 className="text-sm text-[#1B2559] placeholder-[#A3AED0]"
                 allowClear
               />
             </div>
 
-            {/* Financial Year Dropdown */}
             <Dropdown
               className="shrink-0"
               placeholder="Financial Year"
@@ -127,10 +146,9 @@ export const ManagerQuarterlyReview: React.FC = () => {
               value={financialYear}
               onChange={setFinancialYear}
               maxLabelWidth="max-w-[110px]"
-              buttonClassName="bg-white border border-[#E0E5F2] hover:border-gray-300 rounded-2xl px-3 py-2.5 text-sm font-medium text-[#707EAE] min-w-[145px] shadow-none"
+              buttonClassName="bg-white/90 border border-[#E0E5F2] hover:border-gray-300 rounded-2xl px-3 py-2.5 text-sm font-medium text-[#707EAE] min-w-[145px] shadow-none"
             />
 
-            {/* Quarters Dropdown */}
             <Dropdown
               className="shrink-0"
               placeholder="Quarters"
@@ -146,10 +164,9 @@ export const ManagerQuarterlyReview: React.FC = () => {
               value={quarter}
               onChange={setQuarter}
               maxLabelWidth="max-w-[95px]"
-              buttonClassName="bg-white border border-[#E0E5F2] hover:border-gray-300 rounded-2xl px-3 py-2.5 text-sm font-medium text-[#707EAE] min-w-[125px] shadow-none"
+              buttonClassName="bg-white/90 border border-[#E0E5F2] hover:border-gray-300 rounded-2xl px-3 py-2.5 text-sm font-medium text-[#707EAE] min-w-[125px] shadow-none"
             />
 
-            {/* All Members Dropdown */}
             <Dropdown
               className="shrink-0"
               placeholder="All Members"
@@ -162,10 +179,9 @@ export const ManagerQuarterlyReview: React.FC = () => {
               value={memberFilter}
               onChange={setMemberFilter}
               maxLabelWidth="max-w-[105px]"
-              buttonClassName="bg-white border border-[#E0E5F2] hover:border-gray-300 rounded-2xl px-3 py-2.5 text-sm font-medium text-[#707EAE] min-w-[135px] shadow-none"
+              buttonClassName="bg-white/90 border border-[#E0E5F2] hover:border-gray-300 rounded-2xl px-3 py-2.5 text-sm font-medium text-[#707EAE] min-w-[135px] shadow-none"
             />
 
-            {/* All Status Dropdown */}
             <Dropdown
               className="shrink-0"
               placeholder="All Status"
@@ -181,10 +197,9 @@ export const ManagerQuarterlyReview: React.FC = () => {
               value={statusFilter}
               onChange={setStatusFilter}
               maxLabelWidth="max-w-[95px]"
-              buttonClassName="bg-white border border-[#E0E5F2] hover:border-gray-300 rounded-2xl px-3 py-2.5 text-sm font-medium text-[#707EAE] min-w-[125px] shadow-none"
+              buttonClassName="bg-white/90 border border-[#E0E5F2] hover:border-gray-300 rounded-2xl px-3 py-2.5 text-sm font-medium text-[#707EAE] min-w-[125px] shadow-none"
             />
 
-            {/* Clear Button - In the exact same line, visible only when a filter is active */}
             {hasActiveFilters && (
               <Button
                 variant="ghost"
@@ -198,31 +213,17 @@ export const ManagerQuarterlyReview: React.FC = () => {
             )}
           </div>
 
-          {/* Empty State UI */}
-          <div className="py-20 sm:py-28 flex flex-col items-center justify-center text-center px-4">
-            {/* Custom Document Icon matching reference */}
-            <div className="relative mb-4 text-[#CBD5E1]">
-              <svg
-                className="w-16 h-16"
-                viewBox="0 0 48 48"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                {/* Document Outline with folded top corner */}
-                <path d="M14 4h14l12 12v24a4 4 0 0 1-4 4H14a4 4 0 0 1-4-4V8a4 4 0 0 1 4-4z" />
-                <polyline points="28 4 28 16 40 16" />
-                {/* Checkmark inside document */}
-                <polyline points="18 28 22 32 30 24" />
-              </svg>
+          {/* Empty State UI with Rich Colors and Animated SVG */}
+          <div className="py-16 sm:py-24 flex flex-col items-center justify-center text-center px-4">
+            <div className="relative mb-5">
+              <div className="manager-review-empty-glow" />
+              <div className="manager-review-empty-illustration" />
             </div>
 
-            <h3 className="text-lg font-bold text-[#1B2559]">
+            <h3 className="text-xl font-bold text-[#1B2559]">
               No submissions found
             </h3>
-            <p className="text-sm text-[#A3AED0] max-w-sm mt-1.5 leading-relaxed">
+            <p className="text-sm text-[#707EAE] max-w-sm mt-1.5 leading-relaxed font-normal">
               There are currently no employee quarterly review submissions matching your filters.
             </p>
           </div>
@@ -242,6 +243,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
         onClose={handleCloseAssignModal}
         assignmentType={assignmentType}
       />
+      </div>
     </div>
   );
 };

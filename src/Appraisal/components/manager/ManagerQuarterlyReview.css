@@ -1,0 +1,424 @@
+
+
+/* ==========================================================================
+   Manager Quarterly Review - Luxury Background & Silk Waves (All-in-One CSS)
+   ========================================================================== */
+
+/* Morphing fluid aurora mesh blobs */
+@keyframes auroraMorph1 {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1) rotate(0deg);
+    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+  }
+  50% {
+    transform: translate(-40px, 25px) scale(1.12) rotate(12deg);
+    border-radius: 40% 60% 70% 30% / 40% 40% 60% 55%;
+  }
+}
+
+@keyframes auroraMorph2 {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  50% {
+    transform: translate(30px, -20px) scale(1.18);
+  }
+}
+
+/* Organic breathing wave ripples */
+@keyframes silkWaveFlow {
+  0%, 100% {
+    transform: translateY(0px) scaleY(1);
+  }
+  50% {
+    transform: translateY(-14px) scaleY(1.04);
+  }
+}
+
+@keyframes silkWaveFlowBottom {
+  0%, 100% {
+    transform: translateY(0px) scaleY(1);
+  }
+  50% {
+    transform: translateY(14px) scaleY(1.04);
+  }
+}
+
+/* Twinkling starlight sparks */
+@keyframes starGlimmer {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.15);
+  }
+}
+
+/* Container & Layer Utility Classes */
+.manager-review-bg-container {
+  background: linear-gradient(135deg, #FAF8F3 0%, #F7F4EE 45%, #F2EFE9 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.manager-review-canvas {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  user-select: none;
+  z-index: 0;
+}
+
+.manager-review-dot-grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.4;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(112, 144, 176, 0.28) 1.2px, transparent 1.2px);
+  background-size: 28px 28px;
+  mask-image: radial-gradient(ellipse at 50% 30%, black 40%, transparent 80%);
+  -webkit-mask-image: radial-gradient(ellipse at 50% 30%, black 40%, transparent 80%);
+}
+
+.manager-review-aurora-tr {
+  position: absolute;
+  top: -8rem;
+  right: -8rem;
+  width: 600px;
+  height: 550px;
+  filter: blur(100px);
+  opacity: 0.35;
+  pointer-events: none;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.5) 0%, rgba(99, 102, 241, 0.25) 50%, rgba(242, 239, 233, 0) 80%);
+  animation: auroraMorph1 14s ease-in-out infinite;
+}
+
+.manager-review-aurora-tl {
+  position: absolute;
+  top: -5rem;
+  left: -5rem;
+  width: 480px;
+  height: 480px;
+  filter: blur(90px);
+  opacity: 0.25;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(129, 140, 248, 0.4) 0%, rgba(192, 132, 252, 0.15) 50%, transparent 75%);
+  animation: auroraMorph2 16s ease-in-out infinite;
+}
+
+.manager-review-aurora-br {
+  position: absolute;
+  bottom: -6rem;
+  right: -5rem;
+  width: 520px;
+  height: 520px;
+  filter: blur(110px);
+  opacity: 0.20;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(251, 191, 36, 0.35) 0%, rgba(249, 115, 22, 0.15) 50%, transparent 70%);
+}
+
+.manager-review-aurora-bl {
+  position: absolute;
+  bottom: -7rem;
+  left: -6rem;
+  width: 560px;
+  height: 520px;
+  filter: blur(100px);
+  opacity: 0.30;
+  pointer-events: none;
+  background: linear-gradient(315deg, rgba(56, 189, 248, 0.45) 0%, rgba(129, 140, 248, 0.2) 50%, transparent 80%);
+  animation: auroraMorph1 16s ease-in-out 2s infinite;
+}
+
+/* TOP WAVES (Rendered with self-contained animated SVG via pure CSS Data URI) */
+.manager-review-wave-top {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100%;
+  max-width: 1200px;
+  height: 340px;
+  pointer-events: none;
+  opacity: 0.85;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 320' width='100%25' height='100%25' fill='none'%3E%3Cdefs%3E%3ClinearGradient id='g1' x1='100%25' y1='0%25' x2='0%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%2338BDF8' stop-opacity='0.65'/%3E%3Cstop offset='45%25' stop-color='%23818CF8' stop-opacity='0.4'/%3E%3Cstop offset='80%25' stop-color='%2360A5FA' stop-opacity='0.15'/%3E%3Cstop offset='100%25' stop-color='%2338BDF8' stop-opacity='0'/%3E%3C/linearGradient%3E%3ClinearGradient id='g2' x1='100%25' y1='0%25' x2='0%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%2360A5FA' stop-opacity='0.55'/%3E%3Cstop offset='50%25' stop-color='%2338BDF8' stop-opacity='0.3'/%3E%3Cstop offset='90%25' stop-color='%23A78BFA' stop-opacity='0.08'/%3E%3Cstop offset='100%25' stop-color='%2360A5FA' stop-opacity='0'/%3E%3C/linearGradient%3E%3ClinearGradient id='gc' x1='100%25' y1='0%25' x2='0%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%23FFFFFF' stop-opacity='0.8'/%3E%3Cstop offset='40%25' stop-color='%23FFFFFF' stop-opacity='0.45'/%3E%3Cstop offset='80%25' stop-color='%23FFFFFF' stop-opacity='0.1'/%3E%3Cstop offset='100%25' stop-color='%23FFFFFF' stop-opacity='0'/%3E%3C/linearGradient%3E%3Cfilter id='f' x='-20%25' y='-20%25' width='140%25' height='140%25'%3E%3CfeGaussianBlur stdDeviation='4' result='b'/%3E%3CfeMerge%3E%3CfeMergeNode in='b'/%3E%3CfeMergeNode in='SourceGraphic'/%3E%3C/feMerge%3E%3C/filter%3E%3C/defs%3E%3Cg%3E%3Cpath d='M 1200 45 C 960 45, 800 115, 580 90 C 380 65, 200 145, 0 115' stroke='url(%23g1)' stroke-width='4' stroke-linecap='round' filter='url(%23f)' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='100;0;0;100;100' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='0s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0;0.95;0.95;0;0' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='0s'/%3E%3C/path%3E%3Cpath d='M 1200 45 C 960 45, 800 115, 580 90 C 380 65, 200 145, 0 115' stroke='url(%23gc)' stroke-width='1.6' stroke-linecap='round' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='100;0;0;100;100' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='0s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0;0.95;0.95;0;0' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='0s'/%3E%3C/path%3E%3C/g%3E%3Cg%3E%3Cpath d='M 1200 90 C 940 90, 770 160, 540 135 C 320 110, 160 190, 0 160' stroke='url(%23g2)' stroke-width='3.5' stroke-linecap='round' filter='url(%23f)' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='100;0;0;100;100' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='1.8s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0;0.95;0.95;0;0' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='1.8s'/%3E%3C/path%3E%3Cpath d='M 1200 90 C 940 90, 770 160, 540 135 C 320 110, 160 190, 0 160' stroke='url(%23gc)' stroke-width='1.4' stroke-linecap='round' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='100;0;0;100;100' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='1.8s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0;0.95;0.95;0;0' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='1.8s'/%3E%3C/path%3E%3C/g%3E%3Cg%3E%3Cpath d='M 1200 140 C 910 140, 730 210, 490 185 C 270 160, 110 235, 0 210' stroke='url(%23g1)' stroke-width='2.8' stroke-linecap='round' filter='url(%23f)' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='100;0;0;100;100' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='3.6s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0;0.95;0.95;0;0' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='3.6s'/%3E%3C/path%3E%3Cpath d='M 1200 140 C 910 140, 730 210, 490 185 C 270 160, 110 235, 0 210' stroke='url(%23gc)' stroke-width='1.2' stroke-linecap='round' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='100;0;0;100;100' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='3.6s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0;0.95;0.95;0;0' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='3.6s'/%3E%3C/path%3E%3C/g%3E%3C/svg%3E");
+  background-size: 100% 100%;
+  background-position: right top;
+  background-repeat: no-repeat;
+  animation: silkWaveFlow 10s ease-in-out infinite;
+}
+
+/* BOTTOM WAVES (Rendered with self-contained animated SVG via pure CSS Data URI) */
+.manager-review-wave-bottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  max-width: 1200px;
+  height: 340px;
+  pointer-events: none;
+  opacity: 0.85;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 320' width='100%25' height='100%25' fill='none'%3E%3Cdefs%3E%3ClinearGradient id='bg1' x1='0%25' y1='100%25' x2='100%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%2338BDF8' stop-opacity='0.65'/%3E%3Cstop offset='45%25' stop-color='%23818CF8' stop-opacity='0.4'/%3E%3Cstop offset='80%25' stop-color='%2360A5FA' stop-opacity='0.15'/%3E%3Cstop offset='100%25' stop-color='%2338BDF8' stop-opacity='0'/%3E%3C/linearGradient%3E%3ClinearGradient id='bg2' x1='0%25' y1='100%25' x2='100%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%2360A5FA' stop-opacity='0.55'/%3E%3Cstop offset='50%25' stop-color='%2338BDF8' stop-opacity='0.3'/%3E%3Cstop offset='90%25' stop-color='%23A78BFA' stop-opacity='0.08'/%3E%3Cstop offset='100%25' stop-color='%2360A5FA' stop-opacity='0'/%3E%3C/linearGradient%3E%3ClinearGradient id='bgc' x1='0%25' y1='100%25' x2='100%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%23FFFFFF' stop-opacity='0.8'/%3E%3Cstop offset='40%25' stop-color='%23FFFFFF' stop-opacity='0.45'/%3E%3Cstop offset='80%25' stop-color='%23FFFFFF' stop-opacity='0.1'/%3E%3Cstop offset='100%25' stop-color='%23FFFFFF' stop-opacity='0'/%3E%3C/linearGradient%3E%3Cfilter id='bf' x='-20%25' y='-20%25' width='140%25' height='140%25'%3E%3CfeGaussianBlur stdDeviation='4' result='b'/%3E%3CfeMerge%3E%3CfeMergeNode in='b'/%3E%3CfeMergeNode in='SourceGraphic'/%3E%3C/feMerge%3E%3C/filter%3E%3C/defs%3E%3Cg%3E%3Cpath d='M 0 275 C 240 275, 400 205, 620 230 C 820 255, 1000 175, 1200 205' stroke='url(%23bg1)' stroke-width='4' stroke-linecap='round' filter='url(%23bf)' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='0;100;100;0;0' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='0s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0.95;0;0;0.95;0.95' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='0s'/%3E%3C/path%3E%3Cpath d='M 0 275 C 240 275, 400 205, 620 230 C 820 255, 1000 175, 1200 205' stroke='url(%23bgc)' stroke-width='1.6' stroke-linecap='round' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='0;100;100;0;0' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='0s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0.95;0;0;0.95;0.95' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='0s'/%3E%3C/path%3E%3C/g%3E%3Cg%3E%3Cpath d='M 0 230 C 260 230, 430 160, 660 185 C 880 210, 1040 130, 1200 160' stroke='url(%23bg2)' stroke-width='3.5' stroke-linecap='round' filter='url(%23bf)' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='0;100;100;0;0' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='1.8s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0.95;0;0;0.95;0.95' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='1.8s'/%3E%3C/path%3E%3Cpath d='M 0 230 C 260 230, 430 160, 660 185 C 880 210, 1040 130, 1200 160' stroke='url(%23bgc)' stroke-width='1.4' stroke-linecap='round' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='0;100;100;0;0' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='1.8s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0.95;0;0;0.95;0.95' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='1.8s'/%3E%3C/path%3E%3C/g%3E%3Cg%3E%3Cpath d='M 0 180 C 290 180, 470 110, 710 135 C 930 160, 1090 85, 1200 110' stroke='url(%23bg1)' stroke-width='2.8' stroke-linecap='round' filter='url(%23bf)' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='0;100;100;0;0' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='3.6s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0.95;0;0;0.95;0.95' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='3.6s'/%3E%3C/path%3E%3Cpath d='M 0 180 C 290 180, 470 110, 710 135 C 930 160, 1090 85, 1200 110' stroke='url(%23bgc)' stroke-width='1.2' stroke-linecap='round' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='0;100;100;0;0' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='3.6s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0.95;0;0;0.95;0.95' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='3.6s'/%3E%3C/path%3E%3C/g%3E%3C/svg%3E");
+  background-size: 100% 100%;
+  background-position: left bottom;
+  background-repeat: no-repeat;
+  animation: silkWaveFlowBottom 11s ease-in-out infinite;
+}
+
+/* Twinkling Starlight Sparks */
+.manager-review-star-1,
+.manager-review-star-2,
+.manager-review-star-3,
+.manager-review-star-4,
+.manager-review-star-5 {
+  position: absolute;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2338BDF8'%3E%3Cpath d='M12 0L14.5 9.5L24 12L14.5 14.5L12 24L9.5 14.5L0 12L9.5 9.5L12 0Z'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.manager-review-star-1 {
+  top: 4rem;
+  right: 28%;
+  width: 18px;
+  height: 18px;
+  animation: starGlimmer 4s ease-in-out infinite;
+}
+
+.manager-review-star-2 {
+  top: 7rem;
+  right: 12%;
+  width: 14px;
+  height: 14px;
+  filter: hue-rotate(40deg);
+  animation: starGlimmer 5s ease-in-out 1.5s infinite;
+}
+
+.manager-review-star-3 {
+  top: 11rem;
+  right: 42%;
+  width: 10px;
+  height: 10px;
+  animation: starGlimmer 6s ease-in-out 3s infinite;
+}
+
+.manager-review-star-4 {
+  bottom: 4rem;
+  left: 28%;
+  width: 16px;
+  height: 16px;
+  animation: starGlimmer 4.5s ease-in-out 0.8s infinite;
+}
+
+.manager-review-star-5 {
+  bottom: 7rem;
+  left: 14%;
+  width: 12px;
+  height: 12px;
+  filter: hue-rotate(40deg);
+  animation: starGlimmer 5.5s ease-in-out 2.2s infinite;
+}
+
+/* Glassmorphic luxury card with F2E9D7, EEE4D0, E5C98F, F7F2E8 color mix & fade-in */
+.manager-review-glass-card {
+  background: linear-gradient(
+    135deg,
+    rgba(247, 242, 232, 0.95) 0%,
+    rgba(242, 233, 215, 0.92) 35%,
+    rgba(238, 228, 208, 0.88) 70%,
+    rgba(229, 201, 143, 0.45) 100%
+  ) !important;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1.5px solid rgba(229, 201, 143, 0.5) !important;
+  box-shadow:
+    0 24px 60px rgba(180, 150, 95, 0.12),
+    0 4px 16px rgba(229, 201, 143, 0.18),
+    inset 0 1px 2px rgba(247, 242, 232, 0.95) !important;
+  border-radius: 1.5rem;
+  animation: cardFadeIn 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.25s backwards;
+}
+
+@keyframes cardFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(22px) scale(0.985);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Card Header Title: Smooth Slide-In with Animated Gold/Indigo Accent Indicator Bar */
+.manager-review-card-title {
+  color: #1B2559;
+  letter-spacing: -0.015em;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding-bottom: 6px;
+  animation: cardTitleSlideIn 0.75s cubic-bezier(0.16, 1, 0.3, 1) 0.35s backwards;
+}
+
+@keyframes cardTitleSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateX(-12px);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+    filter: blur(0);
+  }
+}
+
+.manager-review-card-title::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  width: 0;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #4318FF 0%, #E5C98F 65%, rgba(242, 233, 215, 0.6) 100%);
+  box-shadow: 0 2px 8px rgba(67, 24, 255, 0.22);
+  animation: cardTitleBarExpand 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.6s forwards;
+  transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease;
+}
+
+.manager-review-card-title:hover::after {
+  width: 100%;
+  box-shadow: 0 3px 12px rgba(67, 24, 255, 0.35), 0 1px 4px rgba(229, 201, 143, 0.4);
+}
+
+/* Empty State Illustration & Glow (Rendered 100% via CSS) */
+.manager-review-empty-glow {
+  position: absolute;
+  inset: -1.5rem;
+  background: radial-gradient(circle, rgba(229, 201, 143, 0.35) 0%, rgba(242, 233, 215, 0.45) 45%, rgba(238, 228, 208, 0) 70%);
+  border-radius: 9999px;
+  filter: blur(24px);
+  animation: pulseGlow 3.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.manager-review-empty-illustration {
+  position: relative;
+  z-index: 10;
+  width: 9.5rem;
+  height: 9.5rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 160' fill='none'%3E%3Cdefs%3E%3ClinearGradient id='fbg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23F7F2E8'/%3E%3Cstop offset='60%25' stop-color='%23EEE4D0'/%3E%3Cstop offset='100%25' stop-color='%23E5C98F'/%3E%3C/linearGradient%3E%3ClinearGradient id='dg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23FFFFFF'/%3E%3Cstop offset='100%25' stop-color='%23F7F2E8'/%3E%3C/linearGradient%3E%3ClinearGradient id='hg' x1='0%25' y1='0%25' x2='100%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%234318FF'/%3E%3Cstop offset='50%25' stop-color='%236366F1'/%3E%3Cstop offset='100%25' stop-color='%2338BDF8'/%3E%3C/linearGradient%3E%3ClinearGradient id='gbg' x1='0%25' y1='0%25' x2='100%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%23E5C98F'/%3E%3Cstop offset='100%25' stop-color='%23D97706'/%3E%3C/linearGradient%3E%3ClinearGradient id='bg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%2310B981'/%3E%3Cstop offset='100%25' stop-color='%23059669'/%3E%3C/linearGradient%3E%3Cfilter id='ds' x='-10%25' y='-10%25' width='130%25' height='130%25'%3E%3CfeDropShadow dx='0' dy='8' stdDeviation='8' flood-color='%23854D0E' flood-opacity='0.1'/%3E%3C/filter%3E%3C/defs%3E%3Cg transform='rotate(-6 80 80)'%3E%3Crect x='35' y='36' width='86' height='98' rx='14' fill='url(%23fbg)' stroke='%23E5C98F' stroke-width='1.5'/%3E%3Crect x='48' y='52' width='38' height='4' rx='2' fill='%23E5C98F' opacity='0.6'/%3E%3Crect x='48' y='62' width='56' height='4' rx='2' fill='%23E5C98F' opacity='0.4'/%3E%3C/g%3E%3Cg filter='url(%23ds)'%3E%3Crect x='42' y='26' width='84' height='104' rx='14' fill='url(%23dg)' stroke='%23E5C98F' stroke-width='1.2'/%3E%3Cpath d='M42 40 C42 32.268 48.268 26 56 26 H112 C119.732 26 126 32.268 126 40 V48 H42 V40 Z' fill='url(%23hg)'/%3E%3Ccircle cx='56' cy='37' r='3' fill='%23FFFFFF' opacity='0.9'/%3E%3Ccircle cx='66' cy='37' r='2' fill='%23FFFFFF' opacity='0.6'/%3E%3Ccircle cx='74' cy='37' r='2' fill='%23FFFFFF' opacity='0.4'/%3E%3Ccircle cx='54' cy='62' r='4' fill='%2338BDF8'/%3E%3Crect x='64' y='60' width='46' height='4.5' rx='2.25' fill='%23E2E8F0'/%3E%3Ccircle cx='54' cy='76' r='4' fill='%23E5C98F'/%3E%3Crect x='64' y='74' width='38' height='4.5' rx='2.25' fill='%23EEE4D0'/%3E%3Ccircle cx='54' cy='90' r='4' fill='%23818CF8'/%3E%3Crect x='64' y='88' width='50' height='4.5' rx='2.25' fill='%23E2E8F0'/%3E%3Crect x='52' y='104' width='62' height='6' rx='3' fill='%23F7F2E8'/%3E%3Crect x='52' y='104' width='44' height='6' rx='3' fill='url(%23gbg)'/%3E%3C/g%3E%3Cg transform='translate(102, 94)'%3E%3Ccircle cx='16' cy='16' r='16' fill='url(%23bg)'/%3E%3Ccircle cx='16' cy='16' r='18' stroke='url(%23bg)' stroke-width='2' opacity='0.3'/%3E%3Cpath d='M10 16.5 L14 20.5 L22 12' stroke='%23FFFFFF' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/g%3E%3Cg fill='%23E5C98F'%3E%3Cpath d='M138 20 L140 26 L146 28 L140 30 L138 36 L136 30 L130 28 L136 26 Z' opacity='0.9'/%3E%3C/g%3E%3Cg fill='%2338BDF8'%3E%3Cpath d='M26 100 L27.5 104.5 L32 106 L27.5 107.5 L26 112 L24.5 107.5 L20 106 L24.5 104.5 Z' opacity='0.8'/%3E%3C/g%3E%3Ccircle cx='28' cy='44' r='3' fill='%23E5C98F' opacity='0.7'/%3E%3Ccircle cx='140' cy='80' r='2.5' fill='%2310B981' opacity='0.8'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  animation: floatIllustration 4s ease-in-out infinite;
+  filter: drop-shadow(0 14px 28px rgba(180, 150, 95, 0.18));
+}
+
+@keyframes floatIllustration {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(0.8deg);
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    transform: scale(0.95);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.8;
+  }
+}
+
+
+/* ==========================================================================
+   Page Header - Distinct Kinetic & Optical Reveal Animations
+   ========================================================================== */
+
+/* Title: Horizontal Curtain Unmask & Shimmer Sweep (Directional Left-to-Right Reveal) */
+.manager-review-title-anim,
+.manager-review-title-typing {
+  display: inline-block;
+  background: linear-gradient(
+    90deg,
+    #1B2559 0%,
+    #1B2559 35%,
+    #4318FF 55%,
+    #38BDF8 70%,
+    #1B2559 85%,
+    #1B2559 100%
+  );
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation:
+    titleHorizontalCurtain 0.9s cubic-bezier(0.2, 0.9, 0.3, 1) 0.1s backwards,
+    titleShimmerSweep 3.5s ease-in-out 1s infinite alternate;
+}
+
+@keyframes titleHorizontalCurtain {
+  0% {
+    opacity: 0;
+    clip-path: inset(0 100% 0 0);
+    transform: translateX(-14px);
+  }
+  40% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+    transform: translateX(0);
+  }
+}
+
+@keyframes titleShimmerSweep {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Subtitle: Optical Lens Focus & Tracking Settle (Non-directional, soft blur to sharp focus) */
+.manager-review-subtitle-anim,
+.manager-review-subtitle-typing {
+  display: inline-block;
+  color: #707EAE;
+  animation: subtitleOpticalFocus 1.1s cubic-bezier(0.16, 1, 0.3, 1) 0.35s backwards;
+}
+
+@keyframes subtitleOpticalFocus {
+  0% {
+    opacity: 0;
+    filter: blur(8px);
+    letter-spacing: 0.04em;
+    transform: scale(0.99);
+  }
+  50% {
+    opacity: 0.7;
+    filter: blur(3px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0px);
+    letter-spacing: normal;
+    transform: scale(1);
+  }
+}
+
+
