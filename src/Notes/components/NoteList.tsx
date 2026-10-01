@@ -14,14 +14,14 @@ import {
   Send,
   Paperclip,
 } from "lucide-react";
-import { Popconfirm } from "antd";
+import { Popconfirm, Tooltip } from "antd";
 import dayjs from "dayjs";
 import { Note, NoteType } from "../types/notes.types";
 import { getCleanDescriptionSnippet } from "../utils/notesHelpers";
 import { useNoteDragDrop } from "../hooks/useNoteDragDrop";
 
 interface NoteListProps {
-  loading: boolean;
+  loading?: boolean;
   notes: Note[];
   paginatedNotes: Note[];
   currentPage: number;
@@ -88,12 +88,7 @@ export const NoteList: React.FC<NoteListProps> = ({
 
   return (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_2px_12px_rgba(0,0,0,0.02)] overflow-hidden">
-      {loading ? (
-        <div className="flex flex-col items-center justify-center py-24">
-          <div className="w-8 h-8 border-3 border-[#4318FF]/20 border-t-[#4318FF] rounded-full animate-spin"></div>
-          <span className="mt-3 text-xs font-medium text-slate-500">Loading notes...</span>
-        </div>
-      ) : notes.length === 0 ? (
+      {notes.length === 0 ? (
         <div className="p-16 text-center flex flex-col items-center justify-center">
           <div className="w-14 h-14 bg-indigo-50 text-[#4318FF] rounded-2xl flex items-center justify-center mb-4 border border-indigo-100">
             <FileText className="w-7 h-7 text-[#4318FF]" />
@@ -272,66 +267,76 @@ export const NoteList: React.FC<NoteListProps> = ({
                       <td className="py-4 px-6 text-center">
                         <div className="flex items-center justify-center gap-1.5">
                           {/* Send Note */}
-                          <button
-                            type="button"
-                            onClick={() => onOpenSendModal(note)}
-                            className="w-8 h-8 rounded-xl bg-[#EEF2FF] text-[#4318FF] hover:bg-[#E0E7FF] flex items-center justify-center transition cursor-pointer shadow-xs"
-                            title="Send / Share Note with files"
-                          >
-                            <Send className="w-3.5 h-3.5 text-[#4318FF]" />
-                          </button>
+                          <Tooltip title="Send / Share Note" placement="top">
+                            <button
+                              type="button"
+                              onClick={() => onOpenSendModal(note)}
+                              className="w-8 h-8 rounded-xl bg-[#EEF2FF] text-[#4318FF] hover:bg-[#E0E7FF] flex items-center justify-center transition cursor-pointer shadow-xs"
+                              aria-label="Send Note"
+                            >
+                              <Send className="w-3.5 h-3.5 text-[#4318FF]" />
+                            </button>
+                          </Tooltip>
 
                           {/* Pin Toggle */}
-                          <button
-                            type="button"
-                            onClick={(e) => onTogglePin(note.id, e)}
-                            className={`w-8 h-8 rounded-xl flex items-center justify-center transition cursor-pointer shadow-xs ${
-                              note.isPinned
-                                ? "bg-[#FEF3C7] text-[#D97706] hover:bg-[#FDE68A]"
-                                : "bg-slate-100/80 text-slate-500 hover:text-[#D97706] hover:bg-amber-50"
-                            }`}
-                            title={note.isPinned ? "Unpin Note" : "Pin Note to top"}
-                          >
-                            <Pin className={`w-3.5 h-3.5 ${note.isPinned ? "fill-[#D97706]" : ""}`} />
-                          </button>
+                          <Tooltip title={note.isPinned ? "Unpin Note" : "Pin Note to top"} placement="top">
+                            <button
+                              type="button"
+                              onClick={(e) => onTogglePin(note.id, e)}
+                              className={`w-8 h-8 rounded-xl flex items-center justify-center transition cursor-pointer shadow-xs ${
+                                note.isPinned
+                                  ? "bg-[#FEF3C7] text-[#D97706] hover:bg-[#FDE68A]"
+                                  : "bg-slate-100/80 text-slate-500 hover:text-[#D97706] hover:bg-amber-50"
+                              }`}
+                              aria-label={note.isPinned ? "Unpin Note" : "Pin Note"}
+                            >
+                              <Pin className={`w-3.5 h-3.5 ${note.isPinned ? "fill-[#D97706]" : ""}`} />
+                            </button>
+                          </Tooltip>
 
                           {/* Archive Toggle */}
-                          <button
-                            type="button"
-                            onClick={(e) => onToggleArchive(note.id, e)}
-                            className={`w-8 h-8 rounded-xl flex items-center justify-center transition cursor-pointer shadow-xs ${
-                              note.isArchived
-                                ? "bg-[#ECFDF5] text-[#059669] hover:bg-[#D1FAE5]"
-                                : "bg-slate-100/80 text-slate-500 hover:text-[#4318FF] hover:bg-indigo-50"
-                            }`}
-                            title={note.isArchived ? "Restore Note from Archive" : "Archive Note"}
-                          >
-                            {note.isArchived ? (
-                              <ArchiveRestore className="w-3.5 h-3.5" />
-                            ) : (
-                              <Archive className="w-3.5 h-3.5" />
-                            )}
-                          </button>
+                          <Tooltip title={note.isArchived ? "Restore Note from Archive" : "Archive Note"} placement="top">
+                            <button
+                              type="button"
+                              onClick={(e) => onToggleArchive(note.id, e)}
+                              className={`w-8 h-8 rounded-xl flex items-center justify-center transition cursor-pointer shadow-xs ${
+                                note.isArchived
+                                  ? "bg-[#ECFDF5] text-[#059669] hover:bg-[#D1FAE5]"
+                                  : "bg-slate-100/80 text-slate-500 hover:text-[#4318FF] hover:bg-indigo-50"
+                              }`}
+                              aria-label={note.isArchived ? "Restore Note" : "Archive Note"}
+                            >
+                              {note.isArchived ? (
+                                <ArchiveRestore className="w-3.5 h-3.5" />
+                              ) : (
+                                <Archive className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          </Tooltip>
 
                           {/* View */}
-                          <button
-                            type="button"
-                            onClick={() => onStartView(note)}
-                            className="w-8 h-8 rounded-xl bg-[#EEF2FF] text-[#4318FF] hover:bg-[#E0E7FF] flex items-center justify-center transition cursor-pointer shadow-xs"
-                            title="View Note"
-                          >
-                            <Eye className="w-3.5 h-3.5 text-[#4318FF]" />
-                          </button>
+                          <Tooltip title="View Note" placement="top">
+                            <button
+                              type="button"
+                              onClick={() => onStartView(note)}
+                              className="w-8 h-8 rounded-xl bg-[#EEF2FF] text-[#4318FF] hover:bg-[#E0E7FF] flex items-center justify-center transition cursor-pointer shadow-xs"
+                              aria-label="View Note"
+                            >
+                              <Eye className="w-3.5 h-3.5 text-[#4318FF]" />
+                            </button>
+                          </Tooltip>
 
                           {/* Edit */}
-                          <button
-                            type="button"
-                            onClick={() => onStartEdit(note)}
-                            className="w-8 h-8 rounded-xl bg-[#EEF2FF] text-[#4318FF] hover:bg-[#E0E7FF] flex items-center justify-center transition cursor-pointer shadow-xs"
-                            title="Edit Note"
-                          >
-                            <Edit3 className="w-3.5 h-3.5 text-[#4318FF]" />
-                          </button>
+                          <Tooltip title="Edit Note" placement="top">
+                            <button
+                              type="button"
+                              onClick={() => onStartEdit(note)}
+                              className="w-8 h-8 rounded-xl bg-[#EEF2FF] text-[#4318FF] hover:bg-[#E0E7FF] flex items-center justify-center transition cursor-pointer shadow-xs"
+                              aria-label="Edit Note"
+                            >
+                              <Edit3 className="w-3.5 h-3.5 text-[#4318FF]" />
+                            </button>
+                          </Tooltip>
 
                           {/* Delete */}
                           <Popconfirm
@@ -342,13 +347,15 @@ export const NoteList: React.FC<NoteListProps> = ({
                             cancelText="Cancel"
                             okButtonProps={{ danger: true }}
                           >
-                            <button
-                              type="button"
-                              className="w-8 h-8 rounded-xl bg-[#FEF2F2] text-[#EF4444] hover:bg-[#FEE2E2] flex items-center justify-center transition cursor-pointer shadow-xs"
-                              title="Delete Note"
-                            >
-                              <Trash2 className="w-3.5 h-3.5 text-[#EF4444]" />
-                            </button>
+                            <Tooltip title="Delete Note" placement="top">
+                              <button
+                                type="button"
+                                className="w-8 h-8 rounded-xl bg-[#FEF2F2] text-[#EF4444] hover:bg-[#FEE2E2] flex items-center justify-center transition cursor-pointer shadow-xs"
+                                aria-label="Delete Note"
+                              >
+                                <Trash2 className="w-3.5 h-3.5 text-[#EF4444]" />
+                              </button>
+                            </Tooltip>
                           </Popconfirm>
                         </div>
                       </td>
@@ -473,33 +480,38 @@ export const NoteList: React.FC<NoteListProps> = ({
                                           </td>
                                           <td className="py-3 px-6 text-center">
                                             <div className="flex items-center justify-center gap-1.5">
-                                              {/* Send Sub-note */}
-                                              <button
-                                                type="button"
-                                                onClick={() => onOpenSendModal(sub)}
-                                                className="w-8 h-8 rounded-xl bg-[#EEF2FF] text-[#4318FF] hover:bg-[#E0E7FF] flex items-center justify-center transition cursor-pointer shadow-xs"
-                                                title="Send Sub-note"
-                                              >
-                                                <Send className="w-3.5 h-3.5 text-[#4318FF]" />
-                                              </button>
+                                              <Tooltip title="Send Sub-note" placement="top">
+                                                <button
+                                                  type="button"
+                                                  onClick={() => onOpenSendModal(sub)}
+                                                  className="w-8 h-8 rounded-xl bg-[#EEF2FF] text-[#4318FF] hover:bg-[#E0E7FF] flex items-center justify-center transition cursor-pointer shadow-xs"
+                                                  aria-label="Send Sub-note"
+                                                >
+                                                  <Send className="w-3.5 h-3.5 text-[#4318FF]" />
+                                                </button>
+                                              </Tooltip>
 
-                                              <button
-                                                type="button"
-                                                onClick={() => onStartView(sub)}
-                                                className="w-8 h-8 rounded-xl bg-[#EEF2FF] text-[#4318FF] hover:bg-[#E0E7FF] flex items-center justify-center transition cursor-pointer shadow-xs"
-                                                title="View Sub-note"
-                                              >
-                                                <Eye className="w-3.5 h-3.5 text-[#4318FF]" />
-                                              </button>
+                                              <Tooltip title="View Sub-note" placement="top">
+                                                <button
+                                                  type="button"
+                                                  onClick={() => onStartView(sub)}
+                                                  className="w-8 h-8 rounded-xl bg-[#EEF2FF] text-[#4318FF] hover:bg-[#E0E7FF] flex items-center justify-center transition cursor-pointer shadow-xs"
+                                                  aria-label="View Sub-note"
+                                                >
+                                                  <Eye className="w-3.5 h-3.5 text-[#4318FF]" />
+                                                </button>
+                                              </Tooltip>
 
-                                              <button
-                                                type="button"
-                                                onClick={() => onStartEdit(sub)}
-                                                className="w-8 h-8 rounded-xl bg-[#EEF2FF] text-[#4318FF] hover:bg-[#E0E7FF] flex items-center justify-center transition cursor-pointer shadow-xs"
-                                                title="Edit Sub-note"
-                                              >
-                                                <Edit3 className="w-3.5 h-3.5 text-[#4318FF]" />
-                                              </button>
+                                              <Tooltip title="Edit Sub-note" placement="top">
+                                                <button
+                                                  type="button"
+                                                  onClick={() => onStartEdit(sub)}
+                                                  className="w-8 h-8 rounded-xl bg-[#EEF2FF] text-[#4318FF] hover:bg-[#E0E7FF] flex items-center justify-center transition cursor-pointer shadow-xs"
+                                                  aria-label="Edit Sub-note"
+                                                >
+                                                  <Edit3 className="w-3.5 h-3.5 text-[#4318FF]" />
+                                                </button>
+                                              </Tooltip>
 
                                               <Popconfirm
                                                 title="Delete Sub-Note"
@@ -509,13 +521,15 @@ export const NoteList: React.FC<NoteListProps> = ({
                                                 cancelText="Cancel"
                                                 okButtonProps={{ danger: true }}
                                               >
-                                                <button
-                                                  type="button"
-                                                  className="w-8 h-8 rounded-xl bg-[#FEF2F2] text-[#EF4444] hover:bg-[#FEE2E2] flex items-center justify-center transition cursor-pointer shadow-xs"
-                                                  title="Delete Sub-note"
-                                                >
-                                                  <Trash2 className="w-3.5 h-3.5 text-[#EF4444]" />
-                                                </button>
+                                                <Tooltip title="Delete Sub-note" placement="top">
+                                                  <button
+                                                    type="button"
+                                                    className="w-8 h-8 rounded-xl bg-[#FEF2F2] text-[#EF4444] hover:bg-[#FEE2E2] flex items-center justify-center transition cursor-pointer shadow-xs"
+                                                    aria-label="Delete Sub-note"
+                                                  >
+                                                    <Trash2 className="w-3.5 h-3.5 text-[#EF4444]" />
+                                                  </button>
+                                                </Tooltip>
                                               </Popconfirm>
                                             </div>
                                           </td>

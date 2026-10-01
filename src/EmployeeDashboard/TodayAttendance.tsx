@@ -326,12 +326,9 @@ const TodayAttendance = ({
 
   // Only block rendering while actively loading with no data (genuine first fetch).
   // Do NOT block if loading is done — even if records are empty (e.g. future month).
-  if (records.length === 0 && loading)
-    return (
-      <div className="flex items-center justify-center p-20">
-        <div className="w-12 h-12 border-4 border-[#00A3C4]/20 border-t-[#00A3C4] rounded-full animate-spin"></div>
-      </div>
-    );
+  if (records.length === 0 && loading) {
+    return <div className="flex-1 w-full min-h-[400px]" />;
+  }
 
   return (
     <div className="flex flex-col h-full w-full overflow-hidden bg-[#F4F7FE]">

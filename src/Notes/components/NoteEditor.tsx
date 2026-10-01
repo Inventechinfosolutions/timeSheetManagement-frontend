@@ -15,6 +15,7 @@ import {
   Cloud,
   Loader2,
   Check,
+  User,
 } from "lucide-react";
 import { Popover } from "antd";
 import { Toggle } from "../../components/ui";
@@ -131,10 +132,18 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                 </div>
               )}
 
+              {/* Personal Note Category Badge (When not a Project Note) */}
+              {!isProjectNote && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl text-xs font-bold uppercase tracking-wider shrink-0 shadow-2xs">
+                  <User className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Personal Note</span>
+                </div>
+              )}
+
               {/* TITLE: Extends all the way to Back button */}
               <div className="flex items-center gap-2.5 flex-1 min-w-0">
                 <span className="text-xs md:text-sm font-bold text-[#1B2559] uppercase tracking-wider whitespace-nowrap">
-                  TITLE:
+                  Title/Subject:
                 </span>
                 <input
                   type="text"
@@ -150,7 +159,13 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
             {/* Top Right Controls: Auto-Save Toggle, Pin Button & Back Button */}
             <div className="flex flex-wrap items-center gap-2.5 shrink-0 self-start lg:self-center">
               {/* Auto-Save Toggle & Status */}
-              <div className="flex items-center gap-2.5 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl shadow-2xs">
+              <div
+                className={`flex items-center gap-2.5 px-3 py-1.5 rounded-xl shadow-2xs border transition-all duration-200 ${
+                  !formData.isAutoSave
+                    ? "bg-blue-50/70 border-blue-200"
+                    : "bg-slate-50 border-slate-200"
+                }`}
+              >
                 <Toggle
                   checked={!!formData.isAutoSave}
                   onChange={() => {
@@ -163,6 +178,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                   label="Auto-Save"
                   size="sm"
                   activeColor="#10B981"
+                  inactiveColor="#3B82F6"
                 />
 
                 {/* Auto-Save Dynamic Status Badge */}
@@ -199,7 +215,8 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                     )}
                   </div>
                 ) : (
-                  <span className="pl-2 border-l border-slate-200 text-[11px] font-medium text-slate-400">
+                  <span className="pl-2 border-l border-blue-200 text-[11px] font-bold text-[#4318FF] flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#4318FF]" />
                     Off
                   </span>
                 )}

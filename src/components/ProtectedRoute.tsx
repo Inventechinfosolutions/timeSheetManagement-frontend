@@ -3,6 +3,7 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useAppSelector } from "../hooks";
 import { UserType } from "../enums";
 import { Storage } from "../utils/storage-util";
+import { WorksphereLogoLoader } from "./ApiLoadingSpinner";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -25,8 +26,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        Loading...
+      <div
+        className="fixed inset-0 flex items-center justify-center bg-white/75 backdrop-blur-[4px] z-[99999]"
+        aria-busy="true"
+        aria-label="Loading"
+      >
+        <WorksphereLogoLoader />
       </div>
     );
   }
