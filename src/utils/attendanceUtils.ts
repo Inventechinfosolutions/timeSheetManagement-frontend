@@ -318,12 +318,10 @@ export const generateRangeEntries = (start: Date, end: Date, now: Date, records:
 
         const entry = mapAttendanceToEntry(currentLoopDate, now, actualRecord);
 
-        // Sunday: No longer forced to Weekend here, let mapAttendanceToEntry 
-        // handle it based on actualRecord status or default behavior.
-        // Saturday: Only show as Weekend if there's NO data (no record, no workLocation, no status)
-        // If Saturday has data (Client Visit, WFH, etc.), show that data instead
+        // Saturday and Sunday: Show as Weekend if there's NO data (no record, no workLocation, no status, no hours)
+        // If there is data (hours, Client Visit, WFH, etc.), preserve that data
         const dayOfWeek = currentLoopDate.getDay();
-        if (dayOfWeek === 6) {
+        if (dayOfWeek === 0 || dayOfWeek === 6) {
             // If there's no record OR no meaningful data, show as Weekend
             if (!actualRecord || (!actualRecord.location && !(actualRecord as any).workLocation && !actualRecord.status && (!actualRecord.totalHours || actualRecord.totalHours === 0))) {
                 entry.status = AttendanceStatus.WEEKEND;

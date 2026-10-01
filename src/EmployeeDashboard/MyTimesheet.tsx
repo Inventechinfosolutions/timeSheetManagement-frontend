@@ -571,7 +571,11 @@ const MyTimesheet = ({
     setManuallyEditedIndices(new Set());
   };
 
-  const handleHoursInput = (entryIndex: number, val: string) => {
+  const handleHoursInput = (
+    entryIndex: number,
+    val: string,
+    immediate = false,
+  ): TimesheetEntry[] | undefined => {
     if (effectiveReadOnly) return;
     if (isDateBlocked(localEntries[entryIndex].fullDate)) return;
 
@@ -583,6 +587,8 @@ const MyTimesheet = ({
 
     // B. Clear any waiting timer
     if (inputTimerRef.current) clearTimeout(inputTimerRef.current);
+
+    let updatedEntriesToReturn: TimesheetEntry[] | undefined;
 
     const applyUpdate = (currentVal: string) => {
       // Prevent calculation if currently showing an error for this field
@@ -643,6 +649,7 @@ const MyTimesheet = ({
             workLocation: undefined,
           };
           setLocalEntries(updated);
+          updatedEntriesToReturn = updated;
 
           setTimeout(() => setInputError(null), 3000);
           return;
@@ -770,20 +777,23 @@ const MyTimesheet = ({
         workLocation: getBadgeLocation(newStatus, fHalf, sHalf),
       };
       setLocalEntries(updated);
+      updatedEntriesToReturn = updated;
 
       // Mark this entry as manually edited to prevent baseEntries from overwriting it
       setManuallyEditedIndices((prev) => new Set(prev).add(entryIndex));
     };
 
-    if (val === "") {
-      // D. Execute immediately for clearing text
-      applyUpdate("");
+    if (val === "" || immediate) {
+      // D. Execute immediately
+      applyUpdate(val);
     } else {
       // C. Wait for the user to stop typing before deciding status/color
       inputTimerRef.current = setTimeout(() => {
         applyUpdate(val);
       }, 500);
     }
+
+    return updatedEntriesToReturn;
   };
 
   const handleInputBlur = (entryIndex: number) => {
@@ -793,6 +803,8 @@ const MyTimesheet = ({
       return next;
     });
   };
+
+  const isSavingRef = useRef(false);
 
   const handleAutoUpdate = () => {
     if (effectiveReadOnly) return;
@@ -844,16 +856,21 @@ const MyTimesheet = ({
       setLocalEntries(updatedEntries);
       setManuallyEditedIndices(newEditedIndices);
       setLocalInputValues(newLocalInputValues);
-      message.success("Auto-filled working days to 9 hours");
+      message.success({ content: "Timesheet already submitted", key: "timesheet-status-msg" });
     } else {
-      message.info("No eligible days to auto-fill");
+      message.info({ content: "Timesheet already submitted", key: "timesheet-status-msg" });
     }
   };
 
-  const onSaveAll = async () => {
-    if (effectiveReadOnly) return;
+  const onSaveAll = async (overrideEntries?: TimesheetEntry[]) => {
+    if (effectiveReadOnly || isSavingRef.current) return;
+    isSavingRef.current = true;
+    setTimeout(() => {
+      isSavingRef.current = false;
+    }, 600);
     const payload: any[] = [];
-    localEntries.forEach((entry, idx) => {
+    const entriesToProcess = overrideEntries || localEntries;
+    entriesToProcess.forEach((entry, idx) => {
       if (isDateBlocked(entry.fullDate)) return;
 
       const currentTotal = entry.totalHours;
@@ -1014,7 +1031,7 @@ const MyTimesheet = ({
     });
 
     if (payload.length === 0) {
-      message.success("Timesheet already submitted");
+      message.info({ content: "Timesheet already submitted", key: "timesheet-status-msg" });
       return;
     }
 
@@ -1102,7 +1119,7 @@ const MyTimesheet = ({
         // Clear manually edited indices and input values after successful save
         setManuallyEditedIndices(new Set());
         setLocalInputValues({});
-        message.success("Attendance saved successfully");
+        message.success({ content: "Timesheet already submitted", key: "timesheet-status-msg" });
       } catch (error: any) {
         const finalError = cleanErrorMessage(
           error?.response?.data?.message ||
@@ -1686,6 +1703,52 @@ const MyTimesheet = ({
   ).getDay();
   const paddingDays = firstDayOfMonth;
 
+  const hasUnfilledWorkingDays = useMemo(() => {
+    return localEntries.some((entry) => {
+      // 1. Check blocked
+      if (isDateBlocked(entry.fullDate)) return false;
+      const manualBlocker = blockers?.find((b) => {
+        const d = new Date(entry.fullDate);
+        d.setHours(0, 0, 0, 0);
+        const start = new Date(b.blockedFrom);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(b.blockedTo);
+        end.setHours(0, 0, 0, 0);
+        return d >= start && d <= end;
+      });
+      if (manualBlocker) return false;
+
+      // 2. Skip exclusions: Leave, Absent, Half Day
+      const statusLower = (entry.status || "").toLowerCase().trim();
+      if (
+        statusLower === AttendanceStatus.LEAVE.toLowerCase() ||
+        statusLower.includes("leave") ||
+        statusLower === AttendanceStatus.ABSENT.toLowerCase() ||
+        statusLower.includes("absent") ||
+        statusLower === AttendanceStatus.HALF_DAY.toLowerCase() ||
+        statusLower.includes("half day")
+      )
+        return false;
+
+      // 3. Skip Holidays
+      if (isHoliday(entry.fullDate)) return false;
+
+      // 4. Skip Weekends
+      const day = entry.fullDate.getDay();
+      if (day === 0 || day === 6) return false;
+
+      // 5. Must not be future
+      const entryDate = new Date(entry.fullDate);
+      entryDate.setHours(0, 0, 0, 0);
+      const todayDate = new Date(today);
+      todayDate.setHours(0, 0, 0, 0);
+      if (entryDate > todayDate) return false;
+
+      // 6. Check if hours already filled
+      return !entry.totalHours || entry.totalHours < 9;
+    });
+  }, [localEntries, isDateBlocked, blockers, isHoliday, today]);
+
   const handleAutoUpdateClick = () => {
     // Only allow auto-update for the current month
     if (
@@ -1695,6 +1758,12 @@ const MyTimesheet = ({
       message.error("Auto-update is only available for the current month.");
       return;
     }
+
+    if (!hasUnfilledWorkingDays) {
+      message.info({ content: "Timesheet already submitted", key: "timesheet-status-msg" });
+      return;
+    }
+
     setShowAutoUpdateModal(true);
   };
 
@@ -1713,9 +1782,10 @@ const MyTimesheet = ({
       setShowAutoUpdateModal(false);
 
       if (!result.count || result.count === 0) {
-        message.info(
-          result.message || "No eligible days found to update.",
-        );
+        message.info({
+          content: result.message || "Timesheet already submitted",
+          key: "timesheet-status-msg",
+        });
         refreshData();
         return;
       }
@@ -1724,6 +1794,7 @@ const MyTimesheet = ({
       refreshData();
       setManuallyEditedIndices(new Set());
 
+      message.success({ content: "Timesheet already submitted", key: "timesheet-status-msg" });
       // Show success modal after data is refreshed so totals/calendar are already updated
       setUpdateResult(result);
       setShowSuccessModal(true);
@@ -1758,36 +1829,58 @@ const MyTimesheet = ({
 
   if (isMobile) {
     return (
-      <MobileMyTimesheet
-        currentWeekEntries={weeks[currentWeekIndex] || []}
-        onPrevWeek={handlePrevWeek}
-        onNextWeek={handleNextWeek}
-        onHoursInput={handleHoursInput}
-        onSave={onSaveAll}
-        monthTotalHours={monthTotalHours}
-        currentMonthName={now.toLocaleDateString("en-US", {
-          month: "long",
-          year: "numeric",
-        })}
-        loading={loading}
-        isAdmin={isAdmin}
-        isManager={isManager}
-        isManagerView={isManagerView}
-        readOnly={effectiveReadOnly}
-        isDateBlocked={isDateBlocked}
-        isEditableMonth={isEditableMonth}
-        isHoliday={isHoliday}
-        onBlockedClick={onBlockedClick}
-        localInputValues={localInputValues}
-        onInputBlur={handleInputBlur}
-        selectedDateId={selectedDateId}
-        isHighlighted={isHighlighted}
-        containerClassName={containerClassName}
-        onAutoUpdate={isViewedMonthEligible ? handleAutoUpdateClick : undefined}
-        // autoUpdateCount={autoUpdateCount}
-        blockers={blockers}
-        department={entity?.department || entity?.department_name || ""}
-      />
+      <>
+        <AutoUpdateModal
+          isOpen={showAutoUpdateModal}
+          onClose={() => setShowAutoUpdateModal(false)}
+          onConfirm={confirmAutoUpdate}
+          monthName={now.toLocaleDateString("en-US", { month: "long" })}
+          year={now.getFullYear()}
+          loading={isAutoUpdating}
+        />
+        <AutoUpdateSuccessModal
+          isOpen={showSuccessModal}
+          onClose={() => setShowSuccessModal(false)}
+          count={updateResult?.count || 0}
+          monthName={now.toLocaleDateString("en-US", { month: "long" })}
+          year={now.getFullYear()}
+        />
+        <MobileMyTimesheet
+          entries={localEntries}
+          now={now}
+          today={today}
+          onPrevMonth={handlePrevMonth}
+          onNextMonth={handleNextMonth}
+          currentWeekEntries={weeks[currentWeekIndex] || []}
+          onPrevWeek={handlePrevWeek}
+          onNextWeek={handleNextWeek}
+          onHoursInput={handleHoursInput}
+          onSave={onSaveAll}
+          monthTotalHours={monthTotalHours}
+          currentMonthName={now.toLocaleDateString("en-US", {
+            month: "long",
+            year: "numeric",
+          })}
+          loading={loading}
+          isAdmin={isAdmin}
+          isManager={isManager}
+          isManagerView={isManagerView}
+          readOnly={effectiveReadOnly}
+          isDateBlocked={isDateBlocked}
+          isEditableMonth={isEditableMonth}
+          isHoliday={isHoliday}
+          onBlockedClick={onBlockedClick}
+          localInputValues={localInputValues}
+          onInputBlur={handleInputBlur}
+          selectedDateId={selectedDateId}
+          isHighlighted={isHighlighted}
+          containerClassName={containerClassName}
+          onAutoUpdate={isViewedMonthEligible ? handleAutoUpdateClick : undefined}
+          isViewedMonthEligible={isViewedMonthEligible}
+          blockers={blockers}
+          department={entity?.department || entity?.department_name || ""}
+        />
+      </>
     );
   }
 
