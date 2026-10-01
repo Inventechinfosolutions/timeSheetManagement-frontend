@@ -69,6 +69,8 @@ const ManagerLayout = () => {
     }
     if (path.includes("/manager-dashboard/quarterly-review")) {
       return "Quarterly Review";
+    if (path.includes("/manager-dashboard/inbox")) {
+      return "Inbox";
     }
 
     switch (tab) {
@@ -104,6 +106,8 @@ const ManagerLayout = () => {
         return "Quarterly Review ";
       case "notes":
         return "Notes";
+      case "inbox":
+        return "Inbox";
       default:
         return "Employee Dashboard";
     }
@@ -159,6 +163,8 @@ const ManagerLayout = () => {
       navigate("/manager-dashboard/my-quarterly-review");
     } else if (tabName === "Notes") {
       navigate("/manager-dashboard/notes");
+    } else if (tabName === "Inbox") {
+      navigate("/manager-dashboard/inbox");
     }
   };
 
