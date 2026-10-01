@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import axios from 'axios';
+import { InboxFolder } from '../enums';
 
 export interface InboxNote {
   id: number;
@@ -30,7 +31,7 @@ export interface InboxItem {
   toMail: string;
   senderId?: string;
   receiverId?: string;
-  folder?: 'INBOX' | 'SENT' | string;
+  folder?: InboxFolder | string;
   permission?: 'VIEW' | 'EDIT' | 'CanView' | 'CanEdit' | string;
   isRead: boolean;
   hasDocument?: boolean;
@@ -46,9 +47,17 @@ export interface InboxItem {
   note: InboxNote | null;
 }
 
+export interface InboxCounts {
+  inbox: number;
+  unread: number;
+  read: number;
+  sent: number;
+}
+
 interface InboxState {
   items: InboxItem[];
   unreadCount: number;
+  counts: InboxCounts;
   selectedItem: InboxItem | null;
   loading: boolean;
   error: string | null;
@@ -57,6 +66,12 @@ interface InboxState {
 const initialState: InboxState = {
   items: [],
   unreadCount: 0,
+  counts: {
+    inbox: 0,
+    unread: 0,
+    read: 0,
+    sent: 0,
+  },
   selectedItem: null,
   loading: false,
   error: null,
@@ -67,7 +82,7 @@ const apiUrl = '/api/inbox';
 // 1. Fetch User Inbox
 export const fetchInbox = createAsyncThunk(
   'inbox/fetchInbox',
-  async (params: { isRead?: boolean; search?: string; folder?: 'INBOX' | 'SENT' | 'ALL' | string } | undefined, { rejectWithValue }) => {
+  async (params: { isRead?: boolean; search?: string; folder?: InboxFolder | string } | undefined, { rejectWithValue }) => {
     try {
       const response = await axios.get(apiUrl, { params });
       return response.data;
@@ -79,13 +94,28 @@ export const fetchInbox = createAsyncThunk(
   }
 );
 
-// 2. Fetch Unread Count
+// 2. Fetch Unified Counts (Inbox, Unread, Read, Sent in a single API call)
+export const fetchInboxCounts = createAsyncThunk(
+  'inbox/fetchInboxCounts',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`${apiUrl}/counts`);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || 'Failed to fetch inbox counts'
+      );
+    }
+  }
+);
+
+// 3. Fetch Unread Count (also updates unified counts)
 export const fetchInboxUnreadCount = createAsyncThunk(
   'inbox/fetchInboxUnreadCount',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axios.get(`${apiUrl}/unread-count`);
-      return response.data?.count ?? 0;
+      const response = await axios.get(`${apiUrl}/counts`);
+      return response.data;
     } catch (error: any) {
       return rejectWithValue(
         error.response?.data?.message || 'Failed to fetch unread count'
@@ -183,16 +213,41 @@ const inboxSlice = createSlice({
     builder.addCase(fetchInbox.fulfilled, (state, action) => {
       state.loading = false;
       state.items = action.payload || [];
-      state.unreadCount = (action.payload || []).filter((i: InboxItem) => !i.isRead).length;
     });
     builder.addCase(fetchInbox.rejected, (state, action) => {
       state.loading = false;
       state.error = action.payload as string;
     });
 
-    // Fetch Unread Count
+    // Fetch All Unified Counts
+    builder.addCase(fetchInboxCounts.fulfilled, (state, action) => {
+      if (action.payload) {
+        state.counts = {
+          inbox: Number(action.payload.inbox ?? 0),
+          unread: Number(action.payload.unread ?? action.payload.count ?? 0),
+          read: Number(action.payload.read ?? 0),
+          sent: Number(action.payload.sent ?? 0),
+        };
+        state.unreadCount = state.counts.unread;
+      }
+    });
+
+    // Fetch Unread Count (supports both {count} and full counts object)
     builder.addCase(fetchInboxUnreadCount.fulfilled, (state, action) => {
-      state.unreadCount = action.payload;
+      const payload = action.payload;
+      if (typeof payload === 'object' && payload !== null) {
+        state.counts = {
+          inbox: Number(payload.inbox ?? state.counts.inbox),
+          unread: Number(payload.unread ?? payload.count ?? 0),
+          read: Number(payload.read ?? state.counts.read),
+          sent: Number(payload.sent ?? state.counts.sent),
+        };
+        state.unreadCount = state.counts.unread;
+      } else {
+        const count = typeof payload === 'number' ? payload : 0;
+        state.unreadCount = count;
+        state.counts.unread = count;
+      }
     });
 
     // Mark as Read
@@ -202,6 +257,8 @@ const inboxSlice = createSlice({
       if (item && !item.isRead) {
         item.isRead = true;
         state.unreadCount = Math.max(0, state.unreadCount - 1);
+        state.counts.unread = Math.max(0, state.counts.unread - 1);
+        state.counts.read = state.counts.read + 1;
       }
       if (state.selectedItem && state.selectedItem.inboxId === id) {
         state.selectedItem.isRead = true;
@@ -213,6 +270,8 @@ const inboxSlice = createSlice({
       state.items.forEach((item) => {
         item.isRead = true;
       });
+      state.counts.read += state.counts.unread;
+      state.counts.unread = 0;
       state.unreadCount = 0;
       if (state.selectedItem) {
         state.selectedItem.isRead = true;
@@ -222,11 +281,24 @@ const inboxSlice = createSlice({
     // Delete Inbox Item
     builder.addCase(deleteInboxItem.fulfilled, (state, action) => {
       const id = action.payload;
+      const deletedItem = state.items.find((i) => i.inboxId === id);
       state.items = state.items.filter((i) => i.inboxId !== id);
       if (state.selectedItem?.inboxId === id) {
         state.selectedItem = null;
       }
-      state.unreadCount = state.items.filter((i) => !i.isRead).length;
+      if (deletedItem) {
+        if (deletedItem.folder === InboxFolder.SENT) {
+          state.counts.sent = Math.max(0, state.counts.sent - 1);
+        } else {
+          state.counts.inbox = Math.max(0, state.counts.inbox - 1);
+          if (deletedItem.isRead) {
+            state.counts.read = Math.max(0, state.counts.read - 1);
+          } else {
+            state.counts.unread = Math.max(0, state.counts.unread - 1);
+            state.unreadCount = Math.max(0, state.unreadCount - 1);
+          }
+        }
+      }
     });
   },
 });

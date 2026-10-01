@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '../hooks';
 import {
   fetchInbox,
-  fetchInboxUnreadCount,
+  fetchInboxCounts,
   markInboxAsRead,
   deleteInboxItem,
   InboxItem,
@@ -10,14 +10,11 @@ import {
 import {
   Mail,
   MailOpen,
-  Search,
-  CheckCircle2,
   Trash2,
   Paperclip,
   User,
   Eye,
   RefreshCw,
-  FileText,
   Clock,
   Edit3,
   Send,
@@ -31,6 +28,8 @@ import { useNotesManagement } from '../Notes/hooks/useNotesManagement';
 import ExcelViewerModal from '../components/ExcelViewerModal';
 import { Note } from '../Notes/types/notes.types';
 import { fetchNoteById } from '../reducers/notes.reducer';
+import SearchBox from '../components/ui/SearchBox';
+import { InboxFolder, InboxTab } from '../enums';
 
 dayjs.extend(relativeTime);
 
@@ -42,18 +41,24 @@ const canEditNote = (permission?: string): boolean => {
 
 export const InboxManagement: React.FC = () => {
   const dispatch = useAppDispatch();
-  const { items, unreadCount, loading } = useAppSelector((state) => state.inbox);
+  const { items, counts, loading } = useAppSelector((state) => state.inbox);
   const notesMgr = useNotesManagement();
 
-  const [folder, setFolder] = useState<'INBOX' | 'SENT'>('INBOX');
-  const [activeTab, setActiveTab] = useState<'ALL' | 'UNREAD' | 'READ'>('ALL');
+  const [folder, setFolder] = useState<InboxFolder>(InboxFolder.INBOX);
+  const [activeTab, setActiveTab] = useState<InboxTab>(InboxTab.ALL);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedInboxItem, setSelectedInboxItem] = useState<InboxItem | null>(null);
 
   useEffect(() => {
-    dispatch(fetchInbox({ folder }));
-    dispatch(fetchInboxUnreadCount());
-  }, [dispatch, folder]);
+    dispatch(
+      fetchInbox({
+        folder,
+        search: debouncedSearch.trim() || undefined,
+      })
+    );
+    dispatch(fetchInboxCounts());
+  }, [dispatch, folder, debouncedSearch]);
 
   const handleMarkAsRead = (item: InboxItem, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -65,7 +70,7 @@ export const InboxManagement: React.FC = () => {
     dispatch(deleteInboxItem(inboxId))
       .unwrap()
       .then(() => {
-        message.success(folder === 'SENT' ? 'Message removed from sent' : 'Message removed from inbox');
+        message.success(folder === InboxFolder.SENT ? 'Message removed from sent' : 'Message removed from inbox');
         if (selectedInboxItem?.inboxId === inboxId) {
           notesMgr.handleBackToList();
           setSelectedInboxItem(null);
@@ -115,29 +120,16 @@ export const InboxManagement: React.FC = () => {
     }
   };
 
-  // Filter items
+  // Filter items (status tabs filter client-side for INBOX only, search filters from backend)
   const filteredItems = useMemo(() => {
+    if (folder === InboxFolder.SENT) return items;
     return items.filter((item) => {
       // Tab filter
-      if (activeTab === 'UNREAD' && item.isRead) return false;
-      if (activeTab === 'READ' && !item.isRead) return false;
-
-      // Search filter
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        const matchesTitle = item.note?.title?.toLowerCase().includes(q);
-        const matchesDesc = item.note?.description?.toLowerCase().includes(q);
-        const matchesSender = item.senderName?.toLowerCase().includes(q) || item.fromMail?.toLowerCase().includes(q);
-        const matchesReceiver = item.receiverName?.toLowerCase().includes(q) || item.toMail?.toLowerCase().includes(q);
-        const matchesProject = item.note?.projectName?.toLowerCase().includes(q);
-        return matchesTitle || matchesDesc || matchesSender || matchesReceiver || matchesProject;
-      }
-
+      if (activeTab === InboxTab.UNREAD && item.isRead) return false;
+      if (activeTab === InboxTab.READ && !item.isRead) return false;
       return true;
     });
-  }, [items, activeTab, searchQuery]);
-
-  const readCount = useMemo(() => items.filter((i) => i.isRead).length, [items]);
+  }, [items, folder, activeTab]);
 
   const getInitials = (name?: string, email?: string) => {
     if (name && name.trim()) {
@@ -195,7 +187,7 @@ export const InboxManagement: React.FC = () => {
           onSubmit={async (e) => {
             await notesMgr.handleSubmitForm(e);
             dispatch(fetchInbox({ folder }));
-            dispatch(fetchInboxUnreadCount());
+            dispatch(fetchInboxCounts());
           }}
           onBack={() => {
             notesMgr.handleBackToList();
@@ -307,20 +299,20 @@ export const InboxManagement: React.FC = () => {
           <button
             type="button"
             onClick={() => {
-              setFolder('INBOX');
-              setActiveTab('ALL');
+              setFolder(InboxFolder.INBOX);
+              setActiveTab(InboxTab.ALL);
             }}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              folder === 'INBOX'
+              folder === InboxFolder.INBOX
                 ? 'bg-white text-[#4318FF] shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             <Inbox className="w-4 h-4" />
             <span>Inbox</span>
-            {unreadCount > 0 && (
+            {(counts?.unread ?? 0) > 0 && (
               <span className="px-1.5 py-0.2 bg-[#4318FF] text-white text-[10px] font-bold rounded-full">
-                {unreadCount}
+                {counts.unread}
               </span>
             )}
           </button>
@@ -328,89 +320,104 @@ export const InboxManagement: React.FC = () => {
           <button
             type="button"
             onClick={() => {
-              setFolder('SENT');
-              setActiveTab('ALL');
+              setFolder(InboxFolder.SENT);
+              setActiveTab(InboxTab.ALL);
             }}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              folder === 'SENT'
+              folder === InboxFolder.SENT
                 ? 'bg-white text-[#4318FF] shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             <Send className="w-4 h-4" />
             <span>Sent</span>
+            {(counts?.sent ?? 0) > 0 && (
+              <span className={`px-1.5 py-0.2 text-[10px] font-bold rounded-full ${
+                folder === InboxFolder.SENT ? 'bg-[#4318FF]/10 text-[#4318FF]' : 'bg-slate-200 text-slate-700'
+              }`}>
+                {counts.sent}
+              </span>
+            )}
           </button>
         </div>
       </div>
 
       {/* Filter and Search Bar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3 rounded-2xl shadow-xs border border-slate-100">
-        {/* Tab Pills */}
-        <div className="flex items-center gap-1.5 w-full sm:w-auto bg-slate-100/80 p-1 rounded-xl">
-          <button
-            onClick={() => setActiveTab('ALL')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
-              activeTab === 'ALL'
-                ? 'bg-white text-[#4318FF] shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <span>All Notes</span>
-            <span className="text-[11px] px-1.5 py-0.2 bg-slate-200/60 rounded-full">
-              {items.length}
-            </span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('UNREAD')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
-              activeTab === 'UNREAD'
-                ? 'bg-white text-[#4318FF] shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <span>Unread</span>
-            {unreadCount > 0 && (
-              <span className="text-[11px] px-1.5 py-0.2 bg-[#4318FF] text-white rounded-full">
-                {unreadCount}
-              </span>
-            )}
-          </button>
-
-          <button
-            onClick={() => setActiveTab('READ')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
-              activeTab === 'READ'
-                ? 'bg-white text-[#4318FF] shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <span>Read</span>
-            <span className="text-[11px] px-1.5 py-0.2 bg-slate-200/60 rounded-full">
-              {readCount}
-            </span>
-          </button>
-        </div>
-
-        {/* Search Input */}
-        <div className="relative w-full sm:w-72">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={folder === 'SENT' ? "Search by title, recipient, content..." : "Search by title, sender, content..."}
-            className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:bg-white focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition"
-          />
-          {searchQuery && (
+        {folder === InboxFolder.INBOX ? (
+          /* Tab Pills (Inbox only) */
+          <div className="flex items-center gap-1.5 w-full sm:w-auto bg-slate-100/80 p-1 rounded-xl">
             <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 cursor-pointer"
+              onClick={() => setActiveTab(InboxTab.ALL)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
+                activeTab === InboxTab.ALL
+                  ? 'bg-white text-[#4318FF] shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
             >
-              ✕
+              <span>All Notes</span>
+              <span className="text-[11px] px-1.5 py-0.2 bg-slate-200/60 rounded-full">
+                {debouncedSearch.trim() ? items.length : (counts?.inbox ?? 0)}
+              </span>
             </button>
-          )}
-        </div>
+
+            <button
+              onClick={() => setActiveTab(InboxTab.UNREAD)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
+                activeTab === InboxTab.UNREAD
+                  ? 'bg-white text-[#4318FF] shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span>Unread</span>
+              {(debouncedSearch.trim()
+                ? items.filter((i) => !i.isRead).length
+                : (counts?.unread ?? 0)) > 0 && (
+                <span className="text-[11px] px-1.5 py-0.2 bg-[#4318FF] text-white rounded-full">
+                  {debouncedSearch.trim()
+                    ? items.filter((i) => !i.isRead).length
+                    : (counts?.unread ?? 0)}
+                </span>
+              )}
+            </button>
+
+            <button
+              onClick={() => setActiveTab(InboxTab.READ)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
+                activeTab === InboxTab.READ
+                  ? 'bg-white text-[#4318FF] shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span>Read</span>
+              <span className="text-[11px] px-1.5 py-0.2 bg-slate-200/60 rounded-full">
+                {debouncedSearch.trim()
+                  ? items.filter((i) => i.isRead).length
+                  : (counts?.read ?? 0)}
+              </span>
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 px-2 py-1">
+            <span>Sent Messages</span>
+            <span className="px-2 py-0.5 bg-[#4318FF]/10 text-[#4318FF] font-bold rounded-full text-xs">
+              {debouncedSearch.trim() ? items.length : (counts?.sent ?? 0)}
+            </span>
+          </div>
+        )}
+
+        {/* Search Input using UI SearchBox */}
+        <SearchBox
+          placeholder={folder === InboxFolder.SENT ? "Search sent by title, recipient, content..." : "Search inbox by title, sender, content..."}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onDebounce={(val) => setDebouncedSearch(val)}
+          onClear={() => {
+            setSearchQuery('');
+            setDebouncedSearch('');
+          }}
+          containerClassName="w-full sm:w-80"
+        />
       </div>
 
       {/* Inbox Items List */}

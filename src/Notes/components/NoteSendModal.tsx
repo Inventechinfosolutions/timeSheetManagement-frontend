@@ -183,6 +183,7 @@ export const NoteSendModal: React.FC<NoteSendModalProps> = ({
     const permissionString = selectedPerms.join(",");
 
     try {
+      const isDocumentSelected = includeFiles && selectedFileKeys.length > 0;
       await sendNoteContent({
         noteId: note.id,
         recipientEmail: currentEmails.join(", "),
@@ -194,10 +195,11 @@ export const NoteSendModal: React.FC<NoteSendModalProps> = ({
         canEdit,
         canDelete,
         includeDescription,
-        includeFiles,
-        hasDocument: includeFiles,
+        includeFiles: isDocumentSelected,
+        hasDocument: isDocumentSelected,
         hasDescription: includeDescription,
-        selectedAttachmentKeys: includeFiles ? selectedFileKeys : [],
+        selectedAttachmentKeys: isDocumentSelected ? selectedFileKeys : [],
+        attachmentKeys: isDocumentSelected ? selectedFileKeys : [],
       });
 
       hideLoading();
