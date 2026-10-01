@@ -1,6 +1,5 @@
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
-import dayjs from "dayjs";
 import { message } from "antd";
 import axios from "axios";
 import { Note, ColorOption } from "../types/notes.types";
@@ -68,78 +67,6 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
 
     const isProject = note.type === "PROJECT";
     const projectLabel = note.projectName || "Worksphere Project";
-    const createdDate = dayjs(note.createdAt).format("MMMM DD, YYYY");
-    const updatedDate = dayjs(note.updatedAt || note.createdAt).format("MMMM DD, YYYY");
-    const author = note.createdBy || "User";
-
-    // Build Sub-notes HTML table for visual PDF
-    let subNotesTable = "";
-    if (note.subNotes && note.subNotes.length > 0) {
-      const subRows = note.subNotes
-        .map(
-          (sub, idx) => `
-          <tr style="background-color: ${idx % 2 === 1 ? "#F8FAFC" : "#FFFFFF"};">
-            <td style="padding: 8px 10px; font-weight: bold; color: #64748B; text-align: center; width: 35px; border: 1px solid #CBD5E1;">${idx + 1}</td>
-            <td style="padding: 8px 10px; font-weight: 600; color: #1E293B; width: 140px; border: 1px solid #CBD5E1;">${sub.title || ""}</td>
-            <td style="padding: 8px 10px; color: #64748B; font-size: 11.5px; width: 85px; border: 1px solid #CBD5E1;">${sub.createdBy || "User"}</td>
-            <td style="padding: 8px 10px; color: #64748B; font-size: 11.5px; width: 90px; border: 1px solid #CBD5E1;">${dayjs(sub.createdAt).format("MMM DD, YYYY")}</td>
-            <td style="padding: 8px 10px; color: #334155; font-size: 12px; border: 1px solid #CBD5E1;">${sub.description || '<span style="color: #94A3B8; font-style: italic;">No description</span>'}</td>
-          </tr>
-        `
-        )
-        .join("");
-
-      subNotesTable = `
-        <div style="margin-top: 24px;">
-          <div style="font-size: 12.5px; font-weight: bold; color: #4318FF; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; border-bottom: 2px solid #E2E8F0; padding-bottom: 4px;">
-            Sub-Notes (${note.subNotes.length})
-          </div>
-          <table style="width: 100%; border-collapse: collapse; background-color: #FFFFFF; border: 1px solid #CBD5E1;">
-            <thead>
-              <tr style="background-color: #4318FF; color: #FFFFFF; font-size: 11.5px; font-weight: bold;">
-                <th style="padding: 8px 10px; text-align: center; width: 35px; border: 1px solid #3730A3;">#</th>
-                <th style="padding: 8px 10px; text-align: left; width: 140px; border: 1px solid #3730A3;">Title</th>
-                <th style="padding: 8px 10px; text-align: left; width: 85px; border: 1px solid #3730A3;">Author</th>
-                <th style="padding: 8px 10px; text-align: left; width: 90px; border: 1px solid #3730A3;">Date</th>
-                <th style="padding: 8px 10px; text-align: left; border: 1px solid #3730A3;">Description</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${subRows}
-            </tbody>
-          </table>
-        </div>
-      `;
-    }
-
-    // Build Attachments list for visual PDF
-    let attachmentsList = "";
-    if (note.attachments && note.attachments.length > 0) {
-      const attRows = note.attachments
-        .map((att, idx) => {
-          const name = att.fileName || att.name || "Attachment";
-          const size = att.fileSize ? `${Math.round(att.fileSize / 1024)} KB` : "File";
-          return `
-            <div style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; font-size: 11px; color: #334155; margin-right: 8px; margin-bottom: 8px;">
-              <span style="font-weight: 700; color: #4318FF;">#${idx + 1}</span>
-              <span style="font-weight: 600;">${name}</span>
-              <span style="color: #64748B; font-size: 10.5px;">(${size})</span>
-            </div>
-          `;
-        })
-        .join("");
-
-      attachmentsList = `
-        <div style="margin-top: 24px;">
-          <div style="font-size: 12.5px; font-weight: bold; color: #4318FF; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; border-bottom: 2px solid #E2E8F0; padding-bottom: 4px;">
-            Files & Attachments (${note.attachments.length})
-          </div>
-          <div style="margin-top: 6px;">
-            ${attRows}
-          </div>
-        </div>
-      `;
-    }
 
     wrapper.innerHTML = `
       <style>
@@ -217,58 +144,38 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
         .pdf-export-body h2 { font-size: 16px !important; font-weight: 700 !important; margin: 10px 0 5px 0 !important; color: #1E293B !important; }
         .pdf-export-body h3 { font-size: 14px !important; font-weight: 600 !important; margin: 8px 0 4px 0 !important; color: #1E293B !important; }
       </style>
-      <div style="padding: 36px 40px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #1E293B; background-color: #FFFFFF; line-height: 1.6;">
-        <div style="border-bottom: 2px solid #4318FF; padding-bottom: 10px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-size: 11px; font-weight: 800; color: #4318FF; letter-spacing: 1.2px; text-transform: uppercase;">
-            WORKSPHERE NOTE
-          </span>
-          <span style="font-size: 11px; color: #64748B; font-weight: 500;">
-            ${dayjs().format("MMMM DD, YYYY")}
-          </span>
-        </div>
-
-        <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 16px 20px; margin-bottom: 20px;">
-          <div style="display: inline-block; padding: 3px 10px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; border-radius: 4px; background-color: ${
-            isProject ? "#EEF2FF" : "#ECFDF5"
-          }; color: ${isProject ? "#4318FF" : "#059669"}; border: 1px solid ${
-            isProject ? "#C7D2FE" : "#A7F3D0"
-          }; margin-bottom: 8px;">
-            ${isProject ? `Project: ${projectLabel}` : "Personal Note"}
+      <div style="padding: 36px 40px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #1E293B; background-color: #FFFFFF; line-height: 1.6; box-sizing: border-box; width: 794px;">
+        <!-- Structured Note Card: Project & Title -->
+        <div style="background-color: #F8FAFC; border: 1.5px solid #E2E8F0; border-radius: 10px; padding: 18px 22px; margin-bottom: 22px;">
+          <!-- Project Row -->
+          <div style="margin-bottom: 12px; display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.8px; white-space: nowrap;">
+              PROJECT:
+            </span>
+            <span style="display: inline-block; font-size: 12.5px; font-weight: 700; line-height: normal; color: ${isProject ? "#4318FF" : "#059669"}; background-color: ${isProject ? "#EEF2FF" : "#ECFDF5"}; border: 1px solid ${isProject ? "#C7D2FE" : "#A7F3D0"}; padding: 4px 14px; border-radius: 6px;">
+              ${isProject ? projectLabel : "Personal Note"}
+            </span>
           </div>
 
-          <h1 style="font-size: 22px; font-weight: 800; color: #1B2559; margin: 0 0 8px 0; line-height: 1.3;">
-            ${note.title || "Untitled Note"}
-          </h1>
-
-          <div style="display: flex; align-items: center; gap: 14px; font-size: 11.5px; color: #64748B; flex-wrap: wrap;">
-            <div><strong>Author:</strong> ${author}</div>
-            <div>•</div>
-            <div><strong>Created:</strong> ${createdDate}</div>
-            <div>•</div>
-            <div><strong>Updated:</strong> ${updatedDate}</div>
-            ${
-              note.attachments && note.attachments.length > 0
-                ? `<div>•</div><div><strong>Attachments:</strong> ${note.attachments.length}</div>`
-                : ""
-            }
+          <!-- Title Row: TITLE in front of Title text on the same line -->
+          <div style="display: flex; align-items: baseline; gap: 10px;">
+            <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.8px; white-space: nowrap;">
+              TITLE:
+            </span>
+            <span style="font-size: 18px; font-weight: 800; color: #1B2559; line-height: 1.35; letter-spacing: -0.2px;">
+              ${note.title || "Untitled Note"}
+            </span>
           </div>
         </div>
 
-        <div>
-          <div style="font-size: 12px; font-weight: bold; color: #4318FF; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; border-bottom: 1.5px solid #E2E8F0; padding-bottom: 4px;">
-            Description & Content
+        <!-- Structured Description Section -->
+        <div style="margin-bottom: 16px;">
+          <div style="font-size: 11px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.8px; border-bottom: 1.5px solid #E2E8F0; padding-bottom: 6px; margin-bottom: 14px;">
+            DESCRIPTION
           </div>
-          <div class="pdf-export-body" style="font-size: 13.5px; line-height: 1.65; color: #1E293B;">
-            ${note.description || '<p style="color: #94A3B8; font-style: italic;">No description provided.</p>'}
+          <div class="pdf-export-body" style="font-size: 13.5px; line-height: 1.65; color: #1E293B; background-color: #FFFFFF;">
+            ${note.description && note.description.trim() ? note.description : '<p style="color: #94A3B8; font-style: italic; margin: 0;">No description provided.</p>'}
           </div>
-        </div>
-
-        ${subNotesTable}
-        ${attachmentsList}
-
-        <div style="margin-top: 36px; padding-top: 12px; border-top: 1px solid #E2E8F0; display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; color: #94A3B8;">
-          <span>© ${new Date().getFullYear()} WorkSphere Powered by inventech</span>
-          <span>Exported on ${dayjs().format("MMM DD, YYYY HH:mm")}</span>
         </div>
       </div>
     `;
@@ -281,7 +188,8 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
       useCORS: true,
       logging: false,
       backgroundColor: "#FFFFFF",
-      windowWidth: 1000,
+      width: 794,
+      windowWidth: 794,
     });
 
     document.body.removeChild(wrapper);
@@ -293,46 +201,102 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
       format: "a4",
     });
 
-    // Height of one full A4 page in canvas coordinates
     const a4Aspect = 297 / 210; // 1.4142857
     const pageHeightPx = Math.floor(canvas.width * a4Aspect);
-    const totalPages = Math.max(1, Math.ceil(canvas.height / pageHeightPx));
 
-    for (let pageIdx = 0; pageIdx < totalPages; pageIdx++) {
-      if (pageIdx > 0) {
-        pdf.addPage("a4", "portrait");
-      }
-
-      const sourceY = pageIdx * pageHeightPx;
-      const sourceHeight = Math.min(pageHeightPx, canvas.height - sourceY);
-
-      // Create a page canvas for this exact slice
+    // 1. If note content fits on 1 full page (common for tables/notes), render on single page without any cuts
+    if (canvas.height <= pageHeightPx) {
       const pageCanvas = document.createElement("canvas");
       pageCanvas.width = canvas.width;
       pageCanvas.height = pageHeightPx;
-
-      const pageCtx = pageCanvas.getContext("2d");
-      if (pageCtx) {
-        // Fill page canvas with white background
-        pageCtx.fillStyle = "#FFFFFF";
-        pageCtx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-
-        // Draw exact slice from main canvas
-        pageCtx.drawImage(
-          canvas,
-          0,
-          sourceY,
-          canvas.width,
-          sourceHeight,
-          0,
-          0,
-          canvas.width,
-          sourceHeight
-        );
+      const ctx = pageCanvas.getContext("2d");
+      if (ctx) {
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+        ctx.drawImage(canvas, 0, 0);
       }
-
       const pageImgData = pageCanvas.toDataURL("image/jpeg", 0.95);
       pdf.addImage(pageImgData, "JPEG", 0, 0, 210, 297);
+    } else {
+      // 2. Multi-page document: slice at natural blank whitespace rows so no text, headings, or table rows are ever cut
+      const canvasCtx = canvas.getContext("2d");
+      let currentY = 0;
+      let pageNum = 0;
+
+      while (currentY < canvas.height) {
+        if (pageNum > 0) {
+          pdf.addPage("a4", "portrait");
+        }
+
+        const remainingHeight = canvas.height - currentY;
+        let sliceHeight = Math.min(pageHeightPx, remainingHeight);
+
+        // Scan upwards from target cutoff for a solid band of whitespace between paragraphs/sections/tables
+        if (remainingHeight > pageHeightPx && canvasCtx) {
+          const minSlice = Math.floor(pageHeightPx * 0.70);
+          const targetY = currentY + pageHeightPx;
+          const searchStartX = Math.floor(canvas.width * 0.05);
+          const searchEndX = Math.floor(canvas.width * 0.95);
+          const sampleStep = 8;
+
+          let consecutiveWhiteRows = 0;
+          let bestSplitY = targetY;
+
+          for (let y = targetY; y >= currentY + minSlice; y--) {
+            const rowData = canvasCtx.getImageData(searchStartX, y, searchEndX - searchStartX, 1).data;
+            let isRowWhite = true;
+
+            for (let i = 0; i < rowData.length; i += sampleStep * 4) {
+              const r = rowData[i];
+              const g = rowData[i + 1];
+              const b = rowData[i + 2];
+              const a = rowData[i + 3];
+              if (a > 20 && (r < 248 || g < 248 || b < 248)) {
+                isRowWhite = false;
+                break;
+              }
+            }
+
+            if (isRowWhite) {
+              consecutiveWhiteRows++;
+              if (consecutiveWhiteRows >= 6) {
+                bestSplitY = y + 3;
+                break;
+              }
+            } else {
+              consecutiveWhiteRows = 0;
+            }
+          }
+
+          sliceHeight = bestSplitY - currentY;
+        }
+
+        const pageCanvas = document.createElement("canvas");
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = pageHeightPx;
+        const pageCtx = pageCanvas.getContext("2d");
+        if (pageCtx) {
+          pageCtx.fillStyle = "#FFFFFF";
+          pageCtx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+          pageCtx.drawImage(
+            canvas,
+            0,
+            currentY,
+            canvas.width,
+            sliceHeight,
+            0,
+            0,
+            canvas.width,
+            sliceHeight
+          );
+        }
+
+        const pageImgData = pageCanvas.toDataURL("image/jpeg", 0.95);
+        pdf.addImage(pageImgData, "JPEG", 0, 0, 210, 297);
+
+        currentY += sliceHeight;
+        pageNum++;
+      }
     }
 
     pdf.save(`${safeTitle}.pdf`);
@@ -354,96 +318,8 @@ export const exportNoteToWord = async (note: Note): Promise<void> => {
   const hideLoading = message.loading("Preparing Word document download...", 0);
 
   try {
-    // 1. Call backend Word download endpoint with format=word
-    if (note.id) {
-      try {
-        const response = await axios.get(`/api/notes/${note.id}/download?format=word`, {
-          responseType: "blob",
-        });
-
-        if (response.data) {
-          const blob = new Blob([response.data], {
-            type: "application/msword;charset=utf-8",
-          });
-          const link = document.createElement("a");
-          link.href = window.URL.createObjectURL(blob);
-          link.download = `${safeTitle}.doc`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          window.URL.revokeObjectURL(link.href);
-          hideLoading();
-          message.success("Word document downloaded successfully");
-          return;
-        }
-      } catch (apiErr) {
-        console.warn("Backend Word download API returned error, falling back to rich client export:", apiErr);
-      }
-    }
-
-    // 2. Client-side high-fidelity fallback Word generator
     const isProject = note.type === "PROJECT";
     const projectLabel = note.projectName || "Worksphere Project";
-    const createdDate = dayjs(note.createdAt).format("MMMM DD, YYYY");
-    const updatedDate = dayjs(note.updatedAt || note.createdAt).format("MMMM DD, YYYY");
-    const author = note.createdBy || "User";
-
-    let subNotesHtml = "";
-    if (note.subNotes && note.subNotes.length > 0) {
-      const subRows = note.subNotes
-        .map(
-          (sub, idx) => `
-          <tr>
-            <td style="padding: 8pt; border: 1pt solid #CBD5E1; text-align: center; font-weight: bold; width: 40pt; background-color: #F8FAFC;">${idx + 1}</td>
-            <td style="padding: 8pt; border: 1pt solid #CBD5E1; font-weight: bold; color: #1E293B; width: 140pt;">${sub.title || ""}</td>
-            <td style="padding: 8pt; border: 1pt solid #CBD5E1; color: #64748B; width: 80pt;">${sub.createdBy || "User"}</td>
-            <td style="padding: 8pt; border: 1pt solid #CBD5E1; color: #64748B; width: 80pt;">${dayjs(sub.createdAt).format("MMM DD, YYYY")}</td>
-            <td style="padding: 8pt; border: 1pt solid #CBD5E1; color: #334155;">${sub.description || '<span style="color:#94A3B8; font-style:italic;">No description</span>'}</td>
-          </tr>
-        `
-        )
-        .join("");
-
-      subNotesHtml = `
-        <div class="section-title">Sub-Notes (${note.subNotes.length})</div>
-        <table style="width: 100%; border-collapse: collapse; margin-top: 10pt; margin-bottom: 20pt;">
-          <thead>
-            <tr style="background-color: #4318FF; color: #FFFFFF;">
-              <th style="padding: 8pt; border: 1pt solid #3730A3; text-align: center; width: 40pt;">#</th>
-              <th style="padding: 8pt; border: 1pt solid #3730A3; text-align: left; width: 140pt;">Title</th>
-              <th style="padding: 8pt; border: 1pt solid #3730A3; text-align: left; width: 80pt;">Author</th>
-              <th style="padding: 8pt; border: 1pt solid #3730A3; text-align: left; width: 80pt;">Date</th>
-              <th style="padding: 8pt; border: 1pt solid #3730A3; text-align: left;">Description</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${subRows}
-          </tbody>
-        </table>
-      `;
-    }
-
-    let attachmentsHtml = "";
-    if (note.attachments && note.attachments.length > 0) {
-      const attRows = note.attachments
-        .map((att, idx) => {
-          const name = att.fileName || att.name || "Attachment";
-          const size = att.fileSize ? `${Math.round(att.fileSize / 1024)} KB` : "Attached file";
-          return `
-            <li style="margin-bottom: 6pt; color: #334155;">
-              <strong>${idx + 1}. ${name}</strong> <span style="color: #64748B; font-size: 9.5pt;">(${size})</span>
-            </li>
-          `;
-        })
-        .join("");
-
-      attachmentsHtml = `
-        <div class="section-title">Files & Attachments (${note.attachments.length})</div>
-        <ul style="padding-left: 20pt; margin-top: 8pt; margin-bottom: 20pt;">
-          ${attRows}
-        </ul>
-      `;
-    }
 
     const wordDocHtml = `
       <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
@@ -482,65 +358,59 @@ export const exportNoteToWord = async (note: Note): Promise<void> => {
             margin-bottom: 6pt;
           }
           h1 {
-            color: #4318FF;
-            font-size: 22pt;
+            color: #1E293B;
+            font-size: 18pt;
             font-weight: bold;
             margin-top: 0;
-            margin-bottom: 12pt;
+            margin-bottom: 0;
           }
-          h2 { font-size: 16pt; color: #1E293B; }
-          h3 { font-size: 13pt; color: #334155; }
-          p { margin-top: 0; margin-bottom: 10pt; line-height: 1.6; }
-          .header-box {
-            background-color: #F8FAFC;
-            border: 1.5pt solid #E2E8F0;
-            padding: 14pt 18pt;
-            border-radius: 8pt;
-            margin-bottom: 18pt;
-          }
-          .badge {
-            display: inline-block;
-            padding: 3pt 10pt;
-            font-size: 9.5pt;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 0.5pt;
-            border-radius: 4pt;
-            background-color: #EEF2FF;
-            color: #4318FF;
-            border: 1pt solid #C7D2FE;
-          }
-          .badge-personal {
-            background-color: #ECFDF5;
-            color: #059669;
-            border: 1pt solid #A7F3D0;
-          }
-          .meta-table {
+          p { margin-top: 0; margin-bottom: 8pt; line-height: 1.6; }
+          table.structured-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 8pt;
+            margin-bottom: 18pt;
+            border: 1.5pt solid #CBD5E1;
           }
-          .meta-table td {
-            padding: 4pt 6pt;
+          table.structured-table td {
+            padding: 9pt 14pt;
+            border: 1pt solid #CBD5E1;
+            vertical-align: middle;
+          }
+          .label-cell {
+            width: 110pt;
+            background-color: #F8FAFC;
             font-size: 9.5pt;
-            color: #64748B;
-            border: none;
-          }
-          .section-title {
-            font-size: 12pt;
             font-weight: bold;
-            color: #4318FF;
+            color: #475569;
             text-transform: uppercase;
-            letter-spacing: 0.8pt;
-            border-bottom: 1.5pt solid #E2E8F0;
-            padding-bottom: 4pt;
-            margin-top: 18pt;
-            margin-bottom: 10pt;
+            letter-spacing: 0.5pt;
           }
-          .content-container {
+          .val-cell {
+            background-color: #FFFFFF;
+            font-size: 11pt;
+            font-weight: bold;
+            color: #1E293B;
+          }
+          .desc-container {
+            border: 1.5pt solid #CBD5E1;
+            margin-bottom: 18pt;
+          }
+          .desc-header {
+            padding: 9pt 14pt;
+            background-color: #F8FAFC;
+            border-bottom: 1.5pt solid #CBD5E1;
+            font-size: 9.5pt;
+            font-weight: bold;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.5pt;
+          }
+          .desc-body {
+            padding: 16pt 18pt;
             font-size: 11pt;
             line-height: 1.65;
             color: #1E293B;
+            background-color: #FFFFFF;
           }
           mark, span[style*="background-color"] {
             padding: 2pt 4pt;
@@ -577,42 +447,26 @@ export const exportNoteToWord = async (note: Note): Promise<void> => {
             font-weight: bold;
             color: #1E293B;
           }
-          .footer-note {
-            margin-top: 30pt;
-            padding-top: 10pt;
-            border-top: 1pt solid #E2E8F0;
-            font-size: 9pt;
-            color: #94A3B8;
-            text-align: center;
-          }
         </style>
       </head>
       <body>
         <div class="Section1">
-          <div class="header-box">
-            <span class="${isProject ? "badge" : "badge badge-personal"}">
-              ${isProject ? `PROJECT NOTE: ${projectLabel}` : "PERSONAL NOTE"}
-            </span>
-            <h1 style="margin-top: 10pt; margin-bottom: 6pt;">${note.title || "Untitled Note"}</h1>
-            <table class="meta-table">
-              <tr>
-                <td><strong>Author:</strong> ${author}</td>
-                <td><strong>Created:</strong> ${createdDate}</td>
-                <td><strong>Last Modified:</strong> ${updatedDate}</td>
-              </tr>
-            </table>
+          <table class="structured-table">
+            <tr>
+              <td class="label-cell">PROJECT:</td>
+              <td class="val-cell">${isProject ? projectLabel : "Personal Note"}</td>
+            </tr>
+            <tr>
+              <td class="label-cell">TITLE:</td>
+              <td class="val-cell">${note.title || "Untitled Note"}</td>
+            </tr>
+          </table>
+
+          <div style="font-size: 10pt; font-weight: bold; color: #475569; text-transform: uppercase; border-bottom: 1.5pt solid #CBD5E1; padding-bottom: 4pt; margin-top: 16pt; margin-bottom: 12pt;">
+            DESCRIPTION
           </div>
-
-          <div class="section-title">Description & Content</div>
-          <div class="content-container">
-            ${note.description || '<p style="color: #94A3B8; font-style: italic;">No description provided.</p>'}
-          </div>
-
-          ${subNotesHtml}
-          ${attachmentsHtml}
-
-          <div class="footer-note">
-            © ${new Date().getFullYear()} WorkSphere Powered by inventech &nbsp;|&nbsp; Exported on ${dayjs().format("MMMM DD, YYYY HH:mm")}
+          <div style="font-size: 11pt; line-height: 1.65; color: #1E293B;">
+            ${note.description && note.description.trim() ? note.description : '<p style="color: #94A3B8; font-style: italic; margin: 0;">No description provided.</p>'}
           </div>
         </div>
       </body>
