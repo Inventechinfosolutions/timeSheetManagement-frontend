@@ -494,6 +494,7 @@ input[type="password"]::-webkit-password-reveal-button {
 
 .a4-page {
   width: 210mm;
+  max-width: 210mm;
   min-height: 297mm;
   background-color: #ffffff;
   margin: 10mm auto;
@@ -503,6 +504,78 @@ input[type="password"]::-webkit-password-reveal-button {
   border-radius: 4px;
   box-sizing: border-box;
   position: relative;
+  font-size: 14px;
+  overflow-x: hidden;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.a4-page.landscape {
+  width: 297mm;
+  max-width: 297mm;
+  min-height: 210mm;
+  padding: 18mm 20mm;
+}
+
+.notes-rich-editor,
+.notes-content-view {
+  font-size: 14px;
+  line-height: 1.6;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+}
+
+.notes-rich-editor *,
+.notes-content-view * {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+}
+
+.notes-rich-editor table,
+.notes-content-view table {
+  width: 100% !important;
+  max-width: 100% !important;
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+  margin: 1rem 0 !important;
+}
+
+.notes-rich-editor table td,
+.notes-rich-editor table th,
+.notes-content-view table td,
+.notes-content-view table th {
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+  white-space: normal !important;
+  max-width: 100% !important;
+}
+
+.notes-rich-editor img,
+.notes-content-view img,
+.notes-rich-editor pre,
+.notes-content-view pre,
+.notes-rich-editor blockquote,
+.notes-content-view blockquote,
+.notes-rich-editor video,
+.notes-content-view video {
+  max-width: 100% !important;
+  height: auto !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+  white-space: pre-wrap !important;
+}
+
+.notes-rich-editor p {
+  margin: 0 0 0.5rem 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 @media print {
@@ -528,4 +601,11 @@ input[type="password"]::-webkit-password-reveal-button {
     box-shadow: none !important;
     page-break-after: always;
   }
+
+  .a4-page.landscape {
+    width: 297mm !important;
+    min-height: 210mm !important;
+    padding: 15mm 20mm !important;
+  }
 }
+

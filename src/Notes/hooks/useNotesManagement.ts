@@ -111,7 +111,8 @@ export const useNotesManagement = () => {
     attachments: [],
     files: [],
     isPinned: false,
-    isAutoSave: true,
+    isAutoSave: false,
+    isVertical: true,
   });
 
   const [autoSaveStatus, setAutoSaveStatus] = useState<AutoSaveStatus>("idle");
@@ -278,7 +279,8 @@ export const useNotesManagement = () => {
       attachments: [],
       files: [],
       isPinned: false,
-      isAutoSave: true,
+      isAutoSave: false,
+      isVertical: true,
     });
     if (editorRef.current) {
       editorRef.current.innerHTML = "";
@@ -311,7 +313,8 @@ export const useNotesManagement = () => {
       attachments: [],
       files: [],
       isPinned: false,
-      isAutoSave: true,
+      isAutoSave: false,
+      isVertical: parent.isVertical ?? true,
     });
     if (editorRef.current) {
       editorRef.current.innerHTML = "";
@@ -343,7 +346,8 @@ export const useNotesManagement = () => {
       attachments: [],
       files: [],
       isPinned: note.isPinned || false,
-      isAutoSave: true,
+      isAutoSave: note.isAutoSave ?? false,
+      isVertical: note.isVertical ?? true,
     });
     lastSavedRef.current = {
       title: note.title,
@@ -369,7 +373,8 @@ export const useNotesManagement = () => {
           attachments: [],
           files: [],
           isPinned: detailedNote.isPinned || false,
-          isAutoSave: true,
+          isAutoSave: detailedNote.isAutoSave ?? false,
+          isVertical: detailedNote.isVertical ?? true,
         });
         lastSavedRef.current = {
           title: detailedNote.title,
@@ -638,6 +643,7 @@ export const useNotesManagement = () => {
               color: "#4318FF",
               isPinned: formData.isPinned,
               isAutoSave: formData.isAutoSave,
+              isVertical: formData.isVertical ?? true,
               attachmentKeys: formData.attachmentKeys,
               files: formData.files.length > 0 ? formData.files : undefined,
             })
@@ -667,6 +673,7 @@ export const useNotesManagement = () => {
             projectName: formData.type === "PROJECT" ? formData.projectName.trim() : undefined,
             isPinned: formData.isPinned,
             autoSave: formData.isAutoSave,
+            isVertical: formData.isVertical ?? true,
           })
         ).unwrap();
 
@@ -814,6 +821,7 @@ export const useNotesManagement = () => {
               color: "#4318FF",
               isPinned: formData.isPinned,
               isAutoSave: formData.isAutoSave,
+              isVertical: formData.isVertical ?? true,
               attachmentKeys: formData.attachmentKeys,
               files: formData.files.length > 0 ? formData.files : undefined,
             })
@@ -829,6 +837,7 @@ export const useNotesManagement = () => {
             projectName: formData.type === "PROJECT" ? formData.projectName.trim() : undefined,
             isPinned: formData.isPinned,
             autoSave: formData.isAutoSave,
+            isVertical: formData.isVertical ?? true,
           })
         ).unwrap();
 
