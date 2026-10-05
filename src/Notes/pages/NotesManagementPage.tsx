@@ -8,7 +8,7 @@ import {
   NoteView,
   NoteSendModal,
 } from "../components";
-import ExcelViewerModal from "../../components/ExcelViewerModal";
+import UniverExcelEditorModal from "../../components/UniverExcelEditorModal";
 
 export const NotesManagementPage: React.FC = () => {
   const {
@@ -74,6 +74,8 @@ export const NotesManagementPage: React.FC = () => {
     handleCloseSendModal,
     dragDrop,
     totalAttachmentsCount,
+    xlsImportInputRef,
+    handleXlsImport,
     setSearchQuery,
     setCurrentPage,
   } = useNotesManagement();
@@ -114,6 +116,8 @@ export const NotesManagementPage: React.FC = () => {
           onBack={handleBackToList}
           autoSaveStatus={autoSaveStatus}
           onToggleAutoSave={handleToggleAutoSave}
+          xlsImportInputRef={xlsImportInputRef}
+          onXlsImport={handleXlsImport}
         />
       )}
 
@@ -196,8 +200,8 @@ export const NotesManagementPage: React.FC = () => {
         </div>
       </Modal>
 
-      {/* Global Excel Spreadsheet Preview Modal */}
-      <ExcelViewerModal
+      {/* Global Excel Spreadsheet Editor Modal */}
+      <UniverExcelEditorModal
         open={excelViewerModal.open}
         onClose={() => setExcelViewerModal({ open: false, fileName: "", blob: null, file: null })}
         fileName={excelViewerModal.fileName}

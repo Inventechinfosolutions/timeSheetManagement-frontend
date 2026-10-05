@@ -135,6 +135,7 @@ export const useNotesManagement = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const doclingJsonInputRef = useRef<HTMLInputElement>(null);
+  const xlsImportInputRef = useRef<HTMLInputElement>(null);
   const [isImportingDocling, setIsImportingDocling] = useState(false);
 
   const editorRef = useRef<HTMLDivElement>(null);
@@ -490,6 +491,59 @@ export const useNotesManagement = () => {
       });
     } finally {
       setIsImportingDocling(false);
+      if (e.target) e.target.value = "";
+    }
+  };
+
+  // Handle XLS/Excel file import — calls the extract API and inserts into editor
+  const handleXlsImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validExtensions = [".xlsx", ".xls", ".csv"];
+    const fileExt = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
+    if (!validExtensions.includes(fileExt)) {
+      message.error("Please upload an Excel file (.xlsx, .xls, .csv)");
+      if (e.target) e.target.value = "";
+      return;
+    }
+
+    const uploadData = new FormData();
+    uploadData.append("files", file);
+    uploadData.append("file", file);
+
+    try {
+      message.loading({ content: "Extracting Excel data...", key: "xls-import", duration: 0 });
+
+      const response = await axios.post("/api/notes/extract", uploadData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      const generatedHtml = response.data?.description || response.data?.html || "";
+
+      if (editorRef.current) {
+        editorRef.current.innerHTML = generatedHtml;
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        description: generatedHtml,
+        title: prev.title || file.name.replace(/\.[^/.]+$/, ""),
+      }));
+
+      message.success({
+        content: "Excel data extracted into Description box! You can now edit it directly.",
+        key: "xls-import",
+      });
+    } catch (err: any) {
+      console.error("Excel extraction error:", err);
+      message.error({
+        content: err.response?.data?.message || "Failed to extract Excel data",
+        key: "xls-import",
+      });
+    } finally {
       if (e.target) e.target.value = "";
     }
   };
@@ -1128,6 +1182,8 @@ export const useNotesManagement = () => {
     setSendNoteModal,
     handleOpenSendModal,
     handleCloseSendModal,
+    xlsImportInputRef,
+    handleXlsImport,
     dispatch,
     setSearchQuery,
   };

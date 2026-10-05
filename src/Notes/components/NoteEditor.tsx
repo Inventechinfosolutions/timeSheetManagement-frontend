@@ -16,6 +16,7 @@ import {
   Loader2,
   Check,
   User,
+  FileSpreadsheet,
 } from "lucide-react";
 import { Popover } from "antd";
 import { Toggle } from "../../components/ui";
@@ -38,9 +39,9 @@ interface NoteEditorProps {
   setHighlightColor: (val: string) => void;
   isImportingDocling: boolean;
   totalAttachmentsCount: number;
-  editorRef: React.RefObject<HTMLDivElement | null>;
-  fileInputRef: React.RefObject<HTMLInputElement | null>;
-  doclingJsonInputRef: React.RefObject<HTMLInputElement | null>;
+  editorRef: React.RefObject<HTMLDivElement>;
+  fileInputRef: React.RefObject<HTMLInputElement>;
+  doclingJsonInputRef: React.RefObject<HTMLInputElement>;
   onEditorInput: () => void;
   onExecuteCommand: (command: string, value?: string) => void;
   onInsertLink: () => void;
@@ -55,6 +56,8 @@ interface NoteEditorProps {
   onBack: () => void;
   autoSaveStatus?: AutoSaveStatus;
   onToggleAutoSave?: () => void;
+  xlsImportInputRef?: React.RefObject<HTMLInputElement>;
+  onXlsImport?: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 export const NoteEditor: React.FC<NoteEditorProps> = ({
@@ -89,6 +92,8 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
   onBack,
   autoSaveStatus = "idle",
   onToggleAutoSave,
+  xlsImportInputRef,
+  onXlsImport,
 }) => {
   const isProjectNote = formData.type === "PROJECT";
 
@@ -568,6 +573,29 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                   <FileCode className="w-4 h-4 text-[#4318FF]" />
                   <span>{isImportingDocling ? "Parsing PDF..." : "Import PDF / Docling"}</span>
                 </button>
+
+                {/* Excel / XLS Import Button */}
+                {xlsImportInputRef && onXlsImport && (
+                  <>
+                    <input
+                      type="file"
+                      ref={xlsImportInputRef}
+                      onChange={onXlsImport}
+                      accept=".xlsx,.xls,.csv"
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => xlsImportInputRef.current?.click()}
+                      className="h-8 px-2.5 flex items-center gap-1.5 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 transition cursor-pointer"
+                      title="Import Excel spreadsheet (.xlsx, .xls, .csv)"
+                    >
+                      <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                      <span>Import XLS</span>
+                    </button>
+                  </>
+                )}
               </div>
 
               {/* A4 Workspace Simulation */}
