@@ -2663,8 +2663,8 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 
                 {/* Right side toolbar controls: Format, Undo, Redo, Clear Page & Copy All */}
                 <div className="ml-auto flex items-center gap-1.5 shrink-0 pl-2">
-                  {/* Format Content Button (Selected content or entire document) */}
-                  <button
+                  {/* Format Content Button (Selected content or entire document) - Temporarily commented out */}
+                  {/* <button
                     type="button"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={handleFormatContent}
@@ -2681,7 +2681,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                   >
                     <Sparkles className="w-3.5 h-3.5 text-[#4318FF]" />
                     <span>Format</span>
-                  </button>
+                  </button> */}
 
                   {/* Undo Button */}
                   <button
