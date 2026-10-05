@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   ArrowLeft,
   Paperclip,
@@ -160,7 +160,35 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
   const [fontSize, setFontSize] = useState<string>("14");
   const [isFontSizeOpen, setIsFontSizeOpen] = useState<boolean>(false);
   const [isCopied, setIsCopied] = useState<boolean>(false);
+  const [hasContent, setHasContent] = useState<boolean>(false);
   const fontSizeDropdownRef = useRef<HTMLDivElement>(null);
+
+  const checkHasContent = useCallback(() => {
+    if (editorRef.current) {
+      const text = (editorRef.current.innerText || editorRef.current.textContent || "").trim();
+      const hasMedia = Boolean(
+        editorRef.current.querySelector("img, table, video, canvas, svg, iframe")
+      );
+      return text.length > 0 || hasMedia;
+    }
+    if (formData.description) {
+      const stripped = formData.description.replace(/<[^>]*>/g, "").trim();
+      return (
+        stripped.length > 0 ||
+        /<(img|table|video|canvas|svg|iframe)/i.test(formData.description)
+      );
+    }
+    return false;
+  }, [editorRef, formData.description]);
+
+  useEffect(() => {
+    setHasContent(checkHasContent());
+  }, [formData.description, checkHasContent]);
+
+  const handleEditorInputWrapper = () => {
+    onEditorInput();
+    setHasContent(checkHasContent());
+  };
 
   useEffect(() => {
     if (formData.isVertical !== undefined) {
@@ -175,6 +203,13 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
       ...prev,
       isVertical: next === "portrait",
     }));
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("note-orientation-change", {
+          detail: { orientation: next, isVertical: next === "portrait" },
+        })
+      );
+    }
   };
 
   useEffect(() => {
@@ -250,11 +285,11 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
         el.style.fontSize = `${size}px`;
       });
     }
-    onEditorInput();
+    handleEditorInputWrapper();
   };
 
-  const handleSelectAllAndCopy = async () => {
-    if (!editorRef.current) return;
+  const handleCopyAll = async () => {
+    if (!editorRef.current || !hasContent) return;
     try {
       editorRef.current.focus();
       const range = document.createRange();
@@ -265,18 +300,30 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
         selection.addRange(range);
       }
       const textToCopy = editorRef.current.innerText || editorRef.current.textContent || "";
-      if (textToCopy) {
+      const htmlToCopy = editorRef.current.innerHTML || "";
+
+      if (navigator.clipboard && window.ClipboardItem) {
+        const textBlob = new Blob([textToCopy], { type: "text/plain" });
+        const htmlBlob = new Blob([htmlToCopy], { type: "text/html" });
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            "text/plain": textBlob,
+            "text/html": htmlBlob,
+          }),
+        ]);
+      } else if (textToCopy) {
         await navigator.clipboard.writeText(textToCopy);
-        setIsCopied(true);
-        message.success("All sheet content selected & copied to clipboard!");
-        setTimeout(() => setIsCopied(false), 2000);
       } else {
-        message.info("Sheet is currently empty");
+        document.execCommand("copy");
       }
+
+      setIsCopied(true);
+      message.success("All sheet content copied to clipboard!");
+      setTimeout(() => setIsCopied(false), 2000);
     } catch {
       document.execCommand("copy");
       setIsCopied(true);
-      message.success("All sheet content selected!");
+      message.success("All sheet content copied to clipboard!");
       setTimeout(() => setIsCopied(false), 2000);
     }
   };
@@ -349,11 +396,10 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
             <div className="flex flex-wrap items-center gap-2.5 shrink-0 self-start lg:self-center">
               {/* Auto-Save Toggle & Status */}
               <div
-                className={`flex items-center gap-2.5 px-3 py-1.5 rounded-xl shadow-2xs border transition-all duration-200 ${
-                  !formData.isAutoSave
+                className={`flex items-center gap-2.5 px-3 py-1.5 rounded-xl shadow-2xs border transition-all duration-200 ${!formData.isAutoSave
                     ? "bg-blue-50/70 border-blue-200"
                     : "bg-slate-50 border-slate-200"
-                }`}
+                  }`}
               >
                 <Toggle
                   checked={!!formData.isAutoSave}
@@ -415,11 +461,10 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
               <button
                 type="button"
                 onClick={() => setFormData((prev) => ({ ...prev, isPinned: !prev.isPinned }))}
-                className={`px-3 py-1.5 border rounded-xl font-semibold text-xs transition cursor-pointer flex items-center gap-1.5 shadow-2xs select-none ${
-                  formData.isPinned
+                className={`px-3 py-1.5 border rounded-xl font-semibold text-xs transition cursor-pointer flex items-center gap-1.5 shadow-2xs select-none ${formData.isPinned
                     ? "bg-amber-50 text-amber-800 border-amber-200"
                     : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-800"
-                }`}
+                  }`}
                 title={formData.isPinned ? "Note is pinned to top" : "Click to pin note to top"}
               >
                 <Pin className={`w-3.5 h-3.5 ${formData.isPinned ? "fill-amber-500 text-amber-500" : "text-slate-400"}`} />
@@ -524,11 +569,10 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                                 handleFontSizeChange(size);
                                 setIsFontSizeOpen(false);
                               }}
-                              className={`w-full py-1 text-center rounded-md text-xs font-semibold transition cursor-pointer ${
-                                isSelected
+                              className={`w-full py-1 text-center rounded-md text-xs font-semibold transition cursor-pointer ${isSelected
                                   ? "bg-indigo-50 text-[#4318FF] font-bold"
                                   : "text-slate-700 hover:bg-indigo-50/60 hover:text-[#4318FF]"
-                              }`}
+                                }`}
                             >
                               {size}
                             </button>
@@ -539,18 +583,16 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                   >
                     <button
                       type="button"
-                      className={`h-8 w-[52px] px-2 bg-white rounded-lg text-xs font-semibold text-slate-800 flex items-center justify-between gap-1 transition cursor-pointer border ${
-                        isFontSizeOpen
+                      className={`h-8 w-[52px] px-2 bg-white rounded-lg text-xs font-semibold text-slate-800 flex items-center justify-between gap-1 transition cursor-pointer border ${isFontSizeOpen
                           ? "border-[#4318FF] text-[#4318FF]"
                           : "border-slate-200 hover:border-slate-300"
-                      }`}
+                        }`}
                       title="Font Size (Default: 14)"
                     >
                       <span>{fontSize}</span>
                       <ChevronDown
-                        className={`w-3 h-3 text-slate-400 transition-transform duration-150 ${
-                          isFontSizeOpen ? "rotate-180 text-[#4318FF]" : ""
-                        }`}
+                        className={`w-3 h-3 text-slate-400 transition-transform duration-150 ${isFontSizeOpen ? "rotate-180 text-[#4318FF]" : ""
+                          }`}
                       />
                     </button>
                   </Popover>
@@ -560,11 +602,10 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                 <button
                   type="button"
                   onClick={handleToggleOrientation}
-                  className={`w-8 h-8 flex items-center justify-center rounded-lg transition cursor-pointer shrink-0 select-none ${
-                    orientation === "landscape"
+                  className={`w-8 h-8 flex items-center justify-center rounded-lg transition cursor-pointer shrink-0 select-none ${orientation === "landscape"
                       ? "bg-indigo-50 text-[#4318FF]"
                       : "hover:bg-slate-100"
-                  }`}
+                    }`}
                   title={
                     orientation === "portrait"
                       ? "Page Orientation: Vertical (Portrait) — Click to switch to Horizontal (Landscape)"
@@ -667,11 +708,10 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                                 setTextColor(c.color);
                               }
                             }}
-                            className={`w-7 h-7 rounded-lg border flex items-center justify-center transition cursor-pointer ${
-                              textColor === c.color
+                            className={`w-7 h-7 rounded-lg border flex items-center justify-center transition cursor-pointer ${textColor === c.color
                                 ? "ring-2 ring-[#4318FF] scale-110 border-white shadow-xs"
                                 : "border-slate-200 hover:scale-105"
-                            }`}
+                              }`}
                             style={{
                               backgroundColor: c.color === "none" ? "#FFFFFF" : c.color,
                             }}
@@ -734,11 +774,10 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                               onExecuteCommand("hiliteColor", c.color);
                               setHighlightColor(c.color);
                             }}
-                            className={`w-6 h-6 rounded-md border flex items-center justify-center transition cursor-pointer ${
-                              highlightColor === c.color
+                            className={`w-6 h-6 rounded-md border flex items-center justify-center transition cursor-pointer ${highlightColor === c.color
                                 ? "ring-2 ring-[#4318FF] scale-110 border-white shadow-xs"
                                 : "border-slate-200 hover:scale-105"
-                            }`}
+                              }`}
                             style={{
                               backgroundColor: c.color === "transparent" ? "#FFFFFF" : c.color,
                             }}
@@ -815,21 +854,27 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                   </>
                 )}
 
-                {/* Right side toolbar controls: Select All */}
+                {/* Right side toolbar controls: Copy All */}
                 <div className="ml-auto flex items-center gap-1.5 shrink-0 pl-2">
-                  {/* Select All & Copy Button */}
+                  {/* Copy All Button */}
                   <button
                     type="button"
-                    onClick={handleSelectAllAndCopy}
-                    className={`h-8 px-2.5 flex items-center gap-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer select-none ${
-                      isCopied
-                        ? "bg-emerald-50 text-emerald-700 border-emerald-300"
-                        : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 hover:text-[#4318FF]"
-                    }`}
-                    title="Select All content in A4 sheet & copy to clipboard"
+                    onClick={handleCopyAll}
+                    disabled={!hasContent}
+                    className={`h-8 px-2.5 flex items-center gap-1.5 rounded-lg text-xs font-semibold border transition select-none ${!hasContent
+                        ? "bg-slate-100/70 text-slate-400 border-slate-200/80 cursor-not-allowed opacity-60"
+                        : isCopied
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-300 cursor-pointer"
+                          : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 hover:text-[#4318FF] cursor-pointer"
+                      }`}
+                    title={
+                      !hasContent
+                        ? "No content in sheet to copy"
+                        : "Copy all content in A4 sheet to clipboard"
+                    }
                   >
                     {isCopied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-600" />}
-                    <span>{isCopied ? "Copied!" : "Select All"}</span>
+                    <span>{isCopied ? "Copied!" : "Copy All"}</span>
                   </button>
                 </div>
               </div>
@@ -837,19 +882,18 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
               {/* A4 Workspace Simulation */}
               <div className="a4-page-workspace w-full flex justify-center items-start overflow-x-auto bg-slate-100/80 p-4 sm:p-8 min-h-[640px]">
                 <div
-                  className={`a4-page shrink-0 transition-all duration-300 ${
-                    orientation === "landscape" ? "landscape" : ""
-                  }`}
+                  className={`a4-page shrink-0 transition-all duration-300 ${orientation === "landscape" ? "landscape" : ""
+                    }`}
                   style={
                     orientation === "landscape"
-                      ? { width: "297mm", maxWidth: "297mm", minHeight: "210mm" }
+                      ? { width: "337mm", maxWidth: "337mm", minHeight: "210mm" }
                       : { width: "210mm", maxWidth: "210mm", minHeight: "297mm" }
                   }
                 >
                   <div
                     ref={editorRef}
                     contentEditable
-                    onInput={onEditorInput}
+                    onInput={handleEditorInputWrapper}
                     data-placeholder="Write your notes, key updates, documentation, or action items here..."
                     className="notes-rich-editor outline-none w-full text-slate-800 leading-relaxed"
                     style={{
@@ -905,11 +949,10 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                   onProcessDropFiles(droppedFiles);
                 }
               }}
-              className={`w-full max-w-md border-2 border-dashed rounded-xl p-3 transition flex items-center gap-2.5 cursor-pointer ${
-                isDraggingModalFile
+              className={`w-full max-w-md border-2 border-dashed rounded-xl p-3 transition flex items-center gap-2.5 cursor-pointer ${isDraggingModalFile
                   ? "border-[#4318FF] bg-indigo-50/80 scale-[1.01] shadow-sm ring-2 ring-indigo-200"
                   : "border-indigo-200 hover:border-[#4318FF] bg-indigo-50/20 hover:bg-indigo-50/40"
-              }`}
+                }`}
             >
               <div className="w-7 h-7 rounded-lg bg-indigo-100/60 flex items-center justify-center text-[#4318FF] shrink-0">
                 <UploadCloud className="w-4 h-4" />
@@ -978,10 +1021,10 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
               {actionLoading
                 ? "Saving..."
                 : parentNoteContext
-                ? "Save Sub-Note"
-                : isProjectNote
-                ? "Save Project Note"
-                : "Save Personal Note"}
+                  ? "Save Sub-Note"
+                  : isProjectNote
+                    ? "Save Project Note"
+                    : "Save Personal Note"}
             </button>
           </div>
         </form>

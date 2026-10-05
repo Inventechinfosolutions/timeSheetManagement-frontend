@@ -511,8 +511,8 @@ input[type="password"]::-webkit-password-reveal-button {
 }
 
 .a4-page.landscape {
-  width: 297mm;
-  max-width: 297mm;
+  width: 337mm;
+  max-width: 337mm;
   min-height: 210mm;
   padding: 18mm 20mm;
 }
@@ -603,7 +603,7 @@ input[type="password"]::-webkit-password-reveal-button {
   }
 
   .a4-page.landscape {
-    width: 297mm !important;
+    width: 337mm !important;
     min-height: 210mm !important;
     padding: 15mm 20mm !important;
   }

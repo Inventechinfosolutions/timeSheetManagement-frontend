@@ -277,7 +277,7 @@ export const NoteView: React.FC<NoteViewProps> = ({
               }`}
               style={
                 activeNote.isVertical === false
-                  ? { width: "297mm", maxWidth: "297mm", minHeight: "210mm" }
+                  ? { width: "337mm", maxWidth: "337mm", minHeight: "210mm" }
                   : { width: "210mm", maxWidth: "210mm", minHeight: "297mm" }
               }
             >
