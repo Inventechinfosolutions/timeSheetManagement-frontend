@@ -44,6 +44,7 @@ export interface Note {
   isPinned: boolean;
   isArchived: boolean;
   isAutoSave?: boolean;
+  isVertical?: boolean;
   orderIndex: number;
   createdAt: string;
   updatedAt: string;
@@ -77,6 +78,7 @@ export interface NotesFormData {
   files: File[];
   isPinned?: boolean;
   isAutoSave?: boolean;
+  isVertical?: boolean;
 }
 
 export interface ColorOption {

@@ -271,7 +271,16 @@ export const NoteView: React.FC<NoteViewProps> = ({
 
           {/* A4 Workspace Simulation for View Mode */}
           <div className="a4-page-workspace w-full rounded-2xl flex justify-center items-start overflow-x-auto bg-slate-100/80 p-4 sm:p-8 min-h-[640px] border border-slate-200/60">
-            <div className="a4-page">
+            <div
+              className={`a4-page shrink-0 transition-all duration-300 ${
+                activeNote.isVertical === false ? "landscape" : ""
+              }`}
+              style={
+                activeNote.isVertical === false
+                  ? { width: "297mm", maxWidth: "297mm", minHeight: "210mm" }
+                  : { width: "210mm", maxWidth: "210mm", minHeight: "297mm" }
+              }
+            >
               {activeNote.description && activeNote.description.trim() ? (
                 <div
                   className="notes-content-view prose prose-slate max-w-none text-slate-800 text-sm sm:text-base leading-relaxed break-words"

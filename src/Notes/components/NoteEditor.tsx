@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   ArrowLeft,
   Paperclip,
@@ -17,12 +17,70 @@ import {
   Check,
   User,
   FileSpreadsheet,
+  Copy,
+  ChevronDown,
 } from "lucide-react";
-import { Popover } from "antd";
+import { Popover, message } from "antd";
 import { Toggle } from "../../components/ui";
 import { Note, NotesFormData, NoteDocumentItem, AutoSaveStatus } from "../types/notes.types";
 import { NoteAttachmentChip } from "./NoteAttachmentChip";
 import { TEXT_COLORS, HIGHLIGHT_COLORS } from "../utils/notesHelpers";
+
+const WordOrientationIcon = () => (
+  <svg
+    className="w-5 h-5 shrink-0"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    {/* Portrait sheet in background */}
+    <path
+      d="M3.5 2H9.5L12.5 5V13H3.5V2Z"
+      fill="#F8FAFC"
+      stroke="#64748B"
+      strokeWidth="1.2"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M9.5 2V5H12.5"
+      fill="#CBD5E1"
+      stroke="#64748B"
+      strokeWidth="1.2"
+      strokeLinejoin="round"
+    />
+
+    {/* Curved Blue Arrow in top-right */}
+    <path
+      d="M14.5 2.5C17.5 2.8 19.5 4.5 19.5 7V7.5"
+      stroke="#2563EB"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+    <path
+      d="M17.5 5.5L19.5 7.5L21.5 5.5"
+      stroke="#2563EB"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+
+    {/* Landscape sheet in foreground */}
+    <path
+      d="M6.5 9H15.5L18.5 12V18H6.5V9Z"
+      fill="#FFFFFF"
+      stroke="#334155"
+      strokeWidth="1.2"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M15.5 9V12H18.5"
+      fill="#E2E8F0"
+      stroke="#334155"
+      strokeWidth="1.2"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
 
 interface NoteEditorProps {
   formData: NotesFormData;
@@ -96,6 +154,132 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
   onXlsImport,
 }) => {
   const isProjectNote = formData.type === "PROJECT";
+  const [orientation, setOrientation] = useState<"portrait" | "landscape">(
+    formData.isVertical === false ? "landscape" : "portrait"
+  );
+  const [fontSize, setFontSize] = useState<string>("14");
+  const [isFontSizeOpen, setIsFontSizeOpen] = useState<boolean>(false);
+  const [isCopied, setIsCopied] = useState<boolean>(false);
+  const fontSizeDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (formData.isVertical !== undefined) {
+      setOrientation(formData.isVertical ? "portrait" : "landscape");
+    }
+  }, [formData.isVertical]);
+
+  const handleToggleOrientation = () => {
+    const next = orientation === "portrait" ? "landscape" : "portrait";
+    setOrientation(next);
+    setFormData((prev) => ({
+      ...prev,
+      isVertical: next === "portrait",
+    }));
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        fontSizeDropdownRef.current &&
+        !fontSizeDropdownRef.current.contains(e.target as Node)
+      ) {
+        setIsFontSizeOpen(false);
+      }
+    };
+    const handleScroll = () => {
+      setIsFontSizeOpen(false);
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    window.addEventListener("scroll", handleScroll, true);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("scroll", handleScroll, true);
+    };
+  }, []);
+
+  const FONT_SIZES = [
+    "8",
+    "9",
+    "10",
+    "11",
+    "12",
+    "14",
+    "16",
+    "18",
+    "20",
+    "22",
+    "24",
+    "26",
+    "28",
+    "36",
+    "48",
+    "72",
+  ];
+
+  const handleFontSizeChange = (size: string) => {
+    setFontSize(size);
+    if (!editorRef.current) return;
+    editorRef.current.focus();
+
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+
+    const range = selection.getRangeAt(0);
+    if (range.collapsed) {
+      const span = document.createElement("span");
+      span.style.fontSize = `${size}px`;
+      span.innerHTML = "&#8203;";
+      range.insertNode(span);
+      range.selectNodeContents(span);
+      range.collapse(false);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    } else {
+      document.execCommand("styleWithCSS", false, "true");
+      document.execCommand("fontSize", false, "7");
+      const fontTags = editorRef.current.querySelectorAll('font[size="7"]');
+      fontTags.forEach((tag: Element) => {
+        const el = tag as HTMLElement;
+        el.removeAttribute("size");
+        el.style.fontSize = `${size}px`;
+      });
+      const spans = editorRef.current.querySelectorAll('span[style*="xxx-large"]');
+      spans.forEach((tag: Element) => {
+        const el = tag as HTMLElement;
+        el.style.fontSize = `${size}px`;
+      });
+    }
+    onEditorInput();
+  };
+
+  const handleSelectAllAndCopy = async () => {
+    if (!editorRef.current) return;
+    try {
+      editorRef.current.focus();
+      const range = document.createRange();
+      range.selectNodeContents(editorRef.current);
+      const selection = window.getSelection();
+      if (selection) {
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+      const textToCopy = editorRef.current.innerText || editorRef.current.textContent || "";
+      if (textToCopy) {
+        await navigator.clipboard.writeText(textToCopy);
+        setIsCopied(true);
+        message.success("All sheet content selected & copied to clipboard!");
+        setTimeout(() => setIsCopied(false), 2000);
+      } else {
+        message.info("Sheet is currently empty");
+      }
+    } catch {
+      document.execCommand("copy");
+      setIsCopied(true);
+      message.success("All sheet content selected!");
+      setTimeout(() => setIsCopied(false), 2000);
+    }
+  };
 
   return (
     <div className="w-full min-h-full bg-[#F4F7FE] p-2 sm:p-3 md:p-4 flex flex-col gap-3 font-sans">
@@ -262,7 +446,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 
             <div className="w-full bg-white border border-slate-200 rounded-2xl focus-within:border-[#4318FF] focus-within:ring-1 focus-within:ring-[#4318FF]/20 transition-all shadow-xs flex flex-col overflow-hidden">
               {/* Rich Text Toolbar */}
-              <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 p-2 px-3 bg-white border-b border-slate-100 text-slate-700 select-none shrink-0 sticky top-0 z-10">
+              <div className="flex items-center overflow-x-auto flex-nowrap gap-1 sm:gap-1.5 p-2 px-3 bg-white border-b border-slate-100 text-slate-700 select-none shrink-0 sticky top-0 z-10 scrollbar-thin">
                 {/* Bold */}
                 <button
                   type="button"
@@ -270,7 +454,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                     e.preventDefault();
                     onExecuteCommand("bold");
                   }}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg font-bold text-sm text-slate-800 hover:text-[#4318FF] hover:bg-slate-100 transition cursor-pointer"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg font-bold text-sm text-slate-800 hover:text-[#4318FF] hover:bg-slate-100 transition cursor-pointer shrink-0"
                   title="Bold (Ctrl+B)"
                 >
                   B
@@ -283,7 +467,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                     e.preventDefault();
                     onExecuteCommand("italic");
                   }}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg italic font-serif text-sm text-slate-800 hover:text-[#4318FF] hover:bg-slate-100 transition cursor-pointer"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg italic font-serif text-sm text-slate-800 hover:text-[#4318FF] hover:bg-slate-100 transition cursor-pointer shrink-0"
                   title="Italic (Ctrl+I)"
                 >
                   I
@@ -296,7 +480,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                     e.preventDefault();
                     onExecuteCommand("underline");
                   }}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg underline text-sm text-slate-800 hover:text-[#4318FF] hover:bg-slate-100 transition cursor-pointer"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg underline text-sm text-slate-800 hover:text-[#4318FF] hover:bg-slate-100 transition cursor-pointer shrink-0"
                   title="Underline (Ctrl+U)"
                 >
                   U
@@ -309,51 +493,85 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                     e.preventDefault();
                     onExecuteCommand("strikeThrough");
                   }}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg line-through text-sm text-slate-800 hover:text-[#4318FF] hover:bg-slate-100 transition cursor-pointer"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg line-through text-sm text-slate-800 hover:text-[#4318FF] hover:bg-slate-100 transition cursor-pointer shrink-0"
                   title="Strikethrough"
                 >
                   S
                 </button>
 
-                <div className="h-4 w-px bg-slate-200 mx-0.5" />
+                <div className="h-4 w-px bg-slate-200 mx-0.5 shrink-0" />
 
-                {/* Heading 1 */}
+                {/* Font Size Dropdown (Matches button width, no dot, sleek scrollbar) */}
+                <div className="flex items-center gap-1.5 shrink-0 px-1 select-none">
+                  <span className="text-[11px] font-semibold text-slate-500 hidden sm:inline">Size:</span>
+                  <Popover
+                    trigger="click"
+                    placement="bottomLeft"
+                    autoAdjustOverflow={false}
+                    open={isFontSizeOpen}
+                    onOpenChange={(visible) => setIsFontSizeOpen(visible)}
+                    arrow={false}
+                    overlayInnerStyle={{ padding: "4px" }}
+                    content={
+                      <div className="w-[52px] max-h-48 overflow-y-auto select-none [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-thumb]:rounded-full [scrollbar-width:thin] flex flex-col gap-0.5">
+                        {FONT_SIZES.map((size) => {
+                          const isSelected = size === fontSize;
+                          return (
+                            <button
+                              key={size}
+                              type="button"
+                              onClick={() => {
+                                handleFontSizeChange(size);
+                                setIsFontSizeOpen(false);
+                              }}
+                              className={`w-full py-1 text-center rounded-md text-xs font-semibold transition cursor-pointer ${
+                                isSelected
+                                  ? "bg-indigo-50 text-[#4318FF] font-bold"
+                                  : "text-slate-700 hover:bg-indigo-50/60 hover:text-[#4318FF]"
+                              }`}
+                            >
+                              {size}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    }
+                  >
+                    <button
+                      type="button"
+                      className={`h-8 w-[52px] px-2 bg-white rounded-lg text-xs font-semibold text-slate-800 flex items-center justify-between gap-1 transition cursor-pointer border ${
+                        isFontSizeOpen
+                          ? "border-[#4318FF] text-[#4318FF]"
+                          : "border-slate-200 hover:border-slate-300"
+                      }`}
+                      title="Font Size (Default: 14)"
+                    >
+                      <span>{fontSize}</span>
+                      <ChevronDown
+                        className={`w-3 h-3 text-slate-400 transition-transform duration-150 ${
+                          isFontSizeOpen ? "rotate-180 text-[#4318FF]" : ""
+                        }`}
+                      />
+                    </button>
+                  </Popover>
+                </div>
+
+                {/* Word Page Orientation Toggle (Icon only, borderless) */}
                 <button
                   type="button"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    onExecuteCommand("formatBlock", "<h1>");
-                  }}
-                  className="px-2 h-8 flex items-center justify-center rounded-lg font-bold text-xs text-slate-800 hover:text-[#4318FF] hover:bg-slate-100 transition cursor-pointer"
-                  title="Heading 1"
+                  onClick={handleToggleOrientation}
+                  className={`w-8 h-8 flex items-center justify-center rounded-lg transition cursor-pointer shrink-0 select-none ${
+                    orientation === "landscape"
+                      ? "bg-indigo-50 text-[#4318FF]"
+                      : "hover:bg-slate-100"
+                  }`}
+                  title={
+                    orientation === "portrait"
+                      ? "Page Orientation: Vertical (Portrait) — Click to switch to Horizontal (Landscape)"
+                      : "Page Orientation: Horizontal (Landscape) — Click to switch to Vertical (Portrait)"
+                  }
                 >
-                  H₁
-                </button>
-
-                {/* Heading 2 */}
-                <button
-                  type="button"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    onExecuteCommand("formatBlock", "<h2>");
-                  }}
-                  className="px-2 h-8 flex items-center justify-center rounded-lg font-bold text-xs text-slate-800 hover:text-[#4318FF] hover:bg-slate-100 transition cursor-pointer"
-                  title="Heading 2"
-                >
-                  H₂
-                </button>
-
-                {/* Normal */}
-                <button
-                  type="button"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    onExecuteCommand("formatBlock", "<p>");
-                  }}
-                  className="px-2.5 h-8 flex items-center justify-center rounded-lg font-medium text-xs text-slate-800 hover:text-[#4318FF] hover:bg-slate-100 transition cursor-pointer"
-                  title="Normal Text"
-                >
-                  Normal
+                  <WordOrientationIcon />
                 </button>
 
                 <div className="h-4 w-px bg-slate-200 mx-0.5" />
@@ -552,9 +770,9 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                   </button>
                 </Popover>
 
-                <div className="h-4 w-px bg-slate-200 mx-0.5" />
+                <div className="h-4 w-px bg-slate-200 mx-0.5 shrink-0" />
 
-                {/* Docling JSON / Document Import Button */}
+                {/* Docling JSON / Document Import Button (Original Position) */}
                 <input
                   type="file"
                   ref={doclingJsonInputRef}
@@ -567,7 +785,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => doclingJsonInputRef.current?.click()}
                   disabled={isImportingDocling}
-                  className="h-8 px-2.5 flex items-center gap-1.5 rounded-lg text-xs font-semibold text-[#4318FF] bg-[#4318FF]/10 hover:bg-[#4318FF]/20 transition cursor-pointer disabled:opacity-50"
+                  className="h-8 px-2.5 flex items-center gap-1.5 rounded-lg text-xs font-semibold text-[#4318FF] bg-[#4318FF]/10 hover:bg-[#4318FF]/20 transition cursor-pointer disabled:opacity-50 shrink-0"
                   title="Import / Parse PDF with Docling directly into this Description box"
                 >
                   <FileCode className="w-4 h-4 text-[#4318FF]" />
@@ -588,7 +806,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                       type="button"
                       onMouseDown={(e) => e.preventDefault()}
                       onClick={() => xlsImportInputRef.current?.click()}
-                      className="h-8 px-2.5 flex items-center gap-1.5 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 transition cursor-pointer"
+                      className="h-8 px-2.5 flex items-center gap-1.5 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 transition cursor-pointer shrink-0"
                       title="Import Excel spreadsheet (.xlsx, .xls, .csv)"
                     >
                       <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
@@ -596,17 +814,48 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                     </button>
                   </>
                 )}
+
+                {/* Right side toolbar controls: Select All */}
+                <div className="ml-auto flex items-center gap-1.5 shrink-0 pl-2">
+                  {/* Select All & Copy Button */}
+                  <button
+                    type="button"
+                    onClick={handleSelectAllAndCopy}
+                    className={`h-8 px-2.5 flex items-center gap-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer select-none ${
+                      isCopied
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-300"
+                        : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 hover:text-[#4318FF]"
+                    }`}
+                    title="Select All content in A4 sheet & copy to clipboard"
+                  >
+                    {isCopied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-600" />}
+                    <span>{isCopied ? "Copied!" : "Select All"}</span>
+                  </button>
+                </div>
               </div>
 
               {/* A4 Workspace Simulation */}
               <div className="a4-page-workspace w-full flex justify-center items-start overflow-x-auto bg-slate-100/80 p-4 sm:p-8 min-h-[640px]">
-                <div className="a4-page">
+                <div
+                  className={`a4-page shrink-0 transition-all duration-300 ${
+                    orientation === "landscape" ? "landscape" : ""
+                  }`}
+                  style={
+                    orientation === "landscape"
+                      ? { width: "297mm", maxWidth: "297mm", minHeight: "210mm" }
+                      : { width: "210mm", maxWidth: "210mm", minHeight: "297mm" }
+                  }
+                >
                   <div
                     ref={editorRef}
                     contentEditable
                     onInput={onEditorInput}
                     data-placeholder="Write your notes, key updates, documentation, or action items here..."
-                    className="notes-rich-editor outline-none w-full min-h-[257mm] text-slate-800 text-sm sm:text-base leading-relaxed"
+                    className="notes-rich-editor outline-none w-full text-slate-800 leading-relaxed"
+                    style={{
+                      fontSize: "14px",
+                      minHeight: orientation === "landscape" ? "170mm" : "257mm",
+                    }}
                   />
                 </div>
               </div>
