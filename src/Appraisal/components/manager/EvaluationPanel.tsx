@@ -25,7 +25,7 @@ import {
   ReviewFormData,
 } from "../../types/appraisal.types";
 import { initialReviewFormData } from "../../mockData/quarterlyReview.mock";
-import Toast from "../../../components/Toast";
+import { message } from "antd";
 import "./EvaluationPanel.css";
 
 export interface EvaluationData {
@@ -100,7 +100,6 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
   const [isMorphingPhase, setIsMorphingPhase] = useState<boolean>(false);
   const [resendTimer, setResendTimer] = useState<number>(45);
   const [isRatingUnlocked, setIsRatingUnlocked] = useState<boolean>(false);
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
 
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -127,11 +126,11 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     }
     setEmailError("");
 
-    // 1. Trigger Toast notification
-    setToast({
-      message: `Verification code has been submitted to your mail ID: ${emailInput.trim()}`,
-      type: "success",
-    });
+    // 1. Trigger notification using existing antd message API
+    message.success(
+      `Verification code has been submitted to your mail ID: ${emailInput.trim()}`,
+      2
+    );
 
     // 2. Morph modal to OTP verification stage
     setModalStage("otp");
@@ -244,10 +243,10 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     setActiveOtpIndex(0);
     setIsGlowPhase(false);
     setIsMorphingPhase(false);
-    setToast({
-      message: `A fresh 6-digit verification code was sent to ${emailInput}`,
-      type: "info",
-    });
+    message.info(
+      `A fresh 6-digit verification code was sent to ${emailInput}`,
+      2
+    );
     otpInputRefs.current[0]?.focus();
   };
 
@@ -1569,15 +1568,6 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
         </div>
       )}
 
-      {/* Toast Notification Container */}
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-          duration={1500}
-        />
-      )}
     </div>
   );
 };
