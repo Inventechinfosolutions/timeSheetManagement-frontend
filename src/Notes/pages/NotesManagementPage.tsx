@@ -8,6 +8,7 @@ import {
   NoteView,
   NoteSendModal,
 } from "../components";
+import DocumentPreviewModal from "../components/DocumentPreviewModal";
 import UniverExcelEditorModal from "../../components/UniverExcelEditorModal";
 
 export const NotesManagementPage: React.FC = () => {
@@ -183,22 +184,13 @@ export const NotesManagementPage: React.FC = () => {
         onSuccess={() => {}}
       />
 
-      {/* Global Image Preview Modal */}
-      <Modal
+      {/* Global In-App Document & Image Preview Modal (Card View) */}
+      <DocumentPreviewModal
         open={previewImageModal.open}
-        onCancel={() => setPreviewImageModal({ open: false, url: "", title: "" })}
-        footer={null}
+        url={previewImageModal.url}
         title={previewImageModal.title}
-        width={800}
-      >
-        <div className="flex items-center justify-center p-4">
-          <img
-            src={previewImageModal.url}
-            alt="Preview"
-            className="max-h-[70vh] object-contain rounded-lg"
-          />
-        </div>
-      </Modal>
+        onClose={() => setPreviewImageModal({ open: false, url: "", title: "" })}
+      />
 
       {/* Global Excel Spreadsheet Editor Modal */}
       <UniverExcelEditorModal

@@ -535,7 +535,9 @@ const SidebarLayout = ({
             <ApiLoadingSpinner contained contentAreaRef={mainContentRef} />
           </div>
           <Footer className="sidebar-footer" />
-          <ScrollNavigator targetRef={mainContentRef} />
+          {derivedActiveTab === "Notes" && (
+            <ScrollNavigator targetRef={mainContentRef} />
+          )}
         </main>
       </div>
     </div>
