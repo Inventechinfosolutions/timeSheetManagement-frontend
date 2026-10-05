@@ -31,6 +31,7 @@ export interface Note {
   isPinned: boolean;
   isArchived: boolean;
   isAutoSave?: boolean;
+  isVertical?: boolean;
   orderIndex: number;
   createdAt: string;
   updatedAt: string;
@@ -47,6 +48,7 @@ export interface CreateNotePayload {
   color?: string;
   isPinned?: boolean;
   isAutoSave?: boolean;
+  isVertical?: boolean;
   subNotes?: Array<{
     title: string;
     description?: string;
@@ -66,6 +68,7 @@ export interface UpdateNotePayload {
   isArchived?: boolean;
   isAutoSave?: boolean;
   autoSave?: boolean;
+  isVertical?: boolean;
   orderIndex?: number;
   parentId?: number | null;
 }
