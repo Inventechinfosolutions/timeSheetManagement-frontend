@@ -1,20 +1,21 @@
 /* ==========================================================================
    Quarterly Review Assignment Table - Modern WorkSphere Design
+   Rich Branded Colors, Visual Polish & Interactive Elements
    ========================================================================== */
 
 .quarterly-review-table-card {
   width: 100%;
   background: #FFFFFF;
-  border-radius: 1.5rem;
+  border-radius: 1.25rem;
   border: 1px solid #E2E8F0;
-  box-shadow: 0 4px 20px rgba(112, 144, 176, 0.08);
+  box-shadow: 0 4px 20px rgba(15, 118, 110, 0.08);
   overflow: hidden;
   position: relative;
   transition: box-shadow 0.3s ease;
 }
 
 .quarterly-review-table-card:hover {
-  box-shadow: 0 8px 30px rgba(112, 144, 176, 0.14);
+  box-shadow: 0 8px 30px rgba(15, 118, 110, 0.14);
 }
 
 /* Horizontal scrollable wrapper - isolated scrollbar */
@@ -30,7 +31,7 @@
 }
 
 .quarterly-review-table-scroll::-webkit-scrollbar-track {
-  background: #F4F7FE;
+  background: #F7FEFD;
   border-radius: 8px;
 }
 
@@ -54,45 +55,108 @@
   min-width: 1180px;
 }
 
-/* Table Header */
+/* Table Header - Modern Vibrant WorkSphere Indigo */
 .quarterly-review-table thead tr {
-  background: #F4F7FE;
-  border-bottom: 1.5px solid #E2E8F0;
+  background: linear-gradient(135deg, #0F766E 0%, #14B8A6 50%, #5EEAD4 100%);
+  border-bottom: 2px solid #0F172A;
+  box-shadow: 0 4px 14px rgba(20, 184, 166, 0.18);
 }
 
 .quarterly-review-table th {
   padding: 1rem 0.875rem;
   font-size: 0.72rem;
   font-weight: 800;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #1B2559;
+  color: #FFFFFF;
   white-space: nowrap;
   user-select: none;
-  border-bottom: 1px solid #E2E8F0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 
-/* Table Body Rows */
-.quarterly-review-table tbody tr {
+.quarterly-review-table th:last-child {
+  border-right: none;
+}
+
+/* Sticky Action Column Header */
+.qr-sticky-action-th {
+  position: sticky;
+  right: 0;
+  background: #0F766E !important;
+  color: #FFFFFF !important;
+  z-index: 10;
+  box-shadow: -5px 0 14px rgba(15, 118, 110, 0.32);
+  border-left: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+/* Theme Variant 1: WorkSphere Indigo */
+.qr-header-indigo thead tr {
+  background: linear-gradient(135deg, #0F766E 0%, #14B8A6 50%, #5EEAD4 100%) !important;
+  border-bottom: 2px solid #0F172A !important;
+}
+.qr-header-indigo .qr-sticky-action-th {
+  background: #0F766E !important;
+}
+
+/* Theme Variant 2: Classic Executive Navy */
+.qr-header-navy thead tr {
+  background: linear-gradient(135deg, #0F172A 0%, #0F766E 55%, #0F766E 100%) !important;
+  border-bottom: 2px solid rgba(20, 184, 166, 0.4) !important;
+}
+.qr-header-navy .qr-sticky-action-th {
+  background: #0F172A !important;
+}
+
+/* Theme Variant 3: Royal Purple */
+.qr-header-purple thead tr {
+  background: linear-gradient(135deg, #581C87 0%, #7E22CE 50%, #9333EA 100%) !important;
+  border-bottom: 2px solid #4C1D95 !important;
+}
+.qr-header-purple .qr-sticky-action-th {
+  background: #6B21A8 !important;
+}
+
+/* Theme Variant 4: Emerald / Teal */
+.qr-header-teal thead tr {
+  background: linear-gradient(135deg, #0F766E 0%, #0D9488 50%, #14B8A6 100%) !important;
+  border-bottom: 2px solid #115E59 !important;
+}
+.qr-header-teal .qr-sticky-action-th {
+  background: #0F766E !important;
+}
+
+/* Table Body Rows - Subtle Zebra Striping & Smooth Transitions */
+.quarterly-review-table tbody tr:nth-child(even) {
+  background: #F9FAFD;
+}
+
+.quarterly-review-table tbody tr:nth-child(odd) {
   background: #FFFFFF;
-  transition: background-color 0.2s ease, transform 0.2s ease;
-  border-bottom: 1px solid #F1F5F9;
 }
 
-.quarterly-review-table tbody tr:last-child {
-  border-bottom: none;
+.quarterly-review-table tbody tr {
+  transition: background-color 0.18s ease, box-shadow 0.18s ease;
+  border-bottom: 1px solid #EDF2F7;
 }
 
 .quarterly-review-table tbody tr:hover {
-  background: #F8FAFC;
+  background: #F0FDFA !important;
+  box-shadow: inset 4px 0 0 #14B8A6;
 }
 
 .quarterly-review-table td {
-  padding: 0.95rem 0.875rem;
-  color: #2B3674;
+  padding: 0.92rem 0.875rem;
+  color: #0F766E;
   vertical-align: middle;
-  border-bottom: 1px solid #F1F5F9;
+  border-bottom: 1px solid #EDF2F7;
+  border-right: 1px solid rgba(226, 232, 240, 0.5);
   white-space: nowrap;
+}
+
+.quarterly-review-table td:last-child {
+  border-right: none;
 }
 
 /* Employee Name cell with Avatar initials */
@@ -103,24 +167,28 @@
 }
 
 .qr-avatar-badge {
-  width: 2.15rem;
-  height: 2.15rem;
+  width: 2.25rem;
+  height: 2.25rem;
   border-radius: 0.75rem;
-  background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);
-  color: #4318FF;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
+  font-weight: 800;
   font-size: 0.78rem;
   flex-shrink: 0;
-  border: 1px solid rgba(67, 24, 255, 0.15);
-  box-shadow: 0 2px 6px rgba(67, 24, 255, 0.1);
+  border-width: 1px;
+  border-style: solid;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.quarterly-review-table tbody tr:hover .qr-avatar-badge {
+  transform: scale(1.05);
 }
 
 .qr-employee-name {
   font-weight: 700;
-  color: #1B2559;
+  color: #0F172A;
   font-size: 0.875rem;
   line-height: 1.25;
 }
@@ -132,25 +200,82 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.72rem;
   font-weight: 700;
-  color: #4318FF;
-  background: #EEF2FF;
-  border: 1px solid #E0E7FF;
-  padding: 0.2rem 0.55rem;
+  color: #0F766E;
+  background: #F0FDFA;
+  border: 1px solid #99F6E4;
+  padding: 0.22rem 0.6rem;
   border-radius: 0.5rem;
+  box-shadow: 0 1px 2px rgba(20, 184, 166, 0.05);
 }
 
-/* Quarter badge */
+/* Role text */
+.qr-role-text {
+  font-size: 0.79rem;
+  color: #1E293B;
+  font-weight: 600;
+}
+
+/* Quarter badges with individual vibrant color themes */
 .qr-quarter-pill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-weight: 800;
   font-size: 0.75rem;
-  color: #1B2559;
-  background: #F4F7FE;
-  border: 1px solid #E2E8F0;
-  padding: 0.2rem 0.65rem;
+  padding: 0.22rem 0.7rem;
   border-radius: 9999px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.qr-quarter-q1 {
+  background: #F0FDFA;
+  color: #14B8A6;
+  border: 1px solid #99F6E4;
+}
+
+.qr-quarter-q2 {
+  background: #ECFDF5;
+  color: #059669;
+  border: 1px solid #A7F3D0;
+}
+
+.qr-quarter-q3 {
+  background: #FFFBEB;
+  color: #D97706;
+  border: 1px solid #FDE68A;
+}
+
+.qr-quarter-q4 {
+  background: #FAF5FF;
+  color: #7C3AED;
+  border: 1px solid #DDD6FE;
+}
+
+/* Financial Year pill */
+.qr-fy-pill {
+  display: inline-flex;
+  align-items: center;
+  font-weight: 700;
+  font-size: 0.74rem;
+  color: #334155;
+  background: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  padding: 0.2rem 0.6rem;
+  border-radius: 0.5rem;
+}
+
+/* Date chips */
+.qr-date-chip {
+  display: inline-flex;
+  align-items: center;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.73rem;
+  font-weight: 600;
+  color: #475569;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  padding: 0.18rem 0.55rem;
+  border-radius: 0.45rem;
 }
 
 /* Assign By pill */
@@ -227,7 +352,7 @@
   background: #F59E0B;
 }
 
-/* 2. In Progress / awaiting Review */
+/* 2. In Progress / Awaiting Review */
 .qr-status-in-progress,
 .qr-status-awaiting-review {
   background: #EFF6FF;
@@ -250,7 +375,7 @@
   background: #A855F7;
 }
 
-/* 4. Completed / reviewed */
+/* 4. Completed / Reviewed */
 .qr-status-completed,
 .qr-status-reviewed {
   background: #ECFDF5;
@@ -273,80 +398,116 @@
   }
 }
 
-/* Action Buttons */
-.qr-action-btn-edit {
+/* Actions Container: View & Edit in same row */
+.qr-actions-container {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.35rem 0.85rem;
+  justify-content: center;
+  gap: 0.45rem;
+}
+
+.qr-action-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.1rem;
+  height: 2.1rem;
   border-radius: 0.65rem;
-  font-size: 0.75rem;
-  font-weight: 700;
-  background: #EEF2FF;
-  color: #4318FF;
-  border: 1px solid #E0E7FF;
   cursor: pointer;
   transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+.qr-action-btn-edit {
+  background: #F0FDFA;
+  color: #14B8A6;
+  border: 1px solid #99F6E4;
+  box-shadow: 0 1px 2px rgba(20, 184, 166, 0.08);
 }
 
 .qr-action-btn-edit:hover {
-  background: #4318FF;
+  background: #14B8A6;
   color: #FFFFFF;
-  border-color: #4318FF;
-  transform: translateY(-1.5px);
-  box-shadow: 0 4px 12px rgba(67, 24, 255, 0.25);
+  border-color: #14B8A6;
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 4px 14px rgba(20, 184, 166, 0.28);
 }
 
 .qr-action-btn-edit:active {
-  transform: scale(0.95);
+  transform: scale(0.94);
 }
 
 .qr-action-btn-view {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.35rem 0.85rem;
-  border-radius: 0.65rem;
-  font-size: 0.75rem;
-  font-weight: 700;
-  background: #F8FAFC;
-  color: #2B3674;
-  border: 1px solid #E2E8F0;
-  cursor: pointer;
-  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  background: #F0FDF4;
+  color: #16A34A;
+  border: 1px solid #BBF7D0;
+  box-shadow: 0 1px 2px rgba(22, 163, 74, 0.08);
 }
 
 .qr-action-btn-view:hover {
-  background: #2B3674;
+  background: #16A34A;
   color: #FFFFFF;
-  border-color: #2B3674;
-  transform: translateY(-1.5px);
-  box-shadow: 0 4px 12px rgba(43, 54, 116, 0.25);
+  border-color: #16A34A;
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 4px 14px rgba(22, 163, 74, 0.28);
 }
 
 .qr-action-btn-view:active {
-  transform: scale(0.95);
+  transform: scale(0.94);
 }
 
-/* Sticky Action Column */
-.qr-sticky-action-th {
-  position: sticky;
-  right: 0;
-  background: #F4F7FE !important;
-  z-index: 10;
-  box-shadow: -4px 0 8px rgba(0, 0, 0, 0.03);
-}
-
+/* Sticky Action Column Body Cell */
 .qr-sticky-action-td {
   position: sticky;
   right: 0;
-  background: #FFFFFF !important;
   z-index: 5;
-  box-shadow: -4px 0 8px rgba(0, 0, 0, 0.03);
+  box-shadow: -5px 0 10px rgba(0, 0, 0, 0.035);
+  border-left: 1px solid #EDF2F7;
+}
+
+.quarterly-review-table tbody tr:nth-child(even) .qr-sticky-action-td {
+  background: #F9FAFD !important;
+}
+
+.quarterly-review-table tbody tr:nth-child(odd) .qr-sticky-action-td {
+  background: #FFFFFF !important;
 }
 
 .quarterly-review-table tbody tr:hover .qr-sticky-action-td {
-  background: #F8FAFC !important;
+  background: #F0FDFA !important;
+}
+
+/* ==========================================================================
+   Pagination Bar inside Table Card Footer - Right Aligned
+   ========================================================================== */
+.quarterly-review-pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0.875rem 1.25rem;
+  background: #FFFFFF;
+  border-top: 1px solid #E2E8F0;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .quarterly-review-pagination-bar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+  }
+}
+
+.quarterly-review-pagination-bar button[class*="bg-[#4318FF]"],
+.quarterly-review-pagination-bar button.bg-\[\#4318FF\] {
+  background-color: #14B8A6 !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 12px rgba(20, 184, 166, 0.35) !important;
+}
+
+.quarterly-review-pagination-bar button:hover:not(:disabled) {
+  border-color: #14B8A6 !important;
+  color: #14B8A6 !important;
 }
 
 /* ==========================================================================
@@ -360,25 +521,25 @@
 
 @keyframes qrRowGlowHighlight {
   0% {
-    background-color: rgba(67, 24, 255, 0.18) !important;
+    background-color: rgba(20, 184, 166, 0.18) !important;
     box-shadow:
-      inset 4px 0 0 #4318FF,
-      0 4px 20px rgba(67, 24, 255, 0.22) !important;
+      inset 4px 0 0 #14B8A6,
+      0 4px 20px rgba(20, 184, 166, 0.22) !important;
   }
   30% {
-    background-color: rgba(67, 24, 255, 0.14) !important;
+    background-color: rgba(20, 184, 166, 0.14) !important;
     box-shadow:
-      inset 4px 0 0 #4318FF,
-      0 6px 24px rgba(67, 24, 255, 0.25) !important;
+      inset 4px 0 0 #14B8A6,
+      0 6px 24px rgba(20, 184, 166, 0.25) !important;
   }
   65% {
-    background-color: rgba(67, 24, 255, 0.07) !important;
+    background-color: rgba(20, 184, 166, 0.07) !important;
     box-shadow:
-      inset 2px 0 0 rgba(67, 24, 255, 0.5),
-      0 3px 12px rgba(67, 24, 255, 0.12) !important;
+      inset 2px 0 0 rgba(20, 184, 166, 0.5),
+      0 3px 12px rgba(20, 184, 166, 0.12) !important;
   }
   100% {
-    background-color: #FFFFFF !important;
+    background-color: inherit;
     box-shadow:
       inset 0 0 0 transparent,
       0 0 0 transparent !important;
@@ -395,15 +556,15 @@
 }
 
 .quarterly-review-table tbody tr.quarterly-review-row-highlighted .qr-avatar-badge {
-  box-shadow: 0 0 14px rgba(67, 24, 255, 0.4) !important;
+  box-shadow: 0 0 14px rgba(20, 184, 166, 0.4) !important;
   transform: scale(1.08);
   transition: all 0.35s ease;
 }
 
 .quarterly-review-table tbody tr.quarterly-review-row-highlighted .qr-id-chip {
-  background: #E0E7FF !important;
-  color: #4318FF !important;
-  border-color: #A5B4FC !important;
-  box-shadow: 0 0 10px rgba(67, 24, 255, 0.25) !important;
+  background: #CCFBF1 !important;
+  color: #14B8A6 !important;
+  border-color: #5EEAD4 !important;
+  box-shadow: 0 0 10px rgba(20, 184, 166, 0.25) !important;
   transition: all 0.35s ease;
 }

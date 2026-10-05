@@ -52,25 +52,41 @@ export interface QuarterlyReviewAssignment {
 
 export interface ReviewFormData {
   // Step 1: Overview
+  overview?: string;
   roleSummary: string;
   keyResponsibilities: string;
   quarterHighlights: string;
-  // Step 2: Achievements
+  // Step 2: Achievements & Projects
+  projectTitle?: string;
+  projectDescription?: string;
+  projectChallenge?: string;
   majorAchievements: string;
   kpisMet: string;
   challengesOvercome: string;
   selfRatingAchievements: number;
-  // Step 3: Team Contribution
+  // Step 3: Team Contribution & Ratings
   collaborationDetails: string;
   mentorshipAssistance: string;
   peerSupport: string;
+  teamRatings?: {
+    crossCollaboration?: number;
+    communication?: number;
+    mentorship?: number;
+    peerSupport?: number;
+    reliability?: number;
+    initiative?: number;
+  };
   // Step 4: Learning Goals
+  learningGoals?: string;
   skillsAcquired: string;
   certificationsOrCourses: string;
   nextQuarterLearningGoals: string;
   // Step 5: Company Environment
   workCultureFeedback: string;
   toolingAndResources: string;
+  workLifeBalance?: string;
+  suggestionsForImprovement?: string;
+  companyEnvironmentRating?: number;
   managementSupportRating: number;
   // Step 6: Review & Final Comments
   overallSelfRating: number;

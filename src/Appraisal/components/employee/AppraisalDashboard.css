@@ -4,26 +4,218 @@
    ========================================================================== */
 
 @import "../manager/ManagerQuarterlyReview.css";
+@import "../manager/QuarterlyReviewTable.css";
 
 /* Glassmorphic luxury card with Cream & Rose-Ivory Watercolor gradient and SVG texture */
 .manager-review-glass-card {
   background: 
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 600' width='100%25' height='100%25' preserveAspectRatio='none'%3E%3Cpath d='M-50 80 C 200 40, 420 120, 680 70 C 850 40, 950 110, 1050 75 L 1050 220 C 850 260, 650 190, 400 240 C 200 270, 80 200, -50 230 Z' fill='%23DFC2B2' opacity='0.22'/%3E%3Cpath d='M-50 190 C 220 240, 480 180, 720 230 C 890 260, 980 210, 1050 240 L 1050 390 C 840 430, 600 370, 360 410 C 180 435, 70 380, -50 400 Z' fill='%23F3E1D3' opacity='0.35'/%3E%3Cpath d='M-50 360 C 200 420, 460 360, 700 410 C 870 440, 960 390, 1050 420 L 1050 620 L -50 620 Z' fill='%23E8D0C0' opacity='0.28'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 600' width='100%25' height='100%25' preserveAspectRatio='none'%3E%3Cpath d='M-50 80 C 200 40, 420 120, 680 70 C 850 40, 950 110, 1050 75 L 1050 220 C 850 260, 650 190, 400 240 C 200 270, 80 200, -50 230 Z' fill='%2399F6E4' opacity='0.22'/%3E%3Cpath d='M-50 190 C 220 240, 480 180, 720 230 C 890 260, 980 210, 1050 240 L 1050 390 C 840 430, 600 370, 360 410 C 180 435, 70 380, -50 400 Z' fill='%23CCFBF1' opacity='0.35'/%3E%3Cpath d='M-50 360 C 200 420, 460 360, 700 410 C 870 440, 960 390, 1050 420 L 1050 620 L -50 620 Z' fill='%23CCFBF1' opacity='0.28'/%3E%3C/svg%3E"),
     linear-gradient(
       135deg,
-      #FDFCF9 0%,
-      #FAF5EE 20%,
-      #F6EDE3 45%,
-      #F1E3D6 75%,
-      #E8D3C4 100%
+      #FFFFFF 0%,
+      #F7FEFD 20%,
+      #F0FDFA 45%,
+      #E6FBF7 75%,
+      #CCFBF1 100%
     ) !important;
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1.5px solid rgba(223, 194, 178, 0.65) !important;
+  border: 1.5px solid rgba(153, 246, 228, 0.65) !important;
   box-shadow:
-    0 24px 60px rgba(185, 145, 125, 0.14),
-    0 4px 18px rgba(215, 178, 160, 0.16),
+    0 24px 60px rgba(15, 23, 42, 0.14),
+    0 4px 18px rgba(94, 234, 212, 0.16),
     inset 0 1px 2px rgba(255, 255, 255, 0.95) !important;
   border-radius: 1.5rem;
 }
+
+/* ==========================================================================
+   Stepper Numbered Circles Animations
+   ========================================================================== */
+@keyframes stepperPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(20, 184, 166, 0.4), 0 4px 14px rgba(20, 184, 166, 0.22);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(20, 184, 166, 0.15), 0 6px 18px rgba(20, 184, 166, 0.32);
+  }
+}
+
+.stepper-circle-active {
+  animation: stepperPulse 2.4s infinite ease-in-out;
+}
+
+/* ==========================================================================
+   Interactive Star Rating Animations (Super Expressive 3D Pop & Hover)
+   ========================================================================== */
+@keyframes starSuperPop {
+  0% {
+    transform: scale(0.4) rotate(-120deg);
+    filter: drop-shadow(0 0 24px rgba(255, 181, 71, 1)) brightness(1.8);
+  }
+  35% {
+    transform: scale(1.65) rotate(190deg);
+    filter: drop-shadow(0 0 20px rgba(255, 181, 71, 1)) brightness(1.5);
+  }
+  65% {
+    transform: scale(0.85) rotate(380deg);
+  }
+  85% {
+    transform: scale(1.2) rotate(355deg);
+  }
+  100% {
+    transform: scale(1) rotate(360deg);
+    filter: drop-shadow(0 2px 10px rgba(255, 181, 71, 0.65));
+  }
+}
+
+@keyframes starSuperHover {
+  0% {
+    transform: scale(1) translateY(0);
+  }
+  35% {
+    transform: scale(1.38) translateY(-4px) rotate(-10deg);
+    filter: drop-shadow(0 4px 14px rgba(255, 181, 71, 0.85));
+  }
+  70% {
+    transform: scale(1.22) translateY(-2px) rotate(6deg);
+  }
+  100% {
+    transform: scale(1.28) translateY(-3px) rotate(0deg);
+    filter: drop-shadow(0 3px 10px rgba(255, 181, 71, 0.75));
+  }
+}
+
+@keyframes starBreathingGlow {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 2px 5px rgba(255, 181, 71, 0.4));
+  }
+  50% {
+    transform: scale(1.06);
+    filter: drop-shadow(0 2px 12px rgba(255, 181, 71, 0.85));
+  }
+}
+
+.star-spin-pop {
+  animation: starSuperPop 0.58s cubic-bezier(0.175, 0.885, 0.32, 1.35) forwards;
+  z-index: 20;
+}
+
+.star-jelly-hover {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.2s ease;
+}
+
+.star-jelly-hover:hover {
+  animation: starSuperHover 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  z-index: 15;
+}
+
+.star-active-glow {
+  animation: starBreathingGlow 3s infinite ease-in-out;
+}
+
+/* ==========================================================================
+   Company Environment Emoji Rating Animations
+   ========================================================================== */
+@keyframes emojiPopBounce {
+  0% {
+    transform: scale(0.75);
+  }
+  50% {
+    transform: scale(1.22);
+  }
+  100% {
+    transform: scale(1.1);
+  }
+}
+
+@keyframes emojiAuraVeryBad {
+  0%, 100% {
+    transform: scale(1.08);
+    filter: drop-shadow(0 0 12px rgba(255, 77, 79, 0.85)) drop-shadow(0 0 4px rgba(207, 19, 34, 0.5));
+  }
+  50% {
+    transform: scale(1.14);
+    filter: drop-shadow(0 0 18px rgba(255, 77, 79, 1)) drop-shadow(0 0 7px rgba(207, 19, 34, 0.7));
+  }
+}
+
+@keyframes emojiAuraBad {
+  0%, 100% {
+    transform: scale(1.08);
+    filter: drop-shadow(0 0 12px rgba(255, 146, 43, 0.85)) drop-shadow(0 0 4px rgba(217, 119, 6, 0.5));
+  }
+  50% {
+    transform: scale(1.14);
+    filter: drop-shadow(0 0 18px rgba(255, 146, 43, 1)) drop-shadow(0 0 7px rgba(217, 119, 6, 0.7));
+  }
+}
+
+@keyframes emojiAuraNeutral {
+  0%, 100% {
+    transform: scale(1.08);
+    filter: drop-shadow(0 0 12px rgba(252, 196, 25, 0.85)) drop-shadow(0 0 4px rgba(217, 119, 6, 0.5));
+  }
+  50% {
+    transform: scale(1.14);
+    filter: drop-shadow(0 0 18px rgba(252, 196, 25, 1)) drop-shadow(0 0 7px rgba(217, 119, 6, 0.7));
+  }
+}
+
+@keyframes emojiAuraGood {
+  0%, 100% {
+    transform: scale(1.08);
+    filter: drop-shadow(0 0 12px rgba(81, 207, 102, 0.85)) drop-shadow(0 0 4px rgba(43, 138, 62, 0.5));
+  }
+  50% {
+    transform: scale(1.14);
+    filter: drop-shadow(0 0 18px rgba(81, 207, 102, 1)) drop-shadow(0 0 7px rgba(43, 138, 62, 0.7));
+  }
+}
+
+@keyframes emojiAuraExcellent {
+  0%, 100% {
+    transform: scale(1.08);
+    filter: drop-shadow(0 0 12px rgba(255, 210, 51, 0.85)) drop-shadow(0 0 6px rgba(255, 45, 117, 0.55));
+  }
+  50% {
+    transform: scale(1.14);
+    filter: drop-shadow(0 0 18px rgba(255, 210, 51, 1)) drop-shadow(0 0 8px rgba(255, 45, 117, 0.75));
+  }
+}
+
+.emoji-btn-pop {
+  animation: emojiPopBounce 0.35s ease-out forwards;
+}
+
+.emoji-hover-effect {
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.25s ease, opacity 0.2s ease;
+}
+
+.emoji-hover-effect:hover {
+  transform: translateY(-4px) scale(1.15);
+}
+
+.emoji-active-1 {
+  animation: emojiAuraVeryBad 2.6s infinite ease-in-out;
+}
+
+.emoji-active-2 {
+  animation: emojiAuraBad 2.6s infinite ease-in-out;
+}
+
+.emoji-active-3 {
+  animation: emojiAuraNeutral 2.6s infinite ease-in-out;
+}
+
+.emoji-active-4 {
+  animation: emojiAuraGood 2.6s infinite ease-in-out;
+}
+
+.emoji-active-5,
+.emoji-active-star {
+  animation: emojiAuraExcellent 2.6s infinite ease-in-out;
+}
+
+
 

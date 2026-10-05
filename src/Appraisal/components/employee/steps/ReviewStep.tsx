@@ -1,97 +1,279 @@
 import React from "react";
 import { StepProps } from "../../../types/appraisal.types";
-import { CheckCircle2, Star, MessageSquare } from "lucide-react";
+import { CheckCircle2, Star, Lock } from "lucide-react";
 import { Card } from "../../../../components/ui";
 
-export const ReviewStep: React.FC<StepProps> = ({ formData, onChange }) => {
+const TEAM_CRITERIA = [
+  { key: "crossCollaboration", title: "Cross-Department Collaboration" },
+  { key: "communication", title: "Communication & Transparency" },
+  { key: "mentorship", title: "Mentorship & Knowledge Sharing" },
+  { key: "peerSupport", title: "Peer Support & Team Spirit" },
+  { key: "reliability", title: "Reliability & Accountability" },
+  { key: "initiative", title: "Adaptability & Initiative" },
+];
+
+const ENVIRONMENT_RATINGS: Record<number, { label: string; emoji: string }> = {
+  1: { label: "Very Bad", emoji: "😠" },
+  2: { label: "Bad", emoji: "🙁" },
+  3: { label: "Neutral", emoji: "😐" },
+  4: { label: "Good", emoji: "🙂" },
+  5: { label: "Excellent", emoji: "🤩" },
+};
+
+export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
+  const teamRatings = formData.teamRatings || {};
+  const ratedTeamKeys = Object.keys(teamRatings).filter((k) => (teamRatings[k as keyof typeof teamRatings] || 0) > 0);
+  const avgTeamScore = ratedTeamKeys.length > 0
+    ? (
+        ratedTeamKeys.reduce((acc, k) => acc + (teamRatings[k as keyof typeof teamRatings] || 0), 0) /
+        ratedTeamKeys.length
+      ).toFixed(1)
+    : null;
+
+  const envRating = formData.companyEnvironmentRating || formData.managementSupportRating || 0;
+  const envRatingInfo = ENVIRONMENT_RATINGS[envRating];
+
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      <div className="border-b border-gray-100 pb-4">
-        <h3 className="text-lg font-bold text-[#1B2559]">Step 6: Review & Final Submission</h3>
-        <p className="text-xs text-[#707EAE] mt-0.5">
-          Review your appraisal responses before finalizing. Your manager will be notified upon submission.
-        </p>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Step 1 Review */}
-        <Card className="p-4 rounded-2xl border border-[#E0E5F2] bg-white shadow-none">
-          <div className="flex items-center gap-2 text-xs font-bold text-[#1B2559] uppercase tracking-wider mb-2">
-            <CheckCircle2 className="w-4 h-4 text-[#05CD99]" />
-            <span>Role & Overview</span>
-          </div>
-          <p className="text-xs font-semibold text-[#1B2559] truncate">{formData.roleSummary || "Not filled"}</p>
-          <p className="text-xs text-[#707EAE] mt-1 line-clamp-2">{formData.keyResponsibilities || "No responsibilities provided"}</p>
-        </Card>
-
-        {/* Step 2 Review */}
-        <Card className="p-4 rounded-2xl border border-[#E0E5F2] bg-white shadow-none">
-          <div className="flex items-center gap-2 text-xs font-bold text-[#1B2559] uppercase tracking-wider mb-2">
-            <CheckCircle2 className="w-4 h-4 text-[#05CD99]" />
-            <span>Achievements (Rating: {formData.selfRatingAchievements}/5)</span>
-          </div>
-          <p className="text-xs font-semibold text-[#1B2559] line-clamp-2">{formData.majorAchievements || "Not filled"}</p>
-          <p className="text-xs text-[#707EAE] mt-1 line-clamp-2">{formData.kpisMet || "No KPIs recorded"}</p>
-        </Card>
-
-        {/* Step 3 Review */}
-        <Card className="p-4 rounded-2xl border border-[#E0E5F2] bg-white shadow-none">
-          <div className="flex items-center gap-2 text-xs font-bold text-[#1B2559] uppercase tracking-wider mb-2">
-            <CheckCircle2 className="w-4 h-4 text-[#05CD99]" />
-            <span>Team Collaboration</span>
-          </div>
-          <p className="text-xs text-[#707EAE] line-clamp-2">{formData.collaborationDetails || "Not filled"}</p>
-        </Card>
-
-        {/* Step 4 Review */}
-        <Card className="p-4 rounded-2xl border border-[#E0E5F2] bg-white shadow-none">
-          <div className="flex items-center gap-2 text-xs font-bold text-[#1B2559] uppercase tracking-wider mb-2">
-            <CheckCircle2 className="w-4 h-4 text-[#05CD99]" />
-            <span>Skills & Growth</span>
-          </div>
-          <p className="text-xs text-[#707EAE] line-clamp-2">{formData.skillsAcquired || "Not filled"}</p>
-        </Card>
-      </div>
-
-      {/* Overall Self Rating */}
-      <div className="p-5 bg-[#F4F7FE] rounded-2xl border border-gray-100 space-y-3">
-        <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#1B2559]">
-          <Star className="w-4 h-4 text-[#FFB547] fill-current" />
-          <span>Overall Self Performance Rating (1 to 5)</span>
-        </label>
-        <div className="flex items-center gap-2.5">
-          {[1, 2, 3, 4, 5].map((score) => (
-            <button
-              key={score}
-              type="button"
-              onClick={() => onChange("overallSelfRating", score)}
-              className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                formData.overallSelfRating === score
-                  ? "bg-[#4318FF] text-white shadow-md shadow-indigo-100"
-                  : "bg-white text-[#707EAE] hover:text-[#1B2559] border border-[#E0E5F2]"
-              }`}
-            >
-              <Star className={`w-3.5 h-3.5 ${formData.overallSelfRating >= score ? "fill-current" : ""}`} />
-              <span>{score}.0</span>
-            </button>
-          ))}
+      {/* Step Header */}
+      <div className="border-b border-[#99F6E4]/40 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h3 className="text-lg font-bold text-[#0F172A]">Step 6: Review & Final Submission</h3>
+          <p className="text-xs text-[#64748B] mt-0.5">
+            Review all responses from previous steps. This summary is strictly uneditable.
+          </p>
+        </div>
+        <div className="px-3 py-1 bg-amber-50 border border-amber-200 text-amber-800 rounded-full text-xs font-bold flex items-center gap-1.5 self-start sm:self-auto shadow-xs">
+          <Lock className="w-3.5 h-3.5" />
+          <span>Uneditable Summary</span>
         </div>
       </div>
 
-      {/* Final Remarks */}
-      <div>
-        <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#1B2559] mb-1.5">
-          <MessageSquare className="w-3.5 h-3.5 text-[#4318FF]" />
-          <span>Final Comments or Note for Manager</span>
-        </label>
-        <textarea
-          rows={3}
-          value={formData.finalComments}
-          onChange={(e) => onChange("finalComments", e.target.value)}
-          placeholder="Any additional context, aspirations, or topics you would like to discuss in your 1-on-1 review meeting..."
-          className="w-full px-3.5 py-2.5 bg-white border border-[#E0E5F2] hover:border-gray-300 focus:border-[#4318FF] focus:ring-2 focus:ring-[#4318FF]/10 rounded-xl text-sm text-[#1B2559] placeholder-[#A3AED0] focus:outline-none resize-none transition-all"
-        />
+      <div className="space-y-5">
+        {/* ===================================================================
+            STEP 1: ROLE & QUARTER OVERVIEW
+           =================================================================== */}
+        <Card className="p-5 rounded-2xl border border-[#99F6E4]/50 bg-white/90 shadow-xs space-y-3">
+          <div className="flex items-center justify-between border-b border-[#99F6E4]/30 pb-2.5">
+            <div className="flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-[#05CD99] text-white flex items-center justify-center text-[11px] font-bold">
+                1
+              </span>
+              <h4 className="text-xs sm:text-sm font-bold text-[#0F172A] uppercase tracking-wider">
+                Step 1: Role & Quarter Overview
+              </h4>
+            </div>
+            <span className="text-[11px] font-semibold text-[#05CD99] flex items-center gap-1">
+              <CheckCircle2 className="w-3.5 h-3.5" /> Completed
+            </span>
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-[#64748B] block mb-1.5 uppercase tracking-wider">
+              Overview
+            </label>
+            <div className="p-3.5 bg-gray-50/70 border border-[#CCFBF1] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium">
+              {formData.overview || formData.roleSummary || "No overview provided."}
+            </div>
+          </div>
+        </Card>
+
+        {/* ===================================================================
+            STEP 2: KEY ACHIEVEMENTS & PROJECTS
+           =================================================================== */}
+        <Card className="p-5 rounded-2xl border border-[#99F6E4]/50 bg-white/90 shadow-xs space-y-3.5">
+          <div className="flex items-center justify-between border-b border-[#99F6E4]/30 pb-2.5">
+            <div className="flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-[#05CD99] text-white flex items-center justify-center text-[11px] font-bold">
+                2
+              </span>
+              <h4 className="text-xs sm:text-sm font-bold text-[#0F172A] uppercase tracking-wider">
+                Step 2: Key Achievements & Projects
+              </h4>
+            </div>
+            <span className="text-[11px] font-semibold text-[#05CD99] flex items-center gap-1">
+              <CheckCircle2 className="w-3.5 h-3.5" /> Completed
+            </span>
+          </div>
+
+          {/* Project Title */}
+          <div>
+            <label className="text-xs font-bold text-[#64748B] block mb-1 uppercase tracking-wider">
+              Project Title
+            </label>
+            <div className="p-3 bg-gray-50/70 border border-[#CCFBF1] rounded-xl text-sm font-bold text-[#0F172A]">
+              {formData.projectTitle || formData.majorAchievements || "No title provided"}
+            </div>
+          </div>
+
+          {/* Project Description */}
+          <div>
+            <label className="text-xs font-bold text-[#64748B] block mb-1 uppercase tracking-wider">
+              Project Description
+            </label>
+            <div className="p-3.5 bg-gray-50/70 border border-[#CCFBF1] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium">
+              {formData.projectDescription || formData.kpisMet || "No description provided."}
+            </div>
+          </div>
+
+          {/* Challenge */}
+          <div>
+            <label className="text-xs font-bold text-[#64748B] block mb-1 uppercase tracking-wider">
+              Challenge
+            </label>
+            <div className="p-3.5 bg-amber-50/50 border border-amber-200/60 rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium">
+              {formData.projectChallenge || formData.challengesOvercome || "No challenge specified."}
+            </div>
+          </div>
+        </Card>
+
+        {/* ===================================================================
+            STEP 3: TEAMWORK & COLLABORATION
+           =================================================================== */}
+        <Card className="p-5 rounded-2xl border border-[#99F6E4]/50 bg-white/90 shadow-xs space-y-3.5">
+          <div className="flex items-center justify-between border-b border-[#99F6E4]/30 pb-2.5">
+            <div className="flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-[#05CD99] text-white flex items-center justify-center text-[11px] font-bold">
+                3
+              </span>
+              <h4 className="text-xs sm:text-sm font-bold text-[#0F172A] uppercase tracking-wider">
+                Step 3: Teamwork & Collaboration
+              </h4>
+            </div>
+            {avgTeamScore ? (
+              <span className="text-xs font-bold text-[#05CD99] px-2.5 py-0.5 rounded-full bg-[#05CD99]/10 flex items-center gap-1">
+                <Star className="w-3.5 h-3.5 fill-current" />
+                Avg Score: {avgTeamScore}/5.0
+              </span>
+            ) : (
+              <span className="text-[11px] font-semibold text-[#05CD99] flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5" /> Completed
+              </span>
+            )}
+          </div>
+
+          {/* 6 Dimensions Rating Display */}
+          <div>
+            <label className="text-xs font-bold text-[#64748B] block mb-2 uppercase tracking-wider">
+              Evaluated Teamwork Dimensions ({ratedTeamKeys.length}/6)
+            </label>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+              {TEAM_CRITERIA.map((criterion) => {
+                const score = teamRatings[criterion.key as keyof typeof teamRatings] || 0;
+                return (
+                  <div
+                    key={criterion.key}
+                    className="p-2.5 bg-gray-50/70 border border-[#CCFBF1] rounded-xl flex items-center justify-between gap-2"
+                  >
+                    <span className="text-xs font-semibold text-[#0F172A] truncate">
+                      {criterion.title}
+                    </span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <Star
+                          key={s}
+                          className={`w-3.5 h-3.5 ${
+                            s <= score
+                              ? "fill-amber-400 text-amber-400"
+                              : "fill-transparent text-gray-300"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </Card>
+
+        {/* ===================================================================
+            STEP 4: CONTINUOUS LEARNING & GOALS
+           =================================================================== */}
+        <Card className="p-5 rounded-2xl border border-[#99F6E4]/50 bg-white/90 shadow-xs space-y-3">
+          <div className="flex items-center justify-between border-b border-[#99F6E4]/30 pb-2.5">
+            <div className="flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-[#05CD99] text-white flex items-center justify-center text-[11px] font-bold">
+                4
+              </span>
+              <h4 className="text-xs sm:text-sm font-bold text-[#0F172A] uppercase tracking-wider">
+                Step 4: Continuous Learning & Goals
+              </h4>
+            </div>
+            <span className="text-[11px] font-semibold text-[#05CD99] flex items-center gap-1">
+              <CheckCircle2 className="w-3.5 h-3.5" /> Completed
+            </span>
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-[#64748B] block mb-1.5 uppercase tracking-wider">
+              Learning Goals
+            </label>
+            <div className="p-3.5 bg-gray-50/70 border border-[#CCFBF1] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium">
+              {formData.learningGoals ||
+                formData.nextQuarterLearningGoals ||
+                formData.skillsAcquired ||
+                "No learning goals provided."}
+            </div>
+          </div>
+        </Card>
+
+        {/* ===================================================================
+            STEP 5: COMPANY ENVIRONMENT
+           =================================================================== */}
+        <Card className="p-5 rounded-2xl border border-[#99F6E4]/50 bg-white/90 shadow-xs space-y-3.5">
+          <div className="flex items-center justify-between border-b border-[#99F6E4]/30 pb-2.5">
+            <div className="flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-[#05CD99] text-white flex items-center justify-center text-[11px] font-bold">
+                5
+              </span>
+              <h4 className="text-xs sm:text-sm font-bold text-[#0F172A] uppercase tracking-wider">
+                Step 5: Company Environment
+              </h4>
+            </div>
+            {envRating > 0 && envRatingInfo ? (
+              <span className="text-xs font-bold text-[#14B8A6] px-3 py-1 rounded-full bg-[#14B8A6]/10 flex items-center gap-1.5">
+                <span className="text-sm">{envRatingInfo.emoji}</span>
+                <span>{envRatingInfo.label} ({envRating}/5)</span>
+              </span>
+            ) : (
+              <span className="text-[11px] font-semibold text-[#05CD99] flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5" /> Completed
+              </span>
+            )}
+          </div>
+
+          {/* Feedback on Work Culture */}
+          <div>
+            <label className="text-xs font-bold text-[#64748B] block mb-1 uppercase tracking-wider">
+              Feedback on Work Culture
+            </label>
+            <div className="p-3.5 bg-gray-50/70 border border-[#CCFBF1] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium">
+              {formData.workCultureFeedback || "No feedback on work culture provided."}
+            </div>
+          </div>
+
+          {/* Work Life Balance */}
+          <div>
+            <label className="text-xs font-bold text-[#64748B] block mb-1 uppercase tracking-wider">
+              Work Life Balance
+            </label>
+            <div className="p-3.5 bg-gray-50/70 border border-[#CCFBF1] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium">
+              {formData.workLifeBalance || "No work life balance feedback provided."}
+            </div>
+          </div>
+
+          {/* Suggestions for Improvement */}
+          <div>
+            <label className="text-xs font-bold text-[#64748B] block mb-1 uppercase tracking-wider">
+              Suggestions for Improvement
+            </label>
+            <div className="p-3.5 bg-gray-50/70 border border-[#CCFBF1] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium">
+              {formData.suggestionsForImprovement || formData.toolingAndResources || "No suggestions provided."}
+            </div>
+          </div>
+        </Card>
       </div>
     </div>
   );

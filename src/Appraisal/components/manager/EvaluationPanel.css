@@ -1,0 +1,1184 @@
+/* ==========================================================================
+   Appraisal Review Evaluation - Ultra Luxury Redesign & Animation System
+   ========================================================================== */
+
+/* Page Container Animation */
+.evaluation-panel-container {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0 0 2.5rem 0;
+  animation: evalSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes spinSlow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spinSlow 24s linear infinite;
+}
+
+@keyframes evalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Card Animations System */
+@keyframes cardSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Glassmorphism Cards */
+.eval-glass-card {
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  border-radius: 1.25rem;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: cardSlideIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.eval-glass-card:hover {
+  box-shadow: 0 12px 36px -4px rgba(20, 184, 166, 0.10), 0 2px 8px rgba(0, 0, 0, 0.03);
+  border-color: rgba(20, 184, 166, 0.25);
+  transform: translateY(-2px);
+}
+
+/* Step Cards in Employee Submission */
+.eval-step-card {
+  background: #FFFFFF;
+  border: 1px solid rgba(153, 246, 228, 0.45);
+  border-radius: 1.15rem;
+  padding: 1.35rem 1.45rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+  animation: cardSlideIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.eval-step-card:nth-of-type(1) { animation-delay: 0.06s; }
+.eval-step-card:nth-of-type(2) { animation-delay: 0.12s; }
+.eval-step-card:nth-of-type(3) { animation-delay: 0.18s; }
+.eval-step-card:nth-of-type(4) { animation-delay: 0.24s; }
+.eval-step-card:nth-of-type(5) { animation-delay: 0.30s; }
+
+.eval-step-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 0;
+  background: linear-gradient(180deg, #14B8A6 0%, #05CD99 100%);
+  transition: height 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.eval-step-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(20, 184, 166, 0.6), rgba(5, 205, 153, 0.6), transparent);
+  transition: left 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+.eval-step-card:hover {
+  border-color: rgba(20, 184, 166, 0.32);
+  box-shadow: 0 12px 28px -4px rgba(20, 184, 166, 0.09), 0 3px 8px rgba(0, 0, 0, 0.02);
+  transform: translateY(-3px);
+}
+
+.eval-step-card:hover::before {
+  height: 100%;
+}
+
+.eval-step-card:hover::after {
+  left: 100%;
+}
+
+/* Back Button */
+.eval-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.05rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #14B8A6;
+  background: #FFFFFF;
+  border: 1.5px solid #CCFBF1;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(20, 184, 166, 0.06);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.eval-back-btn:hover {
+  background: #14B8A6;
+  color: #FFFFFF;
+  border-color: #14B8A6;
+  transform: translateX(-3px);
+  box-shadow: 0 6px 18px rgba(20, 184, 166, 0.25);
+}
+
+.eval-back-btn:active {
+  transform: scale(0.97);
+}
+
+/* Metadata Banner */
+.eval-meta-banner {
+  background: linear-gradient(135deg, #FFFFFF 0%, #FAFFFE 100%);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 1.25rem;
+  padding: 1.15rem 1.5rem;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+  position: relative;
+  overflow: hidden;
+  animation: cardSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.eval-meta-banner::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #14B8A6 0%, #5EEAD4 50%, #05CD99 100%);
+  opacity: 0.9;
+}
+
+.eval-meta-banner:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(20, 184, 166, 0.08);
+  border-color: rgba(20, 184, 166, 0.25);
+}
+
+.eval-meta-segment {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.35rem 0.5rem;
+}
+
+.eval-meta-icon-box {
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.25s ease;
+}
+
+.eval-meta-segment:hover .eval-meta-icon-box {
+  transform: scale(1.08) rotate(3deg);
+}
+
+/* Teamwork Dimension Item (2-Column Grid with NO Truncation!) */
+.eval-teamwork-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 0.75rem;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: not-allowed !important;
+}
+
+.eval-teamwork-item:hover {
+  background: #F1F5F9;
+  border-color: rgba(20, 184, 166, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(20, 184, 166, 0.08);
+}
+
+/* Employee Submission Inputs: Blocked Cursor */
+.eval-submission-col .eval-readonly-field,
+.eval-submission-col input,
+.eval-submission-col textarea,
+.eval-submission-col select,
+.eval-submission-col .eval-step-card div[class*="rounded-xl"],
+.eval-submission-col .eval-teamwork-item {
+  cursor: not-allowed !important;
+}
+
+.eval-readonly-field {
+  cursor: not-allowed !important;
+  user-select: text;
+  transition: all 0.2s ease;
+}
+
+.eval-readonly-field:hover {
+  background-color: #F1F5F9 !important;
+  border-color: #CBD5E1 !important;
+}
+
+/* Parameter Row in Manager Matrix */
+.eval-param-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem 0.85rem;
+  border-radius: 0.85rem;
+  border: 1px solid transparent;
+  transition: all 0.22s ease;
+}
+
+.eval-param-row:hover {
+  background-color: #F8FAFC;
+  border-color: #E2E8F0;
+}
+
+/* Star Buttons & SVG Icons */
+.eval-star-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.eval-star-btn {
+  background: none;
+  border: none;
+  padding: 0.15rem;
+  margin: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.45rem;
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.eval-star-btn:hover {
+  transform: scale(1.28);
+}
+
+.eval-star-btn:active {
+  transform: scale(0.92);
+}
+
+.eval-star-icon {
+  width: 1.45rem;
+  height: 1.45rem;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.eval-star-icon-empty {
+  color: #CBD5E1;
+  fill: #F8FAFC;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.04));
+}
+
+.eval-star-icon-filled {
+  color: #F59E0B;
+  fill: #FBBF24;
+  filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.45));
+}
+
+.eval-star-btn:hover .eval-star-icon-empty {
+  color: #FCD34D;
+  fill: #FEF3C7;
+}
+
+/* True Half-Star: perfectly proportioned, covering exact half of the star */
+.eval-star-half-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.45rem;
+  height: 1.45rem;
+}
+
+.eval-star-half-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1.45rem !important;
+  height: 1.45rem !important;
+  clip-path: polygon(0 0, 50% 0, 50% 100%, 0 100%);
+  -webkit-clip-path: polygon(0 0, 50% 0, 50% 100%, 0 100%);
+  pointer-events: none;
+}
+
+/* Score Pill Input next to stars (allows user to type decimal number or click stars) */
+.eval-star-score-input {
+  width: 2.85rem;
+  min-width: 2.85rem;
+  height: 1.95rem;
+  text-align: center;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #B45309;
+  background: #FEF3C7;
+  border: 1.5px solid #FDE68A;
+  border-radius: 0.65rem;
+  margin-left: 0.5rem;
+  padding: 0 0.25rem;
+  cursor: text;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1px 2px rgba(180, 83, 9, 0.08);
+  -moz-appearance: textfield;
+}
+
+.eval-star-score-input::-webkit-outer-spin-button,
+.eval-star-score-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.eval-star-score-input:hover {
+  background: #FEF08A;
+  border-color: #FCD34D;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.2);
+}
+
+.eval-star-score-input:focus {
+  outline: none;
+  background: #FFFFFF;
+  border-color: #F59E0B;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.28);
+  color: #92400E;
+}
+
+/* Parameter Score Progress Track */
+.eval-param-track {
+  width: 100%;
+  height: 4px;
+  background: #EDF2F7;
+  border-radius: 9999px;
+  overflow: hidden;
+  margin-top: 0.35rem;
+}
+
+.eval-param-fill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1), background 0.35s ease;
+}
+
+/* Average Score & KPI Banner */
+.eval-kpi-card {
+  background: linear-gradient(135deg, #F7FEFD 0%, #F0FDFA 50%, #F7FEFD 100%);
+  border: 1.5px solid #99F6E4;
+  border-radius: 1.15rem;
+  padding: 1.15rem 1.35rem;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(20, 184, 166, 0.05);
+  transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.eval-kpi-card:hover {
+  transform: translateY(-2px);
+  border-color: #5EEAD4;
+  box-shadow: 0 8px 24px -4px rgba(20, 184, 166, 0.12);
+}
+
+.eval-kpi-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 90px;
+  height: 90px;
+  background: radial-gradient(circle, rgba(20, 184, 166, 0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* Rating Tier Badges */
+.eval-tier-badge-5 {
+  background: #ECFDF5;
+  color: #047857;
+  border: 1px solid #A7F3D0;
+}
+.eval-tier-badge-4 {
+  background: #F0FDFA;
+  color: #14B8A6;
+  border: 1px solid #99F6E4;
+}
+.eval-tier-badge-3 {
+  background: #FEF3C7;
+  color: #B45309;
+  border: 1px solid #FDE68A;
+}
+.eval-tier-badge-2,
+.eval-tier-badge-1 {
+  background: #FEF2F2;
+  color: #B91C1C;
+  border: 1px solid #FECACA;
+}
+
+/* Quick Suggestion Chips */
+.eval-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.25rem 0.55rem;
+  border-radius: 9999px;
+  background: #F7FEFD;
+  color: #14B8A6;
+  border: 1px solid #99F6E4;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  user-select: none;
+}
+
+.eval-tag-chip:hover {
+  background: #14B8A6;
+  color: #FFFFFF;
+  border-color: #14B8A6;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(20, 184, 166, 0.22);
+}
+
+.eval-tag-chip:active {
+  transform: scale(0.95);
+}
+
+/* Textareas with Modern Focus Glow */
+.eval-textarea-field {
+  width: 100%;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 0.85rem;
+  padding: 0.8rem 1rem;
+  font-size: 0.8125rem;
+  color: #0F172A;
+  background: #FFFFFF;
+  line-height: 1.55;
+  transition: all 0.22s ease;
+  resize: none;
+}
+
+.eval-textarea-field:hover {
+  border-color: #CBD5E1;
+}
+
+.eval-textarea-field:focus {
+  outline: none;
+  border-color: #14B8A6;
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.12);
+  background: #FAFFFE;
+}
+
+.eval-textarea-field::placeholder {
+  color: #A0AEC0;
+}
+
+/* Submit Evaluation Button with Gradient Glow & Ripple */
+.eval-submit-btn-glow {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 0.925rem 1.5rem;
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #FFFFFF;
+  background: linear-gradient(135deg, #05CD99 0%, #00B074 100%);
+  border: none;
+  border-radius: 0.95rem;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(5, 205, 153, 0.35);
+  transition: all 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.eval-submit-btn-glow::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.65s ease;
+}
+
+.eval-submit-btn-glow:hover {
+  background: linear-gradient(135deg, #04B384 0%, #009964 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(5, 205, 153, 0.45);
+}
+
+.eval-submit-btn-glow:hover::after {
+  left: 140%;
+}
+
+.eval-submit-btn-glow:active {
+  transform: scale(0.98);
+}
+
+/* ==========================================================================
+   Header Title Animation - Fast Kinetic Reveal & Vibrant Gradient Shimmer
+   ========================================================================== */
+
+.eval-trophy-box {
+  animation: evalTrophyFastPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  will-change: transform, opacity;
+}
+
+@keyframes evalTrophyFastPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.75);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.eval-title-anim {
+  display: inline-block;
+  background: linear-gradient(
+    90deg,
+    #0F172A 0%,
+    #0F172A 32%,
+    #14B8A6 55%,
+    #5EEAD4 72%,
+    #0F172A 88%,
+    #0F172A 100%
+  );
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  will-change: transform, background-position, opacity;
+  animation:
+    evalTitleFastReveal 0.35s cubic-bezier(0.16, 1, 0.3, 1) backwards,
+    evalTitleFastShimmer 2s ease-in-out 0.35s infinite alternate;
+}
+
+@keyframes evalTitleFastReveal {
+  0% {
+    opacity: 0;
+    clip-path: inset(0 100% 0 0);
+    transform: translateX(-14px);
+  }
+  50% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+    transform: translateX(0);
+  }
+}
+
+@keyframes evalTitleFastShimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
+.eval-title-accent-line {
+  display: block;
+  width: 2.75rem;
+  height: 3px;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #14B8A6 0%, #5EEAD4 50%, #F59E0B 100%);
+  margin-top: 4px;
+  animation: evalLineFastExpand 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.15s backwards;
+  box-shadow: 0 1px 6px rgba(20, 184, 166, 0.35);
+  will-change: width, opacity;
+}
+
+@keyframes evalLineFastExpand {
+  0% {
+    width: 0;
+    opacity: 0;
+  }
+  100% {
+    width: 2.75rem;
+    opacity: 1;
+  }
+}
+
+.eval-subtitle-anim {
+  animation: evalSubtitleFastReveal 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.1s backwards;
+  will-change: transform, opacity;
+}
+
+@keyframes evalSubtitleFastReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==========================================================================
+   Employee Metadata Banner Card - Animations & Kinetic Reveal
+   ========================================================================== */
+
+.eval-meta-banner {
+  position: relative;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 1.25rem;
+  padding: 1.125rem 1.5rem;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(0, 0, 0, 0.02);
+  overflow: hidden;
+  animation: evalBannerEntrance 0.38s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, box-shadow;
+}
+
+/* Vibrant Animated Gradient Top Border Beam */
+.eval-meta-banner::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #14B8A6 0%, #5EEAD4 35%, #05CD99 70%, #5EEAD4 100%);
+  background-size: 200% 100%;
+  animation: bannerBeamFlow 3s ease-in-out infinite alternate;
+  z-index: 5;
+}
+
+/* Light Beam Glint Sweep on Hover */
+.eval-meta-banner::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(20, 184, 166, 0.04), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.75s ease;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.eval-meta-banner:hover {
+  transform: translateY(-2px);
+  border-color: rgba(20, 184, 166, 0.25);
+  box-shadow: 0 12px 30px -4px rgba(20, 184, 166, 0.1), 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.eval-meta-banner:hover::after {
+  left: 150%;
+}
+
+@keyframes evalBannerEntrance {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.99);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes bannerBeamFlow {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Staggered Kinetic Reveal for Metadata Segments */
+.eval-meta-segment {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  transition: transform 0.22s ease;
+}
+
+.eval-meta-segment:hover {
+  transform: translateY(-1.5px);
+}
+
+.eval-meta-segment-1 {
+  animation: metaSegmentIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.05s backwards;
+}
+
+.eval-meta-segment-2 {
+  animation: metaSegmentIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.1s backwards;
+}
+
+.eval-meta-segment-3 {
+  animation: metaSegmentIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.15s backwards;
+}
+
+.eval-meta-segment-4 {
+  animation: metaSegmentIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.2s backwards;
+}
+
+@keyframes metaSegmentIn {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==========================================================================
+   VIEW-ONLY MODE (Blocked Cursor 🚫 & Readonly Input Styling)
+   ========================================================================== */
+.eval-view-mode .eval-param-row {
+  cursor: not-allowed !important;
+}
+
+.eval-view-mode .eval-param-row:hover {
+  background-color: #F8FAFC;
+  border-color: #E2E8F0;
+}
+
+.eval-view-mode .eval-star-group {
+  cursor: not-allowed !important;
+}
+
+.eval-view-mode .eval-star-btn,
+.eval-star-btn:disabled,
+.eval-disabled-cursor {
+  cursor: not-allowed !important;
+  pointer-events: auto !important;
+  opacity: 0.9;
+}
+
+.eval-view-mode .eval-star-btn:hover {
+  transform: none !important;
+}
+
+.eval-view-mode .eval-star-score-input,
+.eval-star-score-input:disabled,
+.eval-star-score-input:read-only,
+.eval-score-input-disabled {
+  cursor: not-allowed !important;
+  pointer-events: auto !important;
+  background: #F1F5F9 !important;
+  border-color: #CBD5E1 !important;
+  color: #64748B !important;
+  box-shadow: none !important;
+}
+
+.eval-view-mode .eval-star-score-input:hover,
+.eval-view-mode .eval-star-score-input:focus,
+.eval-score-input-disabled:hover,
+.eval-score-input-disabled:focus {
+  background: #F1F5F9 !important;
+  border-color: #CBD5E1 !important;
+  transform: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.eval-view-mode .eval-textarea-field,
+.eval-textarea-field:disabled,
+.eval-textarea-field:read-only,
+.eval-textarea-readonly {
+  cursor: not-allowed !important;
+  pointer-events: auto !important;
+  background: #F8FAFC !important;
+  border-color: #CBD5E1 !important;
+  color: #334155 !important;
+  resize: none !important;
+  user-select: text;
+}
+
+.eval-view-mode .eval-textarea-field:hover,
+.eval-view-mode .eval-textarea-field:focus,
+.eval-textarea-readonly:hover,
+.eval-textarea-readonly:focus {
+  background: #F8FAFC !important;
+  border-color: #CBD5E1 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* ==========================================================================
+   HIDDEN SCORE EVALUATION PARAMETERS (Locked / Click to verify email)
+   ========================================================================== */
+.eval-rating-hidden-card {
+  background: linear-gradient(135deg, #F8FAFC 0%, #F0FDFA 100%);
+  border: 1.5px dashed #99F6E4;
+  border-radius: 1.15rem;
+  padding: 1.25rem;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+.eval-rating-hidden-card:hover {
+  background: linear-gradient(135deg, #F1F5F9 0%, #CCFBF1 100%);
+  border-color: #14B8A6;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px -4px rgba(20, 184, 166, 0.12);
+}
+
+/* ==========================================================================
+   STATE TRANSITION & MORPHING ANIMATIONS (Modal & Number Input)
+   ========================================================================== */
+.eval-modal-backdrop {
+  animation: modalBackdropFadeIn 0.25s ease-out forwards;
+}
+
+@keyframes modalBackdropFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Smooth morphing card container */
+.eval-morphing-modal-card {
+  max-width: 28rem;
+  transition: all 0.38s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.eval-modal-stage-email {
+  max-width: 28rem;
+}
+
+.eval-modal-stage-otp {
+  max-width: 30rem;
+}
+
+.eval-modal-stage-verifying,
+.eval-modal-stage-success {
+  max-width: 25rem;
+}
+
+/* Stage inner content entrance */
+/* ==========================================================================
+   Verification / OTP Animation System (Matching Existing Theme)
+   ========================================================================== */
+
+/* Modal Backdrop */
+.eval-themed-modal-overlay {
+  background: rgba(11, 15, 25, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Modal Card matching existing luxury theme */
+.eval-themed-modal-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.18), 
+              0 0 35px rgba(20, 184, 166, 0.06);
+  border-radius: 28px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Subtle ambient glow matching existing theme */
+.eval-modal-ambient-glow {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 260px;
+  height: 180px;
+  background: radial-gradient(circle, rgba(5, 205, 153, 0.12) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+  transition: all 0.5s ease;
+}
+
+.eval-modal-ambient-glow.glowing {
+  background: radial-gradient(circle, rgba(5, 205, 153, 0.28) 0%, rgba(20, 184, 166, 0.1) 50%, transparent 75%);
+  width: 340px;
+  height: 240px;
+  filter: blur(10px);
+}
+
+/* 6 OTP Input Boxes: Matching Existing Theme */
+.eval-theme-otp-box {
+  width: 50px;
+  height: 62px;
+  background: #FAFFFE;
+  border: 2px solid #E2E8F0;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+}
+
+@media (max-width: 420px) {
+  .eval-theme-otp-box {
+    width: 42px;
+    height: 54px;
+    border-radius: 12px;
+  }
+}
+
+/* Active focus on empty OTP Box */
+.eval-theme-otp-box:focus-within {
+  border-color: #14B8A6;
+  background: #FFFFFF;
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.14), 0 4px 14px rgba(20, 184, 166, 0.08);
+  transform: translateY(-2px);
+}
+
+/* FOR EACH TYPED NUMBER: VIBRANT GREEN SHADOW */
+.eval-theme-otp-box.has-number {
+  border-color: #05CD99 !important;
+  background: #F0FDF9 !important;
+  box-shadow: 0 0 0 3px rgba(5, 205, 153, 0.22), 
+              0 8px 22px -3px rgba(5, 205, 153, 0.42) !important;
+  transform: translateY(-2px);
+}
+
+.eval-theme-otp-box.has-number input {
+  color: #05CD99 !important;
+}
+
+/* Box illumination feedback when number is entered */
+.eval-theme-otp-box.illuminated {
+  animation: greenIlluminatePulse 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes greenIlluminatePulse {
+  0% {
+    background: rgba(5, 205, 153, 0.25);
+    border-color: #05CD99;
+    box-shadow: 0 0 24px rgba(5, 205, 153, 0.6);
+  }
+  100% {
+    background: #F0FDF9;
+    border-color: #05CD99;
+    box-shadow: 0 0 0 3px rgba(5, 205, 153, 0.22), 0 8px 22px -3px rgba(5, 205, 153, 0.42);
+  }
+}
+
+/* Number pop animation when digit is entered */
+.eval-otp-digit-input {
+  font-family: inherit;
+  font-weight: 800;
+  text-align: center;
+  font-size: 1.75rem;
+  line-height: 1;
+  color: #0F172A;
+  background: transparent;
+  outline: none;
+  width: 100%;
+  height: 100%;
+  caret-color: #05CD99;
+  transition: color 0.15s ease;
+}
+
+/* When all 4 boxes are completed */
+.eval-otp-boxes-wrap.energy-glow .eval-theme-otp-box {
+  border-color: #05CD99 !important;
+  background: #F0FDF9 !important;
+  box-shadow: 0 0 24px rgba(5, 205, 153, 0.65), 
+              0 0 45px rgba(5, 205, 153, 0.3), 
+              inset 0 0 12px rgba(5, 205, 153, 0.15) !important;
+  transform: scale(1.03);
+  animation: greenEnergyPulse 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes greenEnergyPulse {
+  0% {
+    box-shadow: 0 0 20px rgba(5, 205, 153, 0.5), 0 0 35px rgba(5, 205, 153, 0.2);
+  }
+  100% {
+    box-shadow: 0 0 30px rgba(5, 205, 153, 0.8), 0 0 55px rgba(5, 205, 153, 0.35);
+  }
+}
+
+/* Energy light spreading beam */
+.eval-energy-beam {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 60px;
+  transform: translateY(-50%);
+  background: linear-gradient(90deg, transparent, rgba(5, 205, 153, 0.35), transparent);
+  filter: blur(12px);
+  pointer-events: none;
+  animation: energySweepGreen 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes energySweepGreen {
+  0% {
+    opacity: 0;
+    transform: translateY(-50%) translateX(-40%);
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.8;
+    transform: translateY(-50%) translateX(40%);
+  }
+}
+
+/* Verification Morphing Transition */
+.eval-otp-fade-out {
+  opacity: 0 !important;
+  transform: scale(0.92) translateY(-10px) !important;
+  filter: blur(6px) !important;
+  transition: all 0.55s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.eval-success-fade-in {
+  animation: successStageReveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes successStageReveal {
+  0% {
+    opacity: 0;
+    transform: scale(0.90) translateY(14px);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0);
+  }
+}
+
+/* Success State: Rounded Square Container & Checkmark Draw */
+.eval-success-square-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.eval-success-square {
+  width: 76px;
+  height: 76px;
+  background: linear-gradient(135deg, #05CD99 0%, #10B981 100%);
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  border-radius: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 35px rgba(5, 205, 153, 0.55), 
+              0 12px 30px rgba(5, 205, 153, 0.35),
+              inset 0 1px 1px rgba(255, 255, 255, 0.6);
+  animation: squarePopSpring 0.48s cubic-bezier(0.175, 0.885, 0.32, 1.25) forwards;
+  z-index: 2;
+  position: relative;
+}
+
+@keyframes squarePopSpring {
+  0% {
+    transform: scale(0.88);
+    opacity: 0;
+  }
+  65% {
+    transform: scale(1.06);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.eval-success-glow-ring {
+  position: absolute;
+  inset: -12px;
+  border-radius: 30px;
+  background: radial-gradient(circle, rgba(5, 205, 153, 0.45) 0%, transparent 70%);
+  filter: blur(8px);
+  animation: greenGlowExpand 0.75s 0.1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  pointer-events: none;
+  z-index: 1;
+}
+
+@keyframes greenGlowExpand {
+  0% {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.25);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.15);
+    opacity: 0.55;
+  }
+}
+
+.eval-success-checkmark-svg {
+  width: 36px;
+  height: 36px;
+  stroke: #FFFFFF;
+  stroke-width: 3.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+.eval-success-checkmark-path {
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: drawCheckmark 0.32s 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes drawCheckmark {
+  0% {
+    stroke-dashoffset: 48;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}

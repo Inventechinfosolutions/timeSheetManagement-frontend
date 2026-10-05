@@ -5,7 +5,7 @@
 /* 1. Modal Overlay Backdrop Entrance & Exit */
 .create-assignment-modal-overlay {
   animation: createModalOverlayFade 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
-  background: rgba(27, 37, 89, 0.2) !important;
+  background: rgba(15, 23, 42, 0.2) !important;
   backdrop-filter: blur(3.5px) !important;
   -webkit-backdrop-filter: blur(3.5px) !important;
   z-index: 0 !important;
@@ -79,7 +79,7 @@ body.modal-open-active .sidebar-footer {
   -webkit-backdrop-filter: blur(28px);
   border: 1.5px solid rgba(229, 201, 143, 0.55) !important;
   box-shadow:
-    0 28px 75px -15px rgba(27, 37, 89, 0.22),
+    0 28px 75px -15px rgba(15, 23, 42, 0.22),
     0 6px 24px rgba(229, 201, 143, 0.25),
     inset 0 1px 2px rgba(255, 255, 255, 1) !important;
   border-radius: 1.75rem !important;
@@ -102,14 +102,14 @@ body.modal-open-active .sidebar-footer {
     transform: perspective(1200px) scale(1) rotateX(0deg) rotateY(0deg) rotateZ(0deg) translateY(0);
     filter: blur(0px);
     box-shadow:
-      0 28px 75px -15px rgba(27, 37, 89, 0.22),
+      0 28px 75px -15px rgba(15, 23, 42, 0.22),
       0 6px 24px rgba(229, 201, 143, 0.25);
   }
   28% {
     opacity: 0.96;
     /* Squeeze vertically & horizontally with an initial 3D page curl/fold */
     transform: perspective(1200px) scale(0.86, 0.92) rotateX(14deg) rotateY(-16deg) rotateZ(-4deg) translateY(6px);
-    box-shadow: 0 16px 40px -10px rgba(27, 37, 89, 0.26);
+    box-shadow: 0 16px 40px -10px rgba(15, 23, 42, 0.26);
   }
   65% {
     opacity: 0.55;
@@ -180,18 +180,18 @@ body.modal-open-active .sidebar-footer {
   width: 2.75rem;
   height: 2.75rem;
   border-radius: 1rem;
-  background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);
-  color: #4318FF;
+  background: linear-gradient(135deg, #F0FDFA 0%, #CCFBF1 100%);
+  color: #14B8A6;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 4px 14px rgba(67, 24, 255, 0.18), inset 0 1px 1px #FFFFFF;
+  box-shadow: 0 4px 14px rgba(20, 184, 166, 0.18), inset 0 1px 1px #FFFFFF;
 }
 
 /* 5. Header Title & Subtitle */
 .create-modal-title {
-  color: #1B2559;
+  color: #0F172A;
   font-size: 1.15rem;
   font-weight: 700;
   line-height: 1.25;
@@ -199,7 +199,7 @@ body.modal-open-active .sidebar-footer {
 }
 
 .create-modal-subtitle {
-  color: #707EAE;
+  color: #64748B;
   font-size: 0.8rem;
   font-weight: 400;
   margin-top: 0.2rem;
@@ -214,14 +214,14 @@ body.modal-open-active .sidebar-footer {
   justify-content: center !important;
   border-radius: 0.85rem !important;
   color: #8F9BBA !important;
-  background: #F4F7FE !important;
+  background: #F7FEFD !important;
   border: 1.5px solid #E2E8F0 !important;
   cursor: pointer !important;
   transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
   transform-origin: center center !important;
   position: relative !important;
   overflow: hidden !important;
-  box-shadow: 0 2px 6px rgba(112, 144, 176, 0.08) !important;
+  box-shadow: 0 2px 6px rgba(15, 118, 110, 0.08) !important;
 }
 
 /* Close Button Hover: Squeeze + 90deg Spin + Soft Crimson Highlight */
@@ -263,7 +263,7 @@ body.modal-open-active .sidebar-footer {
   padding: 1rem 1.15rem !important;
   transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(112, 144, 176, 0.08) !important;
+  box-shadow: 0 2px 8px rgba(15, 118, 110, 0.08) !important;
   position: relative;
   overflow: hidden;
   opacity: 1 !important;
@@ -296,7 +296,7 @@ body.modal-open-active .sidebar-footer {
 .create-modal-option:hover {
   transform: translateY(-2px) !important;
   border-color: #CBD5E1 !important;
-  box-shadow: 0 12px 26px rgba(112, 144, 176, 0.16), 0 2px 6px rgba(229, 201, 143, 0.2) !important;
+  box-shadow: 0 12px 26px rgba(15, 118, 110, 0.16), 0 2px 6px rgba(229, 201, 143, 0.2) !important;
 }
 
 /* Staggered entrance for option cards */
@@ -323,9 +323,9 @@ body.modal-open-active .sidebar-footer {
 
 /* Individual Option Selected */
 .create-modal-option-individual.is-selected {
-  border-color: #4318FF !important;
+  border-color: #14B8A6 !important;
   background: linear-gradient(135deg, #FFFFFF 0%, #F5F7FF 100%) !important;
-  box-shadow: 0 10px 28px rgba(67, 24, 255, 0.18), 0 0 0 2px rgba(67, 24, 255, 0.2) !important;
+  box-shadow: 0 10px 28px rgba(20, 184, 166, 0.18), 0 0 0 2px rgba(20, 184, 166, 0.2) !important;
   animation: optionSelectedPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -355,13 +355,13 @@ body.modal-open-active .sidebar-footer {
   width: 2.75rem;
   height: 2.75rem;
   border-radius: 1rem;
-  background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);
-  color: #4318FF;
+  background: linear-gradient(135deg, #F0FDFA 0%, #CCFBF1 100%);
+  color: #14B8A6;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 3px 10px rgba(67, 24, 255, 0.12);
+  box-shadow: 0 3px 10px rgba(20, 184, 166, 0.12);
   transition: box-shadow 0.25s ease;
 }
 
@@ -383,11 +383,11 @@ body.modal-open-active .sidebar-footer {
 }
 
 .create-modal-option-individual:hover .create-option-icon-wrap-individual {
-  box-shadow: 0 6px 18px rgba(67, 24, 255, 0.24);
+  box-shadow: 0 6px 18px rgba(20, 184, 166, 0.24);
 }
 
 .create-modal-option-individual.is-selected .create-option-icon-wrap-individual {
-  box-shadow: 0 4px 14px rgba(67, 24, 255, 0.22);
+  box-shadow: 0 4px 14px rgba(20, 184, 166, 0.22);
 }
 
 .create-option-icon-wrap-all {
@@ -431,8 +431,8 @@ body.modal-open-active .sidebar-footer {
 }
 
 .create-modal-option-individual.is-selected .create-option-radio {
-  border-color: #4318FF;
-  box-shadow: 0 0 0 3px rgba(67, 24, 255, 0.12);
+  border-color: #14B8A6;
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.12);
 }
 
 .create-modal-option-all.is-selected .create-option-radio {
@@ -444,7 +444,7 @@ body.modal-open-active .sidebar-footer {
   width: 0.65rem;
   height: 0.65rem;
   border-radius: 9999px;
-  background: #4318FF;
+  background: #14B8A6;
   animation: radioDotSpring 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -475,13 +475,13 @@ body.modal-open-active .sidebar-footer {
 .create-option-title {
   font-size: 0.925rem;
   font-weight: 700;
-  color: #1B2559;
+  color: #0F172A;
   opacity: 1 !important;
 }
 
 .create-option-desc {
   font-size: 0.775rem;
-  color: #707EAE;
+  color: #64748B;
   margin-top: 0.15rem;
   opacity: 1 !important;
 }
@@ -500,11 +500,11 @@ body.modal-open-active .sidebar-footer {
 
 /* Active State: Spring Pop + Vibrant Indigo Gradient + Breathing Pulse */
 .create-modal-continue-btn.is-active {
-  background: linear-gradient(135deg, #4318FF 0%, #3210D4 100%) !important;
+  background: linear-gradient(135deg, #14B8A6 0%, #0F766E 100%) !important;
   color: #FFFFFF !important;
   border: 1px solid rgba(255, 255, 255, 0.2) !important;
   box-shadow:
-    0 8px 24px rgba(67, 24, 255, 0.38),
+    0 8px 24px rgba(20, 184, 166, 0.38),
     0 2px 6px rgba(229, 201, 143, 0.25) !important;
   cursor: pointer !important;
   animation:
@@ -539,8 +539,8 @@ body.modal-open-active .sidebar-footer {
   60% {
     transform: scale(1.07);
     box-shadow:
-      0 14px 34px rgba(67, 24, 255, 0.48),
-      0 0 0 5px rgba(67, 24, 255, 0.22);
+      0 14px 34px rgba(20, 184, 166, 0.48),
+      0 0 0 5px rgba(20, 184, 166, 0.22);
   }
   80% {
     transform: scale(0.98);
@@ -548,7 +548,7 @@ body.modal-open-active .sidebar-footer {
   100% {
     transform: scale(1);
     box-shadow:
-      0 8px 24px rgba(67, 24, 255, 0.38),
+      0 8px 24px rgba(20, 184, 166, 0.38),
       0 2px 6px rgba(229, 201, 143, 0.25);
   }
 }
@@ -556,13 +556,13 @@ body.modal-open-active .sidebar-footer {
 @keyframes continuePulseGlow {
   0%, 100% {
     box-shadow:
-      0 8px 24px rgba(67, 24, 255, 0.36),
-      0 0 0 0 rgba(67, 24, 255, 0.35);
+      0 8px 24px rgba(20, 184, 166, 0.36),
+      0 0 0 0 rgba(20, 184, 166, 0.35);
   }
   50% {
     box-shadow:
-      0 12px 30px rgba(67, 24, 255, 0.5),
-      0 0 0 6px rgba(67, 24, 255, 0.12);
+      0 12px 30px rgba(20, 184, 166, 0.5),
+      0 0 0 6px rgba(20, 184, 166, 0.12);
   }
 }
 
@@ -579,7 +579,7 @@ body.modal-open-active .sidebar-footer {
 .create-modal-continue-btn.is-active:hover {
   transform: translateY(-2.5px) scale(1.03) !important;
   box-shadow:
-    0 14px 36px rgba(67, 24, 255, 0.48),
+    0 14px 36px rgba(20, 184, 166, 0.48),
     0 4px 10px rgba(229, 201, 143, 0.32) !important;
 }
 
@@ -587,13 +587,13 @@ body.modal-open-active .sidebar-footer {
 .create-modal-continue-btn.is-active:active {
   transform: translateY(1px) scale(0.95) !important;
   box-shadow:
-    0 4px 14px rgba(67, 24, 255, 0.32) !important;
+    0 4px 14px rgba(20, 184, 166, 0.32) !important;
 }
 
 /* Disabled State */
 .create-modal-continue-btn.is-disabled {
-  background: #F4F7FE !important;
-  color: #A3AED0 !important;
+  background: #F7FEFD !important;
+  color: #94A3B8 !important;
   border: 1px solid transparent !important;
   box-shadow: none !important;
   cursor: not-allowed !important;

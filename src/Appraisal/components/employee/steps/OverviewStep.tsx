@@ -1,61 +1,40 @@
 import React from "react";
 import { StepProps } from "../../../types/appraisal.types";
-import { FileText, Briefcase, Award } from "lucide-react";
+
 
 export const OverviewStep: React.FC<StepProps> = ({ formData, onChange }) => {
+  const overviewVal = formData.overview ?? formData.roleSummary ?? "";
+
+  const handleChange = (val: string) => {
+    onChange("overview" as any, val);
+    onChange("roleSummary", val);
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       <div className="border-b border-gray-100 pb-4">
-        <h3 className="text-lg font-bold text-[#1B2559]">Step 1: Role & Quarter Overview</h3>
-        <p className="text-xs text-[#707EAE] mt-0.5">
+        <h3 className="text-lg font-bold text-[#0F172A]">Step 1: Role & Quarter Overview</h3>
+        <p className="text-xs text-[#64748B] mt-0.5">
           Summarize your current role, primary responsibilities, and key highlights for this quarter.
         </p>
       </div>
 
-      <div className="space-y-5">
-        {/* Role Summary */}
+      <div className="space-y-4">
+        {/* Single Comprehensive Overview Input */}
         <div>
-          <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#1B2559] mb-1.5">
-            <Briefcase className="w-3.5 h-3.5 text-[#4318FF]" />
-            <span>Role Summary <span className="text-red-500">*</span></span>
-          </label>
-          <input
-            type="text"
-            value={formData.roleSummary}
-            onChange={(e) => onChange("roleSummary", e.target.value)}
-            placeholder="e.g. Senior Frontend Developer leading user-facing feature development"
-            className="w-full px-3.5 py-2.5 bg-white border border-[#E0E5F2] hover:border-gray-300 focus:border-[#4318FF] focus:ring-2 focus:ring-[#4318FF]/10 rounded-xl text-sm text-[#1B2559] placeholder-[#A3AED0] focus:outline-none transition-all"
-          />
-        </div>
-
-        {/* Key Responsibilities */}
-        <div>
-          <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#1B2559] mb-1.5">
-            <FileText className="w-3.5 h-3.5 text-[#4318FF]" />
-            <span>Key Responsibilities <span className="text-red-500">*</span></span>
+          <label className="block text-xs font-bold uppercase tracking-wider text-[#0F172A] mb-2">
+            Overview <span className="text-red-500">*</span>
           </label>
           <textarea
-            rows={3}
-            value={formData.keyResponsibilities}
-            onChange={(e) => onChange("keyResponsibilities", e.target.value)}
-            placeholder="Outline your primary day-to-day responsibilities and core accountabilities..."
-            className="w-full px-3.5 py-2.5 bg-white border border-[#E0E5F2] hover:border-gray-300 focus:border-[#4318FF] focus:ring-2 focus:ring-[#4318FF]/10 rounded-xl text-sm text-[#1B2559] placeholder-[#A3AED0] focus:outline-none resize-none transition-all"
+            rows={7}
+            value={overviewVal}
+            onChange={(e) => handleChange(e.target.value)}
+            placeholder="Summarize your role, core responsibilities, deliverables, and major quarter highlights..."
+            className="w-full px-4 py-3 bg-white border border-[#CCFBF1] hover:border-gray-300 focus:border-[#14B8A6] focus:ring-2 focus:ring-[#14B8A6]/10 rounded-2xl text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none resize-none transition-all shadow-xs leading-relaxed"
           />
-        </div>
-
-        {/* Quarter Highlights */}
-        <div>
-          <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#1B2559] mb-1.5">
-            <Award className="w-3.5 h-3.5 text-[#4318FF]" />
-            <span>Quarter Highlights & Major Projects <span className="text-red-500">*</span></span>
-          </label>
-          <textarea
-            rows={3}
-            value={formData.quarterHighlights}
-            onChange={(e) => onChange("quarterHighlights", e.target.value)}
-            placeholder="Key milestones reached, releases delivered, or notable wins this quarter..."
-            className="w-full px-3.5 py-2.5 bg-white border border-[#E0E5F2] hover:border-gray-300 focus:border-[#4318FF] focus:ring-2 focus:ring-[#4318FF]/10 rounded-xl text-sm text-[#1B2559] placeholder-[#A3AED0] focus:outline-none resize-none transition-all"
-          />
+          <p className="text-xs text-[#94A3B8] mt-1.5">
+            Provide a clear summary covering your day-to-day role responsibilities, key milestones reached, and major projects delivered this quarter.
+          </p>
         </div>
       </div>
     </div>

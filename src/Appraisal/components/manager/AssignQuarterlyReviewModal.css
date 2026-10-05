@@ -5,7 +5,7 @@
 /* 1. Modal Overlay Backdrop Entrance & Exit */
 .assign-quarterly-modal-overlay {
   animation: assignModalOverlayFade 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
-  background: rgba(27, 37, 89, 0.2) !important;
+  background: rgba(15, 23, 42, 0.2) !important;
   backdrop-filter: blur(3.5px) !important;
   -webkit-backdrop-filter: blur(3.5px) !important;
   z-index: 0 !important;
@@ -57,7 +57,7 @@
   -webkit-backdrop-filter: blur(28px) !important;
   border: 1.5px solid rgba(229, 201, 143, 0.55) !important;
   box-shadow:
-    0 28px 75px -15px rgba(27, 37, 89, 0.22),
+    0 28px 75px -15px rgba(15, 23, 42, 0.22),
     0 6px 24px rgba(229, 201, 143, 0.25),
     inset 0 1px 2px rgba(255, 255, 255, 1) !important;
   border-radius: 1.75rem !important;
@@ -107,13 +107,13 @@
     transform: perspective(1200px) scale(1) rotateX(0deg) rotateY(0deg) rotateZ(0deg) translateY(0);
     filter: blur(0px);
     box-shadow:
-      0 28px 75px -15px rgba(27, 37, 89, 0.22),
+      0 28px 75px -15px rgba(15, 23, 42, 0.22),
       0 6px 24px rgba(229, 201, 143, 0.25);
   }
   28% {
     opacity: 0.96;
     transform: perspective(1200px) scale(0.86, 0.92) rotateX(14deg) rotateY(-16deg) rotateZ(-4deg) translateY(6px);
-    box-shadow: 0 16px 40px -10px rgba(27, 37, 89, 0.26);
+    box-shadow: 0 16px 40px -10px rgba(15, 23, 42, 0.26);
   }
   65% {
     opacity: 0.55;
@@ -136,14 +136,14 @@
   justify-content: center !important;
   border-radius: 0.85rem !important;
   color: #8F9BBA !important;
-  background: #F4F7FE !important;
+  background: #F7FEFD !important;
   border: 1.5px solid #E2E8F0 !important;
   cursor: pointer !important;
   transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
   transform-origin: center center !important;
   position: relative !important;
   overflow: hidden !important;
-  box-shadow: 0 2px 6px rgba(112, 144, 176, 0.08) !important;
+  box-shadow: 0 2px 6px rgba(15, 118, 110, 0.08) !important;
 }
 
 .assign-quarterly-modal-dialog .assign-modal-close-btn:hover {
@@ -179,13 +179,13 @@
   width: 2.75rem;
   height: 2.75rem;
   border-radius: 1rem;
-  background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);
-  color: #4318FF;
+  background: linear-gradient(135deg, #F0FDFA 0%, #CCFBF1 100%);
+  color: #14B8A6;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 4px 14px rgba(67, 24, 255, 0.18), inset 0 1px 1px #FFFFFF;
+  box-shadow: 0 4px 14px rgba(20, 184, 166, 0.18), inset 0 1px 1px #FFFFFF;
 }
 
 /* 5. Form Sections Staggered Entrance */
@@ -213,7 +213,7 @@
   padding: 0.65rem 1.6rem !important;
   border-radius: 0.85rem !important;
   border: 1.5px solid #E2E8F0 !important;
-  color: #1B2559 !important;
+  color: #0F172A !important;
   font-weight: 700 !important;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
@@ -221,7 +221,7 @@
 .assign-modal-cancel-btn:hover {
   background: #F1F5F9 !important;
   transform: translateY(-1.5px);
-  box-shadow: 0 4px 12px rgba(112, 144, 176, 0.12) !important;
+  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.12) !important;
 }
 
 .assign-modal-cancel-btn:active {
@@ -237,7 +237,7 @@
   border-radius: 0.85rem !important;
   font-weight: 700 !important;
   font-size: 0.875rem !important;
-  background: linear-gradient(135deg, #4318FF 0%, #3210D4 100%) !important;
+  background: linear-gradient(135deg, #14B8A6 0%, #0F766E 100%) !important;
   color: #FFFFFF !important;
   border: 1px solid rgba(255, 255, 255, 0.2) !important;
   position: relative !important;
@@ -250,20 +250,20 @@
     box-shadow 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
     border-color 0.3s ease !important;
   box-shadow:
-    0 8px 24px rgba(67, 24, 255, 0.38),
+    0 8px 24px rgba(20, 184, 166, 0.38),
     0 2px 6px rgba(229, 201, 143, 0.25) !important;
 }
 
 .assign-modal-submit-btn:hover:not(:disabled) {
   transform: translateY(-2.5px) scale(1.02) !important;
   box-shadow:
-    0 14px 34px rgba(67, 24, 255, 0.48),
+    0 14px 34px rgba(20, 184, 166, 0.48),
     0 4px 10px rgba(229, 201, 143, 0.32) !important;
 }
 
 .assign-modal-submit-btn:active:not(:disabled) {
   transform: translateY(1px) scale(0.96) !important;
-  box-shadow: 0 4px 14px rgba(67, 24, 255, 0.32) !important;
+  box-shadow: 0 4px 14px rgba(20, 184, 166, 0.32) !important;
 }
 
 /* Icon Container */
@@ -320,7 +320,7 @@
 /* Button Animating State (compress slightly on launch) */
 .assign-modal-submit-btn.assign-btn-animating {
   transform: scale(0.96) !important;
-  box-shadow: 0 4px 14px rgba(67, 24, 255, 0.3) !important;
+  box-shadow: 0 4px 14px rgba(20, 184, 166, 0.3) !important;
   cursor: default !important;
 }
 
@@ -398,10 +398,10 @@
 
 /* Input Hover: Gentle lift, indigo border highlight & soft shadow */
 .assign-input-control:hover {
-  border-color: #818CF8 !important;
+  border-color: #5EEAD4 !important;
   transform: translateY(-1.5px) !important;
   box-shadow:
-    0 6px 18px rgba(67, 24, 255, 0.08),
+    0 6px 18px rgba(20, 184, 166, 0.08),
     0 2px 4px rgba(0, 0, 0, 0.03) !important;
 }
 
@@ -409,11 +409,11 @@
 .assign-input-control:focus,
 .assign-input-control:focus-within,
 .assign-input-control[aria-expanded="true"] {
-  border-color: #4318FF !important;
+  border-color: #14B8A6 !important;
   transform: translateY(-2px) scale(1.008) !important;
   box-shadow:
-    0 0 0 3.5px rgba(67, 24, 255, 0.16),
-    0 8px 24px rgba(67, 24, 255, 0.12) !important;
+    0 0 0 3.5px rgba(20, 184, 166, 0.16),
+    0 8px 24px rgba(20, 184, 166, 0.12) !important;
 }
 
 /* Input Suffix & Dropdown Chevron Icons Animation */
@@ -423,13 +423,13 @@
 
 .assign-input-control:hover svg {
   transform: scale(1.18) rotate(6deg) !important;
-  color: #4318FF !important;
+  color: #14B8A6 !important;
 }
 
 .assign-input-control:focus-within svg,
 .assign-input-control[aria-expanded="true"] svg {
   transform: scale(1.22) rotate(180deg) !important;
-  color: #4318FF !important;
+  color: #14B8A6 !important;
 }
 
 /* Interactive Form Labels */
@@ -439,7 +439,7 @@
 }
 
 .assign-modal-form-section:hover label {
-  color: #4318FF !important;
+  color: #14B8A6 !important;
   transform: translateX(1.5px) !important;
 }
 
@@ -473,7 +473,7 @@
 
 .assign-select-all-btn:hover {
   transform: scale(1.08) translateX(1px) !important;
-  color: #3311CC !important;
+  color: #0F766E !important;
 }
 
 .assign-select-all-btn:active {
@@ -482,9 +482,9 @@
 
 /* Textarea Focus & Hover */
 .assign-input-textarea:focus {
-  border-color: #4318FF !important;
+  border-color: #14B8A6 !important;
   box-shadow:
-    0 0 0 3.5px rgba(67, 24, 255, 0.16),
-    0 8px 22px rgba(67, 24, 255, 0.1) !important;
+    0 0 0 3.5px rgba(20, 184, 166, 0.16),
+    0 8px 22px rgba(20, 184, 166, 0.1) !important;
 }
 
