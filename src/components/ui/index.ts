@@ -15,4 +15,4 @@ export * from "./Avatar";
 export * from "./Pagination";
 export * from "./MonthNavigator";
 export * from "./Table";
-export * from "./InventechIconLoader";
+export * from "./PopconfirmWithTooltip";

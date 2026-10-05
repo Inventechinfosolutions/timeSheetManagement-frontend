@@ -4,4 +4,5 @@ export * from "./NoteList";
 export * from "./NoteEditor";
 export * from "./NoteView";
 export * from "./NoteSendModal";
+export * from "./EmployeeDirectoryPickerModal";
 

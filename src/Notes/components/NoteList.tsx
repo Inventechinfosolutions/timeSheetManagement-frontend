@@ -14,7 +14,8 @@ import {
   Send,
   Paperclip,
 } from "lucide-react";
-import { Popconfirm, Tooltip } from "antd";
+import { Tooltip } from "antd";
+import { PopconfirmWithTooltip } from "../../components/ui/PopconfirmWithTooltip";
 import dayjs from "dayjs";
 import { Note, NoteType } from "../types/notes.types";
 import { getCleanDescriptionSnippet } from "../utils/notesHelpers";
@@ -339,24 +340,23 @@ export const NoteList: React.FC<NoteListProps> = ({
                           </Tooltip>
 
                           {/* Delete */}
-                          <Popconfirm
+                          <PopconfirmWithTooltip
                             title="Delete Note"
                             description="Are you sure you want to delete this note and its sub-notes?"
+                            tooltipTitle="Delete Note"
                             onConfirm={() => onDeleteNote(note.id)}
                             okText="Delete"
                             cancelText="Cancel"
                             okButtonProps={{ danger: true }}
                           >
-                            <Tooltip title="Delete Note" placement="top">
-                              <button
-                                type="button"
-                                className="w-8 h-8 rounded-xl bg-[#FEF2F2] text-[#EF4444] hover:bg-[#FEE2E2] flex items-center justify-center transition cursor-pointer shadow-xs"
-                                aria-label="Delete Note"
-                              >
-                                <Trash2 className="w-3.5 h-3.5 text-[#EF4444]" />
-                              </button>
-                            </Tooltip>
-                          </Popconfirm>
+                            <button
+                              type="button"
+                              className="w-8 h-8 rounded-xl bg-[#FEF2F2] text-[#EF4444] hover:bg-[#FEE2E2] flex items-center justify-center transition cursor-pointer shadow-xs"
+                              aria-label="Delete Note"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 text-[#EF4444]" />
+                            </button>
+                          </PopconfirmWithTooltip>
                         </div>
                       </td>
                     </tr>
@@ -513,24 +513,23 @@ export const NoteList: React.FC<NoteListProps> = ({
                                                 </button>
                                               </Tooltip>
 
-                                              <Popconfirm
+                                              <PopconfirmWithTooltip
                                                 title="Delete Sub-Note"
                                                 description="Are you sure you want to delete this sub-note?"
+                                                tooltipTitle="Delete Sub-note"
                                                 onConfirm={() => onDeleteNote(sub.id)}
                                                 okText="Delete"
                                                 cancelText="Cancel"
                                                 okButtonProps={{ danger: true }}
                                               >
-                                                <Tooltip title="Delete Sub-note" placement="top">
-                                                  <button
-                                                    type="button"
-                                                    className="w-8 h-8 rounded-xl bg-[#FEF2F2] text-[#EF4444] hover:bg-[#FEE2E2] flex items-center justify-center transition cursor-pointer shadow-xs"
-                                                    aria-label="Delete Sub-note"
-                                                  >
-                                                    <Trash2 className="w-3.5 h-3.5 text-[#EF4444]" />
-                                                  </button>
-                                                </Tooltip>
-                                              </Popconfirm>
+                                                <button
+                                                  type="button"
+                                                  className="w-8 h-8 rounded-xl bg-[#FEF2F2] text-[#EF4444] hover:bg-[#FEE2E2] flex items-center justify-center transition cursor-pointer shadow-xs"
+                                                  aria-label="Delete Sub-note"
+                                                >
+                                                  <Trash2 className="w-3.5 h-3.5 text-[#EF4444]" />
+                                                </button>
+                                              </PopconfirmWithTooltip>
                                             </div>
                                           </td>
                                         </tr>

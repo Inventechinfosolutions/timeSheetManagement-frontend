@@ -29,8 +29,8 @@ import {
   Dropdown,
   Button,
   Badge,
-  InventechIconLoader,
 } from "../components/ui";
+import { WorksphereLogoLoader } from "../components/ApiLoadingSpinner";
 import type { DropdownOption } from "../components/ui";
 
 interface DayInfo {
@@ -567,11 +567,11 @@ const MonthlyAttendanceMatrix: React.FC = () => {
         {/* Matrix Table Card */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-8 min-h-[420px]">
           {loading ? (
-            <div className="py-28 flex flex-col items-center justify-center">
-              <InventechIconLoader
-                size="md"
-                text={`Loading ${monthNames[selectedMonth - 1]} ${selectedYear} Attendance Matrix...`}
-              />
+            <div className="py-24 flex flex-col items-center justify-center">
+              <WorksphereLogoLoader />
+              <span className="text-xs font-semibold text-[#2B3674] mt-2">
+                Loading {monthNames[selectedMonth - 1]} {selectedYear} Attendance Matrix...
+              </span>
             </div>
           ) : !matrixData || filteredEmployees.length === 0 ? (
             <div className="py-20 text-center">

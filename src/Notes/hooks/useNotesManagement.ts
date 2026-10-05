@@ -111,7 +111,8 @@ export const useNotesManagement = () => {
     attachments: [],
     files: [],
     isPinned: false,
-    isAutoSave: true,
+    isAutoSave: false,
+    isVertical: true,
   });
 
   const [autoSaveStatus, setAutoSaveStatus] = useState<AutoSaveStatus>("idle");
@@ -135,6 +136,7 @@ export const useNotesManagement = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const doclingJsonInputRef = useRef<HTMLInputElement>(null);
+  const xlsImportInputRef = useRef<HTMLInputElement>(null);
   const [isImportingDocling, setIsImportingDocling] = useState(false);
 
   const editorRef = useRef<HTMLDivElement>(null);
@@ -278,7 +280,8 @@ export const useNotesManagement = () => {
       attachments: [],
       files: [],
       isPinned: false,
-      isAutoSave: true,
+      isAutoSave: false,
+      isVertical: true,
     });
     if (editorRef.current) {
       editorRef.current.innerHTML = "";
@@ -311,7 +314,8 @@ export const useNotesManagement = () => {
       attachments: [],
       files: [],
       isPinned: false,
-      isAutoSave: true,
+      isAutoSave: false,
+      isVertical: parent.isVertical ?? true,
     });
     if (editorRef.current) {
       editorRef.current.innerHTML = "";
@@ -343,7 +347,8 @@ export const useNotesManagement = () => {
       attachments: [],
       files: [],
       isPinned: note.isPinned || false,
-      isAutoSave: true,
+      isAutoSave: note.isAutoSave ?? false,
+      isVertical: note.isVertical ?? true,
     });
     lastSavedRef.current = {
       title: note.title,
@@ -369,7 +374,8 @@ export const useNotesManagement = () => {
           attachments: [],
           files: [],
           isPinned: detailedNote.isPinned || false,
-          isAutoSave: true,
+          isAutoSave: detailedNote.isAutoSave ?? false,
+          isVertical: detailedNote.isVertical ?? true,
         });
         lastSavedRef.current = {
           title: detailedNote.title,
@@ -490,6 +496,59 @@ export const useNotesManagement = () => {
       });
     } finally {
       setIsImportingDocling(false);
+      if (e.target) e.target.value = "";
+    }
+  };
+
+  // Handle XLS/Excel file import — calls the extract API and inserts into editor
+  const handleXlsImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validExtensions = [".xlsx", ".xls", ".csv"];
+    const fileExt = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
+    if (!validExtensions.includes(fileExt)) {
+      message.error("Please upload an Excel file (.xlsx, .xls, .csv)");
+      if (e.target) e.target.value = "";
+      return;
+    }
+
+    const uploadData = new FormData();
+    uploadData.append("files", file);
+    uploadData.append("file", file);
+
+    try {
+      message.loading({ content: "Extracting Excel data...", key: "xls-import", duration: 0 });
+
+      const response = await axios.post("/api/notes/extract", uploadData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      const generatedHtml = response.data?.description || response.data?.html || "";
+
+      if (editorRef.current) {
+        editorRef.current.innerHTML = generatedHtml;
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        description: generatedHtml,
+        title: prev.title || file.name.replace(/\.[^/.]+$/, ""),
+      }));
+
+      message.success({
+        content: "Excel data extracted into Description box! You can now edit it directly.",
+        key: "xls-import",
+      });
+    } catch (err: any) {
+      console.error("Excel extraction error:", err);
+      message.error({
+        content: err.response?.data?.message || "Failed to extract Excel data",
+        key: "xls-import",
+      });
+    } finally {
       if (e.target) e.target.value = "";
     }
   };
@@ -638,6 +697,7 @@ export const useNotesManagement = () => {
               color: "#4318FF",
               isPinned: formData.isPinned,
               isAutoSave: formData.isAutoSave,
+              isVertical: formData.isVertical ?? true,
               attachmentKeys: formData.attachmentKeys,
               files: formData.files.length > 0 ? formData.files : undefined,
             })
@@ -667,6 +727,7 @@ export const useNotesManagement = () => {
             projectName: formData.type === "PROJECT" ? formData.projectName.trim() : undefined,
             isPinned: formData.isPinned,
             autoSave: formData.isAutoSave,
+            isVertical: formData.isVertical ?? true,
           })
         ).unwrap();
 
@@ -814,6 +875,7 @@ export const useNotesManagement = () => {
               color: "#4318FF",
               isPinned: formData.isPinned,
               isAutoSave: formData.isAutoSave,
+              isVertical: formData.isVertical ?? true,
               attachmentKeys: formData.attachmentKeys,
               files: formData.files.length > 0 ? formData.files : undefined,
             })
@@ -829,6 +891,7 @@ export const useNotesManagement = () => {
             projectName: formData.type === "PROJECT" ? formData.projectName.trim() : undefined,
             isPinned: formData.isPinned,
             autoSave: formData.isAutoSave,
+            isVertical: formData.isVertical ?? true,
           })
         ).unwrap();
 
@@ -1128,6 +1191,8 @@ export const useNotesManagement = () => {
     setSendNoteModal,
     handleOpenSendModal,
     handleCloseSendModal,
+    xlsImportInputRef,
+    handleXlsImport,
     dispatch,
     setSearchQuery,
   };

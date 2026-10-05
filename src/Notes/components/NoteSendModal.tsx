@@ -9,9 +9,11 @@ import {
   Layers,
   Sparkles,
   X,
+  Search,
 } from "lucide-react";
 import { Note } from "../types/notes.types";
 import { getCleanDescriptionSnippet, sendNoteContent } from "../utils/notesHelpers";
+import { EmployeeDirectoryPickerModal } from "./EmployeeDirectoryPickerModal";
 
 interface NoteSendModalProps {
   open: boolean;
@@ -38,8 +40,18 @@ export const NoteSendModal: React.FC<NoteSendModalProps> = ({
   const [includeFiles, setIncludeFiles] = useState(true);
   const [selectedFileKeys, setSelectedFileKeys] = useState<string[]>([]);
   const [isSending, setIsSending] = useState(false);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  const handleAddFromDirectory = (newEmails: string[]) => {
+    const existingLower = new Set(recipientEmails.map((e) => e.trim().toLowerCase()));
+    const filtered = newEmails.filter((e) => !existingLower.has(e.trim().toLowerCase()));
+    if (filtered.length > 0) {
+      setRecipientEmails((prev) => [...prev, ...filtered]);
+      if (emailError) setEmailError("");
+    }
+  };
 
   // Reset/Initialize state when note changes
   useEffect(() => {
@@ -303,9 +315,20 @@ export const NoteSendModal: React.FC<NoteSendModalProps> = ({
         <div className="flex-1 overflow-y-auto p-4 space-y-3.5 custom-scrollbar bg-white">
           {/* Email Field */}
           <div>
-            <label className="text-xs font-bold text-[#2B3674] ml-1 block mb-1">
-              Email <span className="text-red-500">*</span>
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-bold text-[#2B3674] ml-1 block">
+                Email <span className="text-red-500">*</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => setIsPickerOpen(true)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 hover:text-slate-800 active:scale-95 rounded-lg border border-slate-200 transition cursor-pointer"
+                title="Search and select employees to get email IDs"
+              >
+                <Search className="w-3.5 h-3.5 text-slate-500" />
+                <span>Get Email Id's</span>
+              </button>
+            </div>
             <div className="flex flex-wrap gap-2 items-center">
               {recipientEmails.map((email) => (
                 <span
@@ -538,6 +561,13 @@ export const NoteSendModal: React.FC<NoteSendModalProps> = ({
           </div>
         </div>
       </div>
+
+      <EmployeeDirectoryPickerModal
+        open={isPickerOpen}
+        onClose={() => setIsPickerOpen(false)}
+        existingEmails={recipientEmails}
+        onAddRecipients={handleAddFromDirectory}
+      />
     </Modal>
   );
 };

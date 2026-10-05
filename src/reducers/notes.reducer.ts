@@ -114,6 +114,9 @@ export const createNote = createAsyncThunk(
         formData.append("isAutoSave", String(payload.isAutoSave));
         formData.append("autoSave", String(payload.isAutoSave));
       }
+      if (payload.isVertical !== undefined) {
+        formData.append("isVertical", String(payload.isVertical));
+      }
 
       if (payload.subNotes && payload.subNotes.length > 0) {
         formData.append("subNotes", JSON.stringify(payload.subNotes));
@@ -157,6 +160,7 @@ export const updateNote = createAsyncThunk(
       } else if (data.isAutoSave !== undefined) {
         sanitized.autoSave = data.isAutoSave;
       }
+      if (data.isVertical !== undefined) sanitized.isVertical = data.isVertical;
       if (data.orderIndex !== undefined) sanitized.orderIndex = data.orderIndex;
 
       const response = await axios.patch(`${API_BASE}/${id}`, sanitized);
