@@ -505,14 +505,15 @@ input[type="password"]::-webkit-password-reveal-button {
   box-sizing: border-box;
   position: relative;
   font-size: 14px;
-  overflow-x: hidden;
+  overflow-x: auto;
   overflow-wrap: anywhere;
   word-break: break-word;
 }
 
 .a4-page.landscape {
-  width: 297mm;
-  max-width: 297mm;
+  width: auto;
+  min-width: 337mm;
+  max-width: fit-content;
   min-height: 210mm;
   padding: 18mm 20mm;
 }
@@ -522,39 +523,68 @@ input[type="password"]::-webkit-password-reveal-button {
   font-size: 14px;
   line-height: 1.6;
   width: 100%;
-  max-width: 100%;
   box-sizing: border-box;
-  overflow-wrap: anywhere !important;
-  word-break: break-word !important;
-}
-
-.notes-rich-editor *,
-.notes-content-view * {
-  max-width: 100% !important;
-  box-sizing: border-box !important;
   overflow-wrap: anywhere !important;
   word-break: break-word !important;
 }
 
 .notes-rich-editor table,
 .notes-content-view table {
-  width: 100% !important;
-  max-width: 100% !important;
-  table-layout: fixed !important;
+  width: max-content !important;
+  max-width: none !important;
   border-collapse: collapse !important;
-  word-break: break-word !important;
-  overflow-wrap: anywhere !important;
   margin: 1rem 0 !important;
+  font-size: 13px !important;
+  border: 1px solid #64748b !important;
+}
+
+.notes-rich-editor table th,
+.notes-content-view table th {
+  min-width: 120px;
+  padding: 8px 14px;
+  border: 1px solid #64748b !important;
+  background-color: #f1f5f9 !important;
+  font-weight: 600;
+  text-align: center;
+  color: #334155;
+  user-select: none;
+  cursor: pointer;
 }
 
 .notes-rich-editor table td,
-.notes-rich-editor table th,
-.notes-content-view table td,
-.notes-content-view table th {
-  word-break: break-word !important;
-  overflow-wrap: anywhere !important;
-  white-space: normal !important;
-  max-width: 100% !important;
+.notes-content-view table td {
+  min-width: 120px;
+  height: 34px;
+  padding: 8px 14px;
+  border: 1px solid #64748b !important;
+  color: #1e293b;
+  text-align: left;
+}
+
+/* SL Column (First Column) in Excel-style Tables */
+.notes-rich-editor table th.excel-sl-col,
+.notes-rich-editor table td.excel-sl-col,
+.notes-content-view table th.excel-sl-col,
+.notes-content-view table td.excel-sl-col {
+  min-width: 50px !important;
+  max-width: 60px !important;
+  width: 50px !important;
+  padding: 8px 12px !important;
+  text-align: center !important;
+  background-color: #f1f5f9 !important;
+  color: #475569 !important;
+  border: 1px solid #64748b !important;
+  font-weight: 500;
+  font-size: 12px;
+  user-select: none;
+  cursor: pointer;
+}
+
+.notes-rich-editor table th.excel-sl-col.excel-cell-selected,
+.notes-rich-editor table td.excel-sl-col.excel-cell-selected {
+  outline: none !important;
+  border: 1px solid #64748b !important;
+  background-color: #f1f5f9 !important;
 }
 
 .notes-rich-editor img,
@@ -603,9 +633,280 @@ input[type="password"]::-webkit-password-reveal-button {
   }
 
   .a4-page.landscape {
-    width: 297mm !important;
+    width: 337mm !important;
     min-height: 210mm !important;
     padding: 15mm 20mm !important;
   }
 }
+
+/* Excel-Style Table Header Hover & Cell Selection */
+.notes-rich-editor table th[contenteditable="false"]:hover,
+.notes-rich-editor table td[contenteditable="false"]:hover {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+  cursor: pointer !important;
+}
+
+.notes-rich-editor table th[contenteditable="false"],
+.notes-rich-editor table td[contenteditable="false"] {
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.excel-cell-selected {
+  position: relative;
+  z-index: 2;
+}
+
+/* Table Theme Colors & Palette Variables */
+:root {
+  /* Bold & Dark Colors */
+  --tbl-black: #000000;
+  --tbl-dark-slate: #1e293b;
+  --tbl-slate-gray: #475569;
+  --tbl-deep-blue: #1d4ed8;
+  --tbl-electric-blue: #2563eb;
+  --tbl-teal: #0284c7;
+  --tbl-dark-green: #15803d;
+  --tbl-bold-green: #16a34a;
+  --tbl-bold-amber: #d97706;
+  --tbl-bold-orange: #ea580c;
+  --tbl-crimson-red: #dc2626;
+  --tbl-deep-red: #b91c1c;
+  --tbl-bold-pink: #e11d48;
+  --tbl-vibrant-purple: #9333ea;
+  --tbl-deep-purple: #6b21a8;
+
+  /* Soft & Light Shading Colors */
+  --tbl-white: #FFFFFF;
+  --tbl-gray: #F1F5F9;
+  --tbl-blue: #DBEAFE;
+  --tbl-cyan: #A5F3FC;
+  --tbl-green: #DCFCE7;
+  --tbl-lime: #D9F99D;
+  --tbl-yellow: #FEF9C3;
+  --tbl-orange: #FED7AA;
+  --tbl-light-red: #FECACA;
+  --tbl-purple: #DDD6FE;
+}
+
+/* Bold & Dark Swatch Classes */
+.bg-tbl-black { background-color: var(--tbl-black) !important; }
+.bg-tbl-dark-slate { background-color: var(--tbl-dark-slate) !important; }
+.bg-tbl-slate-gray { background-color: var(--tbl-slate-gray) !important; }
+.bg-tbl-deep-blue { background-color: var(--tbl-deep-blue) !important; }
+.bg-tbl-electric-blue { background-color: var(--tbl-electric-blue) !important; }
+.bg-tbl-teal { background-color: var(--tbl-teal) !important; }
+.bg-tbl-dark-green { background-color: var(--tbl-dark-green) !important; }
+.bg-tbl-bold-green { background-color: var(--tbl-bold-green) !important; }
+.bg-tbl-bold-amber { background-color: var(--tbl-bold-amber) !important; }
+.bg-tbl-bold-orange { background-color: var(--tbl-bold-orange) !important; }
+.bg-tbl-crimson-red { background-color: var(--tbl-crimson-red) !important; }
+.bg-tbl-deep-red { background-color: var(--tbl-deep-red) !important; }
+.bg-tbl-bold-pink { background-color: var(--tbl-bold-pink) !important; }
+.bg-tbl-vibrant-purple { background-color: var(--tbl-vibrant-purple) !important; }
+.bg-tbl-deep-purple { background-color: var(--tbl-deep-purple) !important; }
+
+/* Soft & Light Swatch Classes */
+.bg-tbl-white { background-color: var(--tbl-white) !important; }
+.bg-tbl-gray { background-color: var(--tbl-gray) !important; }
+.bg-tbl-blue { background-color: var(--tbl-blue) !important; }
+.bg-tbl-cyan { background-color: var(--tbl-cyan) !important; }
+.bg-tbl-green { background-color: var(--tbl-green) !important; }
+.bg-tbl-lime { background-color: var(--tbl-lime) !important; }
+.bg-tbl-yellow { background-color: var(--tbl-yellow) !important; }
+.bg-tbl-orange { background-color: var(--tbl-orange) !important; }
+.bg-tbl-light-red { background-color: var(--tbl-light-red) !important; }
+.bg-tbl-purple { background-color: var(--tbl-purple) !important; }
+
+/* Swatch Button Refined Focus & Elevation (No purple ring) */
+button[class*="bg-tbl-"] {
+  outline: none !important;
+}
+button[class*="bg-tbl-"]:focus,
+button[class*="bg-tbl-"]:active {
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.4) !important;
+}
+
+/* Attachment Column & Row Interactive Cells */
+.notes-rich-editor table th.excel-attachment-col,
+.notes-content-view table th.excel-attachment-col {
+  min-width: 140px !important;
+  width: 155px !important;
+  text-align: center !important;
+  background-color: #f1f5f9 !important;
+  color: #334155 !important;
+  font-weight: 600;
+  user-select: none;
+}
+
+.excel-attachment-header-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.notes-rich-editor table td.excel-attachment-cell,
+.notes-content-view table td.excel-attachment-cell {
+  min-width: 140px !important;
+  width: 155px !important;
+  padding: 6px 8px !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
+/* Row Attachment Upload Button - Modern Clean Pill */
+.row-attach-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+  background-color: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+.row-attach-upload-btn:hover {
+  color: #4318ff;
+  background-color: #eef2ff;
+  border-color: #a5b4fc;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(67, 24, 255, 0.08);
+}
+.row-attach-upload-btn svg {
+  color: #64748b;
+  transition: color 0.15s;
+}
+.row-attach-upload-btn:hover svg {
+  color: #4318ff;
+}
+
+/* Row Attachment Container for multiple files */
+.row-attach-container {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  vertical-align: middle;
+}
+
+.row-attach-add-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 6px;
+  border: 1px dashed #cbd5e1;
+  background-color: #f8fafc;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  flex-shrink: 0;
+}
+.row-attach-add-btn:hover {
+  background-color: #eef2ff;
+  border-color: #4318ff;
+  border-style: solid;
+  color: #4318ff;
+  transform: scale(1.08);
+}
+
+/* Row Attachment Badge */
+.table-file-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 150px;
+  padding: 3px 6px;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 11px;
+  color: #1e293b;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.15s ease;
+}
+.table-file-badge:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+}
+.table-file-name {
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+  cursor: default;
+}
+.table-file-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.table-file-btn.preview {
+  color: #4318ff;
+}
+.table-file-btn.preview:hover {
+  background-color: #eef2ff;
+}
+.table-file-btn.download {
+  color: #0284c7;
+}
+.table-file-btn.download:hover {
+  background-color: #e0f2fe;
+  color: #0369a1;
+}
+.table-file-btn.remove {
+  color: #94a3b8;
+}
+.table-file-btn.remove:hover {
+  color: #ef4444;
+  background-color: #fee2e2;
+}
+
+.row-attach-loading {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  animation: pulse 1.5s infinite;
+}
+
+/* In View mode: Clean empty attachment indicator instead of edit button, hide add/remove buttons */
+.notes-content-view .row-attach-upload-btn {
+  opacity: 0.35;
+  pointer-events: none;
+  background-color: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+.notes-content-view .row-attach-add-btn {
+  display: none !important;
+}
+.notes-content-view .table-file-btn.remove {
+  display: none !important;
+}
+
+
 

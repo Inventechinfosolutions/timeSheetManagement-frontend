@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef, useEffect } from "react";
 import {
   FileText,
   Edit3,
@@ -55,6 +55,25 @@ export const NoteView: React.FC<NoteViewProps> = ({
   onDelete,
 }) => {
   const isProjectNote = activeNote.type === "PROJECT";
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!contentRef.current) return;
+    const badges = contentRef.current.querySelectorAll<HTMLElement>(".table-file-badge");
+    badges.forEach((badge) => {
+      const fileKey = badge.getAttribute("data-file-key") || badge.querySelector("[data-key]")?.getAttribute("data-key");
+      const fileName = badge.getAttribute("data-file-name") || badge.querySelector(".table-file-name")?.textContent || "Attachment";
+      if (!badge.querySelector("[data-file-action='download']") && fileKey) {
+        const previewBtn = badge.querySelector("[data-file-action='preview']");
+        const downloadBtnHtml = `<button type="button" class="table-file-btn download" data-file-action="download" data-key="${fileKey}" data-name="${fileName}" title="Download file"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg></button>`;
+        if (previewBtn) {
+          previewBtn.insertAdjacentHTML("afterend", downloadBtnHtml);
+        } else {
+          badge.insertAdjacentHTML("beforeend", downloadBtnHtml);
+        }
+      }
+    });
+  }, [activeNote.description]);
 
   const getDownloadMenuItems = (note: Note): MenuProps["items"] => [
     {
@@ -70,6 +89,62 @@ export const NoteView: React.FC<NoteViewProps> = ({
       onClick: () => exportNoteToWord(note),
     },
   ];
+
+  const handleContentViewClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement | null;
+    if (!target) return;
+
+    const downloadBtn = target.closest<HTMLElement>("[data-file-action='download']");
+    if (downloadBtn) {
+      const key =
+        downloadBtn.getAttribute("data-key") ||
+        downloadBtn.getAttribute("data-file-key") ||
+        downloadBtn.closest<HTMLElement>("[data-file-key]")?.getAttribute("data-file-key");
+      const name =
+        downloadBtn.getAttribute("data-name") ||
+        downloadBtn.getAttribute("data-file-name") ||
+        downloadBtn.closest<HTMLElement>("[data-file-name]")?.getAttribute("data-file-name") ||
+        "Attachment";
+
+      if (key && onDownloadAttachment) {
+        e.preventDefault();
+        e.stopPropagation();
+        onDownloadAttachment({
+          key,
+          fileKey: key,
+          name,
+          fileName: name,
+        });
+      }
+      return;
+    }
+
+    const btn = target.closest<HTMLElement>(
+      "[data-file-action='preview'], [data-file-key], .table-file-badge, .table-file-btn"
+    );
+    if (btn) {
+      const key =
+        btn.getAttribute("data-key") ||
+        btn.getAttribute("data-file-key") ||
+        btn.closest<HTMLElement>("[data-file-key]")?.getAttribute("data-file-key");
+      const name =
+        btn.getAttribute("data-name") ||
+        btn.getAttribute("data-file-name") ||
+        btn.closest<HTMLElement>("[data-file-name]")?.getAttribute("data-file-name") ||
+        "Attachment";
+
+      if (key) {
+        e.preventDefault();
+        e.stopPropagation();
+        onPreviewAttachment({
+          key,
+          fileKey: key,
+          name,
+          fileName: name,
+        });
+      }
+    }
+  };
 
   return (
     <div className="w-full min-h-full bg-[#F4F7FE] p-3 sm:p-4 md:p-6 flex flex-col gap-4 font-sans">
@@ -277,14 +352,16 @@ export const NoteView: React.FC<NoteViewProps> = ({
               }`}
               style={
                 activeNote.isVertical === false
-                  ? { width: "297mm", maxWidth: "297mm", minHeight: "210mm" }
+                  ? { width: "337mm", maxWidth: "337mm", minHeight: "210mm" }
                   : { width: "210mm", maxWidth: "210mm", minHeight: "297mm" }
               }
             >
               {activeNote.description && activeNote.description.trim() ? (
                 <div
+                  ref={contentRef}
                   className="notes-content-view prose prose-slate max-w-none text-slate-800 text-sm sm:text-base leading-relaxed break-words"
                   dangerouslySetInnerHTML={{ __html: activeNote.description }}
+                  onClick={handleContentViewClick}
                 />
               ) : (
                 <div className="flex flex-col items-center justify-center py-24 text-center text-slate-400 gap-3">

@@ -1003,14 +1003,11 @@ export const useNotesManagement = () => {
     const isExcel = ["xlsx", "xls", "csv"].includes(ext);
 
     if (item.file) {
-      if (isImg) {
-        const localUrl = URL.createObjectURL(item.file);
-        setPreviewImageModal({ open: true, url: localUrl, title: displayName });
-      } else if (isExcel) {
+      if (isExcel) {
         await openExcelInNewTab(item.file, displayName);
       } else {
         const localUrl = URL.createObjectURL(item.file);
-        window.open(localUrl, "_blank");
+        setPreviewImageModal({ open: true, url: localUrl, title: displayName });
       }
       return;
     }
@@ -1028,27 +1025,13 @@ export const useNotesManagement = () => {
       const contentType = response.headers?.["content-type"] || "application/octet-stream";
       const blob = new Blob([response.data], { type: contentType });
 
-      if (isImg) {
-        const blobUrl = window.URL.createObjectURL(blob);
-        setPreviewImageModal({ open: true, url: blobUrl, title: displayName });
-        return;
-      }
-
       if (isExcel) {
         await openExcelInNewTab(blob, displayName);
         return;
       }
 
       const blobUrl = window.URL.createObjectURL(blob);
-      const newWindow = window.open(blobUrl, "_blank");
-      if (!newWindow) {
-        const link = document.createElement("a");
-        link.href = blobUrl;
-        link.target = "_blank";
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-      }
+      setPreviewImageModal({ open: true, url: blobUrl, title: displayName });
     } catch (err: any) {
       hide();
       message.error(err || "Failed to preview file from server");

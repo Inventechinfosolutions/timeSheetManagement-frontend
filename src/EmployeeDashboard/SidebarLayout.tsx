@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import {
   LayoutGrid,
   Calendar,
@@ -18,6 +18,7 @@ import { logoutUser } from "../reducers/user.reducer";
 import { fetchInboxUnreadCount } from "../reducers/inbox.reducer";
 import { UserType } from "../enums";
 import ApiLoadingSpinner from "../components/ApiLoadingSpinner";
+import ScrollNavigator from "../components/ScrollNavigator";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 
@@ -46,6 +47,19 @@ const SidebarLayout = ({
   useMemo(() => {
     dispatch(fetchInboxUnreadCount());
   }, [dispatch]);
+
+  // Auto-unlock sidebar when note page orientation changes to maximize space
+  useEffect(() => {
+    const handleOrientationChange = () => {
+      setIsLocked(false);
+      setIsHovered(false);
+    };
+
+    window.addEventListener("note-orientation-change", handleOrientationChange);
+    return () => {
+      window.removeEventListener("note-orientation-change", handleOrientationChange);
+    };
+  }, []);
 
   // Get employee details from Redux
   const { entity } = useAppSelector((state) => state.employeeDetails);
@@ -350,6 +364,9 @@ const SidebarLayout = ({
             <ApiLoadingSpinner contained contentAreaRef={mainContentRef} />
           </div>
           <Footer className="sidebar-footer" />
+          {derivedActiveTab === "Employee Notes" && (
+            <ScrollNavigator targetRef={mainContentRef} />
+          )}
         </main>
       </div>
     </div>

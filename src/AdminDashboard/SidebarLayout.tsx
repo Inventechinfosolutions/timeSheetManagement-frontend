@@ -25,6 +25,7 @@ import { logoutUser } from "../reducers/user.reducer";
 import { fetchInboxUnreadCount } from "../reducers/inbox.reducer";
 import { useAppSelector } from "../hooks";
 import ApiLoadingSpinner from "../components/ApiLoadingSpinner";
+import ScrollNavigator from "../components/ScrollNavigator";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 
@@ -53,6 +54,19 @@ const SidebarLayout = ({
   useEffect(() => {
     dispatch(fetchInboxUnreadCount());
   }, [dispatch]);
+
+  // Auto-unlock sidebar when note page orientation changes to maximize space
+  useEffect(() => {
+    const handleOrientationChange = () => {
+      setIsLocked(false);
+      setIsHovered(false);
+    };
+
+    window.addEventListener("note-orientation-change", handleOrientationChange);
+    return () => {
+      window.removeEventListener("note-orientation-change", handleOrientationChange);
+    };
+  }, []);
 
   // Ref for the main scrollable content area
   const mainContentRef = useRef<HTMLDivElement>(null);
@@ -521,6 +535,9 @@ const SidebarLayout = ({
             <ApiLoadingSpinner contained contentAreaRef={mainContentRef} />
           </div>
           <Footer className="sidebar-footer" />
+          {derivedActiveTab === "Notes" && (
+            <ScrollNavigator targetRef={mainContentRef} />
+          )}
         </main>
       </div>
     </div>
