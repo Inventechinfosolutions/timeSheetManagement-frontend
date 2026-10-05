@@ -52,6 +52,9 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
       });
     }
 
+    const isHorizontal = note.isVertical === false;
+    const baseWidthPx = isHorizontal ? 1123 : 794;
+
     // 1. Create temporary container placed at top-left behind UI for accurate html2canvas bounding boxes
     const wrapper = document.createElement("div");
     wrapper.style.position = "absolute";
@@ -61,7 +64,9 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
     wrapper.style.opacity = "1";
     wrapper.style.pointerEvents = "none";
     wrapper.style.overflow = "visible";
-    wrapper.style.width = "794px"; // Standard A4 width in px (96 DPI: 210mm)
+    wrapper.style.minWidth = `${baseWidthPx}px`;
+    wrapper.style.width = "max-content";
+    wrapper.style.display = "inline-block";
     wrapper.style.backgroundColor = "#FFFFFF";
     wrapper.style.boxSizing = "border-box";
 
@@ -112,7 +117,8 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
           padding: 0 !important;
         }
         .pdf-export-body table {
-          width: 100% !important;
+          min-width: 100% !important;
+          width: max-content !important;
           border-collapse: collapse !important;
           margin: 12px 0 !important;
           border: 1px solid #CBD5E1 !important;
@@ -144,13 +150,13 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
         .pdf-export-body h2 { font-size: 16px !important; font-weight: 700 !important; margin: 10px 0 5px 0 !important; color: #1E293B !important; }
         .pdf-export-body h3 { font-size: 14px !important; font-weight: 600 !important; margin: 8px 0 4px 0 !important; color: #1E293B !important; }
       </style>
-      <div style="padding: 36px 40px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #1E293B; background-color: #FFFFFF; line-height: 1.6; box-sizing: border-box; width: 794px;">
+      <div style="padding: 36px 40px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #1E293B; background-color: #FFFFFF; line-height: 1.6; box-sizing: border-box; min-width: ${baseWidthPx}px; width: max-content;">
         <!-- Structured Note Card: Project & Title -->
-        <div style="background-color: #F8FAFC; border: 1.5px solid #E2E8F0; border-radius: 10px; padding: 18px 22px; margin-bottom: 22px;">
+        <div style="background-color: #F8FAFC; border: 1.5px solid #E2E8F0; border-radius: 10px; padding: 18px 22px; margin-bottom: 22px; width: 100%; box-sizing: border-box;">
           <!-- Project Row: Rendered via table for 100% pixel-perfect html2canvas alignment -->
-          <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 12px; border-collapse: separate;">
+          <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 12px; border-collapse: separate; width: 100%;">
             <tr>
-              <td style="vertical-align: middle; padding-right: 10px; white-space: nowrap;">
+              <td style="vertical-align: middle; padding-right: 10px; white-space: nowrap; width: 110px;">
                 <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.8px;">
                   PROJECT:
                 </span>
@@ -168,9 +174,9 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
           </table>
 
           <!-- Title Row: Rendered via table for perfect baseline alignment -->
-          <table cellpadding="0" cellspacing="0" border="0" style="border-collapse: separate;">
+          <table cellpadding="0" cellspacing="0" border="0" style="border-collapse: separate; width: 100%;">
             <tr>
-              <td style="vertical-align: middle; padding-right: 10px; white-space: nowrap;">
+              <td style="vertical-align: middle; padding-right: 10px; white-space: nowrap; width: 110px;">
                 <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.8px;">
                   TITLE/SUBJECT:
                 </span>
@@ -185,11 +191,11 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
         </div>
 
         <!-- Structured Description Section -->
-        <div style="margin-bottom: 16px;">
-          <div style="font-size: 11px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.8px; border-bottom: 1.5px solid #E2E8F0; padding-bottom: 6px; margin-bottom: 14px;">
+        <div style="margin-bottom: 16px; width: 100%; box-sizing: border-box;">
+          <div style="font-size: 11px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.8px; border-bottom: 1.5px solid #E2E8F0; padding-bottom: 6px; margin-bottom: 14px; width: 100%;">
             DESCRIPTION
           </div>
-          <div class="pdf-export-body" style="font-size: 13.5px; line-height: 1.65; color: #1E293B; background-color: #FFFFFF;">
+          <div class="pdf-export-body" style="font-size: 13.5px; line-height: 1.65; color: #1E293B; background-color: #FFFFFF; width: 100%;">
             ${note.description && note.description.trim() ? note.description : '<p style="color: #94A3B8; font-style: italic; margin: 0;">No description provided.</p>'}
           </div>
         </div>
@@ -198,27 +204,36 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
 
     document.body.appendChild(wrapper);
 
+    // Measure full content width, ensuring it takes full width if tables expand horizontally
+    const actualWidthPx = Math.max(baseWidthPx, wrapper.scrollWidth, wrapper.offsetWidth);
+    wrapper.style.width = `${actualWidthPx}px`;
+
     // Capture using html2canvas with scale: 2 for crisp vector-like text
     const canvas = await html2canvas(wrapper, {
       scale: 2,
       useCORS: true,
       logging: false,
       backgroundColor: "#FFFFFF",
-      width: 794,
-      windowWidth: 794,
+      width: actualWidthPx,
+      windowWidth: actualWidthPx,
     });
 
     document.body.removeChild(wrapper);
 
-    // Initialize jsPDF in A4 portrait (210mm x 297mm)
-    const pdf = new jsPDF({
-      orientation: "portrait",
-      unit: "mm",
-      format: "a4",
-    });
+    // Convert pixel width to mm (96 DPI: 1 inch = 25.4mm = 96px => 1px ≈ 0.264583mm)
+    const pageWidthMm = (actualWidthPx * 25.4) / 96;
+    const isLandscape = isHorizontal || actualWidthPx > 794;
+    // Maintain standard A4 aspect ratio (210/297 for landscape, 297/210 for portrait)
+    const aspect = isLandscape ? (210 / 297) : (297 / 210);
+    const pageHeightMm = pageWidthMm * aspect;
+    const pageHeightPx = Math.floor(canvas.width * aspect);
 
-    const a4Aspect = 297 / 210; // 1.4142857
-    const pageHeightPx = Math.floor(canvas.width * a4Aspect);
+    // Initialize jsPDF with dynamic full-width format
+    const pdf = new jsPDF({
+      orientation: isLandscape ? "landscape" : "portrait",
+      unit: "mm",
+      format: [pageWidthMm, pageHeightMm],
+    });
 
     // 1. If note content fits on 1 full page (common for tables/notes), render on single page without any cuts
     if (canvas.height <= pageHeightPx) {
@@ -232,7 +247,7 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
         ctx.drawImage(canvas, 0, 0);
       }
       const pageImgData = pageCanvas.toDataURL("image/jpeg", 0.95);
-      pdf.addImage(pageImgData, "JPEG", 0, 0, 210, 297);
+      pdf.addImage(pageImgData, "JPEG", 0, 0, pageWidthMm, pageHeightMm);
     } else {
       // 2. Multi-page document: slice at natural blank whitespace rows so no text, headings, or table rows are ever cut
       const canvasCtx = canvas.getContext("2d");
@@ -241,7 +256,7 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
 
       while (currentY < canvas.height) {
         if (pageNum > 0) {
-          pdf.addPage("a4", "portrait");
+          pdf.addPage([pageWidthMm, pageHeightMm], isLandscape ? "landscape" : "portrait");
         }
 
         const remainingHeight = canvas.height - currentY;
@@ -308,7 +323,7 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
         }
 
         const pageImgData = pageCanvas.toDataURL("image/jpeg", 0.95);
-        pdf.addImage(pageImgData, "JPEG", 0, 0, 210, 297);
+        pdf.addImage(pageImgData, "JPEG", 0, 0, pageWidthMm, pageHeightMm);
 
         currentY += sliceHeight;
         pageNum++;
@@ -337,6 +352,20 @@ export const exportNoteToWord = async (note: Note): Promise<void> => {
     const isProject = note.type === "PROJECT";
     const projectLabel = note.projectName || "Worksphere Project";
 
+    const isHorizontal = note.isVertical === false;
+    const firstRowMatch = (note.description || "").match(/<tr[^>]*>([\s\S]*?)<\/tr>/i);
+    let colCount = 0;
+    if (firstRowMatch) {
+      const cells = firstRowMatch[1].match(/<t[dh][^>]*>/gi);
+      colCount = cells ? cells.length : 0;
+    }
+    const isWide = isHorizontal || colCount > 3;
+    let pageWidthPt = isWide ? 841.9 : 595.3;
+    let pageHeightPt = isWide ? 595.3 : 841.9;
+    if (colCount > 5) {
+      pageWidthPt = Math.max(841.9, colCount * 135 + 72);
+    }
+
     const wordDocHtml = `
       <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
       <head>
@@ -353,10 +382,11 @@ export const exportNoteToWord = async (note: Note): Promise<void> => {
         <title>${note.title || "Note"}</title>
         <style>
           @page Section1 {
-            size: 595.3pt 841.9pt;
-            margin: 1.0in 1.0in 1.0in 1.0in;
-            mso-header-margin: 35.4pt;
-            mso-footer-margin: 35.4pt;
+            size: ${pageWidthPt}pt ${pageHeightPt}pt;
+            mso-page-orientation: ${isWide ? "landscape" : "portrait"};
+            margin: 0.4in 0.4in 0.4in 0.4in;
+            mso-header-margin: 28pt;
+            mso-footer-margin: 28pt;
             mso-paper-source: 0;
           }
           div.Section1 { page: Section1; }
@@ -451,17 +481,32 @@ export const exportNoteToWord = async (note: Note): Promise<void> => {
             width: 100%;
             border-collapse: collapse;
             margin: 12pt 0;
+            mso-table-layout-alt: auto;
           }
           table th, table td {
             border: 1pt solid #CBD5E1;
             padding: 7pt 10pt;
             text-align: left;
             font-size: 10pt;
+            word-break: break-word;
           }
           table th {
             background-color: #F1F5F9;
             font-weight: bold;
             color: #1E293B;
+          }
+          .table-file-badge {
+            display: inline-block;
+            background-color: #F1F5F9;
+            border: 1pt solid #CBD5E1;
+            padding: 3pt 6pt;
+            border-radius: 4pt;
+            font-size: 9pt;
+            color: #334155;
+            margin: 2pt 0;
+          }
+          .table-file-btn {
+            display: none !important;
           }
         </style>
       </head>
@@ -508,16 +553,42 @@ export const exportNoteToWord = async (note: Note): Promise<void> => {
   }
 };
 
-export const copyNoteContentToClipboard = (htmlContent?: string): void => {
+export const copyNoteContentToClipboard = async (
+  htmlContent?: string
+): Promise<void> => {
   if (!htmlContent || !htmlContent.trim()) {
     message.info("No content to copy");
     return;
   }
-  const tempDiv = document.createElement("div");
-  tempDiv.innerHTML = htmlContent;
-  const textContent = tempDiv.innerText || tempDiv.textContent || "";
-  navigator.clipboard.writeText(textContent);
-  message.success("Note content copied to clipboard");
+
+  try {
+    const fullHtml = htmlContent;
+
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = fullHtml;
+    const textContent = tempDiv.innerText || tempDiv.textContent || "";
+
+    if (navigator.clipboard && window.ClipboardItem) {
+      const textBlob = new Blob([textContent], { type: "text/plain" });
+      const htmlBlob = new Blob([fullHtml], { type: "text/html" });
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          "text/plain": textBlob,
+          "text/html": htmlBlob,
+        }),
+      ]);
+    } else {
+      await navigator.clipboard.writeText(textContent);
+    }
+    message.success("Page copied to clipboard!");
+  } catch (err) {
+    // Fallback
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = htmlContent;
+    const textContent = tempDiv.innerText || tempDiv.textContent || "";
+    navigator.clipboard.writeText(textContent);
+    message.success("Page copied to clipboard!");
+  }
 };
 
 /**
