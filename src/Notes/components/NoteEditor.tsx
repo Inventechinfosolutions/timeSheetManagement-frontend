@@ -648,7 +648,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
               DESCRIPTION
             </span>
 
-            <div className="w-full bg-white border border-slate-200 rounded-2xl focus-within:border-[#4318FF] focus-within:ring-1 focus-within:ring-[#4318FF]/20 transition-all shadow-xs flex flex-col overflow-hidden">
+            <div className="w-full bg-white border border-slate-200 rounded-2xl focus-within:border-[#4318FF] focus-within:ring-1 focus-within:ring-[#4318FF]/20 transition-all shadow-xs flex flex-col">
               {/* Modular Rich Text Toolbar */}
               <NoteEditorToolbar
                 fontSize={fontSize}
@@ -697,7 +697,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
               />
 
               {/* A4 Workspace Simulation */}
-              <div className="a4-page-workspace w-full flex justify-start items-start overflow-x-auto bg-slate-100/80 p-4 sm:p-8 min-h-[640px]">
+              <div className="a4-page-workspace w-full flex justify-start items-start overflow-x-auto bg-slate-100/80 p-4 sm:p-8 min-h-[640px] rounded-b-2xl">
                 <div
                   className={`a4-page shrink-0 transition-all duration-300 ${orientation === "landscape" ? "landscape" : ""
                     }`}

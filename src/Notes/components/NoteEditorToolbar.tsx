@@ -126,7 +126,7 @@ export const NoteEditorToolbar: React.FC<NoteEditorToolbarProps> = ({
   isCopied,
 }) => {
   return (
-    <div className="flex items-center overflow-x-auto flex-nowrap gap-1 sm:gap-1.5 p-2 px-3 bg-white border-b border-slate-100 text-slate-700 select-none shrink-0 sticky top-0 z-10 scrollbar-thin">
+    <div className="flex items-center overflow-x-auto flex-nowrap gap-1 sm:gap-1.5 p-2 px-3 bg-white border-b border-slate-100 text-slate-700 select-none shrink-0 sticky top-0 z-30 rounded-t-2xl shadow-xs scrollbar-thin">
       {/* Bold */}
       <button
         type="button"
