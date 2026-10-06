@@ -26,6 +26,7 @@ import { logoutUser } from "../reducers/user.reducer";
 import { fetchInboxUnreadCount } from "../reducers/inbox.reducer";
 import { useAppSelector } from "../hooks";
 import ApiLoadingSpinner from "../components/ApiLoadingSpinner";
+import ScrollNavigator from "../components/ScrollNavigator";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 
@@ -54,6 +55,19 @@ const SidebarLayout = ({
   useEffect(() => {
     dispatch(fetchInboxUnreadCount());
   }, [dispatch]);
+
+  // Auto-unlock sidebar when note page orientation changes to maximize space
+  useEffect(() => {
+    const handleOrientationChange = () => {
+      setIsLocked(false);
+      setIsHovered(false);
+    };
+
+    window.addEventListener("note-orientation-change", handleOrientationChange);
+    return () => {
+      window.removeEventListener("note-orientation-change", handleOrientationChange);
+    };
+  }, []);
 
   // Ref for the main scrollable content area
   const mainContentRef = useRef<HTMLDivElement>(null);
@@ -195,6 +209,24 @@ const SidebarLayout = ({
     }
   }, [derivedActiveTab]);
 
+  // Track whether user is inside Note Workspace (Create/Edit/View) alone vs List mode / other pages
+  const [isWorkspaceMode, setIsWorkspaceMode] = useState(false);
+
+  useEffect(() => {
+    const handleWorkspaceMode = (e: any) => {
+      setIsWorkspaceMode(Boolean(e.detail?.isWorkspace));
+    };
+
+    window.addEventListener("note-workspace-mode", handleWorkspaceMode);
+    return () => {
+      window.removeEventListener("note-workspace-mode", handleWorkspaceMode);
+    };
+  }, []);
+
+  useEffect(() => {
+    setIsWorkspaceMode(false);
+  }, [derivedActiveTab]);
+
   // Sidebar opens if it's either hovered OR locked
   const isOpen = isHovered || isLocked;
 
@@ -222,7 +254,7 @@ const SidebarLayout = ({
 
   return (
     <div className="flex flex-col w-full h-screen bg-[#f8f9fa] font-sans text-[#2B3674] overflow-hidden relative">
-      <Header />
+      {!isWorkspaceMode && <Header />}
       <div className="flex flex-1 min-h-0 relative overflow-hidden">
         {/* Mobile Menu Trigger - Floating Pulse Button */}
         <button
@@ -529,6 +561,9 @@ const SidebarLayout = ({
             <ApiLoadingSpinner contained contentAreaRef={mainContentRef} />
           </div>
           <Footer className="sidebar-footer" />
+          {derivedActiveTab === "Notes" && (
+            <ScrollNavigator targetRef={mainContentRef} />
+          )}
         </main>
       </div>
     </div>

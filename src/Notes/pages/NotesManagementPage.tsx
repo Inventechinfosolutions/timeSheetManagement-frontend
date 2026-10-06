@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Modal } from "antd";
 import { useNotesManagement } from "../hooks/useNotesManagement";
 import {
@@ -8,6 +8,7 @@ import {
   NoteView,
   NoteSendModal,
 } from "../components";
+import DocumentPreviewModal from "../components/DocumentPreviewModal";
 import UniverExcelEditorModal from "../../components/UniverExcelEditorModal";
 
 export const NotesManagementPage: React.FC = () => {
@@ -79,6 +80,20 @@ export const NotesManagementPage: React.FC = () => {
     setSearchQuery,
     setCurrentPage,
   } = useNotesManagement();
+
+  // Notify layout when user is inside the Note Workspace (create, edit, view) vs List mode
+  useEffect(() => {
+    const isWorkspace =
+      pageMode === "create" || pageMode === "edit" || pageMode === "view";
+    window.dispatchEvent(
+      new CustomEvent("note-workspace-mode", { detail: { isWorkspace } })
+    );
+    return () => {
+      window.dispatchEvent(
+        new CustomEvent("note-workspace-mode", { detail: { isWorkspace: false } })
+      );
+    };
+  }, [pageMode]);
 
   return (
     <div className="w-full min-h-full">
@@ -183,22 +198,13 @@ export const NotesManagementPage: React.FC = () => {
         onSuccess={() => {}}
       />
 
-      {/* Global Image Preview Modal */}
-      <Modal
+      {/* Global In-App Document & Image Preview Modal (Card View) */}
+      <DocumentPreviewModal
         open={previewImageModal.open}
-        onCancel={() => setPreviewImageModal({ open: false, url: "", title: "" })}
-        footer={null}
+        url={previewImageModal.url}
         title={previewImageModal.title}
-        width={800}
-      >
-        <div className="flex items-center justify-center p-4">
-          <img
-            src={previewImageModal.url}
-            alt="Preview"
-            className="max-h-[70vh] object-contain rounded-lg"
-          />
-        </div>
-      </Modal>
+        onClose={() => setPreviewImageModal({ open: false, url: "", title: "" })}
+      />
 
       {/* Global Excel Spreadsheet Editor Modal */}
       <UniverExcelEditorModal
