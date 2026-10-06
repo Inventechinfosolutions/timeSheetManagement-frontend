@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Modal } from "antd";
 import { useNotesManagement } from "../hooks/useNotesManagement";
 import {
@@ -80,6 +80,20 @@ export const NotesManagementPage: React.FC = () => {
     setSearchQuery,
     setCurrentPage,
   } = useNotesManagement();
+
+  // Notify layout when user is inside the Note Workspace (create, edit, view) vs List mode
+  useEffect(() => {
+    const isWorkspace =
+      pageMode === "create" || pageMode === "edit" || pageMode === "view";
+    window.dispatchEvent(
+      new CustomEvent("note-workspace-mode", { detail: { isWorkspace } })
+    );
+    return () => {
+      window.dispatchEvent(
+        new CustomEvent("note-workspace-mode", { detail: { isWorkspace: false } })
+      );
+    };
+  }, [pageMode]);
 
   return (
     <div className="w-full min-h-full">
