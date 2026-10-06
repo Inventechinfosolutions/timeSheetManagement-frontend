@@ -61,6 +61,22 @@ export const InboxManagement: React.FC = () => {
     dispatch(fetchInboxCounts());
   }, [dispatch, folder, debouncedSearch]);
 
+  // Notify layout when user is inside the Note Workspace (create, edit, view) vs List mode in Inbox
+  useEffect(() => {
+    const isWorkspace =
+      notesMgr.pageMode === "create" ||
+      notesMgr.pageMode === "edit" ||
+      notesMgr.pageMode === "view";
+    window.dispatchEvent(
+      new CustomEvent("note-workspace-mode", { detail: { isWorkspace } })
+    );
+    return () => {
+      window.dispatchEvent(
+        new CustomEvent("note-workspace-mode", { detail: { isWorkspace: false } })
+      );
+    };
+  }, [notesMgr.pageMode]);
+
   const handleMarkAsRead = (item: InboxItem, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     if (!item.isRead) {
@@ -157,8 +173,8 @@ export const InboxManagement: React.FC = () => {
     return 'WS';
   };
 
-  // 1. Full Page Edit Mode
-  if (notesMgr.pageMode === 'edit' && notesMgr.activeNote) {
+  // 1. Full Page Edit or Create Mode
+  if ((notesMgr.pageMode === 'edit' || notesMgr.pageMode === 'create') && (notesMgr.activeNote || notesMgr.pageMode === 'create')) {
     return (
       <div className="w-full min-h-full">
         <NoteEditor
